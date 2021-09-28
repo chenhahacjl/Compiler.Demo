@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "Compiler.Demo": {
+      "commandName": "Project"
+    }
+  }
+}
