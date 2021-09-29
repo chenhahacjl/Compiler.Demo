@@ -7,20 +7,23 @@
     {
         // Tokens
         BadToken,
-        EndOfFileToken,
+        EndOfFileToken,          // <EOF>
         WhitespaceToken,
         NumberToken,
-        PlusToken,
-        MinusToken,
-        StarToken,
-        SlashToken,
-        OpenParenthesisToken,
-        CloseParenthesisToken,
+        PlusToken,               // +
+        MinusToken,              // -
+        StarToken,               // *
+        SlashToken,              // /
+        BangToken,               // !
+        AmpersandAmpersandToken, // &&
+        PipePipeToken,           // ||
+        OpenParenthesisToken,    // (
+        CloseParenthesisToken,   // )
         IdentifierToken,
 
         // Keywords
-        TrueKeyword,
-        FalseKeyword,
+        TrueKeyword,              // true
+        FalseKeyword,             // false
 
         // Expressions
         LiteralExpression,

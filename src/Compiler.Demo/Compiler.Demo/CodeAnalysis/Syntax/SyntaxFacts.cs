@@ -13,8 +13,9 @@ namespace Compiler.Demo.CodeAnalysis.Syntax
             {
                 case SyntaxKind.PlusToken:
                 case SyntaxKind.MinusToken:
+                case SyntaxKind.BangToken:
                 {
-                    return 3;
+                    return 5;
                 }
 
                 default:
@@ -31,11 +32,21 @@ namespace Compiler.Demo.CodeAnalysis.Syntax
                 case SyntaxKind.StarToken:
                 case SyntaxKind.SlashToken:
                 {
-                    return 2;
+                    return 4;
                 }
 
                 case SyntaxKind.PlusToken:
                 case SyntaxKind.MinusToken:
+                {
+                    return 3;
+                }
+
+                case SyntaxKind.AmpersandAmpersandToken:
+                {
+                    return 2;
+                }
+
+                case SyntaxKind.PipePipeToken:
                 {
                     return 1;
                 }
@@ -53,7 +64,8 @@ namespace Compiler.Demo.CodeAnalysis.Syntax
             {
                 case "true": return SyntaxKind.TrueKeyword;
                 case "false": return SyntaxKind.FalseKeyword;
-                default: return SyntaxKind.IdentifierToken;
+                default:
+                    return SyntaxKind.IdentifierToken;
             }
         }
     }

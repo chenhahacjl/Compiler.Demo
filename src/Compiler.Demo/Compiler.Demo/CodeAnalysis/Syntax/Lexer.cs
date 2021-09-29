@@ -15,7 +15,21 @@ namespace Compiler.Demo.CodeAnalysis.Syntax
 
         public IEnumerable<string> Diagnostics => m_diagnostics;
 
-        private char Current => m_position >= m_text.Length ? '\0' : m_text[m_position];
+        private char Current => Peek(0);
+
+        private char Lookahead => Peek(1);
+
+        private char Peek(int offset)
+        {
+            var index = m_position + offset;
+
+            if (index >= m_text.Length)
+            {
+                return '\0';
+            }
+
+            return m_text[index];
+        }
 
         private void Next() => m_position++;
 
@@ -87,6 +101,17 @@ namespace Compiler.Demo.CodeAnalysis.Syntax
                 case '/': return new SyntaxToken(SyntaxKind.SlashToken, m_position++, "/", null);
                 case '(': return new SyntaxToken(SyntaxKind.OpenParenthesisToken, m_position++, "(", null);
                 case ')': return new SyntaxToken(SyntaxKind.CloseParenthesisToken, m_position++, ")", null);
+                case '!': return new SyntaxToken(SyntaxKind.BangToken, m_position++, "!", null);
+                case '&':
+                {
+                    if (Lookahead == '&') return new SyntaxToken(SyntaxKind.AmpersandAmpersandToken, m_position += 2, "&&", null);
+                    break;
+                }
+                case '|':
+                {
+                    if (Lookahead == '|') return new SyntaxToken(SyntaxKind.PipePipeToken, m_position += 2, "||", null);
+                    break;
+                }
             }
 
             m_diagnostics.Add($"ERROR: Bad character input: '{Current}'");

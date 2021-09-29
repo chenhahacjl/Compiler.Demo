@@ -8,6 +8,8 @@
         Addition,
         Subtraction,
         Multiplication,
-        Division
+        Division,
+        LogicalAnd,
+        LogicanOr
     }
 }
