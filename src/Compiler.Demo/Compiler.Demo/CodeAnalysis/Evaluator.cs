@@ -54,6 +54,8 @@ namespace Compiler.Demo.CodeAnalysis
                     case BoundBinaryOperatorKind.Division: return (int)left / (int)right;
                     case BoundBinaryOperatorKind.LogicalAnd: return (bool)left && (bool)right;
                     case BoundBinaryOperatorKind.LogicanOr: return (bool)left || (bool)right;
+                    case BoundBinaryOperatorKind.Equals: return Equals(left, right);
+                    case BoundBinaryOperatorKind.NotEquals: return !Equals(left, right);
                     default:
                         throw new Exception($"Unexcepted binary operator {binary.Op}");
                 }

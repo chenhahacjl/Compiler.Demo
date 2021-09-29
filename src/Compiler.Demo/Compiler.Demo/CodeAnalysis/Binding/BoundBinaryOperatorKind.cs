@@ -10,6 +10,8 @@
         Multiplication,
         Division,
         LogicalAnd,
-        LogicanOr
+        LogicanOr,
+        Equals,
+        NotEquals
     }
 }
