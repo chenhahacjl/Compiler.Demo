@@ -1,8 +1,11 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Compiler.Demo.CodeAnalysis
+namespace Compiler.Demo.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 语法树
+    /// </summary>
     public sealed class SyntaxTree
     {
         public SyntaxTree(IEnumerable<string> diagnostics, ExpressionSyntax root, SyntaxToken endOfFileToken)

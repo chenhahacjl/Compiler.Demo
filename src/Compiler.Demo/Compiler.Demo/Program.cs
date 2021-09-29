@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Compiler.Demo.CodeAnalysis;
+using Compiler.Demo.CodeAnalysis.Binding;
+using Compiler.Demo.CodeAnalysis.Syntax;
 
 namespace Compiler.Demo
 {
@@ -12,9 +15,9 @@ namespace Compiler.Demo
     //    / \
     //   1   2
 
-    class Program
+    internal static class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             bool showTree = false;
 
@@ -41,6 +44,10 @@ namespace Compiler.Demo
                 }
 
                 var syntaxTree = SyntaxTree.Parse(line);
+                var binder = new Binder();
+                var boundExpression = binder.BindExpression(syntaxTree.Root);
+
+                IReadOnlyList<string> diagnostics = syntaxTree.Diagnostics.Concat(binder.Diagnostics).ToArray();
 
                 if (showTree)
                 {
@@ -49,11 +56,11 @@ namespace Compiler.Demo
                     Console.ResetColor();
                 }
 
-                if (syntaxTree.Diagnostics.Any())
+                if (diagnostics.Any())
                 {
                     Console.ForegroundColor = ConsoleColor.DarkRed;
 
-                    foreach (var diagnostic in syntaxTree.Diagnostics)
+                    foreach (var diagnostic in diagnostics)
                     {
                         Console.WriteLine(diagnostic);
                     }
@@ -62,7 +69,7 @@ namespace Compiler.Demo
                 }
                 else
                 {
-                    var e = new Evaluator(syntaxTree.Root);
+                    var e = new Evaluator(boundExpression);
                     var result = e.Evaluate();
                     Console.WriteLine(result);
                 }

@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 
-namespace Compiler.Demo.CodeAnalysis
+namespace Compiler.Demo.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 括号表达式语法
+    /// </summary>
     public sealed class ParenthesizedExpressionSyntax : ExpressionSyntax
     {
         public ParenthesizedExpressionSyntax(SyntaxToken openParenthesisToken, ExpressionSyntax expression, SyntaxToken closeParenthesisToken)

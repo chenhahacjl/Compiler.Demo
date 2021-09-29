@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 
-namespace Compiler.Demo.CodeAnalysis
+namespace Compiler.Demo.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 二元表达式语法
+    /// </summary>
     public sealed class BinaryExpressionSyntax : ExpressionSyntax
     {
         public BinaryExpressionSyntax(ExpressionSyntax left, SyntaxToken operationToken, ExpressionSyntax right)
@@ -11,7 +14,7 @@ namespace Compiler.Demo.CodeAnalysis
             Right = right;
         }
 
-        public override SyntaxKind Kind => SyntaxKind.ParenthesizedExpression;
+        public override SyntaxKind Kind => SyntaxKind.BinaryExpression;
 
         public ExpressionSyntax Left { get; }
         public SyntaxToken OperationToken { get; }

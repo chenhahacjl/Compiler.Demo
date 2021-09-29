@@ -5,7 +5,6 @@ D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Comp
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Compiler.Demo.dll
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\ref\Compiler.Demo.dll
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Compiler.Demo.pdb
-D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.AssemblyReference.cache
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.GeneratedMSBuildEditorConfig.editorconfig
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.AssemblyInfoInputs.cache
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.AssemblyInfo.cs
@@ -21,7 +20,6 @@ I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Comp
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Compiler.Demo.dll
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\ref\Compiler.Demo.dll
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Compiler.Demo.pdb
-I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.AssemblyReference.cache
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.GeneratedMSBuildEditorConfig.editorconfig
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.AssemblyInfoInputs.cache
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.AssemblyInfo.cs

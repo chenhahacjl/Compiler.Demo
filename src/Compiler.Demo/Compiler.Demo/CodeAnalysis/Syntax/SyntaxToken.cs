@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Compiler.Demo.CodeAnalysis
+namespace Compiler.Demo.CodeAnalysis.Syntax
 {
-    public class SyntaxToken : SyntaxNode
+    /// <summary>
+    /// 语法符号
+    /// </summary>
+    public sealed class SyntaxToken : SyntaxNode
     {
         public SyntaxToken(SyntaxKind kind, int position, string text, object value)
         {

@@ -1,7 +1,10 @@
 ﻿using System.Collections.Generic;
 
-namespace Compiler.Demo.CodeAnalysis
+namespace Compiler.Demo.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 语法节点
+    /// </summary>
     public abstract class SyntaxNode
     {
         public abstract SyntaxKind Kind { get; }
