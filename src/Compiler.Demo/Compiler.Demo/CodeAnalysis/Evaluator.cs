@@ -15,21 +15,21 @@ namespace Compiler.Demo.CodeAnalysis
             m_root = root;
         }
 
-        public int Evaluate()
+        public object Evaluate()
         {
             return EvaluateExpression(m_root);
         }
 
-        private int EvaluateExpression(BoundExpression node)
+        private object EvaluateExpression(BoundExpression node)
         {
             if (node is BoundLiteralExpression literal)
             {
-                return (int)literal.Value;
+                return literal.Value;
             }
 
             if (node is BoundUnaryExpression unary)
             {
-                var operand = EvaluateExpression(unary.Operand);
+                var operand = (int)EvaluateExpression(unary.Operand);
 
                 switch (unary.OperatorKind)
                 {
@@ -42,8 +42,8 @@ namespace Compiler.Demo.CodeAnalysis
 
             if (node is BoundBinaryExpression binary)
             {
-                var left = EvaluateExpression(binary.Left);
-                var right = EvaluateExpression(binary.Right);
+                var left = (int)EvaluateExpression(binary.Left);
+                var right = (int)EvaluateExpression(binary.Right);
 
                 switch (binary.OperatorKind)
                 {

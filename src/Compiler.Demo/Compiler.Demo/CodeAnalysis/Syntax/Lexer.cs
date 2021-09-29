@@ -63,6 +63,22 @@ namespace Compiler.Demo.CodeAnalysis.Syntax
                 return new SyntaxToken(SyntaxKind.WhitespaceToken, start, text, value);
             }
 
+            if (char.IsLetter(Current))
+            {
+                var start = m_position;
+
+                while (char.IsLetter(Current))
+                {
+                    Next();
+                }
+
+                var length = m_position - start;
+                var text = m_text.Substring(start, length);
+                var kind = SyntaxFacts.GetKeywordKind(text);
+
+                return new SyntaxToken(kind, start, text, null);
+            }
+
             switch (Current)
             {
                 case '+': return new SyntaxToken(SyntaxKind.PlusToken, m_position++, "+", null);
