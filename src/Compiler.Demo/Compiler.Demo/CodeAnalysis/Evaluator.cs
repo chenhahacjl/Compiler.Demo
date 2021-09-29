@@ -31,13 +31,13 @@ namespace Compiler.Demo.CodeAnalysis
             {
                 var operand = EvaluateExpression(unary.Operand);
 
-                switch (unary.OperatorKind)
+                switch (unary.Op.Kind)
                 {
                     case BoundUnaryOperatorKind.Identity: return (int)operand;
                     case BoundUnaryOperatorKind.Negation: return -(int)operand;
                     case BoundUnaryOperatorKind.LogicalNegation: return !(bool)operand;
                     default:
-                        throw new Exception($"Unexcepted unary operator {unary.OperatorKind}");
+                        throw new Exception($"Unexcepted unary operator {unary.Op}");
                 }
             }
 
@@ -46,7 +46,7 @@ namespace Compiler.Demo.CodeAnalysis
                 var left = EvaluateExpression(binary.Left);
                 var right = EvaluateExpression(binary.Right);
 
-                switch (binary.OperatorKind)
+                switch (binary.Op.Kind)
                 {
                     case BoundBinaryOperatorKind.Addition: return (int)left + (int)right;
                     case BoundBinaryOperatorKind.Subtraction: return (int)left - (int)right;
@@ -55,14 +55,9 @@ namespace Compiler.Demo.CodeAnalysis
                     case BoundBinaryOperatorKind.LogicalAnd: return (bool)left && (bool)right;
                     case BoundBinaryOperatorKind.LogicanOr: return (bool)left || (bool)right;
                     default:
-                        throw new Exception($"Unexcepted binary operator {binary.OperatorKind}");
+                        throw new Exception($"Unexcepted binary operator {binary.Op}");
                 }
             }
-
-            //if (node is BoundParenthesizedExpression parenthesized)
-            //{
-            //    return EvaluateExpression(parenthesized.Expression);
-            //}
 
             throw new Exception($"Unexcepted node {node.Kind}");
         }
