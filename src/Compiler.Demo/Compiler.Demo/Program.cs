@@ -1,20 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-
-using Compiler.Demo.CodeAnalysis;
-using Compiler.Demo.CodeAnalysis.Binding;
-using Compiler.Demo.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Compiler.Demo
 {
-    // 1 + 2 + 3
-    //       +
-    //      / \
-    //     +   3
-    //    / \
-    //   1   2
-
     internal static class Program
     {
         private static void Main(string[] args)
@@ -44,10 +35,10 @@ namespace Compiler.Demo
                 }
 
                 var syntaxTree = SyntaxTree.Parse(line);
-                var binder = new Binder();
-                var boundExpression = binder.BindExpression(syntaxTree.Root);
+                var compilation = new Compilation(syntaxTree);
+                var result = compilation.Evaluate();
 
-                IReadOnlyList<string> diagnostics = syntaxTree.Diagnostics.Concat(binder.Diagnostics).ToArray();
+                IReadOnlyList<Diagnostic> diagnostics = result.Diagnostics;
 
                 if (showTree)
                 {
@@ -69,20 +60,14 @@ namespace Compiler.Demo
                 }
                 else
                 {
-                    var e = new Evaluator(boundExpression);
-                    var result = e.Evaluate();
-                    Console.WriteLine(result);
+                    Console.WriteLine(result.Value);
                 }
             }
         }
 
         static void PrettyPrint(SyntaxNode node, string indent = "", bool isLast = true)
         {
-            // │
-            // ├--
-            // └--
-
-            var marker = isLast ? "└--" : "├--";
+            var marker = isLast ? "└---" : "├---";
 
             Console.Write($"{indent}{marker}{node.Kind}");
 
@@ -93,7 +78,7 @@ namespace Compiler.Demo
 
             Console.WriteLine();
 
-            indent += isLast ? "　  " : "│  ";
+            indent += isLast ? "　   " : "│   ";
 
             var lastChild = node.GetChildren().LastOrDefault();
 

@@ -1,26 +1,45 @@
 {
   "version": 3,
   "targets": {
-    "net5.0": {}
+    "net5.0": {
+      "Cocoa/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v5.0",
+        "compile": {
+          "bin/placeholder/Cocoa.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Cocoa.dll": {}
+        }
+      }
+    }
   },
-  "libraries": {},
+  "libraries": {
+    "Cocoa/1.0.0": {
+      "type": "project",
+      "path": "../Cocoa/Cocoa.csproj",
+      "msbuildProject": "../Cocoa/Cocoa.csproj"
+    }
+  },
   "projectFileDependencyGroups": {
-    "net5.0": []
+    "net5.0": [
+      "Cocoa >= 1.0.0"
+    ]
   },
   "packageFolders": {
-    "C:\\Users\\chenj\\.nuget\\packages\\": {}
+    "C:\\Users\\Cmile_96\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Compiler.Demo\\Compiler.Demo.csproj",
+      "projectUniqueName": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Compiler.Demo\\Compiler.Demo.csproj",
       "projectName": "Compiler.Demo",
-      "projectPath": "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Compiler.Demo\\Compiler.Demo.csproj",
-      "packagesPath": "C:\\Users\\chenj\\.nuget\\packages\\",
-      "outputPath": "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Compiler.Demo\\obj\\",
+      "projectPath": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Compiler.Demo\\Compiler.Demo.csproj",
+      "packagesPath": "C:\\Users\\Cmile_96\\.nuget\\packages\\",
+      "outputPath": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Compiler.Demo\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\chenj\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Cmile_96\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -33,7 +52,11 @@
       "frameworks": {
         "net5.0": {
           "targetAlias": "net5.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj": {
+              "projectPath": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

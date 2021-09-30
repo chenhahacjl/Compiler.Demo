@@ -7,14 +7,27 @@
   "targets": {
     ".NETCoreApp,Version=v5.0": {
       "Compiler.Demo/1.0.0": {
+        "dependencies": {
+          "Cocoa": "1.0.0"
+        },
         "runtime": {
           "Compiler.Demo.dll": {}
+        }
+      },
+      "Cocoa/1.0.0": {
+        "runtime": {
+          "Cocoa.dll": {}
         }
       }
     }
   },
   "libraries": {
     "Compiler.Demo/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Cocoa/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

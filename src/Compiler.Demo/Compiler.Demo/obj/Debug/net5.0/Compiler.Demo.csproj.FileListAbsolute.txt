@@ -28,3 +28,7 @@ I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Comp
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\ref\Compiler.Demo.dll
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.pdb
 I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.genruntimeconfig.cache
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.AssemblyReference.cache
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Cocoa.dll
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Cocoa.pdb
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.CopyComplete

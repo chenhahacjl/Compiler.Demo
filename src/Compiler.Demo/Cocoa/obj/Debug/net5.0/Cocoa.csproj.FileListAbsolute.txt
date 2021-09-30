@@ -1,0 +1,11 @@
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\Cocoa.deps.json
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\Cocoa.dll
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\ref\Cocoa.dll
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\Cocoa.pdb
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.GeneratedMSBuildEditorConfig.editorconfig
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.AssemblyInfoInputs.cache
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.AssemblyInfo.cs
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.csproj.CoreCompileInputs.cache
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.dll
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\ref\Cocoa.dll
+D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.pdb
