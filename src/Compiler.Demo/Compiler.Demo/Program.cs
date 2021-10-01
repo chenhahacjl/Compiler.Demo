@@ -11,6 +11,7 @@ namespace Compiler.Demo
         private static void Main(string[] args)
         {
             bool showTree = false;
+            var variables = new Dictionary<VariableSymbol, object>();
 
             while (true)
             {
@@ -36,7 +37,7 @@ namespace Compiler.Demo
 
                 var syntaxTree = SyntaxTree.Parse(line);
                 var compilation = new Compilation(syntaxTree);
-                var result = compilation.Evaluate();
+                var result = compilation.Evaluate(variables);
 
                 IReadOnlyList<Diagnostic> diagnostics = result.Diagnostics;
 

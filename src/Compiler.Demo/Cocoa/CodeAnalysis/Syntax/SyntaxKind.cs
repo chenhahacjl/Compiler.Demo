@@ -8,20 +8,21 @@
         // Tokens
         BadToken,
         EndOfFileToken,          // <EOF>
-        WhitespaceToken,
-        NumberToken,
+        WhitespaceToken,         // 空字符
+        NumberToken,             // 数字
         PlusToken,               // +
         MinusToken,              // -
         StarToken,               // *
         SlashToken,              // /
         BangToken,               // !
+        EqualsToken,             // =
         AmpersandAmpersandToken, // &&
         PipePipeToken,           // ||
         EqualsEqualsToken,       // ==
         BangEqualsToken,         // !=
         OpenParenthesisToken,    // (
         CloseParenthesisToken,   // )
-        IdentifierToken,
+        IdentifierToken,         // 标识符
 
         // Keywords
         TrueKeyword,              // true
@@ -29,8 +30,10 @@
 
         // Expressions
         LiteralExpression,
+        NameExpression,
         UnaryExpression,
         BinaryExpression,
         ParenthesizedExpression,
+        AssignmentExpression,
     }
 }

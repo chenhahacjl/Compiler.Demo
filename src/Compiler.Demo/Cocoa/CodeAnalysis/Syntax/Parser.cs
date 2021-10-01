@@ -5,8 +5,9 @@ namespace Cocoa.CodeAnalysis.Syntax
     internal sealed class Parser
     {
         private readonly SyntaxToken[] m_tokens;
-        private int m_position;
+
         private DiagnosticBag m_diagnostics = new DiagnosticBag();
+        private int m_position;
 
         public Parser(string text)
         {
@@ -67,25 +68,45 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxTree Parse()
         {
-            var expression = ParserExpression();
+            var expression = ParseExpression();
             var endOfFileToken = MatchToken(SyntaxKind.EndOfFileToken);
 
             return new SyntaxTree(m_diagnostics, expression, endOfFileToken);
         }
 
-        private ExpressionSyntax ParserExpression(int parentPrecedence = 0)
+        private ExpressionSyntax ParseExpression()
+        {
+            return ParseAssignmentExpression();
+        }
+
+        private ExpressionSyntax ParseAssignmentExpression()
+        {
+            if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.EqualsToken)
+            {
+                var identifierToken = NextToken();
+                var operatorToken = NextToken();
+                var right = ParseAssignmentExpression();
+
+                return new AssignmentExpressionSyntax(identifierToken, operatorToken, right);
+            }
+
+            return ParseBinaryExpression();
+        }
+
+        private ExpressionSyntax ParseBinaryExpression(int parentPrecedence = 0)
         {
             ExpressionSyntax left;
             var unaryOperatorPrecedence = Current.Kind.GetUnaryOperatorPrecedence();
             if (unaryOperatorPrecedence != 0 && unaryOperatorPrecedence >= parentPrecedence)
             {
                 var operatorToken = NextToken();
-                var operand = ParserExpression(unaryOperatorPrecedence);
+                var operand = ParseBinaryExpression(unaryOperatorPrecedence);
                 left = new UnaryExpressionSyntax(operatorToken, operand);
             }
             else
             {
-                left = ParserPrimaryExpression();
+                left = ParsePrimaryExpression();
             }
 
             while (true)
@@ -97,21 +118,21 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
 
                 var operatorToken = NextToken();
-                var right = ParserExpression(precedence);
+                var right = ParseBinaryExpression(precedence);
                 left = new BinaryExpressionSyntax(left, operatorToken, right);
             }
 
             return left;
         }
 
-        private ExpressionSyntax ParserPrimaryExpression()
+        private ExpressionSyntax ParsePrimaryExpression()
         {
             switch (Current.Kind)
             {
                 case SyntaxKind.OpenParenthesisToken:
                 {
                     var left = NextToken();
-                    var expression = ParserExpression();
+                    var expression = ParseExpression();
                     var right = MatchToken(SyntaxKind.CloseParenthesisToken);
 
                     return new ParenthesizedExpressionSyntax(left, expression, right);
@@ -124,6 +145,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     var value = keywordToken.Kind == SyntaxKind.TrueKeyword;
 
                     return new LiteralExpressionSyntax(keywordToken, value);
+                }
+
+                case SyntaxKind.IdentifierToken:
+                {
+                    var identifierToken = NextToken();
+                    return new NameExpressionSyntax(identifierToken);
                 }
 
                 default:

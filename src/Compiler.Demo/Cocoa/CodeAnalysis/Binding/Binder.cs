@@ -9,7 +9,13 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class Binder
     {
+        private readonly Dictionary<VariableSymbol, object> m_variables;
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
+
+        public Binder(Dictionary<VariableSymbol, object> variables)
+        {
+            m_variables = variables;
+        }
 
         public DiagnosticBag Diagnostics => m_diagnostics;
 
@@ -17,13 +23,20 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             switch (syntax.Kind)
             {
+                case SyntaxKind.ParenthesizedExpression: return BindParenthesizedExpression((ParenthesizedExpressionSyntax)syntax);
                 case SyntaxKind.LiteralExpression: return BindLiteralExpression((LiteralExpressionSyntax)syntax);
+                case SyntaxKind.NameExpression: return BindNameExpression((NameExpressionSyntax)syntax);
+                case SyntaxKind.AssignmentExpression: return BindAssignmentExpression((AssignmentExpressionSyntax)syntax);
                 case SyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
                 case SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
-                case SyntaxKind.ParenthesizedExpression: return BindExpression(((ParenthesizedExpressionSyntax)syntax).Expression);
                 default:
                     throw new Exception($"Unexcepted syntax {syntax.Kind}");
             }
+        }
+
+        private BoundExpression BindParenthesizedExpression(ParenthesizedExpressionSyntax syntax)
+        {
+            return BindExpression(syntax.Expression);
         }
 
         private BoundExpression BindLiteralExpression(LiteralExpressionSyntax syntax)
@@ -31,6 +44,37 @@ namespace Cocoa.CodeAnalysis.Binding
             var value = syntax.Value ?? 0;
 
             return new BoundLiteralExpression(value);
+        }
+
+        private BoundExpression BindNameExpression(NameExpressionSyntax syntax)
+        {
+            var name = syntax.IdentifierToken.Text;
+            var variable = m_variables.Keys.FirstOrDefault(v => v.Name == name);
+
+            if (variable == null)
+            {
+                m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
+                return new BoundLiteralExpression(0);
+            }
+
+            return new BoundVariableExpression(variable);
+        }
+
+        private BoundExpression BindAssignmentExpression(AssignmentExpressionSyntax syntax)
+        {
+            var name = syntax.IdentifierToken.Text;
+            var boundExpression = BindExpression(syntax.Expression);
+
+            var existingVariable = m_variables.Keys.FirstOrDefault(v => v.Name == name);
+            if (existingVariable != null)
+            {
+                m_variables.Remove(existingVariable);
+            }
+
+            var variable = new VariableSymbol(name, boundExpression.Type);
+            m_variables[variable] = null;
+
+            return new BoundAssignmentExpression(variable, boundExpression);
         }
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)

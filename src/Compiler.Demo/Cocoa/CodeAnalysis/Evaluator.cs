@@ -1,6 +1,7 @@
 ﻿using Cocoa.CodeAnalysis.Binding;
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,10 +10,12 @@ namespace Cocoa.CodeAnalysis
     internal sealed class Evaluator
     {
         private readonly BoundExpression m_root;
+        private readonly Dictionary<VariableSymbol, object> m_variables;
 
-        public Evaluator(BoundExpression root)
+        public Evaluator(BoundExpression root, Dictionary<VariableSymbol, object> variables)
         {
             m_root = root;
+            m_variables = variables;
         }
 
         public object Evaluate()
@@ -25,6 +28,19 @@ namespace Cocoa.CodeAnalysis
             if (node is BoundLiteralExpression literal)
             {
                 return literal.Value;
+            }
+
+            if (node is BoundVariableExpression variable)
+            {
+                return m_variables[variable.Variable];
+            }
+
+            if (node is BoundAssignmentExpression assignment)
+            {
+                var value = EvaluateExpression(assignment.Expression);
+                m_variables[assignment.Variable] = value;
+
+                return value;
             }
 
             if (node is BoundUnaryExpression unary)
