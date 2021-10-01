@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj": {}
+    "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj": {}
   },
   "projects": {
-    "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj": {
+    "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj",
+        "projectUniqueName": "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj",
         "projectName": "Cocoa",
-        "projectPath": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj",
-        "packagesPath": "C:\\Users\\Cmile_96\\.nuget\\packages\\",
-        "outputPath": "D:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\obj\\",
+        "projectPath": "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\Cocoa.csproj",
+        "packagesPath": "C:\\Users\\chenj\\.nuget\\packages\\",
+        "outputPath": "I:\\GitFolder\\Compiler.Demo\\src\\Compiler.Demo\\Cocoa\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Cmile_96\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\chenj\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [

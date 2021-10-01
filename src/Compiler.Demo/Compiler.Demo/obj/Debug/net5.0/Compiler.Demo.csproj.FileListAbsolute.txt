@@ -32,3 +32,7 @@ D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Comp
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Cocoa.dll
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Cocoa.pdb
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.CopyComplete
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Cocoa.dll
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\bin\Debug\net5.0\Cocoa.pdb
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.AssemblyReference.cache
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Compiler.Demo\obj\Debug\net5.0\Compiler.Demo.csproj.CopyComplete

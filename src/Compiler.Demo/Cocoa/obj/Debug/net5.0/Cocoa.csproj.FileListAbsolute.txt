@@ -9,3 +9,15 @@ D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.csproj
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.dll
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\ref\Cocoa.dll
 D:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.pdb
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\Cocoa.deps.json
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\Cocoa.dll
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\ref\Cocoa.dll
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\bin\Debug\net5.0\Cocoa.pdb
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.csproj.AssemblyReference.cache
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.GeneratedMSBuildEditorConfig.editorconfig
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.AssemblyInfoInputs.cache
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.AssemblyInfo.cs
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.csproj.CoreCompileInputs.cache
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.dll
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\ref\Cocoa.dll
+I:\GitFolder\Compiler.Demo\src\Compiler.Demo\Cocoa\obj\Debug\net5.0\Cocoa.pdb

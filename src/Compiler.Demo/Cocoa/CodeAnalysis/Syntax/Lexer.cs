@@ -40,10 +40,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return new SyntaxToken(SyntaxKind.EndOfFileToken, m_position, "\0", null);
             }
 
+            var start = m_position;
+
             if (char.IsDigit(Current))
             {
-                var start = m_position;
-
                 while (char.IsDigit(Current))
                 {
                     Next();
@@ -62,8 +62,6 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (char.IsWhiteSpace(Current))
             {
-                var start = m_position;
-
                 while (char.IsWhiteSpace(Current))
                 {
                     Next();
@@ -79,8 +77,6 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (char.IsLetter(Current))
             {
-                var start = m_position;
-
                 while (char.IsLetter(Current))
                 {
                     Next();
@@ -103,23 +99,42 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case ')': return new SyntaxToken(SyntaxKind.CloseParenthesisToken, m_position++, ")", null);
                 case '&':
                 {
-                    if (Lookahead == '&') return new SyntaxToken(SyntaxKind.AmpersandAmpersandToken, m_position += 2, "&&", null);
+                    if (Lookahead == '&')
+                    {
+                        m_position += 2;
+                        return new SyntaxToken(SyntaxKind.AmpersandAmpersandToken, start, "&&", null);
+                    }
                     break;
                 }
                 case '|':
                 {
-                    if (Lookahead == '|') return new SyntaxToken(SyntaxKind.PipePipeToken, m_position += 2, "||", null);
+                    if (Lookahead == '|')
+                    {
+                        m_position += 2;
+                        return new SyntaxToken(SyntaxKind.PipePipeToken, start, "||", null);
+                    }
                     break;
                 }
                 case '=':
                 {
-                    if (Lookahead == '=') return new SyntaxToken(SyntaxKind.EqualsEqualsToken, m_position += 2, "==", null);
+                    if (Lookahead == '=')
+                    {
+                        m_position += 2;
+                        return new SyntaxToken(SyntaxKind.EqualsEqualsToken, start, "==", null);
+                    }
                     break;
                 }
                 case '!':
                 {
-                    if (Lookahead == '=') return new SyntaxToken(SyntaxKind.BangEqualsToken, m_position += 2, "!=", null);
-                    else return new SyntaxToken(SyntaxKind.BangToken, m_position++, "!", null);
+                    if (Lookahead == '=')
+                    {
+                        m_position += 2;
+                        return new SyntaxToken(SyntaxKind.BangEqualsToken, start, "!=", null);
+                    }
+                    else
+                    {
+                        return new SyntaxToken(SyntaxKind.BangToken, m_position++, "!", null);
+                    }
                 }
             }
 
