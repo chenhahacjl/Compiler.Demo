@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 语法优先级
     /// </summary>
-    internal static class SyntaxFacts
+    public static class SyntaxFacts
     {
         public static int GetUnaryOperatorPrecedence(this SyntaxKind kind)
         {
@@ -21,6 +23,32 @@ namespace Cocoa.CodeAnalysis.Syntax
                 default:
                 {
                     return 0;
+                }
+            }
+        }
+
+        public static IEnumerable<SyntaxKind> GetUnaryOperatorKinds()
+        {
+            var kinds = (SyntaxKind[])Enum.GetValues(typeof(SyntaxKind));
+
+            foreach (var kind in kinds)
+            {
+                if (GetUnaryOperatorPrecedence(kind) > 0)
+                {
+                    yield return kind;
+                }
+            }
+        }
+
+        public static IEnumerable<SyntaxKind> GetBinaryOperatorKinds()
+        {
+            var kinds = (SyntaxKind[])Enum.GetValues(typeof(SyntaxKind));
+
+            foreach (var kind in kinds)
+            {
+                if (GetBinaryOperatorPrecedence(kind) > 0)
+                {
+                    yield return kind;
                 }
             }
         }
@@ -64,7 +92,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
-        internal static SyntaxKind GetKeywordKind(string text)
+        public static SyntaxKind GetKeywordKind(string text)
         {
             switch (text)
             {
@@ -72,6 +100,43 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case "false": return SyntaxKind.FalseKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
+            }
+        }
+
+        public static string GetText(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.PlusToken:
+                    return "+";
+                case SyntaxKind.MinusToken:
+                    return "-";
+                case SyntaxKind.StarToken:
+                    return "*";
+                case SyntaxKind.SlashToken:
+                    return "/";
+                case SyntaxKind.BangToken:
+                    return "!";
+                case SyntaxKind.EqualsToken:
+                    return "=";
+                case SyntaxKind.AmpersandAmpersandToken:
+                    return "&&";
+                case SyntaxKind.PipePipeToken:
+                    return "||";
+                case SyntaxKind.EqualsEqualsToken:
+                    return "==";
+                case SyntaxKind.BangEqualsToken:
+                    return "!=";
+                case SyntaxKind.OpenParenthesisToken:
+                    return "(";
+                case SyntaxKind.CloseParenthesisToken:
+                    return ")";
+                case SyntaxKind.TrueKeyword:
+                    return "true";
+                case SyntaxKind.FalseKeyword:
+                    return "false";
+                default:
+                    return null;
             }
         }
     }
