@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.31702.278
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Compiler.Demo", "Compiler.Demo\Compiler.Demo.csproj", "{12A46A9C-0DE8-4FC5-A039-4024F25F44F9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa", "Cocoa\Cocoa.csproj", "{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa", "Cocoa\Cocoa.csproj", "{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa.Tests", "Cocoa.Tests\Cocoa.Tests.csproj", "{0216636A-D9C9-44A2-89D6-8F5A36935E91}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0216636A-D9C9-44A2-89D6-8F5A36935E91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0216636A-D9C9-44A2-89D6-8F5A36935E91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0216636A-D9C9-44A2-89D6-8F5A36935E91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0216636A-D9C9-44A2-89D6-8F5A36935E91}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
