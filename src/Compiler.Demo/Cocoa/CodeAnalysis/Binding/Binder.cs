@@ -80,11 +80,11 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
         {
             var boundOperand = BindExpression(syntax.Operand);
-            var boundOperator = BoundUnaryOperator.Bind(syntax.OperationToken.Kind, boundOperand.Type);
+            var boundOperator = BoundUnaryOperator.Bind(syntax.OperatorToken.Kind, boundOperand.Type);
 
             if (boundOperator == null)
             {
-                m_diagnostics.ReportUndefinedUnaryOperator(syntax.OperationToken.Span, syntax.OperationToken.Text, boundOperand.Type);
+                m_diagnostics.ReportUndefinedUnaryOperator(syntax.OperatorToken.Span, syntax.OperatorToken.Text, boundOperand.Type);
                 return boundOperand;
             }
 
@@ -95,11 +95,11 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var boundLeft = BindExpression(syntax.Left);
             var boundRight = BindExpression(syntax.Right);
-            var boundOperator = BoundBinaryOperator.Bind(syntax.OperationToken.Kind, boundLeft.Type, boundRight.Type);
+            var boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
 
             if (boundOperator == null)
             {
-                m_diagnostics.ReportUndefinedBinaryOperator(syntax.OperationToken.Span, syntax.OperationToken.Text, boundLeft.Type, boundRight.Type);
+                m_diagnostics.ReportUndefinedBinaryOperator(syntax.OperatorToken.Span, syntax.OperatorToken.Text, boundLeft.Type, boundRight.Type);
                 return boundLeft;
             }
 

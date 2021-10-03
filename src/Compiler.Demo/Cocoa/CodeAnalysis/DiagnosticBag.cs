@@ -31,10 +31,10 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
-        public void ReportBadCharacter(int position, char current)
+        public void ReportBadCharacter(int position, char character)
         {
-            TextSpan span = new TextSpan(position, 1);
-            var message = $"Bad character input: '{current}'.";
+            var span = new TextSpan(position, 1);
+            var message = $"Bad character input: '{character}'.";
             Report(span, message);
         }
 
@@ -50,13 +50,13 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
-        internal void ReportUndefinedBinaryOperator(TextSpan span, string operatorText, Type leftType, Type rightType)
+        public void ReportUndefinedBinaryOperator(TextSpan span, string operatorText, Type leftType, Type rightType)
         {
             var message = $"Binary operator '{operatorText}' is not defined for type {leftType} and {rightType}.";
             Report(span, message);
         }
 
-        internal void ReportUndefinedName(TextSpan span, string name)
+        public void ReportUndefinedName(TextSpan span, string name)
         {
             var message = $"Variable '{name}' doesn't exist.";
             Report(span, message);

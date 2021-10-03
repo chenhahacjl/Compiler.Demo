@@ -27,32 +27,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
-        public static IEnumerable<SyntaxKind> GetUnaryOperatorKinds()
-        {
-            var kinds = (SyntaxKind[])Enum.GetValues(typeof(SyntaxKind));
-
-            foreach (var kind in kinds)
-            {
-                if (GetUnaryOperatorPrecedence(kind) > 0)
-                {
-                    yield return kind;
-                }
-            }
-        }
-
-        public static IEnumerable<SyntaxKind> GetBinaryOperatorKinds()
-        {
-            var kinds = (SyntaxKind[])Enum.GetValues(typeof(SyntaxKind));
-
-            foreach (var kind in kinds)
-            {
-                if (GetBinaryOperatorPrecedence(kind) > 0)
-                {
-                    yield return kind;
-                }
-            }
-        }
-
         public static int GetBinaryOperatorPrecedence(this SyntaxKind kind)
         {
             switch (kind)
@@ -103,6 +77,32 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
+        public static IEnumerable<SyntaxKind> GetUnaryOperatorKinds()
+        {
+            var kinds = (SyntaxKind[])Enum.GetValues(typeof(SyntaxKind));
+
+            foreach (var kind in kinds)
+            {
+                if (GetUnaryOperatorPrecedence(kind) > 0)
+                {
+                    yield return kind;
+                }
+            }
+        }
+
+        public static IEnumerable<SyntaxKind> GetBinaryOperatorKinds()
+        {
+            var kinds = (SyntaxKind[])Enum.GetValues(typeof(SyntaxKind));
+
+            foreach (var kind in kinds)
+            {
+                if (GetBinaryOperatorPrecedence(kind) > 0)
+                {
+                    yield return kind;
+                }
+            }
+        }
+		
         public static string GetText(SyntaxKind kind)
         {
             switch (kind)
@@ -131,10 +131,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "(";
                 case SyntaxKind.CloseParenthesisToken:
                     return ")";
-                case SyntaxKind.TrueKeyword:
-                    return "true";
                 case SyntaxKind.FalseKeyword:
                     return "false";
+                case SyntaxKind.TrueKeyword:
+                    return "true";
                 default:
                     return null;
             }

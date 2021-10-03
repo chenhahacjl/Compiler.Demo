@@ -37,6 +37,7 @@ namespace Cocoa.CodeAnalysis.Text
                 {
                     return index;
                 }
+
                 if (start > position)
                 {
                     upper = index - 1;
@@ -59,25 +60,22 @@ namespace Cocoa.CodeAnalysis.Text
 
             while (position < text.Length)
             {
-                for (int i = 0; i < text.Length; i++)
+                var lineBreakWidth = GetLineBreakWidth(text, position);
+
+                if (lineBreakWidth == 0)
                 {
-                    var lineBreakWidth = GetLineBreakWidth(text, i);
+                    position++;
+                }
+                else
+                {
+                    AddLine(result, sourceText, position, lineStart, lineBreakWidth);
 
-                    if (lineBreakWidth == 0)
-                    {
-                        position++;
-                    }
-                    else
-                    {
-                        AddLine(result, sourceText, position, lineStart, lineBreakWidth);
-
-                        position += lineBreakWidth;
-                        lineStart = position;
-                    }
+                    position += lineBreakWidth;
+                    lineStart = position;
                 }
             }
 
-            if (position > lineStart)
+            if (position >= lineStart)
             {
                 AddLine(result, sourceText, position, lineStart, 0);
             }

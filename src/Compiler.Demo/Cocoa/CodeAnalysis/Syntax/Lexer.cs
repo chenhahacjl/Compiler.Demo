@@ -115,8 +115,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else
                     {
-                        m_kind = SyntaxKind.EqualsEqualsToken;
+
                         m_position++;
+                        m_kind = SyntaxKind.EqualsEqualsToken;
                     }
                     break;
                 }

@@ -7,15 +7,15 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed class UnaryExpressionSyntax : ExpressionSyntax
     {
-        public UnaryExpressionSyntax(SyntaxToken operationToken, ExpressionSyntax operand)
+        public UnaryExpressionSyntax(SyntaxToken operatorToken, ExpressionSyntax operand)
         {
-            OperationToken = operationToken;
+            OperatorToken = operatorToken;
             Operand = operand;
         }
 
         public override SyntaxKind Kind => SyntaxKind.UnaryExpression;
 
-        public SyntaxToken OperationToken { get; }
+        public SyntaxToken OperatorToken { get; }
         public ExpressionSyntax Operand { get; }
     }
 }

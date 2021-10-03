@@ -54,7 +54,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private static void PrettyPrint(TextWriter write, SyntaxNode node, string indent = "", bool isLast = true)
         {
-            var marker = isLast ? "└---" : "├---";
+            var marker = isLast ? "└──" : "├──";
 
             write.Write($"{indent}{marker}{node.Kind}");
 
@@ -77,11 +77,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override string ToString()
         {
-            using (var write = new StringWriter())
+            using (var writer = new StringWriter())
             {
-                WriteTo(write);
+                WriteTo(writer);
 
-                return write.ToString();
+                return writer.ToString();
             }
         }
     }

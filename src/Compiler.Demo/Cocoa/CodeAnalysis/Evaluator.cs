@@ -86,7 +86,7 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.Multiplication: return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division: return (int)left / (int)right;
                 case BoundBinaryOperatorKind.LogicalAnd: return (bool)left && (bool)right;
-                case BoundBinaryOperatorKind.LogicanOr: return (bool)left || (bool)right;
+                case BoundBinaryOperatorKind.LogicalOr: return (bool)left || (bool)right;
                 case BoundBinaryOperatorKind.Equals: return Equals(left, right);
                 case BoundBinaryOperatorKind.NotEquals: return !Equals(left, right);
                 default:

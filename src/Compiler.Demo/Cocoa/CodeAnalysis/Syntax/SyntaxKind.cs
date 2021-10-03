@@ -25,8 +25,8 @@
         IdentifierToken,         // 标识符
 
         // Keywords
-        TrueKeyword,              // true
         FalseKeyword,             // false
+        TrueKeyword,              // true
 
         // Expressions
         LiteralExpression,

@@ -10,7 +10,7 @@
         Multiplication,
         Division,
         LogicalAnd,
-        LogicanOr,
+        LogicalOr,
         Equals,
         NotEquals
     }

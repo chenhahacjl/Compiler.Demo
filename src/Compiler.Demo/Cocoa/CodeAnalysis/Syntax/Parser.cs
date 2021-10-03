@@ -136,8 +136,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.OpenParenthesisToken:
                     return ParseParenthesizedExpression();
 
-                case SyntaxKind.TrueKeyword:
+
                 case SyntaxKind.FalseKeyword:
+                case SyntaxKind.TrueKeyword:
                     return ParseBooleanLiteral();
 
                 case SyntaxKind.NumberToken:

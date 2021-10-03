@@ -7,17 +7,17 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed class BinaryExpressionSyntax : ExpressionSyntax
     {
-        public BinaryExpressionSyntax(ExpressionSyntax left, SyntaxToken operationToken, ExpressionSyntax right)
+        public BinaryExpressionSyntax(ExpressionSyntax left, SyntaxToken operatorToken, ExpressionSyntax right)
         {
             Left = left;
-            OperationToken = operationToken;
+            OperatorToken = operatorToken;
             Right = right;
         }
 
         public override SyntaxKind Kind => SyntaxKind.BinaryExpression;
 
         public ExpressionSyntax Left { get; }
-        public SyntaxToken OperationToken { get; }
+        public SyntaxToken OperatorToken { get; }
         public ExpressionSyntax Right { get; }
     }
 }
