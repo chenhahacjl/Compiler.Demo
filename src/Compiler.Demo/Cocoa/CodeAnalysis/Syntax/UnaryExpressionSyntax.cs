@@ -17,11 +17,5 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken OperationToken { get; }
         public ExpressionSyntax Operand { get; }
-
-        public override IEnumerable<SyntaxNode> GetChildren()
-        {
-            yield return OperationToken;
-            yield return Operand;
-        }
     }
 }
