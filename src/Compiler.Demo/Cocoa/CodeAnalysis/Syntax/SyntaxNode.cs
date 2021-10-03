@@ -1,4 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Text;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,9 +55,18 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private static void PrettyPrint(TextWriter write, SyntaxNode node, string indent = "", bool isLast = true)
         {
+            var isToConsole = write == Console.Out;
             var marker = isLast ? "└──" : "├──";
 
-            write.Write($"{indent}{marker}{node.Kind}");
+            write.Write($"{indent}");
+
+            if (isToConsole) { Console.ForegroundColor = ConsoleColor.DarkGray; }
+            write.Write($"{marker}");
+
+            if (isToConsole) { Console.ForegroundColor = node is SyntaxToken ? ConsoleColor.Blue : ConsoleColor.Cyan; }
+            write.Write($"{node.Kind}");
+
+            if (isToConsole) { Console.ResetColor(); }
 
             if (node is SyntaxToken syntaxToken && syntaxToken.Value != null)
             {
