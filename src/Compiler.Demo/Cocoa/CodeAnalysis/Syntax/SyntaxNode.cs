@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -42,6 +43,44 @@ namespace Cocoa.CodeAnalysis.Syntax
                         yield return child;
                     }
                 }
+            }
+        }
+
+        public void WriteTo(TextWriter writer)
+        {
+            PrettyPrint(writer, this);
+        }
+
+        private static void PrettyPrint(TextWriter write, SyntaxNode node, string indent = "", bool isLast = true)
+        {
+            var marker = isLast ? "└---" : "├---";
+
+            write.Write($"{indent}{marker}{node.Kind}");
+
+            if (node is SyntaxToken syntaxToken && syntaxToken.Value != null)
+            {
+                write.Write($" {syntaxToken.Value}");
+            }
+
+            write.WriteLine();
+
+            indent += isLast ? "　   " : "│   ";
+
+            var lastChild = node.GetChildren().LastOrDefault();
+
+            foreach (var child in node.GetChildren())
+            {
+                PrettyPrint(write, child, indent, child == lastChild);
+            }
+        }
+
+        public override string ToString()
+        {
+            using (var write = new StringWriter())
+            {
+                WriteTo(write);
+
+                return write.ToString();
             }
         }
     }
