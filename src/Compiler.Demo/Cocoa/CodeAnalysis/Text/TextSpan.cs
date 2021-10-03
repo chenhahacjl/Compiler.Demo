@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Cocoa.CodeAnalysis
+namespace Cocoa.CodeAnalysis.Text
 {
     public struct TextSpan
     {

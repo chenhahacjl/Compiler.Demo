@@ -1,4 +1,6 @@
-﻿namespace Cocoa.CodeAnalysis
+﻿using Cocoa.CodeAnalysis.Text;
+
+namespace Cocoa.CodeAnalysis
 {
     public sealed class Diagnostic
     {

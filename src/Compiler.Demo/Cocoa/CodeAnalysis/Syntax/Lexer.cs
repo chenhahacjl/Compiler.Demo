@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Cocoa.CodeAnalysis.Text;
+using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
