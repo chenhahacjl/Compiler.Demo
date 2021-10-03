@@ -123,7 +123,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 foreach (var op2 in SyntaxFacts.GetBinaryOperatorKinds())
                 {
                     yield return new object[] { op1, op2 };
-                    yield break;
                 }
             }
         }
@@ -135,7 +134,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 foreach (var binary in SyntaxFacts.GetBinaryOperatorKinds())
                 {
                     yield return new object[] { unary, binary };
-                    yield break;
                 }
             }
         }
