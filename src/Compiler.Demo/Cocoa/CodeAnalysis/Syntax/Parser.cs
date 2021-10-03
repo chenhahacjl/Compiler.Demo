@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Cocoa.CodeAnalysis.Text;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
@@ -6,11 +7,12 @@ namespace Cocoa.CodeAnalysis.Syntax
     internal sealed class Parser
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
+        private readonly SourceText m_text;
         private readonly ImmutableArray<SyntaxToken> m_tokens;
 
         private int m_position;
 
-        public Parser(string text)
+        public Parser(SourceText text)
         {
             var tokens = new List<SyntaxToken>();
 
@@ -29,6 +31,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             } while (token.Kind != SyntaxKind.EndOfFileToken);
 
+            m_text = text;
             m_tokens = tokens.ToImmutableArray();
             m_diagnostics.AddRange(lexer.Diagnostics);
         }
@@ -72,7 +75,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var expression = ParseExpression();
             var endOfFileToken = MatchToken(SyntaxKind.EndOfFileToken);
 
-            return new SyntaxTree(m_diagnostics.ToImmutableArray(), expression, endOfFileToken);
+            return new SyntaxTree(m_text, m_diagnostics.ToImmutableArray(), expression, endOfFileToken);
         }
 
         private ExpressionSyntax ParseExpression()

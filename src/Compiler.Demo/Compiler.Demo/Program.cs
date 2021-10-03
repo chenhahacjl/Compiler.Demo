@@ -50,12 +50,18 @@ namespace Compiler.Demo
 
                 if (diagnostics.Any())
                 {
+                    var text = syntaxTree.Text;
+
                     foreach (var diagnostic in diagnostics)
                     {
+                        var lineIndex = text.GetLineIndex(diagnostic.Span.Start);
+                        var lineNumber = lineIndex + 1;
+                        var character = diagnostic.Span.Start - text.Lines[lineIndex].Start + 1;
+
                         Console.WriteLine();
 
                         Console.ForegroundColor = ConsoleColor.DarkRed;
-                        Console.WriteLine(diagnostic);
+                        Console.WriteLine($"({lineNumber}, {character}): {diagnostic}");
                         Console.ResetColor();
 
                         var prefix = line.Substring(0, diagnostic.Span.Start);

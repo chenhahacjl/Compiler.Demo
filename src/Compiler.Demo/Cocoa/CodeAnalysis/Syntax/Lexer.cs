@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     internal sealed class Lexer
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
-        private readonly string m_text;
+        private readonly SourceText m_text;
 
         private int m_position;
 
@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         private SyntaxKind m_kind;
         private object m_value;
 
-        public Lexer(string text)
+        public Lexer(SourceText text)
         {
             m_text = text;
         }
@@ -179,7 +179,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var text = SyntaxFacts.GetText(m_kind);
             if (text == null)
             {
-                text = m_text.Substring(m_start, length);
+                text = m_text.ToString(m_start, length);
             }
 
             return new SyntaxToken(m_kind, m_start, text, m_value);
@@ -202,11 +202,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var length = m_position - m_start;
-            var text = m_text.Substring(m_start, length);
+            var text = m_text.ToString(m_start, length);
 
             if (!int.TryParse(text, out var value))
             {
-                m_diagnostics.ReportInvalidNumber(new TextSpan(m_start, length), m_text, typeof(int));
+                m_diagnostics.ReportInvalidNumber(new TextSpan(m_start, length), text, typeof(int));
             }
 
             m_value = value;
@@ -221,7 +221,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var length = m_position - m_start;
-            var text = m_text.Substring(m_start, length);
+            var text = m_text.ToString(m_start, length);
 
             m_kind = SyntaxFacts.GetKeywordKind(text);
         }
