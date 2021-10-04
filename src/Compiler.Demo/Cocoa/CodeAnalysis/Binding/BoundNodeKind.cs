@@ -7,6 +7,7 @@
     {
         // Statement
         BlockStatement,
+        VariableDeclaration,
         ExpressionStatement,
 
         // Expression

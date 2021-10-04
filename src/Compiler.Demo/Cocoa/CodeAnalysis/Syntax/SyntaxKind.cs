@@ -28,13 +28,16 @@
 
         // Keywords
         FalseKeyword,             // false
+        LetKeyword,               // let
         TrueKeyword,              // true
+        VarKeyword,               // var
 
         // Nodes
         CompilationUnit,
 
         // Statements
         BlockStatement,
+        VariableDeclaration,
         ExpressionStatement,
 
         // Expressions

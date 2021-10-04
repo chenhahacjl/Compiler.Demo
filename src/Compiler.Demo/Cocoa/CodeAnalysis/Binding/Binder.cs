@@ -68,6 +68,7 @@ namespace Cocoa.CodeAnalysis.Binding
             switch (syntax.Kind)
             {
                 case SyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
+                case SyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
                 case SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 default:
                     throw new Exception($"Unexcepted syntax {syntax.Kind}");
@@ -77,6 +78,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundStatement BindBlockStatement(BlockStatementSyntax syntax)
         {
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            m_scope = new BoundScope(m_scope);
 
             foreach (var statementSyntax in syntax.Statements)
             {
@@ -84,7 +86,24 @@ namespace Cocoa.CodeAnalysis.Binding
                 statements.Add(statement);
             }
 
+            m_scope = m_scope.Parent;
+
             return new BoundBlockStatement(statements.ToImmutable());
+        }
+
+        private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)
+        {
+            var name = syntax.Identifier.Text;
+            var isReadOnly = syntax.Keyword.Kind == SyntaxKind.LetKeyword;
+            var initializer = BindExpression(syntax.Initializer);
+            var variable = new VariableSymbol(name, isReadOnly, initializer.Type);
+
+            if (!m_scope.TryDeclare(variable))
+            {
+                m_diagnostics.ReportVariableAlreadyDeclared(syntax.Identifier.Span, name);
+            }
+
+            return new BoundVariableDeclaration(variable, initializer);
         }
 
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)
@@ -141,8 +160,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!m_scope.TryLookUp(name, out var variable))
             {
-                variable = new VariableSymbol(name, boundExpression.Type);
-                m_scope.TryDeclare(variable);
+                m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
+                return boundExpression;
+            }
+
+            if (variable.IsReadOnly)
+            {
+                m_diagnostics.ReportCannotAssign(syntax.EqualsToken.Span, name);
             }
 
             if (boundExpression.Type != variable.Type)
