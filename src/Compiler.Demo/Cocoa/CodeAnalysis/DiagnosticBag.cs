@@ -9,6 +9,7 @@ namespace Cocoa.CodeAnalysis
     internal sealed class DiagnosticBag : IEnumerable<Diagnostic>
     {
         private readonly List<Diagnostic> m_diagnostics = new List<Diagnostic>();
+        internal object toImmutableArray;
 
         public IEnumerator<Diagnostic> GetEnumerator() => m_diagnostics.GetEnumerator();
 
@@ -59,6 +60,12 @@ namespace Cocoa.CodeAnalysis
         public void ReportUndefinedName(TextSpan span, string name)
         {
             var message = $"Variable '{name}' doesn't exist.";
+            Report(span, message);
+        }
+
+        public void ReportCannotConvert(TextSpan span, Type fromType, Type toType)
+        {
+            var message = $"Cannot convert type '{fromType}' to '{toType}'.";
             Report(span, message);
         }
     }

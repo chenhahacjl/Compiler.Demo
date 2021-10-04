@@ -15,6 +15,7 @@ namespace Compiler.Demo
             var showTree = false;
             var variables = new Dictionary<VariableSymbol, object>();
             var textBuilder = new StringBuilder();
+            Compilation previous = null;
 
             while (true)
             {
@@ -49,6 +50,11 @@ namespace Compiler.Demo
                         Console.Clear();
                         continue;
                     }
+                    else if (input == "#reset")
+                    {
+                        previous = null;
+                        continue;
+                    }
                 }
 
                 textBuilder.AppendLine(input);
@@ -61,7 +67,10 @@ namespace Compiler.Demo
                     continue;
                 }
 
-                var compilation = new Compilation(syntaxTree);
+                var compilation = previous == null
+                    ? new Compilation(syntaxTree)
+                    : previous.ContinueWith(syntaxTree);
+
                 var result = compilation.Evaluate(variables);
 
                 if (showTree)
@@ -71,7 +80,15 @@ namespace Compiler.Demo
                     Console.ResetColor();
                 }
 
-                if (result.Diagnostics.Any())
+                if (!result.Diagnostics.Any())
+                {
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    Console.WriteLine(result.Value);
+                    Console.ResetColor();
+
+                    previous = compilation;
+                }
+                else
                 {
                     foreach (var diagnostic in result.Diagnostics)
                     {
@@ -105,12 +122,6 @@ namespace Compiler.Demo
                     }
 
                     Console.WriteLine();
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Magenta;
-                    Console.WriteLine(result.Value);
-                    Console.ResetColor();
                 }
 
                 textBuilder.Clear();

@@ -1,6 +1,7 @@
 ﻿using Cocoa.CodeAnalysis.Syntax;
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,12 +10,55 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class Binder
     {
-        private readonly Dictionary<VariableSymbol, object> m_variables;
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
 
-        public Binder(Dictionary<VariableSymbol, object> variables)
+        private BoundScope m_scope;
+
+        public Binder(BoundScope parent)
         {
-            m_variables = variables;
+            m_scope = new BoundScope(parent);
+        }
+
+        public static BoundGlobalScope BindGlobalScope(BoundGlobalScope previous, CompilationUnitSyntax syntax)
+        {
+            var parentScope = CreateParentScopes(previous);
+            var binder = new Binder(parentScope);
+            var expression = binder.BindExpression(syntax.Expression);
+            var variables = binder.m_scope.GetDeclaredVariables();
+            var diagnostics = binder.Diagnostics.ToImmutableArray();
+
+            if (previous != null)
+            {
+                diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
+            }
+
+            return new BoundGlobalScope(previous, diagnostics, variables, expression);
+        }
+
+        private static BoundScope CreateParentScopes(BoundGlobalScope previous)
+        {
+            var stack = new Stack<BoundGlobalScope>();
+            while (previous != null)
+            {
+                stack.Push(previous);
+                previous = previous.Previous;
+            }
+
+            BoundScope parent = null;
+
+            while (stack.Count > 0)
+            {
+                previous = stack.Pop();
+                var scope = new BoundScope(parent);
+                foreach (var v in previous.Variables)
+                {
+                    scope.TryDeclare(v);
+                }
+
+                parent = scope;
+            }
+
+            return parent;
         }
 
         public DiagnosticBag Diagnostics => m_diagnostics;
@@ -49,9 +93,8 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindNameExpression(NameExpressionSyntax syntax)
         {
             var name = syntax.IdentifierToken.Text;
-            var variable = m_variables.Keys.FirstOrDefault(v => v.Name == name);
 
-            if (variable == null)
+            if (!m_scope.TryLookUp(name, out var variable))
             {
                 m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
                 return new BoundLiteralExpression(0);
@@ -65,14 +108,17 @@ namespace Cocoa.CodeAnalysis.Binding
             var name = syntax.IdentifierToken.Text;
             var boundExpression = BindExpression(syntax.Expression);
 
-            var existingVariable = m_variables.Keys.FirstOrDefault(v => v.Name == name);
-            if (existingVariable != null)
+            if (!m_scope.TryLookUp(name, out var variable))
             {
-                m_variables.Remove(existingVariable);
+                variable = new VariableSymbol(name, boundExpression.Type);
+                m_scope.TryDeclare(variable);
             }
 
-            var variable = new VariableSymbol(name, boundExpression.Type);
-            m_variables[variable] = null;
+            if (boundExpression.Type != variable.Type)
+            {
+                m_diagnostics.ReportCannotConvert(syntax.Expression.Span, boundExpression.Type, variable.Type);
+                return boundExpression;
+            }
 
             return new BoundAssignmentExpression(variable, boundExpression);
         }
