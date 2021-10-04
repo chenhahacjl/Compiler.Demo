@@ -71,7 +71,9 @@ namespace Cocoa.CodeAnalysis.Syntax
             switch (text)
             {
                 case "true": return SyntaxKind.TrueKeyword;
+                case "let": return SyntaxKind.LetKeyword;
                 case "false": return SyntaxKind.FalseKeyword;
+                case "var": return SyntaxKind.VarKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -102,7 +104,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
         }
-		
+
         public static string GetText(SyntaxKind kind)
         {
             switch (kind)
@@ -137,8 +139,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "}";
                 case SyntaxKind.FalseKeyword:
                     return "false";
+                case SyntaxKind.LetKeyword:
+                    return "let";
                 case SyntaxKind.TrueKeyword:
                     return "true";
+                case SyntaxKind.VarKeyword:
+                    return "var";
                 default:
                     return null;
             }
