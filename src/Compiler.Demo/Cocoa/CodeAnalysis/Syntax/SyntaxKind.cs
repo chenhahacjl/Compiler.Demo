@@ -22,6 +22,8 @@
         BangEqualsToken,         // !=
         OpenParenthesisToken,    // (
         CloseParenthesisToken,   // )
+        OpenBraceToken,          // {
+        CloseBraceToken,         // }
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -30,6 +32,10 @@
 
         // Nodes
         CompilationUnit,
+
+        // Statements
+        BlockStatement,
+        ExpressionStatement,
 
         // Expressions
         LiteralExpression,

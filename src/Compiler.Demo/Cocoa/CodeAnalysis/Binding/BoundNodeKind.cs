@@ -5,6 +5,11 @@
     /// </summary>
     internal enum BoundNodeKind
     {
+        // Statement
+        BlockStatement,
+        ExpressionStatement,
+
+        // Expression
         LiteralExpression,
         VariableExpression,
         AssignmentExpression,

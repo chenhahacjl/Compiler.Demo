@@ -9,10 +9,12 @@ namespace Cocoa.CodeAnalysis
 {
     internal sealed class Evaluator
     {
-        private readonly BoundExpression m_root;
+        private readonly BoundStatement m_root;
         private readonly Dictionary<VariableSymbol, object> m_variables;
 
-        public Evaluator(BoundExpression root, Dictionary<VariableSymbol, object> variables)
+        private object m_lastValue;
+
+        public Evaluator(BoundStatement root, Dictionary<VariableSymbol, object> variables)
         {
             m_root = root;
             m_variables = variables;
@@ -20,7 +22,36 @@ namespace Cocoa.CodeAnalysis
 
         public object Evaluate()
         {
-            return EvaluateExpression(m_root);
+            EvaluateStatement(m_root);
+            return m_lastValue;
+        }
+
+        private void EvaluateStatement(BoundStatement node)
+        {
+            switch (node.Kind)
+            {
+                case BoundNodeKind.BlockStatement:
+                    EvaluateBlockStatement((BoundBlockStatement)node);
+                    break;
+                case BoundNodeKind.ExpressionStatement:
+                    EvaluateExpressionStatement((BoundExpressionStatement)node);
+                    break;
+                default:
+                    throw new Exception($"Unexcepted node {node.Kind}");
+            }
+        }
+
+        private void EvaluateBlockStatement(BoundBlockStatement node)
+        {
+            foreach (var statement in node.Statements)
+            {
+                EvaluateStatement(statement);
+            }
+        }
+
+        private void EvaluateExpressionStatement(BoundExpressionStatement node)
+        {
+            m_lastValue = EvaluateExpression(node.Expression);
         }
 
         private object EvaluateExpression(BoundExpression node)
