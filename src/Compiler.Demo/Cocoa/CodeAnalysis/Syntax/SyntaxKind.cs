@@ -28,6 +28,9 @@
         FalseKeyword,             // false
         TrueKeyword,              // true
 
+        // Nodes
+        CompilationUnit,
+
         // Expressions
         LiteralExpression,
         NameExpression,
