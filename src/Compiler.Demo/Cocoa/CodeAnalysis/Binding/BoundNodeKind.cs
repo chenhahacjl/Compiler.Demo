@@ -8,6 +8,7 @@
         // Statement
         BlockStatement,
         VariableDeclaration,
+        IfStatement,
         ExpressionStatement,
 
         // Expression

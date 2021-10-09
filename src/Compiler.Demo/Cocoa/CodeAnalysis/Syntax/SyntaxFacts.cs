@@ -74,9 +74,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             switch (text)
             {
-                case "true": return SyntaxKind.TrueKeyword;
-                case "let": return SyntaxKind.LetKeyword;
+                case "else": return SyntaxKind.ElseKeyword;
                 case "false": return SyntaxKind.FalseKeyword;
+                case "if": return SyntaxKind.IfKeyword;
+                case "let": return SyntaxKind.LetKeyword;
+                case "true": return SyntaxKind.TrueKeyword;
                 case "var": return SyntaxKind.VarKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
@@ -149,8 +151,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "{";
                 case SyntaxKind.CloseBraceToken:
                     return "}";
+                case SyntaxKind.ElseKeyword:
+                    return "else";
                 case SyntaxKind.FalseKeyword:
                     return "false";
+                case SyntaxKind.IfKeyword:
+                    return "if";
                 case SyntaxKind.LetKeyword:
                     return "let";
                 case SyntaxKind.TrueKeyword:

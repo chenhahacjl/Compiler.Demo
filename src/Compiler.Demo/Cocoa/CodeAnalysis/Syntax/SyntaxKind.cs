@@ -31,17 +31,21 @@
         IdentifierToken,         // 标识符
 
         // Keywords
+        ElseKeyword,              // else
         FalseKeyword,             // false
+        IfKeyword,                // if
         LetKeyword,               // let
         TrueKeyword,              // true
         VarKeyword,               // var
 
         // Nodes
         CompilationUnit,
+        ElseClause,
 
         // Statements
         BlockStatement,
         VariableDeclaration,
+        IfStatement,
         ExpressionStatement,
 
         // Expressions
