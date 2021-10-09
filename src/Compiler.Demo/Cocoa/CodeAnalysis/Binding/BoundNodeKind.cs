@@ -9,8 +9,9 @@
         BlockStatement,
         VariableDeclaration,
         IfStatement,
-        ExpressionStatement,
         WhileStatement,
+        ForStatement,
+        ExpressionStatement,
 
         // Expression
         LiteralExpression,

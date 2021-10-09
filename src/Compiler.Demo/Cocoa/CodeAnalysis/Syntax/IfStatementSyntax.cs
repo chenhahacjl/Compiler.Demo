@@ -2,9 +2,9 @@
 {
     public sealed class IfStatementSyntax : StatementSyntax
     {
-        public IfStatementSyntax(SyntaxToken ifKeyword, ExpressionSyntax condition, StatementSyntax thenStatement, ElseClauseSyntax elseClause)
+        public IfStatementSyntax(SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax thenStatement, ElseClauseSyntax elseClause)
         {
-            IfKeyword = ifKeyword;
+            Keyword = keyword;
             Condition = condition;
             ThenStatement = thenStatement;
             ElseClause = elseClause;
@@ -12,7 +12,7 @@
 
         public override SyntaxKind Kind => SyntaxKind.IfStatement;
 
-        public SyntaxToken IfKeyword { get; }
+        public SyntaxToken Keyword { get; }
         public ExpressionSyntax Condition { get; }
         public StatementSyntax ThenStatement { get; }
         public ElseClauseSyntax ElseClause { get; }

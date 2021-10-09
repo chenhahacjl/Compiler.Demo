@@ -33,22 +33,25 @@
         // Keywords
         ElseKeyword,              // else
         FalseKeyword,             // false
+        ForKeyword,               // for
         IfKeyword,                // if
         LetKeyword,               // let
+        ToKeyword,                // to
         TrueKeyword,              // true
         VarKeyword,               // var
         WhileKeyword,             // while
 
         // Nodes
-        CompilationUnit,
-        ElseClause,
+        CompilationUnit,          // 编译单元
+        ElseClause,               // else 子语句
 
         // Statements
         BlockStatement,
         VariableDeclaration,
         IfStatement,
-        ExpressionStatement,
         WhileStatement,
+        ForStatement,
+        ExpressionStatement,
 
         // Expressions
         LiteralExpression,

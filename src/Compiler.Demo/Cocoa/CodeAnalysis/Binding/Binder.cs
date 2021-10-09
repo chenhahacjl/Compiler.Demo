@@ -70,8 +70,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
                 case SyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
                 case SyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
-                case SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
+                case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
                 case SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
+                case SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 default:
                     throw new Exception($"Unexcepted syntax {syntax.Kind}");
             }
@@ -123,6 +124,28 @@ namespace Cocoa.CodeAnalysis.Binding
             var body = BindStatement(syntax.Body);
 
             return new BoundWhileStatement(condition, body);
+        }
+
+        private BoundStatement BindForStatement(ForStatementSyntax syntax)
+        {
+            var lowerBound = BindExpression(syntax.LowerBound, typeof(int));
+            var upperBound = BindExpression(syntax.UpperBound, typeof(int));
+
+            m_scope = new BoundScope(m_scope);
+
+            var name = syntax.Identifier.Text;
+            var variable = new VariableSymbol(name, true, typeof(int));
+
+            if (!m_scope.TryDeclare(variable))
+            {
+                m_diagnostics.ReportVariableAlreadyDeclared(syntax.Identifier.Span, name);
+            }
+
+            var body = BindStatement(syntax.Body);
+
+            m_scope = m_scope.Parent;
+
+            return new BoundForStatement(variable, lowerBound, upperBound, body);
         }
 
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)

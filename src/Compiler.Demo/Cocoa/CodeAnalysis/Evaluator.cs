@@ -42,19 +42,14 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.WhileStatement:
                     EvaluateWhileStatement((BoundWhileStatement)node);
                     break;
+                case BoundNodeKind.ForStatement:
+                    EvaluateForStatement((BoundForStatement)node);
+                    break;
                 case BoundNodeKind.ExpressionStatement:
                     EvaluateExpressionStatement((BoundExpressionStatement)node);
                     break;
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
-            }
-        }
-
-        private void EvaluateWhileStatement(BoundWhileStatement node)
-        {
-            while ((bool)EvaluateExpression(node.Condition))
-            {
-                EvaluateStatement(node.Body);
             }
         }
 
@@ -83,6 +78,26 @@ namespace Cocoa.CodeAnalysis
             else if (node.ElseStatement != null)
             {
                 EvaluateStatement(node.ElseStatement);
+            }
+        }
+
+        private void EvaluateWhileStatement(BoundWhileStatement node)
+        {
+            while ((bool)EvaluateExpression(node.Condition))
+            {
+                EvaluateStatement(node.Body);
+            }
+        }
+
+        private void EvaluateForStatement(BoundForStatement node)
+        {
+            var lowerBound = (int)EvaluateExpression(node.LowerBound);
+            var upperBound = (int)EvaluateExpression(node.UpperBound);
+
+            for (int i = lowerBound; i <= upperBound; i++)
+            {
+                m_variables[node.Variable] = i;
+                EvaluateStatement(node.Body);
             }
         }
 
