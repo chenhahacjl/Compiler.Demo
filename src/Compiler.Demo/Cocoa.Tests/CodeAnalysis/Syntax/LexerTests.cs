@@ -220,7 +220,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             {
                 foreach (var t2 in GetTokens())
                 {
-                    if (!RequiresSeparator(t1.kind, t2.kind))
+                    if (RequiresSeparator(t1.kind, t2.kind))
                     {
                         foreach (var s in GetSeparators())
                         {

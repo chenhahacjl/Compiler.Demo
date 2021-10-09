@@ -71,53 +71,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 Variable 'x' is already declared.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
-        }
-
-        [Fact]
-        public void Evaluator_Name_Reports_Undefined()
-        {
-            var text = @"[x] * 10";
-
-            var diagnostiscs = @"
-                Variable 'x' doesn't exist.
-            ";
-
-            AssertHasDiagnostics(text, diagnostiscs);
-        }
-
-        [Fact]
-        public void Evaluator_Assigned_Reports_CannotAssign()
-        {
-            var text = @"
-                {
-                    let x = 10
-                    x [=] 0
-                }
-            ";
-
-            var diagnostiscs = @"
-                Variable 'x' is read-only and cannot be assigned to.
-            ";
-
-            AssertHasDiagnostics(text, diagnostiscs);
-        }
-
-        [Fact]
-        public void Evaluator_Assigned_Reports_CannotConvert()
-        {
-            var text = @"
-                {
-                    var x = 10
-                    x = [true]
-                }
-            ";
-
-            var diagnostiscs = @"
-                Cannot convert type 'System.Boolean' to 'System.Int32'.
-            ";
-
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         [Fact]
@@ -135,7 +89,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 Cannot convert type 'System.Int32' to 'System.Boolean'.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         [Fact]
@@ -153,7 +107,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 Cannot convert type 'System.Int32' to 'System.Boolean'.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         [Fact]
@@ -171,7 +125,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 Cannot convert type 'System.Boolean' to 'System.Int32'.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         [Fact]
@@ -189,11 +143,23 @@ namespace Cocoa.Tests.CodeAnalysis
                 Cannot convert type 'System.Boolean' to 'System.Int32'.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         [Fact]
-        public void Evaluator_Unary_Reports_Undefined()
+        public void Evaluator_NameExpression_Reports_Undefined()
+        {
+            var text = @"[x] * 10";
+
+            var diagnostiscs = @"
+                Variable 'x' doesn't exist.
+            ";
+
+            AssertDiagnostics(text, diagnostiscs);
+        }
+
+        [Fact]
+        public void Evaluator_UnaryExpression_Reports_Undefined()
         {
             var text = @"[+]true";
 
@@ -201,11 +167,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 Unary operator '+' is not defined for type 'System.Boolean'.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         [Fact]
-        public void Evaluator_Binary_Reports_Undefined()
+        public void Evaluator_BinaryExpression_Reports_Undefined()
         {
             var text = @"10 [*] false";
 
@@ -213,7 +179,53 @@ namespace Cocoa.Tests.CodeAnalysis
                 Binary operator '*' is not defined for type 'System.Int32' and 'System.Boolean'.
             ";
 
-            AssertHasDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostiscs);
+        }
+
+        [Fact]
+        public void Evaluator_AssignmentExpression_Reports_Undefined()
+        {
+            var text = @"[x] = 10";
+
+            var diagnostics = @"
+                Variable 'x' doesn't exist.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_AssignmentExpression_Reports_CannotAssign()
+        {
+            var text = @"
+                {
+                    let x = 10
+                    x [=] 0
+                }
+            ";
+
+            var diagnostiscs = @"
+                Variable 'x' is read-only and cannot be assigned to.
+            ";
+
+            AssertDiagnostics(text, diagnostiscs);
+        }
+
+        [Fact]
+        public void Evaluator_AssignmentExpression_Reports_CannotConvert()
+        {
+            var text = @"
+                {
+                    var x = 10
+                    x = [true]
+                }
+            ";
+
+            var diagnostiscs = @"
+                Cannot convert type 'System.Boolean' to 'System.Int32'.
+            ";
+
+            AssertDiagnostics(text, diagnostiscs);
         }
 
         private static void AssertValue(string text, object expectedResult)
@@ -227,7 +239,7 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.Equal(expectedResult, result.Value);
         }
 
-        private void AssertHasDiagnostics(string text, string diagnosticText)
+        private void AssertDiagnostics(string text, string diagnosticText)
         {
             var annotatedText = AnnotatedText.Parse(text);
             var syntaxTree = SyntaxTree.Parse(annotatedText.Text);
