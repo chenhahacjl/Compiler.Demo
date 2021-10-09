@@ -80,6 +80,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case "let": return SyntaxKind.LetKeyword;
                 case "true": return SyntaxKind.TrueKeyword;
                 case "var": return SyntaxKind.VarKeyword;
+                case "while": return SyntaxKind.WhileKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -163,6 +164,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "true";
                 case SyntaxKind.VarKeyword:
                     return "var";
+                case SyntaxKind.WhileKeyword:
+                    return "while";
                 default:
                     return null;
             }

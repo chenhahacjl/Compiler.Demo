@@ -10,6 +10,7 @@
         VariableDeclaration,
         IfStatement,
         ExpressionStatement,
+        WhileStatement,
 
         // Expression
         LiteralExpression,

@@ -39,11 +39,22 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.IfStatement:
                     EvaluateIfStatement((BoundIfStatement)node);
                     break;
+                case BoundNodeKind.WhileStatement:
+                    EvaluateWhileStatement((BoundWhileStatement)node);
+                    break;
                 case BoundNodeKind.ExpressionStatement:
                     EvaluateExpressionStatement((BoundExpressionStatement)node);
                     break;
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
+            }
+        }
+
+        private void EvaluateWhileStatement(BoundWhileStatement node)
+        {
+            while ((bool)EvaluateExpression(node.Condition))
+            {
+                EvaluateStatement(node.Body);
             }
         }
 
