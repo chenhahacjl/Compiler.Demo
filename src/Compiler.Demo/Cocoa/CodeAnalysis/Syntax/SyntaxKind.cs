@@ -20,6 +20,10 @@
         PipePipeToken,           // ||
         EqualsEqualsToken,       // ==
         BangEqualsToken,         // !=
+        LessToken,               // <
+        LessOrEqualsToken,       // <=
+        GreaterToken,            // >
+        GreaterOrEqualsToken,    // >=
         OpenParenthesisToken,    // (
         CloseParenthesisToken,   // )
         OpenBraceToken,          // {

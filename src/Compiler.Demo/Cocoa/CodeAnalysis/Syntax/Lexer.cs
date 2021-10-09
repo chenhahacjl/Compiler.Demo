@@ -147,6 +147,34 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     break;
                 }
+                case '<':
+                {
+                    m_position++;
+                    if (Current != '=')
+                    {
+                        m_kind = SyntaxKind.LessToken;
+                    }
+                    else
+                    {
+                        m_kind = SyntaxKind.LessOrEqualsToken;
+                        m_position++;
+                    }
+                    break;
+                }
+                case '>':
+                {
+                    m_position++;
+                    if (Current != '=')
+                    {
+                        m_kind = SyntaxKind.GreaterToken;
+                    }
+                    else
+                    {
+                        m_kind = SyntaxKind.GreaterOrEqualsToken;
+                        m_position++;
+                    }
+                    break;
+                }
                 case '0':
                 case '1':
                 case '2':
