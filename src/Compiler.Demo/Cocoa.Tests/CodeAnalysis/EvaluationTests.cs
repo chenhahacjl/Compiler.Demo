@@ -159,6 +159,18 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
+        public void Evaluator_NameExpression_Reports_NoErrorForInsertedToken()
+        {
+            var text = @"[]";
+
+            var diagnostiscs = @"
+                Unexpected token <EndOfFileToken>, expected <IdentifierToken>.
+            ";
+
+            AssertDiagnostics(text, diagnostiscs);
+        }
+
+        [Fact]
         public void Evaluator_UnaryExpression_Reports_Undefined()
         {
             var text = @"[+]true";
