@@ -16,7 +16,11 @@
         SlashToken,              // /
         BangToken,               // !
         EqualsToken,             // =
+        TildeToken,              // ~
+        HatToken,                // ^
+        AmpersandToken,          // &
         AmpersandAmpersandToken, // &&
+        PipeToken,               // |
         PipePipeToken,           // ||
         EqualsEqualsToken,       // ==
         BangEqualsToken,         // !=

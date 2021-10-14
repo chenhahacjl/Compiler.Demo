@@ -152,6 +152,7 @@ namespace Cocoa.CodeAnalysis
                 case BoundUnaryOperatorKind.Identity: return (int)operand;
                 case BoundUnaryOperatorKind.Negation: return -(int)operand;
                 case BoundUnaryOperatorKind.LogicalNegation: return !(bool)operand;
+                case BoundUnaryOperatorKind.OnesComplement: return ~(int)operand;
                 default:
                     throw new Exception($"Unexcepted unary operator {unary.Op}");
             }
@@ -168,11 +169,13 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.Subtraction: return (int)left - (int)right;
                 case BoundBinaryOperatorKind.Multiplication: return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division: return (int)left / (int)right;
+                case BoundBinaryOperatorKind.BitwiseAnd: return binary.Type == typeof(int) ? (int)left & (int)right : (bool)left & (bool)right;
+                case BoundBinaryOperatorKind.BitwiseOr: return binary.Type == typeof(int) ? (int)left | (int)right : (bool)left | (bool)right;
+                case BoundBinaryOperatorKind.BitwiseXor: return binary.Type == typeof(int) ? (int)left ^ (int)right : (bool)left ^ (bool)right;
                 case BoundBinaryOperatorKind.LogicalAnd: return (bool)left && (bool)right;
                 case BoundBinaryOperatorKind.LogicalOr: return (bool)left || (bool)right;
                 case BoundBinaryOperatorKind.Equals: return Equals(left, right);
                 case BoundBinaryOperatorKind.NotEquals: return !Equals(left, right);
-
                 case BoundBinaryOperatorKind.Less: return (int)left < (int)right;
                 case BoundBinaryOperatorKind.LessOrEquals: return (int)left <= (int)right;
                 case BoundBinaryOperatorKind.Greater: return (int)left > (int)right;

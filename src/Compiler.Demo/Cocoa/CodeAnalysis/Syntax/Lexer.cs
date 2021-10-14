@@ -98,23 +98,45 @@ namespace Cocoa.CodeAnalysis.Syntax
                     m_position++;
                     break;
                 }
+                case '~':
+                {
+                    m_kind = SyntaxKind.TildeToken;
+                    m_position++;
+                    break;
+                }
+                case '^':
+                {
+                    m_kind = SyntaxKind.HatToken;
+                    m_position++;
+                    break;
+                }
                 case '&':
                 {
-                    if (Lookahead == '&')
+                    m_position++;
+                    if (Current != '&')
                     {
+                        m_kind = SyntaxKind.AmpersandToken;
+                    }
+                    else
+                    {
+
+                        m_position++;
                         m_kind = SyntaxKind.AmpersandAmpersandToken;
-                        m_position += 2;
-                        break;
                     }
                     break;
                 }
                 case '|':
                 {
-                    if (Lookahead == '|')
+                    m_position++;
+                    if (Current != '|')
                     {
+                        m_kind = SyntaxKind.PipeToken;
+                    }
+                    else
+                    {
+
+                        m_position++;
                         m_kind = SyntaxKind.PipePipeToken;
-                        m_position += 2;
-                        break;
                     }
                     break;
                 }

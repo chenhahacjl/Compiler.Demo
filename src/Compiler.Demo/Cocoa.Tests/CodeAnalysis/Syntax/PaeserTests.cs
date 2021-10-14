@@ -80,7 +80,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 //   binary
                 //   /    \
                 // unary   b
-                //  |
+                //   |
+                //   a
 
                 using (var e = new AssertingEnumerator(expression))
                 {
