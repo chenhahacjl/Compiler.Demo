@@ -52,7 +52,7 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportUndefinedBinaryOperator(TextSpan span, string operatorText, Type leftType, Type rightType)
         {
-            var message = $"Binary operator '{operatorText}' is not defined for type '{leftType}' and '{rightType}'.";
+            var message = $"Binary operator '{operatorText}' is not defined for types '{leftType}' and '{rightType}'.";
             Report(span, message);
         }
 

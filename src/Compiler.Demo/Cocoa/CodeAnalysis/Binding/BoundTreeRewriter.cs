@@ -49,7 +49,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if (builder != null)
+            if (builder == null)
             {
                 return node;
             }
@@ -156,41 +156,25 @@ namespace Cocoa.CodeAnalysis.Binding
 
         protected virtual BoundExpression RewriteUnaryExpression(BoundUnaryExpression node)
         {
-            var oprand = RewriteExpression(node.Operand);
-            if (oprand == node.Operand)
+            var operand = RewriteExpression(node.Operand);
+            if (operand == node.Operand)
             {
                 return node;
             }
 
-            return new BoundUnaryExpression(node.Op, oprand);
+            return new BoundUnaryExpression(node.Op, operand);
         }
 
         protected virtual BoundExpression RewriteBinaryExpression(BoundBinaryExpression node)
         {
             var left = RewriteExpression(node.Left);
             var right = RewriteExpression(node.Right);
-            if (right == node.Left && right == node.Right)
+            if (left == node.Left && right == node.Right)
             {
                 return node;
             }
 
             return new BoundBinaryExpression(left, node.Op, right);
-        }
-
-        public virtual BoundNode RewriteNode(BoundNode node)
-        {
-            if (node is BoundStatement statement)
-            {
-                return RewriteStatement(statement);
-            }
-            else if (node is BoundExpression expression)
-            {
-                return RewriteExpression(expression);
-            }
-            else
-            {
-                throw new Exception($"Unexpected node: {node.Kind}");
-            }
         }
     }
 }

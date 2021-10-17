@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Syntax
 {
-    public class PaeserTests
+    public class ParserTests
     {
         [Theory]
         [MemberData(nameof(GetBinaryOperatorPairsData))]
@@ -73,7 +73,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var unaryText = SyntaxFacts.GetText(unaryKind);
             var binaryText = SyntaxFacts.GetText(binaryKind);
             var text = $"{unaryText} a {binaryText} b";
-            ExpressionSyntax expression = ParseExpression(text);
+            var expression = ParseExpression(text);
 
             if (unaryPrecedence >= binaryPrecedence)
             {

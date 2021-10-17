@@ -42,14 +42,11 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.WhileStatement:
                     EvaluateWhileStatement((BoundWhileStatement)node);
                     break;
-                case BoundNodeKind.ForStatement:
-                    EvaluateForStatement((BoundForStatement)node);
-                    break;
                 case BoundNodeKind.ExpressionStatement:
                     EvaluateExpressionStatement((BoundExpressionStatement)node);
                     break;
                 default:
-                    throw new Exception($"Unexcepted node {node.Kind}");
+                    throw new Exception($"Unexpected node {node.Kind}");
             }
         }
 
@@ -88,19 +85,7 @@ namespace Cocoa.CodeAnalysis
                 EvaluateStatement(node.Body);
             }
         }
-
-        private void EvaluateForStatement(BoundForStatement node)
-        {
-            var lowerBound = (int)EvaluateExpression(node.LowerBound);
-            var upperBound = (int)EvaluateExpression(node.UpperBound);
-
-            for (int i = lowerBound; i <= upperBound; i++)
-            {
-                m_variables[node.Variable] = i;
-                EvaluateStatement(node.Body);
-            }
-        }
-
+       
         private void EvaluateExpressionStatement(BoundExpressionStatement node)
         {
             m_lastValue = EvaluateExpression(node.Expression);
@@ -181,7 +166,7 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.Greater: return (int)left > (int)right;
                 case BoundBinaryOperatorKind.GreaterOrEquals: return (int)left >= (int)right;
                 default:
-                    throw new Exception($"Unexcepted binary operator {binary.Op}");
+                    throw new Exception($"Unexpected binary operator {binary.Op}");
             }
         }
     }

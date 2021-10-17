@@ -208,7 +208,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '8':
                 case '9':
                 {
-                    ReadNumberToken();
+                    ReadNumber();
                     break;
                 }
                 case ' ':
@@ -216,18 +216,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '\n':
                 case '\r':
                 {
-                    ReadWhitespace();
+                    ReadWhiteSpace();
                     break;
                 }
                 default:
                 {
                     if (char.IsLetter(Current))
                     {
-                        ReadIdentifierKeyword();
+                        ReadIdentifierOrKeyword();
                     }
                     else if (char.IsWhiteSpace(Current))
                     {
-                        ReadWhitespace();
+                        ReadWhiteSpace();
                     }
                     else
                     {
@@ -247,7 +247,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             return new SyntaxToken(m_kind, m_start, text, m_value);
         }
-        private void ReadWhitespace()
+        private void ReadWhiteSpace()
         {
             while (char.IsWhiteSpace(Current))
             {
@@ -257,7 +257,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             m_kind = SyntaxKind.WhitespaceToken;
         }
 
-        private void ReadNumberToken()
+        private void ReadNumber()
         {
             while (char.IsDigit(Current))
             {
@@ -276,7 +276,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             m_kind = SyntaxKind.NumberToken;
         }
 
-        private void ReadIdentifierKeyword()
+        private void ReadIdentifierOrKeyword()
         {
             while (char.IsLetter(Current))
             {

@@ -59,25 +59,25 @@ namespace Cocoa.CodeAnalysis.Syntax
             PrettyPrint(writer, this);
         }
 
-        private static void PrettyPrint(TextWriter write, SyntaxNode node, string indent = "", bool isLast = true)
+        private static void PrettyPrint(TextWriter writer, SyntaxNode node, string indent = "", bool isLast = true)
         {
-            var isToConsole = write == Console.Out;
+            var isToConsole = writer == Console.Out;
             var marker = isLast ? "└──" : "├──";
 
             if (isToConsole) { Console.ForegroundColor = ConsoleColor.DarkGray; }
-            write.Write($"{indent}{marker}");
+            writer.Write($"{indent}{marker}");
 
             if (isToConsole) { Console.ForegroundColor = node is SyntaxToken ? ConsoleColor.Blue : ConsoleColor.Cyan; }
-            write.Write($"{node.Kind}");
+            writer.Write($"{node.Kind}");
 
             if (node is SyntaxToken syntaxToken && syntaxToken.Value != null)
             {
-                write.Write($" {syntaxToken.Value}");
+                writer.Write($" {syntaxToken.Value}");
             }
 
             if (isToConsole) { Console.ResetColor(); }
 
-            write.WriteLine();
+            writer.WriteLine();
 
             indent += isLast ? "　   " : "│   ";
 
@@ -85,7 +85,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             foreach (var child in node.GetChildren())
             {
-                PrettyPrint(write, child, indent, child == lastChild);
+                PrettyPrint(writer, child, indent, child == lastChild);
             }
         }
 

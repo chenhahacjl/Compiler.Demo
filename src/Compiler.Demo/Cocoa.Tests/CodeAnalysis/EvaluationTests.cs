@@ -56,8 +56,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("true & false", false)]
         [InlineData("true & true", true)]
         [InlineData("false ^ false", false)]
-        [InlineData("false ^ true", true)]
         [InlineData("true ^ false", true)]
+        [InlineData("false ^ true", true)]
         [InlineData("true ^ true", false)]
         [InlineData("true", true)]
         [InlineData("false", false)]
@@ -72,9 +72,9 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var a = 0 if a == 4 a = 10 else a = 5 a }", 5)]
         [InlineData("{ var i = 10 var result = 0 while i > 0 { result = result + i i = i - 1 } result }", 55)]
         [InlineData("{ var result = 0 for i = 1 to 10 { result = result + i } result }", 55)]
-        public void Evaluator_Computes_CorrectValues(string text, object expectedResult)
+        public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
-            AssertValue(text, expectedResult);
+            AssertValue(text, expectedValue);
         }
 
         [Fact]
@@ -91,11 +91,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Variable 'x' is already declared.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -106,12 +106,12 @@ namespace Cocoa.Tests.CodeAnalysis
                 [)][]
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Unexpected token <CloseParenthesisToken>, expected <IdentifierToken>.
                 Unexpected token <EndOfFileToken>, expected <CloseBraceToken>.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -125,11 +125,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Cannot convert type 'System.Int32' to 'System.Boolean'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -143,11 +143,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Cannot convert type 'System.Int32' to 'System.Boolean'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -161,11 +161,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Cannot convert type 'System.Boolean' to 'System.Int32'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -179,11 +179,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Cannot convert type 'System.Boolean' to 'System.Int32'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -191,11 +191,11 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var text = @"[x] * 10";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Variable 'x' doesn't exist.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -203,11 +203,11 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var text = @"[]";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Unexpected token <EndOfFileToken>, expected <IdentifierToken>.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -215,11 +215,11 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var text = @"[+]true";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Unary operator '+' is not defined for type 'System.Boolean'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -227,11 +227,11 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var text = @"10 [*] false";
 
-            var diagnostiscs = @"
-                Binary operator '*' is not defined for type 'System.Int32' and 'System.Boolean'.
+            var diagnostics = @"
+                Binary operator '*' is not defined for types 'System.Int32' and 'System.Boolean'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -256,11 +256,11 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Variable 'x' is read-only and cannot be assigned to.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Fact]
@@ -273,22 +273,22 @@ namespace Cocoa.Tests.CodeAnalysis
                 }
             ";
 
-            var diagnostiscs = @"
+            var diagnostics = @"
                 Cannot convert type 'System.Boolean' to 'System.Int32'.
             ";
 
-            AssertDiagnostics(text, diagnostiscs);
+            AssertDiagnostics(text, diagnostics);
         }
 
-        private static void AssertValue(string text, object expectedResult)
+        private static void AssertValue(string text, object expectedValue)
         {
             var syntaxTree = SyntaxTree.Parse(text);
             var compilation = new Compilation(syntaxTree);
-            var variable = new Dictionary<VariableSymbol, object>();
-            var result = compilation.Evaluate(variable);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
 
             Assert.Empty(result.Diagnostics);
-            Assert.Equal(expectedResult, result.Value);
+            Assert.Equal(expectedValue, result.Value);
         }
 
         private void AssertDiagnostics(string text, string diagnosticText)
@@ -305,7 +305,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 throw new Exception("ERROR: Must mark as many spans as there are expected diagnostics");
             }
 
-            Assert.Equal(annotatedText.Spans.Length, expectedDiagnostics.Length);
+            Assert.Equal(expectedDiagnostics.Length, result.Diagnostics.Length);
 
             for (int i = 0; i < expectedDiagnostics.Length; i++)
             {

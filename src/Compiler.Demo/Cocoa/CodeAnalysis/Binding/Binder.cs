@@ -177,7 +177,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
                 case SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
                 default:
-                    throw new Exception($"Unexcepted syntax {syntax.Kind}");
+                    throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
         }
 

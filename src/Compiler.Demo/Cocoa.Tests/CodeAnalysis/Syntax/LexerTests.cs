@@ -14,7 +14,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             var tokenKinds = Enum.GetValues(typeof(SyntaxKind))
                 .Cast<SyntaxKind>()
-                .Where(k => k.ToString().EndsWith("keyword") ||
+                .Where(k => k.ToString().EndsWith("Keyword") ||
                             k.ToString().EndsWith("Token"));
 
             var testedTokenKinds = GetTokens().Concat(GetSeparators()).Select(t => t.kind);
@@ -55,7 +55,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
         [Theory]
         [MemberData(nameof(GetTokenPairsWithSeparatorData))]
-        public void Lexer_Lexes_TokenPairs_WithSeparator(SyntaxKind t1Kind, string t1Text,
+        public void Lexer_Lexes_TokenPairs_WithSeparators(SyntaxKind t1Kind, string t1Text,
                                                          SyntaxKind separatorKind, string separatorText,
                                                          SyntaxKind t2Kind, string t2Text)
         {
