@@ -9,12 +9,12 @@ namespace Cocoa.CodeAnalysis
 {
     internal sealed class Evaluator
     {
-        private readonly BoundStatement m_root;
+        private readonly BoundBlockStatement m_root;
         private readonly Dictionary<VariableSymbol, object> m_variables;
 
         private object m_lastValue;
 
-        public Evaluator(BoundStatement root, Dictionary<VariableSymbol, object> variables)
+        public Evaluator(BoundBlockStatement root, Dictionary<VariableSymbol, object> variables)
         {
             m_root = root;
             m_variables = variables;
@@ -22,32 +22,57 @@ namespace Cocoa.CodeAnalysis
 
         public object Evaluate()
         {
-            EvaluateStatement(m_root);
-            return m_lastValue;
-        }
+            var labelToIndex = new Dictionary<LabelSymbol, int>();
 
-        private void EvaluateStatement(BoundStatement node)
-        {
-            switch (node.Kind)
+            for (int i = 0; i < m_root.Statements.Length; i++)
             {
-                case BoundNodeKind.BlockStatement:
-                    EvaluateBlockStatement((BoundBlockStatement)node);
-                    break;
-                case BoundNodeKind.VariableDeclaration:
-                    EvaluateVariableDeclaration((BoundVariableDeclaration)node);
-                    break;
-                case BoundNodeKind.IfStatement:
-                    EvaluateIfStatement((BoundIfStatement)node);
-                    break;
-                case BoundNodeKind.WhileStatement:
-                    EvaluateWhileStatement((BoundWhileStatement)node);
-                    break;
-                case BoundNodeKind.ExpressionStatement:
-                    EvaluateExpressionStatement((BoundExpressionStatement)node);
-                    break;
-                default:
-                    throw new Exception($"Unexpected node {node.Kind}");
+                if (m_root.Statements[i] is BoundLabelStatement label)
+                {
+                    labelToIndex.Add(label.Label, i + 1);
+                }
             }
+
+            var index = 0;
+
+            while (index < m_root.Statements.Length)
+            {
+                var statement = m_root.Statements[index];
+
+                switch (statement.Kind)
+                {
+                    case BoundNodeKind.VariableDeclaration:
+                        EvaluateVariableDeclaration((BoundVariableDeclaration)statement);
+                        index++;
+                        break;
+                    case BoundNodeKind.ExpressionStatement:
+                        EvaluateExpressionStatement((BoundExpressionStatement)statement);
+                        index++;
+                        break;
+                    case BoundNodeKind.GotoStatement:
+                        var gs = (BoundGotoStatement)statement;
+                        index = labelToIndex[gs.Label];
+                        break;
+                    case BoundNodeKind.ConditionalGotoStatement:
+                        var cgs = (BoundConditionalGotoStatement)statement;
+                        var confition = (bool)EvaluateExpression(cgs.Condition);
+                        if (confition && !cgs.JumpIfFalse || !confition && cgs.JumpIfFalse)
+                        {
+                            index = labelToIndex[cgs.Label];
+                        }
+                        else
+                        {
+                            index++;
+                        }
+                        break;
+                    case BoundNodeKind.LabelStatement:
+                        index++;
+                        break;
+                    default:
+                        throw new Exception($"Unexpected node {statement.Kind}");
+                }
+            }
+
+            return m_lastValue;
         }
 
         private void EvaluateVariableDeclaration(BoundVariableDeclaration node)
@@ -57,35 +82,6 @@ namespace Cocoa.CodeAnalysis
             m_lastValue = value;
         }
 
-        private void EvaluateBlockStatement(BoundBlockStatement node)
-        {
-            foreach (var statement in node.Statements)
-            {
-                EvaluateStatement(statement);
-            }
-        }
-
-        private void EvaluateIfStatement(BoundIfStatement node)
-        {
-            var condition = (bool)EvaluateExpression(node.Condition);
-            if (condition)
-            {
-                EvaluateStatement(node.ThenStatement);
-            }
-            else if (node.ElseStatement != null)
-            {
-                EvaluateStatement(node.ElseStatement);
-            }
-        }
-
-        private void EvaluateWhileStatement(BoundWhileStatement node)
-        {
-            while ((bool)EvaluateExpression(node.Condition))
-            {
-                EvaluateStatement(node.Body);
-            }
-        }
-       
         private void EvaluateExpressionStatement(BoundExpressionStatement node)
         {
             m_lastValue = EvaluateExpression(node.Expression);
