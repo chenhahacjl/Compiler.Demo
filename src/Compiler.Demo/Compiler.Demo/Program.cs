@@ -13,6 +13,7 @@ namespace Compiler.Demo
         private static void Main(string[] args)
         {
             var showTree = false;
+            var showProgram = false;
             var variables = new Dictionary<VariableSymbol, object>();
             var textBuilder = new StringBuilder();
             Compilation previous = null;
@@ -39,10 +40,16 @@ namespace Compiler.Demo
                     {
                         break;
                     }
-                    else if (input == "#showTree")
+                    else if ("#showTree".StartsWith(input))
                     {
                         showTree = !showTree;
-                        Console.WriteLine(showTree ? "Showing parse trees." : "Not showing parse trees.");
+                        Console.WriteLine(showTree ? "Showing parse tree." : "Not showing parse tree.");
+                        continue;
+                    }
+                    else if ("#showProgram".StartsWith(input))
+                    {
+                        showProgram = !showProgram;
+                        Console.WriteLine(showProgram ? "Showing bound trees." : "Not showing bound trees.");
                         continue;
                     }
                     else if (input == "#cls")
@@ -71,14 +78,17 @@ namespace Compiler.Demo
                     ? new Compilation(syntaxTree)
                     : previous.ContinueWith(syntaxTree);
 
-                var result = compilation.Evaluate(variables);
-
                 if (showTree)
                 {
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
                     syntaxTree.Root.WriteTo(Console.Out);
-                    Console.ResetColor();
                 }
+
+                if (showProgram)
+                {
+                    compilation.EmitTree(Console.Out);
+                }
+
+                var result = compilation.Evaluate(variables);
 
                 if (!result.Diagnostics.Any())
                 {

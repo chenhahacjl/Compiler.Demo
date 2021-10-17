@@ -1,7 +1,8 @@
 {
   "profiles": {
     "Compiler.Demo": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "remoteDebugEnabled": false
     }
   }
 }

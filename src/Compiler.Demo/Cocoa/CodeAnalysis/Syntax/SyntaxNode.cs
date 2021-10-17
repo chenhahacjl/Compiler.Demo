@@ -64,20 +64,18 @@ namespace Cocoa.CodeAnalysis.Syntax
             var isToConsole = write == Console.Out;
             var marker = isLast ? "└──" : "├──";
 
-            write.Write($"{indent}");
-
             if (isToConsole) { Console.ForegroundColor = ConsoleColor.DarkGray; }
-            write.Write($"{marker}");
+            write.Write($"{indent}{marker}");
 
             if (isToConsole) { Console.ForegroundColor = node is SyntaxToken ? ConsoleColor.Blue : ConsoleColor.Cyan; }
             write.Write($"{node.Kind}");
-
-            if (isToConsole) { Console.ResetColor(); }
 
             if (node is SyntaxToken syntaxToken && syntaxToken.Value != null)
             {
                 write.Write($" {syntaxToken.Value}");
             }
+
+            if (isToConsole) { Console.ResetColor(); }
 
             write.WriteLine();
 
