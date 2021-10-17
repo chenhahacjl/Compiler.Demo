@@ -1,4 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Syntax;
 using System;
 using System.Collections.Generic;
@@ -54,7 +55,8 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(diagnostics, null);
             }
 
-            var evaluator = new Evaluator(GlobalScope.Statement, variables);
+            var statement = GetStatement();
+            var evaluator = new Evaluator(statement, variables);
             var value = evaluator.Evaluate();
 
             return new EvaluationResult(ImmutableArray<Diagnostic>.Empty, value);
@@ -62,7 +64,14 @@ namespace Cocoa.CodeAnalysis
 
         public void EmitTree(TextWriter writer)
         {
-            GlobalScope.Statement.WriteTo(writer);
+            var statement = GetStatement();
+            statement.WriteTo(writer);
+        }
+
+        private BoundStatement GetStatement()
+        {
+            var result = GlobalScope.Statement;
+            return Lowerer.Lower(result);
         }
     }
 }
