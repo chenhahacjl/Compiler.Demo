@@ -72,7 +72,7 @@ namespace Cocoa.CodeAnalysis.Lowering
                 var endLabel = GenerateLabel();
                 var gotoFalse = new BoundConditionalGotoStatement(endLabel, node.Condition, true);
                 var endLabelStatement = new BoundLabelStatement(endLabel);
-                var result = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(gotoFalse, endLabelStatement));
+                var result = new BoundBlockStatement(ImmutableArray.Create<BoundStatement>(gotoFalse, node.ThenStatement, endLabelStatement));
 
                 return RewriteStatement(result);
             }
@@ -95,7 +95,7 @@ namespace Cocoa.CodeAnalysis.Lowering
                 var elseLabel = GenerateLabel();
                 var endLabel = GenerateLabel();
 
-                var gotoFalse = new BoundConditionalGotoStatement(elseLabel, node.Condition, true); ;
+                var gotoFalse = new BoundConditionalGotoStatement(elseLabel, node.Condition, true);
                 var gotoEndStatement = new BoundGotoStatement(endLabel);
                 var elseLabelStatement = new BoundLabelStatement(elseLabel);
                 var endLabelStatement = new BoundLabelStatement(endLabel);
