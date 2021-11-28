@@ -127,7 +127,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundConditionalGotoStatement(node.Label, confition, node.JumpIfFalse);
+            return new BoundConditionalGotoStatement(node.Label, confition, node.JumpIfTrue);
         }
 
         protected virtual BoundStatement RewriteExpressionStatement(BoundExpressionStatement node)

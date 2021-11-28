@@ -54,8 +54,8 @@ namespace Cocoa.CodeAnalysis
                         break;
                     case BoundNodeKind.ConditionalGotoStatement:
                         var cgs = (BoundConditionalGotoStatement)statement;
-                        var confition = (bool)EvaluateExpression(cgs.Condition);
-                        if (confition && !cgs.JumpIfFalse || !confition && cgs.JumpIfFalse)
+                        var condition = (bool)EvaluateExpression(cgs.Condition);
+                        if (condition == cgs.JumpIfTrue)
                         {
                             index = labelToIndex[cgs.Label];
                         }
