@@ -112,7 +112,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
         {
-            var condition = BindExpression(syntax.Condition, typeof(bool));
+            var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
             var thenStatement = BindStatement(syntax.ThenStatement);
             var elseStatement = syntax.ElseClause == null ? null : BindStatement(syntax.ElseClause.ElseStatement);
 
@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindWhileStatement(WhileStatementSyntax syntax)
         {
-            var condition = BindExpression(syntax.Condition, typeof(bool));
+            var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
             var body = BindStatement(syntax.Body);
 
             return new BoundWhileStatement(condition, body);
@@ -129,13 +129,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)
         {
-            var lowerBound = BindExpression(syntax.LowerBound, typeof(int));
-            var upperBound = BindExpression(syntax.UpperBound, typeof(int));
+            var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Interger);
+            var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Interger);
 
             m_scope = new BoundScope(m_scope);
 
             var name = syntax.Identifier.Text;
-            var variable = new VariableSymbol(name, true, typeof(int));
+            var variable = new VariableSymbol(name, true, TypeSymbol.Interger);
 
             if (!m_scope.TryDeclare(variable))
             {
@@ -156,7 +156,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundExpressionStatement(expression);
         }
 
-        private BoundExpression BindExpression(ExpressionSyntax syntax, Type targetType)
+        private BoundExpression BindExpression(ExpressionSyntax syntax, TypeSymbol targetType)
         {
             var result = BindExpression(syntax);
             if (result.Type != targetType)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Cocoa.CodeAnalysis.Symbols;
+using System;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -7,6 +8,6 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal abstract class BoundExpression : BoundNode
     {
-        public abstract Type Type { get; }
+        public abstract TypeSymbol Type { get; }
     }
 }

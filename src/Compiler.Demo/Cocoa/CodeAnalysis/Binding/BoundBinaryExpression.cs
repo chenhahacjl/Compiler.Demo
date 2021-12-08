@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Cocoa.CodeAnalysis.Symbols;
+using System;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -15,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         public override BoundNodeKind Kind => BoundNodeKind.BinaryExpression;
-        public override Type Type => Op.ResultType;
+        public override TypeSymbol Type => Op.ResultType;
 
         public BoundExpression Left { get; }
         public BoundBinaryOperator Op { get; }

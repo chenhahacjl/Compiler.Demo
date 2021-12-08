@@ -1,4 +1,5 @@
-﻿using Cocoa.CodeAnalysis.Text;
+﻿using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Text;
 using System.Collections.Generic;
 using System.Text;
 
@@ -328,7 +329,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (!int.TryParse(text, out var value))
             {
-                m_diagnostics.ReportInvalidNumber(new TextSpan(m_start, length), text, typeof(int));
+                m_diagnostics.ReportInvalidNumber(new TextSpan(m_start, length), text, TypeSymbol.Interger);
             }
 
             m_value = value;
