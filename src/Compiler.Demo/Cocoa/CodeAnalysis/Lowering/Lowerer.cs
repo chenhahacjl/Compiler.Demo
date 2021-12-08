@@ -17,10 +17,10 @@ namespace Cocoa.CodeAnalysis.Lowering
         {
         }
 
-        private LabelSymbol GenerateLabel()
+        private BoundSymbol GenerateLabel()
         {
             var name = $"Label{++m_labelCount}";
-            return new LabelSymbol(name);
+            return new BoundSymbol(name);
         }
 
         public static BoundBlockStatement Lower(BoundStatement statement)

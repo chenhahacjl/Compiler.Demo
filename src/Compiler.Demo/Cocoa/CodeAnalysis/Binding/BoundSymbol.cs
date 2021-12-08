@@ -1,8 +1,8 @@
-﻿namespace Cocoa.CodeAnalysis
+﻿namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class LabelSymbol
+    internal sealed class BoundSymbol
     {
-        internal LabelSymbol(string name)
+        internal BoundSymbol(string name)
         {
             Name = name;
         }

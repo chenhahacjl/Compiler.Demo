@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis
 
         public object Evaluate()
         {
-            var labelToIndex = new Dictionary<LabelSymbol, int>();
+            var labelToIndex = new Dictionary<BoundSymbol, int>();
 
             for (int i = 0; i < m_root.Statements.Length; i++)
             {
