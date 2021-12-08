@@ -10,6 +10,7 @@
         EndOfFileToken,          // <EOF>
         WhitespaceToken,         // 空字符
         NumberToken,             // 数字
+        StringToken,             // "
         PlusToken,               // +
         MinusToken,              // -
         StarToken,               // *

@@ -38,6 +38,12 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
+        public void ReportUnterminatedString(TextSpan span)
+        {
+            var message = $"Unterminated string literal.";
+            Report(span, message);
+        }
+
         public void ReportUnexpcetedToken(TextSpan span, SyntaxKind actualKind, SyntaxKind expectedKind)
         {
             var message = $"Unexpected token <{actualKind}>, expected <{expectedKind}>.";

@@ -1,5 +1,6 @@
 ﻿using Cocoa.CodeAnalysis.Text;
 using System.Collections.Generic;
+using System.Text;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
@@ -197,6 +198,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     break;
                 }
+                case '"':
+                    ReadString();
+                    break;
                 case '0':
                 case '1':
                 case '2':
@@ -247,6 +251,61 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             return new SyntaxToken(m_kind, m_start, text, m_value);
         }
+
+        private void ReadString()
+        {
+            // "Test \" String"
+            // "Test "" String"
+
+            // 跳过当前引号
+            m_position++;
+
+            var stringBuilder = new StringBuilder();
+            var done = false;
+
+            while (!done)
+            {
+                switch (Current)
+                {
+                    case '\0':
+                    case '\r':
+                    case '\n':
+                    {
+                        var span = new TextSpan(m_start, 1);
+                        m_diagnostics.ReportUnterminatedString(span);
+                        done = true;
+
+                        break;
+                    }
+                    case '"':
+                    {
+                        if (Lookahead == '"')
+                        {
+                            stringBuilder.Append(Current);
+                            m_position += 2;
+                        }
+                        else
+                        {
+                            m_position++;
+                            done = true;
+                        }
+
+                        break;
+                    }
+                    default:
+                    {
+                        stringBuilder.Append(Current);
+                        m_position++;
+
+                        break;
+                    }
+                }
+            }
+
+            m_kind = SyntaxKind.StringToken;
+            m_value = stringBuilder.ToString();
+        }
+
         private void ReadWhiteSpace()
         {
             while (char.IsWhiteSpace(Current))

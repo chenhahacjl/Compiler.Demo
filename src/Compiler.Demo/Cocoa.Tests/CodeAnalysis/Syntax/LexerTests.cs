@@ -1,4 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +10,21 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 {
     public class LexerTests
     {
+        [Fact]
+        public void Lexer_Lexes_UnterminatedString()
+        {
+            var text = "\"text";
+            var tokens = SyntaxTree.ParseTokens(text, out var diagnostics);
+
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.StringToken, token.Kind);
+            Assert.Equal(text, token.Text);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Equal(new TextSpan(0, 1), diagnostic.Span);
+            Assert.Equal("Unterminated string literal.", diagnostic.Message);
+        }
+
         [Fact]
         public void Lexer_Covers_AllTokens()
         {
@@ -108,6 +124,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 (SyntaxKind.NumberToken, "9696"),
                 (SyntaxKind.IdentifierToken, "c"),
                 (SyntaxKind.IdentifierToken, "cmile"),
+                (SyntaxKind.StringToken, "\"Cmile\""),
+                (SyntaxKind.StringToken, "\"Cm\"\"ile\""),
             };
 
             return fixedTokens.Concat(dynamicTokens);
@@ -151,6 +169,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.NumberToken && t2Kind == SyntaxKind.NumberToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.StringToken && t2Kind == SyntaxKind.StringToken)
             {
                 return true;
             }
