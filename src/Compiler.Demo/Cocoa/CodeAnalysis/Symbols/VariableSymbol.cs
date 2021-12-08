@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         public override SymbolKind Kind => SymbolKind.Variable;
-
+		
         public bool IsReadOnly { get; }
         public Type Type { get; }
     }
