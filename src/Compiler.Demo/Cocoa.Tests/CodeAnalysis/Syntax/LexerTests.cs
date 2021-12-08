@@ -10,7 +10,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
     public class LexerTests
     {
         [Fact]
-        public void Lexer_Tests_AllTokens()
+        public void Lexer_Covers_AllTokens()
         {
             var tokenKinds = Enum.GetValues(typeof(SyntaxKind))
                 .Cast<SyntaxKind>()
