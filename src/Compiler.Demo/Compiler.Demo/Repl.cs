@@ -82,7 +82,7 @@ namespace Compiler.Demo
                     var blankLine = new string(' ', Console.WindowWidth);
                     for (var i = 0; i < numberOfBlankLines; i++)
                     {
-                        Console.SetCursorPosition(0, m_cursorTop + lineCount + 1);
+                        Console.SetCursorPosition(0, m_cursorTop + lineCount + i);
                         Console.WriteLine(blankLine);
                     }
                 }
@@ -282,7 +282,6 @@ namespace Compiler.Demo
                 view.CurrentLine--;
                 document[view.CurrentLine] = previousLine + currentLine;
                 view.CurrentCharacter = previousLine.Length;
-                return;
             }
             else
             {
@@ -303,7 +302,15 @@ namespace Compiler.Demo
             var line = document[lineIndex];
             var start = view.CurrentCharacter;
             if (start >= line.Length)
+            {
+                if (view.CurrentLine == document.Count - 1)
+                    return;
+
+                var nextLine = document[view.CurrentLine + 1];
+                document[view.CurrentLine] += nextLine;
+                document.RemoveAt(view.CurrentLine + 1);
                 return;
+            }
 
             var before = line.Substring(0, start);
             var after = line.Substring(start + 1);
@@ -351,6 +358,9 @@ namespace Compiler.Demo
 
         private void UpdateDocumentFromHistory(ObservableCollection<string> document, SubmissionView view)
         {
+            if (m_submissionHistory.Count == 0)
+                return;
+
             document.Clear();
 
             var historyItem = m_submissionHistory[m_submissionHistoryIndex];
