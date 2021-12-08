@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Cocoa.CodeAnalysis
+namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class VariableSymbol
     {

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Cocoa.CodeAnalysis.Symbols;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding

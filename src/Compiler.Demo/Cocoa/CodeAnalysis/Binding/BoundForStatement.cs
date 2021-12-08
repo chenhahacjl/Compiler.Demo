@@ -1,4 +1,6 @@
-﻿namespace Cocoa.CodeAnalysis.Binding
+﻿using Cocoa.CodeAnalysis.Symbols;
+
+namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundForStatement : BoundStatement
     {
