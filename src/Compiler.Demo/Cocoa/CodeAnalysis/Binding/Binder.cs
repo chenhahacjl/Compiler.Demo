@@ -97,15 +97,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)
         {
-            var name = syntax.Identifier.Text;
             var isReadOnly = syntax.Keyword.Kind == SyntaxKind.LetKeyword;
             var initializer = BindExpression(syntax.Initializer);
-            var variable = new VariableSymbol(name, isReadOnly, initializer.Type);
-
-            if (!m_scope.TryDeclare(variable))
-            {
-                m_diagnostics.ReportVariableAlreadyDeclared(syntax.Identifier.Span, name);
-            }
+            var variable = BindVariable(syntax.Identifier, isReadOnly, initializer.Type);
 
             return new BoundVariableDeclaration(variable, initializer);
         }
@@ -134,14 +128,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             m_scope = new BoundScope(m_scope);
 
-            var name = syntax.Identifier.Text;
-            var variable = new VariableSymbol(name, true, TypeSymbol.Interger);
-
-            if (!m_scope.TryDeclare(variable))
-            {
-                m_diagnostics.ReportVariableAlreadyDeclared(syntax.Identifier.Span, name);
-            }
-
+            var variable = BindVariable(syntax.Identifier, isReadOnly: true, TypeSymbol.Interger);
             var body = BindStatement(syntax.Body);
 
             m_scope = m_scope.Parent;
@@ -159,7 +146,9 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindExpression(ExpressionSyntax syntax, TypeSymbol targetType)
         {
             var result = BindExpression(syntax);
-            if (result.Type != targetType)
+            if (targetType != TypeSymbol.Error &&
+                result.Type != TypeSymbol.Error &&
+                result.Type != targetType)
             {
                 m_diagnostics.ReportCannotConvert(syntax.Span, result.Type, targetType);
             }
@@ -197,7 +186,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindNameExpression(NameExpressionSyntax syntax)
         {
             var name = syntax.IdentifierToken.Text;
-            if (string.IsNullOrEmpty(name))
+            if (syntax.IdentifierToken.IsMissing)
             {
                 // This means the token was inserted by the parser, We already
                 // reported error so we can just return an error expression.
@@ -275,6 +264,20 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundBinaryExpression(boundLeft, boundOperator, boundRight);
+        }
+
+        private VariableSymbol BindVariable(SyntaxToken identifier, bool isReadOnly, TypeSymbol type)
+        {
+            var name = identifier.Text ?? "?";
+            var declare = !identifier.IsMissing;
+            var variable = new VariableSymbol(name, isReadOnly, type);
+
+            if (declare && !m_scope.TryDeclare(variable))
+            {
+                m_diagnostics.ReportVariableAlreadyDeclared(identifier.Span, name);
+            }
+
+            return variable;
         }
     }
 }
