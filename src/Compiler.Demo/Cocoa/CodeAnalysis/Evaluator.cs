@@ -147,7 +147,7 @@ namespace Cocoa.CodeAnalysis
 
             switch (binary.Op.Kind)
             {
-                case BoundBinaryOperatorKind.Addition: return (int)left + (int)right;
+                case BoundBinaryOperatorKind.Addition: return binary.Type == TypeSymbol.Interger ? (int)left + (int)right : (string)left + (string)right;
                 case BoundBinaryOperatorKind.Subtraction: return (int)left - (int)right;
                 case BoundBinaryOperatorKind.Multiplication: return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division: return (int)left / (int)right;
