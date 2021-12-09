@@ -17,6 +17,7 @@
         ExpressionStatement,
 
         // Expression
+        ErrorExpression,
         LiteralExpression,
         VariableExpression,
         AssignmentExpression,
