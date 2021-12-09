@@ -100,6 +100,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     m_position++;
                     break;
                 }
+                case ',':
+                {
+                    m_kind = SyntaxKind.CommaToken;
+                    m_position++;
+                    break;
+                }
                 case '~':
                 {
                     m_kind = SyntaxKind.TildeToken;

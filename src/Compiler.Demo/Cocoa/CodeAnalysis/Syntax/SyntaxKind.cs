@@ -33,6 +33,7 @@
         CloseParenthesisToken,   // )
         OpenBraceToken,          // {
         CloseBraceToken,         // }
+        CommaToken,              // ,
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -65,5 +66,6 @@
         BinaryExpression,
         ParenthesizedExpression,
         AssignmentExpression,
+        CallExpression,
     }
 }
