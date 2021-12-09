@@ -45,7 +45,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 previous = previous.Previous;
             }
 
-            BoundScope parent = null;
+            var parent = CreateRootScope();
 
             while (stack.Count > 0)
             {
@@ -53,13 +53,25 @@ namespace Cocoa.CodeAnalysis.Binding
                 var scope = new BoundScope(parent);
                 foreach (var v in previous.Variables)
                 {
-                    scope.TryDeclare(v);
+                    scope.TryDeclareVariable(v);
                 }
 
                 parent = scope;
             }
 
             return parent;
+        }
+
+        private static BoundScope CreateRootScope()
+        {
+            var result = new BoundScope(null);
+
+            foreach (var function in BuiltinFunctions.GetAll())
+            {
+                result.TryDeclareFunction(function);
+            }
+
+            return result;
         }
 
         public DiagnosticBag Diagnostics => m_diagnostics;
@@ -206,7 +218,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression();
             }
 
-            if (!m_scope.TryLookUp(name, out var variable))
+            if (!m_scope.TryLookUpVariable(name, out var variable))
             {
                 m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
                 return new BoundErrorExpression();
@@ -220,7 +232,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var name = syntax.IdentifierToken.Text;
             var boundExpression = BindExpression(syntax.Expression);
 
-            if (!m_scope.TryLookUp(name, out var variable))
+            if (!m_scope.TryLookUpVariable(name, out var variable))
             {
                 m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
                 return boundExpression;
@@ -289,10 +301,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(boundArgument);
             }
 
-            var functions = BuiltinFunctions.GetAll();
-
-            var function = functions.SingleOrDefault(f => f.Name == syntax.Identifier.Text);
-            if (function == null)
+            if (!m_scope.TryLookUpFunction(syntax.Identifier.Text, out var function))
             {
                 m_diagnostics.ReportUndefinedFunction(syntax.Identifier.Span, syntax.Identifier.Text);
                 return new BoundErrorExpression();
@@ -326,7 +335,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var declare = !identifier.IsMissing;
             var variable = new VariableSymbol(name, isReadOnly, type);
 
-            if (declare && !m_scope.TryDeclare(variable))
+            if (declare && !m_scope.TryDeclareVariable(variable))
             {
                 m_diagnostics.ReportVariableAlreadyDeclared(identifier.Span, name);
             }
