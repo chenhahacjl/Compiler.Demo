@@ -152,6 +152,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.UnaryExpression: { return RewriteUnaryExpression((BoundUnaryExpression)node); }
                 case BoundNodeKind.BinaryExpression: { return RewriteBinaryExpression((BoundBinaryExpression)node); }
                 case BoundNodeKind.CallExpression: { return RewriteCallExpression((BoundCallExpression)node); }
+                case BoundNodeKind.ConversionExpression: { return RewriteConversionExpression((BoundConversionExpression)node); }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -241,6 +242,17 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundCallExpression(node.Function, builder.MoveToImmutable());
+        }
+
+        protected virtual BoundExpression RewriteConversionExpression(BoundConversionExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundConversionExpression(node.Type, expression);
         }
     }
 }

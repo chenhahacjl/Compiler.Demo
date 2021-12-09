@@ -293,6 +293,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindCallExpression(CallExpressionSyntax syntax)
         {
+            if (syntax.Arguments.Count == 1 && LookupType(syntax.Identifier.Text) is TypeSymbol type)
+            {
+                return BindConversion(type, syntax.Arguments[0]);
+            }
+
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
 
             foreach (var argument in syntax.Arguments)
@@ -329,6 +334,18 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundCallExpression(function, boundArguments.ToImmutable());
         }
 
+        private BoundExpression BindConversion(TypeSymbol type, ExpressionSyntax syntax)
+        {
+            var expression = BindExpression(syntax);
+            var conversion = Conversion.Classify(expression.Type, type);
+            if (!conversion.Exists)
+            {
+                m_diagnostics.ReportCannotConvert(syntax.Span, expression.Type, type);
+            }
+
+            return new BoundConversionExpression(type, expression);
+        }
+
         private VariableSymbol BindVariable(SyntaxToken identifier, bool isReadOnly, TypeSymbol type)
         {
             var name = identifier.Text ?? "?";
@@ -341,6 +358,18 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return variable;
+        }
+
+        private TypeSymbol LookupType(string name)
+        {
+            switch (name)
+            {
+                case "bool": return TypeSymbol.Boolean;
+                case "int": return TypeSymbol.Interger;
+                case "string": return TypeSymbol.String;
+                default:
+                    return null;
+            }
         }
     }
 }
