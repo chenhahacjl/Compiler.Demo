@@ -12,6 +12,7 @@ namespace Cocoa.CodeAnalysis
     {
         private readonly BoundBlockStatement m_root;
         private readonly Dictionary<VariableSymbol, object> m_variables;
+        private Random m_random;
 
         private object m_lastValue;
 
@@ -180,6 +181,17 @@ namespace Cocoa.CodeAnalysis
                 var message = (string)EvaluateExpression(node.Arguments[0]);
                 Console.WriteLine(message);
                 return null;
+            }
+            else if (node.Function == BuiltinFunctions.Random)
+            {
+                var max = (int)EvaluateExpression(node.Arguments[0]);
+
+                if (m_random == null)
+                {
+                    m_random = new Random();
+                }
+
+                return m_random.Next(max);
             }
             else
             {
