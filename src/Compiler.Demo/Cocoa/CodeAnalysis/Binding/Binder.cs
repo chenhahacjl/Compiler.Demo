@@ -1,6 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -167,7 +166,15 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindExpression(ExpressionSyntax syntax, TypeSymbol targetType)
         {
-            return BindConversion(syntax, targetType);
+            var result = BindExpression(syntax);
+            if (targetType != TypeSymbol.Error &&
+                result.Type != TypeSymbol.Error &&
+                result.Type != targetType)
+            {
+                m_diagnostics.ReportCannotConvert(syntax.Span, result.Type, targetType);
+            }
+
+            return result;
         }
 
         private BoundExpression BindExpression(ExpressionSyntax syntax, bool canBeVoid = false)
@@ -245,9 +252,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 m_diagnostics.ReportCannotAssign(syntax.EqualsToken.Span, name);
             }
 
-            var convertedExpression = BindConversion(syntax.Expression.Span, boundExpression, variable.Type);
+            if (boundExpression.Type != variable.Type)
+            {
+                m_diagnostics.ReportCannotConvert(syntax.Expression.Span, boundExpression.Type, variable.Type);
+                return boundExpression;
+            }
 
-            return new BoundAssignmentExpression(variable, convertedExpression);
+            return new BoundAssignmentExpression(variable, boundExpression);
         }
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
@@ -293,7 +304,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             if (syntax.Arguments.Count == 1 && LookupType(syntax.Identifier.Text) is TypeSymbol type)
             {
-                return BindConversion(syntax.Arguments[0], type);
+                return BindConversion(type, syntax.Arguments[0]);
             }
 
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
@@ -332,30 +343,13 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundCallExpression(function, boundArguments.ToImmutable());
         }
 
-        private BoundExpression BindConversion(ExpressionSyntax syntax, TypeSymbol type)
+        private BoundExpression BindConversion(TypeSymbol type, ExpressionSyntax syntax)
         {
             var expression = BindExpression(syntax);
-
-            return BindConversion(syntax.Span, expression, type);
-        }
-
-        private BoundExpression BindConversion(TextSpan diagnosticSpan, BoundExpression expression, TypeSymbol type)
-        {
             var conversion = Conversion.Classify(expression.Type, type);
-
             if (!conversion.Exists)
             {
-                if (expression.Type != TypeSymbol.Error && type != TypeSymbol.Error)
-                {
-                    m_diagnostics.ReportCannotConvert(diagnosticSpan, expression.Type, type);
-                }
-
-                return new BoundErrorExpression();
-            }
-
-            if (conversion.IsIdentity)
-            {
-                return expression;
+                m_diagnostics.ReportCannotConvert(syntax.Span, expression.Type, type);
             }
 
             return new BoundConversionExpression(type, expression);
