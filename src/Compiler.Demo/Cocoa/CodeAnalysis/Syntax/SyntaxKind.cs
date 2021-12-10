@@ -46,6 +46,7 @@
         TrueKeyword,              // true
         VarKeyword,               // var
         WhileKeyword,             // while
+        DoKeyword,                // do
 
         // Nodes
         CompilationUnit,          // 编译单元
@@ -56,6 +57,7 @@
         VariableDeclaration,
         IfStatement,
         WhileStatement,
+        DoWhileStatement,
         ForStatement,
         ExpressionStatement,
 

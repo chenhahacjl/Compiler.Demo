@@ -13,6 +13,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.VariableDeclaration: { return RewriteVariableDeclaration((BoundVariableDeclaration)node); }
                 case BoundNodeKind.IfStatement: { return RewriteIfStatement((BoundIfStatement)node); }
                 case BoundNodeKind.WhileStatement: { return RewriteWhileStatement((BoundWhileStatement)node); }
+                case BoundNodeKind.DoWhileStatement: { return RewriteDoWhileStatement((BoundDoWhileStatement)node); }
                 case BoundNodeKind.ForStatement: { return RewriteForStatement((BoundForStatement)node); }
                 case BoundNodeKind.LabelStatement: { return RewriteLabelStatement((BoundLabelStatement)node); }
                 case BoundNodeKind.GotoStatement: { return RewriteGotoStatement((BoundGotoStatement)node); }
@@ -94,6 +95,18 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundWhileStatement(condition, body);
+        }
+
+        protected virtual BoundStatement RewriteDoWhileStatement(BoundDoWhileStatement node)
+        {
+            var body = RewriteStatement(node.Body);
+            var condition = RewriteExpression(node.Condition);
+            if (body == node.Body && condition == node.Condition)
+            {
+                return node;
+            }
+
+            return new BoundDoWhileStatement(body, condition);
         }
 
         protected virtual BoundStatement RewriteForStatement(BoundForStatement node)

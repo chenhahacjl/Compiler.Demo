@@ -85,6 +85,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
                 case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
                 case SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
+                case SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
                 case SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 default:
                     throw new Exception($"Unexcepted syntax {syntax.Kind}");
@@ -131,6 +132,14 @@ namespace Cocoa.CodeAnalysis.Binding
             var body = BindStatement(syntax.Body);
 
             return new BoundWhileStatement(condition, body);
+        }
+
+        private BoundStatement BindDoWhileStatement(DoWhileStatementSyntax syntax)
+        {
+            var body = BindStatement(syntax.Body);
+            var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
+
+            return new BoundDoWhileStatement(body, condition);
         }
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)

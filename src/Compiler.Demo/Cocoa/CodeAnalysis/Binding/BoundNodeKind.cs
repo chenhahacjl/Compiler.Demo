@@ -10,6 +10,7 @@
         VariableDeclaration,
         IfStatement,
         WhileStatement,
+        DoWhileStatement,
         ForStatement,
         GotoStatement,
         ConditionalGotoStatement,
