@@ -363,7 +363,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (declare && !m_scope.TryDeclareVariable(variable))
             {
-                m_diagnostics.ReportVariableAlreadyDeclared(identifier.Span, name);
+                m_diagnostics.ReportSymbolAlreadyDeclared(identifier.Span, name);
             }
 
             return variable;

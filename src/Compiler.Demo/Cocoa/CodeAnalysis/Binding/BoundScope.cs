@@ -1,13 +1,13 @@
 ﻿using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundScope
     {
-        private Dictionary<string, VariableSymbol> m_variables;
-        private Dictionary<string, FunctionSymbol> m_functions;
+        private Dictionary<string, Symbol> m_symbols;
 
         public BoundScope(BoundScope parent)
         {
@@ -16,30 +16,47 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public BoundScope Parent { get; }
 
-        public bool TryDeclareVariable(VariableSymbol variable)
-        {
-            if (m_variables == null)
-            {
-                m_variables = new Dictionary<string, VariableSymbol>();
-            }
+        public bool TryDeclareVariable(VariableSymbol variable) => TryDeclareSymbol(variable);
 
-            if (m_variables.ContainsKey(variable.Name))
+        public bool TryLookUpVariable(string name, out VariableSymbol variable) => TryLookupSymbol(name, out variable);
+
+        public bool TryDeclareFunction(FunctionSymbol function) => TryDeclareSymbol(function);
+
+        public bool TryLookUpFunction(string name, out FunctionSymbol function) => TryLookupSymbol(name, out function);
+
+        public ImmutableArray<VariableSymbol> GetDeclaredVariables() => GetDeclaredSymbols<VariableSymbol>();
+
+        public ImmutableArray<FunctionSymbol> GetDeclaredFunctions() => GetDeclaredSymbols<FunctionSymbol>();
+
+        private bool TryDeclareSymbol<TSymbol>(TSymbol symbol) where TSymbol : Symbol
+        {
+            if (m_symbols == null)
+            {
+                m_symbols = new Dictionary<string, Symbol>();
+            }
+            else if (m_symbols.ContainsKey(symbol.Name))
             {
                 return false;
             }
 
-            m_variables.Add(variable.Name, variable);
+            m_symbols.Add(symbol.Name, symbol);
 
             return true;
         }
 
-        public bool TryLookUpVariable(string name, out VariableSymbol variable)
+        private bool TryLookupSymbol<TSymbol>(string name, out TSymbol symbol) where TSymbol : Symbol
         {
-            variable = null;
+            symbol = null;
 
-            if (m_variables != null && m_variables.TryGetValue(name, out variable))
+            if (m_symbols != null && m_symbols.TryGetValue(name, out var declaredSymbol))
             {
-                return true;
+                if (declaredSymbol is TSymbol matchingSymbol)
+                {
+                    symbol = matchingSymbol;
+                    return true;
+                }
+
+                return false;
             }
 
             if (Parent == null)
@@ -47,61 +64,17 @@ namespace Cocoa.CodeAnalysis.Binding
                 return false;
             }
 
-            return Parent.TryLookUpVariable(name, out variable);
+            return Parent.TryLookupSymbol(name, out symbol);
         }
 
-        public bool TryDeclareFunction(FunctionSymbol function)
+        private ImmutableArray<TSymbol> GetDeclaredSymbols<TSymbol>() where TSymbol : Symbol
         {
-            if (m_functions == null)
+            if (m_symbols == null)
             {
-                m_functions = new Dictionary<string, FunctionSymbol>();
+                return ImmutableArray<TSymbol>.Empty;
             }
 
-            if (m_functions.ContainsKey(function.Name))
-            {
-                return false;
-            }
-
-            m_functions.Add(function.Name, function);
-
-            return true;
-        }
-
-        public bool TryLookUpFunction(string name, out FunctionSymbol function)
-        {
-            function = null;
-
-            if (m_functions != null && m_functions.TryGetValue(name, out function))
-            {
-                return true;
-            }
-
-            if (Parent == null)
-            {
-                return false;
-            }
-
-            return Parent.TryLookUpFunction(name, out function);
-        }
-
-        public ImmutableArray<VariableSymbol> GetDeclaredVariables()
-        {
-            if (m_variables == null)
-            {
-                return ImmutableArray<VariableSymbol>.Empty;
-            }
-
-            return m_variables.Values.ToImmutableArray();
-        }
-
-        public ImmutableArray<FunctionSymbol> GetDeclaredFunctions()
-        {
-            if (m_functions == null)
-            {
-                return ImmutableArray<FunctionSymbol>.Empty;
-            }
-
-            return m_functions.Values.ToImmutableArray();
+            return m_symbols.Values.OfType<TSymbol>().ToImmutableArray();
         }
     }
 }

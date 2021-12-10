@@ -95,7 +95,7 @@ namespace Cocoa.Tests.CodeAnalysis
             ";
 
             var diagnostics = @"
-                Variable 'x' is already declared.
+                'x' is already declared.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -307,7 +307,7 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var text = @"
                 {
-                    let print = 42
+                    let print = 96
                     [print](""test"")
                 }
             ";
