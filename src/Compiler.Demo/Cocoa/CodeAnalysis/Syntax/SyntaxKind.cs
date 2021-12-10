@@ -33,6 +33,7 @@
         CloseParenthesisToken,   // )
         OpenBraceToken,          // {
         CloseBraceToken,         // }
+        ColonToken,              // :
         CommaToken,              // ,
         IdentifierToken,         // 标识符
 
