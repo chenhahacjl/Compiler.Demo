@@ -102,7 +102,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
                 case ':':
                 {
-                    m_kind = SyntaxKind.CloseBraceToken;
+                    m_kind = SyntaxKind.ColonToken;
                     m_position++;
                     break;
                 }

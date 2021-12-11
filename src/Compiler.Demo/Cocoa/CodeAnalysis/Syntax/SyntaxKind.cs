@@ -52,6 +52,7 @@
         // Nodes
         CompilationUnit,          // 编译单元
         ElseClause,               // else 子语句
+        TypeClause,               // 类型 语句
 
         // Statements
         BlockStatement,
