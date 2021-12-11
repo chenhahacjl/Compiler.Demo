@@ -63,6 +63,12 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
+        public void ReportParameterAlreadyDeclared(TextSpan span, string parameterName)
+        {
+            var message = $"A parameter with name '{parameterName}' already exists.";
+            Report(span, message);
+        }
+
         public void ReportUndefinedName(TextSpan span, string name)
         {
             var message = $"Variable '{name}' doesn't exist.";
@@ -120,6 +126,12 @@ namespace Cocoa.CodeAnalysis
         public void ReportExpressionMustHaveValue(TextSpan span)
         {
             var message = "Expression must have a value.";
+            Report(span, message);
+        }
+
+        public void XXX_ReportFunctionAreUnsupported(TextSpan span)
+        {
+            var message = $"Function with return values are unsupported.";
             Report(span, message);
         }
     }

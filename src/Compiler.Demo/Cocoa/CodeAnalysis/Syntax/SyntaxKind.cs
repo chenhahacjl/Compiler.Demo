@@ -41,6 +41,7 @@
         ElseKeyword,              // else
         FalseKeyword,             // false
         ForKeyword,               // for
+        FunctionKeyword,          // function
         IfKeyword,                // if
         LetKeyword,               // let
         ToKeyword,                // to
@@ -51,8 +52,11 @@
 
         // Nodes
         CompilationUnit,          // 编译单元
-        ElseClause,               // else 子语句
+        FunctionDeclaration,      // 函数定义
+        GlobalStatement,          // 全局声明
+        Parameter,                // 参数
         TypeClause,               // 类型 语句
+        ElseClause,               // else 子语句
 
         // Statements
         BlockStatement,

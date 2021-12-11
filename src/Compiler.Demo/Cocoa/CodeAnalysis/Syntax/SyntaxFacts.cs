@@ -79,6 +79,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case "else": return SyntaxKind.ElseKeyword;
                 case "false": return SyntaxKind.FalseKeyword;
                 case "for": return SyntaxKind.ForKeyword;
+                case "function": return SyntaxKind.FunctionKeyword;
                 case "if": return SyntaxKind.IfKeyword;
                 case "let": return SyntaxKind.LetKeyword;
                 case "to": return SyntaxKind.ToKeyword;
@@ -175,6 +176,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "false";
                 case SyntaxKind.ForKeyword:
                     return "for";
+                case SyntaxKind.FunctionKeyword:
+                    return "function";
                 case SyntaxKind.IfKeyword:
                     return "if";
                 case SyntaxKind.LetKeyword:

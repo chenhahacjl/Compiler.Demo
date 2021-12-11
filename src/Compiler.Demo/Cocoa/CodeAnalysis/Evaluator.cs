@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -10,25 +11,33 @@ namespace Cocoa.CodeAnalysis
 {
     internal sealed class Evaluator
     {
-        private readonly BoundBlockStatement m_root;
-        private readonly Dictionary<VariableSymbol, object> m_variables;
+        private readonly BoundProgram m_program;
+        private readonly Dictionary<VariableSymbol, object> m_globals;
+        private readonly Stack<Dictionary<VariableSymbol, object>> m_locals = new Stack<Dictionary<VariableSymbol, object>>();
         private Random m_random;
 
         private object m_lastValue;
 
-        public Evaluator(BoundBlockStatement root, Dictionary<VariableSymbol, object> variables)
+        public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
-            m_root = root;
-            m_variables = variables;
+            m_program = program;
+
+            m_globals = variables;
+            m_locals.Push(new Dictionary<VariableSymbol, object>());
         }
 
         public object Evaluate()
         {
+            return EvaluateStatement(m_program.Statement);
+        }
+
+        private object EvaluateStatement(BoundBlockStatement body)
+        {
             var labelToIndex = new Dictionary<BoundSymbol, int>();
 
-            for (int i = 0; i < m_root.Statements.Length; i++)
+            for (int i = 0; i < body.Statements.Length; i++)
             {
-                if (m_root.Statements[i] is BoundLabelStatement label)
+                if (body.Statements[i] is BoundLabelStatement label)
                 {
                     labelToIndex.Add(label.Label, i + 1);
                 }
@@ -36,9 +45,9 @@ namespace Cocoa.CodeAnalysis
 
             var index = 0;
 
-            while (index < m_root.Statements.Length)
+            while (index < body.Statements.Length)
             {
-                var statement = m_root.Statements[index];
+                var statement = body.Statements[index];
 
                 switch (statement.Kind)
                 {
@@ -80,8 +89,9 @@ namespace Cocoa.CodeAnalysis
         private void EvaluateVariableDeclaration(BoundVariableDeclaration node)
         {
             var value = EvaluateExpression(node.Initializer);
-            m_variables[node.Variable] = value;
             m_lastValue = value;
+
+            Assign(node.Variable, value);
         }
 
         private void EvaluateExpressionStatement(BoundExpressionStatement node)
@@ -119,13 +129,22 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateVariableExpression(BoundVariableExpression variable)
         {
-            return m_variables[variable.Variable];
+            if (variable.Variable.Kind == SymbolKind.GlocalVariable)
+            {
+                return m_globals[variable.Variable];
+            }
+            else
+            {
+                var locals = m_locals.Peek();
+                return locals[variable.Variable];
+            }
         }
 
         private object EvaluateAssignmentExpression(BoundAssignmentExpression assignment)
         {
             var value = EvaluateExpression(assignment.Expression);
-            m_variables[assignment.Variable] = value;
+
+            Assign(assignment.Variable, value);
 
             return value;
         }
@@ -197,7 +216,23 @@ namespace Cocoa.CodeAnalysis
             }
             else
             {
-                throw new Exception($"Unexpected function {node.Function}");
+                var locals = new Dictionary<VariableSymbol, object>();
+                for (int i = 0; i < node.Arguments.Length; i++)
+                {
+                    var parameter = node.Function.Parameters[i];
+                    var value = EvaluateExpression(node.Arguments[i]);
+
+                    locals.Add(parameter, value);
+                }
+
+                m_locals.Push(locals);
+
+                var statement = m_program.Functions[node.Function];
+                var result = EvaluateStatement(statement);
+
+                m_locals.Pop();
+
+                return result;
             }
         }
 
@@ -219,6 +254,19 @@ namespace Cocoa.CodeAnalysis
             else
             {
                 throw new Exception($"Unexpected type {node.Type}");
+            }
+        }
+
+        private void Assign(VariableSymbol variable, object value)
+        {
+            if (variable.Kind == SymbolKind.GlocalVariable)
+            {
+                m_globals[variable] = value;
+            }
+            else
+            {
+                var locals = m_locals.Peek();
+                locals[variable] = value;
             }
         }
     }
