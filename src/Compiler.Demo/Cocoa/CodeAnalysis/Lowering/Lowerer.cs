@@ -10,6 +10,9 @@ using System.Threading.Tasks;
 
 namespace Cocoa.CodeAnalysis.Lowering
 {
+    /// <summary>
+    /// 语法降级器
+    /// </summary>
     internal sealed class Lowerer : BoundTreeRewriter
     {
         private int m_labelCount;

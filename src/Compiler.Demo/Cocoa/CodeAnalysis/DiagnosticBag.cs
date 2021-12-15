@@ -7,6 +7,9 @@ using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis
 {
+    /// <summary>
+    /// 诊断信息合集
+    /// </summary>
     internal sealed class DiagnosticBag : IEnumerable<Diagnostic>
     {
         private readonly List<Diagnostic> m_diagnostics = new List<Diagnostic>();

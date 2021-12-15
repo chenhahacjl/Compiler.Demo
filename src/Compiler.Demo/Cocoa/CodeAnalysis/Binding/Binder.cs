@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
+    /// <summary>
+    /// 绑定器
+    /// </summary>
     internal sealed class Binder
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();

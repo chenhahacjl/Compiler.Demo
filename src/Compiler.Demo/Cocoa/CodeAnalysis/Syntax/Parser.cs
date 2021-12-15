@@ -4,6 +4,11 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 语法分析器 (Parser)
+    /// <br/>
+    /// Token => 语法树
+    /// </summary>
     internal sealed class Parser
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();

@@ -5,6 +5,11 @@ using System.Text;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 词法分析器 (Lexical Analyzer)
+    /// <br/>
+    /// 字符 => Token
+    /// </summary>
     internal sealed class Lexer
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();

@@ -48,6 +48,9 @@ namespace Cocoa.CodeAnalysis
             return new Compilation(this, syntaxTree);
         }
 
+        /// <summary>
+        /// 求值
+        /// </summary>
         public EvaluationResult Evaluate(Dictionary<VariableSymbol, object> variables)
         {
             var diagnostics = SyntaxTree.Diagnostics.Concat(GlobalScope.Diagnostics).ToImmutableArray();

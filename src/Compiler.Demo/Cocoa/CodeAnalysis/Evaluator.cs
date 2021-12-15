@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace Cocoa.CodeAnalysis
 {
+    /// <summary>
+    /// 求值器
+    /// </summary>
     internal sealed class Evaluator
     {
         private readonly BoundProgram m_program;

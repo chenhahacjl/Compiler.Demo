@@ -1,5 +1,8 @@
 ﻿namespace Cocoa.CodeAnalysis.Syntax
 {
+    /// <summary>
+    /// 函数调用表达式语法
+    /// </summary>
     public sealed class CallExpressionSyntax : ExpressionSyntax
     {
         public CallExpressionSyntax(SyntaxToken identifier, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ExpressionSyntax> arguments, SyntaxToken closeParenthesisToken)

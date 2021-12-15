@@ -2,6 +2,9 @@
 
 namespace Cocoa.CodeAnalysis.Text
 {
+    /// <summary>
+    /// 文本范围
+    /// </summary>
     public struct TextSpan
     {
         public TextSpan(int start, int length)

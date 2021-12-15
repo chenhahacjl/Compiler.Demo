@@ -59,21 +59,21 @@
         ElseClause,               // else 子语句
 
         // Statements
-        BlockStatement,
-        VariableDeclaration,
-        IfStatement,
-        WhileStatement,
-        DoWhileStatement,
-        ForStatement,
-        ExpressionStatement,
+        BlockStatement,           // 块语句
+        VariableDeclaration,      // 变量定义
+        IfStatement,              // IF 判断语句
+        WhileStatement,           // WHILE 循环语句
+        DoWhileStatement,         // DO-WHILE 循环语句
+        ForStatement,             // FOR 循环语句
+        ExpressionStatement,      // 表达式语句
 
         // Expressions
-        LiteralExpression,
-        NameExpression,
-        UnaryExpression,
-        BinaryExpression,
-        ParenthesizedExpression,
-        AssignmentExpression,
-        CallExpression,
+        LiteralExpression,        // 文字表达式
+        NameExpression,           // 名称表达式
+        UnaryExpression,          // 一元表达式
+        BinaryExpression,         // 二元表达式
+        ParenthesizedExpression,  // 括号表达式
+        AssignmentExpression,     // 赋值表达式
+        CallExpression,           // 函数调用表达式
     }
 }
