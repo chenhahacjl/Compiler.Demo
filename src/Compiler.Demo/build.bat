@@ -1,4 +1,7 @@
 @echo off
 
-dotnet build
-dotnet test .\Cocoa.Tests\Cocoa.Tests.csproj
+REM Restore + Build
+dotnet build ".\Cocoa.sln" --nologo || exit /b
+
+REM Test
+dotnet test ".\Cocoa.Tests" --nologo --no-build
