@@ -12,9 +12,9 @@
         WhileStatement,
         DoWhileStatement,
         ForStatement,
+        LabelStatement,
         GotoStatement,
         ConditionalGotoStatement,
-        LabelStatement,
         ExpressionStatement,
 
         // Expression
