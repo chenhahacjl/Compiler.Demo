@@ -132,7 +132,7 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateVariableExpression(BoundVariableExpression variable)
         {
-            if (variable.Variable.Kind == SymbolKind.GlocalVariable)
+            if (variable.Variable.Kind == SymbolKind.GlobalVariable)
             {
                 return m_globals[variable.Variable];
             }
@@ -262,7 +262,7 @@ namespace Cocoa.CodeAnalysis
 
         private void Assign(VariableSymbol variable, object value)
         {
-            if (variable.Kind == SymbolKind.GlocalVariable)
+            if (variable.Kind == SymbolKind.GlobalVariable)
             {
                 m_globals[variable] = value;
             }

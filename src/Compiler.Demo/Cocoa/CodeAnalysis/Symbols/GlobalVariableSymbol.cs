@@ -7,6 +7,6 @@
         {
         }
 
-        public override SymbolKind Kind => SymbolKind.GlocalVariable;
+        public override SymbolKind Kind => SymbolKind.GlobalVariable;
     }
 }
