@@ -132,6 +132,12 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
+        internal void ReportInvalidBreakOrContinue(TextSpan span, string text)
+        {
+            var message = $"The keyword '{text}' can only be used inside of loop.";
+            Report(span, message);
+        }
+
         public void XXX_ReportFunctionAreUnsupported(TextSpan span)
         {
             var message = $"Function with return values are unsupported.";

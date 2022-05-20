@@ -36,7 +36,7 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateStatement(BoundBlockStatement body)
         {
-            var labelToIndex = new Dictionary<BoundSymbol, int>();
+            var labelToIndex = new Dictionary<BoundLabel, int>();
 
             for (int i = 0; i < body.Statements.Length; i++)
             {

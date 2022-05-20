@@ -19,6 +19,8 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
         private readonly FunctionSymbol m_function;
 
+        private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> m_loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
+        private int m_labelCounter;
         private BoundScope m_scope;
 
         public Binder(BoundScope parent, FunctionSymbol function)
@@ -176,6 +178,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public DiagnosticBag Diagnostics => m_diagnostics;
 
+        private BoundStatement BindErrorStatement()
+        {
+            return new BoundExpressionStatement(new BoundErrorExpression());
+        }
+
         private BoundStatement BindStatement(StatementSyntax syntax)
         {
             switch (syntax.Kind)
@@ -183,9 +190,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
                 case SyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
                 case SyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
-                case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
                 case SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
                 case SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
+                case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
+                case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 default:
                     throw new Exception($"Unexcepted syntax {syntax.Kind}");
@@ -248,17 +257,17 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundStatement BindWhileStatement(WhileStatementSyntax syntax)
         {
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
-            var body = BindStatement(syntax.Body);
+            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
-            return new BoundWhileStatement(condition, body);
+            return new BoundWhileStatement(condition, body, breakLabel, continueLabel);
         }
 
         private BoundStatement BindDoWhileStatement(DoWhileStatementSyntax syntax)
         {
-            var body = BindStatement(syntax.Body);
+            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
 
-            return new BoundDoWhileStatement(body, condition);
+            return new BoundDoWhileStatement(body, condition, breakLabel, continueLabel);
         }
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)
@@ -269,11 +278,48 @@ namespace Cocoa.CodeAnalysis.Binding
             m_scope = new BoundScope(m_scope);
 
             var variable = BindVariable(syntax.Identifier, isReadOnly: true, TypeSymbol.Interger);
-            var body = BindStatement(syntax.Body);
+            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
             m_scope = m_scope.Parent;
 
-            return new BoundForStatement(variable, lowerBound, upperBound, body);
+            return new BoundForStatement(variable, lowerBound, upperBound, body, breakLabel, continueLabel);
+        }
+
+        private BoundStatement BindLoopBody(StatementSyntax body, out BoundLabel breakLabel, out BoundLabel continueLabel)
+        {
+            m_labelCounter++;
+            breakLabel = new BoundLabel($"break{m_labelCounter}");
+            continueLabel = new BoundLabel($"continue{m_labelCounter}");
+
+            m_loopStack.Push((breakLabel, continueLabel));
+            var boundBody = BindStatement(body);
+            m_loopStack.Pop();
+
+            return boundBody;
+        }
+
+        private BoundStatement BindBreakStatement(BreakStatementSyntax syntax)
+        {
+            if (m_loopStack.Count == 0)
+            {
+                m_diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Span, syntax.Keyword.Text);
+                return BindErrorStatement();
+            }
+
+            var breakLabel = m_loopStack.Peek().BreakLabel;
+            return new BoundGotoStatement(breakLabel);
+        }
+
+        private BoundStatement BindContinueStatement(ContinueStatementSyntax syntax)
+        {
+            if (m_loopStack.Count == 0)
+            {
+                m_diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Span, syntax.Keyword.Text);
+                return BindErrorStatement();
+            }
+
+            var continueLabel = m_loopStack.Peek().ContinueLabel;
+            return new BoundGotoStatement(continueLabel);
         }
 
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)

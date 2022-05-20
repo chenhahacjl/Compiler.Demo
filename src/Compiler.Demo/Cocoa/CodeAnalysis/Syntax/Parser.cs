@@ -191,6 +191,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseDoWhileStatement();
                 case SyntaxKind.ForKeyword:
                     return ParseForStatement();
+                case SyntaxKind.BreakKeyword:
+                    return ParseBreakStatement();
+                case SyntaxKind.ContinueKeyword:
+                    return ParseContinueStatement();
                 default:
                     return ParseExpressionStatement();
             }
@@ -310,6 +314,20 @@ namespace Cocoa.CodeAnalysis.Syntax
             var body = ParseStatement();
 
             return new ForStatementSyntax(keyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, body);
+        }
+
+        private StatementSyntax ParseBreakStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.BreakKeyword);
+
+            return new BreakStatementSyntax(keyword);
+        }
+
+        private StatementSyntax ParseContinueStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.ContinueKeyword);
+
+            return new ContinueStatementSyntax(keyword);
         }
 
         private StatementSyntax ParseExpressionStatement()

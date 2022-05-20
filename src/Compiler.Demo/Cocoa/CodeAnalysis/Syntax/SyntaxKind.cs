@@ -38,6 +38,8 @@
         IdentifierToken,         // 标识符
 
         // Keywords
+        BreakKeyword,             // break
+        ContinueKeyword,          // continue
         ElseKeyword,              // else
         FalseKeyword,             // false
         ForKeyword,               // for
@@ -56,7 +58,7 @@
         GlobalStatement,          // 全局声明
         Parameter,                // 参数
         TypeClause,               // 类型 语句
-        ElseClause,               // else 子语句
+        ElseClause,               // ELSE 子语句
 
         // Statements
         BlockStatement,           // 块语句
@@ -65,6 +67,8 @@
         WhileStatement,           // WHILE 循环语句
         DoWhileStatement,         // DO-WHILE 循环语句
         ForStatement,             // FOR 循环语句
+        BreakStatement,           // BREAK 语句
+        ContinueStatement,        // CONTINUE 语句
         ExpressionStatement,      // 表达式语句
 
         // Expressions
