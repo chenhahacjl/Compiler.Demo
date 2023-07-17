@@ -81,6 +81,10 @@ namespace Cocoa.CodeAnalysis
                     case BoundNodeKind.LabelStatement:
                         index++;
                         break;
+                    case BoundNodeKind.ReturnStatement:
+                        var rs = (BoundReturnStatement)statement;
+                        m_lastValue = rs.Expression == null ? null : EvaluateExpression(rs.Expression);
+                        return m_lastValue;
                     default:
                         throw new Exception($"Unexpected node {statement.Kind}");
                 }

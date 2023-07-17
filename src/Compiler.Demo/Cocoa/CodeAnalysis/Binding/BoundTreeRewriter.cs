@@ -12,16 +12,28 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             switch (node.Kind)
             {
-                case BoundNodeKind.BlockStatement: { return RewriteBlockStatement((BoundBlockStatement)node); }
-                case BoundNodeKind.VariableDeclaration: { return RewriteVariableDeclaration((BoundVariableDeclaration)node); }
-                case BoundNodeKind.IfStatement: { return RewriteIfStatement((BoundIfStatement)node); }
-                case BoundNodeKind.WhileStatement: { return RewriteWhileStatement((BoundWhileStatement)node); }
-                case BoundNodeKind.DoWhileStatement: { return RewriteDoWhileStatement((BoundDoWhileStatement)node); }
-                case BoundNodeKind.ForStatement: { return RewriteForStatement((BoundForStatement)node); }
-                case BoundNodeKind.LabelStatement: { return RewriteLabelStatement((BoundLabelStatement)node); }
-                case BoundNodeKind.GotoStatement: { return RewriteGotoStatement((BoundGotoStatement)node); }
-                case BoundNodeKind.ConditionalGotoStatement: { return RewriteConditionalGotoStatement((BoundConditionalGotoStatement)node); }
-                case BoundNodeKind.ExpressionStatement: { return RewriteExpressionStatement((BoundExpressionStatement)node); }
+                case BoundNodeKind.BlockStatement:
+                    return RewriteBlockStatement((BoundBlockStatement)node);
+                case BoundNodeKind.VariableDeclaration:
+                    return RewriteVariableDeclaration((BoundVariableDeclaration)node);
+                case BoundNodeKind.IfStatement:
+                    return RewriteIfStatement((BoundIfStatement)node);
+                case BoundNodeKind.WhileStatement:
+                    return RewriteWhileStatement((BoundWhileStatement)node);
+                case BoundNodeKind.DoWhileStatement:
+                    return RewriteDoWhileStatement((BoundDoWhileStatement)node);
+                case BoundNodeKind.ForStatement:
+                    return RewriteForStatement((BoundForStatement)node);
+                case BoundNodeKind.LabelStatement:
+                    return RewriteLabelStatement((BoundLabelStatement)node);
+                case BoundNodeKind.GotoStatement:
+                    return RewriteGotoStatement((BoundGotoStatement)node);
+                case BoundNodeKind.ConditionalGotoStatement:
+                    return RewriteConditionalGotoStatement((BoundConditionalGotoStatement)node);
+                case BoundNodeKind.ReturnStatement:
+                    return RewriteReturnStatement((BoundReturnStatement)node);
+                case BoundNodeKind.ExpressionStatement:
+                    return RewriteExpressionStatement((BoundExpressionStatement)node);
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -144,6 +156,17 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundConditionalGotoStatement(node.Label, confition, node.JumpIfTrue);
+        }
+
+        private BoundStatement RewriteReturnStatement(BoundReturnStatement node)
+        {
+            var expression = node.Expression == null ? null : RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundReturnStatement(expression);
         }
 
         protected virtual BoundStatement RewriteExpressionStatement(BoundExpressionStatement node)

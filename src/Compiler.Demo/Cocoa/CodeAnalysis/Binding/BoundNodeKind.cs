@@ -15,6 +15,7 @@
         LabelStatement,
         GotoStatement,
         ConditionalGotoStatement,
+        ReturnStatement,
         ExpressionStatement,
 
         // Expression

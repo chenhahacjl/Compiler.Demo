@@ -76,19 +76,34 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             switch (text)
             {
-                case "break": return SyntaxKind.BreakKeyword;
-                case "continue": return SyntaxKind.ContinueKeyword;
-                case "else": return SyntaxKind.ElseKeyword;
-                case "false": return SyntaxKind.FalseKeyword;
-                case "for": return SyntaxKind.ForKeyword;
-                case "function": return SyntaxKind.FunctionKeyword;
-                case "if": return SyntaxKind.IfKeyword;
-                case "let": return SyntaxKind.LetKeyword;
-                case "to": return SyntaxKind.ToKeyword;
-                case "true": return SyntaxKind.TrueKeyword;
-                case "var": return SyntaxKind.VarKeyword;
-                case "while": return SyntaxKind.WhileKeyword;
-                case "do": return SyntaxKind.DoKeyword;
+                case "break":
+                    return SyntaxKind.BreakKeyword;
+                case "continue":
+                    return SyntaxKind.ContinueKeyword;
+                case "else":
+                    return SyntaxKind.ElseKeyword;
+                case "false":
+                    return SyntaxKind.FalseKeyword;
+                case "for":
+                    return SyntaxKind.ForKeyword;
+                case "function":
+                    return SyntaxKind.FunctionKeyword;
+                case "if":
+                    return SyntaxKind.IfKeyword;
+                case "let":
+                    return SyntaxKind.LetKeyword;
+                case "return":
+                    return SyntaxKind.ReturnKeyword;
+                case "to":
+                    return SyntaxKind.ToKeyword;
+                case "true":
+                    return SyntaxKind.TrueKeyword;
+                case "var":
+                    return SyntaxKind.VarKeyword;
+                case "while":
+                    return SyntaxKind.WhileKeyword;
+                case "do":
+                    return SyntaxKind.DoKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -188,6 +203,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "if";
                 case SyntaxKind.LetKeyword:
                     return "let";
+                case SyntaxKind.ReturnKeyword:
+                    return "return";
                 case SyntaxKind.ToKeyword:
                     return "to";
                 case SyntaxKind.TrueKeyword:

@@ -46,6 +46,7 @@
         FunctionKeyword,          // function
         IfKeyword,                // if
         LetKeyword,               // let
+        ReturnKeyword,            // return
         ToKeyword,                // to
         TrueKeyword,              // true
         VarKeyword,               // var
@@ -69,6 +70,7 @@
         ForStatement,             // FOR 循环语句
         BreakStatement,           // BREAK 语句
         ContinueStatement,        // CONTINUE 语句
+        ReturnStatement,          // RETURN 语句
         ExpressionStatement,      // 表达式语句
 
         // Expressions
