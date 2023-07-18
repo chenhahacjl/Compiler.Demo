@@ -60,6 +60,20 @@ namespace Cocoa.CodeAnalysis
             }
 
             var program = Binder.BindProgram(GlobalScope);
+
+            var appPath = Environment.GetCommandLineArgs()[0];
+            var appDirectory = Path.GetDirectoryName(appPath);
+            var cfgPath = Path.Combine(appDirectory, "cfg.dot");
+            var cfgStatements = !program.Statement.Statements.Any() && program.Functions.Any()
+                                ? program.Functions.Last().Value
+                                : program.Statement;
+
+            var cfg = ControlFlowGraph.Create(cfgStatements);
+            using (var streamWrite = new StreamWriter(cfgPath))
+            {
+                cfg.WriteTo(streamWrite);
+            }
+
             if (program.Diagnostics.Any())
             {
                 return new EvaluationResult(program.Diagnostics.ToImmutableArray(), null);

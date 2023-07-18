@@ -138,6 +138,12 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
+        public void ReportAllPathMustReturn(TextSpan span)
+        {
+            var message = $"Not all code paths return a value.";
+            Report(span, message);
+        }
+
         public void ReportInvalidReturn(TextSpan span)
         {
             var message = $"The 'return' keyword can only be used inside of functions.";

@@ -84,6 +84,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     var body = binder.BindStatement(function.Declaration.Body);
                     var loweredBody = Lowerer.Lower(body);
 
+                    if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
+                    {
+                        binder.m_diagnostics.ReportAllPathMustReturn(function.Declaration.Identifier.Span);
+                    }
+
                     functionBodies.Add(function, loweredBody);
                     diagnostics.AddRange(binder.Diagnostics);
                 }
