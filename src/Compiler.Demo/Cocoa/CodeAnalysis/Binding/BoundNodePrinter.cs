@@ -105,7 +105,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             if (expression is BoundUnaryExpression unaryExpression)
             {
-                writer.WriteNestedExpression(parentPrecedence, SyntaxFacts.GetBinaryOperatorPrecedence(unaryExpression.Op.SyntaxKind), unaryExpression);
+                writer.WriteNestedExpression(parentPrecedence, SyntaxFacts.GetUnaryOperatorPrecedence(unaryExpression.Op.SyntaxKind), unaryExpression);
             }
             else if (expression is BoundBinaryExpression binaryExpression)
             {
@@ -300,7 +300,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static void WriteUnaryExpression(BoundUnaryExpression node, IndentedTextWriter writer)
         {
-            var precedence = SyntaxFacts.GetBinaryOperatorPrecedence(node.Op.SyntaxKind);
+            var precedence = SyntaxFacts.GetUnaryOperatorPrecedence(node.Op.SyntaxKind);
 
             writer.WritePunctuation(node.Op.SyntaxKind);
             writer.WriteNestedExpression(precedence, node.Operand);
