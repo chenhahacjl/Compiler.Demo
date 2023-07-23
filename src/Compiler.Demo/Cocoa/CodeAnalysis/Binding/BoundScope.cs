@@ -18,11 +18,15 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public bool TryDeclareVariable(VariableSymbol variable) => TryDeclareSymbol(variable);
 
-        public bool TryLookUpVariable(string name, out VariableSymbol variable) => TryLookupSymbol(name, out variable);
-
         public bool TryDeclareFunction(FunctionSymbol function) => TryDeclareSymbol(function);
 
-        public bool TryLookUpFunction(string name, out FunctionSymbol function) => TryLookupSymbol(name, out function);
+        public Symbol TryLookupSymbol(string name)
+        {
+            if (m_symbols != null && m_symbols.TryGetValue(name, out var symbol))
+                return symbol;
+
+            return Parent?.TryLookupSymbol(name);
+        }
 
         public ImmutableArray<VariableSymbol> GetDeclaredVariables() => GetDeclaredSymbols<VariableSymbol>();
 
@@ -42,29 +46,6 @@ namespace Cocoa.CodeAnalysis.Binding
             m_symbols.Add(symbol.Name, symbol);
 
             return true;
-        }
-
-        private bool TryLookupSymbol<TSymbol>(string name, out TSymbol symbol) where TSymbol : Symbol
-        {
-            symbol = null;
-
-            if (m_symbols != null && m_symbols.TryGetValue(name, out var declaredSymbol))
-            {
-                if (declaredSymbol is TSymbol matchingSymbol)
-                {
-                    symbol = matchingSymbol;
-                    return true;
-                }
-
-                return false;
-            }
-
-            if (Parent == null)
-            {
-                return false;
-            }
-
-            return Parent.TryLookupSymbol(name, out symbol);
         }
 
         private ImmutableArray<TSymbol> GetDeclaredSymbols<TSymbol>() where TSymbol : Symbol

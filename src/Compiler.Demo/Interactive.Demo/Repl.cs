@@ -204,7 +204,7 @@ namespace Compiler.Demo
                 }
             }
 
-            if (key.KeyChar >= ' ')
+            if (key.Key != ConsoleKey.Backspace && key.KeyChar >= ' ')
                 HandleTyping(document, view, key.KeyChar.ToString());
         }
 
@@ -213,6 +213,7 @@ namespace Compiler.Demo
             document.Clear();
             document.Add(string.Empty);
             view.CurrentLine = 0;
+            view.CurrentCharacter = 0;
         }
 
         private void HandleEnter(ObservableCollection<string> document, SubmissionView view)

@@ -8,6 +8,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -126,7 +127,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
 
             var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax);
-            if (!m_scope.TryDeclareFunction(function))
+            if (function.Declaration.Identifier.Text != null && !m_scope.TryDeclareFunction(function))
             {
                 m_diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Span, function.Name);
             }
@@ -224,7 +225,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var type = BindTypeClause(syntax.TypeClause);
             var initializer = BindExpression(syntax.Initializer);
             var variableType = type ?? initializer.Type;
-            var variable = BindVariable(syntax.Identifier, isReadOnly, variableType);
+            var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly, variableType);
             var convertedInitializer = BindConversion(syntax.Initializer.Span, initializer, variableType);
 
             return new BoundVariableDeclaration(variable, convertedInitializer);
@@ -278,7 +279,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             m_scope = new BoundScope(m_scope);
 
-            var variable = BindVariable(syntax.Identifier, isReadOnly: true, TypeSymbol.Interger);
+            var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Interger);
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
             m_scope = m_scope.Parent;
@@ -420,11 +421,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression();
             }
 
-            if (!m_scope.TryLookUpVariable(name, out var variable))
-            {
-                m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
+            var variable = BindVariableReference(name, syntax.IdentifierToken.Span);
+            if (variable == null)
                 return new BoundErrorExpression();
-            }
 
             return new BoundVariableExpression(variable);
         }
@@ -434,11 +433,9 @@ namespace Cocoa.CodeAnalysis.Binding
             var name = syntax.IdentifierToken.Text;
             var boundExpression = BindExpression(syntax.Expression);
 
-            if (!m_scope.TryLookUpVariable(name, out var variable))
-            {
-                m_diagnostics.ReportUndefinedName(syntax.IdentifierToken.Span, name);
+            var variable = BindVariableReference(name, syntax.IdentifierToken.Span);
+            if (variable == null)
                 return boundExpression;
-            }
 
             if (variable.IsReadOnly)
             {
@@ -508,9 +505,17 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(boundArgument);
             }
 
-            if (!m_scope.TryLookUpFunction(syntax.Identifier.Text, out var function))
+            var symbol = m_scope.TryLookupSymbol(syntax.Identifier.Text);
+            if (symbol == null)
             {
                 m_diagnostics.ReportUndefinedFunction(syntax.Identifier.Span, syntax.Identifier.Text);
+                return new BoundErrorExpression();
+            }
+
+            var function = symbol as FunctionSymbol;
+            if (function == null)
+            {
+                m_diagnostics.ReportNotAFunction(syntax.Identifier.Span, syntax.Identifier.Text);
                 return new BoundErrorExpression();
             }
 
@@ -599,7 +604,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundConversionExpression(type, expression);
         }
 
-        private VariableSymbol BindVariable(SyntaxToken identifier, bool isReadOnly, TypeSymbol type)
+        private VariableSymbol BindVariableDeclaration(SyntaxToken identifier, bool isReadOnly, TypeSymbol type)
         {
             var name = identifier.Text ?? "?";
             var declare = !identifier.IsMissing;
@@ -613,6 +618,21 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return variable;
+        }
+
+        private VariableSymbol BindVariableReference(string name, TextSpan span)
+        {
+            switch (m_scope.TryLookupSymbol(name))
+            {
+                case VariableSymbol variable:
+                    return variable;
+                case null:
+                    m_diagnostics.ReportUndefinedVariable(span, name);
+                    return null;
+                default:
+                    m_diagnostics.ReportNotAVariable(span, name);
+                    return null;
+            }
         }
 
         private TypeSymbol LookupType(string name)

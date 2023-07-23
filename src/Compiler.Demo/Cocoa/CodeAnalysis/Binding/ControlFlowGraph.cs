@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Data;
@@ -54,10 +55,14 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 using (var stringWrite = new StringWriter())
                 {
-                    foreach (var statement in Statements)
-                        statement.WriteTo(stringWrite);
+                    using (var indentedWriter = new IndentedTextWriter(stringWrite))
+                    {
 
-                    return stringWrite.ToString();
+                        foreach (var statement in Statements)
+                            statement.WriteTo(indentedWriter);
+
+                        return stringWrite.ToString();
+                    }
                 }
             }
         }
@@ -273,7 +278,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             string Quote(string text)
             {
-                return "\"" + text.Replace("\"", "\\\"") + "\"";
+                return "\"" + text.TrimEnd().Replace("\\", "\\\\").Replace("\"", "\\\"").Replace(Environment.NewLine, "\\l") + "\"";
             }
 
             writer.WriteLine("digraph G {");
@@ -289,7 +294,7 @@ namespace Cocoa.CodeAnalysis.Binding
             foreach (var block in Blocks)
             {
                 var id = blockIds[block];
-                var label = Quote(block.ToString().Replace(Environment.NewLine, "\\l"));
+                var label = Quote(block.ToString());
 
                 writer.WriteLine($"    {id} [label = {label}, shape = box]");
             }
@@ -321,8 +326,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var branch in graph.End.Incoming)
             {
-                var lastStatement = branch.From.Statements.Last();
-                if (lastStatement.Kind != BoundNodeKind.ReturnStatement)
+                var lastStatement = branch.From.Statements.LastOrDefault();
+                if (lastStatement == null || lastStatement.Kind != BoundNodeKind.ReturnStatement)
                     return false;
             }
 

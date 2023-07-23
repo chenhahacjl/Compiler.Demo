@@ -68,13 +68,19 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportParameterAlreadyDeclared(TextSpan span, string parameterName)
         {
-            var message = $"A parameter with name '{parameterName}' already exists.";
+            var message = $"A parameter with the name '{parameterName}' already exists.";
             Report(span, message);
         }
 
-        public void ReportUndefinedName(TextSpan span, string name)
+        public void ReportUndefinedVariable(TextSpan span, string name)
         {
             var message = $"Variable '{name}' doesn't exist.";
+            Report(span, message);
+        }
+
+        public void ReportNotAVariable(TextSpan span, string name)
+        {
+            var message = $"'{name}' is not a variable.";
             Report(span, message);
         }
 
@@ -114,6 +120,12 @@ namespace Cocoa.CodeAnalysis
             Report(span, message);
         }
 
+        public void ReportNotAFunction(TextSpan span, string name)
+        {
+            var message = $"'{name}' is not a function.";
+            Report(span, message);
+        }
+
         public void ReportWrongArgumentCount(TextSpan span, string name, int expectedCount, int actualCount)
         {
             var message = $"Function '{name}' requires {expectedCount} arguments but was given {actualCount}.";
@@ -122,7 +134,7 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportWrongArgumentType(TextSpan span, string name, TypeSymbol expectedType, TypeSymbol actualType)
         {
-            var message = $"Parameter '{name}' requires a value of type '{expectedType}' but was given a value of type {actualType}.";
+            var message = $"Parameter '{name}' requires a value of type '{expectedType}' but was given a value of type '{actualType}'.";
             Report(span, message);
         }
 
@@ -134,7 +146,7 @@ namespace Cocoa.CodeAnalysis
 
         internal void ReportInvalidBreakOrContinue(TextSpan span, string text)
         {
-            var message = $"The keyword '{text}' can only be used inside of loop.";
+            var message = $"The keyword '{text}' can only be used inside of loops.";
             Report(span, message);
         }
 
@@ -152,13 +164,13 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportInvalidReturnExpression(TextSpan span, string functionName)
         {
-            var message = $"Since the function '{functionName}' does not return a value the 'return' keyword cannot be follow by an expression.";
+            var message = $"Since the function '{functionName}' does not return a value the 'return' keyword cannot be followed by an expression.";
             Report(span, message);
         }
 
         public void ReportMissingReturnExpression(TextSpan span, TypeSymbol returnType)
         {
-            var message = $"An expression of type '{returnType}' expected.";
+            var message = $"An expression of type '{returnType}' is expected.";
             Report(span, message);
         }
     }
