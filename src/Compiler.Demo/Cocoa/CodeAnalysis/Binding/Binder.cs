@@ -87,7 +87,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
                     {
-                        binder.m_diagnostics.ReportAllPathMustReturn(function.Declaration.Identifier.Span);
+                        binder.m_diagnostics.ReportAllPathMustReturn(function.Declaration.Identifier.Location);
                     }
 
                     functionBodies.Add(function, loweredBody);
@@ -115,7 +115,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 if (!seenParameterNames.Add(parameterName))
                 {
-                    m_diagnostics.ReportParameterAlreadyDeclared(parameterSyntax.Span, parameterName);
+                    m_diagnostics.ReportParameterAlreadyDeclared(parameterSyntax.Location, parameterName);
                 }
                 else
                 {
@@ -129,7 +129,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax);
             if (function.Declaration.Identifier.Text != null && !m_scope.TryDeclareFunction(function))
             {
-                m_diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Span, function.Name);
+                m_diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);
             }
         }
 
@@ -226,7 +226,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var initializer = BindExpression(syntax.Initializer);
             var variableType = type ?? initializer.Type;
             var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly, variableType);
-            var convertedInitializer = BindConversion(syntax.Initializer.Span, initializer, variableType);
+            var convertedInitializer = BindConversion(syntax.Initializer.Location, initializer, variableType);
 
             return new BoundVariableDeclaration(variable, convertedInitializer);
         }
@@ -241,7 +241,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var type = LookupType(syntax.Identifier.Text);
             if (type == null)
             {
-                m_diagnostics.ReportUndefinedType(syntax.Identifier.Span, syntax.Identifier.Text);
+                m_diagnostics.ReportUndefinedType(syntax.Identifier.Location, syntax.Identifier.Text);
             }
 
             return type;
@@ -304,7 +304,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             if (m_loopStack.Count == 0)
             {
-                m_diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Span, syntax.Keyword.Text);
+                m_diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
                 return BindErrorStatement();
             }
 
@@ -316,7 +316,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             if (m_loopStack.Count == 0)
             {
-                m_diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Span, syntax.Keyword.Text);
+                m_diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
                 return BindErrorStatement();
             }
 
@@ -330,21 +330,21 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (m_function == null)
             {
-                m_diagnostics.ReportInvalidReturn(syntax.Keyword.Span);
+                m_diagnostics.ReportInvalidReturn(syntax.Keyword.Location);
             }
             else
             {
                 if (m_function.ReturnType == TypeSymbol.Void)
                 {
                     if (expression != null)
-                        m_diagnostics.ReportInvalidReturnExpression(syntax.Expression.Span, m_function.Name);
+                        m_diagnostics.ReportInvalidReturnExpression(syntax.Expression.Location, m_function.Name);
                 }
                 else
                 {
                     if (expression == null)
-                        m_diagnostics.ReportMissingReturnExpression(syntax.Keyword.Span, m_function.ReturnType);
+                        m_diagnostics.ReportMissingReturnExpression(syntax.Keyword.Location, m_function.ReturnType);
                     else
-                        expression = BindConversion(syntax.Expression.Span, expression, m_function.ReturnType);
+                        expression = BindConversion(syntax.Expression.Location, expression, m_function.ReturnType);
                 }
             }
 
@@ -365,7 +365,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 result.Type != TypeSymbol.Error &&
                 result.Type != targetType)
             {
-                m_diagnostics.ReportCannotConvert(syntax.Span, result.Type, targetType);
+                m_diagnostics.ReportCannotConvert(syntax.Location, result.Type, targetType);
             }
 
             return result;
@@ -376,7 +376,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var result = BindExpressionInternal(syntax);
             if (!canBeVoid && result.Type == TypeSymbol.Void)
             {
-                m_diagnostics.ReportExpressionMustHaveValue(syntax.Span);
+                m_diagnostics.ReportExpressionMustHaveValue(syntax.Location);
                 return new BoundErrorExpression();
             }
 
@@ -421,7 +421,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression();
             }
 
-            var variable = BindVariableReference(name, syntax.IdentifierToken.Span);
+            var variable = BindVariableReference(syntax.IdentifierToken);
             if (variable == null)
                 return new BoundErrorExpression();
 
@@ -433,18 +433,18 @@ namespace Cocoa.CodeAnalysis.Binding
             var name = syntax.IdentifierToken.Text;
             var boundExpression = BindExpression(syntax.Expression);
 
-            var variable = BindVariableReference(name, syntax.IdentifierToken.Span);
+            var variable = BindVariableReference(syntax.IdentifierToken);
             if (variable == null)
                 return boundExpression;
 
             if (variable.IsReadOnly)
             {
-                m_diagnostics.ReportCannotAssign(syntax.EqualsToken.Span, name);
+                m_diagnostics.ReportCannotAssign(syntax.EqualsToken.Location, name);
             }
 
             if (boundExpression.Type != variable.Type)
             {
-                m_diagnostics.ReportCannotConvert(syntax.Expression.Span, boundExpression.Type, variable.Type);
+                m_diagnostics.ReportCannotConvert(syntax.Expression.Location, boundExpression.Type, variable.Type);
                 return boundExpression;
             }
 
@@ -463,7 +463,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundOperator == null)
             {
-                m_diagnostics.ReportUndefinedUnaryOperator(syntax.OperatorToken.Span, syntax.OperatorToken.Text, boundOperand.Type);
+                m_diagnostics.ReportUndefinedUnaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, boundOperand.Type);
                 return new BoundErrorExpression();
             }
 
@@ -483,7 +483,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundOperator == null)
             {
-                m_diagnostics.ReportUndefinedBinaryOperator(syntax.OperatorToken.Span, syntax.OperatorToken.Text, boundLeft.Type, boundRight.Type);
+                m_diagnostics.ReportUndefinedBinaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, boundLeft.Type, boundRight.Type);
                 return new BoundErrorExpression();
             }
 
@@ -508,14 +508,14 @@ namespace Cocoa.CodeAnalysis.Binding
             var symbol = m_scope.TryLookupSymbol(syntax.Identifier.Text);
             if (symbol == null)
             {
-                m_diagnostics.ReportUndefinedFunction(syntax.Identifier.Span, syntax.Identifier.Text);
+                m_diagnostics.ReportUndefinedFunction(syntax.Identifier.Location, syntax.Identifier.Text);
                 return new BoundErrorExpression();
             }
 
             var function = symbol as FunctionSymbol;
             if (function == null)
             {
-                m_diagnostics.ReportNotAFunction(syntax.Identifier.Span, syntax.Identifier.Text);
+                m_diagnostics.ReportNotAFunction(syntax.Identifier.Location, syntax.Identifier.Text);
                 return new BoundErrorExpression();
             }
 
@@ -542,7 +542,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     span = syntax.CloseParenthesisToken.Span;
                 }
 
-                m_diagnostics.ReportWrongArgumentCount(span, function.Name, function.Parameters.Length, syntax.Arguments.Count);
+                var location = new TextLocation(syntax.SyntaxTree.Text, span);
+                m_diagnostics.ReportWrongArgumentCount(location, function.Name, function.Parameters.Length, syntax.Arguments.Count);
                 return new BoundErrorExpression();
             }
 
@@ -556,7 +557,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     if (argument.Type != TypeSymbol.Error)
                     {
-                        m_diagnostics.ReportWrongArgumentType(syntax.Arguments[i].Span, parameter.Name, parameter.Type, argument.Type);
+                        m_diagnostics.ReportWrongArgumentType(syntax.Arguments[i].Location, parameter.Name, parameter.Type, argument.Type);
                     }
 
                     hasErrors = true;
@@ -575,17 +576,17 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var expression = BindExpression(syntax);
 
-            return BindConversion(syntax.Span, expression, type, allowExplicit);
+            return BindConversion(syntax.Location, expression, type, allowExplicit);
         }
 
-        private BoundExpression BindConversion(TextSpan diagnosticSpan, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)
+        private BoundExpression BindConversion(TextLocation diagnosticLocation, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)
         {
             var conversion = Conversion.Classify(expression.Type, type);
             if (!conversion.Exists)
             {
                 if (expression.Type != TypeSymbol.Error && type != TypeSymbol.Error)
                 {
-                    m_diagnostics.ReportCannotConvert(diagnosticSpan, expression.Type, type);
+                    m_diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
                 }
 
                 return new BoundErrorExpression();
@@ -593,7 +594,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!allowExplicit && conversion.IsExplicit)
             {
-                m_diagnostics.ReportCannotConvertImplicitly(diagnosticSpan, expression.Type, type);
+                m_diagnostics.ReportCannotConvertImplicitly(diagnosticLocation, expression.Type, type);
             }
 
             if (conversion.IsIdentity)
@@ -614,23 +615,25 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (declare && !m_scope.TryDeclareVariable(variable))
             {
-                m_diagnostics.ReportSymbolAlreadyDeclared(identifier.Span, name);
+                m_diagnostics.ReportSymbolAlreadyDeclared(identifier.Location, name);
             }
 
             return variable;
         }
 
-        private VariableSymbol BindVariableReference(string name, TextSpan span)
+        private VariableSymbol BindVariableReference(SyntaxToken identifyToken)
         {
+            var name = identifyToken.Text;
+
             switch (m_scope.TryLookupSymbol(name))
             {
                 case VariableSymbol variable:
                     return variable;
                 case null:
-                    m_diagnostics.ReportUndefinedVariable(span, name);
+                    m_diagnostics.ReportUndefinedVariable(identifyToken.Location, name);
                     return null;
                 default:
-                    m_diagnostics.ReportNotAVariable(span, name);
+                    m_diagnostics.ReportNotAVariable(identifyToken.Location, name);
                     return null;
             }
         }

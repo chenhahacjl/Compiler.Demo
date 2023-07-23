@@ -2,7 +2,8 @@
 {
     public sealed class FunctionDeclarationSyntax : MemberSyntax
     {
-        public FunctionDeclarationSyntax(SyntaxToken functionKeyword, SyntaxToken identifier, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> paramenters, SyntaxToken closeParenthesisToken, TypeClauseSyntax type, StatementSyntax body)
+        public FunctionDeclarationSyntax(SyntaxTree syntaxTree, SyntaxToken functionKeyword, SyntaxToken identifier, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> paramenters, SyntaxToken closeParenthesisToken, TypeClauseSyntax type, StatementSyntax body)
+            : base(syntaxTree)
         {
             FunctionKeyword = functionKeyword;
             Identifier = identifier;

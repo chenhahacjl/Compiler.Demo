@@ -12,6 +12,13 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public abstract class SyntaxNode
     {
+        protected SyntaxNode(SyntaxTree syntaxTree)
+        {
+            SyntaxTree = syntaxTree;
+        }
+
+        public SyntaxTree SyntaxTree { get; }
+
         public abstract SyntaxKind Kind { get; }
 
         public virtual TextSpan Span
@@ -24,6 +31,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return TextSpan.FromBounds(first.Start, last.End);
             }
         }
+
+        public TextLocation Location => new TextLocation(SyntaxTree.Text, Span);
 
         public IEnumerable<SyntaxNode> GetChildren()
         {

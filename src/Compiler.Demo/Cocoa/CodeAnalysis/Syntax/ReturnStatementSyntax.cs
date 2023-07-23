@@ -2,7 +2,8 @@
 {
     public sealed class ReturnStatementSyntax : StatementSyntax
     {
-        public ReturnStatementSyntax(SyntaxToken keyword, ExpressionSyntax expression)
+        public ReturnStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax expression)
+            : base(syntaxTree)
         {
             Keyword = keyword;
             Expression = expression;

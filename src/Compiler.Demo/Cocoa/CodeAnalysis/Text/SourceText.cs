@@ -11,11 +11,14 @@ namespace Cocoa.CodeAnalysis.Text
     {
         private readonly string m_text;
 
-        private SourceText(string text)
+        private SourceText(string text, string fileName)
         {
             m_text = text;
+            FileName = fileName;
             Lines = ParseLines(this, text);
         }
+
+        public string FileName { get; }
 
         public ImmutableArray<TextLine> Lines { get; }
 
@@ -51,7 +54,12 @@ namespace Cocoa.CodeAnalysis.Text
             return lower - 1;
         }
 
-        private ImmutableArray<TextLine> ParseLines(SourceText sourceText, string text)
+        public static SourceText From(string text, string fileName = "")
+        {
+            return new SourceText(text, fileName);
+        }
+
+        private static ImmutableArray<TextLine> ParseLines(SourceText sourceText, string text)
         {
             var result = ImmutableArray.CreateBuilder<TextLine>();
 
@@ -108,11 +116,6 @@ namespace Cocoa.CodeAnalysis.Text
             }
 
             return 0;
-        }
-
-        public static SourceText From(string text)
-        {
-            return new SourceText(text);
         }
 
         public override string ToString() => m_text;

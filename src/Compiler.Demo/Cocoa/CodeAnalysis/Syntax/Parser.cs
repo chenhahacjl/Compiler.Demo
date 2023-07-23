@@ -12,16 +12,16 @@ namespace Cocoa.CodeAnalysis.Syntax
     internal sealed class Parser
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
+        private readonly SyntaxTree m_syntaxTree;
         private readonly SourceText m_text;
         private readonly ImmutableArray<SyntaxToken> m_tokens;
-
         private int m_position;
 
-        public Parser(SourceText text)
+        public Parser(SyntaxTree syntaxTree)
         {
             var tokens = new List<SyntaxToken>();
 
-            var lexer = new Lexer(text);
+            var lexer = new Lexer(syntaxTree);
             SyntaxToken token;
 
             do
@@ -36,7 +36,8 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             } while (token.Kind != SyntaxKind.EndOfFileToken);
 
-            m_text = text;
+            m_syntaxTree = syntaxTree;
+            m_text = syntaxTree.Text;
             m_tokens = tokens.ToImmutableArray();
             m_diagnostics.AddRange(lexer.Diagnostics);
         }
@@ -71,8 +72,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return NextToken();
             }
 
-            m_diagnostics.ReportUnexpcetedToken(Current.Span, Current.Kind, kind);
-            return new SyntaxToken(kind, Current.Position, null, null);
+            m_diagnostics.ReportUnexpcetedToken(Current.Location, Current.Kind, kind);
+            return new SyntaxToken(m_syntaxTree, kind, Current.Position, null, null);
         }
 
         public CompilationUnitSyntax ParseCompilationUnit()
@@ -80,7 +81,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var members = ParseMembers();
             var endOfFileToken = MatchToken(SyntaxKind.EndOfFileToken);
 
-            return new CompilationUnitSyntax(members, endOfFileToken);
+            return new CompilationUnitSyntax(m_syntaxTree, members, endOfFileToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseMembers()
@@ -130,7 +131,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParseOptionalTypeClause();
             var body = ParseBlockStatement();
 
-            return new FunctionDeclarationSyntax(functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+            return new FunctionDeclarationSyntax(m_syntaxTree, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()
@@ -164,14 +165,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var type = ParseTypeClause();
 
-            return new ParameterSyntax(identifier, type);
+            return new ParameterSyntax(m_syntaxTree, identifier, type);
         }
 
         private MemberSyntax ParseGlobalStatement()
         {
             var statement = ParseStatement();
 
-            return new GlobalStatementSyntax(statement);
+            return new GlobalStatementSyntax(m_syntaxTree, statement);
         }
 
         private StatementSyntax ParseStatement()
@@ -230,7 +231,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new BlockStatementSyntax(openBraceToken, statements.ToImmutable(), closeBraceToken);
+            return new BlockStatementSyntax(m_syntaxTree, openBraceToken, statements.ToImmutable(), closeBraceToken);
         }
 
         private StatementSyntax ParseVariableDeclaration()
@@ -242,7 +243,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var equals = MatchToken(SyntaxKind.EqualsToken);
             var initializer = ParseExpression();
 
-            return new VariableDeclarationSyntax(keyword, identifier, typeClause, equals, initializer);
+            return new VariableDeclarationSyntax(m_syntaxTree, keyword, identifier, typeClause, equals, initializer);
         }
 
         private TypeClauseSyntax ParseOptionalTypeClause()
@@ -260,7 +261,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var colonToken = MatchToken(SyntaxKind.ColonToken);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
 
-            return new TypeClauseSyntax(colonToken, identifier);
+            return new TypeClauseSyntax(m_syntaxTree, colonToken, identifier);
         }
 
         private StatementSyntax ParseIfStatement()
@@ -270,7 +271,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var statement = ParseStatement();
             var elseClause = ParseElseClause();
 
-            return new IfStatementSyntax(keyword, condition, statement, elseClause);
+            return new IfStatementSyntax(m_syntaxTree, keyword, condition, statement, elseClause);
         }
 
         private ElseClauseSyntax ParseElseClause()
@@ -283,7 +284,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var keyword = NextToken();
             var statement = ParseStatement();
 
-            return new ElseClauseSyntax(keyword, statement);
+            return new ElseClauseSyntax(m_syntaxTree, keyword, statement);
         }
 
         private StatementSyntax ParseWhileStatement()
@@ -292,7 +293,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var condition = ParseExpression();
             var body = ParseStatement();
 
-            return new WhileStatementSyntax(keyword, condition, body);
+            return new WhileStatementSyntax(m_syntaxTree, keyword, condition, body);
         }
 
         private StatementSyntax ParseDoWhileStatement()
@@ -302,7 +303,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var whileKeyword = MatchToken(SyntaxKind.WhileKeyword);
             var condition = ParseExpression();
 
-            return new DoWhileStatementSyntax(doKeyword, body, whileKeyword, condition);
+            return new DoWhileStatementSyntax(m_syntaxTree, doKeyword, body, whileKeyword, condition);
         }
 
         private StatementSyntax ParseForStatement()
@@ -315,21 +316,21 @@ namespace Cocoa.CodeAnalysis.Syntax
             var upperBound = ParseExpression();
             var body = ParseStatement();
 
-            return new ForStatementSyntax(keyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, body);
+            return new ForStatementSyntax(m_syntaxTree, keyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, body);
         }
 
         private StatementSyntax ParseBreakStatement()
         {
             var keyword = MatchToken(SyntaxKind.BreakKeyword);
 
-            return new BreakStatementSyntax(keyword);
+            return new BreakStatementSyntax(m_syntaxTree, keyword);
         }
 
         private StatementSyntax ParseContinueStatement()
         {
             var keyword = MatchToken(SyntaxKind.ContinueKeyword);
 
-            return new ContinueStatementSyntax(keyword);
+            return new ContinueStatementSyntax(m_syntaxTree, keyword);
         }
 
         private StatementSyntax ParseReturnStatement()
@@ -341,14 +342,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             var sameLine = !isEof && keywordLine == currenrLine;
             var expression = sameLine ? ParseExpression() : null;
 
-            return new ReturnStatementSyntax(keyword, expression);
+            return new ReturnStatementSyntax(m_syntaxTree, keyword, expression);
         }
 
         private StatementSyntax ParseExpressionStatement()
         {
             var expression = ParseExpression();
 
-            return new ExpressionStatementSyntax(expression);
+            return new ExpressionStatementSyntax(m_syntaxTree, expression);
         }
 
         private ExpressionSyntax ParseExpression()
@@ -365,7 +366,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 var operatorToken = NextToken();
                 var right = ParseAssignmentExpression();
 
-                return new AssignmentExpressionSyntax(identifierToken, operatorToken, right);
+                return new AssignmentExpressionSyntax(m_syntaxTree, identifierToken, operatorToken, right);
             }
 
             return ParseBinaryExpression();
@@ -379,7 +380,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 var operatorToken = NextToken();
                 var operand = ParseBinaryExpression(unaryOperatorPrecedence);
-                left = new UnaryExpressionSyntax(operatorToken, operand);
+                left = new UnaryExpressionSyntax(m_syntaxTree, operatorToken, operand);
             }
             else
             {
@@ -396,7 +397,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 var operatorToken = NextToken();
                 var right = ParseBinaryExpression(precedence);
-                left = new BinaryExpressionSyntax(left, operatorToken, right);
+                left = new BinaryExpressionSyntax(m_syntaxTree, left, operatorToken, right);
             }
 
             return left;
@@ -432,7 +433,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var expression = ParseExpression();
             var right = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            return new ParenthesizedExpressionSyntax(left, expression, right);
+            return new ParenthesizedExpressionSyntax(m_syntaxTree, left, expression, right);
         }
 
         private ExpressionSyntax ParseBooleanLiteral()
@@ -440,21 +441,21 @@ namespace Cocoa.CodeAnalysis.Syntax
             var isTrue = Current.Kind == SyntaxKind.TrueKeyword;
             var keywordToken = isTrue ? MatchToken(SyntaxKind.TrueKeyword) : MatchToken(SyntaxKind.FalseKeyword);
 
-            return new LiteralExpressionSyntax(keywordToken, isTrue);
+            return new LiteralExpressionSyntax(m_syntaxTree, keywordToken, isTrue);
         }
 
         private ExpressionSyntax ParseNumberLiteral()
         {
             var numberToken = MatchToken(SyntaxKind.NumberToken);
 
-            return new LiteralExpressionSyntax(numberToken);
+            return new LiteralExpressionSyntax(m_syntaxTree, numberToken);
         }
 
         private ExpressionSyntax ParseStringLiteral()
         {
             var stringToken = MatchToken(SyntaxKind.StringToken);
 
-            return new LiteralExpressionSyntax(stringToken);
+            return new LiteralExpressionSyntax(m_syntaxTree, stringToken);
         }
 
         private ExpressionSyntax ParseNameOrCallExpression()
@@ -474,7 +475,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var arguments = ParseArguments();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            return new CallExpressionSyntax(identidier, openParenthesisToken, arguments, closeParenthesisToken);
+            return new CallExpressionSyntax(m_syntaxTree, identidier, openParenthesisToken, arguments, closeParenthesisToken);
         }
 
         private SeparatedSyntaxList<ExpressionSyntax> ParseArguments()
@@ -507,7 +508,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var identifierToken = MatchToken(SyntaxKind.IdentifierToken);
 
-            return new NameExpressionSyntax(identifierToken);
+            return new NameExpressionSyntax(m_syntaxTree, identifierToken);
         }
     }
 }

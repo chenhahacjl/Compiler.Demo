@@ -13,6 +13,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     internal sealed class Lexer
     {
         private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
+        private readonly SyntaxTree m_syntaxTree;
         private readonly SourceText m_text;
 
         private int m_position;
@@ -21,9 +22,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         private SyntaxKind m_kind;
         private object m_value;
 
-        public Lexer(SourceText text)
+        public Lexer(SyntaxTree syntaxTree)
         {
-            m_text = text;
+            m_syntaxTree = syntaxTree;
+            m_text = syntaxTree.Text;
         }
 
         public DiagnosticBag Diagnostics => m_diagnostics;
@@ -253,7 +255,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else
                     {
-                        m_diagnostics.ReportBadCharacter(m_position, Current);
+                        var span = new TextSpan(m_position, 1);
+                        var location = new TextLocation(m_text, span);
+                        m_diagnostics.ReportBadCharacter(location, Current);
                         m_position++;
                     }
                     break;
@@ -267,7 +271,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 text = m_text.ToString(m_start, length);
             }
 
-            return new SyntaxToken(m_kind, m_start, text, m_value);
+            return new SyntaxToken(m_syntaxTree, m_kind, m_start, text, m_value);
         }
 
         private void ReadString()
@@ -290,7 +294,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     case '\n':
                     {
                         var span = new TextSpan(m_start, 1);
-                        m_diagnostics.ReportUnterminatedString(span);
+                        var location = new TextLocation(m_text, span);
+                        m_diagnostics.ReportUnterminatedString(location);
                         done = true;
 
                         break;
@@ -346,7 +351,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (!int.TryParse(text, out var value))
             {
-                m_diagnostics.ReportInvalidNumber(new TextSpan(m_start, length), text, TypeSymbol.Interger);
+                var span = new TextSpan(m_start, length);
+                var location = new TextLocation(m_text, span);
+                m_diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Interger);
             }
 
             m_value = value;
