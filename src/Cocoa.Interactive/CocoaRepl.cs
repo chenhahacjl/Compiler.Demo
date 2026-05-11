@@ -7,11 +7,11 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using Cocoa.IO;
 
-namespace Compiler.Demo
+namespace Cocoa.Interactive
 {
     internal sealed class CocoaRepl : Repl
     {
-        private Compilation m_previous;
+        private Compilation? m_previous;
         private bool m_showTree;
         private bool m_showProgram;
         private readonly Dictionary<VariableSymbol, object> m_variables = new Dictionary<VariableSymbol, object>();

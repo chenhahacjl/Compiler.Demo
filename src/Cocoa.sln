@@ -1,15 +1,20 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.6.33829.357
+# Visual Studio Version 18
+VisualStudioVersion = 18.5.11709.299
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa", "Cocoa\Cocoa.csproj", "{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Tests", "Cocoa.Tests\Cocoa.Tests.csproj", "{0216636A-D9C9-44A2-89D6-8F5A36935E91}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Interactive.Demo", "Interactive.Demo\Interactive.Demo.csproj", "{8EFA78BC-C621-4637-A2B0-A7D4E34A9423}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Interactive", "Cocoa.Interactive\Cocoa.Interactive.csproj", "{8EFA78BC-C621-4637-A2B0-A7D4E34A9423}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Compiler.Demo", "Compiler.Demo\Compiler.Demo.csproj", "{774DFDA2-325A-44C6-9D52-2BA60E7306D4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa.Compiler", "Cocoa.Compiler\Cocoa.Compiler.csproj", "{774DFDA2-325A-44C6-9D52-2BA60E7306D4}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{770FF151-2102-4DEE-99BA-0BEE89FC1BFF}"
+	ProjectSection(SolutionItems) = preProject
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

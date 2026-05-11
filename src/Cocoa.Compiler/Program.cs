@@ -5,7 +5,7 @@ using Cocoa.IO;
 using System.Net.Http.Headers;
 using System.IO;
 
-namespace Compiler.Demo
+namespace Cocoa.Compiler
 {
     internal static class Program
     {

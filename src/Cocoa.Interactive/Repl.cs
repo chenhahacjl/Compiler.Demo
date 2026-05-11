@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Text;
 
-namespace Compiler.Demo
+namespace Cocoa.Interactive
 {
     internal abstract class Repl
     {
@@ -49,7 +49,7 @@ namespace Compiler.Demo
                 Render();
             }
 
-            private void SubmissionDocumentChanged(object sender, NotifyCollectionChangedEventArgs e)
+            private void SubmissionDocumentChanged(object? sender, NotifyCollectionChangedEventArgs e)
             {
                 Render();
             }
