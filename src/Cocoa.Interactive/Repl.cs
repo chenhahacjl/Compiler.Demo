@@ -9,6 +9,7 @@ namespace Cocoa.Interactive
     internal abstract class Repl
     {
         private List<string> m_submissionHistory = new List<string>();
+        private readonly List<string> m_submissionHistory = new List<string>();
         private int m_submissionHistoryIndex;
 
         private bool m_done;
