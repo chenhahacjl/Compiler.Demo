@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Lowering
     /// </summary>
     internal sealed class Lowerer : BoundTreeRewriter
     {
-        private int m_labelCount;
+        private int _labelCount;
 
         private Lowerer()
         {
@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Lowering
 
         private BoundLabel GenerateLabel()
         {
-            var name = $"Label{++m_labelCount}";
+            var name = $"Label{++_labelCount}";
             return new BoundLabel(name);
         }
 

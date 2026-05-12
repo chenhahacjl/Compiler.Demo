@@ -12,23 +12,23 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     internal sealed class Lexer
     {
-        private readonly DiagnosticBag m_diagnostics = new DiagnosticBag();
-        private readonly SyntaxTree m_syntaxTree;
-        private readonly SourceText m_text;
+        private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
+        private readonly SyntaxTree _syntaxTree;
+        private readonly SourceText _text;
 
-        private int m_position;
+        private int _position;
 
-        private int m_start;
-        private SyntaxKind m_kind;
-        private object m_value;
+        private int _start;
+        private SyntaxKind _kind;
+        private object _value;
 
         public Lexer(SyntaxTree syntaxTree)
         {
-            m_syntaxTree = syntaxTree;
-            m_text = syntaxTree.Text;
+            _syntaxTree = syntaxTree;
+            _text = syntaxTree.Text;
         }
 
-        public DiagnosticBag Diagnostics => m_diagnostics;
+        public DiagnosticBag Diagnostics => _diagnostics;
 
         private char Current => Peek(0);
 
@@ -36,185 +36,185 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private char Peek(int offset)
         {
-            var index = m_position + offset;
+            var index = _position + offset;
 
-            if (index >= m_text.Length)
+            if (index >= _text.Length)
             {
                 return '\0';
             }
 
-            return m_text[index];
+            return _text[index];
         }
 
         public SyntaxToken Lex()
         {
-            m_start = m_position;
-            m_kind = SyntaxKind.BadToken;
-            m_value = null;
+            _start = _position;
+            _kind = SyntaxKind.BadToken;
+            _value = null;
 
             switch (Current)
             {
                 case '\0':
                 {
-                    m_kind = SyntaxKind.EndOfFileToken;
+                    _kind = SyntaxKind.EndOfFileToken;
                     break;
                 }
                 case '+':
                 {
-                    m_kind = SyntaxKind.PlusToken;
-                    m_position++;
+                    _kind = SyntaxKind.PlusToken;
+                    _position++;
                     break;
                 }
                 case '-':
                 {
-                    m_kind = SyntaxKind.MinusToken;
-                    m_position++;
+                    _kind = SyntaxKind.MinusToken;
+                    _position++;
                     break;
                 }
                 case '*':
                 {
-                    m_kind = SyntaxKind.StarToken;
-                    m_position++;
+                    _kind = SyntaxKind.StarToken;
+                    _position++;
                     break;
                 }
                 case '/':
                 {
-                    m_kind = SyntaxKind.SlashToken;
-                    m_position++;
+                    _kind = SyntaxKind.SlashToken;
+                    _position++;
                     break;
                 }
                 case '(':
                 {
-                    m_kind = SyntaxKind.OpenParenthesisToken;
-                    m_position++;
+                    _kind = SyntaxKind.OpenParenthesisToken;
+                    _position++;
                     break;
                 }
                 case ')':
                 {
-                    m_kind = SyntaxKind.CloseParenthesisToken;
-                    m_position++;
+                    _kind = SyntaxKind.CloseParenthesisToken;
+                    _position++;
                     break;
                 }
                 case '{':
                 {
-                    m_kind = SyntaxKind.OpenBraceToken;
-                    m_position++;
+                    _kind = SyntaxKind.OpenBraceToken;
+                    _position++;
                     break;
                 }
                 case '}':
                 {
-                    m_kind = SyntaxKind.CloseBraceToken;
-                    m_position++;
+                    _kind = SyntaxKind.CloseBraceToken;
+                    _position++;
                     break;
                 }
                 case ':':
                 {
-                    m_kind = SyntaxKind.ColonToken;
-                    m_position++;
+                    _kind = SyntaxKind.ColonToken;
+                    _position++;
                     break;
                 }
                 case ',':
                 {
-                    m_kind = SyntaxKind.CommaToken;
-                    m_position++;
+                    _kind = SyntaxKind.CommaToken;
+                    _position++;
                     break;
                 }
                 case '~':
                 {
-                    m_kind = SyntaxKind.TildeToken;
-                    m_position++;
+                    _kind = SyntaxKind.TildeToken;
+                    _position++;
                     break;
                 }
                 case '^':
                 {
-                    m_kind = SyntaxKind.HatToken;
-                    m_position++;
+                    _kind = SyntaxKind.HatToken;
+                    _position++;
                     break;
                 }
                 case '&':
                 {
-                    m_position++;
+                    _position++;
                     if (Current != '&')
                     {
-                        m_kind = SyntaxKind.AmpersandToken;
+                        _kind = SyntaxKind.AmpersandToken;
                     }
                     else
                     {
 
-                        m_position++;
-                        m_kind = SyntaxKind.AmpersandAmpersandToken;
+                        _position++;
+                        _kind = SyntaxKind.AmpersandAmpersandToken;
                     }
                     break;
                 }
                 case '|':
                 {
-                    m_position++;
+                    _position++;
                     if (Current != '|')
                     {
-                        m_kind = SyntaxKind.PipeToken;
+                        _kind = SyntaxKind.PipeToken;
                     }
                     else
                     {
 
-                        m_position++;
-                        m_kind = SyntaxKind.PipePipeToken;
+                        _position++;
+                        _kind = SyntaxKind.PipePipeToken;
                     }
                     break;
                 }
                 case '=':
                 {
-                    m_position++;
+                    _position++;
                     if (Current != '=')
                     {
-                        m_kind = SyntaxKind.EqualsToken;
+                        _kind = SyntaxKind.EqualsToken;
                     }
                     else
                     {
 
-                        m_position++;
-                        m_kind = SyntaxKind.EqualsEqualsToken;
+                        _position++;
+                        _kind = SyntaxKind.EqualsEqualsToken;
                     }
                     break;
                 }
                 case '!':
                 {
-                    m_position++;
+                    _position++;
                     if (Current != '=')
                     {
-                        m_kind = SyntaxKind.BangToken;
+                        _kind = SyntaxKind.BangToken;
                     }
                     else
                     {
-                        m_kind = SyntaxKind.BangEqualsToken;
-                        m_position++;
+                        _kind = SyntaxKind.BangEqualsToken;
+                        _position++;
                     }
                     break;
                 }
                 case '<':
                 {
-                    m_position++;
+                    _position++;
                     if (Current != '=')
                     {
-                        m_kind = SyntaxKind.LessToken;
+                        _kind = SyntaxKind.LessToken;
                     }
                     else
                     {
-                        m_kind = SyntaxKind.LessOrEqualsToken;
-                        m_position++;
+                        _kind = SyntaxKind.LessOrEqualsToken;
+                        _position++;
                     }
                     break;
                 }
                 case '>':
                 {
-                    m_position++;
+                    _position++;
                     if (Current != '=')
                     {
-                        m_kind = SyntaxKind.GreaterToken;
+                        _kind = SyntaxKind.GreaterToken;
                     }
                     else
                     {
-                        m_kind = SyntaxKind.GreaterOrEqualsToken;
-                        m_position++;
+                        _kind = SyntaxKind.GreaterOrEqualsToken;
+                        _position++;
                     }
                     break;
                 }
@@ -255,23 +255,23 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else
                     {
-                        var span = new TextSpan(m_position, 1);
-                        var location = new TextLocation(m_text, span);
-                        m_diagnostics.ReportBadCharacter(location, Current);
-                        m_position++;
+                        var span = new TextSpan(_position, 1);
+                        var location = new TextLocation(_text, span);
+                        _diagnostics.ReportBadCharacter(location, Current);
+                        _position++;
                     }
                     break;
                 }
             }
 
-            var length = m_position - m_start;
-            var text = SyntaxFacts.GetText(m_kind);
+            var length = _position - _start;
+            var text = SyntaxFacts.GetText(_kind);
             if (text == null)
             {
-                text = m_text.ToString(m_start, length);
+                text = _text.ToString(_start, length);
             }
 
-            return new SyntaxToken(m_syntaxTree, m_kind, m_start, text, m_value);
+            return new SyntaxToken(_syntaxTree, _kind, _start, text, _value);
         }
 
         private void ReadString()
@@ -280,7 +280,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             // "Test "" String"
 
             // 跳过当前引号
-            m_position++;
+            _position++;
 
             var stringBuilder = new StringBuilder();
             var done = false;
@@ -293,9 +293,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                     case '\r':
                     case '\n':
                     {
-                        var span = new TextSpan(m_start, 1);
-                        var location = new TextLocation(m_text, span);
-                        m_diagnostics.ReportUnterminatedString(location);
+                        var span = new TextSpan(_start, 1);
+                        var location = new TextLocation(_text, span);
+                        _diagnostics.ReportUnterminatedString(location);
                         done = true;
 
                         break;
@@ -305,11 +305,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                         if (Lookahead == '"')
                         {
                             stringBuilder.Append(Current);
-                            m_position += 2;
+                            _position += 2;
                         }
                         else
                         {
-                            m_position++;
+                            _position++;
                             done = true;
                         }
 
@@ -318,59 +318,59 @@ namespace Cocoa.CodeAnalysis.Syntax
                     default:
                     {
                         stringBuilder.Append(Current);
-                        m_position++;
+                        _position++;
 
                         break;
                     }
                 }
             }
 
-            m_kind = SyntaxKind.StringToken;
-            m_value = stringBuilder.ToString();
+            _kind = SyntaxKind.StringToken;
+            _value = stringBuilder.ToString();
         }
 
         private void ReadWhiteSpace()
         {
             while (char.IsWhiteSpace(Current))
             {
-                m_position++;
+                _position++;
             }
 
-            m_kind = SyntaxKind.WhitespaceToken;
+            _kind = SyntaxKind.WhitespaceToken;
         }
 
         private void ReadNumber()
         {
             while (char.IsDigit(Current))
             {
-                m_position++;
+                _position++;
             }
 
-            var length = m_position - m_start;
-            var text = m_text.ToString(m_start, length);
+            var length = _position - _start;
+            var text = _text.ToString(_start, length);
 
             if (!int.TryParse(text, out var value))
             {
-                var span = new TextSpan(m_start, length);
-                var location = new TextLocation(m_text, span);
-                m_diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Interger);
+                var span = new TextSpan(_start, length);
+                var location = new TextLocation(_text, span);
+                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Interger);
             }
 
-            m_value = value;
-            m_kind = SyntaxKind.NumberToken;
+            _value = value;
+            _kind = SyntaxKind.NumberToken;
         }
 
         private void ReadIdentifierOrKeyword()
         {
             while (char.IsLetter(Current))
             {
-                m_position++;
+                _position++;
             }
 
-            var length = m_position - m_start;
-            var text = m_text.ToString(m_start, length);
+            var length = _position - _start;
+            var text = _text.ToString(_start, length);
 
-            m_kind = SyntaxFacts.GetKeywordKind(text);
+            _kind = SyntaxFacts.GetKeywordKind(text);
         }
     }
 }

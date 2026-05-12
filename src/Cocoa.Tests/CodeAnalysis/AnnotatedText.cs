@@ -82,7 +82,7 @@ namespace Cocoa.Tests.CodeAnalysis
             }
 
             var minIndentation = int.MaxValue;
-            for (int i = 0; i < lines.Count; i++)
+            for (var i = 0; i < lines.Count; i++)
             {
                 var line = lines[i];
 
@@ -96,7 +96,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 minIndentation = Math.Min(minIndentation, indentation);
             }
 
-            for (int i = 0; i < lines.Count; i++)
+            for (var i = 0; i < lines.Count; i++)
             {
                 if (lines[i].Length == 0)
                 {

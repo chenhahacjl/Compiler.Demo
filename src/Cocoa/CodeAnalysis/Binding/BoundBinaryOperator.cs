@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Binding
         public TypeSymbol RightType { get; }
         public TypeSymbol ResultType { get; }
 
-        private static BoundBinaryOperator[] m_operators =
+        private static BoundBinaryOperator[] _operators =
         {
             new BoundBinaryOperator(SyntaxKind.PlusToken, BoundBinaryOperatorKind.Addition, TypeSymbol.Interger),
             new BoundBinaryOperator(SyntaxKind.MinusToken, BoundBinaryOperatorKind.Subtraction, TypeSymbol.Interger),
@@ -66,7 +66,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static BoundBinaryOperator Bind(SyntaxKind syntaxKind, TypeSymbol leftType, TypeSymbol rightType)
         {
-            return m_operators.FirstOrDefault(op => op.SyntaxKind == syntaxKind && op.LeftType == leftType && op.RightType == rightType);
+            return _operators.FirstOrDefault(op => op.SyntaxKind == syntaxKind && op.LeftType == leftType && op.RightType == rightType);
         }
     }
 }

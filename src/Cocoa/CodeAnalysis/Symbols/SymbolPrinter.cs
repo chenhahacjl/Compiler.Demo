@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             writer.WriteIdentifier(symbol.Name);
             writer.WritePunctuation(SyntaxKind.OpenParenthesisToken);
 
-            for (int i = 0; i < symbol.Parameters.Length; i++)
+            for (var i = 0; i < symbol.Parameters.Length; i++)
             {
                 if (i > 0)
                 {
@@ -50,7 +50,13 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
 
             writer.WritePunctuation(SyntaxKind.CloseParenthesisToken);
-            writer.WriteLine();
+
+            if (symbol.ReturnType != TypeSymbol.Void)
+            {
+                writer.WritePunctuation(SyntaxKind.ColonToken);
+                writer.WriteSpace();
+                symbol.ReturnType.WriteTo(writer);
+            }
         }
 
         private static void WriteGlobalVariableTo(GlobalVariableSymbol symbol, TextWriter writer)

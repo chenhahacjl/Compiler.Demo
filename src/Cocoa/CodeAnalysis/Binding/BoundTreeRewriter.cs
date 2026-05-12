@@ -45,7 +45,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             ImmutableArray<BoundStatement>.Builder builder = null;
 
-            for (int i = 0; i < node.Statements.Length; i++)
+            for (var i = 0; i < node.Statements.Length; i++)
             {
                 var oldStatement = node.Statements[i];
                 var newStatement = RewriteStatement(oldStatement);
@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         builder = ImmutableArray.CreateBuilder<BoundStatement>(node.Statements.Length);
 
-                        for (int j = 0; j < i; j++)
+                        for (var j = 0; j < i; j++)
                         {
                             builder.Add(node.Statements[j]);
                         }
@@ -252,7 +252,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             ImmutableArray<BoundExpression>.Builder builder = null;
 
-            for (int i = 0; i < node.Arguments.Length; i++)
+            for (var i = 0; i < node.Arguments.Length; i++)
             {
                 var oldArgument = node.Arguments[i];
                 var newArgument = RewriteExpression(oldArgument);
@@ -262,7 +262,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         builder = ImmutableArray.CreateBuilder<BoundExpression>(node.Arguments.Length);
 
-                        for (int j = 0; j < i; j++)
+                        for (var j = 0; j < i; j++)
                         {
                             builder.Add(node.Arguments[j]);
                         }

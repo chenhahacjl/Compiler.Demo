@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundScope
     {
-        private Dictionary<string, Symbol> m_symbols;
+        private Dictionary<string, Symbol> _symbols;
 
         public BoundScope(BoundScope parent)
         {
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public Symbol TryLookupSymbol(string name)
         {
-            if (m_symbols != null && m_symbols.TryGetValue(name, out var symbol))
+            if (_symbols != null && _symbols.TryGetValue(name, out var symbol))
                 return symbol;
 
             return Parent?.TryLookupSymbol(name);
@@ -34,28 +34,28 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private bool TryDeclareSymbol<TSymbol>(TSymbol symbol) where TSymbol : Symbol
         {
-            if (m_symbols == null)
+            if (_symbols == null)
             {
-                m_symbols = new Dictionary<string, Symbol>();
+                _symbols = new Dictionary<string, Symbol>();
             }
-            else if (m_symbols.ContainsKey(symbol.Name))
+            else if (_symbols.ContainsKey(symbol.Name))
             {
                 return false;
             }
 
-            m_symbols.Add(symbol.Name, symbol);
+            _symbols.Add(symbol.Name, symbol);
 
             return true;
         }
 
         private ImmutableArray<TSymbol> GetDeclaredSymbols<TSymbol>() where TSymbol : Symbol
         {
-            if (m_symbols == null)
+            if (_symbols == null)
             {
                 return ImmutableArray<TSymbol>.Empty;
             }
 
-            return m_symbols.Values.OfType<TSymbol>().ToImmutableArray();
+            return _symbols.Values.OfType<TSymbol>().ToImmutableArray();
         }
     }
 }

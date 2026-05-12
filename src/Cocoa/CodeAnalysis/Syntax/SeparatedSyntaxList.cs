@@ -12,16 +12,16 @@ namespace Cocoa.CodeAnalysis.Syntax
     public sealed class SeparatedSyntaxList<T> : SeparatedSyntaxList, IEnumerable<T>
         where T : SyntaxNode
     {
-        private readonly ImmutableArray<SyntaxNode> m_nodesAndSeparators;
+        private readonly ImmutableArray<SyntaxNode> _nodesAndSeparators;
 
         public SeparatedSyntaxList(ImmutableArray<SyntaxNode> nodesAndSeparators)
         {
-            m_nodesAndSeparators = nodesAndSeparators;
+            _nodesAndSeparators = nodesAndSeparators;
         }
 
-        public int Count => (m_nodesAndSeparators.Length + 1) / 2;
+        public int Count => (_nodesAndSeparators.Length + 1) / 2;
 
-        public T this[int index] => (T)m_nodesAndSeparators[index * 2];
+        public T this[int index] => (T)_nodesAndSeparators[index * 2];
 
         public SyntaxToken GetSeparator(int index)
         {
@@ -30,10 +30,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return null;
             }
 
-            return (SyntaxToken)m_nodesAndSeparators[index * 2 + 1];
+            return (SyntaxToken)_nodesAndSeparators[index * 2 + 1];
         }
 
-        public override ImmutableArray<SyntaxNode> GetWhiteSeparators() => m_nodesAndSeparators;
+        public override ImmutableArray<SyntaxNode> GetWhiteSeparators() => _nodesAndSeparators;
 
         public IEnumerator<T> GetEnumerator()
         {

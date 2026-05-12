@@ -91,8 +91,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public sealed class BasicBlockBuilder
         {
-            private List<BoundStatement> m_statements = new List<BoundStatement>();
-            private List<BasicBlock> m_blocks = new List<BasicBlock>();
+            private List<BoundStatement> _statements = new List<BoundStatement>();
+            private List<BasicBlock> _blocks = new List<BasicBlock>();
 
             public List<BasicBlock> Build(BoundBlockStatement block)
             {
@@ -102,17 +102,17 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         case BoundNodeKind.LabelStatement:
                             StartBlock();
-                            m_statements.Add(statement);
+                            _statements.Add(statement);
                             break;
                         case BoundNodeKind.GotoStatement:
                         case BoundNodeKind.ConditionalGotoStatement:
                         case BoundNodeKind.ReturnStatement:
-                            m_statements.Add(statement);
+                            _statements.Add(statement);
                             StartBlock();
                             break;
                         case BoundNodeKind.VariableDeclaration:
                         case BoundNodeKind.ExpressionStatement:
-                            m_statements.Add(statement);
+                            _statements.Add(statement);
                             break;
                         default:
                             throw new Exception($"Unexpected statement: {statement.Kind}");
@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 EndBlock();
 
-                return m_blocks.ToList();
+                return _blocks.ToList();
             }
 
             private void StartBlock()
@@ -131,47 +131,47 @@ namespace Cocoa.CodeAnalysis.Binding
 
             private void EndBlock()
             {
-                if (m_statements.Count > 0)
+                if (_statements.Count > 0)
                 {
                     var block = new BasicBlock();
-                    block.Statements.AddRange(m_statements);
-                    m_blocks.Add(block);
-                    m_statements.Clear();
+                    block.Statements.AddRange(_statements);
+                    _blocks.Add(block);
+                    _statements.Clear();
                 }
             }
         }
 
         public sealed class GraphBuilder
         {
-            private Dictionary<BoundStatement, BasicBlock> m_blockFromStatement = new Dictionary<BoundStatement, BasicBlock>();
-            private Dictionary<BoundLabel, BasicBlock> m_blockFromLabel = new Dictionary<BoundLabel, BasicBlock>();
-            private List<BasicBlockBranch> m_branches = new List<BasicBlockBranch>();
+            private Dictionary<BoundStatement, BasicBlock> _blockFromStatement = new Dictionary<BoundStatement, BasicBlock>();
+            private Dictionary<BoundLabel, BasicBlock> _blockFromLabel = new Dictionary<BoundLabel, BasicBlock>();
+            private List<BasicBlockBranch> _branches = new List<BasicBlockBranch>();
 
-            private BasicBlock m_start = new BasicBlock(true);
-            private BasicBlock m_end = new BasicBlock(false);
+            private BasicBlock _start = new BasicBlock(true);
+            private BasicBlock _end = new BasicBlock(false);
 
             public ControlFlowGraph Build(List<BasicBlock> blocks)
             {
                 if (!blocks.Any())
-                    Connect(m_start, m_end);
+                    Connect(_start, _end);
                 else
-                    Connect(m_start, blocks.First());
+                    Connect(_start, blocks.First());
 
                 foreach (var block in blocks)
                 {
                     foreach (var statement in block.Statements)
                     {
-                        m_blockFromStatement.Add(statement, block);
+                        _blockFromStatement.Add(statement, block);
 
                         if (statement is BoundLabelStatement labelStatement)
-                            m_blockFromLabel.Add(labelStatement.Label, block);
+                            _blockFromLabel.Add(labelStatement.Label, block);
                     }
                 }
 
-                for (int i = 0; i < blocks.Count; i++)
+                for (var i = 0; i < blocks.Count; i++)
                 {
                     var current = blocks[i];
-                    var next = i == blocks.Count - 1 ? m_end : blocks[i + 1];
+                    var next = i == blocks.Count - 1 ? _end : blocks[i + 1];
 
                     foreach (var statement in current.Statements)
                     {
@@ -180,12 +180,12 @@ namespace Cocoa.CodeAnalysis.Binding
                         {
                             case BoundNodeKind.GotoStatement:
                                 var gs = (BoundGotoStatement)statement;
-                                var toBlock = m_blockFromLabel[gs.Label];
+                                var toBlock = _blockFromLabel[gs.Label];
                                 Connect(current, toBlock);
                                 break;
                             case BoundNodeKind.ConditionalGotoStatement:
                                 var cgs = (BoundConditionalGotoStatement)statement;
-                                var thenBlock = m_blockFromLabel[cgs.Label];
+                                var thenBlock = _blockFromLabel[cgs.Label];
                                 var elseBlock = next;
                                 var negatedCondition = Negate(cgs.Condition);
                                 var thenCondition = cgs.JumpIfTrue ? cgs.Condition : negatedCondition;
@@ -194,7 +194,7 @@ namespace Cocoa.CodeAnalysis.Binding
                                 Connect(current, elseBlock, elseCondition);
                                 break;
                             case BoundNodeKind.ReturnStatement:
-                                Connect(current, m_end);
+                                Connect(current, _end);
                                 break;
                             case BoundNodeKind.VariableDeclaration:
                             case BoundNodeKind.LabelStatement:
@@ -218,10 +218,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                 }
 
-                blocks.Insert(0, m_start);
-                blocks.Add(m_end);
+                blocks.Insert(0, _start);
+                blocks.Add(_end);
 
-                return new ControlFlowGraph(m_start, m_end, blocks, m_branches);
+                return new ControlFlowGraph(_start, _end, blocks, _branches);
             }
 
             private void Connect(BasicBlock from, BasicBlock to, BoundExpression condition = null)
@@ -240,7 +240,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 from.Outgoing.Add(branch);
                 to.Incoming.Add(branch);
-                m_branches.Add(branch);
+                _branches.Add(branch);
             }
 
             private void RemoveBlock(List<BasicBlock> blocks, BasicBlock block)
@@ -248,13 +248,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 foreach (var branch in block.Incoming)
                 {
                     branch.From.Outgoing.Remove(branch);
-                    m_branches.Remove(branch);
+                    _branches.Remove(branch);
                 }
 
                 foreach (var branch in block.Outgoing)
                 {
                     branch.To.Incoming.Remove(branch);
-                    m_branches.Remove(branch);
+                    _branches.Remove(branch);
                 }
 
                 blocks.Remove(block);
@@ -285,7 +285,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var blockIds = new Dictionary<BasicBlock, string>();
 
-            for (int i = 0; i < Blocks.Count; i++)
+            for (var i = 0; i < Blocks.Count; i++)
             {
                 var id = $"N{i}";
                 blockIds.Add(Blocks[i], id);

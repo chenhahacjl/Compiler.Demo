@@ -12,21 +12,21 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     internal sealed class DiagnosticBag : IEnumerable<Diagnostic>
     {
-        private readonly List<Diagnostic> m_diagnostics = new List<Diagnostic>();
+        private readonly List<Diagnostic> _diagnostics = new List<Diagnostic>();
 
-        public IEnumerator<Diagnostic> GetEnumerator() => m_diagnostics.GetEnumerator();
+        public IEnumerator<Diagnostic> GetEnumerator() => _diagnostics.GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
         public void AddRange(DiagnosticBag diagnostics)
         {
-            m_diagnostics.AddRange(diagnostics.m_diagnostics);
+            _diagnostics.AddRange(diagnostics._diagnostics);
         }
 
         private void Report(TextLocation location, string message)
         {
             var diagnostic = new Diagnostic(location, message);
-            m_diagnostics.Add(diagnostic);
+            _diagnostics.Add(diagnostic);
         }
 
         public void ReportInvalidNumber(TextLocation location, string text, TypeSymbol type)

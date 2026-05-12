@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis
 {
     public class Compilation
     {
-        private BoundGlobalScope m_globalScope;
+        private BoundGlobalScope _globalScope;
 
         public Compilation(params SyntaxTree[] syntaxTrees)
             : this(null, syntaxTrees)
@@ -28,18 +28,51 @@ namespace Cocoa.CodeAnalysis
 
         public Compilation Previous { get; }
         public ImmutableArray<SyntaxTree> SyntaxTrees { get; }
+        public ImmutableArray<FunctionSymbol> Functions => GlobalScope.Functions;
+        public ImmutableArray<VariableSymbol> Variables => GlobalScope.Variables;
 
         internal BoundGlobalScope GlobalScope
         {
             get
             {
-                if (m_globalScope == null)
+                if (_globalScope == null)
                 {
                     var globalScope = Binder.BindGlobalScope(Previous?.GlobalScope, SyntaxTrees);
-                    Interlocked.CompareExchange(ref m_globalScope, globalScope, null);
+                    Interlocked.CompareExchange(ref _globalScope, globalScope, null);
                 }
 
-                return m_globalScope;
+                return _globalScope;
+            }
+        }
+
+        public IEnumerable<Symbol> GetSymbols()
+        {
+            var submission = this;
+            var seenSymbolNames = new HashSet<string>();
+
+            var builtinFunctions = BuiltinFunctions.GetAll().ToList();
+
+            while (submission != null)
+            {
+                foreach (var function in submission.Functions)
+                {
+                    if (seenSymbolNames.Add(function.Name))
+                        yield return function;
+                }
+
+                foreach (var variable in submission.Variables)
+                {
+                    if (seenSymbolNames.Add(variable.Name))
+                        yield return variable;
+                }
+
+                foreach (var builtin in builtinFunctions)
+                {
+                    if (seenSymbolNames.Add(builtin.Name))
+                        yield return builtin;
+                }
+
+                submission = submission.Previous;
             }
         }
 
@@ -104,9 +137,25 @@ namespace Cocoa.CodeAnalysis
                         continue;
 
                     functionBody.Key.WriteTo(writer);
+                    writer.WriteLine();
                     functionBody.Value.WriteTo(writer);
                 }
             }
+        }
+
+        public void EmitTree(FunctionSymbol symbol, TextWriter writer)
+        {
+            var program = Binder.BindProgram(GlobalScope);
+
+            symbol.WriteTo(writer);
+            writer.WriteLine();
+
+            if (!program.Functions.TryGetValue(symbol, out var body))
+            {
+                return;
+            }
+
+            body.WriteTo(writer);
         }
     }
 }

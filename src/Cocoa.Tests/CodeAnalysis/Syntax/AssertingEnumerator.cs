@@ -8,27 +8,27 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 {
     internal sealed class AssertingEnumerator : IDisposable
     {
-        private readonly IEnumerator<SyntaxNode> m_enumerator;
-        private bool m_hasErrors;
+        private readonly IEnumerator<SyntaxNode> _enumerator;
+        private bool _hasErrors;
 
         public AssertingEnumerator(SyntaxNode node)
         {
-            m_enumerator = Flatten(node).GetEnumerator();
+            _enumerator = Flatten(node).GetEnumerator();
         }
 
         private bool MarkFailed()
         {
-            m_hasErrors = true;
+            _hasErrors = true;
             return false;
         }
 
         public void Dispose()
         {
-            if (!m_hasErrors)
+            if (!_hasErrors)
             {
-                Assert.False(m_enumerator.MoveNext());
+                Assert.False(_enumerator.MoveNext());
             }
-            m_enumerator.Dispose();
+            _enumerator.Dispose();
         }
 
         private static IEnumerable<SyntaxNode> Flatten(SyntaxNode node)
@@ -52,9 +52,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             try
             {
-                Assert.True(m_enumerator.MoveNext());
-                Assert.Equal(kind, m_enumerator.Current.Kind);
-                Assert.IsNotType<SyntaxToken>(m_enumerator.Current);
+                Assert.True(_enumerator.MoveNext());
+                Assert.Equal(kind, _enumerator.Current.Kind);
+                Assert.IsNotType<SyntaxToken>(_enumerator.Current);
             }
             catch when (MarkFailed())
             {
@@ -66,9 +66,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             try
             {
-                Assert.True(m_enumerator.MoveNext());
-                Assert.Equal(kind, m_enumerator.Current.Kind);
-                var token = Assert.IsType<SyntaxToken>(m_enumerator.Current);
+                Assert.True(_enumerator.MoveNext());
+                Assert.Equal(kind, _enumerator.Current.Kind);
+                var token = Assert.IsType<SyntaxToken>(_enumerator.Current);
                 Assert.Equal(text, token.Text);
             }
             catch when (MarkFailed())

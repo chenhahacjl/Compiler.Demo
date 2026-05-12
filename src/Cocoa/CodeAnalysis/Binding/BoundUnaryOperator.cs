@@ -28,7 +28,7 @@ namespace Cocoa.CodeAnalysis.Binding
         public TypeSymbol OperandType { get; }
         public TypeSymbol ResultType { get; }
 
-        private static BoundUnaryOperator[] m_operators =
+        private static BoundUnaryOperator[] _operators =
         {
             new BoundUnaryOperator(SyntaxKind.BangToken, BoundUnaryOperatorKind.LogicalNegation, TypeSymbol.Boolean),
 
@@ -39,7 +39,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static BoundUnaryOperator Bind(SyntaxKind syntaxKind, TypeSymbol operandType)
         {
-            return m_operators.FirstOrDefault(op => op.SyntaxKind == syntaxKind && op.OperandType == operandType);
+            return _operators.FirstOrDefault(op => op.SyntaxKind == syntaxKind && op.OperandType == operandType);
         }
     }
 }

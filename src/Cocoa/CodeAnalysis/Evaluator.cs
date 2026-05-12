@@ -14,31 +14,31 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     internal sealed class Evaluator
     {
-        private readonly BoundProgram m_program;
-        private readonly Dictionary<VariableSymbol, object> m_globals;
-        private readonly Stack<Dictionary<VariableSymbol, object>> m_locals = new Stack<Dictionary<VariableSymbol, object>>();
-        private Random m_random;
+        private readonly BoundProgram _program;
+        private readonly Dictionary<VariableSymbol, object> _globals;
+        private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
+        private Random _random;
 
-        private object m_lastValue;
+        private object _lastValue;
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
-            m_program = program;
+            _program = program;
 
-            m_globals = variables;
-            m_locals.Push(new Dictionary<VariableSymbol, object>());
+            _globals = variables;
+            _locals.Push(new Dictionary<VariableSymbol, object>());
         }
 
         public object Evaluate()
         {
-            return EvaluateStatement(m_program.Statement);
+            return EvaluateStatement(_program.Statement);
         }
 
         private object EvaluateStatement(BoundBlockStatement body)
         {
             var labelToIndex = new Dictionary<BoundLabel, int>();
 
-            for (int i = 0; i < body.Statements.Length; i++)
+            for (var i = 0; i < body.Statements.Length; i++)
             {
                 if (body.Statements[i] is BoundLabelStatement label)
                 {
@@ -83,27 +83,27 @@ namespace Cocoa.CodeAnalysis
                         break;
                     case BoundNodeKind.ReturnStatement:
                         var rs = (BoundReturnStatement)statement;
-                        m_lastValue = rs.Expression == null ? null : EvaluateExpression(rs.Expression);
-                        return m_lastValue;
+                        _lastValue = rs.Expression == null ? null : EvaluateExpression(rs.Expression);
+                        return _lastValue;
                     default:
                         throw new Exception($"Unexpected node {statement.Kind}");
                 }
             }
 
-            return m_lastValue;
+            return _lastValue;
         }
 
         private void EvaluateVariableDeclaration(BoundVariableDeclaration node)
         {
             var value = EvaluateExpression(node.Initializer);
-            m_lastValue = value;
+            _lastValue = value;
 
             Assign(node.Variable, value);
         }
 
         private void EvaluateExpressionStatement(BoundExpressionStatement node)
         {
-            m_lastValue = EvaluateExpression(node.Expression);
+            _lastValue = EvaluateExpression(node.Expression);
         }
 
         private object EvaluateExpression(BoundExpression node)
@@ -138,11 +138,11 @@ namespace Cocoa.CodeAnalysis
         {
             if (variable.Variable.Kind == SymbolKind.GlobalVariable)
             {
-                return m_globals[variable.Variable];
+                return _globals[variable.Variable];
             }
             else
             {
-                var locals = m_locals.Peek();
+                var locals = _locals.Peek();
                 return locals[variable.Variable];
             }
         }
@@ -214,17 +214,17 @@ namespace Cocoa.CodeAnalysis
             {
                 var max = (int)EvaluateExpression(node.Arguments[0]);
 
-                if (m_random == null)
+                if (_random == null)
                 {
-                    m_random = new Random();
+                    _random = new Random();
                 }
 
-                return m_random.Next(max);
+                return _random.Next(max);
             }
             else
             {
                 var locals = new Dictionary<VariableSymbol, object>();
-                for (int i = 0; i < node.Arguments.Length; i++)
+                for (var i = 0; i < node.Arguments.Length; i++)
                 {
                     var parameter = node.Function.Parameters[i];
                     var value = EvaluateExpression(node.Arguments[i]);
@@ -232,12 +232,12 @@ namespace Cocoa.CodeAnalysis
                     locals.Add(parameter, value);
                 }
 
-                m_locals.Push(locals);
+                _locals.Push(locals);
 
-                var statement = m_program.Functions[node.Function];
+                var statement = _program.Functions[node.Function];
                 var result = EvaluateStatement(statement);
 
-                m_locals.Pop();
+                _locals.Pop();
 
                 return result;
             }
@@ -268,11 +268,11 @@ namespace Cocoa.CodeAnalysis
         {
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
-                m_globals[variable] = value;
+                _globals[variable] = value;
             }
             else
             {
-                var locals = m_locals.Peek();
+                var locals = _locals.Peek();
                 locals[variable] = value;
             }
         }

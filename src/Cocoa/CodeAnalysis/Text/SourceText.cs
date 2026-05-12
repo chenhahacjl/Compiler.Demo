@@ -9,11 +9,11 @@ namespace Cocoa.CodeAnalysis.Text
 {
     public sealed class SourceText
     {
-        private readonly string m_text;
+        private readonly string _text;
 
         private SourceText(string text, string fileName)
         {
-            m_text = text;
+            _text = text;
             FileName = fileName;
             Lines = ParseLines(this, text);
         }
@@ -22,9 +22,9 @@ namespace Cocoa.CodeAnalysis.Text
 
         public ImmutableArray<TextLine> Lines { get; }
 
-        public char this[int index] => m_text[index];
+        public char this[int index] => _text[index];
 
-        public int Length => m_text.Length;
+        public int Length => _text.Length;
 
         public int GetLineIndex(int position)
         {
@@ -118,10 +118,10 @@ namespace Cocoa.CodeAnalysis.Text
             return 0;
         }
 
-        public override string ToString() => m_text;
+        public override string ToString() => _text;
 
-        public string ToString(int start, int length) => m_text.Substring(start, length);
+        public string ToString(int start, int length) => _text.Substring(start, length);
 
-        public string ToString(TextSpan span) => m_text.Substring(span.Start, span.Length);
+        public string ToString(TextSpan span) => _text.Substring(span.Start, span.Length);
     }
 }

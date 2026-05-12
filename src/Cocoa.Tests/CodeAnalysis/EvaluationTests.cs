@@ -640,7 +640,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
             Assert.Equal(expectedDiagnostics.Length, result.Diagnostics.Length);
 
-            for (int i = 0; i < expectedDiagnostics.Length; i++)
+            for (var i = 0; i < expectedDiagnostics.Length; i++)
             {
                 var expectedMessage = expectedDiagnostics[i];
                 var actualMessage = result.Diagnostics[i].Message;

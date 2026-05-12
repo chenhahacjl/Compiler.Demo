@@ -1,18 +1,47 @@
-﻿using System;
+﻿using Cocoa.IO;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Drawing;
+using System.Globalization;
+using System.Reflection;
 using System.Text;
 
 namespace Cocoa.Interactive
 {
     internal abstract class Repl
     {
-        private List<string> m_submissionHistory = new List<string>();
-        private readonly List<string> m_submissionHistory = new List<string>();
-        private int m_submissionHistoryIndex;
+        private readonly List<MetaCommand> _metaCommands = new List<MetaCommand>();
+        private readonly List<string> _submissionHistory = new List<string>();
+        private int _submissionHistoryIndex;
 
-        private bool m_done;
+        private bool _done;
+
+        protected Repl()
+        {
+            InitializeMetaCommands();
+        }
+
+        private void InitializeMetaCommands()
+        {
+            var methods = GetType().GetMethods(
+                BindingFlags.Public | BindingFlags.NonPublic |
+                BindingFlags.Static | BindingFlags.Instance |
+                BindingFlags.FlattenHierarchy);
+
+            foreach (var method in methods)
+            {
+                var attribute = method.GetCustomAttribute<MetaCommandAttribute>();
+                if (attribute == null)
+                {
+                    continue;
+                }
+
+                var metaCommand = new MetaCommand(attribute.Name, attribute.Description, method);
+                _metaCommands.Add(metaCommand);
+            }
+        }
 
         public void Run()
         {
@@ -27,26 +56,26 @@ namespace Cocoa.Interactive
                 else
                     EvaluateSubmission(text);
 
-                m_submissionHistory.Add(text);
-                m_submissionHistoryIndex = 0;
+                _submissionHistory.Add(text);
+                _submissionHistoryIndex = 0;
             }
         }
 
         private sealed class SubmissionView
         {
-            private readonly Action<string> m_lineRenderer;
-            private readonly ObservableCollection<string> m_submissionDocument;
-            private readonly int m_cursorTop;
-            private int m_renderedLineCount;
-            private int m_currentLine;
-            private int m_currentCharacter;
+            private readonly Action<string> _lineRenderer;
+            private readonly ObservableCollection<string> _submissionDocument;
+            private readonly int _cursorTop;
+            private int _renderedLineCount;
+            private int _currentLine;
+            private int _currentCharacter;
 
             public SubmissionView(Action<string> lineRenderer, ObservableCollection<string> submissionDocument)
             {
-                m_lineRenderer = lineRenderer;
-                m_submissionDocument = submissionDocument;
-                m_submissionDocument.CollectionChanged += SubmissionDocumentChanged;
-                m_cursorTop = Console.CursorTop;
+                _lineRenderer = lineRenderer;
+                _submissionDocument = submissionDocument;
+                _submissionDocument.CollectionChanged += SubmissionDocumentChanged;
+                _cursorTop = Console.CursorTop;
                 Render();
             }
 
@@ -61,9 +90,9 @@ namespace Cocoa.Interactive
 
                 var lineCount = 0;
 
-                foreach (var line in m_submissionDocument)
+                foreach (var line in _submissionDocument)
                 {
-                    Console.SetCursorPosition(0, m_cursorTop + lineCount);
+                    Console.SetCursorPosition(0, _cursorTop + lineCount);
                     Console.ForegroundColor = ConsoleColor.Green;
 
                     if (lineCount == 0)
@@ -72,23 +101,23 @@ namespace Cocoa.Interactive
                         Console.Write("... ");
 
                     Console.ResetColor();
-                    m_lineRenderer(line);
+                    _lineRenderer(line);
                     Console.WriteLine(new string(' ', Console.WindowWidth - line.Length));
                     lineCount++;
                 }
 
-                var numberOfBlankLines = m_renderedLineCount - lineCount;
+                var numberOfBlankLines = _renderedLineCount - lineCount;
                 if (numberOfBlankLines > 0)
                 {
                     var blankLine = new string(' ', Console.WindowWidth);
                     for (var i = 0; i < numberOfBlankLines; i++)
                     {
-                        Console.SetCursorPosition(0, m_cursorTop + lineCount + i);
+                        Console.SetCursorPosition(0, _cursorTop + lineCount + i);
                         Console.WriteLine(blankLine);
                     }
                 }
 
-                m_renderedLineCount = lineCount;
+                _renderedLineCount = lineCount;
 
                 Console.CursorVisible = true;
                 UpdateCursorPosition();
@@ -96,19 +125,19 @@ namespace Cocoa.Interactive
 
             private void UpdateCursorPosition()
             {
-                Console.CursorTop = m_cursorTop + m_currentLine;
-                Console.CursorLeft = 4 + m_currentCharacter;
+                Console.CursorTop = _cursorTop + _currentLine;
+                Console.CursorLeft = 4 + _currentCharacter;
             }
 
             public int CurrentLine
             {
-                get => m_currentLine;
+                get => _currentLine;
                 set
                 {
-                    if (m_currentLine != value)
+                    if (_currentLine != value)
                     {
-                        m_currentLine = value;
-                        m_currentCharacter = Math.Min(m_submissionDocument[m_currentLine].Length, m_currentCharacter);
+                        _currentLine = value;
+                        _currentCharacter = Math.Min(_submissionDocument[_currentLine].Length, _currentCharacter);
                         UpdateCursorPosition();
                     }
                 }
@@ -116,12 +145,12 @@ namespace Cocoa.Interactive
 
             public int CurrentCharacter
             {
-                get => m_currentCharacter;
+                get => _currentCharacter;
                 set
                 {
-                    if (m_currentCharacter != value)
+                    if (_currentCharacter != value)
                     {
-                        m_currentCharacter = value;
+                        _currentCharacter = value;
                         UpdateCursorPosition();
                     }
                 }
@@ -130,12 +159,12 @@ namespace Cocoa.Interactive
 
         private string EditSubmission()
         {
-            m_done = false;
+            _done = false;
 
             var document = new ObservableCollection<string> { "" };
             var view = new SubmissionView(RenderLine, document);
 
-            while (!m_done)
+            while (!_done)
             {
                 var key = Console.ReadKey(true);
                 HandleKey(key, document, view);
@@ -222,7 +251,7 @@ namespace Cocoa.Interactive
             var submissionText = string.Join(Environment.NewLine, document);
             if (submissionText.StartsWith("#") || IsCompleteSubmission(submissionText))
             {
-                m_done = true;
+                _done = true;
                 return;
             }
 
@@ -343,30 +372,30 @@ namespace Cocoa.Interactive
 
         private void HandlePageUp(ObservableCollection<string> document, SubmissionView view)
         {
-            m_submissionHistoryIndex--;
-            if (m_submissionHistoryIndex < 0)
-                m_submissionHistoryIndex = m_submissionHistory.Count - 1;
+            _submissionHistoryIndex--;
+            if (_submissionHistoryIndex < 0)
+                _submissionHistoryIndex = _submissionHistory.Count - 1;
 
             UpdateDocumentFromHistory(document, view);
         }
 
         private void HandlePageDown(ObservableCollection<string> document, SubmissionView view)
         {
-            m_submissionHistoryIndex++;
-            if (m_submissionHistoryIndex > m_submissionHistory.Count - 1)
-                m_submissionHistoryIndex = 0;
+            _submissionHistoryIndex++;
+            if (_submissionHistoryIndex > _submissionHistory.Count - 1)
+                _submissionHistoryIndex = 0;
 
             UpdateDocumentFromHistory(document, view);
         }
 
         private void UpdateDocumentFromHistory(ObservableCollection<string> document, SubmissionView view)
         {
-            if (m_submissionHistory.Count == 0)
+            if (_submissionHistory.Count == 0)
                 return;
 
             document.Clear();
 
-            var historyItem = m_submissionHistory[m_submissionHistoryIndex];
+            var historyItem = _submissionHistory[_submissionHistoryIndex];
             var lines = historyItem.Split(Environment.NewLine);
             foreach (var line in lines)
             {
@@ -388,7 +417,7 @@ namespace Cocoa.Interactive
 
         protected void ClearHistory()
         {
-            m_submissionHistory.Clear();
+            _submissionHistory.Clear();
         }
 
         protected virtual void RenderLine(string line)
@@ -396,15 +425,173 @@ namespace Cocoa.Interactive
             Console.Write(line);
         }
 
-        protected virtual void EvaluateMetaCommand(string input)
+        private void EvaluateMetaCommand(string input)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"Invalid command {input}.");
-            Console.ResetColor();
+            var inQuotes = false;
+            var args = new List<string>();
+            var sb = new StringBuilder();
+
+            var position = 1;
+            while (position < input.Length)
+            {
+                var currChar = input[position];
+                var nextChar = position + 1 >= input.Length ? '\0' : input[position + 1];
+
+                if (char.IsWhiteSpace(currChar))
+                {
+                    if (!inQuotes)
+                    {
+                        CommitPendingArgument();
+                    }
+                    else
+                    {
+                        sb.Append(currChar);
+                    }
+                }
+                else if (currChar == '\"')
+                {
+                    if (!inQuotes)
+                    {
+                        inQuotes = true;
+                    }
+                    else if (nextChar == '\"')
+                    {
+                        sb.Append(currChar);
+                        position++;
+                    }
+                    else
+                    {
+                        inQuotes = false;
+                    }
+                }
+                else
+                {
+                    sb.Append(currChar);
+                }
+
+                position++;
+            }
+
+            CommitPendingArgument();
+
+            void CommitPendingArgument()
+            {
+                var arg = sb.ToString();
+
+                if (!string.IsNullOrWhiteSpace(arg))
+                    args.Add(arg);
+
+                sb.Clear();
+            }
+
+            var commandName = args.FirstOrDefault();
+            if (args.Count > 0)
+            {
+                args.RemoveAt(0);
+            }
+
+            var command = _metaCommands.SingleOrDefault(mc => mc.Name == commandName);
+            if (command == null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Invalid command {input}.");
+                Console.ResetColor();
+
+                return;
+            }
+
+            var parameters = command.Method.GetParameters();
+
+            if (args.Count != parameters.Length)
+            {
+                var parameterNames = string.Join(" ", parameters.Select(p => $"<{p.Name}>"));
+
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"error: invalid number of arguments");
+                Console.WriteLine($"usage: #{command.Name} {parameterNames}");
+                Console.ResetColor();
+
+                return;
+            }
+
+            var instance = command.Method.IsStatic ? null : this;
+            command.Method.Invoke(instance, args.ToArray());
         }
 
         protected abstract bool IsCompleteSubmission(string text);
 
         protected abstract void EvaluateSubmission(string text);
+
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        protected sealed class MetaCommandAttribute : Attribute
+        {
+            public MetaCommandAttribute(string name, string description)
+            {
+                Name = name;
+                Description = description;
+            }
+
+            public string Name { get; }
+            public string Description { get; }
+        }
+
+        private class MetaCommand
+        {
+            public MetaCommand(string name, string description, MethodInfo method)
+            {
+                Name = name;
+                Description = description;
+                Method = method;
+            }
+
+            public string Name { get; }
+            public string Description { get; }
+            public MethodInfo Method { get; }
+        }
+
+        [MetaCommand("help", "Shows help")]
+        protected void EvaluateHelp()
+        {
+            var maxNameLength = _metaCommands.Max(mc => mc.Name.Length);
+
+            foreach (var metaCommand in _metaCommands.OrderBy(mc => mc.Name))
+            {
+                var metaParams = metaCommand.Method.GetParameters();
+                if (metaParams.Length == 0)
+                {
+                    var paddedName = metaCommand.Name.PadRight(maxNameLength);
+
+                    Console.Out.WritePunctuation("#");
+                    Console.Out.WriteIdentifier(paddedName);
+                }
+                else
+                {
+                    Console.Out.WritePunctuation("#");
+                    Console.Out.WriteIdentifier(metaCommand.Name);
+
+                    foreach (var pi in metaParams)
+                    {
+                        Console.Out.WriteSpace();
+                        Console.Out.WritePunctuation("<");
+                        Console.Out.WriteIdentifier(pi.Name!);
+                        Console.Out.WritePunctuation(">");
+                    }
+
+                    Console.Out.WriteLine();
+                    Console.Out.WriteSpace();
+
+                    for (var _ = 0; _ < maxNameLength; _++)
+                    {
+                        Console.Out.WriteSpace();
+                    }
+                }
+
+                Console.Out.WriteSpace();
+                Console.Out.WriteSpace();
+                Console.Out.WriteSpace();
+                Console.Out.WritePunctuation(metaCommand.Description);
+                Console.Out.WriteLine();
+            }
+        }
     }
 }
