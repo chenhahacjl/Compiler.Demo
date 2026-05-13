@@ -195,6 +195,7 @@ namespace Cocoa.Interactive
 				Console.Out.WriteDiagnostics(result.Diagnostics);
 			}
 		}
+
 		private static string GetSubmissionsDirectory()
 		{
 			var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
