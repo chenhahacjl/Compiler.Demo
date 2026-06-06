@@ -1,7 +1,10 @@
 @echo off
 
+REM Vars
+set "SLNDIR=%~dp0"
+
 REM Restore + Build
-dotnet build ".\Cocoa.sln" --nologo || exit /b
+dotnet build "%SLNDIR%Cocoa.sln" --nologo || exit /b
 
 REM Test
-dotnet test ".\Cocoa.Tests" --nologo --no-build
+dotnet test "%SLNDIR%Cocoa.Tests" --nologo --no-build

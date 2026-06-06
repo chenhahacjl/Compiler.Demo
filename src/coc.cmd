@@ -1,3 +1,10 @@
 @echo off
 
-dotnet run --project .\Cocoa.Compiler\Cocoa.Compiler.csproj -- "%*"
+REM Vars
+set "SLNDIR=%~dp0"
+
+REM Restore + Build
+dotnet build "%SLNDIR%Cocoa.Compiler" --nologo || exit /b
+
+REM Run
+dotnet run --project "%SLNDIR%Cocoa.Compiler" --no-build -- %*
