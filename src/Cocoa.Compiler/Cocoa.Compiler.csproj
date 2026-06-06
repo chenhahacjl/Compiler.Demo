@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-	<AssemblyName>Cocoa.Interactive</AssemblyName>
-	<RootNamespace>Cocoa.Interactive</RootNamespace>
+	<AssemblyName>Cocoa.Compiler</AssemblyName>
+	<RootNamespace>Cocoa.Compiler</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

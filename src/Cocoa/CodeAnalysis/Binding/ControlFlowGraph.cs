@@ -175,7 +175,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     foreach (var statement in current.Statements)
                     {
-                        var isLastStatementent = statement == current.Statements.Last();
+                        var isLastStatement = statement == current.Statements.Last();
                         switch (statement.Kind)
                         {
                             case BoundNodeKind.GotoStatement:
@@ -199,7 +199,7 @@ namespace Cocoa.CodeAnalysis.Binding
                             case BoundNodeKind.VariableDeclaration:
                             case BoundNodeKind.LabelStatement:
                             case BoundNodeKind.ExpressionStatement:
-                                if (isLastStatementent)
+                                if (isLastStatement)
                                     Connect(current, next);
                                 break;
                             default:

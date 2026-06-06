@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 
 namespace Cocoa.CodeAnalysis
@@ -15,19 +16,27 @@ namespace Cocoa.CodeAnalysis
     {
         private BoundGlobalScope _globalScope;
 
-        public Compilation(params SyntaxTree[] syntaxTrees)
-            : this(null, syntaxTrees)
+        private Compilation(bool isScript, Compilation previous, params SyntaxTree[] syntaxTrees)
         {
-        }
-
-        private Compilation(Compilation previous, params SyntaxTree[] syntaxTrees)
-        {
+            IsScript = isScript;
             Previous = previous;
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
 
+        public static Compilation Create(params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, syntaxTrees);
+        }
+
+        public static Compilation CreateScript(Compilation previous, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: true, previous, syntaxTrees);
+        }
+
+        public bool IsScript { get; }
         public Compilation Previous { get; }
         public ImmutableArray<SyntaxTree> SyntaxTrees { get; }
+        public FunctionSymbol MainFunction => GlobalScope.MainFunction;
         public ImmutableArray<FunctionSymbol> Functions => GlobalScope.Functions;
         public ImmutableArray<VariableSymbol> Variables => GlobalScope.Variables;
 
@@ -37,7 +46,7 @@ namespace Cocoa.CodeAnalysis
             {
                 if (_globalScope == null)
                 {
-                    var globalScope = Binder.BindGlobalScope(Previous?.GlobalScope, SyntaxTrees);
+                    var globalScope = Binding.Binder.BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees);
                     Interlocked.CompareExchange(ref _globalScope, globalScope, null);
                 }
 
@@ -55,30 +64,26 @@ namespace Cocoa.CodeAnalysis
             while (submission != null)
             {
                 foreach (var function in submission.Functions)
-                {
                     if (seenSymbolNames.Add(function.Name))
                         yield return function;
-                }
 
                 foreach (var variable in submission.Variables)
-                {
                     if (seenSymbolNames.Add(variable.Name))
                         yield return variable;
-                }
 
                 foreach (var builtin in builtinFunctions)
-                {
                     if (seenSymbolNames.Add(builtin.Name))
                         yield return builtin;
-                }
 
                 submission = submission.Previous;
             }
         }
 
-        public Compilation ContinueWith(SyntaxTree syntaxTree)
+        private BoundProgram GetProgram()
         {
-            return new Compilation(this, syntaxTree);
+            var previous = Previous == null ? null : Previous.GetProgram();
+
+            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope);
         }
 
         /// <summary>
@@ -94,20 +99,20 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(diagnostics, null);
             }
 
-            var program = Binder.BindProgram(GlobalScope);
+            var program = GetProgram();
 
-            var appPath = Environment.GetCommandLineArgs()[0];
-            var appDirectory = Path.GetDirectoryName(appPath);
-            var cfgPath = Path.Combine(appDirectory, "cfg.dot");
-            var cfgStatements = !program.Statement.Statements.Any() && program.Functions.Any()
-                                ? program.Functions.Last().Value
-                                : program.Statement;
+            //var appPath = Environment.GetCommandLineArgs()[0];
+            //var appDirectory = Path.GetDirectoryName(appPath);
+            //var cfgPath = Path.Combine(appDirectory, "cfg.dot");
+            //var cfgStatements = !program.Statement.Statements.Any() && program.Functions.Any()
+            //                    ? program.Functions.Last().Value
+            //                    : program.Statement;
 
-            var cfg = ControlFlowGraph.Create(cfgStatements);
-            using (var streamWrite = new StreamWriter(cfgPath))
-            {
-                cfg.WriteTo(streamWrite);
-            }
+            //var cfg = ControlFlowGraph.Create(cfgStatements);
+            //using (var streamWriter = new StreamWriter(cfgPath))
+            //{
+            //    cfg.WriteTo(streamWriter);
+            //}
 
             if (program.Diagnostics.Any())
             {
@@ -123,29 +128,21 @@ namespace Cocoa.CodeAnalysis
 
         public void EmitTree(TextWriter writer)
         {
-            var program = Binder.BindProgram(GlobalScope);
+            var program = GetProgram();
 
-            if (program.Statement.Statements.Any())
+            if (GlobalScope.MainFunction != null)
             {
-                program.Statement.WriteTo(writer);
+                EmitTree(GlobalScope.MainFunction, writer);
             }
-            else
+            else if (GlobalScope.ScriptFunction != null)
             {
-                foreach (var functionBody in program.Functions)
-                {
-                    if (!GlobalScope.Functions.Contains(functionBody.Key))
-                        continue;
-
-                    functionBody.Key.WriteTo(writer);
-                    writer.WriteLine();
-                    functionBody.Value.WriteTo(writer);
-                }
+                EmitTree(GlobalScope.ScriptFunction, writer);
             }
         }
 
         public void EmitTree(FunctionSymbol symbol, TextWriter writer)
         {
-            var program = Binder.BindProgram(GlobalScope);
+            var program = GetProgram();
 
             symbol.WriteTo(writer);
             writer.WriteLine();

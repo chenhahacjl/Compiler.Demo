@@ -18,15 +18,17 @@ namespace Cocoa.CodeAnalysis.Binding
     internal sealed class Binder
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
+        private readonly bool _isScript;
         private readonly FunctionSymbol _function;
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
 
-        public Binder(BoundScope parent, FunctionSymbol function)
+        public Binder(bool isScript, BoundScope parent, FunctionSymbol function)
         {
             _scope = new BoundScope(parent);
+            _isScript = isScript;
             _function = function;
 
             if (function != null)
@@ -38,13 +40,13 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(BoundGlobalScope previous, ImmutableArray<SyntaxTree> syntaxTrees)
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope previous, ImmutableArray<SyntaxTree> syntaxTrees)
         {
-            var parentScope = CreateParentScopes(previous);
-            var binder = new Binder(parentScope, null);
+            var parentScope = CreateParentScope(previous);
+            var binder = new Binder(isScript, parentScope, null);
 
             var functionDeclarations = syntaxTrees.SelectMany(st => st.Root.Members)
-                                                 .OfType<FunctionDeclarationSyntax>();
+                                                  .OfType<FunctionDeclarationSyntax>();
 
             foreach (var function in functionDeclarations)
             {
@@ -58,54 +60,140 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var globalStatement in globalStatements)
             {
-                var statement = binder.BindStatement(globalStatement.Statement);
+                var statement = binder.BindGlobalStatement(globalStatement.Statement);
+
                 statements.Add(statement);
             }
 
+            // Check global statements
+
+            var firstGlobalStatementPerSyntaxTree = syntaxTrees
+                .Select(st => st.Root.Members.OfType<GlobalStatementSyntax>().FirstOrDefault())
+                .Where(g => g != null)
+                .ToArray();
+
+            if (firstGlobalStatementPerSyntaxTree.Length > 1)
+            {
+                foreach (var globalStatement in firstGlobalStatementPerSyntaxTree)
+                {
+                    binder.Diagnostics.ReportOnlyOneFileCanHaveGlobalStatements(globalStatement.Location);
+                }
+            }
+
+            // Check for main/script with global statements
+
             var functions = binder._scope.GetDeclaredFunctions();
-            var variables = binder._scope.GetDeclaredVariables();
+
+            FunctionSymbol? mainFunction;
+            FunctionSymbol? scriptFunction;
+
+            if (isScript)
+            {
+                mainFunction = null;
+
+                if (globalStatements.Any())
+                {
+                    scriptFunction = new FunctionSymbol("$eval", ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Any, null);
+                }
+                else
+                {
+                    scriptFunction = null;
+                }
+            }
+            else
+            {
+                scriptFunction = null;
+
+                mainFunction = functions.SingleOrDefault(f => f.Name == "main");
+
+                if (mainFunction != null)
+                {
+                    if (mainFunction.ReturnType != TypeSymbol.Void || mainFunction.Parameters.Any())
+                    {
+                        binder.Diagnostics.ReportMainMustHaveCorrectSignature(mainFunction.Declaration.Identifier.Location);
+                    }
+                }
+
+                if (globalStatements.Any())
+                {
+                    if (mainFunction != null)
+                    {
+                        binder.Diagnostics.ReportCannotMixMainAndGlobalStatements(mainFunction.Declaration.Identifier.Location);
+
+                        foreach (var globalStatement in firstGlobalStatementPerSyntaxTree)
+                        {
+                            binder.Diagnostics.ReportCannotMixMainAndGlobalStatements(globalStatement.Location);
+                        }
+                    }
+                    else
+                    {
+                        mainFunction = new FunctionSymbol("main", ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null);
+                    }
+                }
+            }
+
             var diagnostics = binder.Diagnostics.ToImmutableArray();
+            var variables = binder._scope.GetDeclaredVariables();
 
             if (previous != null)
             {
                 diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
             }
 
-            return new BoundGlobalScope(previous, diagnostics, functions, variables, statements.ToImmutable());
+            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, variables, statements.ToImmutable());
         }
 
-        public static BoundProgram BindProgram(BoundGlobalScope globalScope)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram previous, BoundGlobalScope globalScope)
         {
-            var parentScope = CreateParentScopes(globalScope);
+            var parentScope = CreateParentScope(globalScope);
 
             var functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
-            var scope = globalScope;
-
-            while (scope != null)
+            foreach (var function in globalScope.Functions)
             {
-                foreach (var function in scope.Functions)
+                var binder = new Binder(isScript, parentScope, function);
+                var body = binder.BindStatement(function.Declaration.Body);
+                var loweredBody = Lowerer.Lower(body);
+
+                if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
                 {
-                    var binder = new Binder(parentScope, function);
-                    var body = binder.BindStatement(function.Declaration.Body);
-                    var loweredBody = Lowerer.Lower(body);
-
-                    if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
-                    {
-                        binder._diagnostics.ReportAllPathMustReturn(function.Declaration.Identifier.Location);
-                    }
-
-                    functionBodies.Add(function, loweredBody);
-                    diagnostics.AddRange(binder.Diagnostics);
+                    binder._diagnostics.ReportAllPathsMustReturn(function.Declaration.Identifier.Location);
                 }
 
-                scope = scope.Previous;
+                functionBodies.Add(function, loweredBody);
+                diagnostics.AddRange(binder.Diagnostics);
             }
 
-            var statement = Lowerer.Lower(new BoundBlockStatement(globalScope.Statements));
+            if (globalScope.MainFunction != null && globalScope.Statements.Any())
+            {
+                var body = Lowerer.Lower(new BoundBlockStatement(globalScope.Statements));
 
-            return new BoundProgram(diagnostics.ToImmutable(), functionBodies.ToImmutable(), statement);
+                functionBodies.Add(globalScope.MainFunction, body);
+            }
+            else if (globalScope.ScriptFunction != null)
+            {
+                var statements = globalScope.Statements;
+
+                if (statements.Length == 1 &&
+                    statements[0] is BoundExpressionStatement es &&
+                    es.Expression.Type != TypeSymbol.Void)
+                {
+                    statements = statements.SetItem(0, new BoundReturnStatement(es.Expression));
+                }
+                else if (statements.Any() && statements.Last().Kind != BoundNodeKind.ReturnStatement)
+                {
+                    var nullValue = new BoundLiteralExpression("");
+
+                    statements = statements.Add(new BoundReturnStatement(nullValue));
+                }
+
+                var body = Lowerer.Lower(new BoundBlockStatement(statements));
+
+                functionBodies.Add(globalScope.ScriptFunction, body);
+            }
+
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable());
         }
 
         private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax)
@@ -114,7 +202,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var seenParameterNames = new HashSet<string>();
 
-            foreach (var parameterSyntax in syntax.Paramenters)
+            foreach (var parameterSyntax in syntax.Parameters)
             {
                 var parameterName = parameterSyntax.Identifier.Text;
                 var parameterType = BindTypeClause(parameterSyntax.Type);
@@ -139,7 +227,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private static BoundScope CreateParentScopes(BoundGlobalScope previous)
+        private static BoundScope CreateParentScope(BoundGlobalScope previous)
         {
             var stack = new Stack<BoundGlobalScope>();
             while (previous != null)
@@ -190,7 +278,31 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundExpressionStatement(new BoundErrorExpression());
         }
 
-        private BoundStatement BindStatement(StatementSyntax syntax)
+        private BoundStatement BindGlobalStatement(StatementSyntax syntax)
+        {
+            return BindStatement(syntax, isGlobal: true);
+        }
+
+        private BoundStatement BindStatement(StatementSyntax syntax, bool isGlobal = false)
+        {
+            var result = BindStatementInternal(syntax);
+
+            if (!_isScript || !isGlobal)
+            {
+                if (result is BoundExpressionStatement es)
+                {
+                    var isAllowedExpression = es.Expression.Kind == BoundNodeKind.ErrorExpression ||
+                                              es.Expression.Kind == BoundNodeKind.AssignmentExpression ||
+                                              es.Expression.Kind == BoundNodeKind.CallExpression;
+                    if (!isAllowedExpression)
+                        _diagnostics.ReportInvalidExpressionStatement(syntax.Location);
+                }
+            }
+
+            return result;
+        }
+
+        private BoundStatement BindStatementInternal(StatementSyntax syntax)
         {
             switch (syntax.Kind)
             {
@@ -336,7 +448,19 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (_function == null)
             {
-                _diagnostics.ReportInvalidReturn(syntax.Keyword.Location);
+                if (_isScript)
+                {
+                    // Ignore because we allow both return with and without values.
+                    if (expression == null)
+                    {
+                        expression = new BoundLiteralExpression("");
+                    }
+                }
+                else if (expression != null)
+                {
+                    // Main does not support return values.
+                    _diagnostics.ReportInvalidReturnExpression(syntax.Expression.Location, _function.Name);
+                }
             }
             else
             {
@@ -366,15 +490,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindExpression(ExpressionSyntax syntax, TypeSymbol targetType)
         {
-            var result = BindExpression(syntax);
-            if (targetType != TypeSymbol.Error &&
-                result.Type != TypeSymbol.Error &&
-                result.Type != targetType)
-            {
-                _diagnostics.ReportCannotConvert(syntax.Location, result.Type, targetType);
-            }
-
-            return result;
+            return BindConversion(syntax, targetType);
         }
 
         private BoundExpression BindExpression(ExpressionSyntax syntax, bool canBeVoid = false)
@@ -448,24 +564,21 @@ namespace Cocoa.CodeAnalysis.Binding
                 _diagnostics.ReportCannotAssign(syntax.EqualsToken.Location, name);
             }
 
-            if (boundExpression.Type != variable.Type)
-            {
-                _diagnostics.ReportCannotConvert(syntax.Expression.Location, boundExpression.Type, variable.Type);
-                return boundExpression;
-            }
+            var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, variable.Type);
 
-            return new BoundAssignmentExpression(variable, boundExpression);
+            return new BoundAssignmentExpression(variable, convertedExpression);
         }
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
         {
             var boundOperand = BindExpression(syntax.Operand);
-            var boundOperator = BoundUnaryOperator.Bind(syntax.OperatorToken.Kind, boundOperand.Type);
 
             if (boundOperand.Type == TypeSymbol.Error)
             {
                 return new BoundErrorExpression();
             }
+
+            var boundOperator = BoundUnaryOperator.Bind(syntax.OperatorToken.Kind, boundOperand.Type);
 
             if (boundOperator == null)
             {
@@ -553,26 +666,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression();
             }
 
-            bool hasErrors = false;
             for (var i = 0; i < syntax.Arguments.Count; i++)
             {
+                var argumentLocation = syntax.Arguments[i].Location;
                 var argument = boundArguments[i];
                 var parameter = function.Parameters[i];
 
-                if (argument.Type != parameter.Type)
-                {
-                    if (argument.Type != TypeSymbol.Error)
-                    {
-                        _diagnostics.ReportWrongArgumentType(syntax.Arguments[i].Location, parameter.Name, parameter.Type, argument.Type);
-                    }
-
-                    hasErrors = true;
-                }
-            }
-
-            if (hasErrors)
-            {
-                return new BoundErrorExpression();
+                boundArguments[i] = BindConversion(argumentLocation, argument, parameter.Type);
             }
 
             return new BoundCallExpression(function, boundArguments.ToImmutable());
@@ -627,19 +727,19 @@ namespace Cocoa.CodeAnalysis.Binding
             return variable;
         }
 
-        private VariableSymbol BindVariableReference(SyntaxToken identifyToken)
+        private VariableSymbol BindVariableReference(SyntaxToken identifierToken)
         {
-            var name = identifyToken.Text;
+            var name = identifierToken.Text;
 
             switch (_scope.TryLookupSymbol(name))
             {
                 case VariableSymbol variable:
                     return variable;
                 case null:
-                    _diagnostics.ReportUndefinedVariable(identifyToken.Location, name);
+                    _diagnostics.ReportUndefinedVariable(identifierToken.Location, name);
                     return null;
                 default:
-                    _diagnostics.ReportNotAVariable(identifyToken.Location, name);
+                    _diagnostics.ReportNotAVariable(identifierToken.Location, name);
                     return null;
             }
         }
@@ -648,6 +748,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             switch (name)
             {
+                case "any": return TypeSymbol.Any;
                 case "bool": return TypeSymbol.Boolean;
                 case "int": return TypeSymbol.Interger;
                 case "string": return TypeSymbol.String;

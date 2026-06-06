@@ -59,10 +59,10 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private SyntaxToken NextToken()
         {
-            var currnet = Current;
+            var current = Current;
             _position++;
 
-            return currnet;
+            return current;
         }
 
         private SyntaxToken MatchToken(SyntaxKind kind)
@@ -72,7 +72,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return NextToken();
             }
 
-            _diagnostics.ReportUnexpcetedToken(Current.Location, Current.Kind, kind);
+            _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, kind);
             return new SyntaxToken(_syntaxTree, kind, Current.Position, null, null);
         }
 
@@ -92,10 +92,10 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 var startToken = Current;
 
-                var member = ParseMenber();
+                var member = ParseMember();
                 members.Add(member);
 
-                // If ParseMenber() did not consume any tokens,
+                // If ParseMember() did not consume any tokens,
                 // we need to skip the current token and continue
                 // in order to avoid an infinite loop.
                 //
@@ -111,7 +111,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return members.ToImmutable();
         }
 
-        private MemberSyntax ParseMenber()
+        private MemberSyntax ParseMember()
         {
             if (Current.Kind == SyntaxKind.FunctionKeyword)
             {
@@ -203,7 +203,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
-        private StatementSyntax ParseBlockStatement()
+        private BlockStatementSyntax ParseBlockStatement()
         {
             var statements = ImmutableArray.CreateBuilder<StatementSyntax>();
 
@@ -337,9 +337,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var keyword = MatchToken(SyntaxKind.ReturnKeyword);
             var keywordLine = _text.GetLineIndex(keyword.Span.Start);
-            var currenrLine = _text.GetLineIndex(Current.Span.Start);
+            var currentLine = _text.GetLineIndex(Current.Span.Start);
             var isEof = Current.Kind == SyntaxKind.EndOfFileToken;
-            var sameLine = !isEof && keywordLine == currenrLine;
+            var sameLine = !isEof && keywordLine == currentLine;
             var expression = sameLine ? ParseExpression() : null;
 
             return new ReturnStatementSyntax(_syntaxTree, keyword, expression);
@@ -470,12 +470,12 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private ExpressionSyntax ParseCallExpression()
         {
-            var identidier = MatchToken(SyntaxKind.IdentifierToken);
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
             var arguments = ParseArguments();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            return new CallExpressionSyntax(_syntaxTree, identidier, openParenthesisToken, arguments, closeParenthesisToken);
+            return new CallExpressionSyntax(_syntaxTree, identifier, openParenthesisToken, arguments, closeParenthesisToken);
         }
 
         private SeparatedSyntaxList<ExpressionSyntax> ParseArguments()

@@ -16,6 +16,7 @@ namespace Cocoa.CodeAnalysis
     {
         private readonly BoundProgram _program;
         private readonly Dictionary<VariableSymbol, object> _globals;
+        private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
         private Random _random;
 
@@ -27,11 +28,35 @@ namespace Cocoa.CodeAnalysis
 
             _globals = variables;
             _locals.Push(new Dictionary<VariableSymbol, object>());
+
+            var current = program;
+
+            while (current != null)
+            {
+                foreach (var kv in current.Functions)
+                {
+                    var function = kv.Key;
+                    var body = kv.Value;
+
+                    _functions.Add(function, body);
+                }
+
+                current = current.Previous;
+            }
         }
 
         public object Evaluate()
         {
-            return EvaluateStatement(_program.Statement);
+            var function = _program.MainFunction ?? _program.ScriptFunction;
+
+            if (function == null)
+            {
+                return null;
+            }
+
+            var body = _functions[function];
+
+            return EvaluateStatement(body);
         }
 
         private object EvaluateStatement(BoundBlockStatement body)
@@ -234,7 +259,7 @@ namespace Cocoa.CodeAnalysis
 
                 _locals.Push(locals);
 
-                var statement = _program.Functions[node.Function];
+                var statement = _functions[node.Function];
                 var result = EvaluateStatement(statement);
 
                 _locals.Pop();
@@ -246,7 +271,11 @@ namespace Cocoa.CodeAnalysis
         private object EvaluateConversionExpression(BoundConversionExpression node)
         {
             var value = EvaluateExpression(node.Expression);
-            if (node.Type == TypeSymbol.Boolean)
+            if (node.Type == TypeSymbol.Any)
+            {
+                return value;
+            }
+            else if (node.Type == TypeSymbol.Boolean)
             {
                 return Convert.ToBoolean(value);
             }

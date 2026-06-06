@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// </summary>
         /// <returns></returns>
         internal static IEnumerable<FunctionSymbol> GetAll()
-            => typeof(BuiltinFunctions).GetFields(BindingFlags.Public | BindingFlags.Static)
+            => typeof(BuiltinFunctions).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.NonPublic)
                                        .Where(f => f.FieldType == typeof(FunctionSymbol))
                                        .Select(f => (FunctionSymbol)f.GetValue(null));
     }
