@@ -120,6 +120,7 @@ namespace Cocoa.IO
 
                 writer.SetForeground(ConsoleColor.DarkRed);
                 writer.Write($"{fileName}({startLine},{startCharacter},{endLine},{endCharacter}): ");
+                writer.WriteLine(diagnostic);
                 writer.ResetColor();
 
                 var prefixSpan = TextSpan.FromBounds(line.Start, span.Start);
