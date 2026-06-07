@@ -1,8 +1,0 @@
-var m = 1
-var factorial = 1
-while m <= 5
-{
-    factorial = factorial * m
-    m = m + 1
-}
-print("factorial: " + string(factorial))

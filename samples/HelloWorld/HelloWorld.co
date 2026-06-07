@@ -1,5 +1,0 @@
-function main()
-{
-	let name = GetName()
-	print("Hello " + name + "!")
-}

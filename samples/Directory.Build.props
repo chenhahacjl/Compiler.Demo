@@ -1,0 +1,8 @@
+<Project>
+
+  <PropertyGroup>
+    <DefaultLanguageSourceExtension>.co</DefaultLanguageSourceExtension>
+    <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+  </PropertyGroup>
+
+</Project>
