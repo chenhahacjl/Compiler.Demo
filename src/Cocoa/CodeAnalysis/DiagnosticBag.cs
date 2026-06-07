@@ -1,6 +1,7 @@
 ﻿using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
+using Mono.Cecil;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -155,6 +156,12 @@ namespace Cocoa.CodeAnalysis
             Report(location, message);
         }
 
+        public void ReportInvalidReturnWithValueInGlobalStatements(TextLocation location)
+        {
+            var message = "The 'return' keyword cannot be followed by an expression in global statements.";
+            Report(location, message);
+        }
+
         public void ReportMissingReturnExpression(TextLocation location, TypeSymbol returnType)
         {
             var message = $"An expression of type '{returnType}' is expected.";
@@ -183,6 +190,38 @@ namespace Cocoa.CodeAnalysis
         {
             var message = $"Cannot declare main function when global statements are used.";
             Report(location, message);
+        }
+
+        public void ReportInvalidReference(string path)
+        {
+            var message = $"The reference is not a valid .NET assembly: '{path}'.";
+            Report(default, message);
+        }
+
+        public void ReportRequiredTypeNotFound(string cocoaName, string metadataName)
+        {
+            var message = cocoaName == null
+                ? $"The required type '{metadataName}' cannot be resolved among the given references."
+                : $"The required type '{cocoaName}' ('{metadataName}') cannot be resolved among the given references.";
+            Report(default, message);
+        }
+
+        public void ReportRequiredTypeAmbiguous(string cocoaName, string metadataName, TypeDefinition[] foundTypes)
+        {
+            var assemblyNames = foundTypes.Select(t => t.Module.Assembly.Name.Name);
+            var assemblyNameList = string.Join(", ", assemblyNames);
+
+            var message = cocoaName == null
+                ? $"The required type '{cocoaName}' was found in multiple references: {assemblyNameList}."
+                : $"The required type '{cocoaName}' ('{metadataName}') was found in multiple references: {assemblyNameList}.";
+            Report(default, message);
+        }
+
+        public void ReportRequiredMethodNotFound(string typeName, string methodName, string[] parameterTypeNames)
+        {
+            var parameterTypeNameList = string.Join(", ", parameterTypeNames);
+            var message = $"The required method '{typeName}.{methodName}({parameterTypeNameList})' cannot be resolved among the given references.";
+            Report(default, message);
         }
     }
 }

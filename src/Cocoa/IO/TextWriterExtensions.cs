@@ -101,7 +101,15 @@ namespace Cocoa.IO
 
         public static void WriteDiagnostics(this TextWriter writer, IEnumerable<Diagnostic> diagnostics)
         {
-            foreach (var diagnostic in diagnostics.OrderBy(diag => diag.Location.FileName)
+            foreach (var diagnostic in diagnostics.Where(d => d.Location.Text == null))
+            {
+                writer.SetForeground(ConsoleColor.DarkRed);
+                writer.Write(diagnostic.Message);
+                writer.ResetColor();
+            }
+
+            foreach (var diagnostic in diagnostics.Where(d => d.Location.Text != null)
+                                                  .OrderBy(diag => diag.Location.FileName)
                                                   .ThenBy(diag => diag.Location.Span.Start)
                                                   .ThenBy(diag => diag.Location.Span.Length))
             {

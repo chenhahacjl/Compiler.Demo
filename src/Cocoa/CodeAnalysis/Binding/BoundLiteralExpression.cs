@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (value is bool)
                 Type = TypeSymbol.Boolean;
             else if (value is int)
-                Type = TypeSymbol.Interger;
+                Type = TypeSymbol.Int32;
             else if (value is string)
                 Type = TypeSymbol.String;
             else

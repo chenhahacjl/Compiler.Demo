@@ -353,7 +353,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 var span = new TextSpan(_start, length);
                 var location = new TextLocation(_text, span);
-                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Interger);
+                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Int32);
             }
 
             _value = value;

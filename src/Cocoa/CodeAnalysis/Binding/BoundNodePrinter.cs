@@ -289,7 +289,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 writer.WriteKeyword((bool)node.Value ? SyntaxKind.TrueKeyword : SyntaxKind.FalseKeyword);
             }
-            else if (node.Type == TypeSymbol.Interger)
+            else if (node.Type == TypeSymbol.Int32)
             {
                 writer.WriteNumber(value);
             }

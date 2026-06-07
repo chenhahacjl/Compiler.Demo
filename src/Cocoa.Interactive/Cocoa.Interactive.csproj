@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <AssemblyName>Cocoa.Interactive</AssemblyName>
+    <AssemblyName>coi</AssemblyName>
     <RootNamespace>Cocoa.Interactive</RootNamespace>
   </PropertyGroup>
 

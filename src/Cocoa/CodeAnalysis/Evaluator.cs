@@ -203,13 +203,13 @@ namespace Cocoa.CodeAnalysis
 
             switch (binary.Op.Kind)
             {
-                case BoundBinaryOperatorKind.Addition: return binary.Type == TypeSymbol.Interger ? (int)left + (int)right : (string)left + (string)right;
+                case BoundBinaryOperatorKind.Addition: return binary.Type == TypeSymbol.Int32 ? (int)left + (int)right : (string)left + (string)right;
                 case BoundBinaryOperatorKind.Subtraction: return (int)left - (int)right;
                 case BoundBinaryOperatorKind.Multiplication: return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division: return (int)left / (int)right;
-                case BoundBinaryOperatorKind.BitwiseAnd: return binary.Type == TypeSymbol.Interger ? (int)left & (int)right : (bool)left & (bool)right;
-                case BoundBinaryOperatorKind.BitwiseOr: return binary.Type == TypeSymbol.Interger ? (int)left | (int)right : (bool)left | (bool)right;
-                case BoundBinaryOperatorKind.BitwiseXor: return binary.Type == TypeSymbol.Interger ? (int)left ^ (int)right : (bool)left ^ (bool)right;
+                case BoundBinaryOperatorKind.BitwiseAnd: return binary.Type == TypeSymbol.Int32 ? (int)left & (int)right : (bool)left & (bool)right;
+                case BoundBinaryOperatorKind.BitwiseOr: return binary.Type == TypeSymbol.Int32 ? (int)left | (int)right : (bool)left | (bool)right;
+                case BoundBinaryOperatorKind.BitwiseXor: return binary.Type == TypeSymbol.Int32 ? (int)left ^ (int)right : (bool)left ^ (bool)right;
                 case BoundBinaryOperatorKind.LogicalAnd: return (bool)left && (bool)right;
                 case BoundBinaryOperatorKind.LogicalOr: return (bool)left || (bool)right;
                 case BoundBinaryOperatorKind.Equals: return Equals(left, right);
@@ -279,7 +279,7 @@ namespace Cocoa.CodeAnalysis
             {
                 return Convert.ToBoolean(value);
             }
-            else if (node.Type == TypeSymbol.Interger)
+            else if (node.Type == TypeSymbol.Int32)
             {
                 return Convert.ToInt32(value);
             }

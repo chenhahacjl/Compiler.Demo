@@ -1,4 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Emit;
 using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -153,6 +154,13 @@ namespace Cocoa.CodeAnalysis
             }
 
             body.WriteTo(writer);
+        }
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath)
+        {
+            var program = GetProgram();
+
+            return Emitter.Emit(program, moduleName, references, outputPath);
         }
     }
 }

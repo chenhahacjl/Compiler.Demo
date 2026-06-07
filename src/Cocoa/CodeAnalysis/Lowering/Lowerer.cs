@@ -202,11 +202,11 @@ namespace Cocoa.CodeAnalysis.Lowering
 
             var variableDeclaration = new BoundVariableDeclaration(node.Variable, node.LowerBound);
             var variableExpression = new BoundVariableExpression(node.Variable);
-            var upperBoundSymbol = new LocalVariableSymbol("upperBound", true, TypeSymbol.Interger);
+            var upperBoundSymbol = new LocalVariableSymbol("upperBound", true, TypeSymbol.Int32);
             var upperBoundDeclaration = new BoundVariableDeclaration(upperBoundSymbol, node.UpperBound);
             var condition = new BoundBinaryExpression(
                 variableExpression,
-                BoundBinaryOperator.Bind(SyntaxKind.LessOrEqualsToken, TypeSymbol.Interger, TypeSymbol.Interger),
+                BoundBinaryOperator.Bind(SyntaxKind.LessOrEqualsToken, TypeSymbol.Int32, TypeSymbol.Int32),
                 new BoundVariableExpression(upperBoundSymbol)
             );
             var continueLabelStatement = new BoundLabelStatement(node.ContinueLabel);
@@ -215,7 +215,7 @@ namespace Cocoa.CodeAnalysis.Lowering
                     node.Variable,
                     new BoundBinaryExpression(
                         variableExpression,
-                        BoundBinaryOperator.Bind(SyntaxKind.PlusToken, TypeSymbol.Interger, TypeSymbol.Interger),
+                        BoundBinaryOperator.Bind(SyntaxKind.PlusToken, TypeSymbol.Int32, TypeSymbol.Int32),
                         new BoundLiteralExpression(1)
                     )
                 )

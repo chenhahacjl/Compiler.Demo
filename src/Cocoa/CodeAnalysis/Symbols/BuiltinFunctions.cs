@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>
         /// 随机数: int random(int max)
         /// </summary>
-        public static readonly FunctionSymbol Random = new FunctionSymbol("random", ImmutableArray.Create(new ParameterSymbol("max", TypeSymbol.Interger)), TypeSymbol.Interger);
+        public static readonly FunctionSymbol Random = new FunctionSymbol("random", ImmutableArray.Create(new ParameterSymbol("max", TypeSymbol.Int32)), TypeSymbol.Int32);
 
         /// <summary>
         /// 获取所有内置函数

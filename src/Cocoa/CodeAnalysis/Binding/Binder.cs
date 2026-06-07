@@ -392,12 +392,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)
         {
-            var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Interger);
-            var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Interger);
+            var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Int32);
+            var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Int32);
 
             _scope = new BoundScope(_scope);
 
-            var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Interger);
+            var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Int32);
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
             _scope = _scope.Parent;
@@ -459,7 +459,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (expression != null)
                 {
                     // Main does not support return values.
-                    _diagnostics.ReportInvalidReturnExpression(syntax.Expression.Location, _function.Name);
+                    _diagnostics.ReportInvalidReturnWithValueInGlobalStatements(syntax.Expression.Location);
                 }
             }
             else
@@ -750,7 +750,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 case "any": return TypeSymbol.Any;
                 case "bool": return TypeSymbol.Boolean;
-                case "int": return TypeSymbol.Interger;
+                case "int": return TypeSymbol.Int32;
                 case "string": return TypeSymbol.String;
                 default:
                     return null;

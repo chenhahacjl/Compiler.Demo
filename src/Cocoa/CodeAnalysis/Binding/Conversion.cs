@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Explicit;
             }
 
-            if (from == TypeSymbol.Boolean || from == TypeSymbol.Interger)
+            if (from == TypeSymbol.Boolean || from == TypeSymbol.Int32)
             {
                 if (to == TypeSymbol.String)
                 {
@@ -48,7 +48,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (from == TypeSymbol.String)
             {
-                if (to == TypeSymbol.Boolean || to == TypeSymbol.Interger)
+                if (to == TypeSymbol.Boolean || to == TypeSymbol.Int32)
                 {
                     return Conversion.Explicit;
                 }
