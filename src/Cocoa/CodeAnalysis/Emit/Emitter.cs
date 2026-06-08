@@ -211,6 +211,8 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 ilProcessor.Emit(OpCodes.Ret);
             }
+
+            method.Body.OptimizeMacros();
         }
 
         private void EmitStatement(ILProcessor ilProcessor, BoundStatement node)
