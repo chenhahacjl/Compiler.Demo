@@ -18,9 +18,12 @@ namespace Cocoa.CodeAnalysis.Emit
         private DiagnosticBag _diagnostics = new DiagnosticBag();
 
         private readonly Dictionary<TypeSymbol, TypeReference> _knownTypes;
+        private readonly MethodReference _consoleReadLineReference;
         private readonly MethodReference _consoleWriteLineReference;
         private readonly AssemblyDefinition _assemblyDefinition;
         private readonly Dictionary<FunctionSymbol, MethodDefinition> _methods = new Dictionary<FunctionSymbol, MethodDefinition>();
+        private readonly Dictionary<VariableSymbol, VariableDefinition> _locals = new Dictionary<VariableSymbol, VariableDefinition>();
+
         private TypeDefinition _typeDefinition;
 
         private Emitter(string moduleName, string[] references)
@@ -140,6 +143,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 return null;
             }
 
+            _consoleReadLineReference = ResolveMethod("System.Console", "ReadLine", Array.Empty<string>());
             _consoleWriteLineReference = ResolveMethod("System.Console", "WriteLine", new[] { "System.String" });
         }
 
@@ -192,13 +196,16 @@ namespace Cocoa.CodeAnalysis.Emit
             var voidType = _knownTypes[TypeSymbol.Void];
             var method = new MethodDefinition(function.Name, MethodAttributes.Static | MethodAttributes.Private, voidType);
 
-            _typeDefinition.Methods.Add(method);
             _methods.Add(function, method);
+            _typeDefinition.Methods.Add(method);
         }
 
         private void EmitFunctionBody(FunctionSymbol function, BoundBlockStatement body)
         {
             var method = _methods[function];
+
+            _locals.Clear();
+
             var ilProcessor = method.Body.GetILProcessor();
 
             foreach (var statement in body.Statements)
@@ -244,7 +251,15 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitVariableDeclaration(ILProcessor ilProcessor, BoundVariableDeclaration node)
         {
-            throw new NotImplementedException();
+            var typeReference = _knownTypes[node.Variable.Type];
+            var variableDefinition = new VariableDefinition(typeReference);
+
+            _locals.Add(node.Variable, variableDefinition);
+            ilProcessor.Body.Variables.Add(variableDefinition);
+
+            EmitExpression(ilProcessor, node.Initializer);
+
+            ilProcessor.Emit(OpCodes.Stloc, variableDefinition);
         }
 
         private void EmitLabelStatement(ILProcessor ilProcessor, BoundLabelStatement node)
@@ -336,7 +351,9 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitVariableExpression(ILProcessor ilProcessor, BoundVariableExpression node)
         {
-            throw new NotImplementedException();
+            var variableDefinition = _locals[node.Variable];
+
+            ilProcessor.Emit(OpCodes.Ldloc, variableDefinition);
         }
 
         private void EmitAssignmentExpression(ILProcessor ilProcessor, BoundAssignmentExpression node)
@@ -367,7 +384,7 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else if (node.Function == BuiltinFunctions.Input)
             {
-                throw new NotImplementedException();
+                ilProcessor.Emit(OpCodes.Call, _consoleReadLineReference);
             }
             else if (node.Function == BuiltinFunctions.Random)
             {
