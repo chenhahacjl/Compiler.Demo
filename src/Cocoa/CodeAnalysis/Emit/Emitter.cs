@@ -11,20 +11,16 @@ using System.Threading.Tasks;
 
 namespace Cocoa.CodeAnalysis.Emit
 {
-    internal class Emitter
+    internal sealed class Emitter
     {
-        private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
-        private readonly List<AssemblyDefinition> _assemblies = new List<AssemblyDefinition>();
-        private readonly Dictionary<TypeSymbol, TypeReference> _knownTypes = new Dictionary<TypeSymbol, TypeReference>();
+        private DiagnosticBag _diagnostics = new DiagnosticBag();
 
-        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
+        private readonly Dictionary<TypeSymbol, TypeReference> _knownTypes;
+        private readonly MethodReference _consoleWriteLineReference;
+        private readonly AssemblyDefinition _assemblyDefinition;
+
+        private Emitter(string moduleName, string[] references)
         {
-            if (program.Diagnostics.Any())
-            {
-                return program.Diagnostics;
-            }
-
-            var result = new DiagnosticBag();
             var assemblies = new List<AssemblyDefinition>();
 
             foreach (var reference in references)
@@ -37,16 +33,9 @@ namespace Cocoa.CodeAnalysis.Emit
                 }
                 catch (BadImageFormatException)
                 {
-                    result.ReportInvalidReference(reference);
+                    _diagnostics.ReportInvalidReference(reference);
                 }
             }
-
-            // Resolve types
-            // Any -> System.Object
-            // Bool -> System.Boolean
-            // Int32 -> System.Int32
-            // String -> System.String
-            // void -> System.Void
 
             var builtinTypes = new List<(TypeSymbol type, string metadataName)>
             {
@@ -58,15 +47,14 @@ namespace Cocoa.CodeAnalysis.Emit
             };
 
             var assemblyName = new AssemblyNameDefinition(moduleName, new Version("1.0"));
-            var assemblyDefinition = AssemblyDefinition.CreateAssembly(assemblyName, moduleName, ModuleKind.Console);
-
-            var knownTypes = new Dictionary<TypeSymbol, TypeReference>();
+            _assemblyDefinition = AssemblyDefinition.CreateAssembly(assemblyName, moduleName, ModuleKind.Console);
+            _knownTypes = new Dictionary<TypeSymbol, TypeReference>();
 
             foreach (var (typeSymbol, metadataName) in builtinTypes)
             {
                 var typeReference = ResolveType(typeSymbol.Name, metadataName);
 
-                knownTypes.Add(typeSymbol, typeReference);
+                _knownTypes.Add(typeSymbol, typeReference);
             }
 
             TypeReference ResolveType(string cocoaName, string metadataName)
@@ -78,17 +66,17 @@ namespace Cocoa.CodeAnalysis.Emit
 
                 if (foundTypes.Length == 1)
                 {
-                    var typeReference = assemblyDefinition.MainModule.ImportReference(foundTypes[0]);
+                    var typeReference = _assemblyDefinition.MainModule.ImportReference(foundTypes[0]);
 
                     return typeReference;
                 }
                 else if (foundTypes.Length == 0)
                 {
-                    result.ReportRequiredTypeNotFound(cocoaName, metadataName);
+                    _diagnostics.ReportRequiredTypeNotFound(cocoaName, metadataName);
                 }
                 else
                 {
-                    result.ReportRequiredTypeAmbiguous(cocoaName, metadataName, foundTypes);
+                    _diagnostics.ReportRequiredTypeAmbiguous(cocoaName, metadataName, foundTypes);
                 }
 
                 return null;
@@ -129,51 +117,66 @@ namespace Cocoa.CodeAnalysis.Emit
                             continue;
                         }
 
-                        return assemblyDefinition.MainModule.ImportReference(method);
+                        return _assemblyDefinition.MainModule.ImportReference(method);
                     }
 
-                    result.ReportRequiredMethodNotFound(typeName, methodName, parameterTypeNames);
+                    _diagnostics.ReportRequiredMethodNotFound(typeName, methodName, parameterTypeNames);
 
                     return null;
                 }
                 else if (foundTypes.Length == 0)
                 {
-                    result.ReportRequiredTypeNotFound(null, typeName);
+                    _diagnostics.ReportRequiredTypeNotFound(null, typeName);
                 }
                 else
                 {
-                    result.ReportRequiredTypeAmbiguous(null, typeName, foundTypes);
+                    _diagnostics.ReportRequiredTypeAmbiguous(null, typeName, foundTypes);
                 }
 
                 return null;
             }
 
-            var consoleWriteLineReference = ResolveMethod("System.Console", "WriteLine", new[] { "System.String" });
+            _consoleWriteLineReference = ResolveMethod("System.Console", "WriteLine", new[] { "System.String" });
+        }
 
-            if (result.Any())
+        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
+        {
+            if (program.Diagnostics.Any())
             {
-                return result.ToImmutableArray();
+                return program.Diagnostics;
             }
 
-            var objectType = knownTypes[TypeSymbol.Any];
-            var typeDefinition = new TypeDefinition("", "Program", TypeAttributes.Abstract | TypeAttributes.Sealed, objectType);
-            assemblyDefinition.MainModule.Types.Add(typeDefinition);
+            var emitter = new Emitter(moduleName, references);
 
-            var voidType = knownTypes[TypeSymbol.Void];
+            return emitter.Emit(program, outputPath);
+        }
+
+        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
+        {
+            if (_diagnostics.Any())
+            {
+                return _diagnostics.ToImmutableArray();
+            }
+
+            var objectType = _knownTypes[TypeSymbol.Any];
+            var typeDefinition = new TypeDefinition("", "Program", TypeAttributes.Abstract | TypeAttributes.Sealed, objectType);
+            _assemblyDefinition.MainModule.Types.Add(typeDefinition);
+
+            var voidType = _knownTypes[TypeSymbol.Void];
             var mainMethod = new MethodDefinition("Main", MethodAttributes.Static | MethodAttributes.Private, voidType);
             typeDefinition.Methods.Add(mainMethod);
 
             var ilProcessor = mainMethod.Body.GetILProcessor();
 
-            ilProcessor.Emit(OpCodes.Ldstr, "Hello World!");
-            ilProcessor.Emit(OpCodes.Call, consoleWriteLineReference);
+            ilProcessor.Emit(OpCodes.Ldstr, "Hello Cocoa!");
+            ilProcessor.Emit(OpCodes.Call, _consoleWriteLineReference);
             ilProcessor.Emit(OpCodes.Ret);
 
-            assemblyDefinition.EntryPoint = mainMethod;
+            _assemblyDefinition.EntryPoint = mainMethod;
 
-            assemblyDefinition.Write(outputPath);
+            _assemblyDefinition.Write(outputPath);
 
-            return result.ToImmutableArray();
+            return _diagnostics.ToImmutableArray();
         }
     }
 }
