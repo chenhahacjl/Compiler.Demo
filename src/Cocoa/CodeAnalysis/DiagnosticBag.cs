@@ -212,7 +212,7 @@ namespace Cocoa.CodeAnalysis
             var assemblyNameList = string.Join(", ", assemblyNames);
 
             var message = cocoaName == null
-                ? $"The required type '{cocoaName}' was found in multiple references: {assemblyNameList}."
+                ? $"The required type '{metadataName}' was found in multiple references: {assemblyNameList}."
                 : $"The required type '{cocoaName}' ('{metadataName}') was found in multiple references: {assemblyNameList}.";
             Report(default, message);
         }
