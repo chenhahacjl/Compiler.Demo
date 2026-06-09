@@ -39,7 +39,7 @@ const TYPE_ITEMS: vscode.CompletionItem[] = [
 const FUNC_ITEMS: vscode.CompletionItem[] = [
   { label: 'print', insert: 'print(${1:text})', detail: 'void print(text: string) – 打印字符串到控制台' },
   { label: 'input', insert: 'input()', detail: 'string input() – 从控制台读取一行输入' },
-  { label: 'random', insert: 'random()', detail: 'int random() – 返回一个随机整数' },
+  { label: 'random', insert: 'random(${1:max})', detail: 'int random(max: int) – 返回 0~max 的随机整数' },
 ].map(({ label, insert, detail }) => {
   const item = new vscode.CompletionItem(label, vscode.CompletionItemKind.Function);
   item.detail = detail;

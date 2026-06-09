@@ -45,9 +45,9 @@ const BUILTINS: BuiltinFunc[] = [
   },
   {
     name: 'random',
-    signature: 'int random()',
-    description: '返回一个随机整数',
-    parameters: [],
+    signature: 'int random(max: int)',
+    description: '返回一个 0 到 max（含）之间的随机整数',
+    parameters: [{ name: 'max', type: 'int' }],
     returnType: 'int',
   },
 ];
