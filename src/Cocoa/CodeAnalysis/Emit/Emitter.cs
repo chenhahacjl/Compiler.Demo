@@ -195,8 +195,8 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitFunctionDeclaration(FunctionSymbol function)
         {
-            var voidType = _knownTypes[TypeSymbol.Void];
-            var method = new MethodDefinition(function.Name, MethodAttributes.Static | MethodAttributes.Private, voidType);
+            var type = _knownTypes[function.ReturnType];
+            var method = new MethodDefinition(function.Name, MethodAttributes.Static | MethodAttributes.Private, type);
 
             _methods.Add(function, method);
             _typeDefinition.Methods.Add(method);
