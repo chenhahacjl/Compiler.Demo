@@ -224,12 +224,6 @@ namespace Cocoa.CodeAnalysis.Emit
                 EmitStatement(ilProcessor, statement);
             }
 
-            // HACK: We should make sure that our bound tree has explicit returns.
-            if (function.ReturnType == TypeSymbol.Void)
-            {
-                ilProcessor.Emit(OpCodes.Ret);
-            }
-
             method.Body.OptimizeMacros();
         }
 
