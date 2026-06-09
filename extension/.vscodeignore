@@ -1,0 +1,8 @@
+.vscode/**
+src/**
+tsconfig.json
+build-vsix.ps1
+build-vsix.sh
+node_modules/**
+.gitignore
+design.md

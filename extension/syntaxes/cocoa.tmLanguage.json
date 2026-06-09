@@ -1,0 +1,95 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Cocoa",
+  "scopeName": "source.cocoa",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#builtinFunctions"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#numbers"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.double-slash.cocoa",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.cocoa",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.cocoa",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.cocoa",
+          "match": "\"\""
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.cocoa",
+          "match": "\\b(if|else|while|do|for|break|continue|return)\\b"
+        },
+        {
+          "name": "keyword.declaration.cocoa",
+          "match": "\\b(let|var|function)\\b"
+        },
+        {
+          "name": "keyword.literal.cocoa",
+          "match": "\\b(true|false)\\b"
+        },
+        {
+          "name": "keyword.operator.cocoa",
+          "match": "\\b(to)\\b"
+        }
+      ]
+    },
+    "types": {
+      "name": "storage.type.cocoa",
+      "match": "\\b(int|bool|string|any|void)\\b"
+    },
+    "builtinFunctions": {
+      "name": "support.function.cocoa",
+      "match": "\\b(print|input|random)\\b(?=\\s*\\()"
+    },
+    "operators": {
+      "patterns": [
+        { "name": "keyword.operator.comparison.cocoa", "match": "==|!=|<=|>=|<|>" },
+        { "name": "keyword.operator.logical.cocoa", "match": "&&|\\|\\||!" },
+        { "name": "keyword.operator.assignment.cocoa", "match": "=" },
+        { "name": "keyword.operator.arithmetic.cocoa", "match": "[+\\-*/]" },
+        { "name": "keyword.operator.bitwise.cocoa", "match": "[&|^~]" }
+      ]
+    },
+    "numbers": {
+      "name": "constant.numeric.cocoa",
+      "match": "\\b\\d+\\b"
+    }
+  }
+}

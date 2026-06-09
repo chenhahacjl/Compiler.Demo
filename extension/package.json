@@ -1,0 +1,70 @@
+{
+  "name": "cocoa-language",
+  "displayName": "Cocoa Language",
+  "description": "Language support for Cocoa programming language",
+  "version": "1.0.0",
+  "publisher": "cocoa-lang",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/cocoa-language"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "keywords": [
+    "cocoa",
+    "language",
+    "compiler",
+    "syntax highlighting",
+    "minsk"
+  ],
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:cocoa"
+  ],
+  "main": "./out/extension",
+  "contributes": {
+    "languages": [
+      {
+        "id": "cocoa",
+        "aliases": [
+          "Cocoa",
+          "cocoa"
+        ],
+        "extensions": [
+          ".co"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cocoa",
+        "scopeName": "source.cocoa",
+        "path": "./syntaxes/cocoa.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "cocoa",
+        "path": "./snippets/cocoa.code-snippets.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}
