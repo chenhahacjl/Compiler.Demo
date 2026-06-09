@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>
         /// 输出字符串: void print(string text)
         /// </summary>
-        public static readonly FunctionSymbol Print = new FunctionSymbol("print", ImmutableArray.Create(new ParameterSymbol("text", TypeSymbol.String)), TypeSymbol.Void);
+        public static readonly FunctionSymbol Print = new FunctionSymbol("print", ImmutableArray.Create(new ParameterSymbol("text", TypeSymbol.String, 0)), TypeSymbol.Void);
         /// <summary>
         /// 输入字符串: string input()
         /// </summary>
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>
         /// 随机数: int random(int max)
         /// </summary>
-        public static readonly FunctionSymbol Random = new FunctionSymbol("random", ImmutableArray.Create(new ParameterSymbol("max", TypeSymbol.Int32)), TypeSymbol.Int32);
+        public static readonly FunctionSymbol Random = new FunctionSymbol("random", ImmutableArray.Create(new ParameterSymbol("max", TypeSymbol.Int32, 0)), TypeSymbol.Int32);
 
         /// <summary>
         /// 获取所有内置函数
