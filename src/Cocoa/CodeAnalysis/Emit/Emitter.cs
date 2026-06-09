@@ -17,13 +17,17 @@ namespace Cocoa.CodeAnalysis.Emit
     {
         private DiagnosticBag _diagnostics = new DiagnosticBag();
 
+        private readonly AssemblyDefinition _assemblyDefinition;
         private readonly Dictionary<TypeSymbol, TypeReference> _knownTypes;
+        private readonly Dictionary<FunctionSymbol, MethodDefinition> _methods = new Dictionary<FunctionSymbol, MethodDefinition>();
+        private readonly Dictionary<VariableSymbol, VariableDefinition> _locals = new Dictionary<VariableSymbol, VariableDefinition>();
+
         private readonly MethodReference _consoleReadLineReference;
         private readonly MethodReference _consoleWriteLineReference;
         private readonly MethodReference _stringConcatReference;
-        private readonly AssemblyDefinition _assemblyDefinition;
-        private readonly Dictionary<FunctionSymbol, MethodDefinition> _methods = new Dictionary<FunctionSymbol, MethodDefinition>();
-        private readonly Dictionary<VariableSymbol, VariableDefinition> _locals = new Dictionary<VariableSymbol, VariableDefinition>();
+        private readonly MethodReference _convertToBooleanReference;
+        private readonly MethodReference _convertToInt32Reference;
+        private readonly MethodReference _convertToStringReference;
 
         private TypeDefinition _typeDefinition;
 
@@ -147,6 +151,9 @@ namespace Cocoa.CodeAnalysis.Emit
             _consoleReadLineReference = ResolveMethod("System.Console", "ReadLine", Array.Empty<string>());
             _consoleWriteLineReference = ResolveMethod("System.Console", "WriteLine", new[] { "System.String" });
             _stringConcatReference = ResolveMethod("System.String", "Concat", new[] { "System.String", "System.String" });
+            _convertToBooleanReference = ResolveMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
+            _convertToInt32Reference = ResolveMethod("System.Convert", "ToInt32", new[] { "System.Object" });
+            _convertToStringReference = ResolveMethod("System.Convert", "ToString", new[] { "System.Object" });
         }
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
@@ -440,7 +447,35 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitConversionExpression(ILProcessor ilProcessor, BoundConversionExpression node)
         {
-            throw new NotImplementedException();
+            EmitExpression(ilProcessor, node.Expression);
+
+            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32;
+
+            if (needBoxing)
+            {
+                ilProcessor.Emit(OpCodes.Box, (TypeReference?)_knownTypes[node.Expression.Type]);
+            }
+
+            if (node.Type == TypeSymbol.Any)
+            {
+                // Done
+            }
+            else if (node.Type == TypeSymbol.Boolean)
+            {
+                ilProcessor.Emit(OpCodes.Call, _convertToBooleanReference);
+            }
+            else if (node.Type == TypeSymbol.Int32)
+            {
+                ilProcessor.Emit(OpCodes.Call, _convertToInt32Reference);
+            }
+            else if (node.Type == TypeSymbol.String)
+            {
+                ilProcessor.Emit(OpCodes.Call, _convertToStringReference);
+            }
+            else
+            {
+                throw new Exception($"Unexpected convertion from {node.Expression.Type} to {node.Type}");
+            }
         }
     }
 }
