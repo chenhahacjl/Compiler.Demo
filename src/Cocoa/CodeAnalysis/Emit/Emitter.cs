@@ -34,6 +34,8 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly MethodReference _convertToBooleanReference;
         private readonly MethodReference _convertToInt32Reference;
         private readonly MethodReference _convertToStringReference;
+        private readonly MethodReference _randomGetSharedReference;
+        private readonly MethodReference _randomNextReference;
 
         private Emitter(string moduleName, string[] references)
         {
@@ -159,6 +161,8 @@ namespace Cocoa.CodeAnalysis.Emit
             _convertToBooleanReference = ResolveMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
             _convertToInt32Reference = ResolveMethod("System.Convert", "ToInt32", new[] { "System.Object" });
             _convertToStringReference = ResolveMethod("System.Convert", "ToString", new[] { "System.Object" });
+            _randomGetSharedReference = ResolveMethod("System.Random", "get_Shared", Array.Empty<string>());
+            _randomNextReference = ResolveMethod("System.Random", "Next", new[] { "System.Int32" });
         }
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
@@ -544,6 +548,20 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitCallExpression(ILProcessor ilProcessor, BoundCallExpression node)
         {
+            if (node.Function == BuiltinFunctions.Random)
+            {
+                ilProcessor.Emit(OpCodes.Call, _randomGetSharedReference);
+
+                foreach (var argument in node.Arguments)
+                {
+                    EmitExpression(ilProcessor, argument);
+                }
+
+                ilProcessor.Emit(OpCodes.Callvirt, _randomNextReference);
+
+                return;
+            }
+
             foreach (var argument in node.Arguments)
             {
                 EmitExpression(ilProcessor, argument);
@@ -556,10 +574,6 @@ namespace Cocoa.CodeAnalysis.Emit
             else if (node.Function == BuiltinFunctions.Input)
             {
                 ilProcessor.Emit(OpCodes.Call, _consoleReadLineReference);
-            }
-            else if (node.Function == BuiltinFunctions.Random)
-            {
-                throw new NotImplementedException();
             }
             else
             {
