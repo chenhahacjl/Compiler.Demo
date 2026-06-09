@@ -290,7 +290,12 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitReturnStatement(ILProcessor ilProcessor, BoundReturnStatement node)
         {
-            throw new NotImplementedException();
+            if (node.Expression != null)
+            {
+                EmitExpression(ilProcessor, node.Expression);
+            }
+
+            ilProcessor.Emit(OpCodes.Ret);
         }
 
         private void EmitExpressionStatement(ILProcessor ilProcessor, BoundExpressionStatement node)
