@@ -141,6 +141,7 @@ namespace Cocoa.Interactive
                 return true;
 
             var lastTwoLineAreBlank = text.Split(Environment.NewLine)
+                                          .AsEnumerable()
                                           .Reverse()
                                           .TakeWhile(s => string.IsNullOrEmpty(s))
                                           .Take(2)
