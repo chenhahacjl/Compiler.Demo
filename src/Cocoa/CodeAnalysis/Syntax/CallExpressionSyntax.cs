@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 函数调用表达式语法

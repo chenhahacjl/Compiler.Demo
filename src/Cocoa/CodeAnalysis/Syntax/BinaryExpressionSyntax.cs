@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 二元表达式语法

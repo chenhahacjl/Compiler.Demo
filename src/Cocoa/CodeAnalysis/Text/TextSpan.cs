@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Text
+namespace Cocoa.CodeAnalysis.Text
 {
     /// <summary>
     /// 文本范围

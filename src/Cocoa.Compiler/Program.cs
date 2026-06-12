@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
 using Mono.Options;

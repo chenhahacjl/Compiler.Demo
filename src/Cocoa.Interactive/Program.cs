@@ -1,4 +1,4 @@
-﻿namespace Cocoa.Interactive
+namespace Cocoa.Interactive
 {
     internal static class Program
     {

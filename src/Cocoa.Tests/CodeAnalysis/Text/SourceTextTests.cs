@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeAnalysis.Text;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Text

@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Symbols
+namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class GlobalVariableSymbol : VariableSymbol
     {

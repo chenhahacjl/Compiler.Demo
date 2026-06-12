@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Binding
+namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>
     /// 绑定节点

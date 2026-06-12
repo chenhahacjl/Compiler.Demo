@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 语法类型

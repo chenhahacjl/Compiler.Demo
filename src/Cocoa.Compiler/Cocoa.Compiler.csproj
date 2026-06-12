@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-	<AssemblyName>coc</AssemblyName>
-	<RootNamespace>Cocoa.Compiler</RootNamespace>
+	  <AssemblyName>coc</AssemblyName>
+	  <RootNamespace>Cocoa.Compiler</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

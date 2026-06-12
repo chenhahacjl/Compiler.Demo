@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class VariableDeclarationSyntax : StatementSyntax
     {

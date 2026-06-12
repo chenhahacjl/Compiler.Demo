@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Mono.Cecil;

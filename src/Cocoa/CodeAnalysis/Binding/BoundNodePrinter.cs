@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
 using System.CodeDom.Compiler;

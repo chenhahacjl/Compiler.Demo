@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Text
+namespace Cocoa.CodeAnalysis.Text
 {
     public sealed class TextLine
     {

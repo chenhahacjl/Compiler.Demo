@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using Xunit;
 
