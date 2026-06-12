@@ -1,9 +1,6 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Symbols;
+﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
-using System.Net.Http.Headers;
-using System.IO;
 using Mono.Options;
 
 namespace Cocoa.Compiler
@@ -34,7 +31,7 @@ namespace Cocoa.Compiler
             {
                 options.WriteOptionDescriptions(Console.Out);
                 return 0;
-            } 
+            }
 
             if (sourcePaths.Count == 0)
             {
@@ -82,7 +79,7 @@ namespace Cocoa.Compiler
                 return 1;
 
             var compilation = Compilation.Create(syntaxTrees.ToArray());
-            
+
             var diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), outputPath);
 
             if (diagnostics.Any())

@@ -1,6 +1,4 @@
 ﻿using Cocoa.CodeAnalysis.Text;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {

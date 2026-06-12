@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 文字表达式语法

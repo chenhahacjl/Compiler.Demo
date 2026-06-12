@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 括号表达式语法

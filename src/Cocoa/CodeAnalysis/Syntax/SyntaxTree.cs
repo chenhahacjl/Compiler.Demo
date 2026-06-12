@@ -1,11 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Text;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Diagnostics.Metrics;
-using System.IO;
-using System.Linq;
-using System.Xml.Serialization;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Cocoa.CodeAnalysis.Symbols
+﻿namespace Cocoa.CodeAnalysis.Symbols
 {
     public abstract class VariableSymbol : Symbol
     {

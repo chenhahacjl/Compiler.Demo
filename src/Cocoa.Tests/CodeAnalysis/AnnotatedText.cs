@@ -1,8 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Text;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.IO;
 using System.Text;
 
 namespace Cocoa.Tests.CodeAnalysis

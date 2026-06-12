@@ -1,12 +1,7 @@
 ﻿using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Cocoa.CodeAnalysis.Lowering
 {

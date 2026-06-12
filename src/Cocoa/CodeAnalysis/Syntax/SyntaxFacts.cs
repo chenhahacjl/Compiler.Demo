@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
 
     public static class SyntaxFacts

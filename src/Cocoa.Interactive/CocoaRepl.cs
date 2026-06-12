@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Cocoa.CodeAnalysis;
+﻿using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
 using Cocoa.IO;
 
 namespace Cocoa.Interactive

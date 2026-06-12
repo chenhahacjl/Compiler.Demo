@@ -3,9 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using System.CodeDom.Compiler;
-using System.ComponentModel;
 using System.Text;
-using System.Timers;
 
 namespace Cocoa.Generators
 {

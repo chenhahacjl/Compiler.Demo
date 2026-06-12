@@ -1,6 +1,4 @@
 ﻿using Cocoa.CodeAnalysis.Syntax;
-using System.Collections;
-using System.Collections.Generic;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Syntax

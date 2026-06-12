@@ -1,10 +1,6 @@
 ﻿using Cocoa.IO;
-using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using System.Drawing;
-using System.Globalization;
 using System.Reflection;
 using System.Text;
 

@@ -2,9 +2,7 @@
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using Mono.Cecil;
-using System;
 using System.Collections;
-using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis
 {

@@ -1,6 +1,5 @@
 ﻿using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Text;
-using System.Collections.Generic;
 using System.Text;
 
 namespace Cocoa.CodeAnalysis.Syntax

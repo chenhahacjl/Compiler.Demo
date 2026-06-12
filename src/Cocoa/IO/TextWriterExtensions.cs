@@ -1,13 +1,7 @@
 ﻿using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
-using System;
 using System.CodeDom.Compiler;
-using System.Collections;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.IO;
-using System.Linq;
 
 namespace Cocoa.IO
 {

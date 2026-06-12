@@ -1,12 +1,4 @@
-﻿using System;
-using System.CodeDom.Compiler;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Text;
+﻿using System.CodeDom.Compiler;
 
 namespace Cocoa.CodeAnalysis.Binding
 {

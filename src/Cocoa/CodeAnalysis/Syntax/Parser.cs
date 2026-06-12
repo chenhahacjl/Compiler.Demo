@@ -1,5 +1,4 @@
 ﻿using Cocoa.CodeAnalysis.Text;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
