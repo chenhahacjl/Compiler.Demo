@@ -242,6 +242,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                     ReadWhiteSpace();
                     break;
                 }
+                case '_':
+                {
+                    ReadIdentifierOrKeyword();
+                    break;
+                }
                 default:
                 {
                     if (char.IsLetter(Current))
@@ -361,7 +366,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private void ReadIdentifierOrKeyword()
         {
-            while (char.IsLetter(Current))
+            while (char.IsLetterOrDigit(Current) || Current == '_')
             {
                 _position++;
             }
