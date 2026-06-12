@@ -225,8 +225,8 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Function == BuiltinFunctions.Print)
             {
-                var message = (string)EvaluateExpression(node.Arguments[0]);
-                Console.WriteLine(message);
+                var value = EvaluateExpression(node.Arguments[0]);
+                Console.WriteLine(value);
                 return null;
             }
             else if (node.Function == BuiltinFunctions.Random)

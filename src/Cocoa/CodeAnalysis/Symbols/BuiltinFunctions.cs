@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>
         /// 输出字符串: void print(string text)
         /// </summary>
-        public static readonly FunctionSymbol Print = new FunctionSymbol("print", ImmutableArray.Create(new ParameterSymbol("text", TypeSymbol.String, 0)), TypeSymbol.Void);
+        public static readonly FunctionSymbol Print = new FunctionSymbol("print", ImmutableArray.Create(new ParameterSymbol("text", TypeSymbol.Any, 0)), TypeSymbol.Void);
         /// <summary>
         /// 输入字符串: string input()
         /// </summary>
