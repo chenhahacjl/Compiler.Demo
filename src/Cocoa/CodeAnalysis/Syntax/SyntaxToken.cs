@@ -29,5 +29,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// A token is missing if it was inserted by the parser and doesn't appear in source.
         /// </summary>
         public bool IsMissing => Text == null;
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            return Array.Empty<SyntaxNode>();
+        }
     }
 }

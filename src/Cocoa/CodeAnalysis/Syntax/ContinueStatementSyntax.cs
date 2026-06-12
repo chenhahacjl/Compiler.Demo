@@ -1,6 +1,6 @@
 ﻿namespace Cocoa.CodeAnalysis.Syntax
 {
-    internal class ContinueStatementSyntax : StatementSyntax
+    public sealed partial class ContinueStatementSyntax : StatementSyntax
     {
         public ContinueStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword)
             : base(syntaxTree)

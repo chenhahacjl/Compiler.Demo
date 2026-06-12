@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 名称表达式语法
     /// </summary>
-    public sealed class NameExpressionSyntax : ExpressionSyntax
+    public sealed partial class NameExpressionSyntax : ExpressionSyntax
     {
         public NameExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken identifierToken)
             : base(syntaxTree)

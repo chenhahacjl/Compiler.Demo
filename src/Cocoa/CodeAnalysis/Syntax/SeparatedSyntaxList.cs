@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public abstract class SeparatedSyntaxList
     {
-        public abstract ImmutableArray<SyntaxNode> GetWhiteSeparators();
+        public abstract ImmutableArray<SyntaxNode> GetWithSeparators();
     }
 
     public sealed class SeparatedSyntaxList<T> : SeparatedSyntaxList, IEnumerable<T>
@@ -33,7 +33,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return (SyntaxToken)_nodesAndSeparators[index * 2 + 1];
         }
 
-        public override ImmutableArray<SyntaxNode> GetWhiteSeparators() => _nodesAndSeparators;
+        public override ImmutableArray<SyntaxNode> GetWithSeparators() => _nodesAndSeparators;
 
         public IEnumerator<T> GetEnumerator()
         {

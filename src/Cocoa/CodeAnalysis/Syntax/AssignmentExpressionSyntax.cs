@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 赋值表达式语法
     /// </summary>
-    public sealed class AssignmentExpressionSyntax : ExpressionSyntax
+    public sealed partial class AssignmentExpressionSyntax : ExpressionSyntax
     {
         public AssignmentExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken identifierToken, SyntaxToken equalsToken, ExpressionSyntax expression)
             : base(syntaxTree)

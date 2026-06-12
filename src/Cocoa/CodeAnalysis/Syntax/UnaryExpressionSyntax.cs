@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 一元表达式语法
     /// </summary>
-    public sealed class UnaryExpressionSyntax : ExpressionSyntax
+    public sealed partial class UnaryExpressionSyntax : ExpressionSyntax
     {
         public UnaryExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken operatorToken, ExpressionSyntax operand)
             : base(syntaxTree)

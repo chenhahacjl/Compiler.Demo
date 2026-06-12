@@ -3,7 +3,7 @@
     /// <summary>
     /// 函数调用表达式语法
     /// </summary>
-    public sealed class CallExpressionSyntax : ExpressionSyntax
+    public sealed partial class CallExpressionSyntax : ExpressionSyntax
     {
         public CallExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken identifier, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ExpressionSyntax> arguments, SyntaxToken closeParenthesisToken)
             : base(syntaxTree)
@@ -12,6 +12,11 @@
             OpenParenthesisToken = openParenthesisToken;
             Arguments = arguments;
             CloseParenthesisToken = closeParenthesisToken;
+
+            foreach (var child in Arguments.GetWithSeparators())
+            {
+                return;
+            }
         }
 
         public override SyntaxKind Kind => SyntaxKind.CallExpression;

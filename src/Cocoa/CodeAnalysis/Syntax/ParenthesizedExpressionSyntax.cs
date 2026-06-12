@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 括号表达式语法
     /// </summary>
-    public sealed class ParenthesizedExpressionSyntax : ExpressionSyntax
+    public sealed partial class ParenthesizedExpressionSyntax : ExpressionSyntax
     {
         public ParenthesizedExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken openParenthesisToken, ExpressionSyntax expression, SyntaxToken closeParenthesisToken)
             : base(syntaxTree)

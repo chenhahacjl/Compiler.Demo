@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 文字表达式语法
     /// </summary>
-    public sealed class LiteralExpressionSyntax : ExpressionSyntax
+    public sealed partial class LiteralExpressionSyntax : ExpressionSyntax
     {
         public LiteralExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken literalToken) :
             this(syntaxTree, literalToken, literalToken.Value)

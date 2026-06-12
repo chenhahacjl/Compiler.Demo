@@ -1,6 +1,6 @@
 ﻿namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed class IfStatementSyntax : StatementSyntax
+    public sealed partial class IfStatementSyntax : StatementSyntax
     {
         public IfStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax thenStatement, ElseClauseSyntax elseClause)
             : base(syntaxTree)

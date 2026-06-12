@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 二元表达式语法
     /// </summary>
-    public sealed class BinaryExpressionSyntax : ExpressionSyntax
+    public sealed partial class BinaryExpressionSyntax : ExpressionSyntax
     {
         public BinaryExpressionSyntax(SyntaxTree syntaxTree, ExpressionSyntax left, SyntaxToken operatorToken, ExpressionSyntax right)
             : base(syntaxTree)

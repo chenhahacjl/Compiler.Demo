@@ -1,6 +1,6 @@
 ﻿namespace Cocoa.CodeAnalysis.Syntax
 {
-    internal sealed class WhileStatementSyntax : StatementSyntax
+    public sealed partial class WhileStatementSyntax : StatementSyntax
     {
         public WhileStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax body)
             : base(syntaxTree)

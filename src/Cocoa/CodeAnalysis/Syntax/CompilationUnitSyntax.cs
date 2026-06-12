@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 编译单元语法
     /// </summary>
-    public sealed class CompilationUnitSyntax : SyntaxNode
+    public sealed partial class CompilationUnitSyntax : SyntaxNode
     {
         public CompilationUnitSyntax(SyntaxTree syntaxTree, ImmutableArray<MemberSyntax> members, SyntaxToken endOfFileToken)
             : base(syntaxTree)

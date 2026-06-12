@@ -3,6 +3,7 @@
     <File Path="Directory.Build.props" />
   </Folder>
   <Project Path="Cocoa.Compiler/Cocoa.Compiler.csproj" />
+  <Project Path="Cocoa.Generators/Cocoa.Generators.csproj" />
   <Project Path="Cocoa.Interactive/Cocoa.Interactive.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
   <Project Path="Cocoa/Cocoa.csproj" />
