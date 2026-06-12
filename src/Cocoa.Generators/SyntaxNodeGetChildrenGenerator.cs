@@ -111,6 +111,8 @@ namespace Cocoa.Generators
 
             GetAllTypes(result, symbol.GlobalNamespace);
 
+            result.Sort((x, y) => x.MetadataName.CompareTo(y.MetadataName));
+
             return result;
         }
 
