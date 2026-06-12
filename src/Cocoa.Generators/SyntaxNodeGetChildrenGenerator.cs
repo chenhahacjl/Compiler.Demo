@@ -23,10 +23,11 @@ namespace Cocoa.Generators
 
         private void Execute(SourceProductionContext context, CSharpCompilation compilation)
         {
-            var types = GetAllTypes(compilation.Assembly);
             var immutableArrayType = compilation.GetTypeByMetadataName("System.Collections.Immutable.ImmutableArray`1");
             var separatedSyntaxListType = compilation.GetTypeByMetadataName("Cocoa.CodeAnalysis.Syntax.SeparatedSyntaxList`1");
             var syntaxNodeType = compilation.GetTypeByMetadataName("Cocoa.CodeAnalysis.Syntax.SyntaxNode");
+
+            var types = GetAllTypes(compilation.Assembly);
             var syntaxNodeTypes = types.Where(t => !t.IsAbstract && IsPartial(t) && IsDerivedFrom(t, syntaxNodeType));
 
             using var stringWriter = new StringWriter();
@@ -99,10 +100,11 @@ namespace Cocoa.Generators
             indentedTextWriter.WriteLine("}");
 
             indentedTextWriter.Flush();
+            stringWriter.Flush();
 
             var sourceText = SourceText.From(stringWriter.ToString(), Encoding.UTF8);
 
-            context.AddSource("Cocoa.CodeAnalysis.Syntax.g.cs", sourceText);
+            context.AddSource("Cocoa.CodeAnalysis.Syntax.SyntaxNode.GetChildren.g.cs", sourceText);
         }
 
         private IReadOnlyList<INamedTypeSymbol> GetAllTypes(IAssemblySymbol symbol)
