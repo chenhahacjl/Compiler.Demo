@@ -28,6 +28,7 @@ namespace Cocoa.Interactive
                 var isIdentifier = token.Kind == SyntaxKind.IdentifierToken;
                 var isNumber = token.Kind == SyntaxKind.NumberToken;
                 var isString = token.Kind == SyntaxKind.StringToken;
+                var isComment = token.Kind == SyntaxKind.SingleLineCommentToken;
 
                 if (isKeyword)
                     Console.ForegroundColor = ConsoleColor.Blue;
@@ -37,6 +38,8 @@ namespace Cocoa.Interactive
                     Console.ForegroundColor = ConsoleColor.Cyan;
                 else if (isString)
                     Console.ForegroundColor = ConsoleColor.Magenta;
+                else if (isComment)
+                    Console.ForegroundColor = ConsoleColor.Green;
                 else
                     Console.ForegroundColor = ConsoleColor.DarkGray;
 
@@ -149,7 +152,8 @@ namespace Cocoa.Interactive
             var syntaxTree = SyntaxTree.Parse(text);
 
             // Use Member because we need to exclude the EndOfFileToken.
-            if (syntaxTree.Root.Members.Last().GetLastToken().IsMissing)
+            var lastMembet = syntaxTree.Root.Members.LastOrDefault();
+            if (lastMembet == null || lastMembet.GetLastToken().IsMissing)
                 return false;
 
             return true;

@@ -9,6 +9,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         BadToken,
         EndOfFileToken,          // <EOF>
         WhitespaceToken,         // 空字符
+        SingleLineCommentToken,  // 单行注释
         NumberToken,             // 数字
         StringToken,             // "
         PlusToken,               // +

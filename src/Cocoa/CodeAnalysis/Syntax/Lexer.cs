@@ -78,8 +78,15 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
                 case '/':
                 {
-                    _kind = SyntaxKind.SlashToken;
-                    _position++;
+                    if (Lookahead == '/')
+                    {
+                        ReadSingleLineComment();
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.SlashToken;
+                        _position++;
+                    }
                     break;
                 }
                 case '(':
@@ -276,6 +283,34 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new SyntaxToken(_syntaxTree, _kind, _start, text, _value);
+        }
+
+        private void ReadSingleLineComment()
+        {
+            _position += 2;
+
+            var done = false;
+
+            while (!done)
+            {
+                switch (Current)
+                {
+                    case '\0':
+                    case '\r':
+                    case '\n':
+                    {
+                        done = true;
+                        break;
+                    }
+                    default:
+                    {
+                        _position++;
+                        break;
+                    }
+                }
+            }
+
+            _kind = SyntaxKind.SingleLineCommentToken;
         }
 
         private void ReadString()
