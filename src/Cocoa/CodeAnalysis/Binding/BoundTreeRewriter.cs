@@ -13,6 +13,8 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 case BoundNodeKind.BlockStatement:
                     return RewriteBlockStatement((BoundBlockStatement)node);
+                case BoundNodeKind.NopStatement:
+                    return RewriteNopStatement((BoundNopStatement)node);
                 case BoundNodeKind.VariableDeclaration:
                     return RewriteVariableDeclaration((BoundVariableDeclaration)node);
                 case BoundNodeKind.IfStatement:
@@ -73,6 +75,11 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundBlockStatement(builder.MoveToImmutable());
+        }
+
+        protected virtual BoundStatement RewriteNopStatement(BoundNopStatement node)
+        {
+            return node;
         }
 
         protected virtual BoundStatement RewriteVariableDeclaration(BoundVariableDeclaration node)

@@ -9,8 +9,6 @@ namespace Cocoa.CodeAnalysis.Binding
     {
         public BoundLiteralExpression(object value)
         {
-            Value = value;
-
             if (value is bool)
                 Type = TypeSymbol.Boolean;
             else if (value is int)
@@ -19,11 +17,15 @@ namespace Cocoa.CodeAnalysis.Binding
                 Type = TypeSymbol.String;
             else
                 throw new Exception($"Unexpected literal '{value}' of type {value.GetType()}");
+
+            ConstantValue = new BoundConstant(value);
         }
 
         public override BoundNodeKind Kind => BoundNodeKind.LiteralExpression;
         public override TypeSymbol Type { get; }
 
-        public object Value { get; }
+        public object Value => ConstantValue.Value;
+
+        public override BoundConstant ConstantValue { get; }
     }
 }

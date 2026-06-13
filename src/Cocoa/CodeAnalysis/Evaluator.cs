@@ -73,6 +73,9 @@ namespace Cocoa.CodeAnalysis
 
                 switch (statement.Kind)
                 {
+                    case BoundNodeKind.NopStatement:
+                        index++;
+                        break;
                     case BoundNodeKind.VariableDeclaration:
                         EvaluateVariableDeclaration((BoundVariableDeclaration)statement);
                         index++;
@@ -127,10 +130,13 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateExpression(BoundExpression node)
         {
+            if (node.ConstantValue != null)
+            {
+                return EvaluateConstantExpression(node);
+            }
+
             switch (node.Kind)
             {
-                case BoundNodeKind.LiteralExpression:
-                    return EvaluateLiteralExpression((BoundLiteralExpression)node);
                 case BoundNodeKind.VariableExpression:
                     return EvaluateVariableExpression((BoundVariableExpression)node);
                 case BoundNodeKind.AssignmentExpression:
@@ -148,9 +154,9 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private static object EvaluateLiteralExpression(BoundLiteralExpression literal)
+        private static object EvaluateConstantExpression(BoundExpression expression)
         {
-            return literal.Value;
+            return expression.ConstantValue.Value;
         }
 
         private object EvaluateVariableExpression(BoundVariableExpression variable)
@@ -181,10 +187,14 @@ namespace Cocoa.CodeAnalysis
 
             switch (unary.Op.Kind)
             {
-                case BoundUnaryOperatorKind.Identity: return (int)operand;
-                case BoundUnaryOperatorKind.Negation: return -(int)operand;
-                case BoundUnaryOperatorKind.LogicalNegation: return !(bool)operand;
-                case BoundUnaryOperatorKind.OnesComplement: return ~(int)operand;
+                case BoundUnaryOperatorKind.Identity:
+                    return (int)operand;
+                case BoundUnaryOperatorKind.Negation:
+                    return -(int)operand;
+                case BoundUnaryOperatorKind.LogicalNegation:
+                    return !(bool)operand;
+                case BoundUnaryOperatorKind.OnesComplement:
+                    return ~(int)operand;
                 default:
                     throw new Exception($"Unexcepted unary operator {unary.Op}");
             }
@@ -197,21 +207,44 @@ namespace Cocoa.CodeAnalysis
 
             switch (binary.Op.Kind)
             {
-                case BoundBinaryOperatorKind.Addition: return binary.Type == TypeSymbol.Int32 ? (int)left + (int)right : (string)left + (string)right;
-                case BoundBinaryOperatorKind.Subtraction: return (int)left - (int)right;
-                case BoundBinaryOperatorKind.Multiplication: return (int)left * (int)right;
-                case BoundBinaryOperatorKind.Division: return (int)left / (int)right;
-                case BoundBinaryOperatorKind.BitwiseAnd: return binary.Type == TypeSymbol.Int32 ? (int)left & (int)right : (bool)left & (bool)right;
-                case BoundBinaryOperatorKind.BitwiseOr: return binary.Type == TypeSymbol.Int32 ? (int)left | (int)right : (bool)left | (bool)right;
-                case BoundBinaryOperatorKind.BitwiseXor: return binary.Type == TypeSymbol.Int32 ? (int)left ^ (int)right : (bool)left ^ (bool)right;
-                case BoundBinaryOperatorKind.LogicalAnd: return (bool)left && (bool)right;
-                case BoundBinaryOperatorKind.LogicalOr: return (bool)left || (bool)right;
-                case BoundBinaryOperatorKind.Equals: return Equals(left, right);
-                case BoundBinaryOperatorKind.NotEquals: return !Equals(left, right);
-                case BoundBinaryOperatorKind.Less: return (int)left < (int)right;
-                case BoundBinaryOperatorKind.LessOrEquals: return (int)left <= (int)right;
-                case BoundBinaryOperatorKind.Greater: return (int)left > (int)right;
-                case BoundBinaryOperatorKind.GreaterOrEquals: return (int)left >= (int)right;
+                case BoundBinaryOperatorKind.Addition:
+                    return binary.Type == TypeSymbol.Int32 ?
+                        (int)left + (int)right :
+                        (string)left + (string)right;
+                case BoundBinaryOperatorKind.Subtraction:
+                    return (int)left - (int)right;
+                case BoundBinaryOperatorKind.Multiplication:
+                    return (int)left * (int)right;
+                case BoundBinaryOperatorKind.Division:
+                    return (int)left / (int)right;
+                case BoundBinaryOperatorKind.BitwiseAnd:
+                    return binary.Type == TypeSymbol.Int32 ?
+                        (int)left & (int)right :
+                        (bool)left & (bool)right;
+                case BoundBinaryOperatorKind.BitwiseOr:
+                    return binary.Type == TypeSymbol.Int32 ?
+                        (int)left | (int)right :
+                        (bool)left | (bool)right;
+                case BoundBinaryOperatorKind.BitwiseXor:
+                    return binary.Type == TypeSymbol.Int32 ?
+                        (int)left ^ (int)right :
+                        (bool)left ^ (bool)right;
+                case BoundBinaryOperatorKind.LogicalAnd:
+                    return (bool)left && (bool)right;
+                case BoundBinaryOperatorKind.LogicalOr:
+                    return (bool)left || (bool)right;
+                case BoundBinaryOperatorKind.Equals:
+                    return Equals(left, right);
+                case BoundBinaryOperatorKind.NotEquals:
+                    return !Equals(left, right);
+                case BoundBinaryOperatorKind.Less:
+                    return (int)left < (int)right;
+                case BoundBinaryOperatorKind.LessOrEquals:
+                    return (int)left <= (int)right;
+                case BoundBinaryOperatorKind.Greater:
+                    return (int)left > (int)right;
+                case BoundBinaryOperatorKind.GreaterOrEquals:
+                    return (int)left >= (int)right;
                 default:
                     throw new Exception($"Unexpected binary operator {binary.Op}");
             }

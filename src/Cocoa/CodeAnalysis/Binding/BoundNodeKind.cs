@@ -7,6 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     {
         // Statement
         BlockStatement,
+        NopStatement,
         VariableDeclaration,
         IfStatement,
         WhileStatement,
