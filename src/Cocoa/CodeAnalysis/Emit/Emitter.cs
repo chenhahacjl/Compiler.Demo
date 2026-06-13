@@ -5,6 +5,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using System.Collections.Immutable;
+using System.Text;
 
 namespace Cocoa.CodeAnalysis.Emit
 {
@@ -558,21 +559,35 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitStringConcatExpression(ILProcessor ilProcessor, BoundBinaryExpression node)
         {
-            var nodes = Flatten(node).ToList();
+            // Flatten the expression tree to a sequence of nodes to concatenate, then fold consecutive constants in that sequence.
+            // This approach enables constant folding of non-sibling nodes, which cannot be done in the ConstantFolding class as it would require changing the tree.
+            // Example: folding b and c in ((a + b) + c) if they are constant.
+
+            var nodes = FoldConstants(Flatten(node)).ToList();
 
             switch (nodes.Count)
             {
+                case 0:
+                    ilProcessor.Emit(OpCodes.Ldstr, string.Empty);
+                    break;
+
+                case 1:
+                    EmitExpression(ilProcessor, nodes[0]);
+                    break;
+
                 case 2:
                     EmitExpression(ilProcessor, nodes[0]);
                     EmitExpression(ilProcessor, nodes[1]);
                     ilProcessor.Emit(OpCodes.Call, _stringConcat2Reference);
                     break;
+
                 case 3:
                     EmitExpression(ilProcessor, nodes[0]);
                     EmitExpression(ilProcessor, nodes[1]);
                     EmitExpression(ilProcessor, nodes[2]);
                     ilProcessor.Emit(OpCodes.Call, _stringConcat3Reference);
                     break;
+
                 case 4:
                     EmitExpression(ilProcessor, nodes[0]);
                     EmitExpression(ilProcessor, nodes[1]);
@@ -580,6 +595,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     EmitExpression(ilProcessor, nodes[3]);
                     ilProcessor.Emit(OpCodes.Call, _stringConcat4Reference);
                     break;
+
                 default:
                     ilProcessor.Emit(OpCodes.Ldc_I4, nodes.Count);
                     ilProcessor.Emit(OpCodes.Newarr, _knownTypes[TypeSymbol.String]);
@@ -596,6 +612,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     break;
             }
 
+            // (a + b) + (c + d) --> [a, b, c, d]
             static IEnumerable<BoundExpression> Flatten(BoundExpression node)
             {
                 if (node is BoundBinaryExpression binaryExpression &&
@@ -621,6 +638,44 @@ namespace Cocoa.CodeAnalysis.Emit
                     }
 
                     yield return node;
+                }
+            }
+
+            // [a, "foo", "bar", b, ""] --> [a, "foobar", b]
+            static IEnumerable<BoundExpression> FoldConstants(IEnumerable<BoundExpression> nodes)
+            {
+                StringBuilder stringBuilder = null;
+
+                foreach (var node in nodes)
+                {
+                    if (node.ConstantValue != null)
+                    {
+                        var stringValue = (string)node.ConstantValue.Value;
+
+                        if (string.IsNullOrEmpty(stringValue))
+                        {
+                            continue;
+                        }
+
+                        stringBuilder ??= new StringBuilder();
+                        stringBuilder.Append(stringValue);
+                    }
+                    else
+                    {
+                        if (stringBuilder?.Length > 0)
+                        {
+                            yield return new BoundLiteralExpression(stringBuilder.ToString());
+
+                            stringBuilder.Clear();
+                        }
+
+                        yield return node;
+                    }
+                }
+
+                if (stringBuilder?.Length > 0)
+                {
+                    yield return new BoundLiteralExpression(stringBuilder.ToString());
                 }
             }
         }
