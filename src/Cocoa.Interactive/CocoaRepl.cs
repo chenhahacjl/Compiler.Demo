@@ -64,7 +64,7 @@ namespace Cocoa.Interactive
                 var tokenSpan = TextSpan.FromBounds(tokenStart, tokenEnd);
                 var tokenText = renderState.Text.ToString(tokenSpan);
 
-                var isKeyword = token.Kind.ToString().EndsWith("Keyword");
+                var isKeyword = token.Kind.IsKeyword();
                 var isIdentifier = token.Kind == SyntaxKind.IdentifierToken;
                 var isNumber = token.Kind == SyntaxKind.NumberToken;
                 var isString = token.Kind == SyntaxKind.StringToken;

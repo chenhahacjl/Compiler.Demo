@@ -1,6 +1,5 @@
 namespace Cocoa.CodeAnalysis.Syntax
 {
-
     public static class SyntaxFacts
     {
         public static int GetUnaryOperatorPrecedence(this SyntaxKind kind)
@@ -220,6 +219,16 @@ namespace Cocoa.CodeAnalysis.Syntax
                 default:
                     return null;
             }
+        }
+
+        public static bool IsKeyword(this SyntaxKind kind)
+        {
+            return kind.ToString().EndsWith("Keyword");
+        }
+
+        public static bool IsToken(this SyntaxKind kind)
+        {
+            return kind.IsKeyword() || kind.ToString().EndsWith("Token");
         }
     }
 }
