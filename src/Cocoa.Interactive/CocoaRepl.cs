@@ -68,7 +68,7 @@ namespace Cocoa.Interactive
                 var isIdentifier = token.Kind == SyntaxKind.IdentifierToken;
                 var isNumber = token.Kind == SyntaxKind.NumberToken;
                 var isString = token.Kind == SyntaxKind.StringToken;
-                var isComment = token.Kind == SyntaxKind.SingleLineCommentToken || token.Kind == SyntaxKind.MultiLineCommentToken;
+                var isComment = token.Kind == SyntaxKind.SingleLineCommentTrivia || token.Kind == SyntaxKind.MultiLineCommentTrivia;
 
                 if (isKeyword)
                     Console.ForegroundColor = ConsoleColor.Blue;

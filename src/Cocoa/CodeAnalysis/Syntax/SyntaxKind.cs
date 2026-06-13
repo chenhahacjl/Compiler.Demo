@@ -6,11 +6,11 @@ namespace Cocoa.CodeAnalysis.Syntax
     public enum SyntaxKind
     {
         // Tokens
-        BadToken,
         EndOfFileToken,          // <EOF>
-        WhitespaceToken,         // 空字符
-        SingleLineCommentToken,  // 单行注释
-        MultiLineCommentToken,   // 多行注释
+        BadTokenTrivia,
+        WhitespaceTrivia,        // 空字符
+        SingleLineCommentTrivia, // 单行注释
+        MultiLineCommentTrivia,  // 多行注释
         NumberToken,             // 数字
         StringToken,             // "
         PlusToken,               // +

@@ -48,7 +48,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken Lex()
         {
             _start = _position;
-            _kind = SyntaxKind.BadToken;
+            _kind = SyntaxKind.BadTokenTrivia;
             _value = null;
 
             switch (Current)
@@ -314,7 +314,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            _kind = SyntaxKind.SingleLineCommentToken;
+            _kind = SyntaxKind.SingleLineCommentTrivia;
         }
 
         private void ReadMultiLineComment()
@@ -355,7 +355,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            _kind = SyntaxKind.MultiLineCommentToken;
+            _kind = SyntaxKind.MultiLineCommentTrivia;
         }
 
         private void ReadString()
@@ -420,7 +420,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 _position++;
             }
 
-            _kind = SyntaxKind.WhitespaceToken;
+            _kind = SyntaxKind.WhitespaceTrivia;
         }
 
         private void ReadNumber()
