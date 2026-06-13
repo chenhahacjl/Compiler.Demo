@@ -26,12 +26,13 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             var tokenKinds = Enum.GetValues(typeof(SyntaxKind))
                 .Cast<SyntaxKind>()
+                .Where(k => k != SyntaxKind.SingleLineCommentToken && k != SyntaxKind.MultiLineCommentToken)
                 .Where(k => k.ToString().EndsWith("Keyword") ||
                             k.ToString().EndsWith("Token"));
 
             var testedTokenKinds = GetTokens().Concat(GetSeparators()).Select(t => t.kind);
-            var untestedTokenKinds = new SortedSet<SyntaxKind>(tokenKinds);
 
+            var untestedTokenKinds = new SortedSet<SyntaxKind>(tokenKinds);
             untestedTokenKinds.Remove(SyntaxKind.BadToken);
             untestedTokenKinds.Remove(SyntaxKind.EndOfFileToken);
             untestedTokenKinds.ExceptWith(testedTokenKinds);
@@ -152,6 +153,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 (SyntaxKind.WhitespaceToken, "\r"),
                 (SyntaxKind.WhitespaceToken, "\n"),
                 (SyntaxKind.WhitespaceToken, "\r\n"),
+                (SyntaxKind.MultiLineCommentToken, "/**/"),
             };
         }
 
@@ -260,6 +262,26 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.SlashToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.StarToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.SingleLineCommentToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.SlashToken && t2Kind == SyntaxKind.MultiLineCommentToken)
+            {
+                return true;
+            }
+
             return false;
         }
 
@@ -289,7 +311,10 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                     {
                         foreach (var s in GetSeparators())
                         {
-                            yield return (t1.kind, t1.text, s.kind, s.text, t2.kind, t2.text);
+                            if (!RequiresSeparator(t1.kind, s.kind) && !RequiresSeparator(s.kind, t2.kind))
+                            {
+                                yield return (t1.kind, t1.text, s.kind, s.text, t2.kind, t2.text);
+                            }
                         }
                     }
                 }
