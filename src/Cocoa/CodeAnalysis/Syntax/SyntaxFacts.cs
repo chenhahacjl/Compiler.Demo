@@ -68,6 +68,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
+        public static bool IsComment(this SyntaxKind kind)
+        {
+            return kind == SyntaxKind.SingleLineCommentTrivia ||
+                   kind == SyntaxKind.MultiLineCommentTrivia;
+        }
+
         public static SyntaxKind GetKeywordKind(string text)
         {
             switch (text)

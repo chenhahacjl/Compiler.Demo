@@ -82,6 +82,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     {
                         ReadSingleLineComment();
                     }
+                    else if (Lookahead == '*')
+                    {
+                        ReadMultiLineComment();
+                    }
                     else
                     {
                         _kind = SyntaxKind.SlashToken;
@@ -311,6 +315,47 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             _kind = SyntaxKind.SingleLineCommentToken;
+        }
+
+        private void ReadMultiLineComment()
+        {
+            _position += 2;
+
+            var done = false;
+
+            while (!done)
+            {
+                switch (Current)
+                {
+                    case '\0':
+                    {
+                        var span = new TextSpan(_start, 2);
+                        var location = new TextLocation(_text, span);
+                        _diagnostics.ReportUnterminatedMultiLineComment(location);
+                        done = true;
+
+                        break;
+                    }
+                    case '*':
+                    {
+                        if (Lookahead == '/')
+                        {
+                            _position++;
+                            done = true;
+                        }
+
+                        _position++;
+                        break;
+                    }
+                    default:
+                    {
+                        _position++;
+                        break;
+                    }
+                }
+            }
+
+            _kind = SyntaxKind.MultiLineCommentToken;
         }
 
         private void ReadString()

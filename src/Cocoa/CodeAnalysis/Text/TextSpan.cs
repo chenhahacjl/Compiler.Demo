@@ -22,6 +22,11 @@ namespace Cocoa.CodeAnalysis.Text
             return new TextSpan(start, length);
         }
 
+        public bool OverlapsWith(TextSpan span)
+        {
+            return Start < span.End && End > span.Start;
+        }
+
         public override string ToString() => $"{Start}..{End}";
     }
 }

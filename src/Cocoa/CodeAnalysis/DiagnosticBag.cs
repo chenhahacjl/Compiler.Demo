@@ -46,6 +46,12 @@ namespace Cocoa.CodeAnalysis
             Report(location, message);
         }
 
+        internal void ReportUnterminatedMultiLineComment(TextLocation location)
+        {
+            var message = $"Unterminated multi-line comment.";
+            Report(location, message);
+        }
+
         public void ReportUnexpectedToken(TextLocation location, SyntaxKind actualKind, SyntaxKind expectedKind)
         {
             var message = $"Unexpected token <{actualKind}>, expected <{expectedKind}>.";
