@@ -36,6 +36,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly MethodReference _randomGetSharedReference;
         private readonly MethodReference _randomNextReference;
 
+        // TOOD: This constructor does too much. Resolution should be factored out.
         private Emitter(string moduleName, string[] references)
         {
             var assemblies = new List<AssemblyDefinition>();

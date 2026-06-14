@@ -4,6 +4,7 @@ using System.Diagnostics;
 
 namespace Cocoa.CodeAnalysis
 {
+    // TODO: Get rid of evaluator in favor of Emitter
     /// <summary>
     /// 求值器
     /// </summary>
