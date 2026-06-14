@@ -256,5 +256,27 @@ namespace Cocoa.CodeAnalysis.Lowering
 
             return base.RewriteConditionalGotoStatement(node);
         }
+
+        protected override BoundExpression RewriteCompoundAssignmentExpression(BoundCompoundAssignmentExpression node)
+        {
+            var newNode = (BoundCompoundAssignmentExpression)base.RewriteCompoundAssignmentExpression(node);
+
+            // a <op>= b
+            //
+            // ---->
+            //
+            // a = (a <op> b)
+
+            var result = Assignment(
+                newNode.Variable,
+                Binary(
+                    Variable(newNode.Variable),
+                    newNode.Op,
+                    newNode.Expression
+                )
+            );
+
+            return result;
+        }
     }
 }

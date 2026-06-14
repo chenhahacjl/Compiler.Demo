@@ -24,6 +24,7 @@ namespace Cocoa.CodeAnalysis.Binding
         LiteralExpression,
         VariableExpression,
         AssignmentExpression,
+        CompoundAssignmentExpression,
         UnaryExpression,
         BinaryExpression,
         CallExpression,

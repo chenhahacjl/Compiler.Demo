@@ -19,17 +19,24 @@ namespace Cocoa.CodeAnalysis.Syntax
         NumberToken,             // 数字
         StringToken,             // "
         PlusToken,               // +
+        PlusEqualsToken,         // +=
         MinusToken,              // -
+        MinusEqualsToken,        // -=
         StarToken,               // *
+        StarEqualsToken,         // *=
         SlashToken,              // /
+        SlashEqualsToken,        // /=
         BangToken,               // !
         EqualsToken,             // =
         TildeToken,              // ~
         HatToken,                // ^
+        HatEqualsToken,          // ^=
         AmpersandToken,          // &
         AmpersandAmpersandToken, // &&
+        AmpersandEqualsToken,    // &=
         PipeToken,               // |
         PipePipeToken,           // ||
+        PipeEqualsToken,         // |=
         EqualsEqualsToken,       // ==
         BangEqualsToken,         // !=
         LessToken,               // <
@@ -85,6 +92,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         NameExpression,           // 名称表达式
         UnaryExpression,          // 一元表达式
         BinaryExpression,         // 二元表达式
+        CompoundAssignmentExpression, // 复合赋值表达式
         ParenthesizedExpression,  // 括号表达式
         AssignmentExpression,     // 赋值表达式
         CallExpression,           // 函数调用表达式

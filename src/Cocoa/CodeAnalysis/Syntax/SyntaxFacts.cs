@@ -142,12 +142,20 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case SyntaxKind.PlusToken:
                     return "+";
+                case SyntaxKind.PlusEqualsToken:
+                    return "+=";
                 case SyntaxKind.MinusToken:
                     return "-";
+                case SyntaxKind.MinusEqualsToken:
+                    return "-=";
                 case SyntaxKind.StarToken:
                     return "*";
+                case SyntaxKind.StarEqualsToken:
+                    return "*=";
                 case SyntaxKind.SlashToken:
                     return "/";
+                case SyntaxKind.SlashEqualsToken:
+                    return "/=";
                 case SyntaxKind.BangToken:
                     return "!";
                 case SyntaxKind.EqualsToken:
@@ -166,12 +174,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "&";
                 case SyntaxKind.AmpersandAmpersandToken:
                     return "&&";
+                case SyntaxKind.AmpersandEqualsToken:
+                    return "&=";
                 case SyntaxKind.PipeToken:
                     return "|";
                 case SyntaxKind.PipePipeToken:
                     return "||";
+                case SyntaxKind.PipeEqualsToken:
+                    return "|=";
                 case SyntaxKind.HatToken:
                     return "^";
+                case SyntaxKind.HatEqualsToken:
+                    return "^=";
                 case SyntaxKind.EqualsEqualsToken:
                     return "==";
                 case SyntaxKind.BangEqualsToken:
@@ -218,6 +232,29 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "do";
                 default:
                     return null;
+            }
+        }
+
+        public static SyntaxKind GetBinaryOperatorOfAssignmentOperator(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.PlusEqualsToken:
+                    return SyntaxKind.PlusToken;
+                case SyntaxKind.MinusEqualsToken:
+                    return SyntaxKind.MinusToken;
+                case SyntaxKind.StarEqualsToken:
+                    return SyntaxKind.StarToken;
+                case SyntaxKind.SlashEqualsToken:
+                    return SyntaxKind.SlashToken;
+                case SyntaxKind.AmpersandEqualsToken:
+                    return SyntaxKind.AmpersandToken;
+                case SyntaxKind.PipeEqualsToken:
+                    return SyntaxKind.PipeToken;
+                case SyntaxKind.HatEqualsToken:
+                    return SyntaxKind.HatToken;
+                default:
+                    throw new Exception($"Unexpected syntax: '{kind}'");
             }
         }
 

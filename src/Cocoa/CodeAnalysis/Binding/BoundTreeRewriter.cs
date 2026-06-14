@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Linq.Expressions;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -190,14 +191,42 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             switch (node.Kind)
             {
-                case BoundNodeKind.ErrorExpression: { return RewriteErrorExpression((BoundErrorExpression)node); }
-                case BoundNodeKind.LiteralExpression: { return RewriteLiteralExpression((BoundLiteralExpression)node); }
-                case BoundNodeKind.VariableExpression: { return RewriteVariableExpression((BoundVariableExpression)node); }
-                case BoundNodeKind.AssignmentExpression: { return RewriteAssignmentExpression((BoundAssignmentExpression)node); }
-                case BoundNodeKind.UnaryExpression: { return RewriteUnaryExpression((BoundUnaryExpression)node); }
-                case BoundNodeKind.BinaryExpression: { return RewriteBinaryExpression((BoundBinaryExpression)node); }
-                case BoundNodeKind.CallExpression: { return RewriteCallExpression((BoundCallExpression)node); }
-                case BoundNodeKind.ConversionExpression: { return RewriteConversionExpression((BoundConversionExpression)node); }
+                case BoundNodeKind.ErrorExpression:
+                {
+                    return RewriteErrorExpression((BoundErrorExpression)node);
+                }
+                case BoundNodeKind.LiteralExpression:
+                {
+                    return RewriteLiteralExpression((BoundLiteralExpression)node);
+                }
+                case BoundNodeKind.VariableExpression:
+                {
+                    return RewriteVariableExpression((BoundVariableExpression)node);
+                }
+                case BoundNodeKind.AssignmentExpression:
+                {
+                    return RewriteAssignmentExpression((BoundAssignmentExpression)node);
+                }
+                case BoundNodeKind.CompoundAssignmentExpression:
+                {
+                    return RewriteCompoundAssignmentExpression((BoundCompoundAssignmentExpression)node);
+                }
+                case BoundNodeKind.UnaryExpression:
+                {
+                    return RewriteUnaryExpression((BoundUnaryExpression)node);
+                }
+                case BoundNodeKind.BinaryExpression:
+                {
+                    return RewriteBinaryExpression((BoundBinaryExpression)node);
+                }
+                case BoundNodeKind.CallExpression:
+                {
+                    return RewriteCallExpression((BoundCallExpression)node);
+                }
+                case BoundNodeKind.ConversionExpression:
+                {
+                    return RewriteConversionExpression((BoundConversionExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -229,6 +258,17 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundAssignmentExpression(node.Variable, expression);
+        }
+
+        protected virtual BoundExpression RewriteCompoundAssignmentExpression(BoundCompoundAssignmentExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundCompoundAssignmentExpression(node.Variable, node.Op, expression);
         }
 
         protected virtual BoundExpression RewriteUnaryExpression(BoundUnaryExpression node)
