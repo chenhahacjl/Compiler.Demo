@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class WhileStatementSyntax : StatementSyntax
     {
-        public WhileStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax body)
+        internal WhileStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax body)
             : base(syntaxTree)
         {
             Keyword = keyword;

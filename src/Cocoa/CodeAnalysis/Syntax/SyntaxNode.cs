@@ -2,13 +2,12 @@ using Cocoa.CodeAnalysis.Text;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    // TODO: All constructors should be internal
     /// <summary>
     /// 语法节点
     /// </summary>
     public abstract class SyntaxNode
     {
-        protected SyntaxNode(SyntaxTree syntaxTree)
+        private protected SyntaxNode(SyntaxTree syntaxTree)
         {
             SyntaxTree = syntaxTree;
         }

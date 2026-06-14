@@ -4,7 +4,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class BlockStatementSyntax : StatementSyntax
     {
-        public BlockStatementSyntax(SyntaxTree syntaxTree, SyntaxToken openBraceToken, ImmutableArray<StatementSyntax> statements, SyntaxToken closeBraceToken)
+        internal BlockStatementSyntax(SyntaxTree syntaxTree, SyntaxToken openBraceToken, ImmutableArray<StatementSyntax> statements, SyntaxToken closeBraceToken)
             : base(syntaxTree)
         {
             OpenBraceToken = openBraceToken;

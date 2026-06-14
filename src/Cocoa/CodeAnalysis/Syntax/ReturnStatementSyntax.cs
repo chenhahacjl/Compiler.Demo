@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class ReturnStatementSyntax : StatementSyntax
     {
-        public ReturnStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax? expression)
+        internal ReturnStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax? expression)
             : base(syntaxTree)
         {
             Keyword = keyword;

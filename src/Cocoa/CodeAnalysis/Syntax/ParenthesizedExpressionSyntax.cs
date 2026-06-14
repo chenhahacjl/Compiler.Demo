@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed partial class ParenthesizedExpressionSyntax : ExpressionSyntax
     {
-        public ParenthesizedExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken openParenthesisToken, ExpressionSyntax expression, SyntaxToken closeParenthesisToken)
+        internal ParenthesizedExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken openParenthesisToken, ExpressionSyntax expression, SyntaxToken closeParenthesisToken)
             : base(syntaxTree)
         {
             OpenParenthesisToken = openParenthesisToken;

@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class ExpressionStatementSyntax : StatementSyntax
     {
-        public ExpressionStatementSyntax(SyntaxTree syntaxTree, ExpressionSyntax expression)
+        internal ExpressionStatementSyntax(SyntaxTree syntaxTree, ExpressionSyntax expression)
             : base(syntaxTree)
         {
             Expression = expression;
