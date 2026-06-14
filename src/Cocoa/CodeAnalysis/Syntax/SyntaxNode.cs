@@ -44,6 +44,22 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public abstract IEnumerable<SyntaxNode> GetChildren();
 
+        public IEnumerable<SyntaxNode> AncestorsAndSelf()
+        {
+            var node = this;
+            while (node != null)
+            {
+                yield return node;
+
+                node = node.Parent;
+            }
+        }
+
+        public IEnumerable<SyntaxNode> Ancestors()
+        {
+            return AncestorsAndSelf().Skip(1);
+        }
+
         public SyntaxToken GetLastToken()
         {
             if (this is SyntaxToken token)
