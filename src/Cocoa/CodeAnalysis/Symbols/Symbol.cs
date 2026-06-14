@@ -1,6 +1,5 @@
 namespace Cocoa.CodeAnalysis.Symbols
 {
-    // TODO: Constructors should be internal
     public abstract class Symbol
     {
         private protected Symbol(string name)

@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class FunctionSymbol : Symbol
     {
-        public FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null)
+        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null)
             : base(name)
         {
             Parameters = parameters;
