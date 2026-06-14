@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.Linq.Expressions;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
