@@ -71,7 +71,7 @@ namespace Cocoa.Tests.CodeAnalysis
             var lines = new List<string>();
             using (var stringReader = new StringReader(text))
             {
-                string line;
+                string? line;
                 while ((line = stringReader.ReadLine()) != null)
                 {
                     lines.Add(line);

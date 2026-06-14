@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Syntax;
+using System.Diagnostics;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Syntax
@@ -15,6 +16,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var op2Text = SyntaxFacts.GetText(op2);
             var text = $"a {op1Text} b {op2Text} c";
             var expression = ParseExpression(text);
+
+            Debug.Assert(op1Text != null);
+            Debug.Assert(op2Text != null);
 
             if (op1Precedence >= op2Precedence)
             {
@@ -72,6 +76,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var binaryText = SyntaxFacts.GetText(binaryKind);
             var text = $"{unaryText} a {binaryText} b";
             var expression = ParseExpression(text);
+
+            Debug.Assert(unaryText != null);
+            Debug.Assert(binaryText != null);
 
             if (unaryPrecedence >= binaryPrecedence)
             {
