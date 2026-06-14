@@ -199,10 +199,10 @@ namespace Cocoa.Interactive
 
             var result = compilation.Evaluate(_variables);
 
-            if (!result.ErrorDiagnostics.Any())
-            {
-                Console.Out.WriteDiagnostics(result.WarningDiagnostics);
+            Console.Out.WriteDiagnostics(result.Diagnostics);
 
+            if (!result.Diagnostics.HasErrors())
+            {
                 if (result.Value != null)
                 {
                     Console.ForegroundColor = ConsoleColor.White;
@@ -213,10 +213,6 @@ namespace Cocoa.Interactive
                 _previous = compilation;
 
                 SaveSubmission(text);
-            }
-            else
-            {
-                Console.Out.WriteDiagnostics(result.Diagnostics);
             }
         }
 

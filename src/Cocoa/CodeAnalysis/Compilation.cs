@@ -92,7 +92,7 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            if (program.ErrorDiagnostics.Any())
+            if (program.Diagnostics.HasErrors())
             {
                 return new EvaluationResult(program.Diagnostics, null);
             }
@@ -101,7 +101,7 @@ namespace Cocoa.CodeAnalysis
 
             var value = evaluator.Evaluate();
 
-            return new EvaluationResult(program.WarningDiagnostics, value);
+            return new EvaluationResult(program.Diagnostics, value);
         }
 
         public void EmitTree(TextWriter writer)
@@ -139,8 +139,7 @@ namespace Cocoa.CodeAnalysis
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
             var diagnostics = parseDiagnostics.Concat(GlobalScope.Diagnostics).ToImmutableArray();
-            var errorDiagnostics = diagnostics.Where(d => d.IsError);
-            if (errorDiagnostics.Any())
+            if (diagnostics.HasErrors())
             {
                 return diagnostics;
             }
