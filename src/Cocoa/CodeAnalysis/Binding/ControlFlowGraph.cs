@@ -1,5 +1,4 @@
 using System.CodeDom.Compiler;
-using System.Diagnostics;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -257,18 +256,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
             private BoundExpression Negate(BoundExpression condition)
             {
-                if (condition is BoundLiteralExpression literal)
+                var negated = BoundNodeFactory.Not(condition.Syntax, condition);
+                if (negated.ConstantValue != null)
                 {
-                    var value = (bool)literal.Value;
-
-                    return new BoundLiteralExpression(!value);
+                    return new BoundLiteralExpression(condition.Syntax, negated.ConstantValue.Value);
                 }
 
-                var op = BoundUnaryOperator.Bind(Syntax.SyntaxKind.BangToken, Symbols.TypeSymbol.Boolean);
-
-                Debug.Assert(op != null, "Expected operator to be not null.");
-
-                return new BoundUnaryExpression(op, condition);
+                return negated;
             }
         }
 

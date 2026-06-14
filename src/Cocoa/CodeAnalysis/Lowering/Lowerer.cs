@@ -59,11 +59,11 @@ namespace Cocoa.CodeAnalysis.Lowering
             {
                 if (builder.Count == 0 || CanFallThrough(builder.Last()))
                 {
-                    builder.Add(new BoundReturnStatement(null));
+                    builder.Add(new BoundReturnStatement(statement.Syntax, null));
                 }
             }
 
-            return new BoundBlockStatement(builder.ToImmutable());
+            return new BoundBlockStatement(statement.Syntax, builder.ToImmutable());
         }
 
         private static bool CanFallThrough(BoundStatement boundStatement)
@@ -87,7 +87,7 @@ namespace Cocoa.CodeAnalysis.Lowering
                 }
             }
 
-            return new BoundBlockStatement(builder.ToImmutable());
+            return new BoundBlockStatement(node.Syntax, builder.ToImmutable());
         }
 
         protected override BoundStatement RewriteIfStatement(BoundIfStatement node)
@@ -103,13 +103,14 @@ namespace Cocoa.CodeAnalysis.Lowering
                 // <then>
                 // end:
 
-                var endLabel = Label(GenerateLabel());
+                var endLabel = Label(node.Syntax, GenerateLabel());
 
-                var result =
-                Block(
-                    GotoFalse(endLabel, node.Condition),
+                var result = Block(
+                    node.Syntax,
+                    GotoFalse(node.Syntax, endLabel, node.Condition),
                     node.ThenStatement,
-                    endLabel);
+                    endLabel
+                );
 
                 return RewriteStatement(result);
             }
@@ -129,17 +130,18 @@ namespace Cocoa.CodeAnalysis.Lowering
                 // <else>
                 // end:
 
-                var elseLabel = Label(GenerateLabel());
-                var endLabel = Label(GenerateLabel());
+                var elseLabel = Label(node.Syntax, GenerateLabel());
+                var endLabel = Label(node.Syntax, GenerateLabel());
 
-                var result =
-                Block(
-                    GotoFalse(elseLabel, node.Condition),
+                var result = Block(
+                    node.Syntax,
+                    GotoFalse(node.Syntax, elseLabel, node.Condition),
                     node.ThenStatement,
-                    Goto(endLabel),
+                    Goto(node.Syntax, endLabel),
                     elseLabel,
                     node.ElseStatement,
-                    endLabel);
+                    endLabel
+                );
 
                 return RewriteStatement(result);
             }
@@ -159,16 +161,17 @@ namespace Cocoa.CodeAnalysis.Lowering
             // gotoTrue <condition> body
             // break:
 
-            var bodyLabel = Label(GenerateLabel());
+            var bodyLabel = Label(node.Syntax, GenerateLabel());
 
-            var result =
-            Block(
-                Goto(node.ContinueLabel),
+            var result = Block(
+                node.Syntax,
+                Goto(node.Syntax, node.ContinueLabel),
                 bodyLabel,
                 node.Body,
-                Label(node.ContinueLabel),
-                GotoTrue(bodyLabel, node.Condition),
-                Label(node.BreakLabel));
+                Label(node.Syntax, node.ContinueLabel),
+                GotoTrue(node.Syntax, bodyLabel, node.Condition),
+                Label(node.Syntax, node.BreakLabel)
+            );
 
             return RewriteStatement(result);
         }
@@ -187,14 +190,16 @@ namespace Cocoa.CodeAnalysis.Lowering
             // gotoTrue <condition> body
             // break:
 
-            var bodyLabel = Label(GenerateLabel());
+            var bodyLabel = Label(node.Syntax, GenerateLabel());
 
-            var result =
-            Block(bodyLabel,
+            var result = Block(
+                node.Syntax,
+                bodyLabel,
                 node.Body,
-                Label(node.ContinueLabel),
-                GotoTrue(bodyLabel, node.Condition),
-                Label(node.BreakLabel));
+                Label(node.Syntax, node.ContinueLabel),
+                GotoTrue(node.Syntax, bodyLabel, node.Condition),
+                Label(node.Syntax, node.BreakLabel)
+            );
 
             return RewriteStatement(result);
         }
@@ -217,21 +222,30 @@ namespace Cocoa.CodeAnalysis.Lowering
             //     }
             // }
 
-            var lowerBound = VariableDeclaration(node.Variable, node.LowerBound);
-            var upperBound = ConstantDeclaration("upperBound", node.UpperBound);
+            var lowerBound = VariableDeclaration(node.Syntax, node.Variable, node.LowerBound);
+            var upperBound = ConstantDeclaration(node.Syntax, "upperBound", node.UpperBound);
 
-            var result =
-            Block(
+            var result = Block(
+                node.Syntax,
                 lowerBound,
                 upperBound,
-                While(
-                    LessOrEqual(Variable(lowerBound), Variable(upperBound)),
+                While(node.Syntax,
+                    LessOrEqual(
+                        node.Syntax,
+                        Variable(node.Syntax, lowerBound),
+                        Variable(node.Syntax, upperBound)
+                    ),
                     Block(
+                        node.Syntax,
                         node.Body,
-                        Label(node.ContinueLabel),
-                        Increment(Variable(lowerBound))),
-                        node.BreakLabel,
-                        continueLabel: GenerateLabel())
+                        Label(node.Syntax, node.ContinueLabel),
+                        Increment(
+                            node.Syntax,
+                            Variable(node.Syntax, lowerBound)
+                    )
+                ),
+                node.BreakLabel,
+                continueLabel: GenerateLabel())
             );
 
             return RewriteStatement(result);
@@ -246,11 +260,11 @@ namespace Cocoa.CodeAnalysis.Lowering
 
                 if (condition)
                 {
-                    return RewriteStatement(Goto(node.Label));
+                    return RewriteStatement(Goto(node.Syntax, node.Label));
                 }
                 else
                 {
-                    return RewriteStatement(Nop());
+                    return RewriteStatement(Nop(node.Syntax));
                 }
             }
 
@@ -268,9 +282,11 @@ namespace Cocoa.CodeAnalysis.Lowering
             // a = (a <op> b)
 
             var result = Assignment(
+                newNode.Syntax,
                 newNode.Variable,
                 Binary(
-                    Variable(newNode.Variable),
+                    newNode.Syntax,
+                    Variable(newNode.Syntax, newNode.Variable),
                     newNode.Op,
                     newNode.Expression
                 )

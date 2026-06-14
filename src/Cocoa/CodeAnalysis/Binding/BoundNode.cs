@@ -1,3 +1,5 @@
+using Cocoa.CodeAnalysis.Syntax;
+
 namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>
@@ -5,7 +7,14 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal abstract class BoundNode
     {
+        protected BoundNode(SyntaxNode syntax)
+        {
+            Syntax = syntax;
+        }
+
         public abstract BoundNodeKind Kind { get; }
+
+        public SyntaxNode Syntax { get; }
 
         public override string ToString()
         {

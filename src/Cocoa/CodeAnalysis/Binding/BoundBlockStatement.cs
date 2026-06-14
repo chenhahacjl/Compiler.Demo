@@ -1,10 +1,12 @@
+using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundBlockStatement : BoundStatement
     {
-        public BoundBlockStatement(ImmutableArray<BoundStatement> statements)
+        public BoundBlockStatement(SyntaxNode syntax, ImmutableArray<BoundStatement> statements)
+            : base(syntax)
         {
             Statements = statements;
         }

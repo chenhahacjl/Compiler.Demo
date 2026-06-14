@@ -1,10 +1,12 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundVariableDeclaration : BoundStatement
     {
-        public BoundVariableDeclaration(VariableSymbol variable, BoundExpression initializer)
+        public BoundVariableDeclaration(SyntaxNode syntax, VariableSymbol variable, BoundExpression initializer)
+            : base(syntax)
         {
             Variable = variable;
             Initializer = initializer;

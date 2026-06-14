@@ -1,8 +1,11 @@
+using Cocoa.CodeAnalysis.Syntax;
+
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundReturnStatement : BoundStatement
     {
-        public BoundReturnStatement(BoundExpression? expression)
+        public BoundReturnStatement(SyntaxNode syntax, BoundExpression? expression)
+            : base(syntax)
         {
             Expression = expression;
         }

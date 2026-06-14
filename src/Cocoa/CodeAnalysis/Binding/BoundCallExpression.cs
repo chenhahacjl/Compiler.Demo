@@ -1,11 +1,13 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundCallExpression : BoundExpression
     {
-        public BoundCallExpression(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        public BoundCallExpression(SyntaxNode syntax, FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+            : base(syntax)
         {
             Function = function;
             Arguments = arguments;

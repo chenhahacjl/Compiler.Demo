@@ -172,9 +172,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 diagnostics.AddRange(binder.Diagnostics);
             }
 
+            var compilationUnit = globalScope.Statements.Any()
+                ? globalScope.Statements.First().Syntax.AncestorsAndSelf().LastOrDefault()
+                : null;
+
             if (globalScope.MainFunction != null && globalScope.Statements.Any())
             {
-                var body = Lowerer.Lower(globalScope.MainFunction, new BoundBlockStatement(globalScope.Statements));
+                var body = Lowerer.Lower(globalScope.MainFunction, new BoundBlockStatement(compilationUnit!, globalScope.Statements));
 
                 functionBodies.Add(globalScope.MainFunction, body);
             }
@@ -186,16 +190,16 @@ namespace Cocoa.CodeAnalysis.Binding
                     statements[0] is BoundExpressionStatement es &&
                     es.Expression.Type != TypeSymbol.Void)
                 {
-                    statements = statements.SetItem(0, new BoundReturnStatement(es.Expression));
+                    statements = statements.SetItem(0, new BoundReturnStatement(es.Expression.Syntax, es.Expression));
                 }
                 else if (statements.Any() && statements.Last().Kind != BoundNodeKind.ReturnStatement)
                 {
-                    var nullValue = new BoundLiteralExpression("");
+                    var nullValue = new BoundLiteralExpression(compilationUnit!, "");
 
-                    statements = statements.Add(new BoundReturnStatement(nullValue));
+                    statements = statements.Add(new BoundReturnStatement(compilationUnit!, nullValue));
                 }
 
-                var body = Lowerer.Lower(globalScope.ScriptFunction, new BoundBlockStatement(statements));
+                var body = Lowerer.Lower(globalScope.ScriptFunction, new BoundBlockStatement(compilationUnit!, statements));
 
                 functionBodies.Add(globalScope.ScriptFunction, body);
             }
@@ -280,9 +284,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public DiagnosticBag Diagnostics => _diagnostics;
 
-        private BoundStatement BindErrorStatement()
+        private BoundStatement BindErrorStatement(SyntaxNode syntax)
         {
-            return new BoundExpressionStatement(new BoundErrorExpression());
+            return new BoundExpressionStatement(syntax, new BoundErrorExpression(syntax));
         }
 
         private BoundStatement BindGlobalStatement(StatementSyntax syntax)
@@ -343,7 +347,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             _scope = _scope.Parent!;
 
-            return new BoundBlockStatement(statements.ToImmutable());
+            return new BoundBlockStatement(syntax, statements.ToImmutable());
         }
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)
@@ -355,7 +359,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly, variableType, initializer.ConstantValue);
             var convertedInitializer = BindConversion(syntax.Initializer.Location, initializer, variableType);
 
-            return new BoundVariableDeclaration(variable, convertedInitializer);
+            return new BoundVariableDeclaration(syntax, variable, convertedInitializer);
         }
 
         [return: NotNullIfNotNull(nameof(syntax))]
@@ -394,7 +398,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var thenStatement = BindStatement(syntax.ThenStatement);
             var elseStatement = syntax.ElseClause == null ? null : BindStatement(syntax.ElseClause.ElseStatement);
 
-            return new BoundIfStatement(condition, thenStatement, elseStatement);
+            return new BoundIfStatement(syntax, condition, thenStatement, elseStatement);
         }
 
         private BoundStatement BindWhileStatement(WhileStatementSyntax syntax)
@@ -411,7 +415,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
-            return new BoundWhileStatement(condition, body, breakLabel, continueLabel);
+            return new BoundWhileStatement(syntax, condition, body, breakLabel, continueLabel);
         }
 
         private BoundStatement BindDoWhileStatement(DoWhileStatementSyntax syntax)
@@ -419,7 +423,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
 
-            return new BoundDoWhileStatement(body, condition, breakLabel, continueLabel);
+            return new BoundDoWhileStatement(syntax, body, condition, breakLabel, continueLabel);
         }
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)
@@ -434,7 +438,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             _scope = _scope.Parent!;
 
-            return new BoundForStatement(variable, lowerBound, upperBound, body, breakLabel, continueLabel);
+            return new BoundForStatement(syntax, variable, lowerBound, upperBound, body, breakLabel, continueLabel);
         }
 
         private BoundStatement BindLoopBody(StatementSyntax body, out BoundLabel breakLabel, out BoundLabel continueLabel)
@@ -455,11 +459,11 @@ namespace Cocoa.CodeAnalysis.Binding
             if (_loopStack.Count == 0)
             {
                 _diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
-                return BindErrorStatement();
+                return BindErrorStatement(syntax);
             }
 
             var breakLabel = _loopStack.Peek().BreakLabel;
-            return new BoundGotoStatement(breakLabel);
+            return new BoundGotoStatement(syntax, breakLabel);
         }
 
         private BoundStatement BindContinueStatement(ContinueStatementSyntax syntax)
@@ -467,11 +471,11 @@ namespace Cocoa.CodeAnalysis.Binding
             if (_loopStack.Count == 0)
             {
                 _diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
-                return BindErrorStatement();
+                return BindErrorStatement(syntax);
             }
 
             var continueLabel = _loopStack.Peek().ContinueLabel;
-            return new BoundGotoStatement(continueLabel);
+            return new BoundGotoStatement(syntax, continueLabel);
         }
 
         private BoundStatement BindReturnStatement(ReturnStatementSyntax syntax)
@@ -485,7 +489,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     // Ignore because we allow both return with and without values.
                     if (expression == null)
                     {
-                        expression = new BoundLiteralExpression("");
+                        expression = new BoundLiteralExpression(syntax, "");
                     }
                 }
                 else if (expression != null)
@@ -510,14 +514,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            return new BoundReturnStatement(expression);
+            return new BoundReturnStatement(syntax, expression);
         }
 
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)
         {
             var expression = BindExpression(syntax.Expression, canBeVoid: true);
 
-            return new BoundExpressionStatement(expression);
+            return new BoundExpressionStatement(syntax, expression);
         }
 
         private BoundExpression BindExpression(ExpressionSyntax syntax, TypeSymbol targetType)
@@ -531,7 +535,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (!canBeVoid && result.Type == TypeSymbol.Void)
             {
                 _diagnostics.ReportExpressionMustHaveValue(syntax.Location);
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             return result;
@@ -562,7 +566,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var value = syntax.Value ?? 0;
 
-            return new BoundLiteralExpression(value);
+            return new BoundLiteralExpression(syntax, value);
         }
 
         private BoundExpression BindNameExpression(NameExpressionSyntax syntax)
@@ -572,14 +576,14 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 // This means the token was inserted by the parser, We already
                 // reported error so we can just return an error expression.
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             var variable = BindVariableReference(syntax.IdentifierToken);
             if (variable == null)
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
 
-            return new BoundVariableExpression(variable);
+            return new BoundVariableExpression(syntax, variable);
         }
 
         private BoundExpression BindAssignmentExpression(AssignmentExpressionSyntax syntax)
@@ -604,18 +608,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (boundOperator == null)
                 {
                     _diagnostics.ReportUndefinedBinaryOperator(syntax.AssignmentToken.Location, syntax.AssignmentToken.Text, variable.Type, boundExpression.Type);
-                    return new BoundErrorExpression();
+                    return new BoundErrorExpression(syntax);
                 }
 
                 var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, variable.Type);
 
-                return new BoundCompoundAssignmentExpression(variable, boundOperator, convertedExpression);
+                return new BoundCompoundAssignmentExpression(syntax, variable, boundOperator, convertedExpression);
             }
             else
             {
                 var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, variable.Type);
 
-                return new BoundAssignmentExpression(variable, convertedExpression);
+                return new BoundAssignmentExpression(syntax, variable, convertedExpression);
             }
         }
 
@@ -625,7 +629,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundOperand.Type == TypeSymbol.Error)
             {
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             var boundOperator = BoundUnaryOperator.Bind(syntax.OperatorToken.Kind, boundOperand.Type);
@@ -633,10 +637,10 @@ namespace Cocoa.CodeAnalysis.Binding
             if (boundOperator == null)
             {
                 _diagnostics.ReportUndefinedUnaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, boundOperand.Type);
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
-            return new BoundUnaryExpression(boundOperator, boundOperand);
+            return new BoundUnaryExpression(syntax, boundOperator, boundOperand);
         }
 
         private BoundExpression BindBinaryExpression(BinaryExpressionSyntax syntax)
@@ -647,16 +651,16 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundLeft.Type == TypeSymbol.Error || boundRight.Type == TypeSymbol.Error)
             {
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             if (boundOperator == null)
             {
                 _diagnostics.ReportUndefinedBinaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, boundLeft.Type, boundRight.Type);
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
-            return new BoundBinaryExpression(boundLeft, boundOperator, boundRight);
+            return new BoundBinaryExpression(syntax, boundLeft, boundOperator, boundRight);
         }
 
         private BoundExpression BindCallExpression(CallExpressionSyntax syntax)
@@ -678,14 +682,14 @@ namespace Cocoa.CodeAnalysis.Binding
             if (symbol == null)
             {
                 _diagnostics.ReportUndefinedFunction(syntax.Identifier.Location, syntax.Identifier.Text);
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             var function = symbol as FunctionSymbol;
             if (function == null)
             {
                 _diagnostics.ReportNotAFunction(syntax.Identifier.Location, syntax.Identifier.Text);
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             if (syntax.Arguments.Count != function.Parameters.Length)
@@ -713,7 +717,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 var location = new TextLocation(syntax.SyntaxTree.Text, span);
                 _diagnostics.ReportWrongArgumentCount(location, function.Name, function.Parameters.Length, syntax.Arguments.Count);
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(syntax);
             }
 
             for (var i = 0; i < syntax.Arguments.Count; i++)
@@ -725,7 +729,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments[i] = BindConversion(argumentLocation, argument, parameter.Type);
             }
 
-            return new BoundCallExpression(function, boundArguments.ToImmutable());
+            return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
         }
 
         private BoundExpression BindConversion(ExpressionSyntax syntax, TypeSymbol type, bool allowExplicit = false)
@@ -745,7 +749,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     _diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
                 }
 
-                return new BoundErrorExpression();
+                return new BoundErrorExpression(expression.Syntax);
             }
 
             if (!allowExplicit && conversion.IsExplicit)
@@ -758,7 +762,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return expression;
             }
 
-            return new BoundConversionExpression(type, expression);
+            return new BoundConversionExpression(expression.Syntax, type, expression);
         }
 
         private VariableSymbol BindVariableDeclaration(SyntaxToken identifier, bool isReadOnly, TypeSymbol type, BoundConstant? constant = null)

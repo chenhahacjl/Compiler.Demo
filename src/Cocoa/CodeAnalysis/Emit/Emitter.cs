@@ -572,7 +572,7 @@ namespace Cocoa.CodeAnalysis.Emit
             // This approach enables constant folding of non-sibling nodes, which cannot be done in the ConstantFolding class as it would require changing the tree.
             // Example: folding b and c in ((a + b) + c) if they are constant.
 
-            var nodes = FoldConstants(Flatten(node)).ToList();
+            var nodes = FoldConstants(node.Syntax, Flatten(node)).ToList();
 
             switch (nodes.Count)
             {
@@ -651,7 +651,7 @@ namespace Cocoa.CodeAnalysis.Emit
             }
 
             // [a, "foo", "bar", b, ""] --> [a, "foobar", b]
-            static IEnumerable<BoundExpression> FoldConstants(IEnumerable<BoundExpression> nodes)
+            static IEnumerable<BoundExpression> FoldConstants(SyntaxNode syntax, IEnumerable<BoundExpression> nodes)
             {
                 StringBuilder? stringBuilder = null;
 
@@ -673,7 +673,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     {
                         if (stringBuilder?.Length > 0)
                         {
-                            yield return new BoundLiteralExpression(stringBuilder.ToString());
+                            yield return new BoundLiteralExpression(syntax, stringBuilder.ToString());
 
                             stringBuilder.Clear();
                         }
@@ -684,7 +684,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
                 if (stringBuilder?.Length > 0)
                 {
-                    yield return new BoundLiteralExpression(stringBuilder.ToString());
+                    yield return new BoundLiteralExpression(syntax, stringBuilder.ToString());
                 }
             }
         }

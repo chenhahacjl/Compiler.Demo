@@ -1,9 +1,11 @@
+using Cocoa.CodeAnalysis.Syntax;
+
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundWhileStatement : BoundLoopStatement
     {
-        public BoundWhileStatement(BoundExpression condition, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
-            : base(breakLabel, continueLabel)
+        public BoundWhileStatement(SyntaxNode syntax, BoundExpression condition, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
+            : base(syntax, breakLabel, continueLabel)
         {
             Condition = condition;
             Body = body;

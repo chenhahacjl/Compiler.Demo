@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -7,7 +8,8 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundUnaryExpression : BoundExpression
     {
-        public BoundUnaryExpression(BoundUnaryOperator op, BoundExpression operand)
+        public BoundUnaryExpression(SyntaxNode syntax, BoundUnaryOperator op, BoundExpression operand)
+            : base(syntax)
         {
             Op = op;
             Operand = operand;

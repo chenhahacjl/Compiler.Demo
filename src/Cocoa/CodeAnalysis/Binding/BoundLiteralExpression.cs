@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -7,7 +8,8 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundLiteralExpression : BoundExpression
     {
-        public BoundLiteralExpression(object value)
+        public BoundLiteralExpression(SyntaxNode syntax, object value)
+            : base(syntax)
         {
             if (value is bool)
                 Type = TypeSymbol.Boolean;

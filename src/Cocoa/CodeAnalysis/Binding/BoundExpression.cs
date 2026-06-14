@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -7,6 +8,11 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal abstract class BoundExpression : BoundNode
     {
+        protected BoundExpression(SyntaxNode syntax)
+            : base(syntax)
+        {
+        }
+
         public abstract TypeSymbol Type { get; }
         public virtual BoundConstant? ConstantValue => null;
     }

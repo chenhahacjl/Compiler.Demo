@@ -1,8 +1,11 @@
+using Cocoa.CodeAnalysis.Syntax;
+
 namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundLabelStatement : BoundStatement
     {
-        public BoundLabelStatement(BoundLabel label)
+        public BoundLabelStatement(SyntaxNode syntax, BoundLabel label)
+            : base(syntax)
         {
             Label = label;
         }

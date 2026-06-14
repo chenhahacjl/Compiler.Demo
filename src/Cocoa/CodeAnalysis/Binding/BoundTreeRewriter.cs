@@ -74,7 +74,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundBlockStatement(builder.MoveToImmutable());
+            return new BoundBlockStatement(node.Syntax, builder.MoveToImmutable());
         }
 
         protected virtual BoundStatement RewriteNopStatement(BoundNopStatement node)
@@ -90,7 +90,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundVariableDeclaration(node.Variable, initializer);
+            return new BoundVariableDeclaration(node.Syntax, node.Variable, initializer);
         }
 
         protected virtual BoundStatement RewriteIfStatement(BoundIfStatement node)
@@ -103,7 +103,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundIfStatement(condition, thenStatement, elseStatement);
+            return new BoundIfStatement(node.Syntax, condition, thenStatement, elseStatement);
         }
 
         protected virtual BoundStatement RewriteWhileStatement(BoundWhileStatement node)
@@ -115,7 +115,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundWhileStatement(condition, body, node.BreakLabel, node.ContinueLabel);
+            return new BoundWhileStatement(node.Syntax, condition, body, node.BreakLabel, node.ContinueLabel);
         }
 
         protected virtual BoundStatement RewriteDoWhileStatement(BoundDoWhileStatement node)
@@ -127,7 +127,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundDoWhileStatement(body, condition, node.BreakLabel, node.ContinueLabel);
+            return new BoundDoWhileStatement(node.Syntax, body, condition, node.BreakLabel, node.ContinueLabel);
         }
 
         protected virtual BoundStatement RewriteForStatement(BoundForStatement node)
@@ -140,7 +140,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundForStatement(node.Variable, lowerBound, upperBound, body, node.BreakLabel, node.ContinueLabel);
+            return new BoundForStatement(node.Syntax, node.Variable, lowerBound, upperBound, body, node.BreakLabel, node.ContinueLabel);
         }
 
         protected virtual BoundStatement RewriteLabelStatement(BoundLabelStatement node)
@@ -161,7 +161,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundConditionalGotoStatement(node.Label, confition, node.JumpIfTrue);
+            return new BoundConditionalGotoStatement(node.Syntax, node.Label, confition, node.JumpIfTrue);
         }
 
         private BoundStatement RewriteReturnStatement(BoundReturnStatement node)
@@ -172,7 +172,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundReturnStatement(expression);
+            return new BoundReturnStatement(node.Syntax, expression);
         }
 
         protected virtual BoundStatement RewriteExpressionStatement(BoundExpressionStatement node)
@@ -183,7 +183,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundExpressionStatement(expression);
+            return new BoundExpressionStatement(node.Syntax, expression);
         }
 
         public virtual BoundExpression RewriteExpression(BoundExpression node)
@@ -256,7 +256,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundAssignmentExpression(node.Variable, expression);
+            return new BoundAssignmentExpression(node.Syntax, node.Variable, expression);
         }
 
         protected virtual BoundExpression RewriteCompoundAssignmentExpression(BoundCompoundAssignmentExpression node)
@@ -267,7 +267,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundCompoundAssignmentExpression(node.Variable, node.Op, expression);
+            return new BoundCompoundAssignmentExpression(node.Syntax, node.Variable, node.Op, expression);
         }
 
         protected virtual BoundExpression RewriteUnaryExpression(BoundUnaryExpression node)
@@ -278,7 +278,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundUnaryExpression(node.Op, operand);
+            return new BoundUnaryExpression(node.Syntax, node.Op, operand);
         }
 
         protected virtual BoundExpression RewriteBinaryExpression(BoundBinaryExpression node)
@@ -290,7 +290,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundBinaryExpression(left, node.Op, right);
+            return new BoundBinaryExpression(node.Syntax, left, node.Op, right);
         }
 
         protected virtual BoundExpression RewriteCallExpression(BoundCallExpression node)
@@ -325,7 +325,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundCallExpression(node.Function, builder.MoveToImmutable());
+            return new BoundCallExpression(node.Syntax, node.Function, builder.MoveToImmutable());
         }
 
         protected virtual BoundExpression RewriteConversionExpression(BoundConversionExpression node)
@@ -336,7 +336,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundConversionExpression(node.Type, expression);
+            return new BoundConversionExpression(node.Syntax, node.Type, expression);
         }
     }
 }
