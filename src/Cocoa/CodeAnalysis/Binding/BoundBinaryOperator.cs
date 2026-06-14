@@ -65,9 +65,17 @@ namespace Cocoa.CodeAnalysis.Binding
             new BoundBinaryOperator(SyntaxKind.BangEqualsToken, BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any),
         };
 
-        public static BoundBinaryOperator Bind(SyntaxKind syntaxKind, TypeSymbol leftType, TypeSymbol rightType)
+        public static BoundBinaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol leftType, TypeSymbol rightType)
         {
-            return _operators.FirstOrDefault(op => op.SyntaxKind == syntaxKind && op.LeftType == leftType && op.RightType == rightType);
+            foreach (var op in _operators)
+            {
+                if (op.SyntaxKind == syntaxKind && op.LeftType == leftType && op.RightType == rightType)
+                {
+                    return op;
+                }
+            }
+
+            return null;
         }
     }
 }

@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using System.Diagnostics;
 
 namespace Cocoa.CodeAnalysis
 {
@@ -12,9 +13,8 @@ namespace Cocoa.CodeAnalysis
         private readonly Dictionary<VariableSymbol, object> _globals;
         private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
-        private Random _random;
 
-        private object _lastValue;
+        private object? _lastValue;
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
@@ -39,7 +39,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        public object Evaluate()
+        public object? Evaluate()
         {
             var function = _program.MainFunction ?? _program.ScriptFunction;
 
@@ -53,7 +53,7 @@ namespace Cocoa.CodeAnalysis
             return EvaluateStatement(body);
         }
 
-        private object EvaluateStatement(BoundBlockStatement body)
+        private object? EvaluateStatement(BoundBlockStatement body)
         {
             var labelToIndex = new Dictionary<BoundLabel, int>();
 
@@ -90,7 +90,7 @@ namespace Cocoa.CodeAnalysis
                         break;
                     case BoundNodeKind.ConditionalGotoStatement:
                         var cgs = (BoundConditionalGotoStatement)statement;
-                        var condition = (bool)EvaluateExpression(cgs.Condition);
+                        var condition = (bool)EvaluateExpression(cgs.Condition)!;
                         if (condition == cgs.JumpIfTrue)
                         {
                             index = labelToIndex[cgs.Label];
@@ -118,6 +118,9 @@ namespace Cocoa.CodeAnalysis
         private void EvaluateVariableDeclaration(BoundVariableDeclaration node)
         {
             var value = EvaluateExpression(node.Initializer);
+
+            Debug.Assert(value != null);
+
             _lastValue = value;
 
             Assign(node.Variable, value);
@@ -128,7 +131,7 @@ namespace Cocoa.CodeAnalysis
             _lastValue = EvaluateExpression(node.Expression);
         }
 
-        private object EvaluateExpression(BoundExpression node)
+        private object? EvaluateExpression(BoundExpression node)
         {
             if (node.ConstantValue != null)
             {
@@ -156,6 +159,8 @@ namespace Cocoa.CodeAnalysis
 
         private static object EvaluateConstantExpression(BoundExpression expression)
         {
+            Debug.Assert(expression.ConstantValue != null);
+
             return expression.ConstantValue.Value;
         }
 
@@ -176,6 +181,8 @@ namespace Cocoa.CodeAnalysis
         {
             var value = EvaluateExpression(assignment.Expression);
 
+            Debug.Assert(value != null);
+
             Assign(assignment.Variable, value);
 
             return value;
@@ -184,6 +191,8 @@ namespace Cocoa.CodeAnalysis
         private object EvaluateUnaryExpression(BoundUnaryExpression unary)
         {
             var operand = EvaluateExpression(unary.Operand);
+
+            Debug.Assert(operand != null);
 
             switch (unary.Op.Kind)
             {
@@ -204,6 +213,8 @@ namespace Cocoa.CodeAnalysis
         {
             var left = EvaluateExpression(binary.Left);
             var right = EvaluateExpression(binary.Right);
+
+            Debug.Assert(left != null && right != null);
 
             switch (binary.Op.Kind)
             {
@@ -250,7 +261,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private object EvaluateCallExpression(BoundCallExpression node)
+        private object? EvaluateCallExpression(BoundCallExpression node)
         {
             if (node.Function == BuiltinFunctions.Input)
             {
@@ -264,14 +275,9 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Function == BuiltinFunctions.Random)
             {
-                var max = (int)EvaluateExpression(node.Arguments[0]);
+                var max = (int)EvaluateExpression(node.Arguments[0])!;
 
-                if (_random == null)
-                {
-                    _random = new Random();
-                }
-
-                return _random.Next(max);
+                return Random.Shared.Next(max);
             }
             else
             {
@@ -280,6 +286,8 @@ namespace Cocoa.CodeAnalysis
                 {
                     var parameter = node.Function.Parameters[i];
                     var value = EvaluateExpression(node.Arguments[i]);
+
+                    Debug.Assert(value != null);
 
                     locals.Add(parameter, value);
                 }
@@ -295,7 +303,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private object EvaluateConversionExpression(BoundConversionExpression node)
+        private object? EvaluateConversionExpression(BoundConversionExpression node)
         {
             var value = EvaluateExpression(node.Expression);
             if (node.Type == TypeSymbol.Any)

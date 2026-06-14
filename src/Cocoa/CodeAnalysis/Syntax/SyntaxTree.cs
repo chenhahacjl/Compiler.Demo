@@ -75,17 +75,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             void ParseTokens(SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> d)
             {
-                root = null;
-
                 var lexer = new Lexer(syntaxTree);
 
                 while (true)
                 {
                     var token = lexer.Lex();
-                    if (token.Kind == SyntaxKind.EndOfFileToken)
-                    {
-                        root = new CompilationUnitSyntax(syntaxTree, ImmutableArray<MemberSyntax>.Empty, token);
-                    }
 
                     if (token.Kind != SyntaxKind.EndOfFileToken || includeEndOfFile)
                     {
@@ -94,6 +88,8 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                     if (token.Kind == SyntaxKind.EndOfFileToken)
                     {
+                        root = new CompilationUnitSyntax(syntaxTree, ImmutableArray<MemberSyntax>.Empty, token);
+
                         break;
                     }
                 }

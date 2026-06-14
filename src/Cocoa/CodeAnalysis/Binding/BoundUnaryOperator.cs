@@ -35,9 +35,17 @@ namespace Cocoa.CodeAnalysis.Binding
             new BoundUnaryOperator(SyntaxKind.TildeToken, BoundUnaryOperatorKind.OnesComplement, TypeSymbol.Int32),
         };
 
-        public static BoundUnaryOperator Bind(SyntaxKind syntaxKind, TypeSymbol operandType)
+        public static BoundUnaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol operandType)
         {
-            return _operators.FirstOrDefault(op => op.SyntaxKind == syntaxKind && op.OperandType == operandType);
+            foreach (var op in _operators)
+            {
+                if (op.SyntaxKind == syntaxKind && op.OperandType == operandType)
+                {
+                    return op;
+                }
+            }
+
+            return null;
         }
     }
 }

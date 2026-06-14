@@ -23,6 +23,6 @@ namespace Cocoa.CodeAnalysis.Binding
         public BoundBinaryOperator Op { get; }
         public BoundExpression Right { get; }
 
-        public override BoundConstant ConstantValue { get; }
+        public override BoundConstant? ConstantValue { get; }
     }
 }

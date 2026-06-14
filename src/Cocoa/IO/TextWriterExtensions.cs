@@ -2,6 +2,7 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.CodeDom.Compiler;
+using System.Diagnostics;
 
 namespace Cocoa.IO
 {
@@ -45,7 +46,11 @@ namespace Cocoa.IO
 
         public static void WriteKeyword(this TextWriter writer, SyntaxKind kind)
         {
-            writer.WriteKeyword(SyntaxFacts.GetText(kind));
+            var text = SyntaxFacts.GetText(kind);
+
+            Debug.Assert(kind.IsKeyword() && text != null);
+
+            writer.WriteKeyword(text);
         }
 
         public static void WriteKeyword(this TextWriter writer, string text)
@@ -83,7 +88,11 @@ namespace Cocoa.IO
 
         public static void WritePunctuation(this TextWriter writer, SyntaxKind kind)
         {
-            writer.WritePunctuation(SyntaxFacts.GetText(kind));
+            var text = SyntaxFacts.GetText(kind);
+
+            Debug.Assert(text != null);
+
+            writer.WritePunctuation(text);
         }
 
         public static void WritePunctuation(this TextWriter writer, string text)

@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class ReturnStatementSyntax : StatementSyntax
     {
-        public ReturnStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax expression)
+        public ReturnStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax? expression)
             : base(syntaxTree)
         {
             Keyword = keyword;
@@ -12,6 +12,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         public override SyntaxKind Kind => SyntaxKind.ReturnStatement;
 
         public SyntaxToken Keyword { get; }
-        public ExpressionSyntax Expression { get; }
+        public ExpressionSyntax? Expression { get; }
     }
 }

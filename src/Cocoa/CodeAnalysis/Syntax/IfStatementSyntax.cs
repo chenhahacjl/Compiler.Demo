@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class IfStatementSyntax : StatementSyntax
     {
-        public IfStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax thenStatement, ElseClauseSyntax elseClause)
+        public IfStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, ExpressionSyntax condition, StatementSyntax thenStatement, ElseClauseSyntax? elseClause)
             : base(syntaxTree)
         {
             Keyword = keyword;
@@ -16,6 +16,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken Keyword { get; }
         public ExpressionSyntax Condition { get; }
         public StatementSyntax ThenStatement { get; }
-        public ElseClauseSyntax ElseClause { get; }
+        public ElseClauseSyntax? ElseClause { get; }
     }
 }

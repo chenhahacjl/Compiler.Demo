@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -13,13 +14,13 @@ namespace Cocoa.CodeAnalysis.Binding
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;
-        private readonly FunctionSymbol _function;
+        private readonly FunctionSymbol? _function;
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
 
-        private Binder(bool isScript, BoundScope parent, FunctionSymbol function)
+        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
@@ -34,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope previous, ImmutableArray<SyntaxTree> syntaxTrees)
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees)
         {
             var parentScope = CreateParentScope(previous);
             var binder = new Binder(isScript, parentScope, null);
@@ -70,6 +71,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var firstGlobalStatementPerSyntaxTree = syntaxTrees
                 .Select(st => st.Root.Members.OfType<GlobalStatementSyntax>().FirstOrDefault())
                 .Where(g => g != null)
+                .Select(g => g!)
                 .ToArray();
 
             if (firstGlobalStatementPerSyntaxTree.Length > 1)
@@ -110,7 +112,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     if (mainFunction.ReturnType != TypeSymbol.Void || mainFunction.Parameters.Any())
                     {
-                        binder.Diagnostics.ReportMainMustHaveCorrectSignature(mainFunction.Declaration.Identifier.Location);
+                        binder.Diagnostics.ReportMainMustHaveCorrectSignature(mainFunction.Declaration!.Identifier.Location);
                     }
                 }
 
@@ -118,7 +120,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     if (mainFunction != null)
                     {
-                        binder.Diagnostics.ReportCannotMixMainAndGlobalStatements(mainFunction.Declaration.Identifier.Location);
+                        binder.Diagnostics.ReportCannotMixMainAndGlobalStatements(mainFunction.Declaration!.Identifier.Location);
 
                         foreach (var globalStatement in firstGlobalStatementPerSyntaxTree)
                         {
@@ -143,7 +145,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, variables, statements.ToImmutable());
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram previous, BoundGlobalScope globalScope)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope)
         {
             var parentScope = CreateParentScope(globalScope);
 
@@ -158,7 +160,7 @@ namespace Cocoa.CodeAnalysis.Binding
             foreach (var function in globalScope.Functions)
             {
                 var binder = new Binder(isScript, parentScope, function);
-                var body = binder.BindStatement(function.Declaration.Body);
+                var body = binder.BindStatement(function.Declaration!.Body);
                 var loweredBody = Lowerer.Lower(function, body);
 
                 if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
@@ -226,13 +228,13 @@ namespace Cocoa.CodeAnalysis.Binding
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
 
             var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax);
-            if (function.Declaration.Identifier.Text != null && !_scope.TryDeclareFunction(function))
+            if (syntax.Identifier.Text != null && !_scope.TryDeclareFunction(function))
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);
             }
         }
 
-        private static BoundScope CreateParentScope(BoundGlobalScope previous)
+        private static BoundScope CreateParentScope(BoundGlobalScope? previous)
         {
             var stack = new Stack<BoundGlobalScope>();
             while (previous != null)
@@ -337,7 +339,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 statements.Add(statement);
             }
 
-            _scope = _scope.Parent;
+            _scope = _scope.Parent!;
 
             return new BoundBlockStatement(statements.ToImmutable());
         }
@@ -354,7 +356,8 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundVariableDeclaration(variable, convertedInitializer);
         }
 
-        private TypeSymbol BindTypeClause(TypeClauseSyntax syntax)
+        [return: NotNullIfNotNull(nameof(syntax))]
+        private TypeSymbol? BindTypeClause(TypeClauseSyntax? syntax)
         {
             if (syntax == null)
             {
@@ -367,7 +370,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 _diagnostics.ReportUndefinedType(syntax.Identifier.Location, syntax.Identifier.Text);
             }
 
-            return type;
+            return type!;
         }
 
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
@@ -405,7 +408,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Int32);
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
-            _scope = _scope.Parent;
+            _scope = _scope.Parent!;
 
             return new BoundForStatement(variable, lowerBound, upperBound, body, breakLabel, continueLabel);
         }
@@ -464,7 +467,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (expression != null)
                 {
                     // Main does not support return values.
-                    _diagnostics.ReportInvalidReturnWithValueInGlobalStatements(syntax.Expression.Location);
+                    _diagnostics.ReportInvalidReturnWithValueInGlobalStatements(syntax.Expression!.Location);
                 }
             }
             else
@@ -472,14 +475,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (_function.ReturnType == TypeSymbol.Void)
                 {
                     if (expression != null)
-                        _diagnostics.ReportInvalidReturnExpression(syntax.Expression.Location, _function.Name);
+                        _diagnostics.ReportInvalidReturnExpression(syntax.Expression!.Location, _function.Name);
                 }
                 else
                 {
                     if (expression == null)
                         _diagnostics.ReportMissingReturnExpression(syntax.Keyword.Location, _function.ReturnType);
                     else
-                        expression = BindConversion(syntax.Expression.Location, expression, _function.ReturnType);
+                        expression = BindConversion(syntax.Expression!.Location, expression, _function.ReturnType);
                 }
             }
 
@@ -716,7 +719,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundConversionExpression(type, expression);
         }
 
-        private VariableSymbol BindVariableDeclaration(SyntaxToken identifier, bool isReadOnly, TypeSymbol type, BoundConstant constant = null)
+        private VariableSymbol BindVariableDeclaration(SyntaxToken identifier, bool isReadOnly, TypeSymbol type, BoundConstant? constant = null)
         {
             var name = identifier.Text ?? "?";
             var declare = !identifier.IsMissing;
@@ -732,7 +735,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return variable;
         }
 
-        private VariableSymbol BindVariableReference(SyntaxToken identifierToken)
+        private VariableSymbol? BindVariableReference(SyntaxToken identifierToken)
         {
             var name = identifierToken.Text;
 
@@ -749,7 +752,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private TypeSymbol LookupType(string name)
+        private TypeSymbol? LookupType(string name)
         {
             switch (name)
             {

@@ -1,4 +1,5 @@
 using System.CodeDom.Compiler;
+using System.Diagnostics;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -61,7 +62,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public sealed class BasicBlockBranch
         {
-            public BasicBlockBranch(BasicBlock from, BasicBlock to, BoundExpression condition)
+            public BasicBlockBranch(BasicBlock from, BasicBlock to, BoundExpression? condition)
             {
                 From = from;
                 To = to;
@@ -70,7 +71,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             public BasicBlock From { get; }
             public BasicBlock To { get; }
-            public BoundExpression Condition { get; }
+            public BoundExpression? Condition { get; }
 
             public override string ToString()
             {
@@ -218,7 +219,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new ControlFlowGraph(_start, _end, blocks, _branches);
             }
 
-            private void Connect(BasicBlock from, BasicBlock to, BoundExpression condition = null)
+            private void Connect(BasicBlock from, BasicBlock to, BoundExpression? condition = null)
             {
                 if (condition is BoundLiteralExpression literalExpression)
                 {
@@ -264,6 +265,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 var op = BoundUnaryOperator.Bind(Syntax.SyntaxKind.BangToken, Symbols.TypeSymbol.Boolean);
+
+                Debug.Assert(op != null, "Expected operator to be not null.");
+
                 return new BoundUnaryExpression(op, condition);
             }
         }

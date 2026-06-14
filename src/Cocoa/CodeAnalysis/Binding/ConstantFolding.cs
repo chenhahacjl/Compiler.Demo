@@ -4,22 +4,20 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal static class ConstantFolding
     {
-        public static BoundConstant ComputeConstanct(BoundUnaryOperator op, BoundExpression operand)
+        public static BoundConstant? ComputeConstanct(BoundUnaryOperator op, BoundExpression operand)
         {
-            var operandConstant = operand.ConstantValue;
-
             if (operand.ConstantValue != null)
             {
                 switch (op.Kind)
                 {
                     case BoundUnaryOperatorKind.Identity:
-                        return new BoundConstant((int)operandConstant.Value);
+                        return new BoundConstant((int)operand.ConstantValue.Value);
                     case BoundUnaryOperatorKind.Negation:
-                        return new BoundConstant(-(int)operandConstant.Value);
+                        return new BoundConstant(-(int)operand.ConstantValue.Value);
                     case BoundUnaryOperatorKind.LogicalNegation:
-                        return new BoundConstant(!(bool)operandConstant.Value);
+                        return new BoundConstant(!(bool)operand.ConstantValue.Value);
                     case BoundUnaryOperatorKind.OnesComplement:
-                        return new BoundConstant(~(int)operandConstant.Value);
+                        return new BoundConstant(~(int)operand.ConstantValue.Value);
                     default:
                         throw new Exception($"Unexcepted unary operator {op.Kind}");
                 }
@@ -28,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return null;
         }
 
-        public static BoundConstant ComputeConstanct(BoundExpression left, BoundBinaryOperator op, BoundExpression right)
+        public static BoundConstant? ComputeConstanct(BoundExpression left, BoundBinaryOperator op, BoundExpression right)
         {
             var leftConstant = left.ConstantValue;
             var rightConstant = right.ConstantValue;

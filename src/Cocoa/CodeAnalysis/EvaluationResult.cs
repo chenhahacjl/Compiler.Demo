@@ -7,13 +7,13 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     public sealed class EvaluationResult
     {
-        public EvaluationResult(ImmutableArray<Diagnostic> diagnostics, object value)
+        public EvaluationResult(ImmutableArray<Diagnostic> diagnostics, object? value)
         {
             Diagnostics = diagnostics;
             Value = value;
         }
 
         public ImmutableArray<Diagnostic> Diagnostics { get; }
-        public object Value { get; }
+        public object? Value { get; }
     }
 }

@@ -8,24 +8,33 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed class SyntaxToken : SyntaxNode
     {
-        public SyntaxToken(SyntaxTree syntaxTree, SyntaxKind kind, int position, string text, object value, ImmutableArray<SyntaxTrivia> leadingTrivia, ImmutableArray<SyntaxTrivia> trailingTrivia)
+        public SyntaxToken(SyntaxTree syntaxTree, SyntaxKind kind, int position, string? text, object? value, ImmutableArray<SyntaxTrivia> leadingTrivia, ImmutableArray<SyntaxTrivia> trailingTrivia)
             : base(syntaxTree)
         {
             Kind = kind;
             Position = position;
-            Text = text;
+            Text = text ?? string.Empty;
             Value = value;
             LeadingTrivia = leadingTrivia;
             TrailingTrivia = trailingTrivia;
+
+            IsMissing = text == null;
         }
 
         public override SyntaxKind Kind { get; }
 
         public int Position { get; }
         public string Text { get; }
-        public object Value { get; }
+        public object? Value { get; }
+        public ImmutableArray<SyntaxTrivia> LeadingTrivia { get; }
+        public ImmutableArray<SyntaxTrivia> TrailingTrivia { get; }
 
-        public override TextSpan Span => new TextSpan(Position, Text?.Length ?? 0);
+        /// <summary>
+        /// A token is missing if it was inserted by the parser and doesn't appear in source.
+        /// </summary>
+        public bool IsMissing { get; }
+
+        public override TextSpan Span => new TextSpan(Position, Text.Length);
         public override TextSpan FullSpan
         {
             get
@@ -36,14 +45,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return TextSpan.FromBounds(start, end);
             }
         }
-
-        public ImmutableArray<SyntaxTrivia> LeadingTrivia { get; }
-        public ImmutableArray<SyntaxTrivia> TrailingTrivia { get; }
-
-        /// <summary>
-        /// A token is missing if it was inserted by the parser and doesn't appear in source.
-        /// </summary>
-        public bool IsMissing => Text == null;
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {

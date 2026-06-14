@@ -202,7 +202,7 @@ namespace Cocoa.CodeAnalysis
             Report(default, message);
         }
 
-        public void ReportRequiredTypeNotFound(string cocoaName, string metadataName)
+        public void ReportRequiredTypeNotFound(string? cocoaName, string metadataName)
         {
             var message = cocoaName == null
                 ? $"The required type '{metadataName}' cannot be resolved among the given references."
@@ -210,7 +210,7 @@ namespace Cocoa.CodeAnalysis
             Report(default, message);
         }
 
-        public void ReportRequiredTypeAmbiguous(string cocoaName, string metadataName, TypeDefinition[] foundTypes)
+        public void ReportRequiredTypeAmbiguous(string? cocoaName, string metadataName, TypeDefinition[] foundTypes)
         {
             var assemblyNames = foundTypes.Select(t => t.Module.Assembly.Name.Name);
             var assemblyNameList = string.Join(", ", assemblyNames);

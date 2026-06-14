@@ -5,6 +5,7 @@ using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Text;
 
 namespace Cocoa.CodeAnalysis.Emit
@@ -95,7 +96,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     _diagnostics.ReportRequiredTypeAmbiguous(cocoaName, metadataName, foundTypes);
                 }
 
-                return null;
+                return null!;
             }
 
             MethodReference ResolveMethod(string typeName, string methodName, string[] parameterTypeNames)
@@ -137,8 +138,6 @@ namespace Cocoa.CodeAnalysis.Emit
                     }
 
                     _diagnostics.ReportRequiredMethodNotFound(typeName, methodName, parameterTypeNames);
-
-                    return null;
                 }
                 else if (foundTypes.Length == 0)
                 {
@@ -149,7 +148,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     _diagnostics.ReportRequiredTypeAmbiguous(null, typeName, foundTypes);
                 }
 
-                return null;
+                return null!;
             }
 
             _objectEqualsReference = ResolveMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
@@ -163,6 +162,18 @@ namespace Cocoa.CodeAnalysis.Emit
             _convertToStringReference = ResolveMethod("System.Convert", "ToString", new[] { "System.Object" });
             _randomGetSharedReference = ResolveMethod("System.Random", "get_Shared", Array.Empty<string>());
             _randomNextReference = ResolveMethod("System.Random", "Next", new[] { "System.Int32" });
+
+            var objectType = _knownTypes[TypeSymbol.Any];
+
+            if (objectType != null)
+            {
+                _typeDefinition = new TypeDefinition("", "Program", TypeAttributes.Abstract | TypeAttributes.Sealed, objectType);
+                _assemblyDefinition.MainModule.Types.Add(_typeDefinition);
+            }
+            else
+            {
+                _typeDefinition = null!;
+            }
         }
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
@@ -183,11 +194,6 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 return _diagnostics.ToImmutableArray();
             }
-
-            var objectType = _knownTypes[TypeSymbol.Any];
-
-            _typeDefinition = new TypeDefinition("", "Program", TypeAttributes.Abstract | TypeAttributes.Sealed, objectType);
-            _assemblyDefinition.MainModule.Types.Add(_typeDefinition);
 
             foreach (var functionWithBody in program.Functions)
             {
@@ -381,6 +387,8 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitConstantExpression(ILProcessor ilProcessor, BoundExpression node)
         {
+            Debug.Assert(node.ConstantValue != null);
+
             if (node.Type == TypeSymbol.Boolean)
             {
                 var value = (bool)node.ConstantValue.Value;
@@ -644,7 +652,7 @@ namespace Cocoa.CodeAnalysis.Emit
             // [a, "foo", "bar", b, ""] --> [a, "foobar", b]
             static IEnumerable<BoundExpression> FoldConstants(IEnumerable<BoundExpression> nodes)
             {
-                StringBuilder stringBuilder = null;
+                StringBuilder? stringBuilder = null;
 
                 foreach (var node in nodes)
                 {
