@@ -44,24 +44,14 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundGotoStatement(syntax, label);
         }
 
-        public static BoundGotoStatement Goto(SyntaxNode syntax, BoundLabelStatement label)
+        public static BoundConditionalGotoStatement GotoTrue(SyntaxNode syntax, BoundLabel label, BoundExpression condition)
         {
-            return new BoundGotoStatement(syntax, label.Label);
+            return new BoundConditionalGotoStatement(syntax, label, condition, jumpIfTrue: true);
         }
 
-        public static BoundConditionalGotoStatement GotoIf(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition, bool jumpIfTrue)
+        public static BoundConditionalGotoStatement GotoFalse(SyntaxNode syntax, BoundLabel label, BoundExpression condition)
         {
-            return new BoundConditionalGotoStatement(syntax, label.Label, condition, jumpIfTrue);
-        }
-
-        public static BoundConditionalGotoStatement GotoTrue(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition)
-        {
-            return GotoIf(syntax, label, condition, jumpIfTrue: true);
-        }
-
-        public static BoundConditionalGotoStatement GotoFalse(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition)
-        {
-            return GotoIf(syntax, label, condition, jumpIfTrue: false);
+            return new BoundConditionalGotoStatement(syntax, label, condition, jumpIfTrue: false);
         }
 
         public static BoundLabelStatement Label(SyntaxNode syntax, BoundLabel label)
