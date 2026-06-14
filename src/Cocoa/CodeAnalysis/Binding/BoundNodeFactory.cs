@@ -7,61 +7,9 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal static class BoundNodeFactory
     {
-        public static BoundNopStatement Nop(SyntaxNode syntax)
-        {
-            return new BoundNopStatement(syntax);
-        }
-
-        public static BoundLabelStatement Label(SyntaxNode syntax, BoundLabel label)
-        {
-            return new BoundLabelStatement(syntax, label);
-        }
-
-        public static BoundLiteralExpression Literal(SyntaxNode syntax, object literal)
-        {
-            Debug.Assert(literal is string || literal is bool || literal is int);
-
-            return new BoundLiteralExpression(syntax, literal);
-        }
-
         public static BoundBlockStatement Block(SyntaxNode syntax, params BoundStatement[] statements)
         {
             return new BoundBlockStatement(syntax, ImmutableArray.Create(statements));
-        }
-
-        public static BoundGotoStatement Goto(SyntaxNode syntax, BoundLabelStatement label)
-        {
-            return new BoundGotoStatement(syntax, label.Label);
-        }
-
-        public static BoundGotoStatement Goto(SyntaxNode syntax, BoundLabel label)
-        {
-            return new BoundGotoStatement(syntax, label);
-        }
-
-        public static BoundConditionalGotoStatement GotoIf(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition, bool jumpIfTrue)
-        {
-            return new BoundConditionalGotoStatement(syntax, label.Label, condition, jumpIfTrue);
-        }
-
-        public static BoundConditionalGotoStatement GotoTrue(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition)
-        {
-            return GotoIf(syntax, label, condition, jumpIfTrue: true);
-        }
-
-        public static BoundConditionalGotoStatement GotoFalse(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition)
-        {
-            return GotoIf(syntax, label, condition, jumpIfTrue: false);
-        }
-
-        public static BoundVariableExpression Variable(SyntaxNode syntax, BoundVariableDeclaration variable)
-        {
-            return Variable(syntax, variable.Variable);
-        }
-
-        public static BoundVariableExpression Variable(SyntaxNode syntax, VariableSymbol variable)
-        {
-            return new BoundVariableExpression(syntax, variable);
         }
 
         public static BoundVariableDeclaration VariableDeclaration(SyntaxNode syntax, VariableSymbol symbol, BoundExpression initializer)
@@ -84,6 +32,46 @@ namespace Cocoa.CodeAnalysis.Binding
             var local = new LocalVariableSymbol(name, isReadOnly, initializer.Type, initializer.ConstantValue);
 
             return new BoundVariableDeclaration(syntax, local, initializer);
+        }
+
+        public static BoundWhileStatement While(SyntaxNode syntax, BoundExpression condition, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
+        {
+            return new BoundWhileStatement(syntax, condition, body, breakLabel, continueLabel);
+        }
+
+        public static BoundGotoStatement Goto(SyntaxNode syntax, BoundLabel label)
+        {
+            return new BoundGotoStatement(syntax, label);
+        }
+
+        public static BoundGotoStatement Goto(SyntaxNode syntax, BoundLabelStatement label)
+        {
+            return new BoundGotoStatement(syntax, label.Label);
+        }
+
+        public static BoundConditionalGotoStatement GotoIf(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition, bool jumpIfTrue)
+        {
+            return new BoundConditionalGotoStatement(syntax, label.Label, condition, jumpIfTrue);
+        }
+
+        public static BoundConditionalGotoStatement GotoTrue(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition)
+        {
+            return GotoIf(syntax, label, condition, jumpIfTrue: true);
+        }
+
+        public static BoundConditionalGotoStatement GotoFalse(SyntaxNode syntax, BoundLabelStatement label, BoundExpression condition)
+        {
+            return GotoIf(syntax, label, condition, jumpIfTrue: false);
+        }
+
+        public static BoundLabelStatement Label(SyntaxNode syntax, BoundLabel label)
+        {
+            return new BoundLabelStatement(syntax, label);
+        }
+
+        public static BoundNopStatement Nop(SyntaxNode syntax)
+        {
+            return new BoundNopStatement(syntax);
         }
 
         public static BoundAssignmentExpression Assignment(SyntaxNode syntax, VariableSymbol variable, BoundExpression expression)
@@ -113,11 +101,6 @@ namespace Cocoa.CodeAnalysis.Binding
             return Binary(syntax, left, SyntaxKind.LessOrEqualsToken, right);
         }
 
-        public static BoundWhileStatement While(SyntaxNode syntax, BoundExpression condition, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
-        {
-            return new BoundWhileStatement(syntax, condition, body, breakLabel, continueLabel);
-        }
-
         public static BoundExpressionStatement Increment(SyntaxNode syntax, BoundVariableExpression variable)
         {
             var increment = Add(syntax, variable, Literal(syntax, 1));
@@ -125,13 +108,33 @@ namespace Cocoa.CodeAnalysis.Binding
 
             return new BoundExpressionStatement(syntax, incrementAssign);
         }
+
         public static BoundUnaryExpression Not(SyntaxNode syntax, BoundExpression condition)
         {
             Debug.Assert(condition.Type == TypeSymbol.Boolean);
 
             var op = BoundUnaryOperator.Bind(SyntaxKind.BangToken, TypeSymbol.Boolean);
+
             Debug.Assert(op != null);
+
             return new BoundUnaryExpression(syntax, op, condition);
+        }
+
+        public static BoundVariableExpression Variable(SyntaxNode syntax, BoundVariableDeclaration variable)
+        {
+            return Variable(syntax, variable.Variable);
+        }
+
+        public static BoundVariableExpression Variable(SyntaxNode syntax, VariableSymbol variable)
+        {
+            return new BoundVariableExpression(syntax, variable);
+        }
+
+        public static BoundLiteralExpression Literal(SyntaxNode syntax, object literal)
+        {
+            Debug.Assert(literal is string || literal is bool || literal is int);
+
+            return new BoundLiteralExpression(syntax, literal);
         }
     }
 }
