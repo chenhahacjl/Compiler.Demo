@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Binding
             Op = op;
             Right = right;
 
-            ConstantValue = ConstantFolding.ComputeConstanct(left, op, right);
+            ConstantValue = ConstantFolding.Fold(left, op, right);
         }
 
         public override BoundNodeKind Kind => BoundNodeKind.BinaryExpression;

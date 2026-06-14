@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Binding
             Op = op;
             Operand = operand;
 
-            ConstantValue = ConstantFolding.ComputeConstanct(op, operand);
+            ConstantValue = ConstantFolding.Fold(op, operand);
         }
 
         public override BoundNodeKind Kind => BoundNodeKind.UnaryExpression;
