@@ -31,7 +31,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var testedTokenKinds = GetTokens().Concat(GetSeparators()).Select(t => t.kind);
 
             var untestedTokenKinds = new SortedSet<SyntaxKind>(tokenKinds);
-            untestedTokenKinds.Remove(SyntaxKind.BadTokenTrivia);
+            untestedTokenKinds.Remove(SyntaxKind.BadToken);
             untestedTokenKinds.Remove(SyntaxKind.EndOfFileToken);
             untestedTokenKinds.ExceptWith(testedTokenKinds);
 
@@ -42,11 +42,23 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [MemberData(nameof(GetTokensData))]
         public void Lexer_Lexes_Token(SyntaxKind kind, string text)
         {
-            var tokens = SyntaxTree.ParseTokens(text);
+            var tokens = SyntaxTree.ParseTokens(text, includeEndOfFile: false);
 
             var token = Assert.Single(tokens);
             Assert.Equal(kind, token.Kind);
             Assert.Equal(text, token.Text);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetSeparatorsData))]
+        public void Lexer_Lexes_Separator(SyntaxKind kind, string text)
+        {
+            var tokens = SyntaxTree.ParseTokens(text, includeEndOfFile: true);
+
+            var token = Assert.Single(tokens);
+            var trivia = Assert.Single(token.LeadingTrivia);
+            Assert.Equal(kind, trivia.Kind);
+            Assert.Equal(text, trivia.Text);
         }
 
         [Theory]
@@ -67,19 +79,22 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         [Theory]
         [MemberData(nameof(GetTokenPairsWithSeparatorData))]
         public void Lexer_Lexes_TokenPairs_WithSeparators(SyntaxKind t1Kind, string t1Text,
-                                                         SyntaxKind separatorKind, string separatorText,
-                                                         SyntaxKind t2Kind, string t2Text)
+                                                          SyntaxKind separatorKind, string separatorText,
+                                                          SyntaxKind t2Kind, string t2Text)
         {
             var text = t1Text + separatorText + t2Text;
             var tokens = SyntaxTree.ParseTokens(text).ToArray();
 
-            Assert.Equal(3, tokens.Length);
+            Assert.Equal(2, tokens.Length);
             Assert.Equal(t1Kind, tokens[0].Kind);
             Assert.Equal(t1Text, tokens[0].Text);
-            Assert.Equal(separatorKind, tokens[1].Kind);
-            Assert.Equal(separatorText, tokens[1].Text);
-            Assert.Equal(t2Kind, tokens[2].Kind);
-            Assert.Equal(t2Text, tokens[2].Text);
+
+            var separator = Assert.Single(tokens[0].TrailingTrivia);
+            Assert.Equal(separatorKind, separator.Kind);
+            Assert.Equal(separatorText, separator.Text);
+
+            Assert.Equal(t2Kind, tokens[1].Kind);
+            Assert.Equal(t2Text, tokens[1].Text);
         }
 
         [Theory]
@@ -100,9 +115,17 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
         public static IEnumerable<object[]> GetTokensData()
         {
-            foreach (var (kind, test) in GetTokens().Concat(GetSeparators()))
+            foreach (var (kind, text) in GetTokens())
             {
-                yield return new object[] { kind, test };
+                yield return new object[] { kind, text };
+            }
+        }
+
+        public static IEnumerable<object[]> GetSeparatorsData()
+        {
+            foreach (var (kind, text) in GetSeparators())
+            {
+                yield return new object[] { kind, text };
             }
         }
 
@@ -148,9 +171,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             {
                 (SyntaxKind.WhitespaceTrivia, " "),
                 (SyntaxKind.WhitespaceTrivia, "  "),
-                (SyntaxKind.WhitespaceTrivia, "\r"),
-                (SyntaxKind.WhitespaceTrivia, "\n"),
-                (SyntaxKind.WhitespaceTrivia, "\r\n"),
+                (SyntaxKind.LineBreakTrivia, "\r"),
+                (SyntaxKind.LineBreakTrivia, "\n"),
+                (SyntaxKind.LineBreakTrivia, "\r\n"),
                 (SyntaxKind.MultiLineCommentTrivia, "/**/"),
             };
         }

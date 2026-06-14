@@ -5,12 +5,17 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public enum SyntaxKind
     {
-        // Tokens
-        EndOfFileToken,          // <EOF>
-        BadTokenTrivia,
+        BadToken,
+
+        // Trivia
+        SkippedTextTrivia,       // 被跳过的文本
+        LineBreakTrivia,         // 换行符
         WhitespaceTrivia,        // 空字符
         SingleLineCommentTrivia, // 单行注释
         MultiLineCommentTrivia,  // 多行注释
+
+        // Tokens
+        EndOfFileToken,          // <EOF>
         NumberToken,             // 数字
         StringToken,             // "
         PlusToken,               // +

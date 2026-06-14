@@ -225,7 +225,8 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             switch (kind)
             {
-                case SyntaxKind.BadTokenTrivia:
+                case SyntaxKind.SkippedTextTrivia:
+                case SyntaxKind.LineBreakTrivia:
                 case SyntaxKind.WhitespaceTrivia:
                 case SyntaxKind.SingleLineCommentTrivia:
                 case SyntaxKind.MultiLineCommentTrivia:

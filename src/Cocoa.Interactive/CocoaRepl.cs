@@ -1,9 +1,8 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Authoring;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
 using Cocoa.IO;
-using System.Collections.Immutable;
 
 namespace Cocoa.Interactive
 {
@@ -21,74 +20,56 @@ namespace Cocoa.Interactive
             LoadSubmissions();
         }
 
-        private sealed class RenderState
-        {
-            public RenderState(SourceText text, ImmutableArray<SyntaxToken> tokens)
-            {
-                Text = text;
-                Tokens = tokens;
-            }
-
-            public SourceText Text { get; }
-            public ImmutableArray<SyntaxToken> Tokens { get; }
-        }
-
         protected override object RenderLine(IReadOnlyList<string> lines, int lineIndex, object state)
         {
-            RenderState renderState;
+            SyntaxTree syntaxTree;
 
             if (state == null)
             {
                 var text = string.Join(Environment.NewLine, lines);
-                var sourceText = SourceText.From(text);
-                var tokens = SyntaxTree.ParseTokens(sourceText);
 
-                renderState = new RenderState(sourceText, tokens);
+                syntaxTree = SyntaxTree.Parse(text);
             }
             else
             {
-                renderState = (RenderState)state;
+                syntaxTree = (SyntaxTree)state;
             }
 
-            var lineSpan = renderState.Text.Lines[lineIndex].Span;
+            var lineSpan = syntaxTree.Text.Lines[lineIndex].Span;
+            var classifiedSpans = Classifier.Classify(syntaxTree, lineSpan);
 
-            foreach (var token in renderState.Tokens)
+            foreach (var classifiedSpan in classifiedSpans)
             {
-                if (!lineSpan.OverlapsWith(token.Span))
+                var classifiedText = syntaxTree.Text.ToString(classifiedSpan.Span);
+
+                switch (classifiedSpan.Classification)
                 {
-                    continue;
+                    case Classification.Keyword:
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        break;
+                    case Classification.Identifier:
+                        Console.ForegroundColor = ConsoleColor.DarkYellow;
+                        break;
+                    case Classification.Number:
+                        Console.ForegroundColor = ConsoleColor.Cyan;
+                        break;
+                    case Classification.String:
+                        Console.ForegroundColor = ConsoleColor.Magenta;
+                        break;
+                    case Classification.Comment:
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        break;
+                    case Classification.Text:
+                    default:
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        break;
                 }
 
-                var tokenStart = Math.Max(token.Span.Start, lineSpan.Start);
-                var tokenEnd = Math.Min(token.Span.End, lineSpan.End);
-                var tokenSpan = TextSpan.FromBounds(tokenStart, tokenEnd);
-                var tokenText = renderState.Text.ToString(tokenSpan);
-
-                var isKeyword = token.Kind.IsKeyword();
-                var isIdentifier = token.Kind == SyntaxKind.IdentifierToken;
-                var isNumber = token.Kind == SyntaxKind.NumberToken;
-                var isString = token.Kind == SyntaxKind.StringToken;
-                var isComment = token.Kind == SyntaxKind.SingleLineCommentTrivia || token.Kind == SyntaxKind.MultiLineCommentTrivia;
-
-                if (isKeyword)
-                    Console.ForegroundColor = ConsoleColor.Blue;
-                else if (isIdentifier)
-                    Console.ForegroundColor = ConsoleColor.DarkYellow;
-                else if (isNumber)
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                else if (isString)
-                    Console.ForegroundColor = ConsoleColor.Magenta;
-                else if (isComment)
-                    Console.ForegroundColor = ConsoleColor.Green;
-                else
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-
-                Console.Write(tokenText);
-
+                Console.Write(classifiedText);
                 Console.ResetColor();
             }
 
-            return renderState;
+            return syntaxTree;
         }
 
         [MetaCommand("exit", "Exits the REPL")]

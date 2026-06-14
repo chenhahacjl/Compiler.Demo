@@ -27,6 +27,17 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
         }
 
+        public virtual TextSpan FullSpan
+        {
+            get
+            {
+                var first = GetChildren().First().FullSpan;
+                var last = GetChildren().Last().FullSpan;
+
+                return TextSpan.FromBounds(first.Start, last.End);
+            }
+        }
+
         public TextLocation Location => new TextLocation(SyntaxTree.Text, Span);
 
         public abstract IEnumerable<SyntaxNode> GetChildren();
@@ -47,23 +58,90 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private static void PrettyPrint(TextWriter writer, SyntaxNode node, string indent = "", bool isLast = true)
         {
-            var isToConsole = writer == Console.Out;
-            var marker = isLast ? "└──" : "├──";
-
-            if (isToConsole) { Console.ForegroundColor = ConsoleColor.DarkGray; }
-            writer.Write($"{indent}{marker}");
-
-            if (isToConsole) { Console.ForegroundColor = node is SyntaxToken ? ConsoleColor.Blue : ConsoleColor.Cyan; }
-            writer.Write($"{node.Kind}");
-
-            if (node is SyntaxToken syntaxToken && syntaxToken.Value != null)
+            // HACK: node should never be null.
+            if (node == null)
             {
-                writer.Write($" {syntaxToken.Value}");
+                return;
             }
 
-            if (isToConsole) { Console.ResetColor(); }
+            var isToConsole = writer == Console.Out;
+            var token = node as SyntaxToken;
+
+            if (token != null)
+            {
+                foreach (var trivia in token.LeadingTrivia)
+                {
+                    if (isToConsole)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+
+                    writer.Write(indent);
+                    writer.Write("├──");
+
+                    if (isToConsole)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    }
+
+                    writer.WriteLine($"L: {trivia.Kind}");
+                }
+            }
+
+            var hasTrailingTrivia = token != null && token.TrailingTrivia.Any();
+            var tokenMarker = !hasTrailingTrivia && isLast ? "└──" : "├──";
+
+            if (isToConsole)
+            {
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+            }
+
+            writer.Write(indent);
+            writer.Write($"{tokenMarker}");
+
+            if (isToConsole)
+            {
+                Console.ForegroundColor = node is SyntaxToken ? ConsoleColor.Blue : ConsoleColor.Cyan;
+            }
+
+            writer.Write($"{node.Kind}");
+
+            if (token != null && token.Value != null)
+            {
+                writer.Write(" ");
+                writer.Write(token.Value);
+            }
+
+            if (isToConsole)
+            {
+                Console.ResetColor();
+            }
 
             writer.WriteLine();
+
+            if (token != null)
+            {
+                foreach (var trivia in token.TrailingTrivia)
+                {
+                    var isLastTrailingTrivia = trivia == token.TrailingTrivia.Last();
+                    var triviaMarker = isLast && isLastTrailingTrivia ? "└──" : "├──";
+
+                    if (isToConsole)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                    }
+
+                    writer.Write(indent);
+                    writer.Write(triviaMarker);
+
+                    if (isToConsole)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    }
+
+                    writer.WriteLine($"T: {trivia.Kind}");
+                }
+            }
 
             indent += isLast ? "　   " : "│   ";
 
