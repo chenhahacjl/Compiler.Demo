@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 }
             }
 
-            var builtinTypes = new List<(TypeSymbol type, string metadataName)>
+            var builtinTypes = new List<(TypeSymbol Type, string MetadataName)>
             {
                 (TypeSymbol.Any, "System.Object"),
                 (TypeSymbol.Boolean, "System.Boolean"),
