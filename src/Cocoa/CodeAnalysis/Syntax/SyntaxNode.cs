@@ -59,12 +59,6 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private static void PrettyPrint(TextWriter writer, SyntaxNode node, string indent = "", bool isLast = true)
         {
-            // HACK: node should never be null.
-            if (node == null)
-            {
-                return;
-            }
-
             var isToConsole = writer == Console.Out;
             var token = node as SyntaxToken;
 

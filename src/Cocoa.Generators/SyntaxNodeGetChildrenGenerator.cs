@@ -53,7 +53,17 @@ namespace Cocoa.Generators
                         {
                             if (IsDerivedFrom(propertyType, syntaxNodeType))
                             {
-                                indentedTextWriter.WriteLine($"yield return {property.Name};");
+                                var canBeNull = property.NullableAnnotation == NullableAnnotation.Annotated;
+                                if (canBeNull)
+                                {
+                                    using var ifCurly = new CurlyIndenter(indentedTextWriter, $"if ({property.Name} != null)");
+
+                                    indentedTextWriter.WriteLine($"yield return {property.Name};");
+                                }
+                                else
+                                {
+                                    indentedTextWriter.WriteLine($"yield return {property.Name};");
+                                }
                             }
                             else if (propertyType.TypeArguments.Length == 1 &&
                                      IsDerivedFrom(propertyType.TypeArguments[0], syntaxNodeType) &&
