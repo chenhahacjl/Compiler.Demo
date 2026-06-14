@@ -92,16 +92,16 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            if (program.Diagnostics.Any())
+            if (program.ErrorDiagnostics.Any())
             {
-                return new EvaluationResult(program.Diagnostics.ToImmutableArray(), null);
+                return new EvaluationResult(program.Diagnostics, null);
             }
 
             var evaluator = new Evaluator(program, variables);
 
             var value = evaluator.Evaluate();
 
-            return new EvaluationResult(ImmutableArray<Diagnostic>.Empty, value);
+            return new EvaluationResult(program.WarningDiagnostics, value);
         }
 
         public void EmitTree(TextWriter writer)
@@ -138,7 +138,8 @@ namespace Cocoa.CodeAnalysis
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
             var diagnostics = parseDiagnostics.Concat(GlobalScope.Diagnostics).ToImmutableArray();
-            if (diagnostics.Any())
+            var errorDiagnostics = diagnostics.Where(d => d.IsError);
+            if (errorDiagnostics.Any())
             {
                 return diagnostics;
             }

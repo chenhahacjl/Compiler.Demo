@@ -518,6 +518,74 @@ namespace Cocoa.Tests.CodeAnalysis
             AssertDiagnostics(text, diagnostics);
         }
 
+        [Fact]
+        public void Evaluator_IfStatement_Reports_NotReachableCode_Warning()
+        {
+            var text = @"
+                function test()
+                {
+                    let x = 4 * 3
+                    if x > 12
+                    {
+                        [print](""x"")
+                    }
+                    else
+                    {
+                        print(""x"")
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                Unreachable code detected.
+            ";
+            AssertDiagnostics(text, diagnostics, assertWarnings: true);
+        }
+
+        [Fact]
+        public void Evaluator_ElseStatement_Reports_NotReachableCode_Warning()
+        {
+            var text = @"
+                function test(): int
+                {
+                    if true
+                    {
+                        return 1
+                    }
+                    else
+                    {
+                        [return] 0
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                Unreachable code detected.
+            ";
+
+            AssertDiagnostics(text, diagnostics, assertWarnings: true);
+        }
+
+        [Fact]
+        public void Evaluator_WhileStatement_Reports_NotReachableCode_Warning()
+        {
+            var text = @"
+                function test()
+                {
+                    while false
+                    {
+                        [continue]
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                Unreachable code detected.
+            ";
+
+            AssertDiagnostics(text, diagnostics, assertWarnings: true);
+        }
+
         [Theory]
         [InlineData("[break]", "break")]
         [InlineData("[continue]", "continue")]
@@ -616,11 +684,11 @@ namespace Cocoa.Tests.CodeAnalysis
             var variables = new Dictionary<VariableSymbol, object>();
             var result = compilation.Evaluate(variables);
 
-            Assert.Empty(result.Diagnostics);
+            Assert.Empty(result.ErrorDiagnostics);
             Assert.Equal(expectedValue, result.Value);
         }
 
-        private void AssertDiagnostics(string text, string diagnosticText)
+        private void AssertDiagnostics(string text, string diagnosticText, bool assertWarnings = false)
         {
             var annotatedText = AnnotatedText.Parse(text);
             var syntaxTree = SyntaxTree.Parse(annotatedText.Text);
@@ -634,16 +702,17 @@ namespace Cocoa.Tests.CodeAnalysis
                 throw new Exception("ERROR: Must mark as many spans as there are expected diagnostics");
             }
 
-            Assert.Equal(expectedDiagnostics.Length, result.Diagnostics.Length);
+            var diagnostics = assertWarnings ? result.Diagnostics : result.ErrorDiagnostics;
+            Assert.Equal(expectedDiagnostics.Length, diagnostics.Length);
 
             for (var i = 0; i < expectedDiagnostics.Length; i++)
             {
                 var expectedMessage = expectedDiagnostics[i];
-                var actualMessage = result.Diagnostics[i].Message;
+                var actualMessage = diagnostics[i].Message;
                 Assert.Equal(expectedMessage, actualMessage);
 
                 var expectedSpan = annotatedText.Spans[i];
-                var actualSpan = result.Diagnostics[i].Location.Span;
+                var actualSpan = diagnostics[i].Location.Span;
                 Assert.Equal(expectedSpan, actualSpan);
             }
         }

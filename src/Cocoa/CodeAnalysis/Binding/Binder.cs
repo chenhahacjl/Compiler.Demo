@@ -376,6 +376,19 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
         {
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
+
+            if (condition.ConstantValue != null)
+            {
+                if ((bool)condition.ConstantValue.Value == false)
+                {
+                    _diagnostics.ReportUnreachableCode(syntax.ThenStatement);
+                }
+                else if (syntax.ElseClause != null)
+                {
+                    _diagnostics.ReportUnreachableCode(syntax.ElseClause.ElseStatement);
+                }
+            }
+
             var thenStatement = BindStatement(syntax.ThenStatement);
             var elseStatement = syntax.ElseClause == null ? null : BindStatement(syntax.ElseClause.ElseStatement);
 
@@ -385,6 +398,15 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundStatement BindWhileStatement(WhileStatementSyntax syntax)
         {
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
+
+            if (condition.ConstantValue != null)
+            {
+                if (!(bool)condition.ConstantValue.Value)
+                {
+                    _diagnostics.ReportUnreachableCode(syntax.Body);
+                }
+            }
+
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
             return new BoundWhileStatement(condition, body, breakLabel, continueLabel);

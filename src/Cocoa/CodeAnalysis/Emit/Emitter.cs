@@ -178,7 +178,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
         {
-            if (program.Diagnostics.Any())
+            if (program.ErrorDiagnostics.Any())
             {
                 return program.Diagnostics;
             }

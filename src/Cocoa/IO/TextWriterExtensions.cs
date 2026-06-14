@@ -106,7 +106,8 @@ namespace Cocoa.IO
         {
             foreach (var diagnostic in diagnostics.Where(d => d.Location.Text == null))
             {
-                writer.SetForeground(ConsoleColor.DarkRed);
+                var messageColor = diagnostic.IsWarning ? ConsoleColor.DarkYellow : ConsoleColor.DarkRed;
+                writer.SetForeground(messageColor);
                 writer.Write(diagnostic.Message);
                 writer.ResetColor();
             }
@@ -129,7 +130,8 @@ namespace Cocoa.IO
 
                 writer.WriteLine();
 
-                writer.SetForeground(ConsoleColor.DarkRed);
+                var messageColor = diagnostic.IsWarning ? ConsoleColor.DarkYellow : ConsoleColor.DarkRed;
+                writer.SetForeground(messageColor);
                 writer.Write($"{fileName}({startLine},{startCharacter},{endLine},{endCharacter}): ");
                 writer.WriteLine(diagnostic);
                 writer.ResetColor();
