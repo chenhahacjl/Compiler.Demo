@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using Cocoa.IO;
 using System.CodeDom.Compiler;
 
@@ -58,6 +59,9 @@ namespace Cocoa.CodeAnalysis.Binding
                     break;
                 case BoundNodeKind.ExpressionStatement:
                     WriteExpressionStatement((BoundExpressionStatement)node, writer);
+                    break;
+                case BoundNodeKind.SequencePointStatement:
+                    WriteSequencePointStatement((BoundSequencePointStatement)node, writer);
                     break;
                 case BoundNodeKind.ErrorExpression:
                     WriteErrorExpression((BoundErrorExpression)node, writer);
@@ -278,6 +282,31 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             writer.WriteLine();
+        }
+
+        private static void WriteSequencePointStatement(BoundSequencePointStatement node, IndentedTextWriter writer)
+        {
+            var sourceText = node.Location.Text;
+            var span = node.Location.Span;
+
+            var startLine = sourceText.GetLineIndex(span.Start);
+            var endLine = sourceText.GetLineIndex(span.End - 1);
+
+            for (var i = startLine; i <= endLine; i++)
+            {
+                var line = sourceText.Lines[i];
+                var start = Math.Max(line.Start, span.Start);
+                var end = Math.Min(line.End, span.End);
+                var lineSpan = TextSpan.FromBounds(start, end);
+
+                var text = sourceText.ToString(lineSpan);
+
+                writer.WriteComment(text);
+            }
+
+            writer.WriteLine();
+
+            node.Statement.WriteTo(writer);
         }
 
         private static void WriteExpressionStatement(BoundExpressionStatement node, IndentedTextWriter writer)

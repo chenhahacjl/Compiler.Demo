@@ -18,6 +18,7 @@ namespace Cocoa.CodeAnalysis.Binding
         ConditionalGotoStatement,
         ReturnStatement,
         ExpressionStatement,
+        SequencePointStatement,
 
         // Expression
         ErrorExpression,

@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -23,6 +24,8 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private TypeDefinition _typeDefinition;
 
+        private Dictionary<SourceText, Document> _documents = new Dictionary<SourceText, Document>();
+
         private readonly MethodReference _objectEqualsReference;
         private readonly MethodReference _consoleReadLineReference;
         private readonly MethodReference _consoleWriteLineReference;
@@ -35,6 +38,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly MethodReference _convertToStringReference;
         private readonly MethodReference _randomGetSharedReference;
         private readonly MethodReference _randomNextReference;
+        private readonly MethodReference _debuggableAttributeCtorReference;
 
         // TOOD: This constructor does too much. Resolution should be factored out.
         private Emitter(string moduleName, string[] references)
@@ -163,6 +167,7 @@ namespace Cocoa.CodeAnalysis.Emit
             _convertToStringReference = ResolveMethod("System.Convert", "ToString", new[] { "System.Object" });
             _randomGetSharedReference = ResolveMethod("System.Random", "get_Shared", Array.Empty<string>());
             _randomNextReference = ResolveMethod("System.Random", "Next", new[] { "System.Int32" });
+            _debuggableAttributeCtorReference = ResolveMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
 
             var objectType = _knownTypes[TypeSymbol.Any];
 
@@ -211,7 +216,29 @@ namespace Cocoa.CodeAnalysis.Emit
                 _assemblyDefinition.EntryPoint = _methods[program.MainFunction];
             }
 
-            _assemblyDefinition.Write(outputPath);
+            // TODO: We should not emit this attribute unless we produce a debug build
+            var debuggableAttribute = new CustomAttribute(_debuggableAttributeCtorReference);
+
+            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], true));
+            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], true));
+
+            _assemblyDefinition.CustomAttributes.Add(debuggableAttribute);
+
+            // TODO: We should not be computing paths in here.
+            var symbolsPath = Path.ChangeExtension(outputPath, "pdb");
+
+            // TODO: We should support not emitting symbols
+            using var outputStream = File.Create(outputPath);
+            using var symbolsStream = File.Create(symbolsPath);
+
+            var writerParameters = new WriterParameters
+            {
+                WriteSymbols = true,
+                SymbolStream = symbolsStream,
+                SymbolWriterProvider = new PortablePdbWriterProvider(),
+            };
+
+            _assemblyDefinition.Write(outputStream, writerParameters);
 
             return _diagnostics.ToImmutableArray();
         }
@@ -260,6 +287,19 @@ namespace Cocoa.CodeAnalysis.Emit
             }
 
             method.Body.OptimizeMacros();
+
+            // TODO: Only emit this when emitting symbols
+
+            method.DebugInformation.Scope = new ScopeDebugInformation(method.Body.Instructions.First(), method.Body.Instructions.Last());
+
+            foreach (var local in _locals)
+            {
+                var symbol = local.Key;
+                var definition = local.Value;
+                var debugInformation = new VariableDebugInformation(definition, symbol.Name);
+
+                method.DebugInformation.Scope.Variables.Add(debugInformation);
+            }
         }
 
         private void EmitStatement(ILProcessor ilProcessor, BoundStatement node)
@@ -286,6 +326,9 @@ namespace Cocoa.CodeAnalysis.Emit
                     break;
                 case BoundNodeKind.ExpressionStatement:
                     EmitExpressionStatement(ilProcessor, (BoundExpressionStatement)node);
+                    break;
+                case BoundNodeKind.SequencePointStatement:
+                    EmitSequencePointStatement(ilProcessor, (BoundSequencePointStatement)node);
                     break;
                 default:
                     throw new Exception($"Unexpected node kind {node.Kind}");
@@ -351,6 +394,34 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 ilProcessor.Emit(OpCodes.Pop);
             }
+        }
+
+        private void EmitSequencePointStatement(ILProcessor ilProcessor, BoundSequencePointStatement node)
+        {
+            int index = ilProcessor.Body.Instructions.Count;
+
+            EmitStatement(ilProcessor, node.Statement);
+
+            var instruction = ilProcessor.Body.Instructions[index];
+
+            if (!_documents.TryGetValue(node.Location.Text, out var document))
+            {
+                var fullPath = Path.GetFullPath(node.Location.Text.FileName);
+
+                document = new Document(fullPath);
+
+                _documents.Add(node.Location.Text, document);
+            }
+
+            var sequencePoint = new SequencePoint(instruction, document)
+            {
+                StartLine = node.Location.StartLine + 1,
+                StartColumn = node.Location.StartCharacter + 1,
+                EndLine = node.Location.EndLine + 1,
+                EndColumn = node.Location.EndCharacter + 1,
+            };
+
+            ilProcessor.Body.Method.DebugInformation.SequencePoints.Add(sequencePoint);
         }
 
         private void EmitExpression(ILProcessor ilProcessor, BoundExpression node)

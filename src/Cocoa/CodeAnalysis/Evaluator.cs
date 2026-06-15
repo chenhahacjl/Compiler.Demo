@@ -66,11 +66,21 @@ namespace Cocoa.CodeAnalysis
                 }
             }
 
+            var statements = body.Statements.ToArray();
+
+            for (var i = 0; i < statements.Length; i++)
+            {
+                if (statements[i] is BoundSequencePointStatement statement)
+                {
+                    statements[i] = statement.Statement;
+                }
+            }
+
             var index = 0;
 
-            while (index < body.Statements.Length)
+            while (index < statements.Length)
             {
-                var statement = body.Statements[index];
+                var statement = statements[index];
 
                 switch (statement.Kind)
                 {

@@ -294,5 +294,19 @@ namespace Cocoa.CodeAnalysis.Lowering
 
             return result;
         }
+
+        protected override BoundStatement RewriteVariableDeclaration(BoundVariableDeclaration node)
+        {
+            var rewrittenNode = base.RewriteVariableDeclaration(node);
+
+            return new BoundSequencePointStatement(rewrittenNode.Syntax, rewrittenNode, rewrittenNode.Syntax.Location);
+        }
+
+        protected override BoundStatement RewriteExpressionStatement(BoundExpressionStatement node)
+        {
+            var rewrittenNode = base.RewriteExpressionStatement(node);
+
+            return new BoundSequencePointStatement(rewrittenNode.Syntax, rewrittenNode, rewrittenNode.Syntax.Location);
+        }
     }
 }

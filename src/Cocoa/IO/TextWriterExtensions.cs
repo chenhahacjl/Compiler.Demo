@@ -86,6 +86,14 @@ namespace Cocoa.IO
             writer.WritePunctuation(" ");
         }
 
+        public static void WriteComment(this TextWriter writer, string text)
+        {
+            writer.SetForeground(ConsoleColor.DarkGreen);
+            writer.Write("// ");
+            writer.Write(text);
+            writer.ResetColor();
+        }
+
         public static void WritePunctuation(this TextWriter writer, SyntaxKind kind)
         {
             var text = SyntaxFacts.GetText(kind);
