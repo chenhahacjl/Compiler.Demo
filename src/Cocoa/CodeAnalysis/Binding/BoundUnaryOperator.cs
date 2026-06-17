@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundUnaryOperator
     {
-        private BoundUnaryOperator(SyntaxKind syntaxKind, BoundUnaryOperatorKind kind, TypeSymbol operandType)
+        internal BoundUnaryOperator(SyntaxKind syntaxKind, BoundUnaryOperatorKind kind, TypeSymbol operandType)
             : this(syntaxKind, kind, operandType, operandType)
         {
         }
@@ -33,6 +33,9 @@ namespace Cocoa.CodeAnalysis.Binding
             new BoundUnaryOperator(SyntaxKind.PlusToken, BoundUnaryOperatorKind.Identity, TypeSymbol.Int32),
             new BoundUnaryOperator(SyntaxKind.MinusToken, BoundUnaryOperatorKind.Negation, TypeSymbol.Int32),
             new BoundUnaryOperator(SyntaxKind.TildeToken, BoundUnaryOperatorKind.OnesComplement, TypeSymbol.Int32),
+
+            new BoundUnaryOperator(SyntaxKind.PlusPlusToken, BoundUnaryOperatorKind.PrefixIncrement, TypeSymbol.Int32),
+            new BoundUnaryOperator(SyntaxKind.MinusMinusToken, BoundUnaryOperatorKind.PrefixDecrement, TypeSymbol.Int32),
         };
 
         public static BoundUnaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol operandType)

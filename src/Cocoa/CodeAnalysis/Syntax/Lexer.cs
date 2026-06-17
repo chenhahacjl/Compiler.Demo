@@ -288,28 +288,38 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '+':
                 {
                     _position++;
-                    if (Current != '=')
-                    {
-                        _kind = SyntaxKind.PlusToken;
-                    }
-                    else
+                    if (Current == '=')
                     {
                         _kind = SyntaxKind.PlusEqualsToken;
                         _position++;
+                    }
+                    else if (Current == '+')
+                    {
+                        _kind = SyntaxKind.PlusPlusToken;
+                        _position++;
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.PlusToken;
                     }
                     break;
                 }
                 case '-':
                 {
                     _position++;
-                    if (Current != '=')
-                    {
-                        _kind = SyntaxKind.MinusToken;
-                    }
-                    else
+                    if (Current == '=')
                     {
                         _kind = SyntaxKind.MinusEqualsToken;
                         _position++;
+                    }
+                    else if (Current == '-')
+                    {
+                        _kind = SyntaxKind.MinusMinusToken;
+                        _position++;
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.MinusToken;
                     }
                     break;
                 }
@@ -338,6 +348,20 @@ namespace Cocoa.CodeAnalysis.Syntax
                     {
                         _kind = SyntaxKind.SlashEqualsToken;
                         _position++;
+                    }
+                    break;
+                }
+                case '%':
+                {
+                    _position++;
+                    if (Current == '=')
+                    {
+                        _kind = SyntaxKind.PercentEqualsToken;
+                        _position++;
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.PercentToken;
                     }
                     break;
                 }
@@ -414,6 +438,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     {
                         _kind = SyntaxKind.AmpersandToken;
                     }
+                    break;
+                }
+                case '?':
+                {
+                    _kind = SyntaxKind.QuestionToken;
+                    _position++;
                     break;
                 }
                 case '|':
@@ -495,6 +525,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '"':
                     ReadString();
                     break;
+                case '\'':
+                    ReadChar();
+                    break;
                 case '0':
                 case '1':
                 case '2':
@@ -531,6 +564,70 @@ namespace Cocoa.CodeAnalysis.Syntax
                     break;
                 }
             }
+        }
+
+        private void ReadChar()
+        {
+            _position++;
+
+            char value;
+
+            if (Current == '\\')
+            {
+                _position++;
+                switch (Current)
+                {
+                    case '0': value = '\0'; break;
+                    case 'a': value = '\a'; break;
+                    case 'b': value = '\b'; break;
+                    case 'f': value = '\f'; break;
+                    case 'n': value = '\n'; break;
+                    case 'r': value = '\r'; break;
+                    case 't': value = '\t'; break;
+                    case 'v': value = '\v'; break;
+                    case '\\': value = '\\'; break;
+                    case '\'': value = '\''; break;
+                    case '"': value = '"'; break;
+                    default:
+                    {
+                        var span = new TextSpan(_start, 1);
+                        var location = new TextLocation(_text, span);
+                        _diagnostics.ReportBadCharacter(location, Current);
+                        value = Current;
+                        break;
+                    }
+                }
+                _position++;
+            }
+            else
+            {
+                if (Current == '\0' || Current == '\r' || Current == '\n' || Current == '\'')
+                {
+                    var span = new TextSpan(_start, 1);
+                    var location = new TextLocation(_text, span);
+                    _diagnostics.ReportUnterminatedCharacter(location);
+                    value = '\0';
+                }
+                else
+                {
+                    value = Current;
+                    _position++;
+                }
+            }
+
+            if (Current != '\'')
+            {
+                var span = new TextSpan(_start, 1);
+                var location = new TextLocation(_text, span);
+                _diagnostics.ReportUnterminatedCharacter(location);
+            }
+            else
+            {
+                _position++;
+            }
+
+            _kind = SyntaxKind.CharToken;
+            _value = value;
         }
 
         private void ReadString()
@@ -590,23 +687,83 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private void ReadNumber()
         {
-            while (char.IsDigit(Current))
+            var isHex = false;
+            var isBinary = false;
+
+            if (Current == '0')
             {
-                _position++;
+                if (Lookahead == 'x' || Lookahead == 'X')
+                {
+                    isHex = true;
+                    _position += 2;
+                    _start = _position;
+                }
+                else if (Lookahead == 'b' || Lookahead == 'B')
+                {
+                    isBinary = true;
+                    _position += 2;
+                    _start = _position;
+                }
+            }
+
+            var hasSeparator = false;
+
+            while (true)
+            {
+                if (Current == '_')
+                {
+                    hasSeparator = true;
+                    _position++;
+                    continue;
+                }
+
+                if (isHex)
+                {
+                    if (char.IsAsciiHexDigit(Current))
+                        _position++;
+                    else
+                        break;
+                }
+                else if (isBinary)
+                {
+                    if (Current == '0' || Current == '1')
+                        _position++;
+                    else
+                        break;
+                }
+                else
+                {
+                    if (char.IsDigit(Current))
+                        _position++;
+                    else
+                        break;
+                }
             }
 
             var length = _position - _start;
-            var text = _text.ToString(_start, length);
+            var rawText = _text.ToString(_start, length);
+            var text = rawText.Replace("_", "");
 
-            if (!int.TryParse(text, out var value))
+            var textValue = GetNumberText(text, isHex, isBinary);
+
+            if (!int.TryParse(textValue, out var value))
             {
                 var span = new TextSpan(_start, length);
                 var location = new TextLocation(_text, span);
-                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Int32);
+                _diagnostics.ReportInvalidNumber(location, rawText, TypeSymbol.Int32);
             }
 
             _value = value;
             _kind = SyntaxKind.NumberToken;
+        }
+
+        private static string GetNumberText(string text, bool isHex, bool isBinary)
+        {
+            if (isHex)
+                return Convert.ToInt64(text, 16).ToString();
+            if (isBinary)
+                return Convert.ToInt64(text, 2).ToString();
+            return text;
         }
 
         private void ReadIdentifierOrKeyword()

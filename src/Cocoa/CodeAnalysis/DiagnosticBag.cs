@@ -52,6 +52,12 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportUnterminatedCharacter(TextLocation location)
+        {
+            var message = $"Unterminated character literal.";
+            ReportError(location, message);
+        }
+
         internal void ReportUnterminatedMultiLineComment(TextLocation location)
         {
             var message = $"Unterminated multi-line comment.";
@@ -312,6 +318,12 @@ namespace Cocoa.CodeAnalysis
                     throw new Exception($"Unexpected syntax {node.Kind}");
                 }
             }
+        }
+
+        internal void ReportSwitchCaseMustEndWithBreak(TextLocation location)
+        {
+            var message = "Each case clause in a switch statement must end with a 'break' statement.";
+            ReportError(location, message);
         }
     }
 }

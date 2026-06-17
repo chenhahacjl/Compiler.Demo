@@ -17,6 +17,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly FunctionSymbol? _function;
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
+        private Stack<BoundLabel> _switchStack = new Stack<BoundLabel>();
         private int _labelCounter;
         private BoundScope _scope;
 
@@ -325,6 +326,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
                 case SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
                 case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case SyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
+                case SyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
                 case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
@@ -441,6 +444,82 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundForStatement(syntax, variable, lowerBound, upperBound, body, breakLabel, continueLabel);
         }
 
+        private BoundStatement BindSwitchStatement(SwitchStatementSyntax syntax)
+        {
+            var expression = BindExpression(syntax.Expression);
+            var breakLabel = GenerateLabel();
+
+            _switchStack.Push(breakLabel);
+
+            var cases = ImmutableArray.CreateBuilder<BoundSwitchCase>();
+
+            foreach (var caseSyntax in syntax.Clauses)
+            {
+                var caseExpression = caseSyntax.Value == null ? null : BindExpression(caseSyntax.Value);
+                var caseBody = BindStatement(caseSyntax.Statement);
+
+                // Check if case ends with break
+                if (!EndsWithBreak(caseSyntax.Statement))
+                {
+                    _diagnostics.ReportSwitchCaseMustEndWithBreak(caseSyntax.Keyword.Location);
+                }
+
+                cases.Add(new BoundSwitchCase(caseSyntax, caseExpression, caseBody));
+            }
+
+            _switchStack.Pop();
+
+            return new BoundSwitchStatement(syntax, expression, cases.ToImmutable(), breakLabel);
+        }
+
+        private static bool EndsWithBreak(StatementSyntax syntax)
+        {
+            switch (syntax.Kind)
+            {
+                case SyntaxKind.BreakStatement:
+                    return true;
+                case SyntaxKind.ReturnStatement:
+                    return true;
+                case SyntaxKind.BlockStatement:
+                    {
+                        var block = (BlockStatementSyntax)syntax;
+                        if (block.Statements.Length == 0)
+                            return false;
+                        return EndsWithBreak(block.Statements[block.Statements.Length - 1]);
+                    }
+                case SyntaxKind.IfStatement:
+                    {
+                        var ifStatement = (IfStatementSyntax)syntax;
+                        var thenEnds = EndsWithBreak(ifStatement.ThenStatement);
+                        if (ifStatement.ElseClause == null)
+                            return false;
+                        return thenEnds && EndsWithBreak(ifStatement.ElseClause.ElseStatement);
+                    }
+                default:
+                    return false;
+            }
+        }
+
+        private BoundStatement BindForeachStatement(ForeachStatementSyntax syntax)
+        {
+            var expression = BindExpression(syntax.Expression);
+
+            _scope = new BoundScope(_scope);
+
+            var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Any);
+            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
+
+            _scope = _scope.Parent!;
+
+            return new BoundForeachStatement(syntax, variable, expression, body, breakLabel, continueLabel);
+        }
+
+        private BoundLabel GenerateLabel()
+        {
+            var name = $"label{++_labelCounter}";
+            return new BoundLabel(name);
+        }
+
         private BoundStatement BindLoopBody(StatementSyntax body, out BoundLabel breakLabel, out BoundLabel continueLabel)
         {
             _labelCounter++;
@@ -456,13 +535,23 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindBreakStatement(BreakStatementSyntax syntax)
         {
-            if (_loopStack.Count == 0)
+            if (_loopStack.Count == 0 && _switchStack.Count == 0)
             {
                 _diagnostics.ReportInvalidBreakOrContinue(syntax.Keyword.Location, syntax.Keyword.Text);
                 return BindErrorStatement(syntax);
             }
 
-            var breakLabel = _loopStack.Peek().BreakLabel;
+            // Prefer loop break, but if we're only in a switch, use switch break
+            BoundLabel breakLabel;
+            if (_loopStack.Count > 0)
+            {
+                breakLabel = _loopStack.Peek().BreakLabel;
+            }
+            else
+            {
+                breakLabel = _switchStack.Peek();
+            }
+
             return new BoundGotoStatement(syntax, breakLabel);
         }
 
@@ -552,6 +641,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
                 case SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
                 case SyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
+                case SyntaxKind.TernaryExpression: return BindTernaryExpression((TernaryExpressionSyntax)syntax);
+                case SyntaxKind.PostfixUnaryExpression: return BindPostfixUnaryExpression((PostfixUnaryExpressionSyntax)syntax);
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
@@ -564,9 +655,62 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindLiteralExpression(LiteralExpressionSyntax syntax)
         {
-            var value = syntax.Value ?? 0;
+            var value = syntax.Value;
 
             return new BoundLiteralExpression(syntax, value);
+        }
+
+        private BoundExpression BindTernaryExpression(TernaryExpressionSyntax syntax)
+        {
+            var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
+            var whenTrue = BindExpression(syntax.WhenTrue);
+            var whenFalse = BindExpression(syntax.WhenFalse);
+
+            var commonType = GetCommonType(whenTrue.Type, whenFalse.Type);
+            if (commonType == null)
+            {
+                _diagnostics.ReportCannotConvert(syntax.WhenTrue.Location, whenTrue.Type, whenFalse.Type);
+                return new BoundErrorExpression(syntax);
+            }
+
+            var convertedWhenTrue = BindConversion(syntax.WhenTrue.Location, whenTrue, commonType);
+            var convertedWhenFalse = BindConversion(syntax.WhenFalse.Location, whenFalse, commonType);
+
+            return new BoundTernaryExpression(syntax, condition, convertedWhenTrue, convertedWhenFalse);
+        }
+
+        private TypeSymbol? GetCommonType(TypeSymbol a, TypeSymbol b)
+        {
+            if (a == b)
+                return a;
+            if (a == TypeSymbol.Error || b == TypeSymbol.Error)
+                return TypeSymbol.Error;
+            if (a == TypeSymbol.Any || b == TypeSymbol.Any)
+                return TypeSymbol.Any;
+            // Numeric types promotion
+            if (a == TypeSymbol.Int32 && b == TypeSymbol.Int32)
+                return TypeSymbol.Int32;
+            if (a == TypeSymbol.Boolean && b == TypeSymbol.Boolean)
+                return TypeSymbol.Boolean;
+            if (a == TypeSymbol.String && b == TypeSymbol.String)
+                return TypeSymbol.String;
+            return TypeSymbol.Any;
+        }
+
+        private BoundExpression BindPostfixUnaryExpression(PostfixUnaryExpressionSyntax syntax)
+        {
+            var operand = BindExpression(syntax.Operand);
+            var opKind = syntax.OperatorToken.Kind == SyntaxKind.PlusPlusToken
+                ? BoundUnaryOperatorKind.PostfixIncrement
+                : BoundUnaryOperatorKind.PostfixDecrement;
+
+            if (operand.Type != TypeSymbol.Int32)
+            {
+                _diagnostics.ReportUndefinedUnaryOperator(syntax.OperatorToken.Location, syntax.OperatorToken.Text, operand.Type);
+                return new BoundErrorExpression(syntax);
+            }
+
+            return new BoundPostfixUnaryExpression(syntax, new BoundUnaryOperator(syntax.OperatorToken.Kind, opKind, TypeSymbol.Int32), operand);
         }
 
         private BoundExpression BindNameExpression(NameExpressionSyntax syntax)
@@ -806,6 +950,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "bool": return TypeSymbol.Boolean;
                 case "int": return TypeSymbol.Int32;
                 case "string": return TypeSymbol.String;
+                case "char": return TypeSymbol.Char;
                 default:
                     return null;
             }

@@ -25,6 +25,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     return RewriteDoWhileStatement((BoundDoWhileStatement)node);
                 case BoundNodeKind.ForStatement:
                     return RewriteForStatement((BoundForStatement)node);
+                case BoundNodeKind.SwitchStatement:
+                    return RewriteSwitchStatement((BoundSwitchStatement)node);
+                case BoundNodeKind.ForeachStatement:
+                    return RewriteForeachStatement((BoundForeachStatement)node);
                 case BoundNodeKind.LabelStatement:
                     return RewriteLabelStatement((BoundLabelStatement)node);
                 case BoundNodeKind.GotoStatement:
@@ -145,6 +149,47 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundForStatement(node.Syntax, node.Variable, lowerBound, upperBound, body, node.BreakLabel, node.ContinueLabel);
         }
 
+        protected virtual BoundStatement RewriteSwitchStatement(BoundSwitchStatement node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            ImmutableArray<BoundSwitchCase>.Builder? caseBuilder = null;
+
+            for (var i = 0; i < node.Cases.Length; i++)
+            {
+                var caseNode = node.Cases[i];
+                var caseValue = caseNode.Value == null ? null : RewriteExpression(caseNode.Value);
+                var caseBody = RewriteStatement(caseNode.Body);
+
+                if (caseValue != caseNode.Value || caseBody != caseNode.Body)
+                {
+                    caseBuilder ??= ImmutableArray.CreateBuilder<BoundSwitchCase>(node.Cases.Length);
+                    for (var j = 0; j < i; j++)
+                        caseBuilder.Add(node.Cases[j]);
+
+                    caseBuilder.Add(new BoundSwitchCase(caseNode.Syntax, caseValue, caseBody));
+                }
+            }
+
+            var newCases = caseBuilder == null ? node.Cases : caseBuilder.MoveToImmutable();
+
+            if (expression == node.Expression && caseBuilder == null)
+                return node;
+
+            return new BoundSwitchStatement(node.Syntax, expression, newCases, node.BreakLabel);
+        }
+
+        protected virtual BoundStatement RewriteForeachStatement(BoundForeachStatement node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            var body = RewriteStatement(node.Body);
+            if (expression == node.Expression && body == node.Body)
+            {
+                return node;
+            }
+
+            return new BoundForeachStatement(node.Syntax, node.Variable, expression, body, node.BreakLabel, node.ContinueLabel);
+        }
+
         protected virtual BoundStatement RewriteLabelStatement(BoundLabelStatement node)
         {
             return node;
@@ -238,6 +283,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.ConversionExpression:
                 {
                     return RewriteConversionExpression((BoundConversionExpression)node);
+                }
+                case BoundNodeKind.TernaryExpression:
+                {
+                    return RewriteTernaryExpression((BoundTernaryExpression)node);
+                }
+                case BoundNodeKind.PostfixUnaryExpression:
+                {
+                    return RewritePostfixUnaryExpression((BoundPostfixUnaryExpression)node);
                 }
                 default:
                 {
@@ -350,6 +403,30 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundConversionExpression(node.Syntax, node.Type, expression);
+        }
+
+        protected virtual BoundExpression RewriteTernaryExpression(BoundTernaryExpression node)
+        {
+            var condition = RewriteExpression(node.Condition);
+            var whenTrue = RewriteExpression(node.ThenExpression);
+            var whenFalse = RewriteExpression(node.ElseExpression);
+            if (condition == node.Condition && whenTrue == node.ThenExpression && whenFalse == node.ElseExpression)
+            {
+                return node;
+            }
+
+            return new BoundTernaryExpression(node.Syntax, condition, whenTrue, whenFalse);
+        }
+
+        protected virtual BoundExpression RewritePostfixUnaryExpression(BoundPostfixUnaryExpression node)
+        {
+            var operand = RewriteExpression(node.Operand);
+            if (operand == node.Operand)
+            {
+                return node;
+            }
+
+            return new BoundPostfixUnaryExpression(node.Syntax, node.Op, operand);
         }
     }
 }

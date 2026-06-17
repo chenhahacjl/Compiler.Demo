@@ -5,17 +5,14 @@ function showMenu(choice: int)
         case 1:
         {
             print("You selected: New Game")
-	    break
         }
         case 2:
         {
             print("You selected: Load Game")
-	    break
         }
         default:
         {
             print("You selected: Unknown")
-	    break
         }
     }
 }

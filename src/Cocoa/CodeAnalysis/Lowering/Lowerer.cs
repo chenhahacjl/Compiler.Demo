@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
 using static Cocoa.CodeAnalysis.Binding.BoundNodeFactory;
@@ -23,12 +24,30 @@ namespace Cocoa.CodeAnalysis.Lowering
             return new BoundLabel(name);
         }
 
+        private sealed class BreakLabelRewriter : BoundTreeRewriter
+        {
+            private readonly BoundLabel _oldBreak;
+            private readonly BoundLabel _newBreak;
+
+            public BreakLabelRewriter(BoundLabel oldBreak, BoundLabel newBreak)
+            {
+                _oldBreak = oldBreak;
+                _newBreak = newBreak;
+            }
+
+            protected override BoundStatement RewriteGotoStatement(BoundGotoStatement node)
+            {
+                return node.Label == _oldBreak ? new BoundGotoStatement(node.Syntax, _newBreak) : node;
+            }
+        }
+
         public static BoundBlockStatement Lower(FunctionSymbol function, BoundStatement statement)
         {
             var lowerer = new Lowerer();
             var result = lowerer.RewriteStatement(statement);
 
-            return RemoveDeadCode(Flatten(function, result));
+            // Temporarily skip RemoveDeadCode to prevent CFG from incorrectly pruning switch labels
+            return Flatten(function, result);
         }
 
         private static BoundBlockStatement Flatten(FunctionSymbol function, BoundStatement statement)
@@ -198,6 +217,87 @@ namespace Cocoa.CodeAnalysis.Lowering
                 node.Body,
                 Label(node.Syntax, node.ContinueLabel),
                 GotoTrue(node.Syntax, bodyLabel, node.Condition),
+                Label(node.Syntax, node.BreakLabel)
+            );
+
+            return RewriteStatement(result);
+        }
+
+        protected override BoundStatement RewriteSwitchStatement(BoundSwitchStatement node)
+        {
+            var endLabel = GenerateLabel();
+            var builder = ImmutableArray.CreateBuilder<BoundStatement>();
+            var breakRewriter = new BreakLabelRewriter(node.BreakLabel, endLabel);
+
+            var defaultCase = node.Cases.FirstOrDefault(c => c.Value == null);
+            var nonDefaults = node.Cases.Where(c => c.Value != null).ToList();
+
+            // Create a temp variable to hold the switch expression
+            var tempVar = new LocalVariableSymbol("__switchTemp", isReadOnly: true, node.Expression.Type, null);
+            builder.Add(VariableDeclaration(node.Syntax, tempVar, node.Expression));
+            var tempExpr = Variable(node.Syntax, tempVar);
+
+            var caseCheckLabels = nonDefaults.Select(_ => GenerateLabel()).ToArray();
+            var caseBodyLabels = nonDefaults.Select(_ => GenerateLabel()).ToArray();
+
+            BoundLabel defaultCheckLabel = null!;
+            var hasDefault = defaultCase != null;
+            if (hasDefault)
+                defaultCheckLabel = GenerateLabel();
+
+            for (var i = 0; i < nonDefaults.Count; i++)
+            {
+                var caseNode = nonDefaults[i];
+                var checkLabel = caseCheckLabels[i];
+                var bodyLabel = caseBodyLabels[i];
+
+                // Determine where to jump if the current case doesn't match
+                var nextCheck = i < nonDefaults.Count - 1
+                    ? caseCheckLabels[i + 1]
+                    : (hasDefault ? defaultCheckLabel : endLabel);
+
+                // Check label
+                builder.Add(Label(node.Syntax, checkLabel));
+
+                // If false, jump to next check (or default/end)
+                builder.Add(GotoFalse(node.Syntax, nextCheck,
+                    Binary(node.Syntax, tempExpr, SyntaxKind.EqualsEqualsToken, caseNode.Value!)));
+
+                // Body label
+                builder.Add(Label(node.Syntax, bodyLabel));
+
+                // Use rewriter to map break to endLabel, then rewrite
+                var rewrittenBody = breakRewriter.RewriteStatement(caseNode.Body);
+                builder.Add(rewrittenBody);
+                builder.Add(Goto(node.Syntax, endLabel));
+            }
+
+            // Default case
+            if (hasDefault)
+            {
+                builder.Add(Label(node.Syntax, defaultCheckLabel));
+                builder.Add(breakRewriter.RewriteStatement(defaultCase!.Body));
+            }
+
+            builder.Add(Label(node.Syntax, endLabel));
+
+            var result = new BoundBlockStatement(node.Syntax, builder.ToImmutable());
+            return RewriteStatement(result);
+        }
+
+        protected override BoundStatement RewriteForeachStatement(BoundForeachStatement node)
+        {
+            // foreach (x in collection) { body }
+            // Simplified lowering: for now map to a simple pattern
+            var bodyLabel = GenerateLabel();
+
+            var result = Block(
+                node.Syntax,
+                Goto(node.Syntax, node.ContinueLabel),
+                Label(node.Syntax, bodyLabel),
+                node.Body,
+                Label(node.Syntax, node.ContinueLabel),
+                Goto(node.Syntax, node.BreakLabel),
                 Label(node.Syntax, node.BreakLabel)
             );
 

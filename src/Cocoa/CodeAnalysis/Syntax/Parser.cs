@@ -222,6 +222,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseDoWhileStatement();
                 case SyntaxKind.ForKeyword:
                     return ParseForStatement();
+                case SyntaxKind.SwitchKeyword:
+                    return ParseSwitchStatement();
+                case SyntaxKind.ForeachKeyword:
+                    return ParseForeachStatement();
                 case SyntaxKind.BreakKeyword:
                     return ParseBreakStatement();
                 case SyntaxKind.ContinueKeyword:
@@ -349,6 +353,78 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ForStatementSyntax(_syntaxTree, keyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, body);
         }
 
+        private StatementSyntax ParseSwitchStatement()
+        {
+            var switchKeyword = MatchToken(SyntaxKind.SwitchKeyword);
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var expression = ParseExpression();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            var clauses = ImmutableArray.CreateBuilder<CaseClauseSyntax>();
+
+            while (Current.Kind != SyntaxKind.CloseBraceToken &&
+                   Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var clause = ParseCaseClause();
+                clauses.Add(clause);
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new SwitchStatementSyntax(_syntaxTree, switchKeyword, openParenthesisToken, expression, closeParenthesisToken, openBraceToken, clauses.ToImmutable(), closeBraceToken);
+        }
+
+        private CaseClauseSyntax ParseCaseClause()
+        {
+            SyntaxToken keyword;
+            ExpressionSyntax? value = null;
+
+            if (Current.Kind == SyntaxKind.CaseKeyword)
+            {
+                keyword = MatchToken(SyntaxKind.CaseKeyword);
+                value = ParseExpression();
+            }
+            else
+            {
+                keyword = MatchToken(SyntaxKind.DefaultKeyword);
+            }
+
+            var colonToken = MatchToken(SyntaxKind.ColonToken);
+            var statement = MatchToken(SyntaxKind.OpenBraceToken);
+            var statements = ImmutableArray.CreateBuilder<StatementSyntax>();
+
+            while (Current.Kind != SyntaxKind.EndOfFileToken &&
+                   Current.Kind != SyntaxKind.CloseBraceToken &&
+                   Current.Kind != SyntaxKind.CaseKeyword &&
+                   Current.Kind != SyntaxKind.DefaultKeyword)
+            {
+                var stmt = ParseStatement();
+                statements.Add(stmt);
+            }
+
+            var closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
+
+            var body = statements.Count == 1
+                ? statements[0]
+                : new BlockStatementSyntax(_syntaxTree, new SyntaxToken(_syntaxTree, SyntaxKind.OpenBraceToken, statement.Position, "{", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty), statements.ToImmutable(), closeBrace);
+
+            return new CaseClauseSyntax(_syntaxTree, keyword, value, colonToken, body);
+        }
+
+        private StatementSyntax ParseForeachStatement()
+        {
+            var foreachKeyword = MatchToken(SyntaxKind.ForeachKeyword);
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var inKeyword = MatchToken(SyntaxKind.InKeyword);
+            var expression = ParseExpression();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var body = ParseStatement();
+
+            return new ForeachStatementSyntax(_syntaxTree, foreachKeyword, openParenthesisToken, identifier, inKeyword, expression, closeParenthesisToken, body);
+        }
+
         private StatementSyntax ParseBreakStatement()
         {
             var keyword = MatchToken(SyntaxKind.BreakKeyword);
@@ -397,6 +473,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     case SyntaxKind.MinusEqualsToken:
                     case SyntaxKind.StarEqualsToken:
                     case SyntaxKind.SlashEqualsToken:
+                    case SyntaxKind.PercentEqualsToken:
                     case SyntaxKind.AmpersandEqualsToken:
                     case SyntaxKind.PipeEqualsToken:
                     case SyntaxKind.HatEqualsToken:
@@ -442,6 +519,17 @@ namespace Cocoa.CodeAnalysis.Syntax
                 left = new BinaryExpressionSyntax(_syntaxTree, left, operatorToken, right);
             }
 
+            // Ternary expression: condition ? whenTrue : whenFalse
+            // Precedence level 0 (lower than assignment)
+            if (Current.Kind == SyntaxKind.QuestionToken && 0 >= parentPrecedence)
+            {
+                var questionToken = NextToken();
+                var whenTrue = ParseExpression();
+                var colonToken = MatchToken(SyntaxKind.ColonToken);
+                var whenFalse = ParseExpression();
+                left = new TernaryExpressionSyntax(_syntaxTree, left, questionToken, whenTrue, colonToken, whenFalse);
+            }
+
             return left;
         }
 
@@ -452,10 +540,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.OpenParenthesisToken:
                     return ParseParenthesizedExpression();
 
-
                 case SyntaxKind.FalseKeyword:
                 case SyntaxKind.TrueKeyword:
-                    return ParseBooleanLiteral();
+                case SyntaxKind.NullKeyword:
+                    return ParseLiteralExpression();
 
                 case SyntaxKind.NumberToken:
                     return ParseNumberLiteral();
@@ -463,10 +551,29 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.StringToken:
                     return ParseStringLiteral();
 
+                case SyntaxKind.CharToken:
+                    return ParseCharLiteral();
+
                 case SyntaxKind.IdentifierToken:
                 default:
                     return ParseNameOrCallExpression();
             }
+        }
+
+        private ExpressionSyntax ParseLiteralExpression()
+        {
+            var isTrue = Current.Kind == SyntaxKind.TrueKeyword;
+            var isFalse = Current.Kind == SyntaxKind.FalseKeyword;
+            var isNull = Current.Kind == SyntaxKind.NullKeyword;
+
+            if (isNull)
+            {
+                var keywordToken = MatchToken(SyntaxKind.NullKeyword);
+                return new LiteralExpressionSyntax(_syntaxTree, keywordToken, null);
+            }
+
+            var keyword = isTrue ? MatchToken(SyntaxKind.TrueKeyword) : MatchToken(SyntaxKind.FalseKeyword);
+            return new LiteralExpressionSyntax(_syntaxTree, keyword, isTrue);
         }
 
         private ExpressionSyntax ParseParenthesizedExpression()
@@ -476,14 +583,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             var right = MatchToken(SyntaxKind.CloseParenthesisToken);
 
             return new ParenthesizedExpressionSyntax(_syntaxTree, left, expression, right);
-        }
-
-        private ExpressionSyntax ParseBooleanLiteral()
-        {
-            var isTrue = Current.Kind == SyntaxKind.TrueKeyword;
-            var keywordToken = isTrue ? MatchToken(SyntaxKind.TrueKeyword) : MatchToken(SyntaxKind.FalseKeyword);
-
-            return new LiteralExpressionSyntax(_syntaxTree, keywordToken, isTrue);
         }
 
         private ExpressionSyntax ParseNumberLiteral()
@@ -500,6 +599,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new LiteralExpressionSyntax(_syntaxTree, stringToken);
         }
 
+        private ExpressionSyntax ParseCharLiteral()
+        {
+            var charToken = MatchToken(SyntaxKind.CharToken);
+
+            return new LiteralExpressionSyntax(_syntaxTree, charToken);
+        }
+
         private ExpressionSyntax ParseNameOrCallExpression()
         {
             if (Peek(0).Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.OpenParenthesisToken)
@@ -507,7 +613,16 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseCallExpression();
             }
 
-            return ParseNameExpression();
+            var nameExpression = ParseNameExpression();
+
+            // Check for postfix ++ or --
+            if (Current.Kind == SyntaxKind.PlusPlusToken || Current.Kind == SyntaxKind.MinusMinusToken)
+            {
+                var operatorToken = NextToken();
+                return new PostfixUnaryExpressionSyntax(_syntaxTree, nameExpression, operatorToken);
+            }
+
+            return nameExpression;
         }
 
         private ExpressionSyntax ParseCallExpression()

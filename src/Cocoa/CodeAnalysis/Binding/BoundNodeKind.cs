@@ -13,6 +13,8 @@ namespace Cocoa.CodeAnalysis.Binding
         WhileStatement,
         DoWhileStatement,
         ForStatement,
+        SwitchStatement,
+        ForeachStatement,
         LabelStatement,
         GotoStatement,
         ConditionalGotoStatement,
@@ -30,5 +32,7 @@ namespace Cocoa.CodeAnalysis.Binding
         BinaryExpression,
         CallExpression,
         ConversionExpression,
+        TernaryExpression,
+        PostfixUnaryExpression,
     }
 }

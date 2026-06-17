@@ -163,6 +163,10 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateCallExpression((BoundCallExpression)node);
                 case BoundNodeKind.ConversionExpression:
                     return EvaluateConversionExpression((BoundConversionExpression)node);
+                case BoundNodeKind.TernaryExpression:
+                    return EvaluateTernaryExpression((BoundTernaryExpression)node);
+                case BoundNodeKind.PostfixUnaryExpression:
+                    return EvaluatePostfixUnaryExpression((BoundPostfixUnaryExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -215,9 +219,31 @@ namespace Cocoa.CodeAnalysis
                     return !(bool)operand;
                 case BoundUnaryOperatorKind.OnesComplement:
                     return ~(int)operand;
+                case BoundUnaryOperatorKind.PrefixIncrement:
+                    return (int)operand + 1;
+                case BoundUnaryOperatorKind.PrefixDecrement:
+                    return (int)operand - 1;
                 default:
                     throw new Exception($"Unexcepted unary operator {unary.Op}");
             }
+        }
+
+        private object EvaluatePostfixUnaryExpression(BoundPostfixUnaryExpression postfix)
+        {
+            var operand = EvaluateExpression(postfix.Operand);
+
+            Debug.Assert(operand != null);
+
+            var value = (int)operand;
+            return postfix.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement ? value : value;
+        }
+
+        private object EvaluateTernaryExpression(BoundTernaryExpression ternary)
+        {
+            var condition = (bool)EvaluateExpression(ternary.Condition)!;
+            return condition
+                ? EvaluateExpression(ternary.ThenExpression)
+                : EvaluateExpression(ternary.ElseExpression);
         }
 
         private object EvaluateBinaryExpression(BoundBinaryExpression binary)
@@ -239,6 +265,8 @@ namespace Cocoa.CodeAnalysis
                     return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division:
                     return (int)left / (int)right;
+                case BoundBinaryOperatorKind.Modulo:
+                    return (int)left % (int)right;
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     return binary.Type == TypeSymbol.Int32 ?
                         (int)left & (int)right :

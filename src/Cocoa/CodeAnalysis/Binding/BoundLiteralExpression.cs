@@ -11,12 +11,16 @@ namespace Cocoa.CodeAnalysis.Binding
         public BoundLiteralExpression(SyntaxNode syntax, object value)
             : base(syntax)
         {
-            if (value is bool)
+            if (value == null)
+                Type = TypeSymbol.Any;
+            else if (value is bool)
                 Type = TypeSymbol.Boolean;
             else if (value is int)
                 Type = TypeSymbol.Int32;
             else if (value is string)
                 Type = TypeSymbol.String;
+            else if (value is char)
+                Type = TypeSymbol.Char;
             else
                 throw new Exception($"Unexpected literal '{value}' of type {value.GetType()}");
 

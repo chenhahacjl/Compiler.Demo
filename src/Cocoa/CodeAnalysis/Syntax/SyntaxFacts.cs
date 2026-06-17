@@ -10,6 +10,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.MinusToken:
                 case SyntaxKind.BangToken:
                 case SyntaxKind.TildeToken:
+                case SyntaxKind.PlusPlusToken:
+                case SyntaxKind.MinusMinusToken:
                 {
                     return 6;
                 }
@@ -27,6 +29,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case SyntaxKind.StarToken:
                 case SyntaxKind.SlashToken:
+                case SyntaxKind.PercentToken:
                 {
                     return 5;
                 }
@@ -105,6 +108,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.WhileKeyword;
                 case "do":
                     return SyntaxKind.DoKeyword;
+                case "switch":
+                    return SyntaxKind.SwitchKeyword;
+                case "case":
+                    return SyntaxKind.CaseKeyword;
+                case "default":
+                    return SyntaxKind.DefaultKeyword;
+                case "foreach":
+                    return SyntaxKind.ForeachKeyword;
+                case "in":
+                    return SyntaxKind.InKeyword;
+                case "null":
+                    return SyntaxKind.NullKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -156,6 +171,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "/";
                 case SyntaxKind.SlashEqualsToken:
                     return "/=";
+                case SyntaxKind.PercentToken:
+                    return "%";
+                case SyntaxKind.PercentEqualsToken:
+                    return "%=";
                 case SyntaxKind.BangToken:
                     return "!";
                 case SyntaxKind.EqualsToken:
@@ -202,6 +221,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ":";
                 case SyntaxKind.CommaToken:
                     return ",";
+                case SyntaxKind.QuestionToken:
+                    return "?";
+                case SyntaxKind.PlusPlusToken:
+                    return "++";
+                case SyntaxKind.MinusMinusToken:
+                    return "--";
                 case SyntaxKind.BreakKeyword:
                     return "break";
                 case SyntaxKind.ContinueKeyword:
@@ -230,6 +255,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "while";
                 case SyntaxKind.DoKeyword:
                     return "do";
+                case SyntaxKind.SwitchKeyword:
+                    return "switch";
+                case SyntaxKind.CaseKeyword:
+                    return "case";
+                case SyntaxKind.DefaultKeyword:
+                    return "default";
+                case SyntaxKind.ForeachKeyword:
+                    return "foreach";
+                case SyntaxKind.InKeyword:
+                    return "in";
+                case SyntaxKind.NullKeyword:
+                    return "null";
                 default:
                     return null;
             }
@@ -247,6 +284,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.StarToken;
                 case SyntaxKind.SlashEqualsToken:
                     return SyntaxKind.SlashToken;
+                case SyntaxKind.PercentEqualsToken:
+                    return SyntaxKind.PercentToken;
                 case SyntaxKind.AmpersandEqualsToken:
                     return SyntaxKind.AmpersandToken;
                 case SyntaxKind.PipeEqualsToken:

@@ -21,6 +21,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly Dictionary<VariableSymbol, VariableDefinition> _locals = new Dictionary<VariableSymbol, VariableDefinition>();
         private readonly Dictionary<BoundLabel, int> _labels = new Dictionary<BoundLabel, int>();
         private readonly List<(int InstructionIndex, BoundLabel Target)> _fixups = new List<(int InstructionIndex, BoundLabel Target)>();
+        private int _labelCounter;
 
         private TypeDefinition _typeDefinition;
 
@@ -66,6 +67,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 (TypeSymbol.Int32, "System.Int32"),
                 (TypeSymbol.String, "System.String"),
                 (TypeSymbol.Void, "System.Void"),
+                (TypeSymbol.Char, "System.Char"),
             };
 
             var assemblyName = new AssemblyNameDefinition(moduleName, new Version("1.0"));
@@ -268,6 +270,7 @@ namespace Cocoa.CodeAnalysis.Emit
             _locals.Clear();
             _labels.Clear();
             _fixups.Clear();
+            _labelCounter = 0;
 
             var ilProcessor = method.Body.GetILProcessor();
 
@@ -452,6 +455,12 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundNodeKind.ConversionExpression:
                     EmitConversionExpression(ilProcessor, (BoundConversionExpression)node);
                     break;
+                case BoundNodeKind.PostfixUnaryExpression:
+                    EmitPostfixUnaryExpression(ilProcessor, (BoundPostfixUnaryExpression)node);
+                    break;
+                case BoundNodeKind.TernaryExpression:
+                    EmitTernaryExpression(ilProcessor, (BoundTernaryExpression)node);
+                    break;
                 default:
                     throw new Exception($"Unexpected node kind {node.Kind}");
             }
@@ -479,6 +488,26 @@ namespace Cocoa.CodeAnalysis.Emit
                 var value = (string)node.ConstantValue.Value;
 
                 ilProcessor.Emit(OpCodes.Ldstr, value);
+            }
+            else if (node.Type == TypeSymbol.Any)
+            {
+                var value = node.ConstantValue.Value;
+                if (value == null)
+                {
+                    ilProcessor.Emit(OpCodes.Ldnull);
+                    return;
+                }
+
+                if (value is string s)
+                {
+                    ilProcessor.Emit(OpCodes.Ldstr, s);
+                    ilProcessor.Emit(OpCodes.Box, _knownTypes[TypeSymbol.String]);
+                    return;
+                }
+            }
+            else if (node.Type == TypeSymbol.Char)
+            {
+                ilProcessor.Emit(OpCodes.Ldc_I4, Convert.ToInt32(node.ConstantValue.Value));
             }
             else
             {
@@ -512,6 +541,76 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitUnaryExpression(ILProcessor ilProcessor, BoundUnaryExpression node)
         {
+            var operand = node.Operand;
+
+            if (node.Op.Kind == BoundUnaryOperatorKind.PrefixIncrement ||
+                node.Op.Kind == BoundUnaryOperatorKind.PrefixDecrement)
+            {
+                // ++x / --x logic: update value, leave new value on stack
+                if (operand is BoundVariableExpression variable)
+                {
+                    if (variable.Variable is ParameterSymbol parameter)
+                    {
+                        ilProcessor.Emit(OpCodes.Ldarg, parameter.Ordinal);
+                        if (node.Op.Kind == BoundUnaryOperatorKind.PrefixIncrement)
+                            ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                        else
+                            ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                        ilProcessor.Emit(OpCodes.Add);
+                        ilProcessor.Emit(OpCodes.Dup);
+                        ilProcessor.Emit(OpCodes.Starg, parameter.Ordinal);
+                        return;
+                    }
+                    else if (_locals.TryGetValue(variable.Variable, out var variableDef))
+                    {
+                        ilProcessor.Emit(OpCodes.Ldloc, variableDef);
+                        if (node.Op.Kind == BoundUnaryOperatorKind.PrefixIncrement)
+                            ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                        else
+                            ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                        ilProcessor.Emit(OpCodes.Add);
+                        ilProcessor.Emit(OpCodes.Dup);
+                        ilProcessor.Emit(OpCodes.Stloc, variableDef);
+                        return;
+                    }
+                }
+                throw new Exception($"Unexpected prefix unary operand {operand.Kind}");
+            }
+            else if (node.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement ||
+                     node.Op.Kind == BoundUnaryOperatorKind.PostfixDecrement)
+            {
+                // x++ / x-- logic: leave old value on stack, update value
+                if (operand is BoundVariableExpression variable)
+                {
+                    if (variable.Variable is ParameterSymbol parameter)
+                    {
+                        ilProcessor.Emit(OpCodes.Ldarg, parameter.Ordinal);
+                        ilProcessor.Emit(OpCodes.Dup);
+                        if (node.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement)
+                            ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                        else
+                            ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                        ilProcessor.Emit(OpCodes.Add);
+                        ilProcessor.Emit(OpCodes.Starg, parameter.Ordinal);
+                        return;
+                    }
+                    else if (_locals.TryGetValue(variable.Variable, out var variableDef))
+                    {
+                        ilProcessor.Emit(OpCodes.Ldloc, variableDef);
+                        ilProcessor.Emit(OpCodes.Dup);
+                        if (node.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement)
+                            ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                        else
+                            ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                        ilProcessor.Emit(OpCodes.Add);
+                        ilProcessor.Emit(OpCodes.Stloc, variableDef);
+                        return;
+                    }
+                }
+                throw new Exception($"Unexpected postfix unary operand {operand.Kind}");
+            }
+
+            // Standard unary operators
             EmitExpression(ilProcessor, node.Operand);
 
             if (node.Op.Kind == BoundUnaryOperatorKind.Identity)
@@ -594,6 +693,9 @@ namespace Cocoa.CodeAnalysis.Emit
                     break;
                 case BoundBinaryOperatorKind.Division:
                     ilProcessor.Emit(OpCodes.Div);
+                    break;
+                case BoundBinaryOperatorKind.Modulo:
+                    ilProcessor.Emit(OpCodes.Rem);
                     break;
                 // TODO: Implement short-circuit evaluation
                 case BoundBinaryOperatorKind.LogicalAnd:
@@ -801,7 +903,7 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             EmitExpression(ilProcessor, node.Expression);
 
-            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32;
+            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char;
 
             if (needBoxing)
             {
@@ -828,6 +930,74 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 throw new Exception($"Unexpected convertion from {node.Expression.Type} to {node.Type}");
             }
+        }
+
+        private void EmitPostfixUnaryExpression(ILProcessor ilProcessor, BoundPostfixUnaryExpression node)
+        {
+            var operand = node.Operand;
+            if (operand is BoundVariableExpression variable)
+            {
+                if (variable.Variable is ParameterSymbol parameter)
+                {
+                    ilProcessor.Emit(OpCodes.Ldarg, parameter.Ordinal);
+                    ilProcessor.Emit(OpCodes.Dup);
+                    if (node.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement)
+                        ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                    else
+                        ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                    ilProcessor.Emit(OpCodes.Add);
+                    ilProcessor.Emit(OpCodes.Starg, parameter.Ordinal);
+                }
+                else if (_locals.TryGetValue(variable.Variable, out var variableDef))
+                {
+                    ilProcessor.Emit(OpCodes.Ldloc, variableDef);
+                    ilProcessor.Emit(OpCodes.Dup);
+                    if (node.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement)
+                        ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                    else
+                        ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                    ilProcessor.Emit(OpCodes.Add);
+                    ilProcessor.Emit(OpCodes.Stloc, variableDef);
+                }
+                else
+                {
+                    throw new Exception($"Unexpected postfix unary operand: {variable.Variable.Name}");
+                }
+            }
+            else
+            {
+                // Fallback: just emit the operand value
+                EmitExpression(ilProcessor, operand);
+                if (node.Op.Kind == BoundUnaryOperatorKind.PostfixIncrement)
+                    ilProcessor.Emit(OpCodes.Ldc_I4_1);
+                else
+                    ilProcessor.Emit(OpCodes.Ldc_I4_M1);
+                ilProcessor.Emit(OpCodes.Add);
+            }
+        }
+
+        private void EmitTernaryExpression(ILProcessor ilProcessor, BoundTernaryExpression node)
+        {
+            var elseLabel = GenerateLabel();
+            var endLabel = GenerateLabel();
+
+            EmitExpression(ilProcessor, node.Condition);
+            _fixups.Add((ilProcessor.Body.Instructions.Count, elseLabel));
+            ilProcessor.Emit(OpCodes.Brfalse, Instruction.Create(OpCodes.Nop));
+
+            EmitExpression(ilProcessor, node.ThenExpression);
+            _fixups.Add((ilProcessor.Body.Instructions.Count, endLabel));
+            ilProcessor.Emit(OpCodes.Br, Instruction.Create(OpCodes.Nop));
+
+            _labels.Add(elseLabel, ilProcessor.Body.Instructions.Count);
+            EmitExpression(ilProcessor, node.ElseExpression);
+
+            _labels.Add(endLabel, ilProcessor.Body.Instructions.Count);
+        }
+
+        private BoundLabel GenerateLabel()
+        {
+            return new BoundLabel($"label{++_labelCounter}");
         }
     }
 }

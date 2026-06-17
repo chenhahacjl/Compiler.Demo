@@ -18,6 +18,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         EndOfFileToken,          // <EOF>
         NumberToken,             // 数字
         StringToken,             // "
+        CharToken,               // '
         PlusToken,               // +
         PlusEqualsToken,         // +=
         MinusToken,              // -
@@ -49,6 +50,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         CloseBraceToken,         // }
         ColonToken,              // :
         CommaToken,              // ,
+        SemicolonToken,          // ;
+        QuestionToken,           // ?
+        PercentToken,            // %
+        PercentEqualsToken,      // %=
+        PlusPlusToken,           // ++
+        MinusMinusToken,         // --
+        ArrowToken,              // ->
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -66,6 +74,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         VarKeyword,               // var
         WhileKeyword,             // while
         DoKeyword,                // do
+        SwitchKeyword,            // switch
+        CaseKeyword,              // case
+        DefaultKeyword,           // default
+        ForeachKeyword,           // foreach
+        InKeyword,                // in
+        NullKeyword,              // null
 
         // Nodes
         CompilationUnit,          // 编译单元
@@ -86,6 +100,8 @@ namespace Cocoa.CodeAnalysis.Syntax
         ContinueStatement,        // CONTINUE 语句
         ReturnStatement,          // RETURN 语句
         ExpressionStatement,      // 表达式语句
+        SwitchStatement,          // SWITCH 语句
+        ForeachStatement,         // FOREACH 语句
 
         // Expressions
         LiteralExpression,        // 文字表达式
@@ -96,5 +112,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         ParenthesizedExpression,  // 括号表达式
         AssignmentExpression,     // 赋值表达式
         CallExpression,           // 函数调用表达式
+        TernaryExpression,        // 三元表达式
+        PostfixUnaryExpression,   // 后缀一元表达式
+
+        CaseClause,               // CASE 子句
     }
 }

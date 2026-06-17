@@ -8,6 +8,10 @@ namespace Cocoa.CodeAnalysis.Binding
         Identity,
         Negation,
         LogicalNegation,
-        OnesComplement
+        OnesComplement,
+        PrefixIncrement,
+        PrefixDecrement,
+        PostfixIncrement,
+        PostfixDecrement,
     }
 }
