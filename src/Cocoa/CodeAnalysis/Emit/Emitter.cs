@@ -184,7 +184,7 @@ namespace Cocoa.CodeAnalysis.Emit
             }
         }
 
-        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
+        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, bool debugMode = true)
         {
             if (program.Diagnostics.HasErrors())
             {
@@ -193,10 +193,10 @@ namespace Cocoa.CodeAnalysis.Emit
 
             var emitter = new Emitter(moduleName, references);
 
-            return emitter.Emit(program, outputPath);
+            return emitter.Emit(program, outputPath, debugMode);
         }
 
-        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
+        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, bool debugMode = true)
         {
             if (_diagnostics.Any())
             {
@@ -218,29 +218,32 @@ namespace Cocoa.CodeAnalysis.Emit
                 _assemblyDefinition.EntryPoint = _methods[program.MainFunction];
             }
 
-            // TODO: We should not emit this attribute unless we produce a debug build
+            // Emit DebuggableAttribute based on debugMode
             var debuggableAttribute = new CustomAttribute(_debuggableAttributeCtorReference);
-
-            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], true));
-            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], true));
-
+            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], debugMode));
+            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], debugMode));
             _assemblyDefinition.CustomAttributes.Add(debuggableAttribute);
 
-            // TODO: We should not be computing paths in here.
-            var symbolsPath = Path.ChangeExtension(outputPath, "pdb");
-
-            // TODO: We should support not emitting symbols
+            // Write assembly
             using var outputStream = File.Create(outputPath);
-            using var symbolsStream = File.Create(symbolsPath);
 
-            var writerParameters = new WriterParameters
+            if (debugMode)
             {
-                WriteSymbols = true,
-                SymbolStream = symbolsStream,
-                SymbolWriterProvider = new PortablePdbWriterProvider(),
-            };
+                var symbolsPath = Path.ChangeExtension(outputPath, "pdb");
+                using var symbolsStream = File.Create(symbolsPath);
 
-            _assemblyDefinition.Write(outputStream, writerParameters);
+                var writerParameters = new WriterParameters
+                {
+                    WriteSymbols = true,
+                    SymbolStream = symbolsStream,
+                    SymbolWriterProvider = new PortablePdbWriterProvider(),
+                };
+                _assemblyDefinition.Write(outputStream, writerParameters);
+            }
+            else
+            {
+                _assemblyDefinition.Write(outputStream);
+            }
 
             return _diagnostics.ToImmutableArray();
         }
@@ -290,8 +293,6 @@ namespace Cocoa.CodeAnalysis.Emit
             }
 
             method.Body.OptimizeMacros();
-
-            // TODO: Only emit this when emitting symbols
 
             method.DebugInformation.Scope = new ScopeDebugInformation(method.Body.Instructions.First(), method.Body.Instructions.Last());
 
@@ -640,13 +641,11 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             // +(string, string)
 
-            if (node.Op.Kind == BoundBinaryOperatorKind.Addition)
+            if (node.Op.Kind == BoundBinaryOperatorKind.Addition &&
+                node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
             {
-                if (node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
-                {
-                    EmitStringConcatExpression(ilProcessor, node);
-                    return;
-                }
+                EmitStringConcatExpression(ilProcessor, node);
+                return;
             }
 
             EmitExpression(ilProcessor, node.Left);
@@ -697,13 +696,17 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundBinaryOperatorKind.Modulo:
                     ilProcessor.Emit(OpCodes.Rem);
                     break;
-                // TODO: Implement short-circuit evaluation
+
                 case BoundBinaryOperatorKind.LogicalAnd:
+                    EmitLogicalAnd(ilProcessor, node);
+                    break;
+                case BoundBinaryOperatorKind.LogicalOr:
+                    EmitLogicalOr(ilProcessor, node);
+                    break;
+
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     ilProcessor.Emit(OpCodes.And);
                     break;
-                // TODO: Implement short-circuit evaluation
-                case BoundBinaryOperatorKind.LogicalOr:
                 case BoundBinaryOperatorKind.BitwiseOr:
                     ilProcessor.Emit(OpCodes.Or);
                     break;
@@ -741,10 +744,6 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitStringConcatExpression(ILProcessor ilProcessor, BoundBinaryExpression node)
         {
-            // Flatten the expression tree to a sequence of nodes to concatenate, then fold consecutive constants in that sequence.
-            // This approach enables constant folding of non-sibling nodes, which cannot be done in the ConstantFolding class as it would require changing the tree.
-            // Example: folding b and c in ((a + b) + c) if they are constant.
-
             var nodes = FoldConstants(node.Syntax, Flatten(node)).ToList();
 
             switch (nodes.Count)
@@ -860,6 +859,52 @@ namespace Cocoa.CodeAnalysis.Emit
                     yield return new BoundLiteralExpression(syntax, stringBuilder.ToString());
                 }
             }
+        }
+
+        private void EmitLogicalAnd(ILProcessor ilProcessor, BoundBinaryExpression node)
+        {
+            var elseLabel = GenerateLabel();
+            var endLabel = GenerateLabel();
+
+            EmitExpression(ilProcessor, node.Left);
+            ilProcessor.Emit(OpCodes.Dup);
+
+            _fixups.Add((ilProcessor.Body.Instructions.Count, elseLabel));
+            ilProcessor.Emit(OpCodes.Brfalse, Instruction.Create(OpCodes.Nop));
+
+            ilProcessor.Emit(OpCodes.Pop); // Discard duplicate Left (which was true)
+            EmitExpression(ilProcessor, node.Right);
+
+            _fixups.Add((ilProcessor.Body.Instructions.Count, endLabel));
+            ilProcessor.Emit(OpCodes.Br, Instruction.Create(OpCodes.Nop));
+
+            _labels.Add(elseLabel, ilProcessor.Body.Instructions.Count);
+            // Stack has Left (0), do nothing
+
+            _labels.Add(endLabel, ilProcessor.Body.Instructions.Count);
+        }
+
+        private void EmitLogicalOr(ILProcessor ilProcessor, BoundBinaryExpression node)
+        {
+            var elseLabel = GenerateLabel();
+            var endLabel = GenerateLabel();
+
+            EmitExpression(ilProcessor, node.Left);
+            ilProcessor.Emit(OpCodes.Dup);
+
+            _fixups.Add((ilProcessor.Body.Instructions.Count, elseLabel));
+            ilProcessor.Emit(OpCodes.Brtrue, Instruction.Create(OpCodes.Nop));
+
+            ilProcessor.Emit(OpCodes.Pop); // Discard duplicate Left (which was false)
+            EmitExpression(ilProcessor, node.Right);
+
+            _fixups.Add((ilProcessor.Body.Instructions.Count, endLabel));
+            ilProcessor.Emit(OpCodes.Br, Instruction.Create(OpCodes.Nop));
+
+            _labels.Add(elseLabel, ilProcessor.Body.Instructions.Count);
+            // Stack has Left (1), do nothing
+
+            _labels.Add(endLabel, ilProcessor.Body.Instructions.Count);
         }
 
         private void EmitCallExpression(ILProcessor ilProcessor, BoundCallExpression node)

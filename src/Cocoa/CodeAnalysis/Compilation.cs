@@ -9,22 +9,34 @@ namespace Cocoa.CodeAnalysis
     public class Compilation
     {
         private BoundGlobalScope? _globalScope;
+        private readonly ImmutableArray<string> _references;
 
-        private Compilation(bool isScript, Compilation? previous, params SyntaxTree[] syntaxTrees)
+        private Compilation(bool isScript, Compilation? previous, string[] references, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
             Previous = previous;
             SyntaxTrees = syntaxTrees.ToImmutableArray();
+            _references = references.ToImmutableArray();
         }
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, references: Array.Empty<string>(), syntaxTrees);
+        }
+
+        internal Compilation CreateWithReferences(params string[] references)
+        {
+            return new Compilation(IsScript, Previous, references, SyntaxTrees.Cast<SyntaxTree>().ToArray());
+        }
+
+        public static Compilation Create(string[] references, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, references: references, syntaxTrees: syntaxTrees);
         }
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: true, previous, syntaxTrees);
+            return new Compilation(isScript: true, previous: previous, references: Array.Empty<string>(), syntaxTrees);
         }
 
         public bool IsScript { get; }
@@ -133,8 +145,7 @@ namespace Cocoa.CodeAnalysis
             body.WriteTo(writer);
         }
 
-        // TODO: References should be part of the compilation, not arguments for Emit
-        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath)
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string outputPath, bool debugMode = true)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -146,7 +157,7 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            return Emitter.Emit(program, moduleName, references, outputPath);
+            return Emitter.Emit(program, moduleName, _references.Cast<string>().ToArray(), outputPath, debugMode);
         }
     }
 }

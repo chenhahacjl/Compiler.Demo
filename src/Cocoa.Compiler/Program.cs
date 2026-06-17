@@ -78,9 +78,10 @@ namespace Cocoa.Compiler
             if (hasErrors)
                 return 1;
 
-            var compilation = Compilation.Create(syntaxTrees.ToArray());
+            var compilation = Compilation.Create(referencePaths.ToArray(), syntaxTrees.ToArray());
+            var debugMode = true; // TODO: derive from -d / -r flags if desired
 
-            var diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), outputPath);
+            var diagnostics = compilation.Emit(moduleName, outputPath, debugMode);
 
             if (diagnostics.Any())
             {
