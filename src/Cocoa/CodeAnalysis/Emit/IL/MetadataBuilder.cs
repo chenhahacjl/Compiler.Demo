@@ -1,0 +1,646 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+
+namespace Cocoa.CodeAnalysis.Emit.IL
+{
+    /// <summary>鎴戜滑鑷繁鐨勭被鍨嬪畾涔夛紙TypeDef 琛ㄨ锛夈€傚綋鍓嶄粎 Program 涓€涓€?/summary>
+    internal sealed class IlTypeDef
+    {
+        public IlTypeDef(string name, IlTypeRef? baseTypeRef)
+        {
+            Name = name;
+            BaseTypeRef = baseTypeRef;
+        }
+
+        public string Name { get; }
+        public IlTypeRef? BaseTypeRef { get; }
+    }
+
+    /// <summary>鎴戜滑鑷繁鐨勬柟娉曞畾涔夛紙MethodDef 琛ㄨ + 鏂规硶浣擄級銆?/summary>
+    internal sealed class IlMethodDef
+    {
+        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body)
+        {
+            Name = name;
+            ReturnType = returnType;
+            ParameterTypes = parameterTypes;
+            Body = body;
+        }
+
+        public string Name { get; }
+        public IlType ReturnType { get; }
+        public IReadOnlyList<IlType> ParameterTypes { get; }
+        public IlMethodBody? Body { get; }
+    }
+
+    /// <summary>
+    /// ECMA-335 鍏冩暟鎹啓鍏ュ櫒锛堟渶灏忓瓙闆嗭級锛歁odule/TypeRef/TypeDef/MethodDef/Param/MemberRef/
+    /// CustomAttribute/Assembly/AssemblyRef/StandAloneSig 琛?+ #Strings/#US/#GUID/#Blob 鍫嗐€?    /// 甯冨眬缁嗚妭瀵圭収 Roslyn MetadataWriter / System.Reflection.Metadata.Ecma335.MetadataBuilder銆?    /// </summary>
+    internal sealed class MetadataBuilder
+    {
+        private const string RuntimeVersion = "v4.0.30319";
+
+        private readonly string _moduleName;
+        private readonly string _assemblyName;
+        private readonly Guid _mvid = Guid.NewGuid();
+
+        private readonly List<IlTypeRef> _typeRefs = new List<IlTypeRef>();
+        private readonly List<IlAssemblyRef> _assemblyRefs = new List<IlAssemblyRef>();
+        private readonly List<IlTypeDef> _typeDefs = new List<IlTypeDef>();
+        private readonly List<IlMethodDef> _methodDefs = new List<IlMethodDef>();
+        private readonly List<IlMethodRef> _memberRefs = new List<IlMethodRef>();
+        private readonly List<IlCustomAttribute> _customAttributes = new List<IlCustomAttribute>();
+        private readonly List<IlStandAloneSig> _standAloneSigs = new List<IlStandAloneSig>();
+
+        private readonly Dictionary<IlTypeRef, int> _typeRefIndex = new Dictionary<IlTypeRef, int>();
+        private readonly Dictionary<IlAssemblyRef, int> _assemblyRefIndex = new Dictionary<IlAssemblyRef, int>();
+        private readonly Dictionary<IlMethodRef, int> _memberRefIndex = new Dictionary<IlMethodRef, int>();
+        private readonly Dictionary<string, int> _strings = new Dictionary<string, int>();
+        private readonly Dictionary<string, uint> _userStrings = new Dictionary<string, uint>();
+        private readonly Dictionary<BlobKey, int> _blobs = new Dictionary<BlobKey, int>();
+
+        private readonly List<byte> _stringHeap = new List<byte>();
+        private readonly List<byte> _usHeap = new List<byte>();
+        private readonly List<byte> _blobHeap = new List<byte>();
+
+        // token 琛ㄥ彿
+        private const uint TypeRefTable = 0x01;
+        private const uint TypeDefTable = 0x02;
+        private const uint MethodDefTable = 0x06;
+        private const uint ParamTable = 0x08;
+        private const uint MemberRefTable = 0x0A;
+        private const uint StandAloneSigTable = 0x11;
+        private const uint AssemblyRefTable = 0x23;
+        private const uint UserStringTable = 0x70;
+
+        public MetadataBuilder(string moduleName, string assemblyName)
+        {
+            _moduleName = moduleName;
+            _assemblyName = assemblyName;
+
+            _stringHeap.Add(0);
+            _usHeap.Add(0);
+            _blobHeap.Add(0);
+        }
+
+        // ------------------------------------------------------------------
+        // 寮曠敤瀹氫箟锛堝幓閲嶏級
+        // ------------------------------------------------------------------
+
+        public IlAssemblyRef DefineAssemblyRef(string name, Version version, byte[] publicKeyOrToken, string? culture, uint flags)
+        {
+            var reference = new IlAssemblyRef(name, version, publicKeyOrToken, culture, flags);
+            if (!_assemblyRefIndex.ContainsKey(reference))
+            {
+                _assemblyRefIndex.Add(reference, _assemblyRefs.Count + 1);
+                _assemblyRefs.Add(reference);
+            }
+
+            return reference;
+        }
+
+        public IlTypeRef DefineTypeRef(IlAssemblyRef? scope, string? namespaceName, string name)
+        {
+            var reference = new IlTypeRef(namespaceName, name, scope);
+            if (!_typeRefIndex.ContainsKey(reference))
+            {
+                _typeRefIndex.Add(reference, _typeRefs.Count + 1);
+                _typeRefs.Add(reference);
+            }
+
+            return reference;
+        }
+
+        public IlMethodRef DefineMethodRef(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        {
+            var reference = new IlMethodRef(declaringType, name, returnType, parameterTypes);
+            if (!_memberRefIndex.ContainsKey(reference))
+            {
+                _memberRefIndex.Add(reference, _memberRefs.Count + 1);
+                _memberRefs.Add(reference);
+            }
+
+            return reference;
+        }
+
+        public void AddTypeDef(IlTypeDef typeDef) => _typeDefs.Add(typeDef);
+
+        public void AddCustomAttribute(IlCustomAttribute attribute) => _customAttributes.Add(attribute);
+
+        public uint GetOrAddUserString(string value)
+        {
+            if (_userStrings.TryGetValue(value, out var token))
+            {
+                return token;
+            }
+
+            var offset = _usHeap.Count;
+            WriteCompressedInteger(_usHeap, value.Length * 2 + 1);
+            foreach (var c in value)
+            {
+                _usHeap.Add((byte)c);
+                _usHeap.Add((byte)(c >> 8));
+            }
+            _usHeap.Add(GetUserStringTrailingByte(value));
+
+            token = UserStringTable << 24 | (uint)offset;
+            _userStrings.Add(value, token);
+            return token;
+        }
+
+        /// <summary>娉ㄥ唽 StandAloneSig锛堝眬閮ㄥ彉閲忕鍚嶇瓑锛夊苟杩斿洖寮曠敤锛坱oken 缁?<see cref="BuildTokenMap"/> 瑙ｆ瀽锛夈€?/summary>
+        public IlStandAloneSig AddStandAloneSig(byte[] signatureBlob)
+        {
+            var reference = new IlStandAloneSig(signatureBlob);
+            foreach (var existing in _standAloneSigs)
+            {
+                if (existing.Equals(reference))
+                {
+                    return existing;
+                }
+            }
+
+            _standAloneSigs.Add(reference);
+            return reference;
+        }
+
+        /// <summary>鏋勫缓 token 鏄犲皠锛圛lAssembler 鍥炲～鐢級锛氬紩鐢ㄥ璞?鈫?鍏冩暟鎹?token銆?/summary>
+        public Dictionary<object, uint> BuildTokenMap()
+        {
+            var map = new Dictionary<object, uint>();
+            for (var i = 0; i < _typeRefs.Count; i++)
+            {
+                map[_typeRefs[i]] = TypeRefTable << 24 | (uint)(i + 1);
+            }
+
+            for (var i = 0; i < _methodDefs.Count; i++)
+            {
+                map[_methodDefs[i]] = MethodDefTable << 24 | (uint)(i + 1);
+            }
+
+            for (var i = 0; i < _memberRefs.Count; i++)
+            {
+                map[_memberRefs[i]] = MemberRefTable << 24 | (uint)(i + 1);
+            }
+
+            for (var i = 0; i < _standAloneSigs.Count; i++)
+            {
+                map[_standAloneSigs[i]] = StandAloneSigTable << 24 | (uint)(i + 1);
+            }
+
+            return map;
+        }
+
+        private int GetOrAddBlob(byte[] blob)
+        {
+            var key = new BlobKey(blob);
+            if (_blobs.TryGetValue(key, out var index))
+            {
+                return index;
+            }
+
+            index = _blobHeap.Count;
+            _blobs.Add(key, index);
+            WriteCompressedInteger(_blobHeap, blob.Length);
+            _blobHeap.AddRange(blob);
+            return index;
+        }
+
+        private int GetOrAddString(string value)
+        {
+            if (_strings.TryGetValue(value, out var index))
+            {
+                return index;
+            }
+
+            index = _stringHeap.Count;
+            _strings.Add(value, index);
+            var bytes = Encoding.UTF8.GetBytes(value);
+            _stringHeap.AddRange(bytes);
+            _stringHeap.Add(0);
+            return index;
+        }
+
+        private readonly struct BlobKey : IEquatable<BlobKey>
+        {
+            private readonly byte[] _bytes;
+
+            public BlobKey(byte[] bytes) => _bytes = bytes;
+
+            public bool Equals(BlobKey other) => _bytes.SequenceEqual(other._bytes);
+            public override bool Equals(object? obj) => obj is BlobKey other && Equals(other);
+            public override int GetHashCode()
+            {
+                var hash = 17;
+                foreach (var b in _bytes)
+                {
+                    hash = hash * 31 + b;
+                }
+
+                return hash;
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // 鏂规硶瀹氫箟
+        // ------------------------------------------------------------------
+
+        /// <summary>娣诲姞鎴戜滑鑷繁鐨勬柟娉曪紙TypeDef Program 鐨勬柟娉曪級銆傝繑鍥?MethodDef token銆?/summary>
+        public uint AddMethodDef(IlMethodDef method)
+        {
+            _methodDefs.Add(method);
+            return MethodDefTable << 24 | (uint)_methodDefs.Count;
+        }
+
+        // ------------------------------------------------------------------
+        // 绛惧悕缂栫爜
+        // ------------------------------------------------------------------
+
+        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        {
+            using var stream = new MemoryStream();
+            stream.WriteByte(0x00); // Method(0) | Default(0) | 静态（无 HAS_THIS）
+            WriteCompressedInteger(stream, parameterTypes.Count);
+            EncodeType(stream, returnType);
+            foreach (var parameterType in parameterTypes)
+            {
+                EncodeType(stream, parameterType);
+            }
+
+            return stream.ToArray();
+        }
+
+        public byte[] EncodeLocalVarSignature(IReadOnlyList<IlType> locals)
+        {
+            using var stream = new MemoryStream();
+            stream.WriteByte(0x07); // LocalVariables
+            WriteCompressedInteger(stream, locals.Count);
+            foreach (var local in locals)
+            {
+                EncodeType(stream, local);
+            }
+
+            return stream.ToArray();
+        }
+
+        /// <summary>DebuggableAttribute(bool, bool) 鍥哄畾鍙傛暟锛歱rolog + 2 涓?ELEMENT_TYPE_BOOLEAN(true)銆?/summary>
+        public static byte[] EncodeDebuggableAttributeBlob()
+        {
+            using var stream = new MemoryStream();
+            stream.WriteByte(0x01);
+            stream.WriteByte(0x00);
+            stream.WriteByte(0x02); // ELEMENT_TYPE_BOOLEAN
+            stream.WriteByte(0x01);
+            stream.WriteByte(0x02); // ELEMENT_TYPE_BOOLEAN
+            stream.WriteByte(0x01);
+            return stream.ToArray();
+        }
+
+        private void EncodeType(Stream stream, IlType type)
+        {
+            switch (type.Kind)
+            {
+                case IlTypeKind.Void:
+                    stream.WriteByte(0x01);
+                    break;
+                case IlTypeKind.Boolean:
+                    stream.WriteByte(0x02);
+                    break;
+                case IlTypeKind.Int32:
+                    stream.WriteByte(0x08);
+                    break;
+                case IlTypeKind.Double:
+                    stream.WriteByte(0x0D);
+                    break;
+                case IlTypeKind.String:
+                    stream.WriteByte(0x0E);
+                    break;
+                case IlTypeKind.Object:
+                    stream.WriteByte(0x1C);
+                    break;
+                case IlTypeKind.Class:
+                    stream.WriteByte(0x12); // CLASS
+                    WriteCompressedInteger(stream, CodedIndexTypeDefOrRef(type.Reference!, _typeRefIndex));
+                    break;
+                case IlTypeKind.SzArray:
+                    stream.WriteByte(0x1D); // SZARRAY
+                    EncodeType(stream, type.ElementType!);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unhandled type kind {type.Kind}");
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Coded index
+        // ------------------------------------------------------------------
+
+        private int CodedIndexTypeDefOrRef(IlTypeRef typeRef) => CodedIndexTypeDefOrRef(typeRef, _typeRefIndex);
+        private int CodedIndexMemberRef(IlMethodRef methodRef) => CodedIndexMemberRef(methodRef, _memberRefIndex);
+
+        private static int CodedIndexTypeDefOrRef(IlTypeRef typeRef, Dictionary<IlTypeRef, int> typeRefIndex)
+        {
+            // tag 2 浣嶏細TypeDef=0, TypeRef=1
+            var rowId = typeRefIndex[typeRef];
+            return (rowId << 2) | 1;
+        }
+
+        private static int CodedIndexMemberRef(IlMethodRef methodRef, Dictionary<IlMethodRef, int> memberRefIndex)
+        {
+            // MemberRefParent tag 3 浣嶏細TypeRef=1
+            var rowId = memberRefIndex[methodRef];
+            return (rowId << 3) | 1;
+        }
+
+        private static int CodedIndexTypeRef(IlTypeRef typeRef, Dictionary<IlTypeRef, int> typeRefIndex)
+        {
+            // MemberRefParent tag 3 浣嶏細TypeRef=1
+            var rowId = typeRefIndex[typeRef];
+            return (rowId << 3) | 1;
+        }
+
+        // ------------------------------------------------------------------
+        // 搴忓垪鍖?        // ------------------------------------------------------------------
+
+        /// <summary>搴忓垪鍖栫粨鏋滐細鍚勬祦瀛楄妭锛堣〃娴?瀛楃涓?US/GUID/Blob锛夛紝鐢?ManagedPEWriter 缁勮鍏冩暟鎹牴銆?/summary>
+        internal sealed class MetadataBlobs
+        {
+            public MetadataBlobs(byte[] tables, byte[] strings, byte[] us, byte[] guid, byte[] blob)
+            {
+                Tables = tables;
+                Strings = strings;
+                Us = us;
+                Guid = guid;
+                Blob = blob;
+            }
+
+            public byte[] Tables { get; }
+            public byte[] Strings { get; }
+            public byte[] Us { get; }
+            public byte[] Guid { get; }
+            public byte[] Blob { get; }
+        }
+
+        public byte[] MvidBytes => _mvid.ToByteArray();
+
+        /// <summary>
+        /// 搴忓垪鍖栬〃娴?+ 鍥涘爢銆?        /// <paramref name="methodRvas"/>锛氭瘡涓柟娉曚綋鐨?RVA锛堢敱 ManagedPEWriter 甯冨眬鍚庢彁渚涳級銆?        /// </summary>
+        public MetadataBlobs Serialize(IReadOnlyDictionary<IlMethodDef, uint> methodRvas)
+        {
+            // ---- 鍏堟敹闆嗗叏閮ㄥ紩鐢紙string/blob 鍫嗗湪鍐欒〃鍓嶅～鍏咃級----
+            var typeRefCount = _typeRefs.Count;
+            var assemblyRefCount = _assemblyRefs.Count;
+            var typeDefCount = _typeDefs.Count + 1; // + <Module>
+            var methodDefCount = _methodDefs.Count;
+            var paramCount = _methodDefs.Sum(m => m.ParameterTypes.Count);
+            var memberRefCount = _memberRefs.Count;
+            var customAttributeCount = _customAttributes.Count;
+            var standAloneSigCount = _standAloneSigs.Count;
+
+            // 鍒楀锛堣鏁?鍫嗗ぇ灏?> 0xFFFF 鈫?4 瀛楄妭锛?
+            var stringIsBig = _stringHeap.Count > 0xFFFF;
+            var guidIsBig = false;
+            var blobIsBig = _blobHeap.Count > 0xFFFF;
+            var typeRefIsBig = typeRefCount > 0xFFFF;
+            var typeDefIsBig = typeDefCount > 0xFFFF;
+            var methodDefIsBig = methodDefCount > 0xFFFF;
+            var paramIsBig = paramCount > 0xFFFF;
+            var memberRefIsBig = memberRefCount > 0xFFFF;
+            var standAloneSigIsBig = standAloneSigCount > 0xFFFF;
+            var assemblyRefIsBig = assemblyRefCount > 0xFFFF;
+
+            // coded index 瀹斤紙tag 浣嶅悗浣欓噺 < 16 鈫?4 瀛楄妭锛?
+            var resolutionScopeIsBig = typeRefCount + assemblyRefCount + 1 > (1 << 14);
+            var typeDefOrRefIsBig = typeDefCount + typeRefCount > (1 << 14);
+            var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount > (1 << 13);
+            var hasCustomAttributeIsBig = false;
+            var customAttributeTypeIsBig = memberRefCount > (1 << 13);
+
+            var heapSizes = (stringIsBig ? 0x01 : 0) | (guidIsBig ? 0x02 : 0) | (blobIsBig ? 0x04 : 0);
+
+            using var stream = new MemoryStream();
+            using var writer = new BinaryWriter(stream);
+
+            // ---- #~ 琛ㄦ祦澶?----
+            writer.Write(0u); // reserved（4 字节，ECMA-335 II.24.2.2）
+            writer.Write((byte)2); // major
+            writer.Write((byte)0); // minor
+            writer.Write((byte)heapSizes);
+            writer.Write((byte)1); // reserved
+
+            var valid = 0UL;
+            void SetValid(int table) => valid |= 1UL << table;
+            SetValid(0x00); // Module
+            SetValid(0x01); // TypeRef
+            SetValid(0x02); // TypeDef
+            SetValid(0x06); // MethodDef
+            SetValid(0x08); // Param
+            SetValid(0x0A); // MemberRef
+            SetValid(0x0C); // CustomAttribute
+            SetValid(0x11); // StandAloneSig
+            SetValid(0x20); // Assembly
+            SetValid(0x23); // AssemblyRef
+            writer.Write(valid);
+
+            var sorted = 1UL << 0x0C; // CustomAttribute
+            writer.Write(sorted);
+
+            void WriteRowCount(int count) { if (count > 0) writer.Write((uint)count); }
+            WriteRowCount(1);               // Module
+            WriteRowCount(typeRefCount);    // TypeRef
+            WriteRowCount(typeDefCount);    // TypeDef
+            WriteRowCount(methodDefCount);  // MethodDef
+            WriteRowCount(paramCount);      // Param
+            WriteRowCount(memberRefCount);  // MemberRef
+            WriteRowCount(customAttributeCount);
+            WriteRowCount(standAloneSigCount);
+            WriteRowCount(1);               // Assembly
+            WriteRowCount(assemblyRefCount);
+
+            void WriteRef(int value, bool isBig) { if (isBig) writer.Write((uint)value); else writer.Write((ushort)value); }
+            void WriteStringRef(string value, bool isBig) => WriteRef(GetOrAddString(value), isBig);
+            void WriteCoded(int value, bool isBig) => WriteRef(value, isBig);
+            void WriteTypeDefRow(uint flags, string name, string ns, int extends, int fieldList, int methodList)
+            {
+                writer.Write(flags);
+                WriteRef(GetOrAddString(name), stringIsBig);
+                WriteRef(GetOrAddString(ns), stringIsBig);
+                WriteRef(extends, typeDefOrRefIsBig);
+                WriteRef(fieldList, typeDefIsBig);
+                WriteRef(methodList, methodDefIsBig);
+            }
+
+            // ---- Module锛? 琛岋級----
+            writer.Write((ushort)0);
+            WriteStringRef(_moduleName, stringIsBig);
+            WriteRef(1, guidIsBig);
+            WriteRef(0, guidIsBig);
+            WriteRef(0, guidIsBig);
+
+            // ---- TypeRef ----
+            foreach (var typeRef in _typeRefs)
+            {
+                // ResolutionScope锛? 浣?tag锛歁odule=0, ModuleRef=1, AssemblyRef=2, TypeRef=3锛?
+            var scope = typeRef.Scope == null ? 0 : (CodedIndexAssemblyRef(typeRef.Scope) << 2) | 2;
+                WriteCoded(scope, resolutionScopeIsBig);
+                WriteStringRef(typeRef.Name, stringIsBig);
+                WriteStringRef(typeRef.Namespace, stringIsBig);
+            }
+
+            // ---- TypeDef锛?Module> + Program ----
+            WriteTypeDefRow(0x00000000, "<Module>", "", 0, 1, 1);
+            if (_typeDefs.Count > 0)
+            {
+                var typeDef = _typeDefs[0];
+                var flags = 0x00000001; // Public
+                var extends = typeDef.BaseTypeRef == null ? 0 : CodedIndexTypeDefOrRef(typeDef.BaseTypeRef);
+                WriteTypeDefRow((uint)flags, typeDef.Name, "", extends, 1, 1);
+            }
+
+            // ---- MethodDef ----
+            var paramRow = 1;
+            foreach (var method in _methodDefs)
+            {
+                writer.Write(methodRvas.TryGetValue(method, out var rva) ? rva : 0u);
+                writer.Write((ushort)0);             // ImplFlags
+                var implFlags = (ushort)0x0096;
+                writer.Write(implFlags);        // Public|Static|HideBySig|ReuseSlot
+                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes));
+                WriteRef(methodSigBlob, blobIsBig);
+                WriteRef(paramRow, paramIsBig);
+                paramRow += method.ParameterTypes.Count;
+            }
+
+            // ---- Param ----
+            foreach (var method in _methodDefs)
+            {
+                var sequence = 1;
+                foreach (var _ in method.ParameterTypes)
+                {
+                    writer.Write((ushort)0);
+                    writer.Write((ushort)sequence++);
+                    WriteStringRef("", stringIsBig);
+                }
+            }
+
+            // ---- MemberRef ----
+            foreach (var memberRef in _memberRefs)
+            {
+                WriteCoded(CodedIndexTypeRef(memberRef.DeclaringType, _typeRefIndex), memberRefParentIsBig);
+                WriteStringRef(memberRef.Name, stringIsBig);
+                WriteRef(GetOrAddBlob(EncodeMethodSignature(memberRef.ReturnType, memberRef.ParameterTypes)), blobIsBig);
+            }
+
+            // ---- CustomAttribute ----
+            foreach (var attribute in _customAttributes)
+            {
+                WriteCoded(14 << 5 | 1, hasCustomAttributeIsBig); // HasCustomAttribute: Assembly=14
+                var caType = (CodedIndexMemberRef(attribute.Constructor) << 3) | 3;
+                WriteCoded(caType, customAttributeTypeIsBig); // CustomAttributeType: MemberRef=3
+            }
+
+            // ---- StandAloneSig ----
+            foreach (var sig in _standAloneSigs)
+            {
+                WriteRef(GetOrAddBlob(sig.Signature), blobIsBig);
+            }
+
+            // ---- Assembly锛? 琛岋級----
+            writer.Write((uint)0x0804); // HashAlgId = SHA1
+            writer.Write((ushort)1); writer.Write((ushort)0); writer.Write((ushort)0); writer.Write((ushort)0);
+            writer.Write((uint)0); // Flags
+            WriteRef(GetOrAddBlob(Array.Empty<byte>()), blobIsBig);
+            WriteStringRef(_assemblyName, stringIsBig);
+            WriteStringRef("", stringIsBig);
+
+            // ---- AssemblyRef ----
+            foreach (var assemblyRef in _assemblyRefs)
+            {
+                writer.Write((ushort)assemblyRef.Version.Major);
+                writer.Write((ushort)assemblyRef.Version.Minor);
+                writer.Write((ushort)assemblyRef.Version.Build);
+                writer.Write((ushort)assemblyRef.Version.Revision);
+                writer.Write((uint)assemblyRef.Flags);
+                WriteRef(GetOrAddBlob(assemblyRef.PublicKeyOrToken), blobIsBig);
+                WriteStringRef(assemblyRef.Name, stringIsBig);
+                WriteStringRef(assemblyRef.Culture, stringIsBig);
+                WriteRef(GetOrAddBlob(Array.Empty<byte>()), blobIsBig); // HashValue
+            }
+
+            // 琛ㄦ祦灏惧榻?
+            writer.Write((byte)0);
+            while (stream.Position % 4 != 0) writer.Write((byte)0);
+
+            var guid = _mvid.ToByteArray();
+            return new MetadataBlobs(stream.ToArray(), _stringHeap.ToArray(), _usHeap.ToArray(), guid, _blobHeap.ToArray());
+        }
+
+        private int CodedIndexAssemblyRef(IlAssemblyRef assemblyRef) => _assemblyRefIndex[assemblyRef];
+
+        // ------------------------------------------------------------------
+        // 鍘嬬缉鏁存暟
+        // ------------------------------------------------------------------
+
+        private static void WriteCompressedInteger(List<byte> bytes, int value)
+        {
+            if (value <= 0x7F)
+            {
+                bytes.Add((byte)value);
+            }
+            else if (value <= 0x3FFF)
+            {
+                bytes.Add((byte)(0x80 | (value >> 8)));
+                bytes.Add((byte)value);
+            }
+            else
+            {
+                bytes.Add((byte)(0xC0 | (value >> 24)));
+                bytes.Add((byte)(value >> 16));
+                bytes.Add((byte)(value >> 8));
+                bytes.Add((byte)value);
+            }
+        }
+
+        private static void WriteCompressedInteger(Stream stream, int value)
+        {
+            if (value <= 0x7F)
+            {
+                stream.WriteByte((byte)value);
+            }
+            else if (value <= 0x3FFF)
+            {
+                stream.WriteByte((byte)(0x80 | (value >> 8)));
+                stream.WriteByte((byte)value);
+            }
+            else
+            {
+                stream.WriteByte((byte)(0xC0 | (value >> 24)));
+                stream.WriteByte((byte)(value >> 16));
+                stream.WriteByte((byte)(value >> 8));
+                stream.WriteByte((byte)value);
+            }
+        }
+
+        private static byte GetUserStringTrailingByte(string value)
+        {
+            foreach (var c in value)
+            {
+                if (c >= 0x7F)
+                {
+                    return 1;
+                }
+
+                var b = (byte)c;
+                if (b >= 0x01 && b <= 0x08) return 1;
+                if (b >= 0x0E && b <= 0x1F) return 1;
+                if (b == 0x27 || b == 0x2D || b == 0x7F) return 1;
+            }
+
+            return 0;
+        }
+    }
+}
+
