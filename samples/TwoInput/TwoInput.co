@@ -1,0 +1,9 @@
+function main()
+{
+	print("A")
+	let a = input()
+	print("N=" + a)
+	print("B")
+	let b = input()
+	print("done")
+}
