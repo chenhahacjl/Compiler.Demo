@@ -1,6 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Cocoa.Tests" />
+    <InternalsVisibleTo Include="coc" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
     <PackageReference Include="Mono.Options" Version="6.12.0.148" />
     <PackageReference Include="System.Collections.Immutable" Version="9.0.9" />

@@ -1,0 +1,125 @@
+using System.Collections.Generic;
+using System.Text;
+
+namespace Cocoa.CodeAnalysis.Emit.IR
+{
+    /// <summary>IR 文本打印器：输出平台无关的中间表示（.cod 雏形）。</summary>
+    internal static class IrPrinter
+    {
+        public static string Format(IrInstruction instruction)
+        {
+            var sb = new StringBuilder();
+            sb.Append(instruction.OpCode.ToString().ToLowerInvariant());
+
+            if (instruction.Dst != null)
+            {
+                sb.Append(' ').Append(instruction.Dst);
+            }
+
+            if (instruction.OpCode == IrOpCode.Jcc || instruction.OpCode == IrOpCode.Setcc)
+            {
+                sb.Append(' ').Append(((IrCond)instruction.A.Imm).ToString());
+                if (instruction.B.IsNone == false)
+                {
+                    sb.Append(", ").Append(instruction.B.ToString());
+                }
+
+                return sb.ToString();
+            }
+
+            if (instruction.A.IsNone == false)
+            {
+                sb.Append(' ').Append(FormatOperand(instruction));
+            }
+
+            if (instruction.B.IsNone == false)
+            {
+                sb.Append(", ").Append(instruction.B.ToString());
+            }
+
+            if (instruction.OpCode != IrOpCode.Load && instruction.OpCode != IrOpCode.Store && instruction.Offset != 0)
+            {
+                sb.Append(instruction.Offset > 0 ? " +" : " ").Append(instruction.Offset);
+            }
+
+            if (instruction.ByteSize > 0)
+            {
+                sb.Append(" :").Append(instruction.ByteSize * 8).Append("bit");
+            }
+
+            return sb.ToString();
+        }
+
+        private static string FormatOperand(IrInstruction instruction)
+        {
+            var a = instruction.A;
+            if (instruction.OpCode == IrOpCode.Load || instruction.OpCode == IrOpCode.Store)
+            {
+                var offset = instruction.Offset == 0 ? "" : (instruction.Offset > 0 ? "+" + instruction.Offset : instruction.Offset.ToString());
+                return "[" + a.ToString() + offset + "]";
+            }
+
+            return a.ToString();
+        }
+
+        public static string Format(IrFunction function)
+        {
+            var sb = new StringBuilder();
+            sb.Append("FUNCTION ").Append(function.Name);
+            var paramNames = new List<string>();
+            foreach (var parameter in function.Parameters)
+            {
+                paramNames.Add(parameter.Name ?? "p" + parameter.Ordinal);
+            }
+
+            if (paramNames.Count > 0)
+            {
+                sb.Append(" (").Append(string.Join(", ", paramNames)).Append(')');
+            }
+
+            sb.AppendLine();
+
+            foreach (var instruction in function.Instructions)
+            {
+                sb.Append("  ").AppendLine(Format(instruction));
+            }
+
+            return sb.ToString();
+        }
+
+        public static string Format(IrProgram program)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("PROGRAM entry = " + program.EntryFunctionName);
+
+            if (program.Data.Count > 0)
+            {
+                sb.AppendLine(".data");
+                foreach (var pair in program.Data)
+                {
+                    var text = pair.Value.Text ?? "";
+                    sb.AppendLine("  D$" + text + " = \"" + Escape(text) + "\"");
+                }
+            }
+
+            foreach (var function in program.Functions)
+            {
+                sb.AppendLine();
+                sb.Append(Format(function));
+            }
+
+            return sb.ToString();
+        }
+
+        private static string Escape(string text)
+        {
+            var sb = new StringBuilder();
+            foreach (var c in text)
+            {
+                sb.Append(c == '"' ? "\\\"" : c == '\\' ? "\\\\" : c.ToString());
+            }
+
+            return sb.ToString();
+        }
+    }
+}

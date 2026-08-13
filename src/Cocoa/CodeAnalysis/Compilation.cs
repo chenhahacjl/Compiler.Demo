@@ -1,7 +1,9 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Emit;
+using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis
@@ -147,6 +149,32 @@ namespace Cocoa.CodeAnalysis
             var program = GetProgram();
 
             return Emitter.Emit(program, moduleName, references, outputPath);
+        }
+
+        /// <summary>
+        /// 把程序直接生成为原生可执行文件，不依赖 .NET 运行时。
+        /// </summary>
+        internal ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default)
+        {
+            var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
+
+            var diagnostics = parseDiagnostics.Concat(GlobalScope.Diagnostics).ToImmutableArray();
+            if (diagnostics.HasErrors())
+            {
+                return diagnostics;
+            }
+
+            var program = GetProgram();
+
+            if (program.MainFunction == null)
+            {
+                var location = new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
+                return ImmutableArray.Create(Diagnostic.Error(location, "native code generation requires a main function"));
+            }
+
+            NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);
+
+            return ImmutableArray<Diagnostic>.Empty;
         }
     }
 }
