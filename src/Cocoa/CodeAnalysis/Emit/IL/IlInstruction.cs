@@ -15,6 +15,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         SzArray,        // 一维数组（元素为另一个类型）
     }
 
+    /// <summary>P/Invoke 调用约定（对应 ECMA-335 II.23.1.10 ImplMapFlags.CallConvMask）。</summary>
+    internal enum IlCallingConvention
+    {
+        Winapi,     // 0x0100（Windows 上按平台默认 = stdcall）
+        Cdecl,      // 0x0200
+        StdCall,    // 0x0300
+    }
+
     /// <summary>自研元数据引用：签名与 token 分配的最小描述。</summary>
     internal sealed class IlType
     {

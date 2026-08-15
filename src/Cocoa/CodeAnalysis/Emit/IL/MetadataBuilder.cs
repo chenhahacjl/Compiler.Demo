@@ -22,18 +22,27 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>我们自己的方法定义（MethodDef 表行 + 方法体）。</summary>
     internal sealed class IlMethodDef
     {
-        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body)
+        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body, string? dllName = null, string? importName = null, IlCallingConvention callingConvention = IlCallingConvention.Winapi)
         {
             Name = name;
             ReturnType = returnType;
             ParameterTypes = parameterTypes;
             Body = body;
+            DllName = dllName;
+            ImportName = importName;
+            CallingConvention = callingConvention;
         }
 
         public string Name { get; }
         public IlType ReturnType { get; }
         public IReadOnlyList<IlType> ParameterTypes { get; }
         public IlMethodBody? Body { get; }
+
+        /// <summary>P/Invoke 目标 DLL（null = 普通方法，不产生 ImplMap 行）。</summary>
+        public string? DllName { get; }
+        /// <summary>入口点名称（null = 与方法同名）。</summary>
+        public string? ImportName { get; }
+        public IlCallingConvention CallingConvention { get; }
     }
 
     /// <summary>
@@ -260,10 +269,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         // 签名编码
         // ------------------------------------------------------------------
 
-        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
+        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true, IlCallingConvention callingConvention = IlCallingConvention.Winapi)
         {
             using var stream = new MemoryStream();
-            stream.WriteByte((byte)(isStatic ? 0x00 : 0x20)); // Method(0) | Default(0) | HAS_THIS=0x20
+            var conventionByte = callingConvention switch
+            {
+                IlCallingConvention.Cdecl => 0x01,
+                IlCallingConvention.StdCall => 0x02,
+                _ => 0x00, // Default/Winapi
+            };
+            stream.WriteByte((byte)((isStatic ? 0x00 : 0x20) | conventionByte)); // Method(0) | HAS_THIS=0x20 | 调用约定
             WriteCompressedInteger(stream, parameterTypes.Count);
             EncodeType(stream, returnType);
             foreach (var parameterType in parameterTypes)
@@ -405,6 +420,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
 
+            var moduleRefs = _methodDefs.Where(m => m.DllName != null).Select(m => m.DllName!).Distinct().ToList();
+            var moduleRefCount = moduleRefs.Count;
+            var implMapCount = _methodDefs.Count(m => m.DllName != null);
+
             // 列宽（行数/堆大小 > 0xFFFF → 4 字节）
             var stringIsBig = _stringHeap.Count > 0xFFFF;
             var guidIsBig = false;
@@ -416,6 +435,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var memberRefIsBig = memberRefCount > 0xFFFF;
             var standAloneSigIsBig = standAloneSigCount > 0xFFFF;
             var assemblyRefIsBig = assemblyRefCount > 0xFFFF;
+            var moduleRefIsBig = moduleRefCount > 0xFFFF;
 
             // coded index 宽（tag 位后余量 < 16 → 4 字节）
             var resolutionScopeIsBig = typeRefCount + assemblyRefCount + 1 > (1 << 14);
@@ -423,6 +443,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount > (1 << 13);
             var hasCustomAttributeIsBig = new[] { typeRefCount, typeDefCount, methodDefCount, paramCount, memberRefCount, standAloneSigCount, 1, assemblyRefCount }.Max() > (1 << 11);
             var customAttributeTypeIsBig = Math.Max(methodDefCount, memberRefCount) > (1 << 13);
+            var memberForwardedIsBig = methodDefCount > (1 << 15); // 1 位 tag（MemberForwarded: Field=0/MethodDef=1）
 
             var heapSizes = (stringIsBig ? 0x01 : 0) | (guidIsBig ? 0x02 : 0) | (blobIsBig ? 0x04 : 0);
 
@@ -446,11 +467,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (memberRefCount > 0) SetValid(0x0A); // MemberRef
             if (customAttributeCount > 0) SetValid(0x0C); // CustomAttribute
             if (standAloneSigCount > 0) SetValid(0x11); // StandAloneSig
+            if (moduleRefCount > 0) SetValid(0x1A); // ModuleRef
+            if (implMapCount > 0) SetValid(0x1C); // ImplMap
             SetValid(0x20); // Assembly（始终 1 行）
             if (assemblyRefCount > 0) SetValid(0x23); // AssemblyRef
             writer.Write(valid);
 
-            var sorted = 1UL << 0x0C; // CustomAttribute
+            var sorted = (1UL << 0x0C) | (1UL << 0x1C); // CustomAttribute | ImplMap（ECMA-335 II.24.2.6）
             writer.Write(sorted);
 
             void WriteRowCount(int count) { if (count > 0) writer.Write((uint)count); }
@@ -462,6 +485,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteRowCount(memberRefCount);  // MemberRef
             WriteRowCount(customAttributeCount);
             WriteRowCount(standAloneSigCount);
+            WriteRowCount(moduleRefCount);  // ModuleRef
+            WriteRowCount(implMapCount);    // ImplMap
             WriteRowCount(1);               // Assembly
             WriteRowCount(assemblyRefCount);
 
@@ -511,10 +536,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 writer.Write(methodRvas.TryGetValue(method, out var rva) ? rva : 0u);
                 writer.Write((ushort)0);             // ImplFlags
-                var implFlags = (ushort)0x0096;
-                writer.Write(implFlags);        // Public|Static|HideBySig|ReuseSlot
+                var implFlags = (ushort)(0x0096 | (method.DllName != null ? 0x2000 : 0)); // Public|Static|HideBySig|ReuseSlot|PInvokeImpl
+                writer.Write(implFlags);
                 WriteStringRef(method.Name, stringIsBig); // Name（MethodDef 行缺 Name 曾导致后续表全部偏移 2 字节）
-                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes));
+                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, isStatic: true, method.CallingConvention));
                 WriteRef(methodSigBlob, blobIsBig);
                 WriteRef(paramRow, paramIsBig);
                 paramRow += method.ParameterTypes.Count;
@@ -553,6 +578,34 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var sig in _standAloneSigs)
             {
                 WriteRef(GetOrAddBlob(sig.Signature), blobIsBig);
+            }
+
+            // ---- ModuleRef（行：Name #Strings）----
+            foreach (var dll in moduleRefs)
+            {
+                WriteStringRef(dll, stringIsBig);
+            }
+
+            // ---- ImplMap（按 MemberForwarded MethodDef 行递增排序；行：MappingFlags + MemberForwarded + ImportName + ImportScope）----
+            var methodRow = 1;
+            foreach (var method in _methodDefs)
+            {
+                if (method.DllName != null)
+                {
+                    var callConvMask = method.CallingConvention switch
+                    {
+                        IlCallingConvention.Cdecl => 0x0200,
+                        IlCallingConvention.StdCall => 0x0300,
+                        _ => 0x0100, // Winapi
+                    };
+                    var mappingFlags = (ushort)(callConvMask | 0x0002 /* CharSetAnsi */);
+                    writer.Write(mappingFlags);
+                    WriteCoded((methodRow << 1) | 1, memberForwardedIsBig); // MemberForwarded: MethodDef, tag=1
+                    WriteStringRef(method.ImportName ?? method.Name, stringIsBig);
+                    WriteRef(moduleRefs.IndexOf(method.DllName) + 1, moduleRefIsBig);
+                }
+
+                methodRow++;
             }
 
             // ---- Assembly（1 行）----
