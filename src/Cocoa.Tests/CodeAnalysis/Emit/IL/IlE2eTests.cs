@@ -140,6 +140,64 @@ function main()
         }
 
         [Fact]
+        public void Run_CocoaProgram_WithPInvokeArguments_Stdcall_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+import kernel32.dll
+
+stdcall function ExitProcess(exitCode: int)
+
+function main()
+{
+    ExitProcess(42)
+}", "e2e-pinvoke-stdcall-args");
+
+            // 退出码 42 证明 int 参数正确穿越 P/Invoke 桩到达 native
+            Assert.Equal(42, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
+        public void Run_CocoaProgram_WithPInvokeArguments_Cdecl_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+import kernel32.dll
+
+cdecl function ExitProcess(exitCode: int)
+
+function main()
+{
+    ExitProcess(7)
+}", "e2e-pinvoke-cdecl-args");
+
+            // x64 上 cdecl/stdcall 无差异，验证 cdecl 关键字全链路（ImplMap 0x0200 + 参数穿越）
+            Assert.Equal(7, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
+        public void Run_CocoaProgram_WithPInvokeArguments_PointerParam_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+import kernel32.dll
+
+stdcall function GetModuleHandleW(moduleName: int): int
+
+function main()
+{
+    var h = GetModuleHandleW(0)
+    if h != 0
+    {
+        print(""ok"")
+    }
+}", "e2e-pinvoke-pointer-param");
+
+            // int 字面量 0 → LPWSTR(NULL)：模块基址句柄必非 0
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
         public void Run_CocoaProgram_WithControlFlow_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
