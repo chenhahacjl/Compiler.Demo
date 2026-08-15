@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Xunit;
 
@@ -186,14 +187,117 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             Assert.Equal(0, blobs.Tables[5]);
             Assert.Equal(0, blobs.Tables[6]);
             Assert.Equal(1, blobs.Tables[7]);
-            // Valid 位图（offset 8）
+            // Valid 位图（offset 8）：仅置位真实存在行的表（空表可省略，ECMA II.24.2.6）
             var valid = System.BitConverter.ToUInt64(blobs.Tables, 8);
-            Assert.True((valid & (1UL << 0x00)) != 0); // Module
-            Assert.True((valid & (1UL << 0x02)) != 0); // TypeDef
+            Assert.True((valid & (1UL << 0x00)) != 0); // Module（恒 1 行）
+            Assert.True((valid & (1UL << 0x02)) != 0); // TypeDef（<Module> 恒 1 行）
+            Assert.True((valid & (1UL << 0x20)) != 0); // Assembly（恒 1 行）
+            Assert.Equal(0UL, valid & ~(1UL << 0x00) & ~(1UL << 0x02) & ~(1UL << 0x20)); // 空构建器不应置位其余表
+        }
+
+        [Fact]
+        public void Serialize_Sets_MethodDef_Bit_When_Method_Exists()
+        {
+            var builder = new MetadataBuilder("test", "test");
+            builder.AddMethodDef(new IlMethodDef("main", IlType.Void, new IlType[0], null));
+            var blobs = builder.Serialize(new Dictionary<IlMethodDef, uint>());
+            var valid = System.BitConverter.ToUInt64(blobs.Tables, 8);
             Assert.True((valid & (1UL << 0x06)) != 0); // MethodDef
-            Assert.True((valid & (1UL << 0x0A)) != 0); // MemberRef
-            Assert.True((valid & (1UL << 0x20)) != 0); // Assembly
-            Assert.True((valid & (1UL << 0x23)) != 0); // AssemblyRef
+        }
+    }
+
+    public class IlMaxStackTests
+    {
+        private static int ComputeMaxStack(params IlInstruction[] instructions)
+        {
+            var assembler = new IlAssembler();
+            foreach (var instruction in instructions)
+            {
+                assembler.Emit(instruction);
+            }
+
+            return assembler.ComputeMaxStack();
+        }
+
+        [Fact]
+        public void ComputeMaxStack_BinaryChain_Is_Two()
+        {
+            var maxStack = ComputeMaxStack(
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 1),
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 2),
+                new IlInstruction(IlOpCodes.Get("Add"), null),
+                new IlInstruction(IlOpCodes.Get("Stloc"), (ushort)0));
+            Assert.Equal(2, maxStack);
+        }
+
+        [Fact]
+        public void ComputeMaxStack_Call_With_Three_Arguments_Is_Three()
+        {
+            var sum = new IlMethodRef(new IlTypeRef("", "Program", null), "sum", IlType.Int32, new[] { IlType.Int32, IlType.Int32, IlType.Int32 });
+            var maxStack = ComputeMaxStack(
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 1),
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 2),
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 3),
+                new IlInstruction(IlOpCodes.Get("Call"), sum),
+                new IlInstruction(IlOpCodes.Get("Stloc"), (ushort)0));
+            Assert.Equal(3, maxStack);
+        }
+
+        [Fact]
+        public void ComputeMaxStack_StringConcat_Array_Path_Is_Four()
+        {
+            var concat = new IlMethodRef(new IlTypeRef("System", "String", null), "Concat", IlType.String, new[] { IlType.SzArrayOf(IlType.String) });
+            var instructions = new List<IlInstruction>
+            {
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 5),
+                new IlInstruction(IlOpCodes.Get("Newarr"), IlType.String),
+            };
+            for (var i = 0; i < 5; i++)
+            {
+                instructions.Add(new IlInstruction(IlOpCodes.Get("Dup"), null));
+                instructions.Add(new IlInstruction(IlOpCodes.Get("Ldc_I4"), i));
+                instructions.Add(new IlInstruction(IlOpCodes.Get("Ldstr"), "x"));
+                instructions.Add(new IlInstruction(IlOpCodes.Get("Stelem_Ref"), null));
+            }
+
+            instructions.Add(new IlInstruction(IlOpCodes.Get("Call"), concat));
+            Assert.Equal(4, ComputeMaxStack(instructions.ToArray()));
+        }
+
+        [Fact]
+        public void ComputeMaxStack_Wide_Call_Is_Argument_Count()
+        {
+            var f = new IlMethodRef(new IlTypeRef("", "Program", null), "f", IlType.Void, Enumerable.Repeat(IlType.Int32, 10).ToArray());
+            var instructions = new List<IlInstruction>();
+            for (var i = 0; i < 10; i++)
+            {
+                instructions.Add(new IlInstruction(IlOpCodes.Get("Ldc_I4"), i));
+            }
+
+            instructions.Add(new IlInstruction(IlOpCodes.Get("Call"), f));
+            Assert.Equal(10, ComputeMaxStack(instructions.ToArray()));
+        }
+
+        [Fact]
+        public void ComputeMaxStack_Instance_Call_Counts_This()
+        {
+            var randomType = new IlTypeRef("System", "Random", null);
+            var shared = new IlMethodRef(randomType, "get_Shared", IlType.Class(randomType), System.Array.Empty<IlType>());
+            var next = new IlMethodRef(randomType, "Next", IlType.Int32, new[] { IlType.Int32 }, isStatic: false);
+            var maxStack = ComputeMaxStack(
+                new IlInstruction(IlOpCodes.Get("Call"), shared),
+                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 100),
+                new IlInstruction(IlOpCodes.Get("Callvirt"), next));
+            Assert.Equal(2, maxStack);
+        }
+
+        [Fact]
+        public void ComputeMaxStack_Empty_Body_Is_Zero()
+        {
+            var maxStack = ComputeMaxStack(
+                new IlInstruction(IlOpCodes.Get("Nop"), null),
+                new IlInstruction(IlOpCodes.Get("Ret"), null));
+            Assert.Equal(0, maxStack);
         }
     }
 }

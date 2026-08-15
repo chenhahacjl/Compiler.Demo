@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -8,18 +8,20 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>从引用程序集解析出的方法信息（供 Emitter 构造 MemberRef）。</summary>
     internal sealed class ResolvedMethodInfo
     {
-        public ResolvedMethodInfo(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        public ResolvedMethodInfo(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)
         {
             DeclaringType = declaringType;
             Name = name;
             ReturnType = returnType;
             ParameterTypes = parameterTypes;
+            IsStatic = isStatic;
         }
 
         public IlTypeRef DeclaringType { get; }
         public string Name { get; }
         public IlType ReturnType { get; }
         public IReadOnlyList<IlType> ParameterTypes { get; }
+        public bool IsStatic { get; }
     }
 
     /// <summary>
@@ -96,7 +98,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                         }
                     }
 
-                    return new ResolvedMethodInfo(declaringType, methodName, result.ReturnType, parameterTypes);
+                    return new ResolvedMethodInfo(declaringType, methodName, result.ReturnType, parameterTypes, result.IsStatic);
                 }
             }
 
@@ -292,22 +294,43 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _typeDefOrRefIsBig = typeDefOrRefIsBig;
             _resolutionScopeIsBig = resolutionScopeIsBig;
 
-            // 读取 AssemblyRef（表 0x23）
-            var assemblyRefOffset = _tableOffsets[0x23];
-            var pktSize = blobIsBig ? 4 : 2;
-            var strSize = stringIsBig ? 4 : 2;
-            for (var i = 0; i < assemblyRefCount; i++)
+            // 读取 Assembly（表 0x20）：程序集自身标识（首选；corelib 无 AssemblyRef 表）
+            var assemblyOffset = _tableOffsets[0x20];
+            if (RowCount(0x20) > 0)
             {
-                var row = assemblyRefOffset + i * AssemblyRefRowSize(stringIsBig, blobIsBig);
-                var major = BitConverter.ToUInt16(data, (int)row);
-                var minor = BitConverter.ToUInt16(data, (int)row + 2);
-                var build = BitConverter.ToUInt16(data, (int)row + 4);
-                var revision = BitConverter.ToUInt16(data, (int)row + 6);
-                _flags = BitConverter.ToUInt32(data, (int)row + 8);
-                _publicKeyOrToken = ReadBlob(ReadRef(data, row + 12, blobIsBig));
-                _assemblyName = ReadString(ReadRef(data, row + 12 + pktSize, stringIsBig));
-                _culture = ReadString(ReadRef(data, row + 12 + pktSize + strSize, stringIsBig));
-                _version = new Version(major, minor, build, revision);
+                var row = assemblyOffset;
+                _version = new Version(
+                    BitConverter.ToUInt16(data, (int)row + 4),
+                    BitConverter.ToUInt16(data, (int)row + 6),
+                    BitConverter.ToUInt16(data, (int)row + 8),
+                    BitConverter.ToUInt16(data, (int)row + 10));
+                _flags = BitConverter.ToUInt32(data, (int)row + 12);
+                var pktSize = blobIsBig ? 4 : 2;
+                var strSize2 = stringIsBig ? 4 : 2;
+                _publicKeyOrToken = ReadBlob(ReadRef(data, row + 16, blobIsBig));
+                _assemblyName = ReadString(ReadRef(data, row + 16 + pktSize, stringIsBig));
+                _culture = ReadString(ReadRef(data, row + 16 + pktSize + strSize2, stringIsBig));
+            }
+
+            // 读取 AssemblyRef（表 0x23）——仅当无 Assembly 表时回退
+            var assemblyRefOffset = _tableOffsets[0x23];
+            var pktSize2 = blobIsBig ? 4 : 2;
+            var strSize2b = stringIsBig ? 4 : 2;
+            if (RowCount(0x20) == 0)
+            {
+                for (var i = 0; i < assemblyRefCount; i++)
+                {
+                    var row = assemblyRefOffset + i * AssemblyRefRowSize(stringIsBig, blobIsBig);
+                    var major = BitConverter.ToUInt16(data, (int)row);
+                    var minor = BitConverter.ToUInt16(data, (int)row + 2);
+                    var build = BitConverter.ToUInt16(data, (int)row + 4);
+                    var revision = BitConverter.ToUInt16(data, (int)row + 6);
+                    _flags = BitConverter.ToUInt32(data, (int)row + 8);
+                    _publicKeyOrToken = ReadBlob(ReadRef(data, row + 12, blobIsBig));
+                    _assemblyName = ReadString(ReadRef(data, row + 12 + pktSize2, stringIsBig));
+                    _culture = ReadString(ReadRef(data, row + 12 + pktSize2 + strSize2b, stringIsBig));
+                    _version = new Version(major, minor, build, revision);
+                }
             }
         }
 
@@ -323,8 +346,20 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             int S() => stringIsBig ? 4 : 2;
             int B() => blobIsBig ? 4 : 2;
+            int G() => (_heapSizes & 0x02) != 0 ? 4 : 2; // GUID 堆索引
             int L(int count) => count > 0xFFFF ? 4 : 2; // 表行号引用
-            int C(int tagBits, int maxRows) => maxRows > (1 << (16 - tagBits)) ? 4 : 2; // coded index
+            int C(int tagBits, params int[] targets) // coded index：SUM(目标表行数) 超过 2^(16-tagBits) → 4 字节
+            {
+                long total = 0;
+                foreach (var tg in targets)
+                {
+                    if (tg < 0) continue;
+                    var c = RowCount(tg);
+                    if (c == 0 && (tg == 0x00 || tg == 0x20)) c = 1; // Module/Assembly 恒有 1 行
+                    total += c;
+                }
+                return total > (1L << (16 - tagBits)) ? 4 : 2;
+            }
 
             var typeDefCount = RowCount(0x02);
             var typeRefCount = RowCount(0x01);
@@ -333,48 +368,43 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var paramCount = RowCount(0x08);
             var assemblyRefCount = RowCount(0x23);
             var fieldCount = RowCount(0x04);
-            var interfaceImplCount = RowCount(0x09);
             var eventCount = RowCount(0x14);
             var propertyCount = RowCount(0x17);
             var moduleRefCount = RowCount(0x1A);
-            var typeSpecCount = RowCount(0x1B);
             var genericParamCount = RowCount(0x2A);
-            var methodSpecCount = RowCount(0x2B);
-            var fileCount = RowCount(0x26);
-            var exportedTypeCount = RowCount(0x27);
-            var manifestResourceCount = RowCount(0x28);
 
             switch (table)
             {
-                case 0x00: return 2 + 3 * 2 + S(); // Module
-                case 0x01: return C(2, typeRefCount + moduleRefCount + 1 + exportedTypeCount + 1) + 2 * S(); // TypeRef
-                case 0x02: return 4 + 2 * S() + C(2, typeDefCount + typeRefCount + typeSpecCount) + L(fieldCount) + L(methodDefCount); // TypeDef
+                // 布局经 TempDiagnostics 对 System.Console.dll 逐表字节级验证（PEReader 交叉核对）
+                case 0x00: return 2 + S() + 3 * G(); // Module: Generation,Name,Mvid,EncId,EncBaseId
+                case 0x01: return C(2, 0x00, 0x1A, 0x23, 0x01) + 2 * S(); // TypeRef: ResolutionScope,Name,Namespace
+                case 0x02: return 4 + 2 * S() + C(2, 0x02, 0x01, 0x1B) + L(fieldCount) + L(methodDefCount); // TypeDef
                 case 0x03: return L(typeDefCount); // FieldPtr
                 case 0x04: return 2 + S() + B(); // Field
                 case 0x05: return L(methodDefCount); // MethodPtr
                 case 0x06: return 4 + 2 + 2 + S() + B() + L(paramCount); // MethodDef
-                case 0x07: return L(methodDefCount); // ParamPtr
+                case 0x07: return L(paramCount); // ParamPtr
                 case 0x08: return 2 + 2 + S(); // Param
-                case 0x09: return C(2, typeDefCount + typeRefCount + typeSpecCount) + L(fieldCount); // InterfaceImpl
-                case 0x0A: return C(3, typeDefCount + typeRefCount + moduleRefCount + methodDefCount + typeSpecCount) + S() + B(); // MemberRef
-                case 0x0B: return 2 + 2 + C(2, fieldCount + paramCount + propertyCount + eventCount) + B(); // Constant
-                case 0x0C: return C(5, methodDefCount + fieldCount + typeRefCount + typeDefCount + paramCount + interfaceImplCount + memberRefCount + 1 + 1 + propertyCount + eventCount + typeSpecCount + 1 + genericParamCount + methodSpecCount) + C(3, methodDefCount + memberRefCount) + B(); // CustomAttribute
-                case 0x0D: return C(2, fieldCount + paramCount + propertyCount + eventCount) + B(); // FieldMarshal
-                case 0x0E: return 2 + C(2, typeDefCount + typeRefCount + moduleRefCount + 1) + B(); // DeclSecurity
+                case 0x09: return L(typeDefCount) + C(2, 0x02, 0x01, 0x1B); // InterfaceImpl: Class,Interface
+                case 0x0A: return C(3, 0x02, 0x01, 0x1A, 0x06, 0x1B) + S() + B(); // MemberRef
+                case 0x0B: return 1 + 1 + C(2, 0x04, 0x08, 0x17) + B(); // Constant: Type(1)+Pad(1)+Parent+Value
+                case 0x0C: return C(5, 0x06, 0x04, 0x01, 0x02, 0x08, 0x09, 0x0A, 0x00, 0x0E, 0x17, 0x14, 0x11, 0x1A, 0x1B, 0x20, 0x23, 0x26, 0x27, 0x28, 0x2A, 0x2C, 0x2B) + C(3, 0x06, 0x0A) + B(); // CustomAttribute
+                case 0x0D: return C(1, 0x04, 0x08) + B(); // FieldMarshal（文件实证 1-bit HasFieldMarshal）
+                case 0x0E: return 2 + C(2, 0x02, 0x06, 0x20) + B(); // DeclSecurity
                 case 0x0F: return 2 + 4 + L(typeDefCount); // ClassLayout
                 case 0x10: return 4 + L(fieldCount); // FieldLayout
                 case 0x11: return B(); // StandAloneSig
                 case 0x12: return L(typeDefCount) + L(eventCount); // EventMap
-                case 0x13: return L(typeDefCount); // EventPtr
-                case 0x14: return 2 + S() + C(2, typeDefCount + typeRefCount + typeSpecCount); // Event
+                case 0x13: return L(eventCount); // EventPtr
+                case 0x14: return 2 + S() + C(2, 0x02, 0x01, 0x1B); // Event
                 case 0x15: return L(typeDefCount) + L(propertyCount); // PropertyMap
-                case 0x16: return L(typeDefCount); // PropertyPtr
+                case 0x16: return L(propertyCount); // PropertyPtr
                 case 0x17: return 2 + S() + B(); // Property
-                case 0x18: return 2 + L(methodDefCount) + C(2, methodDefCount + memberRefCount); // MethodSemantics
-                case 0x19: return C(2, typeDefCount + typeRefCount + typeSpecCount) + C(2, methodDefCount + memberRefCount); // MethodImpl
+                case 0x18: return 2 + L(methodDefCount) + C(1, 0x14, 0x17); // MethodSemantics: Semantics,Method(plain),Association
+                case 0x19: return L(typeDefCount) + C(1, 0x06, 0x0A) + C(1, 0x06, 0x0A); // MethodImpl: Class(TypeDef),MethodBody,MethodDeclaration(MethodDefOrRef)
                 case 0x1A: return S(); // ModuleRef
                 case 0x1B: return B(); // TypeSpec
-                case 0x1C: return 2 + C(2, fieldCount + memberRefCount) + S() + C(2, moduleRefCount + 1 + typeRefCount); // ImplMap
+                case 0x1C: return 2 + C(1, 0x04, 0x06) + S() + L(moduleRefCount); // ImplMap
                 case 0x1D: return 4 + L(fieldCount); // FieldRva
                 case 0x1E: return 4 + 4; // ENCLog
                 case 0x1F: return 4; // ENCMap
@@ -385,12 +415,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x24: return 4 + L(assemblyRefCount); // AssemblyRefProcessor
                 case 0x25: return 4 + 4 + 4 + L(assemblyRefCount); // AssemblyRefOS
                 case 0x26: return 4 + S() + B(); // File
-                case 0x27: return 4 + 4 + S() + S() + C(2, fileCount + 1 + exportedTypeCount); // ExportedType
-                case 0x28: return 4 + 4 + S() + C(2, fileCount + 1 + exportedTypeCount + manifestResourceCount); // ManifestResource
-                case 0x29: return C(2, typeDefCount + typeRefCount + typeSpecCount) + L(typeDefCount); // NestedClass
-                case 0x2A: return 2 + 2 + C(2, typeDefCount + methodDefCount) + S(); // GenericParam
-                case 0x2B: return C(2, methodDefCount + memberRefCount) + B(); // MethodSpec
-                case 0x2C: return C(2, genericParamCount) + C(2, typeDefCount + typeRefCount + typeSpecCount); // GenericParamConstraint
+                case 0x27: return 4 + 4 + S() + S() + C(2, 0x26, 0x23, 0x27); // ExportedType
+                case 0x28: return 4 + 4 + S() + C(2, 0x26, 0x23, 0x27); // ManifestResource
+                case 0x29: return L(typeDefCount) + L(typeDefCount); // NestedClass
+                case 0x2A: return 2 + 2 + C(1, 0x02, 0x06) + S(); // GenericParam
+                case 0x2B: return C(1, 0x06, 0x0A) + B(); // MethodSpec
+                case 0x2C: return C(2, 0x2A) + C(2, 0x02, 0x01, 0x1B); // GenericParamConstraint
                 default: return 2;
             }
         }
@@ -526,6 +556,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     {
                         continue; // 不支持的签名跳过该重载
                     }
+
                     if (Matches(signature, parameterTypeNames))
                     {
                         return signature;
@@ -559,6 +590,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             var pos = 0;
             var header = blob[pos++];
+            var isStatic = (header & 0x20) == 0;
             var (paramCount, size) = ReadCompressedInteger(blob, pos);
             pos += size;
             var returnType = ParseType(blob, ref pos);
@@ -568,7 +600,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 parameters.Add(ParseType(blob, ref pos));
             }
 
-            return new ResolvedMethodSignature(returnType, parameters);
+            return new ResolvedMethodSignature(returnType, parameters, isStatic);
         }
 
         private IlType ParseType(byte[] blob, ref int pos)
@@ -666,13 +698,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
     internal sealed class ResolvedMethodSignature
     {
-        public ResolvedMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        public ResolvedMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)
         {
             ReturnType = returnType;
             ParameterTypes = parameterTypes;
+            IsStatic = isStatic;
         }
 
         public IlType ReturnType { get; }
         public IReadOnlyList<IlType> ParameterTypes { get; }
+        public bool IsStatic { get; }
     }
 }

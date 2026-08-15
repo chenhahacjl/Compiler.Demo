@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Cocoa.CodeAnalysis.Emit.IL
 {
-    /// <summary>鎴戜滑鑷繁鐨勭被鍨嬪畾涔夛紙TypeDef 琛ㄨ锛夈€傚綋鍓嶄粎 Program 涓€涓€?/summary>
+    /// <summary>我们自己的类型定义（TypeDef 表行）。当前仅 Program 一个。</summary>
     internal sealed class IlTypeDef
     {
         public IlTypeDef(string name, IlTypeRef? baseTypeRef)
@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlTypeRef? BaseTypeRef { get; }
     }
 
-    /// <summary>鎴戜滑鑷繁鐨勬柟娉曞畾涔夛紙MethodDef 琛ㄨ + 鏂规硶浣擄級銆?/summary>
+    /// <summary>我们自己的方法定义（MethodDef 表行 + 方法体）。</summary>
     internal sealed class IlMethodDef
     {
         public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body)
@@ -37,8 +37,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     }
 
     /// <summary>
-    /// ECMA-335 鍏冩暟鎹啓鍏ュ櫒锛堟渶灏忓瓙闆嗭級锛歁odule/TypeRef/TypeDef/MethodDef/Param/MemberRef/
-    /// CustomAttribute/Assembly/AssemblyRef/StandAloneSig 琛?+ #Strings/#US/#GUID/#Blob 鍫嗐€?    /// 甯冨眬缁嗚妭瀵圭収 Roslyn MetadataWriter / System.Reflection.Metadata.Ecma335.MetadataBuilder銆?    /// </summary>
+    /// ECMA-335 元数据写入器（最小子集）：Module/TypeRef/TypeDef/MethodDef/Param/MemberRef/
+    /// CustomAttribute/Assembly/AssemblyRef/StandAloneSig 表 + #Strings/#US/#GUID/#Blob 堆。布局细节对照 Roslyn MetadataWriter / System.Reflection.Metadata.Ecma335.MetadataBuilder。
+    /// </summary>
     internal sealed class MetadataBuilder
     {
         private const string RuntimeVersion = "v4.0.30319";
@@ -66,7 +67,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly List<byte> _usHeap = new List<byte>();
         private readonly List<byte> _blobHeap = new List<byte>();
 
-        // token 琛ㄥ彿
+        // token 表号
         private const uint TypeRefTable = 0x01;
         private const uint TypeDefTable = 0x02;
         private const uint MethodDefTable = 0x06;
@@ -87,7 +88,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         // ------------------------------------------------------------------
-        // 寮曠敤瀹氫箟锛堝幓閲嶏級
+        // 引用定义（去重）
         // ------------------------------------------------------------------
 
         public IlAssemblyRef DefineAssemblyRef(string name, Version version, byte[] publicKeyOrToken, string? culture, uint flags)
@@ -114,9 +115,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return reference;
         }
 
-        public IlMethodRef DefineMethodRef(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        public IlMethodRef DefineMethodRef(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
         {
-            var reference = new IlMethodRef(declaringType, name, returnType, parameterTypes);
+            var reference = new IlMethodRef(declaringType, name, returnType, parameterTypes, isStatic);
             if (!_memberRefIndex.ContainsKey(reference))
             {
                 _memberRefIndex.Add(reference, _memberRefs.Count + 1);
@@ -151,7 +152,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return token;
         }
 
-        /// <summary>娉ㄥ唽 StandAloneSig锛堝眬閮ㄥ彉閲忕鍚嶇瓑锛夊苟杩斿洖寮曠敤锛坱oken 缁?<see cref="BuildTokenMap"/> 瑙ｆ瀽锛夈€?/summary>
+        /// <summary>注册 StandAloneSig（局部变量签名等）并返回引用（token 由 <see cref="BuildTokenMap"/> 解析）。</summary>
         public IlStandAloneSig AddStandAloneSig(byte[] signatureBlob)
         {
             var reference = new IlStandAloneSig(signatureBlob);
@@ -167,7 +168,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return reference;
         }
 
-        /// <summary>鏋勫缓 token 鏄犲皠锛圛lAssembler 鍥炲～鐢級锛氬紩鐢ㄥ璞?鈫?鍏冩暟鎹?token銆?/summary>
+        /// <summary>构建 token 映射（IlAssembler 回填用）：引用对象 → 元数据 token。</summary>
         public Dictionary<object, uint> BuildTokenMap()
         {
             var map = new Dictionary<object, uint>();
@@ -245,10 +246,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         // ------------------------------------------------------------------
-        // 鏂规硶瀹氫箟
+        // 方法定义
         // ------------------------------------------------------------------
 
-        /// <summary>娣诲姞鎴戜滑鑷繁鐨勬柟娉曪紙TypeDef Program 鐨勬柟娉曪級銆傝繑鍥?MethodDef token銆?/summary>
+        /// <summary>添加我们自己的方法（TypeDef Program 的方法）。返回 MethodDef token。</summary>
         public uint AddMethodDef(IlMethodDef method)
         {
             _methodDefs.Add(method);
@@ -256,13 +257,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         // ------------------------------------------------------------------
-        // 绛惧悕缂栫爜
+        // 签名编码
         // ------------------------------------------------------------------
 
-        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
         {
             using var stream = new MemoryStream();
-            stream.WriteByte(0x00); // Method(0) | Default(0) | 静态（无 HAS_THIS）
+            stream.WriteByte((byte)(isStatic ? 0x00 : 0x20)); // Method(0) | Default(0) | HAS_THIS=0x20
             WriteCompressedInteger(stream, parameterTypes.Count);
             EncodeType(stream, returnType);
             foreach (var parameterType in parameterTypes)
@@ -286,7 +287,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return stream.ToArray();
         }
 
-        /// <summary>DebuggableAttribute(bool, bool) 鍥哄畾鍙傛暟锛歱rolog + 2 涓?ELEMENT_TYPE_BOOLEAN(true)銆?/summary>
+        /// <summary>DebuggableAttribute(bool, bool) 固定参数：prolog + 2 个 ELEMENT_TYPE_BOOLEAN(true)。</summary>
         public static byte[] EncodeDebuggableAttributeBlob()
         {
             using var stream = new MemoryStream();
@@ -343,29 +344,30 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private static int CodedIndexTypeDefOrRef(IlTypeRef typeRef, Dictionary<IlTypeRef, int> typeRefIndex)
         {
-            // tag 2 浣嶏細TypeDef=0, TypeRef=1
+            // tag 2 位：TypeDef=0, TypeRef=1
             var rowId = typeRefIndex[typeRef];
             return (rowId << 2) | 1;
         }
 
         private static int CodedIndexMemberRef(IlMethodRef methodRef, Dictionary<IlMethodRef, int> memberRefIndex)
         {
-            // MemberRefParent tag 3 浣嶏細TypeRef=1
+            // MemberRefParent tag 3 位：TypeRef=1
             var rowId = memberRefIndex[methodRef];
             return (rowId << 3) | 1;
         }
 
         private static int CodedIndexTypeRef(IlTypeRef typeRef, Dictionary<IlTypeRef, int> typeRefIndex)
         {
-            // MemberRefParent tag 3 浣嶏細TypeRef=1
+            // MemberRefParent tag 3 位：TypeRef=1
             var rowId = typeRefIndex[typeRef];
             return (rowId << 3) | 1;
         }
 
         // ------------------------------------------------------------------
-        // 搴忓垪鍖?        // ------------------------------------------------------------------
+        // 序列化
+        // ------------------------------------------------------------------
 
-        /// <summary>搴忓垪鍖栫粨鏋滐細鍚勬祦瀛楄妭锛堣〃娴?瀛楃涓?US/GUID/Blob锛夛紝鐢?ManagedPEWriter 缁勮鍏冩暟鎹牴銆?/summary>
+        /// <summary>序列化结果：各流字节（表流/字符串/US/GUID/Blob），由 ManagedPEWriter 组装元数据根。</summary>
         internal sealed class MetadataBlobs
         {
             public MetadataBlobs(byte[] tables, byte[] strings, byte[] us, byte[] guid, byte[] blob)
@@ -385,12 +387,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         public byte[] MvidBytes => _mvid.ToByteArray();
+        public IReadOnlyDictionary<string, uint> UserStringTokens => _userStrings;
 
         /// <summary>
-        /// 搴忓垪鍖栬〃娴?+ 鍥涘爢銆?        /// <paramref name="methodRvas"/>锛氭瘡涓柟娉曚綋鐨?RVA锛堢敱 ManagedPEWriter 甯冨眬鍚庢彁渚涳級銆?        /// </summary>
+        /// 序列化表流 + 四堆。
+        /// </summary>
+        /// <paramref name="methodRvas"/>：每个方法体的 RVA（由 ManagedPEWriter 布局后提供）。
         public MetadataBlobs Serialize(IReadOnlyDictionary<IlMethodDef, uint> methodRvas)
         {
-            // ---- 鍏堟敹闆嗗叏閮ㄥ紩鐢紙string/blob 鍫嗗湪鍐欒〃鍓嶅～鍏咃級----
+ 
             var typeRefCount = _typeRefs.Count;
             var assemblyRefCount = _assemblyRefs.Count;
             var typeDefCount = _typeDefs.Count + 1; // + <Module>
@@ -400,7 +405,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
 
-            // 鍒楀锛堣鏁?鍫嗗ぇ灏?> 0xFFFF 鈫?4 瀛楄妭锛?
+            // 列宽（行数/堆大小 > 0xFFFF → 4 字节）
             var stringIsBig = _stringHeap.Count > 0xFFFF;
             var guidIsBig = false;
             var blobIsBig = _blobHeap.Count > 0xFFFF;
@@ -412,19 +417,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var standAloneSigIsBig = standAloneSigCount > 0xFFFF;
             var assemblyRefIsBig = assemblyRefCount > 0xFFFF;
 
-            // coded index 瀹斤紙tag 浣嶅悗浣欓噺 < 16 鈫?4 瀛楄妭锛?
+            // coded index 宽（tag 位后余量 < 16 → 4 字节）
             var resolutionScopeIsBig = typeRefCount + assemblyRefCount + 1 > (1 << 14);
             var typeDefOrRefIsBig = typeDefCount + typeRefCount > (1 << 14);
             var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount > (1 << 13);
-            var hasCustomAttributeIsBig = false;
-            var customAttributeTypeIsBig = memberRefCount > (1 << 13);
+            var hasCustomAttributeIsBig = new[] { typeRefCount, typeDefCount, methodDefCount, paramCount, memberRefCount, standAloneSigCount, 1, assemblyRefCount }.Max() > (1 << 11);
+            var customAttributeTypeIsBig = Math.Max(methodDefCount, memberRefCount) > (1 << 13);
 
             var heapSizes = (stringIsBig ? 0x01 : 0) | (guidIsBig ? 0x02 : 0) | (blobIsBig ? 0x04 : 0);
 
             using var stream = new MemoryStream();
             using var writer = new BinaryWriter(stream);
 
-            // ---- #~ 琛ㄦ祦澶?----
+            // ---- #~ 表流头 ----
             writer.Write(0u); // reserved（4 字节，ECMA-335 II.24.2.2）
             writer.Write((byte)2); // major
             writer.Write((byte)0); // minor
@@ -433,16 +438,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             var valid = 0UL;
             void SetValid(int table) => valid |= 1UL << table;
-            SetValid(0x00); // Module
-            SetValid(0x01); // TypeRef
-            SetValid(0x02); // TypeDef
-            SetValid(0x06); // MethodDef
-            SetValid(0x08); // Param
-            SetValid(0x0A); // MemberRef
-            SetValid(0x0C); // CustomAttribute
-            SetValid(0x11); // StandAloneSig
-            SetValid(0x20); // Assembly
-            SetValid(0x23); // AssemblyRef
+            SetValid(0x00); // Module（始终 1 行）
+            if (typeRefCount > 0) SetValid(0x01); // TypeRef
+            if (typeDefCount > 0) SetValid(0x02); // TypeDef
+            if (methodDefCount > 0) SetValid(0x06); // MethodDef
+            if (paramCount > 0) SetValid(0x08); // Param
+            if (memberRefCount > 0) SetValid(0x0A); // MemberRef
+            if (customAttributeCount > 0) SetValid(0x0C); // CustomAttribute
+            if (standAloneSigCount > 0) SetValid(0x11); // StandAloneSig
+            SetValid(0x20); // Assembly（始终 1 行）
+            if (assemblyRefCount > 0) SetValid(0x23); // AssemblyRef
             writer.Write(valid);
 
             var sorted = 1UL << 0x0C; // CustomAttribute
@@ -473,7 +478,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 WriteRef(methodList, methodDefIsBig);
             }
 
-            // ---- Module锛? 琛岋級----
+            // ---- Module（1 行）----
             writer.Write((ushort)0);
             WriteStringRef(_moduleName, stringIsBig);
             WriteRef(1, guidIsBig);
@@ -483,14 +488,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // ---- TypeRef ----
             foreach (var typeRef in _typeRefs)
             {
-                // ResolutionScope锛? 浣?tag锛歁odule=0, ModuleRef=1, AssemblyRef=2, TypeRef=3锛?
-            var scope = typeRef.Scope == null ? 0 : (CodedIndexAssemblyRef(typeRef.Scope) << 2) | 2;
+                // ResolutionScope（2 位 tag：Module=0, ModuleRef=1, AssemblyRef=2, TypeRef=3）
+                var scope = typeRef.Scope == null ? 0 : (CodedIndexAssemblyRef(typeRef.Scope) << 2) | 2;
                 WriteCoded(scope, resolutionScopeIsBig);
                 WriteStringRef(typeRef.Name, stringIsBig);
                 WriteStringRef(typeRef.Namespace, stringIsBig);
             }
 
-            // ---- TypeDef锛?Module> + Program ----
+            // ---- TypeDef（<Module> + Program）----
             WriteTypeDefRow(0x00000000, "<Module>", "", 0, 1, 1);
             if (_typeDefs.Count > 0)
             {
@@ -508,6 +513,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 writer.Write((ushort)0);             // ImplFlags
                 var implFlags = (ushort)0x0096;
                 writer.Write(implFlags);        // Public|Static|HideBySig|ReuseSlot
+                WriteStringRef(method.Name, stringIsBig); // Name（MethodDef 行缺 Name 曾导致后续表全部偏移 2 字节）
                 var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes));
                 WriteRef(methodSigBlob, blobIsBig);
                 WriteRef(paramRow, paramIsBig);
@@ -531,15 +537,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 WriteCoded(CodedIndexTypeRef(memberRef.DeclaringType, _typeRefIndex), memberRefParentIsBig);
                 WriteStringRef(memberRef.Name, stringIsBig);
-                WriteRef(GetOrAddBlob(EncodeMethodSignature(memberRef.ReturnType, memberRef.ParameterTypes)), blobIsBig);
+                WriteRef(GetOrAddBlob(EncodeMethodSignature(memberRef.ReturnType, memberRef.ParameterTypes, memberRef.IsStatic)), blobIsBig);
             }
 
-            // ---- CustomAttribute ----
+            // ---- CustomAttribute（行：Parent(5-bit HasCustomAttribute) + Type(3-bit CustomAttributeType) + Value#）----
             foreach (var attribute in _customAttributes)
             {
-                WriteCoded(14 << 5 | 1, hasCustomAttributeIsBig); // HasCustomAttribute: Assembly=14
-                var caType = (CodedIndexMemberRef(attribute.Constructor) << 3) | 3;
+                WriteCoded((1 << 5) | 0x0E, hasCustomAttributeIsBig); // HasCustomAttribute: Assembly 行 1, tag=0x0E
+                var caType = (_memberRefIndex[attribute.Constructor] << 3) | 3;
                 WriteCoded(caType, customAttributeTypeIsBig); // CustomAttributeType: MemberRef=3
+                WriteRef(GetOrAddBlob(attribute.FixedArguments), blobIsBig); // Value
             }
 
             // ---- StandAloneSig ----
@@ -548,7 +555,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 WriteRef(GetOrAddBlob(sig.Signature), blobIsBig);
             }
 
-            // ---- Assembly锛? 琛岋級----
+            // ---- Assembly（1 行）----
             writer.Write((uint)0x0804); // HashAlgId = SHA1
             writer.Write((ushort)1); writer.Write((ushort)0); writer.Write((ushort)0); writer.Write((ushort)0);
             writer.Write((uint)0); // Flags
@@ -556,7 +563,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteStringRef(_assemblyName, stringIsBig);
             WriteStringRef("", stringIsBig);
 
-            // ---- AssemblyRef ----
+            // ---- Assembly（1 行）----
             foreach (var assemblyRef in _assemblyRefs)
             {
                 writer.Write((ushort)assemblyRef.Version.Major);
@@ -570,7 +577,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 WriteRef(GetOrAddBlob(Array.Empty<byte>()), blobIsBig); // HashValue
             }
 
-            // 琛ㄦ祦灏惧榻?
+            // 表流尾对齐
             writer.Write((byte)0);
             while (stream.Position % 4 != 0) writer.Write((byte)0);
 
@@ -581,7 +588,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private int CodedIndexAssemblyRef(IlAssemblyRef assemblyRef) => _assemblyRefIndex[assemblyRef];
 
         // ------------------------------------------------------------------
-        // 鍘嬬缉鏁存暟
+ 
         // ------------------------------------------------------------------
 
         private static void WriteCompressedInteger(List<byte> bytes, int value)

@@ -2,7 +2,6 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
-using Mono.Options;
 using System.Collections.Immutable;
 
 namespace Cocoa.Compiler
@@ -19,23 +18,79 @@ namespace Cocoa.Compiler
             var sourcePaths = new List<string>();
             var helpRequested = false;
 
-            var options = new OptionSet
+            for (var i = 0; i < args.Length; i++)
             {
-                "usage: coc <source-paths> [options]",
-                { "r=", "The {path} of an assembly to reference", v => referencePaths.Add(v) },
-                { "o=", "The output {path} of the assembly to create", v => outputPath = v },
-                { "m=", "The {name} of the module", v => moduleName = v },
-                { "backend=", "The code generation backend: dotnet (default) or native", v => backendText = v },
-                { "target=", "The native target platform, e.g. windows-x64 (default). Only used with -backend native", v => targetText = v },
-                { "?|h|help", "Prints help", v => helpRequested = true },
-                { "<>", v => sourcePaths.Add(v) }
-            };
+                var arg = args[i];
+                string? inlineValue = null;
+                var name = arg;
+                var colon = arg.IndexOf(':');
+                if (arg.Length > 1 && arg[0] == '-' && colon > 1)
+                {
+                    name = arg.Substring(0, colon);
+                    inlineValue = arg.Substring(colon + 1);
+                }
 
-            options.Parse(args);
+                switch (name)
+                {
+                    case "-r":
+                    case "--reference":
+                        if (!TryTakeValue(args, ref i, inlineValue, out var reference))
+                        {
+                            return 1;
+                        }
+
+                        referencePaths.Add(reference);
+                        break;
+                    case "-o":
+                    case "--output":
+                        if (!TryTakeValue(args, ref i, inlineValue, out outputPath))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "-m":
+                    case "--module":
+                        if (!TryTakeValue(args, ref i, inlineValue, out moduleName))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "-backend":
+                        if (!TryTakeValue(args, ref i, inlineValue, out backendText))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "-target":
+                        if (!TryTakeValue(args, ref i, inlineValue, out targetText))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "-?":
+                    case "-h":
+                    case "--help":
+                        helpRequested = true;
+                        break;
+                    default:
+                        if (arg.Length > 0 && arg[0] == '-' && arg != "-")
+                        {
+                            Console.Error.WriteLine($"error: unknown option '{arg}'");
+                            return 1;
+                        }
+
+                        sourcePaths.Add(arg);
+                        break;
+                }
+            }
 
             if (helpRequested)
             {
-                options.WriteOptionDescriptions(Console.Out);
+                PrintHelp();
                 return 0;
             }
 
@@ -63,7 +118,7 @@ namespace Cocoa.Compiler
 
                 if (backend != CodeBackend.Native)
                 {
-                    Console.Error.WriteLine($"warning: -target is only used with -backend native and was ignored");
+                    Console.Error.WriteLine("warning: -target is only used with -backend native and was ignored");
                 }
             }
 
@@ -104,9 +159,17 @@ namespace Cocoa.Compiler
             }
 
             if (hasErrors)
+            {
                 return 1;
+            }
 
             var compilation = Compilation.Create(syntaxTrees.ToArray());
+
+            if (referencePaths.Count == 0)
+            {
+                referencePaths.Add(typeof(object).Assembly.Location);
+                referencePaths.Add(typeof(System.Console).Assembly.Location);
+            }
 
             ImmutableArray<Diagnostic> diagnostics;
             try
@@ -133,6 +196,26 @@ namespace Cocoa.Compiler
             return 0;
         }
 
+        private static bool TryTakeValue(string[] args, ref int index, string? inlineValue, out string value)
+        {
+            if (inlineValue != null)
+            {
+                value = inlineValue;
+                return true;
+            }
+
+            if (index + 1 >= args.Length)
+            {
+                Console.Error.WriteLine($"error: option '{args[index]}' requires a value");
+                value = "";
+                return false;
+            }
+
+            index++;
+            value = args[index];
+            return true;
+        }
+
         private static CodeBackend? ParseBackend(string? text)
         {
             return text switch
@@ -142,6 +225,19 @@ namespace Cocoa.Compiler
                 "native" => CodeBackend.Native,
                 _ => null
             };
+        }
+
+        private static void PrintHelp()
+        {
+            Console.WriteLine("usage: coc <source-paths> [options]");
+            Console.WriteLine();
+            Console.WriteLine("options:");
+            Console.WriteLine("  -r <path>        The path of an assembly to reference");
+            Console.WriteLine("  -o <path>        The output path of the assembly to create");
+            Console.WriteLine("  -m <name>        The name of the module");
+            Console.WriteLine("  -backend <name>  The code generation backend: dotnet (default) or native");
+            Console.WriteLine("  -target <name>   The native target platform, e.g. windows-x64 (default). Only used with -backend native");
+            Console.WriteLine("  -?, -h, --help   Prints help");
         }
     }
 }

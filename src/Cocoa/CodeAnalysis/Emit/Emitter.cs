@@ -1,185 +1,69 @@
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
-using Cocoa.CodeAnalysis.Text;
-using Mono.Cecil;
-using Mono.Cecil.Cil;
-using Mono.Cecil.Rocks;
-using System.Collections.Immutable;
-using System.Diagnostics;
-using System.Text;
 
 namespace Cocoa.CodeAnalysis.Emit
 {
+    /// <summary>
+    /// IL 路径发射器：绑定树 → 自研 IL 组件（IlAssembler/MetadataBuilder/ManagedPEWriter）。
+    /// 发射语义与原 Mono.Cecil 实现一致（表达式/语句 → IL 指令序列）。
+    /// </summary>
     internal sealed class Emitter
     {
-        private DiagnosticBag _diagnostics = new DiagnosticBag();
+        private readonly MetadataBuilder _metadata;
+        private readonly MetadataReader _reader;
+        private readonly string _moduleName;
+        private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
+        private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
+        private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
 
-        private readonly AssemblyDefinition _assemblyDefinition;
-        private readonly Dictionary<TypeSymbol, TypeReference> _knownTypes;
-        private readonly Dictionary<FunctionSymbol, MethodDefinition> _methods = new Dictionary<FunctionSymbol, MethodDefinition>();
-        private readonly Dictionary<VariableSymbol, VariableDefinition> _locals = new Dictionary<VariableSymbol, VariableDefinition>();
-        private readonly Dictionary<BoundLabel, int> _labels = new Dictionary<BoundLabel, int>();
-        private readonly List<(int InstructionIndex, BoundLabel Target)> _fixups = new List<(int InstructionIndex, BoundLabel Target)>();
+        private readonly IlTypeRef _objectType;
+        private readonly IlTypeRef _stringType;
+        private readonly IlTypeDef _typeDefinition;
 
-        private TypeDefinition _typeDefinition;
+        private readonly IlMethodRef _objectEqualsReference;
+        private readonly IlMethodRef _consoleReadLineReference;
+        private readonly IlMethodRef _consoleWriteLineReference;
+        private readonly IlMethodRef _stringConcat2Reference;
+        private readonly IlMethodRef _stringConcat3Reference;
+        private readonly IlMethodRef _stringConcat4Reference;
+        private readonly IlMethodRef _stringConcatArrayReference;
+        private readonly IlMethodRef _convertToBooleanReference;
+        private readonly IlMethodRef _convertToInt32Reference;
+        private readonly IlMethodRef _convertToStringReference;
+        private readonly IlMethodRef _randomGetSharedReference;
+        private readonly IlMethodRef _randomNextReference;
+        private readonly IlMethodRef _debuggableAttributeCtorReference;
 
-        private Dictionary<SourceText, Document> _documents = new Dictionary<SourceText, Document>();
-
-        private readonly MethodReference _objectEqualsReference;
-        private readonly MethodReference _consoleReadLineReference;
-        private readonly MethodReference _consoleWriteLineReference;
-        private readonly MethodReference _stringConcat2Reference;
-        private readonly MethodReference _stringConcat3Reference;
-        private readonly MethodReference _stringConcat4Reference;
-        private readonly MethodReference _stringConcatArrayReference;
-        private readonly MethodReference _convertToBooleanReference;
-        private readonly MethodReference _convertToInt32Reference;
-        private readonly MethodReference _convertToStringReference;
-        private readonly MethodReference _randomGetSharedReference;
-        private readonly MethodReference _randomNextReference;
-        private readonly MethodReference _debuggableAttributeCtorReference;
-
-        // TOOD: This constructor does too much. Resolution should be factored out.
         private Emitter(string moduleName, string[] references)
         {
-            var assemblies = new List<AssemblyDefinition>();
+            _moduleName = moduleName;
+            _metadata = new MetadataBuilder(moduleName, moduleName);
+            _reader = new MetadataReader(references);
 
-            foreach (var reference in references)
-            {
-                try
-                {
-                    var assembly = AssemblyDefinition.ReadAssembly(reference);
+            _objectType = RequireType("System.Object");
+            _stringType = RequireType("System.String");
 
-                    assemblies.Add(assembly);
-                }
-                catch (BadImageFormatException)
-                {
-                    _diagnostics.ReportInvalidReference(reference);
-                }
-            }
+            _objectEqualsReference = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
+            _consoleReadLineReference = RequireMethod("System.Console", "ReadLine", System.Array.Empty<string>());
+            _consoleWriteLineReference = RequireMethod("System.Console", "WriteLine", new[] { "System.Object" });
+            _stringConcat2Reference = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String" });
+            _stringConcat3Reference = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String" });
+            _stringConcat4Reference = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String", "System.String" });
+            _stringConcatArrayReference = RequireMethod("System.String", "Concat", new[] { "System.String[]" });
+            _convertToBooleanReference = RequireMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
+            _convertToInt32Reference = RequireMethod("System.Convert", "ToInt32", new[] { "System.Object" });
+            _convertToStringReference = RequireMethod("System.Convert", "ToString", new[] { "System.Object" });
+            _randomGetSharedReference = RequireMethod("System.Random", "get_Shared", System.Array.Empty<string>());
+            _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
+            _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
 
-            var builtinTypes = new List<(TypeSymbol Type, string MetadataName)>
-            {
-                (TypeSymbol.Any, "System.Object"),
-                (TypeSymbol.Boolean, "System.Boolean"),
-                (TypeSymbol.Int32, "System.Int32"),
-                (TypeSymbol.String, "System.String"),
-                (TypeSymbol.Void, "System.Void"),
-            };
-
-            var assemblyName = new AssemblyNameDefinition(moduleName, new Version("1.0"));
-            _assemblyDefinition = AssemblyDefinition.CreateAssembly(assemblyName, moduleName, ModuleKind.Console);
-            _knownTypes = new Dictionary<TypeSymbol, TypeReference>();
-
-            foreach (var (typeSymbol, metadataName) in builtinTypes)
-            {
-                var typeReference = ResolveType(typeSymbol.Name, metadataName);
-
-                _knownTypes.Add(typeSymbol, typeReference);
-            }
-
-            TypeReference ResolveType(string cocoaName, string metadataName)
-            {
-                var foundTypes = assemblies.SelectMany(a => a.Modules)
-                                           .SelectMany(m => m.Types)
-                                           .Where(t => t.FullName == metadataName)
-                                           .ToArray();
-
-                if (foundTypes.Length == 1)
-                {
-                    var typeReference = _assemblyDefinition.MainModule.ImportReference(foundTypes[0]);
-
-                    return typeReference;
-                }
-                else if (foundTypes.Length == 0)
-                {
-                    _diagnostics.ReportRequiredTypeNotFound(cocoaName, metadataName);
-                }
-                else
-                {
-                    _diagnostics.ReportRequiredTypeAmbiguous(cocoaName, metadataName, foundTypes);
-                }
-
-                return null!;
-            }
-
-            MethodReference ResolveMethod(string typeName, string methodName, string[] parameterTypeNames)
-            {
-                var foundTypes = assemblies.SelectMany(a => a.Modules)
-                                           .SelectMany(m => m.Types)
-                                           .Where(t => t.FullName == typeName)
-                                           .ToArray();
-
-                if (foundTypes.Length == 1)
-                {
-                    var foundType = foundTypes[0];
-                    var methods = foundType.Methods.Where(m => m.Name == methodName);
-
-                    foreach (var method in methods)
-                    {
-                        if (method.Parameters.Count != parameterTypeNames.Length)
-                        {
-                            continue;
-                        }
-
-                        var allParametersMatch = true;
-
-                        for (var i = 0; i < parameterTypeNames.Length; i++)
-                        {
-                            if (method.Parameters[i].ParameterType.FullName != parameterTypeNames[i])
-                            {
-                                allParametersMatch = false;
-                                break;
-                            }
-                        }
-
-                        if (!allParametersMatch)
-                        {
-                            continue;
-                        }
-
-                        return _assemblyDefinition.MainModule.ImportReference(method);
-                    }
-
-                    _diagnostics.ReportRequiredMethodNotFound(typeName, methodName, parameterTypeNames);
-                }
-                else if (foundTypes.Length == 0)
-                {
-                    _diagnostics.ReportRequiredTypeNotFound(null, typeName);
-                }
-                else
-                {
-                    _diagnostics.ReportRequiredTypeAmbiguous(null, typeName, foundTypes);
-                }
-
-                return null!;
-            }
-
-            _objectEqualsReference = ResolveMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
-            _consoleReadLineReference = ResolveMethod("System.Console", "ReadLine", Array.Empty<string>());
-            _consoleWriteLineReference = ResolveMethod("System.Console", "WriteLine", new[] { "System.Object" });
-            _stringConcat2Reference = ResolveMethod("System.String", "Concat", new[] { "System.String", "System.String" });
-            _stringConcat3Reference = ResolveMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String" });
-            _stringConcat4Reference = ResolveMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String", "System.String" });
-            _stringConcatArrayReference = ResolveMethod("System.String", "Concat", new[] { "System.String[]" }); _convertToBooleanReference = ResolveMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
-            _convertToInt32Reference = ResolveMethod("System.Convert", "ToInt32", new[] { "System.Object" });
-            _convertToStringReference = ResolveMethod("System.Convert", "ToString", new[] { "System.Object" });
-            _randomGetSharedReference = ResolveMethod("System.Random", "get_Shared", Array.Empty<string>());
-            _randomNextReference = ResolveMethod("System.Random", "Next", new[] { "System.Int32" });
-            _debuggableAttributeCtorReference = ResolveMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
-
-            var objectType = _knownTypes[TypeSymbol.Any];
-
-            if (objectType != null)
-            {
-                _typeDefinition = new TypeDefinition("", "Program", TypeAttributes.Abstract | TypeAttributes.Sealed, objectType);
-                _assemblyDefinition.MainModule.Types.Add(_typeDefinition);
-            }
-            else
-            {
-                _typeDefinition = null!;
-            }
+            _typeDefinition = new IlTypeDef("Program", _objectType);
+            _metadata.AddTypeDef(_typeDefinition);
         }
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
@@ -196,323 +80,387 @@ namespace Cocoa.CodeAnalysis.Emit
 
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
         {
-            if (_diagnostics.Any())
-            {
-                return _diagnostics.ToImmutableArray();
-            }
-
             foreach (var functionWithBody in program.Functions)
             {
                 EmitFunctionDeclaration(functionWithBody.Key);
             }
 
+            var bodies = new List<ManagedPEWriter.MethodBodyBlob>();
+            var methods = new List<IlMethodDef>();
+
             foreach (var functionWithBody in program.Functions)
             {
-                EmitFunctionBody(functionWithBody.Key, functionWithBody.Value);
+                var method = _methods[functionWithBody.Key];
+                methods.Add(method);
+                var (code, localSigToken, maxStack) = EmitFunctionBody(method, functionWithBody.Value);
+                bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack));
             }
 
-            if (program.MainFunction != null)
-            {
-                _assemblyDefinition.EntryPoint = _methods[program.MainFunction];
-            }
+            _metadata.AddCustomAttribute(new IlCustomAttribute(_debuggableAttributeCtorReference, MetadataBuilder.EncodeDebuggableAttributeBlob()));
 
-            // TODO: We should not emit this attribute unless we produce a debug build
-            var debuggableAttribute = new CustomAttribute(_debuggableAttributeCtorReference);
+            var entryPointToken = program.MainFunction == null ? 0 : _metadata.BuildTokenMap()[_methods[program.MainFunction]];
+            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken);
 
-            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], true));
-            debuggableAttribute.ConstructorArguments.Add(new CustomAttributeArgument(_knownTypes[TypeSymbol.Boolean], true));
+            File.WriteAllBytes(outputPath, pe);
+            WriteRuntimeConfig(outputPath);
 
-            _assemblyDefinition.CustomAttributes.Add(debuggableAttribute);
+            return ImmutableArray<Diagnostic>.Empty;
+        }
 
-            // TODO: We should not be computing paths in here.
-            var symbolsPath = Path.ChangeExtension(outputPath, "pdb");
-
-            // TODO: We should support not emitting symbols
-            using var outputStream = File.Create(outputPath);
-            using var symbolsStream = File.Create(symbolsPath);
-
-            var writerParameters = new WriterParameters
-            {
-                WriteSymbols = true,
-                SymbolStream = symbolsStream,
-                SymbolWriterProvider = new PortablePdbWriterProvider(),
-            };
-
-            _assemblyDefinition.Write(outputStream, writerParameters);
-
-            return _diagnostics.ToImmutableArray();
+        /// <summary>framework-dependent 运行所需的 runtimeconfig.json。</summary>
+        private static void WriteRuntimeConfig(string outputPath)
+        {
+            var runtimeConfigPath = Path.ChangeExtension(outputPath, ".runtimeconfig.json");
+            var json =
+                "{\n" +
+                "  \"runtimeOptions\": {\n" +
+                "    \"tfm\": \"net9.0\",\n" +
+                "    \"framework\": {\n" +
+                "      \"name\": \"Microsoft.NETCore.App\",\n" +
+                "      \"version\": \"9.0.0\"\n" +
+                "    }\n" +
+                "  }\n" +
+                "}\n";
+            File.WriteAllText(runtimeConfigPath, json);
         }
 
         private void EmitFunctionDeclaration(FunctionSymbol function)
         {
-            var type = _knownTypes[function.ReturnType];
-            var method = new MethodDefinition(function.Name, MethodAttributes.Static | MethodAttributes.Private, type);
-
+            var returnType = ToIlType(function.ReturnType);
+            var parameterTypes = new List<IlType>();
             foreach (var parameter in function.Parameters)
             {
-                var parameterType = _knownTypes[parameter.Type];
-                var parameterAttributes = ParameterAttributes.None;
-                var parameterDefinition = new ParameterDefinition(parameter.Name, parameterAttributes, parameterType);
-
-                method.Parameters.Add(parameterDefinition);
+                parameterTypes.Add(ToIlType(parameter.Type));
             }
 
+            var method = new IlMethodDef(function.Name, returnType, parameterTypes, null);
             _methods.Add(function, method);
-            _typeDefinition.Methods.Add(method);
+            _metadata.AddMethodDef(method);
         }
 
-        private void EmitFunctionBody(FunctionSymbol function, BoundBlockStatement body)
+        private (byte[] Code, uint LocalSigToken, int MaxStack) EmitFunctionBody(IlMethodDef method, BoundBlockStatement body)
         {
-            var method = _methods[function];
-
             _locals.Clear();
-            _labels.Clear();
-            _fixups.Clear();
+            _labelTargets.Clear();
 
-            var ilProcessor = method.Body.GetILProcessor();
+            var assembler = new IlAssembler();
+
+            // 预收集局部变量（按声明顺序分配索引）
+            var localTypes = new List<IlType>();
+            CollectLocals(body, localTypes);
+
+            // 预收集 label 占位（前向引用需要目标指令对象）
+            CollectLabels(body);
 
             foreach (var statement in body.Statements)
             {
-                EmitStatement(ilProcessor, statement);
+                EmitStatement(assembler, statement);
             }
 
-            foreach (var fixup in _fixups)
-            {
-                var targetLabel = fixup.Target;
-                var targetInstructionIndex = _labels[targetLabel];
-                var targetInstruction = ilProcessor.Body.Instructions[targetInstructionIndex];
-                var instructionToFix = ilProcessor.Body.Instructions[fixup.InstructionIndex];
+            var code = assembler.Assemble();
+            var maxStack = assembler.ComputeMaxStack(assembler.Instructions);
 
-                instructionToFix.Operand = targetInstruction;
+            // 注册 #US 字符串（Ldstr fixup 回填前）
+            foreach (var value in assembler.StringFixupValues)
+            {
+                _metadata.GetOrAddUserString(value);
             }
 
-            method.Body.OptimizeMacros();
+            // 先注册 StandAloneSig（局部变量签名），再构建 token 映射回填
+            uint localSigToken = 0;
+            var sigReference = localTypes.Count > 0
+                ? _metadata.AddStandAloneSig(_metadata.EncodeLocalVarSignature(localTypes))
+                : null;
 
-            // TODO: Only emit this when emitting symbols
+            var tokenMap = _metadata.BuildTokenMap();
+            assembler.PatchTokens(code, tokenMap);
+            assembler.PatchStrings(code, _metadata.UserStringTokens);
 
-            method.DebugInformation.Scope = new ScopeDebugInformation(method.Body.Instructions.First(), method.Body.Instructions.Last());
-
-            foreach (var local in _locals)
+            if (sigReference != null)
             {
-                var symbol = local.Key;
-                var definition = local.Value;
-                var debugInformation = new VariableDebugInformation(definition, symbol.Name);
+                localSigToken = tokenMap[sigReference];
+            }
 
-                method.DebugInformation.Scope.Variables.Add(debugInformation);
+            return (code, localSigToken, maxStack);
+        }
+
+        private void CollectLabels(BoundStatement node)
+        {
+            switch (node)
+            {
+                case BoundBlockStatement block:
+                    foreach (var statement in block.Statements)
+                    {
+                        CollectLabels(statement);
+                    }
+
+                    break;
+                case BoundLabelStatement labelStatement:
+                    _labelTargets[labelStatement.Label] = new IlInstruction(IlOpCodes.Get("Nop"), null);
+                    break;
+                case BoundSequencePointStatement sequencePoint:
+                    CollectLabels(sequencePoint.Statement);
+                    break;
             }
         }
 
-        private void EmitStatement(ILProcessor ilProcessor, BoundStatement node)
+        private void CollectLocals(BoundStatement node, List<IlType> localTypes)
+        {
+            switch (node)
+            {
+                case BoundBlockStatement block:
+                    foreach (var statement in block.Statements)
+                    {
+                        CollectLocals(statement, localTypes);
+                    }
+
+                    break;
+                case BoundVariableDeclaration variableDeclaration:
+                    _locals.Add(variableDeclaration.Variable, localTypes.Count);
+                    localTypes.Add(ToIlType(variableDeclaration.Variable.Type));
+                    break;
+                case BoundSequencePointStatement sequencePoint:
+                    CollectLocals(sequencePoint.Statement, localTypes);
+                    break;
+            }
+        }
+
+        private static IlType ToIlType(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Any)
+            {
+                return IlType.Object;
+            }
+
+            if (type == TypeSymbol.Boolean)
+            {
+                return IlType.Boolean;
+            }
+
+            if (type == TypeSymbol.Int32)
+            {
+                return IlType.Int32;
+            }
+
+            if (type == TypeSymbol.String)
+            {
+                return IlType.String;
+            }
+
+            if (type == TypeSymbol.Void)
+            {
+                return IlType.Void;
+            }
+
+            throw new System.Exception($"Unexpected type {type}");
+        }
+
+        private IlTypeRef RequireType(string fullName)
+        {
+            return _reader.FindType(fullName, _metadata) ?? throw new System.Exception($"Type '{fullName}' not found in references.");
+        }
+
+        private IlMethodRef RequireMethod(string typeFullName, string methodName, string[] parameterTypeNames)
+        {
+            var resolved = _reader.FindMethod(typeFullName, methodName, parameterTypeNames, _metadata);
+            if (resolved == null)
+            {
+                throw new System.Exception($"Method '{typeFullName}.{methodName}' not found in references.");
+            }
+
+            var returnType = ResolveClassType(resolved.ReturnType);
+            var parameterTypes = new List<IlType>(resolved.ParameterTypes.Count);
+            foreach (var parameterType in resolved.ParameterTypes)
+            {
+                parameterTypes.Add(ResolveClassType(parameterType));
+            }
+
+            return _metadata.DefineMethodRef(resolved.DeclaringType, resolved.Name, returnType, parameterTypes, resolved.IsStatic);
+        }
+
+        /// <summary>把签名中的 Class TypeRef 解析为带 scope 的注册引用（供签名编码使用）。</summary>
+        private IlType ResolveClassType(IlType type)
+        {
+            if (type.Kind == IlTypeKind.Class)
+            {
+                var resolved = _reader.FindType(type.Reference!.FullName, _metadata);
+                if (resolved != null)
+                {
+                    return IlType.Class(resolved);
+                }
+            }
+
+            return type;
+        }
+
+        // ------------------------------------------------------------------
+        // 语句
+        // ------------------------------------------------------------------
+
+        private void EmitStatement(IlAssembler il, BoundStatement node)
         {
             switch (node.Kind)
             {
                 case BoundNodeKind.NopStatement:
-                    EmitNopStatement(ilProcessor, (BoundNopStatement)node);
+                    il.Emit(IlOpCodes.Get("Nop"));
                     break;
                 case BoundNodeKind.VariableDeclaration:
-                    EmitVariableDeclaration(ilProcessor, (BoundVariableDeclaration)node);
+                    EmitVariableDeclaration(il, (BoundVariableDeclaration)node);
                     break;
                 case BoundNodeKind.LabelStatement:
-                    EmitLabelStatement(ilProcessor, (BoundLabelStatement)node);
+                    EmitLabelStatement(il, (BoundLabelStatement)node);
                     break;
                 case BoundNodeKind.GotoStatement:
-                    EmitGotoStatement(ilProcessor, (BoundGotoStatement)node);
+                    EmitGotoStatement(il, (BoundGotoStatement)node);
                     break;
                 case BoundNodeKind.ConditionalGotoStatement:
-                    EmitConditionalGotoStatement(ilProcessor, (BoundConditionalGotoStatement)node);
+                    EmitConditionalGotoStatement(il, (BoundConditionalGotoStatement)node);
                     break;
                 case BoundNodeKind.ReturnStatement:
-                    EmitReturnStatement(ilProcessor, (BoundReturnStatement)node);
+                    EmitReturnStatement(il, (BoundReturnStatement)node);
                     break;
                 case BoundNodeKind.ExpressionStatement:
-                    EmitExpressionStatement(ilProcessor, (BoundExpressionStatement)node);
+                    EmitExpressionStatement(il, (BoundExpressionStatement)node);
                     break;
                 case BoundNodeKind.SequencePointStatement:
-                    EmitSequencePointStatement(ilProcessor, (BoundSequencePointStatement)node);
+                    EmitSequencePointStatement(il, (BoundSequencePointStatement)node);
                     break;
                 default:
-                    throw new Exception($"Unexpected node kind {node.Kind}");
+                    throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
         }
 
-        private void EmitNopStatement(ILProcessor ilProcessor, BoundNopStatement node)
+        private void EmitVariableDeclaration(IlAssembler il, BoundVariableDeclaration node)
         {
-            ilProcessor.Emit(OpCodes.Nop);
+            EmitExpression(il, node.Initializer);
+            il.Emit(IlOpCodes.Get("Stloc"), (ushort)_locals[node.Variable]);
         }
 
-        private void EmitVariableDeclaration(ILProcessor ilProcessor, BoundVariableDeclaration node)
+        private void EmitLabelStatement(IlAssembler il, BoundLabelStatement node)
         {
-            var typeReference = _knownTypes[node.Variable.Type];
-            var variableDefinition = new VariableDefinition(typeReference);
-
-            _locals.Add(node.Variable, variableDefinition);
-            ilProcessor.Body.Variables.Add(variableDefinition);
-
-            EmitExpression(ilProcessor, node.Initializer);
-
-            ilProcessor.Emit(OpCodes.Stloc, variableDefinition);
+            // 占位 Nop（CollectLabels 预建）：分支目标引用此指令，编码时自动重定位
+            il.Emit(_labelTargets[node.Label]);
         }
 
-        private void EmitLabelStatement(ILProcessor ilProcessor, BoundLabelStatement node)
+        private void EmitGotoStatement(IlAssembler il, BoundGotoStatement node)
         {
-            _labels.Add(node.Label, ilProcessor.Body.Instructions.Count);
+            il.Emit(IlOpCodes.Get("Br"), _labelTargets[node.Label]);
         }
 
-        private void EmitGotoStatement(ILProcessor ilProcessor, BoundGotoStatement node)
+        private void EmitConditionalGotoStatement(IlAssembler il, BoundConditionalGotoStatement node)
         {
-            _fixups.Add((ilProcessor.Body.Instructions.Count, node.Label));
-
-            ilProcessor.Emit(OpCodes.Br, Instruction.Create(OpCodes.Nop));
+            EmitExpression(il, node.Condition);
+            var opCode = node.JumpIfTrue ? "Brtrue" : "Brfalse";
+            il.Emit(IlOpCodes.Get(opCode), _labelTargets[node.Label]);
         }
 
-        private void EmitConditionalGotoStatement(ILProcessor ilProcessor, BoundConditionalGotoStatement node)
-        {
-            EmitExpression(ilProcessor, node.Condition);
-
-            _fixups.Add((ilProcessor.Body.Instructions.Count, node.Label));
-
-            var opCode = node.JumpIfTrue ? OpCodes.Brtrue : OpCodes.Brfalse;
-
-            ilProcessor.Emit(opCode, Instruction.Create(OpCodes.Nop));
-        }
-
-        private void EmitReturnStatement(ILProcessor ilProcessor, BoundReturnStatement node)
+        private void EmitReturnStatement(IlAssembler il, BoundReturnStatement node)
         {
             if (node.Expression != null)
             {
-                EmitExpression(ilProcessor, node.Expression);
+                EmitExpression(il, node.Expression);
             }
 
-            ilProcessor.Emit(OpCodes.Ret);
+            il.Emit(IlOpCodes.Get("Ret"));
         }
 
-        private void EmitExpressionStatement(ILProcessor ilProcessor, BoundExpressionStatement node)
+        private void EmitExpressionStatement(IlAssembler il, BoundExpressionStatement node)
         {
-            EmitExpression(ilProcessor, node.Expression);
+            EmitExpression(il, node.Expression);
 
             if (node.Expression.Type != TypeSymbol.Void)
             {
-                ilProcessor.Emit(OpCodes.Pop);
+                il.Emit(IlOpCodes.Get("Pop"));
             }
         }
 
-        private void EmitSequencePointStatement(ILProcessor ilProcessor, BoundSequencePointStatement node)
+        private void EmitSequencePointStatement(IlAssembler il, BoundSequencePointStatement node)
         {
-            int index = ilProcessor.Body.Instructions.Count;
-
-            EmitStatement(ilProcessor, node.Statement);
-
-            var instruction = ilProcessor.Body.Instructions[index];
-
-            if (!_documents.TryGetValue(node.Location.Text, out var document))
-            {
-                var fullPath = Path.GetFullPath(node.Location.Text.FileName);
-
-                document = new Document(fullPath);
-
-                _documents.Add(node.Location.Text, document);
-            }
-
-            var sequencePoint = new SequencePoint(instruction, document)
-            {
-                StartLine = node.Location.StartLine + 1,
-                StartColumn = node.Location.StartCharacter + 1,
-                EndLine = node.Location.EndLine + 1,
-                EndColumn = node.Location.EndCharacter + 1,
-            };
-
-            ilProcessor.Body.Method.DebugInformation.SequencePoints.Add(sequencePoint);
+            EmitStatement(il, node.Statement);
         }
 
-        private void EmitExpression(ILProcessor ilProcessor, BoundExpression node)
+        // ------------------------------------------------------------------
+        // 表达式
+        // ------------------------------------------------------------------
+
+        private void EmitExpression(IlAssembler il, BoundExpression node)
         {
             if (node.ConstantValue != null)
             {
-                EmitConstantExpression(ilProcessor, node);
+                EmitConstantExpression(il, node);
                 return;
             }
 
             switch (node.Kind)
             {
                 case BoundNodeKind.VariableExpression:
-                    EmitVariableExpression(ilProcessor, (BoundVariableExpression)node);
+                    EmitVariableExpression(il, (BoundVariableExpression)node);
                     break;
                 case BoundNodeKind.AssignmentExpression:
-                    EmitAssignmentExpression(ilProcessor, (BoundAssignmentExpression)node);
+                    EmitAssignmentExpression(il, (BoundAssignmentExpression)node);
                     break;
                 case BoundNodeKind.UnaryExpression:
-                    EmitUnaryExpression(ilProcessor, (BoundUnaryExpression)node);
+                    EmitUnaryExpression(il, (BoundUnaryExpression)node);
                     break;
                 case BoundNodeKind.BinaryExpression:
-                    EmitBinaryExpression(ilProcessor, (BoundBinaryExpression)node);
+                    EmitBinaryExpression(il, (BoundBinaryExpression)node);
                     break;
                 case BoundNodeKind.CallExpression:
-                    EmitCallExpression(ilProcessor, (BoundCallExpression)node);
+                    EmitCallExpression(il, (BoundCallExpression)node);
                     break;
                 case BoundNodeKind.ConversionExpression:
-                    EmitConversionExpression(ilProcessor, (BoundConversionExpression)node);
+                    EmitConversionExpression(il, (BoundConversionExpression)node);
                     break;
                 default:
-                    throw new Exception($"Unexpected node kind {node.Kind}");
+                    throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
         }
 
-        private void EmitConstantExpression(ILProcessor ilProcessor, BoundExpression node)
+        private void EmitConstantExpression(IlAssembler il, BoundExpression node)
         {
-            Debug.Assert(node.ConstantValue != null);
-
             if (node.Type == TypeSymbol.Boolean)
             {
                 var value = (bool)node.ConstantValue.Value;
-                var instruction = value ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0;
-
-                ilProcessor.Emit(instruction);
+                il.Emit(IlOpCodes.Get(value ? "Ldc_I4_1" : "Ldc_I4_0"));
             }
             else if (node.Type == TypeSymbol.Int32)
             {
                 var value = (int)node.ConstantValue.Value;
-
-                ilProcessor.Emit(OpCodes.Ldc_I4, value);
+                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.String)
             {
                 var value = (string)node.ConstantValue.Value;
-
-                ilProcessor.Emit(OpCodes.Ldstr, value);
+                il.Emit(IlOpCodes.Get("Ldstr"), value);
             }
             else
             {
-                throw new Exception($"Unexpected constant expression kind {node.Kind}");
+                throw new System.Exception($"Unexpected constant expression kind {node.Kind}");
             }
         }
 
-        private void EmitVariableExpression(ILProcessor ilProcessor, BoundVariableExpression node)
+        private void EmitVariableExpression(IlAssembler il, BoundVariableExpression node)
         {
             if (node.Variable is ParameterSymbol parameter)
             {
-                ilProcessor.Emit(OpCodes.Ldarg, parameter.Ordinal);
+                il.Emit(IlOpCodes.Get("Ldarg"), (ushort)parameter.Ordinal);
             }
             else
             {
-                var variableDefinition = _locals[node.Variable];
-
-                ilProcessor.Emit(OpCodes.Ldloc, variableDefinition);
+                il.Emit(IlOpCodes.Get("Ldloc"), (ushort)_locals[node.Variable]);
             }
         }
 
-        private void EmitAssignmentExpression(ILProcessor ilProcessor, BoundAssignmentExpression node)
+        private void EmitAssignmentExpression(IlAssembler il, BoundAssignmentExpression node)
         {
-            var variableDefinition = _locals[node.Variable];
-
-            EmitExpression(ilProcessor, node.Expression);
-
-            ilProcessor.Emit(OpCodes.Dup);
-            ilProcessor.Emit(OpCodes.Stloc, variableDefinition);
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodes.Get("Dup"));
+            il.Emit(IlOpCodes.Get("Stloc"), (ushort)_locals[node.Variable]);
         }
 
-        private void EmitUnaryExpression(ILProcessor ilProcessor, BoundUnaryExpression node)
+        private void EmitUnaryExpression(IlAssembler il, BoundUnaryExpression node)
         {
-            EmitExpression(ilProcessor, node.Operand);
+            EmitExpression(il, node.Operand);
 
             if (node.Op.Kind == BoundUnaryOperatorKind.Identity)
             {
@@ -520,63 +468,55 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else if (node.Op.Kind == BoundUnaryOperatorKind.LogicalNegation)
             {
-                ilProcessor.Emit(OpCodes.Ldc_I4_0);
-                ilProcessor.Emit(OpCodes.Ceq);
+                il.Emit(IlOpCodes.Get("Ldc_I4_0"));
+                il.Emit(IlOpCodes.Get("Ceq"));
             }
             else if (node.Op.Kind == BoundUnaryOperatorKind.Negation)
             {
-                ilProcessor.Emit(OpCodes.Neg);
+                il.Emit(IlOpCodes.Get("Neg"));
             }
             else if (node.Op.Kind == BoundUnaryOperatorKind.OnesComplement)
             {
-                ilProcessor.Emit(OpCodes.Not);
+                il.Emit(IlOpCodes.Get("Not"));
             }
             else
             {
-                throw new Exception($"Unexpected unary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Operand.Type})");
+                throw new System.Exception($"Unexpected unary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Operand.Type})");
             }
         }
 
-        private void EmitBinaryExpression(ILProcessor ilProcessor, BoundBinaryExpression node)
+        private void EmitBinaryExpression(IlAssembler il, BoundBinaryExpression node)
         {
-            // +(string, string)
-
             if (node.Op.Kind == BoundBinaryOperatorKind.Addition)
             {
                 if (node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
-                    EmitStringConcatExpression(ilProcessor, node);
+                    EmitStringConcatExpression(il, node);
                     return;
                 }
             }
 
-            EmitExpression(ilProcessor, node.Left);
-            EmitExpression(ilProcessor, node.Right);
-
-            // ==(any, any)
-            // ==(string, string)
+            EmitExpression(il, node.Left);
+            EmitExpression(il, node.Right);
 
             if (node.Op.Kind == BoundBinaryOperatorKind.Equals)
             {
                 if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||
                     node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
-                    ilProcessor.Emit(OpCodes.Call, _objectEqualsReference);
+                    il.Emit(IlOpCodes.Get("Call"), _objectEqualsReference);
                     return;
                 }
             }
-
-            // !=(any, any)
-            // !=(string, string)
 
             if (node.Op.Kind == BoundBinaryOperatorKind.NotEquals)
             {
                 if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||
                     node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
-                    ilProcessor.Emit(OpCodes.Call, _objectEqualsReference);
-                    ilProcessor.Emit(OpCodes.Ldc_I4_0);
-                    ilProcessor.Emit(OpCodes.Ceq);
+                    il.Emit(IlOpCodes.Get("Call"), _objectEqualsReference);
+                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodes.Get("Ceq"));
                     return;
                 }
             }
@@ -584,115 +524,102 @@ namespace Cocoa.CodeAnalysis.Emit
             switch (node.Op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    ilProcessor.Emit(OpCodes.Add);
+                    il.Emit(IlOpCodes.Get("Add"));
                     break;
                 case BoundBinaryOperatorKind.Subtraction:
-                    ilProcessor.Emit(OpCodes.Sub);
+                    il.Emit(IlOpCodes.Get("Sub"));
                     break;
                 case BoundBinaryOperatorKind.Multiplication:
-                    ilProcessor.Emit(OpCodes.Mul);
+                    il.Emit(IlOpCodes.Get("Mul"));
                     break;
                 case BoundBinaryOperatorKind.Division:
-                    ilProcessor.Emit(OpCodes.Div);
+                    il.Emit(IlOpCodes.Get("Div"));
                     break;
-                // TODO: Implement short-circuit evaluation
                 case BoundBinaryOperatorKind.LogicalAnd:
                 case BoundBinaryOperatorKind.BitwiseAnd:
-                    ilProcessor.Emit(OpCodes.And);
+                    il.Emit(IlOpCodes.Get("And"));
                     break;
-                // TODO: Implement short-circuit evaluation
                 case BoundBinaryOperatorKind.LogicalOr:
                 case BoundBinaryOperatorKind.BitwiseOr:
-                    ilProcessor.Emit(OpCodes.Or);
+                    il.Emit(IlOpCodes.Get("Or"));
                     break;
                 case BoundBinaryOperatorKind.BitwiseXor:
-                    ilProcessor.Emit(OpCodes.Xor);
+                    il.Emit(IlOpCodes.Get("Xor"));
                     break;
                 case BoundBinaryOperatorKind.Equals:
-                    ilProcessor.Emit(OpCodes.Ceq);
+                    il.Emit(IlOpCodes.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.NotEquals:
-                    ilProcessor.Emit(OpCodes.Ceq);
-                    ilProcessor.Emit(OpCodes.Ldc_I4_0);
-                    ilProcessor.Emit(OpCodes.Ceq);
+                    il.Emit(IlOpCodes.Get("Ceq"));
+                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodes.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.Less:
-                    ilProcessor.Emit(OpCodes.Clt);
+                    il.Emit(IlOpCodes.Get("Clt"));
                     break;
                 case BoundBinaryOperatorKind.LessOrEquals:
-                    ilProcessor.Emit(OpCodes.Cgt);
-                    ilProcessor.Emit(OpCodes.Ldc_I4_0);
-                    ilProcessor.Emit(OpCodes.Ceq);
+                    il.Emit(IlOpCodes.Get("Cgt"));
+                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodes.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.Greater:
-                    ilProcessor.Emit(OpCodes.Cgt);
+                    il.Emit(IlOpCodes.Get("Cgt"));
                     break;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
-                    ilProcessor.Emit(OpCodes.Clt);
-                    ilProcessor.Emit(OpCodes.Ldc_I4_0);
-                    ilProcessor.Emit(OpCodes.Ceq);
+                    il.Emit(IlOpCodes.Get("Clt"));
+                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodes.Get("Ceq"));
                     break;
                 default:
-                    throw new Exception($"Unexpected binary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Left.Type}, {node.Right.Type})");
+                    throw new System.Exception($"Unexpected binary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Left.Type}, {node.Right.Type})");
             }
         }
 
-        private void EmitStringConcatExpression(ILProcessor ilProcessor, BoundBinaryExpression node)
+        private void EmitStringConcatExpression(IlAssembler il, BoundBinaryExpression node)
         {
-            // Flatten the expression tree to a sequence of nodes to concatenate, then fold consecutive constants in that sequence.
-            // This approach enables constant folding of non-sibling nodes, which cannot be done in the ConstantFolding class as it would require changing the tree.
-            // Example: folding b and c in ((a + b) + c) if they are constant.
-
             var nodes = FoldConstants(node.Syntax, Flatten(node)).ToList();
 
             switch (nodes.Count)
             {
                 case 0:
-                    ilProcessor.Emit(OpCodes.Ldstr, string.Empty);
+                    il.Emit(IlOpCodes.Get("Ldstr"), string.Empty);
                     break;
-
                 case 1:
-                    EmitExpression(ilProcessor, nodes[0]);
+                    EmitExpression(il, nodes[0]);
                     break;
-
                 case 2:
-                    EmitExpression(ilProcessor, nodes[0]);
-                    EmitExpression(ilProcessor, nodes[1]);
-                    ilProcessor.Emit(OpCodes.Call, _stringConcat2Reference);
+                    EmitExpression(il, nodes[0]);
+                    EmitExpression(il, nodes[1]);
+                    il.Emit(IlOpCodes.Get("Call"), _stringConcat2Reference);
                     break;
-
                 case 3:
-                    EmitExpression(ilProcessor, nodes[0]);
-                    EmitExpression(ilProcessor, nodes[1]);
-                    EmitExpression(ilProcessor, nodes[2]);
-                    ilProcessor.Emit(OpCodes.Call, _stringConcat3Reference);
+                    EmitExpression(il, nodes[0]);
+                    EmitExpression(il, nodes[1]);
+                    EmitExpression(il, nodes[2]);
+                    il.Emit(IlOpCodes.Get("Call"), _stringConcat3Reference);
                     break;
-
                 case 4:
-                    EmitExpression(ilProcessor, nodes[0]);
-                    EmitExpression(ilProcessor, nodes[1]);
-                    EmitExpression(ilProcessor, nodes[2]);
-                    EmitExpression(ilProcessor, nodes[3]);
-                    ilProcessor.Emit(OpCodes.Call, _stringConcat4Reference);
+                    EmitExpression(il, nodes[0]);
+                    EmitExpression(il, nodes[1]);
+                    EmitExpression(il, nodes[2]);
+                    EmitExpression(il, nodes[3]);
+                    il.Emit(IlOpCodes.Get("Call"), _stringConcat4Reference);
                     break;
-
                 default:
-                    ilProcessor.Emit(OpCodes.Ldc_I4, nodes.Count);
-                    ilProcessor.Emit(OpCodes.Newarr, _knownTypes[TypeSymbol.String]);
-
+                    il.Emit(IlOpCodes.Get("Ldc_I4"), nodes.Count);
+                    il.Emit(IlOpCodes.Get("Newarr"), _stringType);
                     for (var i = 0; i < nodes.Count; i++)
                     {
-                        ilProcessor.Emit(OpCodes.Dup);
-                        ilProcessor.Emit(OpCodes.Ldc_I4, i);
-                        EmitExpression(ilProcessor, nodes[i]);
-                        ilProcessor.Emit(OpCodes.Stelem_Ref);
+                        il.Emit(IlOpCodes.Get("Dup"));
+                        il.Emit(IlOpCodes.Get("Ldc_I4"), i);
+                        EmitExpression(il, nodes[i]);
+                        il.Emit(IlOpCodes.Get("Stelem_Ref"));
                     }
 
-                    ilProcessor.Emit(OpCodes.Call, _stringConcatArrayReference);
+                    il.Emit(IlOpCodes.Get("Call"), _stringConcatArrayReference);
                     break;
             }
 
-            // (a + b) + (c + d) --> [a, b, c, d]
             static IEnumerable<BoundExpression> Flatten(BoundExpression node)
             {
                 if (node is BoundBinaryExpression binaryExpression &&
@@ -714,30 +641,27 @@ namespace Cocoa.CodeAnalysis.Emit
                 {
                     if (node.Type != TypeSymbol.String)
                     {
-                        throw new Exception($"Unexpected node type in string concatenation: {node.Type}");
+                        throw new System.Exception($"Unexpected node type in string concatenation: {node.Type}");
                     }
 
                     yield return node;
                 }
             }
 
-            // [a, "foo", "bar", b, ""] --> [a, "foobar", b]
             static IEnumerable<BoundExpression> FoldConstants(SyntaxNode syntax, IEnumerable<BoundExpression> nodes)
             {
-                StringBuilder? stringBuilder = null;
-
+                System.Text.StringBuilder? stringBuilder = null;
                 foreach (var node in nodes)
                 {
                     if (node.ConstantValue != null)
                     {
                         var stringValue = (string)node.ConstantValue.Value;
-
                         if (string.IsNullOrEmpty(stringValue))
                         {
                             continue;
                         }
 
-                        stringBuilder ??= new StringBuilder();
+                        stringBuilder ??= new System.Text.StringBuilder();
                         stringBuilder.Append(stringValue);
                     }
                     else
@@ -745,7 +669,6 @@ namespace Cocoa.CodeAnalysis.Emit
                         if (stringBuilder?.Length > 0)
                         {
                             yield return new BoundLiteralExpression(syntax, stringBuilder.ToString());
-
                             stringBuilder.Clear();
                         }
 
@@ -760,52 +683,51 @@ namespace Cocoa.CodeAnalysis.Emit
             }
         }
 
-        private void EmitCallExpression(ILProcessor ilProcessor, BoundCallExpression node)
+        private void EmitCallExpression(IlAssembler il, BoundCallExpression node)
         {
             if (node.Function == BuiltinFunctions.Random)
             {
-                ilProcessor.Emit(OpCodes.Call, _randomGetSharedReference);
-
+                il.Emit(IlOpCodes.Get("Call"), _randomGetSharedReference);
                 foreach (var argument in node.Arguments)
                 {
-                    EmitExpression(ilProcessor, argument);
+                    EmitExpression(il, argument);
                 }
 
-                ilProcessor.Emit(OpCodes.Callvirt, _randomNextReference);
-
+                il.Emit(IlOpCodes.Get("Callvirt"), _randomNextReference);
                 return;
             }
 
             foreach (var argument in node.Arguments)
             {
-                EmitExpression(ilProcessor, argument);
+                EmitExpression(il, argument);
             }
 
             if (node.Function == BuiltinFunctions.Print)
             {
-                ilProcessor.Emit(OpCodes.Call, _consoleWriteLineReference);
+                il.Emit(IlOpCodes.Get("Call"), _consoleWriteLineReference);
             }
             else if (node.Function == BuiltinFunctions.Input)
             {
-                ilProcessor.Emit(OpCodes.Call, _consoleReadLineReference);
+                il.Emit(IlOpCodes.Get("Call"), _consoleReadLineReference);
             }
             else
             {
                 var methodDefinition = _methods[node.Function];
-
-                ilProcessor.Emit(OpCodes.Call, methodDefinition);
+                il.Emit(IlOpCodes.Get("Call"), methodDefinition);
             }
         }
 
-        private void EmitConversionExpression(ILProcessor ilProcessor, BoundConversionExpression node)
+        private void EmitConversionExpression(IlAssembler il, BoundConversionExpression node)
         {
-            EmitExpression(ilProcessor, node.Expression);
+            EmitExpression(il, node.Expression);
 
             var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32;
-
             if (needBoxing)
             {
-                ilProcessor.Emit(OpCodes.Box, (TypeReference?)_knownTypes[node.Expression.Type]);
+                var type = node.Expression.Type == TypeSymbol.Boolean
+                    ? RequireType("System.Boolean")
+                    : RequireType("System.Int32");
+                il.Emit(IlOpCodes.Get("Box"), type);
             }
 
             if (node.Type == TypeSymbol.Any)
@@ -814,19 +736,19 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else if (node.Type == TypeSymbol.Boolean)
             {
-                ilProcessor.Emit(OpCodes.Call, _convertToBooleanReference);
+                il.Emit(IlOpCodes.Get("Call"), _convertToBooleanReference);
             }
             else if (node.Type == TypeSymbol.Int32)
             {
-                ilProcessor.Emit(OpCodes.Call, _convertToInt32Reference);
+                il.Emit(IlOpCodes.Get("Call"), _convertToInt32Reference);
             }
             else if (node.Type == TypeSymbol.String)
             {
-                ilProcessor.Emit(OpCodes.Call, _convertToStringReference);
+                il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
             }
             else
             {
-                throw new Exception($"Unexpected convertion from {node.Expression.Type} to {node.Type}");
+                throw new System.Exception($"Unexpected conversion from {node.Expression.Type} to {node.Type}");
             }
         }
     }

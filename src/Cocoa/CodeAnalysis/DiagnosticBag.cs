@@ -1,7 +1,7 @@
-using Cocoa.CodeAnalysis.Symbols;
+﻿using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
-using Mono.Cecil;
+using System.Linq;
 using System.Collections;
 
 namespace Cocoa.CodeAnalysis
@@ -216,16 +216,6 @@ namespace Cocoa.CodeAnalysis
             ReportError(default, message);
         }
 
-        public void ReportRequiredTypeAmbiguous(string? cocoaName, string metadataName, TypeDefinition[] foundTypes)
-        {
-            var assemblyNames = foundTypes.Select(t => t.Module.Assembly.Name.Name);
-            var assemblyNameList = string.Join(", ", assemblyNames);
-
-            var message = cocoaName == null
-                ? $"The required type '{metadataName}' was found in multiple references: {assemblyNameList}."
-                : $"The required type '{cocoaName}' ('{metadataName}') was found in multiple references: {assemblyNameList}.";
-            ReportError(default, message);
-        }
 
         public void ReportRequiredMethodNotFound(string typeName, string methodName, string[] parameterTypeNames)
         {

@@ -15,10 +15,12 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="System.Reflection.Metadata" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Cocoa\Cocoa.csproj" />
+    <ProjectReference Include="..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

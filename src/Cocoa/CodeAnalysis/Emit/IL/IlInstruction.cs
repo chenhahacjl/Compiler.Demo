@@ -111,26 +111,28 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>MemberRef：对另一个程序集/模块中方法的引用。</summary>
     internal sealed class IlMethodRef : IlReference
     {
-        public IlMethodRef(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes)
+        public IlMethodRef(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
         {
             DeclaringType = declaringType;
             Name = name;
             ReturnType = returnType;
             ParameterTypes = parameterTypes;
+            IsStatic = isStatic;
         }
 
         public IlTypeRef DeclaringType { get; }
         public string Name { get; }
         public IlType ReturnType { get; }
         public IReadOnlyList<IlType> ParameterTypes { get; }
+        public bool IsStatic { get; }
 
         public override bool Equals(object? obj) =>
             obj is IlMethodRef other &&
             other.DeclaringType.Equals(DeclaringType) && other.Name == Name &&
-            other.ReturnType.Kind == ReturnType.Kind &&
+            other.ReturnType.Kind == ReturnType.Kind && other.IsStatic == IsStatic &&
             System.Linq.Enumerable.SequenceEqual(other.ParameterTypes, ParameterTypes, ReferenceEqualityComparer.Instance);
 
-        public override int GetHashCode() => System.HashCode.Combine(DeclaringType, Name, ReturnType.Kind, ParameterTypes.Count);
+        public override int GetHashCode() => System.HashCode.Combine(DeclaringType, Name, ReturnType.Kind, ParameterTypes.Count, IsStatic);
     }
 
     /// <summary>自定义特性（CustomAttribute 表行）。</summary>

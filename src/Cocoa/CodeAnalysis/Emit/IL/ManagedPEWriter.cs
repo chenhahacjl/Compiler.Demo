@@ -38,17 +38,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         /// <summary>
         /// 生成托管 exe。
         /// </summary>
-        /// <param name="outputPath">输出路径。</param>
         /// <param name="moduleName">模块名（不含扩展名）。</param>
-        /// <param name="methodBodies">每个方法的编码后方法体（顺序与 MethodDef 一致）。</param>
+        /// <param name="methods">方法定义（顺序与 <paramref name="methodBodies"/> 一致）。</param>
+        /// <param name="methodBodies">每个方法的编码后方法体。</param>
         /// <param name="metadata">元数据构建器（已收集全部引用/方法）。</param>
-        /// <param name="methodRvas">方法体 RVA 回填（序列化前由本方法布局后填充）。</param>
         /// <param name="entryPointToken">入口点 MethodDef token。</param>
         public static byte[] Build(
             string moduleName,
+            IReadOnlyList<IlMethodDef> methods,
             IReadOnlyList<MethodBodyBlob> methodBodies,
             MetadataBuilder metadata,
-            IReadOnlyDictionary<IlMethodDef, uint> methodRvas,
             uint entryPointToken)
         {
             // ---- .text 布局 ----
@@ -65,13 +64,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var methodStreamRva = (uint)(TextRva + methodStreamOffset);
 
             var bodyOffsets = new List<int>();
-            var methodBodyStartOffsets = new List<int>();
-            foreach (var body in methodBodies)
+            var methodRvas = new Dictionary<IlMethodDef, uint>();
+            for (var i = 0; i < methodBodies.Count; i++)
             {
+                var body = methodBodies[i];
                 while (section.Position % 4 != 0) section.WriteByte(0);
-                methodBodyStartOffsets.Add((int)section.Position);
-                WriteFatMethodHeader(section, body);
                 bodyOffsets.Add((int)section.Position - methodStreamOffset);
+                methodRvas[methods[i]] = (uint)(methodStreamRva + section.Position - methodStreamOffset);
+                WriteFatMethodHeader(section, body);
                 section.Write(body.Code, 0, body.Code.Length);
             }
 
@@ -91,7 +91,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 ("#Blob", blobs.Blob),
             };
 
-            WriteMetadataRoot(section, streams);
+            WriteMetadataRoot(section, metadataOffset, streams);
 
             var sectionBytes = section.ToArray();
 
@@ -133,7 +133,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteInt32(section, (int)body.LocalVarSigToken);
         }
 
-        private static void WriteMetadataRoot(Stream section, (string Name, byte[] Bytes)[] streams)
+        private static void WriteMetadataRoot(Stream section, int metadataStartOffset, (string Name, byte[] Bytes)[] streams)
         {
             var versionBytes = Encoding.UTF8.GetBytes(RuntimeVersion + "\0");
             var versionLength = Align4(versionBytes.Length);
@@ -150,10 +150,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteUInt16(section, (ushort)streams.Length);
 
             // 流头：offset 相对元数据根起点（BSJB 处）。
-            // 先写流头占位，计算首个流偏移 = 根头 + 流头总大小。
-            var streamHeadersStart = (int)section.Position;
+            var headerOffsets = new List<int>();
             for (var i = 0; i < streams.Length; i++)
             {
+                headerOffsets.Add((int)section.Position);
                 WriteInt32(section, 0); // offset 占位
                 var size = Align4(streams[i].Bytes.Length);
                 WriteInt32(section, size);
@@ -163,12 +163,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             // 回填流偏移（首个流紧跟流头区）
-            var firstStreamOffset = (int)section.Position;
+            var firstStreamOffset = (int)section.Position - metadataStartOffset;
             var current = section.Position;
-            section.Position = streamHeadersStart;
             for (var i = 0; i < streams.Length; i++)
             {
-                WriteInt32(section, firstStreamOffset + (i == 0 ? 0 : StreamOffset(streams, i)));
+                section.Position = headerOffsets[i];
+                WriteInt32(section, firstStreamOffset + StreamOffset(streams, i));
             }
 
             section.Position = current;
