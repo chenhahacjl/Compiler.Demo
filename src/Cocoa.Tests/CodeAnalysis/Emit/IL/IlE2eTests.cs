@@ -119,6 +119,27 @@ function main()
         }
 
         [Fact]
+        public void Run_CocoaProgram_WithPInvoke_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+import kernel32.dll
+
+stdcall function GetTickCount(): int
+
+function main()
+{
+    var t = GetTickCount()
+    if t > 0
+    {
+        print(""up"")
+    }
+}", "e2e-pinvoke");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("up\r\n", stdout);
+        }
+
+        [Fact]
         public void Run_CocoaProgram_WithControlFlow_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

@@ -66,13 +66,82 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             Assert.Equal(0x2000u, (uint)tickDef.Attributes & 0x2000u);
             Assert.Equal(0, tickDef.RelativeVirtualAddress);
 
-            // signature calling convention: stdcall (0x02)
-            Assert.Equal(0x02, md.GetBlobBytes(tickDef.Signature)[0] & 0x0F);
+            // extern 方法需要 PreserveSig（ImplFlags），否则 JIT 桩对返回值的处理不同
+            Assert.Equal(System.Reflection.MethodImplAttributes.PreserveSig, tickDef.ImplAttributes);
+            Assert.Equal(System.Reflection.MethodImplAttributes.IL, normalDef.ImplAttributes);
+
+            // extern 方法签名必须用默认调用约定（0x00），本机约定由 ImplMap.MappingFlags 表达
+            Assert.Equal(0x00, md.GetBlobBytes(tickDef.Signature)[0] & 0x0F);
             Assert.Equal(0x00, md.GetBlobBytes(normalDef.Signature)[0] & 0x0F);
+        }
+
+        [Fact]
+        public void EmitPipeline_Produces_Valid_ImplMap_Rows()
+        {
+            var source = @"
+import kernel32.dll
+
+stdcall function GetCurrentProcessId(): int
+
+function main()
+{
+    var t = GetCurrentProcessId()
+    print(t)
+}";
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", "pinvoke-pipeline-" + Guid.NewGuid().ToString("N") + ".exe");
+            var diagnostics = compilation.Emit("test", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
+
+            Assert.Empty(diagnostics);
+
+            var root = GetMetadataRoot(File.ReadAllBytes(exePath));
+            var tables = ReadTableStream(root);
+            var strings = ReadStringsStream(root);
+
+            Assert.Equal(1, RowCount(tables, (int)TableId.ModuleRef));
+            Assert.Equal(1, RowCount(tables, (int)TableId.ImplMap));
+
+            var implMapOffset = TableOffset(tables, (int)TableId.ImplMap);
+            var impl = ReadImplMap(tables, strings, implMapOffset);
+
+            // 方法行号与 MethodDef 表一致（ImmutableDictionary 迭代顺次不保证，故由表内动态推导）
+            var methodDefRow = FindMethodRow(tables, strings, "GetCurrentProcessId");
+
+            Assert.Equal(methodDefRow, impl.MemberForwarded >> 1);
+            Assert.Equal(0x0302, impl.MappingFlags);
+            Assert.Equal("GetCurrentProcessId", impl.ImportName);
+            Assert.Equal(1, impl.ImportScope);
+
+            var moduleRefOffset = TableOffset(tables, (int)TableId.ModuleRef);
+            Assert.Equal("kernel32.dll", ReadModuleRefName(tables, strings, moduleRefOffset));
         }
 
         private static MethodDefinitionHandle FindMethodHandle(System.Reflection.Metadata.MetadataReader md, string name) =>
             md.MethodDefinitions.Single(h => md.GetString(md.GetMethodDefinition(h).Name) == name);
+
+        // 在 MethodDef 表中按名字找 1-based 行号；行 = RVA(4)+ImplFlags(2)+Flags(2)+Name(#Strings)
+        private static int FindMethodRow(byte[] tables, byte[] strings, string name)
+        {
+            var stringIsBig = (tables[4] & 0x01) != 0;
+            var rowCount = RowCount(tables, (int)TableId.MethodDef);
+            var offset = TableOffset(tables, (int)TableId.MethodDef);
+
+            for (var row = 0; row < rowCount; row++)
+            {
+                var nameOffset = stringIsBig
+                    ? BitConverter.ToInt32(tables, offset + 8)
+                    : BitConverter.ToUInt16(tables, offset + 8);
+                if (ReadStringHeap(strings, nameOffset) == name)
+                {
+                    return row + 1;
+                }
+
+                offset += 14;
+            }
+
+            throw new Exception("method not found: " + name);
+        }
 
         // ------------------------------------------------------------------
         // Raw table-stream walk: ModuleRef / ImplMap rows
@@ -154,17 +223,15 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         }
 
         [Fact]
-        public void EncodeMethodSignature_Writes_CallingConvention()
+        public void EncodeMethodSignature_Uses_Default_CallingConvention()
         {
             var builder = new MetadataBuilder("test", "test");
 
-            var stdcall = builder.EncodeMethodSignature(IlType.Int32, Array.Empty<IlType>(), isStatic: true, IlCallingConvention.StdCall);
-            var cdecl = builder.EncodeMethodSignature(IlType.Int32, Array.Empty<IlType>(), isStatic: true, IlCallingConvention.Cdecl);
-            var winapi = builder.EncodeMethodSignature(IlType.Int32, Array.Empty<IlType>(), isStatic: true, IlCallingConvention.Winapi);
+            // extern 方法的签名约定固定为默认（0x00），本机约定由 ImplMap.MappingFlags 表达
+            var signature = builder.EncodeMethodSignature(IlType.Int32, Array.Empty<IlType>(), isStatic: true);
 
-            Assert.Equal(0x02, stdcall[0]);
-            Assert.Equal(0x01, cdecl[0]);
-            Assert.Equal(0x00, winapi[0]);
+            Assert.Equal(0x00, signature[0]);
+            Assert.Equal(0x00, signature[0] & 0x0F);
         }
 
         // ------------------------------------------------------------------
@@ -205,23 +272,32 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             {
                 var count = RowCount(tables, id);
                 if (id == tableId) return cursor;
-                for (var r = 0; r < count; r++) cursor += RowSize(id);
+                for (var r = 0; r < count; r++) cursor += RowSize(id, tables[4]);
             }
 
             throw new Exception("unreachable");
         }
 
-        private static int RowSize(int tableId)
+        private static int RowSize(int tableId, byte heapSizes)
         {
+            var blobIsBig = (heapSizes & 0x04) != 0;
+            var stringIsBig = (heapSizes & 0x01) != 0;
+
             switch (tableId)
             {
                 case 0x00: return 10; // Module: Gen(2) Name(2) Mvid(2) EncId(2) EncBaseId(2)
-                case 0x01: return 6;  // TypeRef: Scope(2) Name(2) Namespace(2)
+                case 0x01: return stringIsBig ? 8 : 6;  // TypeRef: Scope(2) Name(2) Namespace(2)
                 case 0x02: return 14; // TypeDef: Flags(4) Name(2) Namespace(2) Extends(2) FieldList(2) MethodList(2)
+                case 0x04: return 6;  // Field: Flags(2) Name(2) Signature(2)
                 case 0x06: return 14; // MethodDef: RVA(4) ImplFlags(2) Flags(2) Name(2) Signature(2) ParamList(2)
+                case 0x08: return 6;  // Param: Flags(2) Seq(2) Name(2)
                 case 0x0A: return 6;  // MemberRef: Class(2) Name(2) Signature(2)
                 case 0x0C: return 6;  // CustomAttribute: Parent(2) Type(2) Value(2)
-                case 0x1A: return 2;  // ModuleRef: Name(2)
+                case 0x11: return blobIsBig ? 4 : 2;  // StandAloneSig: Signature(#Blob)
+                case 0x14: return 6;  // Event: Flags(2) Name(2) EventType(2)
+                case 0x17: return 6;  // Property: Flags(2) Name(2) Type(2)
+                case 0x1A: return stringIsBig ? 4 : 2;  // ModuleRef: Name(#Strings)
+
                 case 0x1C: return 8;  // ImplMap: MappingFlags(2) MemberForwarded(2) ImportName(2) ImportScope(2)
                 default: throw new Exception("row size not implemented: " + tableId);
             }

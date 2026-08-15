@@ -46,16 +46,22 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty);
             }
 
-            var functionDeclarations = syntaxTrees.SelectMany(st => st.Root.Members)
-                                                  .OfType<FunctionDeclarationSyntax>();
-
-            foreach (var function in functionDeclarations)
-            {
-                binder.BindFunctionDeclaration(function);
-            }
-
             var globalStatements = syntaxTrees.SelectMany(st => st.Root.Members)
                                               .OfType<GlobalStatementSyntax>();
+
+            string? importedDll = null;
+
+            foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
+            {
+                if (member is ImportClauseSyntax importClause)
+                {
+                    importedDll = importClause.DllName;
+                }
+                else if (member is FunctionDeclarationSyntax function)
+                {
+                    binder.BindFunctionDeclaration(function, importedDll);
+                }
+            }
 
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
 
@@ -159,8 +165,14 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var function in globalScope.Functions)
             {
+                if (function.IsExtern)
+                {
+                    functionBodies.Add(function, new BoundBlockStatement(function.Declaration!, ImmutableArray<BoundStatement>.Empty));
+                    continue;
+                }
+
                 var binder = new Binder(isScript, parentScope, function);
-                var body = binder.BindStatement(function.Declaration!.Body);
+                var body = binder.BindStatement(function.Declaration!.Body!);
                 var loweredBody = Lowerer.Lower(function, body);
 
                 if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
@@ -207,7 +219,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable());
         }
 
-        private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax)
+        private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? importedDll = null)
         {
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
 
@@ -231,7 +243,29 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
 
-            var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax);
+            var isExtern = syntax.CallingConventionKeyword != null;
+
+            if (isExtern)
+            {
+                if (importedDll == null)
+                {
+                    _diagnostics.ReportExternFunctionWithoutImport(syntax.Identifier.Location);
+                }
+
+                if (syntax.Body != null)
+                {
+                    _diagnostics.ReportExternFunctionCannotHaveBody(syntax.Body.Location);
+                }
+            }
+
+            var callingConvention = syntax.CallingConventionKeyword?.Kind switch
+            {
+                SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
+                SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
+                _ => CallingConvention.Winapi,
+            };
+
+            var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax, isExtern, importedDll, callingConvention);
             if (syntax.Identifier.Text != null && !_scope.TryDeclareFunction(function))
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);

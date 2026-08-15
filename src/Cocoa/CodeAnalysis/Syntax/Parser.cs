@@ -143,6 +143,18 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private MemberSyntax ParseMember()
         {
+            if (Current.Kind == SyntaxKind.ImportKeyword)
+            {
+                return ParseImportClause();
+            }
+
+            if (Current.Kind == SyntaxKind.CdeclKeyword ||
+                Current.Kind == SyntaxKind.StdcallKeyword)
+            {
+                var callingConvention = MatchToken(Current.Kind);
+                return ParseFunctionDeclaration(callingConvention);
+            }
+
             if (Current.Kind == SyntaxKind.FunctionKeyword)
             {
                 return ParseFunctionDeclaration();
@@ -151,7 +163,23 @@ namespace Cocoa.CodeAnalysis.Syntax
             return ParseGlobalStatement();
         }
 
-        private MemberSyntax ParseFunctionDeclaration()
+        private MemberSyntax ParseImportClause()
+        {
+            var importKeyword = MatchToken(SyntaxKind.ImportKeyword);
+            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
+
+            nameTokens.Add(MatchToken(SyntaxKind.IdentifierToken));
+
+            while (Current.Kind == SyntaxKind.DotToken)
+            {
+                nameTokens.Add(MatchToken(SyntaxKind.DotToken));
+                nameTokens.Add(MatchToken(SyntaxKind.IdentifierToken));
+            }
+
+            return new ImportClauseSyntax(_syntaxTree, importKeyword, nameTokens.ToImmutable());
+        }
+
+        private MemberSyntax ParseFunctionDeclaration(SyntaxToken? callingConventionKeyword = null)
         {
             var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
@@ -159,9 +187,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             var type = ParseOptionalTypeClause();
-            var body = ParseBlockStatement();
+            BlockStatementSyntax? body = null;
 
-            return new FunctionDeclarationSyntax(_syntaxTree, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+            if (callingConventionKeyword == null || Current.Kind == SyntaxKind.OpenBraceToken)
+            {
+                body = ParseBlockStatement();
+            }
+
+            return new FunctionDeclarationSyntax(_syntaxTree, callingConventionKeyword, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()

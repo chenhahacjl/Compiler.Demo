@@ -90,6 +90,11 @@ namespace Cocoa.CodeAnalysis.Emit
 
             foreach (var functionWithBody in program.Functions)
             {
+                if (functionWithBody.Key.IsExtern)
+                {
+                    continue;
+                }
+
                 var method = _methods[functionWithBody.Key];
                 methods.Add(method);
                 var (code, localSigToken, maxStack) = EmitFunctionBody(method, functionWithBody.Value);
@@ -133,7 +138,14 @@ namespace Cocoa.CodeAnalysis.Emit
                 parameterTypes.Add(ToIlType(parameter.Type));
             }
 
-            var method = new IlMethodDef(function.Name, returnType, parameterTypes, null);
+            var callingConvention = function.CallingConvention switch
+            {
+                CallingConvention.Cdecl => IlCallingConvention.Cdecl,
+                CallingConvention.StdCall => IlCallingConvention.StdCall,
+                _ => IlCallingConvention.Winapi,
+            };
+
+            var method = new IlMethodDef(function.Name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention);
             _methods.Add(function, method);
             _metadata.AddMethodDef(method);
         }

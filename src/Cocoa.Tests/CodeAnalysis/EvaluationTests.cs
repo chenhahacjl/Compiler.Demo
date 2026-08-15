@@ -743,6 +743,40 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.Equal(expectedValue, result.Value);
         }
 
+        [Fact]
+        public void Evaluator_ExternFunction_WithoutImport_ReportsError()
+        {
+            var text = @"
+stdcall function [GetTickCount](): int";
+
+            AssertDiagnostics(text, "An extern function declaration must be preceded by an 'import' clause.");
+        }
+
+        [Fact]
+        public void Evaluator_ExternFunction_WithBody_ReportsError()
+        {
+            var text = @"
+import kernel32.dll
+
+stdcall function GetTickCount(): int
+[{
+    return 0
+}]";
+
+            AssertDiagnostics(text, "An extern function declaration cannot have a body.");
+        }
+
+        [Fact]
+        public void Evaluator_ExternFunction_WithImport_ReportsNoDiagnostics()
+        {
+            var text = @"
+import kernel32.dll
+
+stdcall function GetTickCount(): int";
+
+            AssertDiagnostics(text, "");
+        }
+
         private void AssertDiagnostics(string text, string diagnosticText)
         {
             var annotatedText = AnnotatedText.Parse(text);

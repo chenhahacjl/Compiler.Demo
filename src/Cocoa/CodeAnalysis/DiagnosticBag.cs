@@ -160,6 +160,18 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportExternFunctionWithoutImport(TextLocation location)
+        {
+            var message = "An extern function declaration must be preceded by an 'import' clause.";
+            ReportError(location, message);
+        }
+
+        public void ReportExternFunctionCannotHaveBody(TextLocation location)
+        {
+            var message = "An extern function declaration cannot have a body.";
+            ReportError(location, message);
+        }
+
         public void ReportInvalidReturnExpression(TextLocation location, string functionName)
         {
             var message = $"Since the function '{functionName}' does not return a value the 'return' keyword cannot be followed by an expression.";

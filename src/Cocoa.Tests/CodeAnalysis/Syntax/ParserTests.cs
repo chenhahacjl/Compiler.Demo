@@ -122,6 +122,67 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
         }
 
+        [Fact]
+        public void Parser_ImportClause_ParsesDottedName()
+        {
+            var syntaxTree = SyntaxTree.Parse("import kernel32.dll");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var importClause = Assert.IsType<ImportClauseSyntax>(member);
+
+            Assert.Equal("kernel32.dll", importClause.DllName);
+
+            using (var e = new AssertingEnumerator(member))
+            {
+                e.AssertNode(SyntaxKind.ImportClause);
+                e.AssertToken(SyntaxKind.ImportKeyword, "import");
+                e.AssertToken(SyntaxKind.IdentifierToken, "kernel32");
+                e.AssertToken(SyntaxKind.DotToken, ".");
+                e.AssertToken(SyntaxKind.IdentifierToken, "dll");
+            }
+        }
+
+        [Fact]
+        public void Parser_StdcallExternDeclaration_ParsesNoBody()
+        {
+            var syntaxTree = SyntaxTree.Parse("stdcall function GetTickCount(): int");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Equal(SyntaxKind.StdcallKeyword, function.CallingConventionKeyword!.Kind);
+            Assert.Null(function.Body);
+
+            using (var e = new AssertingEnumerator(member))
+            {
+                e.AssertNode(SyntaxKind.FunctionDeclaration);
+                e.AssertToken(SyntaxKind.StdcallKeyword, "stdcall");
+                e.AssertToken(SyntaxKind.FunctionKeyword, "function");
+                e.AssertToken(SyntaxKind.IdentifierToken, "GetTickCount");
+                e.AssertToken(SyntaxKind.OpenParenthesisToken, "(");
+                e.AssertToken(SyntaxKind.CloseParenthesisToken, ")");
+                e.AssertNode(SyntaxKind.TypeClause);
+                e.AssertToken(SyntaxKind.ColonToken, ":");
+                e.AssertToken(SyntaxKind.IdentifierToken, "int");
+            }
+        }
+
+        [Fact]
+        public void Parser_CdeclExternDeclaration_ParsesBodyWhenPresent()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+cdecl function double(x: int): int
+{
+    return x * 2
+}");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Equal(SyntaxKind.CdeclKeyword, function.CallingConventionKeyword!.Kind);
+            Assert.NotNull(function.Body);
+        }
+
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

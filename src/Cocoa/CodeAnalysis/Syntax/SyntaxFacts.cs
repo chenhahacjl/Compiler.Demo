@@ -79,6 +79,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case "break":
                     return SyntaxKind.BreakKeyword;
+                case "cdecl":
+                    return SyntaxKind.CdeclKeyword;
                 case "continue":
                     return SyntaxKind.ContinueKeyword;
                 case "else":
@@ -91,10 +93,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.FunctionKeyword;
                 case "if":
                     return SyntaxKind.IfKeyword;
+                case "import":
+                    return SyntaxKind.ImportKeyword;
                 case "let":
                     return SyntaxKind.LetKeyword;
                 case "return":
                     return SyntaxKind.ReturnKeyword;
+                case "stdcall":
+                    return SyntaxKind.StdcallKeyword;
                 case "to":
                     return SyntaxKind.ToKeyword;
                 case "true":
@@ -202,8 +208,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ":";
                 case SyntaxKind.CommaToken:
                     return ",";
+                case SyntaxKind.DotToken:
+                    return ".";
                 case SyntaxKind.BreakKeyword:
                     return "break";
+                case SyntaxKind.CdeclKeyword:
+                    return "cdecl";
                 case SyntaxKind.ContinueKeyword:
                     return "continue";
                 case SyntaxKind.ElseKeyword:
@@ -216,10 +226,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "function";
                 case SyntaxKind.IfKeyword:
                     return "if";
+                case SyntaxKind.ImportKeyword:
+                    return "import";
                 case SyntaxKind.LetKeyword:
                     return "let";
                 case SyntaxKind.ReturnKeyword:
                     return "return";
+                case SyntaxKind.StdcallKeyword:
+                    return "stdcall";
                 case SyntaxKind.ToKeyword:
                     return "to";
                 case SyntaxKind.TrueKeyword:

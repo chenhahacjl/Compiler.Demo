@@ -377,6 +377,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     _position++;
                     break;
                 }
+                case '.':
+                {
+                    _kind = SyntaxKind.DotToken;
+                    _position++;
+                    break;
+                }
                 case '~':
                 {
                     _kind = SyntaxKind.TildeToken;

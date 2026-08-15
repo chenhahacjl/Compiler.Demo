@@ -47,20 +47,24 @@ namespace Cocoa.CodeAnalysis.Syntax
         CloseParenthesisToken,   // )
         OpenBraceToken,          // {
         CloseBraceToken,         // }
-        ColonToken,              // :
-        CommaToken,              // ,
+ColonToken,               // :
+        CommaToken,               // ,
+        DotToken,                 // .
         IdentifierToken,         // 标识符
 
         // Keywords
         BreakKeyword,             // break
+        CdeclKeyword,             // cdecl
         ContinueKeyword,          // continue
         ElseKeyword,              // else
         FalseKeyword,             // false
         ForKeyword,               // for
         FunctionKeyword,          // function
         IfKeyword,                // if
+        ImportKeyword,            // import
         LetKeyword,               // let
         ReturnKeyword,            // return
+        StdcallKeyword,           // stdcall
         ToKeyword,                // to
         TrueKeyword,              // true
         VarKeyword,               // var
@@ -70,6 +74,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         // Nodes
         CompilationUnit,          // 编译单元
         FunctionDeclaration,      // 函数定义
+        ImportClause,             // import 声明
         GlobalStatement,          // 全局声明
         Parameter,                // 参数
         TypeClause,               // 类型 语句

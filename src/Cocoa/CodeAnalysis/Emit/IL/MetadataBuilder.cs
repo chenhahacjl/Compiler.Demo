@@ -269,16 +269,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         // 签名编码
         // ------------------------------------------------------------------
 
-        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true, IlCallingConvention callingConvention = IlCallingConvention.Winapi)
+        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
         {
             using var stream = new MemoryStream();
-            var conventionByte = callingConvention switch
-            {
-                IlCallingConvention.Cdecl => 0x01,
-                IlCallingConvention.StdCall => 0x02,
-                _ => 0x00, // Default/Winapi
-            };
-            stream.WriteByte((byte)((isStatic ? 0x00 : 0x20) | conventionByte)); // Method(0) | HAS_THIS=0x20 | 调用约定
+            // 注意：Extern 方法的签名必须使用默认调用约定（0x00），本机调用约定由 ImplMap 的 MappingFlags 表达。
+            stream.WriteByte((byte)(isStatic ? 0x00 : 0x20)); // Method(0) | HAS_THIS=0x20 | 默认调用约定
             WriteCompressedInteger(stream, parameterTypes.Count);
             EncodeType(stream, returnType);
             foreach (var parameterType in parameterTypes)
@@ -535,11 +530,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var method in _methodDefs)
             {
                 writer.Write(methodRvas.TryGetValue(method, out var rva) ? rva : 0u);
-                writer.Write((ushort)0);             // ImplFlags
-                var implFlags = (ushort)(0x0096 | (method.DllName != null ? 0x2000 : 0)); // Public|Static|HideBySig|ReuseSlot|PInvokeImpl
+                var implFlags = (ushort)(method.DllName != null ? 0x0080 : 0); // ImplFlags: extern 方法 PreserveSig（对齐 csc）
                 writer.Write(implFlags);
+                var methodFlags = (ushort)(0x0096 | (method.DllName != null ? 0x2000 : 0)); // Flags: Public|Static|HideBySig|ReuseSlot|PInvokeImpl
+                writer.Write(methodFlags);
                 WriteStringRef(method.Name, stringIsBig); // Name（MethodDef 行缺 Name 曾导致后续表全部偏移 2 字节）
-                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, isStatic: true, method.CallingConvention));
+                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, isStatic: true));
                 WriteRef(methodSigBlob, blobIsBig);
                 WriteRef(paramRow, paramIsBig);
                 paramRow += method.ParameterTypes.Count;
