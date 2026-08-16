@@ -69,6 +69,12 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         public int RegisterSize(IrVirtualRegister register) => RegisterSizes[register];
     }
 
+    /// <summary>导入规格：DLL 名 + 函数名 + x86 调用约定（cdecl 调用方清理）。x64 约定统一，Cdecl 忽略。</summary>
+    internal readonly record struct IrImport(string DllName, string Name, bool Cdecl)
+    {
+        public override string ToString() => DllName + "!" + Name;
+    }
+
     /// <summary>整个 IR 程序：函数表 + 数据段 + 运行时配置 + 入口函数名。</summary>
     internal sealed class IrProgram
     {
@@ -80,7 +86,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             Functions = new List<IrFunction>();
             Data = new Dictionary<string, IrDataItem>();
             DataItems = new List<IrDataItem>();
-            Imports = new List<string>();
+            Imports = new List<IrImport>();
             SpecialFunctions = new Dictionary<string, IrFunction>();
         }
 
@@ -88,7 +94,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         public List<IrFunction> Functions { get; }
         public Dictionary<string, IrDataItem> Data { get; }
         public List<IrDataItem> DataItems { get; }
-        public List<string> Imports { get; }
+        public List<IrImport> Imports { get; }
         public Dictionary<string, IrFunction> SpecialFunctions { get; }
 
         /// <summary>取或建字符串字面量数据项（去重，返回 key）。</summary>

@@ -22,7 +22,7 @@
         public static IrOperand Reg(IrVirtualRegister reg) => new IrOperand(IrOperandKind.Register, 0, reg, null);
         public static IrOperand Label(int id) => new IrOperand(IrOperandKind.Label, id, null, null);
         public static IrOperand Data(string key) => new IrOperand(IrOperandKind.Data, 0, null, key);
-        public static IrOperand Import(string name) => new IrOperand(IrOperandKind.Import, 0, null, name);
+        public static IrOperand Import(IrImport import) => new IrOperand(IrOperandKind.Import, 0, null, import);
         public static IrOperand Func(IrFunction function) => new IrOperand(IrOperandKind.Function, 0, null, function);
         public static IrOperand Runtime(string name) => new IrOperand(IrOperandKind.Runtime, 0, null, name);
 

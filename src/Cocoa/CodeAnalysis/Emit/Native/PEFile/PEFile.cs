@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 {
-    /// <summary>导入规格：函数名 + IAT 槽在 .idata blob 内的偏移。</summary>
-    internal readonly record struct PefileImport(string Name, int IatOffset);
+    /// <summary>导入规格：DLL 名 + 函数名 + IAT 槽在 .idata blob 内的偏移。</summary>
+    internal readonly record struct PefileImport(string DllName, string Name, int IatOffset);
 
     /// <summary>PE 写出器：组装头结构层 + 导入表结构层，产出 PE32+ / PE32 镜像文件。</summary>
     internal static class PefileWriter
@@ -49,7 +50,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
             var specs = new List<PeImportSpec>();
             foreach (var import in imports)
             {
-                specs.Add(new PeImportSpec("kernel32.dll", import.Name));
+                specs.Add(new PeImportSpec(import.DllName, import.Name));
             }
 
             var importLayout = ImportTableBuilder.Build(specs, (uint)idataRva, pe32);
@@ -58,8 +59,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
             if (imports.Count > 0)
             {
                 var iatEntrySize = pe32 ? ImageThunkData32.SizeOfEntry : ImageThunkData64.SizeOfEntry;
+                var iatSlotCount = importLayout.Dlls.Sum(d => d.Entries.Count);
                 directories.Add((PeDataDirectoryEntry.Import, (uint)idataRva + (uint)importLayout.DescriptorsOffset, (uint)((importLayout.Dlls.Count + 1) * ImageImportDescriptor.SizeOfEntry)));
-                directories.Add((PeDataDirectoryEntry.Iat, (uint)idataRva + (uint)importLayout.Dlls[0].IatOffset, (uint)(importLayout.Dlls[0].Entries.Count * iatEntrySize)));
+                directories.Add((PeDataDirectoryEntry.Iat, (uint)idataRva + (uint)importLayout.Dlls[0].IatOffset, (uint)(iatSlotCount * iatEntrySize)));
             }
 
             // 可执行节虚拟大小不得超过 SectionAlignment（0x1000），故代码按页拆分为多个 .text 节；

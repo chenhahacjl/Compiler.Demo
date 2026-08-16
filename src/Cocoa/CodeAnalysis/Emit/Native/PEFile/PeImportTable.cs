@@ -259,7 +259,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
             }
 
             var parts = new List<byte>();
-            var layouts = new List<PeImportDllLayout>();
+            var pending = new List<(string Dll, int DllNameOffset, int IntOffset, int IatOffset, List<(PeImportSpec Spec, int HintNameOffset)> Entries)>();
 
             foreach (var dll in dllNames)
             {
@@ -295,17 +295,28 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 
                 WriteThunk(parts, null, blobBaseRva, pe32);
 
-                var descriptorOffset = parts.Count;
-                WriteUInt32(parts, 0);
-                WriteUInt32(parts, 0);
-                WriteUInt32(parts, 0);
-                WriteUInt32(parts, (int)(blobBaseRva + (uint)dllNameOffset));
-                WriteUInt32(parts, 0);
-
-                layouts.Add(new PeImportDllLayout(dll, descriptorOffset, intOffset, iatOffset, dllNameOffset, entries));
+                pending.Add((dll, dllNameOffset, intOffset, iatOffset, entries));
             }
 
-            var descriptorsOffset = layouts.Count > 0 ? layouts[0].DescriptorOffset : 0;
+            // 描述符数组必须连续排列：Windows 加载器从导入目录 RVA 起按 20 字节步进遍历，
+            // 每个 DLL 一个描述符，随后是全零终止项（interleaved 布局会让多 DLL 时第二个模块
+            // 的数据被当成垃圾描述符，加载器读取越界内存）。
+            var descriptorsOffset = parts.Count;
+            var layouts = new List<PeImportDllLayout>(pending.Count);
+            for (var i = 0; i < pending.Count; i++)
+            {
+                var p = pending[i];
+                var descriptorOffset = descriptorsOffset + i * ImageImportDescriptor.SizeOfEntry;
+                WriteUInt32(parts, 0);
+                WriteUInt32(parts, 0);
+                WriteUInt32(parts, 0);
+                WriteUInt32(parts, (int)(blobBaseRva + (uint)p.DllNameOffset));
+                WriteUInt32(parts, 0);
+                layouts.Add(new PeImportDllLayout(p.Dll, descriptorOffset, p.IntOffset, p.IatOffset, p.DllNameOffset, p.Entries));
+            }
+
+            parts.AddRange(new byte[ImageImportDescriptor.SizeOfEntry]);
+
             for (var i = 0; i < layouts.Count; i++)
             {
                 var layout = layouts[i];
@@ -313,7 +324,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 WriteUInt32(parts, layout.DescriptorOffset + 16, (int)(blobBaseRva + (uint)layout.IatOffset));
             }
 
-            parts.AddRange(new byte[ImageImportDescriptor.SizeOfEntry]);
             return new PeImportTableLayout(parts.ToArray(), descriptorsOffset, layouts);
         }
 

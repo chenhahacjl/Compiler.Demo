@@ -172,9 +172,11 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(location, "native code generation requires a main function"));
             }
 
+            var importWarnings = NativeImportValidator.Validate(program, platform.Arch);
+
             NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);
 
-            return ImmutableArray<Diagnostic>.Empty;
+            return importWarnings;
         }
     }
 }

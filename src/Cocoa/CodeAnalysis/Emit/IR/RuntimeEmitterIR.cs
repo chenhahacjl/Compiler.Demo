@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Cocoa.CodeAnalysis.Emit.Native;
 
 namespace Cocoa.CodeAnalysis.Emit.IR
@@ -42,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "";
+                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _newLine = "";
 
             public Emitter(IrProgram program, TargetPlatform platform)
             {
@@ -110,9 +111,10 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 _emptyString = _program.AddData(IrDataItem.Utf16(Prefix + "EmptyString", ""));
                 _divZeroMessage = _program.AddData(IrDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
                 _stackOverflowMessage = _program.AddData(IrDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
+                _newLine = _program.AddData(IrDataItem.Utf16(Prefix + "NewLine", "\r\n"));
 
-                _program.Imports.AddRange(Kernel32Imports);
-                _program.Imports.Add(_tickCountImport);
+                _program.Imports.AddRange(Kernel32Imports.Select(n => new IrImport("kernel32.dll", n, false)));
+                _program.Imports.Add(new IrImport("kernel32.dll", _tickCountImport, false));
             }
 
             // ------------------------------------------------------------------
@@ -254,7 +256,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     }
                 }
 
-                Add(IrOpCode.SysCall, dst, IrOperand.Import(import), IrOperand.Constant(argCount));
+                Add(IrOpCode.SysCall, dst, IrOperand.Import(new IrImport("kernel32.dll", import, false)), IrOperand.Constant(argCount));
             }
 
             /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）。</summary>
@@ -514,7 +516,18 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 var chars = NewReg(8);
                 Lea(chars, s, 4);
                 CallRuntime(null, "WriteStr", chars, len);
+                EmitWriteNewLine();
                 EndFunction(_currentFunction!, 0);
+            }
+
+            /// <summary>语言层 print 语义：文本 + CRLF（与解释器/IL 后端 Console.WriteLine 一致）。</summary>
+            private void EmitWriteNewLine()
+            {
+                var newLine = NewReg(8);
+                LeaData(newLine, _newLine);
+                var newLineChars = NewReg(8);
+                Lea(newLineChars, newLine, 4);
+                CallRuntime(null, "WriteStr", newLineChars, C(4, 2));
             }
 
             // ------------------------------------------------------------------
@@ -533,6 +546,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Mov(chars, len);
                 Shr(chars, chars, 1);
                 CallRuntime(null, "WriteStr", buf, chars);
+                EmitWriteNewLine();
                 EndFunction(_currentFunction!, 0);
             }
 

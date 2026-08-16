@@ -564,7 +564,41 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return result;
             }
 
+            if (node.Function.IsExtern)
+            {
+                return EmitExternCall(node);
+            }
+
             return EmitUserCall(node);
+        }
+
+        private IrVirtualRegister EmitExternCall(BoundCallExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var arguments = node.Arguments;
+            var count = arguments.Length;
+
+            // 平台化 SysCall：x64 寄存器 + 第 5 参槽 / x86 栈传递；当前上限 5 参（与运行时所一致）
+            if (count > 5)
+            {
+                throw new Exception($"Extern function '{node.Function.Name}' has {count} parameters; native backend supports at most 5");
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                var value = EmitExpression(arguments[i]);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(i), IrOperand.Reg(value)));
+            }
+
+            var import = new IrImport(node.Function.DllName!, node.Function.Name, node.Function.CallingConvention == CallingConvention.Cdecl);
+            if (!_irProgram.Imports.Contains(import))
+            {
+                _irProgram.Imports.Add(import);
+            }
+
+            var result = node.Function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(node.Function.ReturnType));
+            Add(instructions, new IrInstruction(IrOpCode.SysCall, result, IrOperand.Import(import), IrOperand.Constant(count)));
+            return result ?? VoidResult();
         }
 
         private IrVirtualRegister VoidResult()

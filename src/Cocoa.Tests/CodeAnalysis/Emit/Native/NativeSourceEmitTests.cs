@@ -86,7 +86,7 @@ function main()
     print(42)
 }", "dbg-int", target);
 
-            Assert.Equal("42", output);
+            Assert.Equal("42\r\n", output);
         }
 
         [Theory]
@@ -100,7 +100,7 @@ function main()
     print(""hi"")
 }", "dbg-str", target);
 
-            Assert.Equal("hi", output);
+            Assert.Equal("hi\r\n", output);
         }
 
         [Theory]
@@ -120,7 +120,7 @@ function main()
     print(false)
 }", "src-print-expressions", target);
 
-            Assert.Equal("Hello, World!424279TrueFalse", output);
+            Assert.Equal("Hello, World!\r\n42\r\n42\r\n7\r\n9\r\nTrue\r\nFalse\r\n", output);
         }
 
         [Theory]
@@ -142,7 +142,7 @@ function main()
     print(s)
 }", "src-variables", target);
 
-            Assert.Equal("1545foobar", output);
+            Assert.Equal("15\r\n45\r\nfoobar\r\n", output);
         }
 
         [Theory]
@@ -168,7 +168,7 @@ function main()
     }
 }", "src-if", target);
 
-            Assert.Equal("bigsmall", output);
+            Assert.Equal("big\r\nsmall\r\n", output);
         }
 
         [Theory]
@@ -196,7 +196,7 @@ function main()
     print(nested)
 }", "src-user-functions", target);
 
-            Assert.Equal("7252513", output);
+            Assert.Equal("7\r\n25\r\n25\r\n13\r\n", output);
         }
 
         [Theory]
@@ -230,7 +230,7 @@ function main()
     print(fibonacci(10))
 }", "src-recursion", target);
 
-            Assert.Equal("120362880055", output);
+            Assert.Equal("120\r\n3628800\r\n55\r\n", output);
         }
 
         [Theory]
@@ -258,7 +258,7 @@ function main()
     print(""done"")
 }", "src-while", target);
 
-            Assert.Equal("2done", output);
+            Assert.Equal("2\r\ndone\r\n", output);
         }
 
         [Theory]
@@ -288,7 +288,7 @@ function main()
     while k < 3
 }", "src-for-do", target);
 
-            Assert.Equal("024x123", output);
+            Assert.Equal("0\r\n2\r\n4\r\nx\r\n1\r\n2\r\n3\r\n", output);
         }
 
         [Theory]
@@ -310,7 +310,7 @@ function main()
     print(x)
 }", "src-compound-assignment", target);
 
-            Assert.Equal("51582", output);
+            Assert.Equal("5\r\n15\r\n8\r\n2\r\n", output);
         }
 
         [Theory]
@@ -330,7 +330,7 @@ function main()
     print(s != t)
 }", "src-strings", target);
 
-            Assert.Equal("foobarfoo!barTrueFalseTrue", output);
+            Assert.Equal("foobar\r\nfoo!bar\r\nTrue\r\nFalse\r\nTrue\r\n", output);
         }
 
         [Theory]
@@ -351,7 +351,7 @@ function main()
     print(greet(""World""))
 }", "src-string-parameter", target);
 
-            Assert.Equal("Hello, CocoaHello, World", output);
+            Assert.Equal("Hello, Cocoa\r\nHello, World\r\n", output);
         }
 
         [Theory]
@@ -372,7 +372,7 @@ function main()
     print(!false)
 }", "src-negative", target);
 
-            Assert.Equal("-5-73-6FalseTrue", output);
+            Assert.Equal("-5\r\n-7\r\n3\r\n-6\r\nFalse\r\nTrue\r\n", output);
         }
 
         [Theory]
@@ -391,7 +391,7 @@ function main()
     print(c)
 }", "src-logical", target);
 
-            Assert.Equal("FalseTrueTrue", output);
+            Assert.Equal("False\r\nTrue\r\nTrue\r\n", output);
         }
 
         [Theory]
@@ -406,7 +406,7 @@ function main()
     print(s)
 }", "src-input", target, input: "Hello\n");
 
-            Assert.Equal("Hello", output);
+            Assert.Equal("Hello\r\n", output);
         }
 
         [Theory]
@@ -422,7 +422,7 @@ function main()
     print(random(100) < 100)
 }", "src-random", target);
 
-                Assert.Equal("True", output);
+                Assert.Equal("True\r\n", output);
             }
         }
 
@@ -440,7 +440,7 @@ function main()
     print(-42 / -7)
 }", "src-division", target);
 
-            Assert.Equal("6-6-66", output);
+            Assert.Equal("6\r\n-6\r\n-6\r\n6\r\n", output);
         }
 
         [Theory]
@@ -454,7 +454,7 @@ function main()
     print(1 / 0)
 }", "src-division-by-zero", target, expectedExitCode: 1);
 
-            Assert.Equal("error: division by zero", output);
+            Assert.Equal("error: division by zero\r\n", output);
         }
     }
 }

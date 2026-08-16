@@ -120,7 +120,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Runtime.Windows.X64
                 a.WriteDataInt64(0);
 
                 importSlots.Add(name, slot);
-                imports.Add(new PefileImport(name, a.GetDataOffset(slot)));
+                imports.Add(new PefileImport("kernel32.dll", name, a.GetDataOffset(slot)));
             }
 
             var stub = a.CreateLabel();

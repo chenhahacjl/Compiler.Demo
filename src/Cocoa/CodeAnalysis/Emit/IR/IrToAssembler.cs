@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Cocoa.CodeAnalysis.Emit.Native;
@@ -44,7 +44,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         private readonly Dictionary<string, int> _nameToLabel = new();
         private readonly Dictionary<int, int> _asmLabelCache = new();
         private readonly Dictionary<string, int> _dataSymbols = new();
-        private readonly Dictionary<string, int> _importSlots = new();
+        private readonly Dictionary<IrImport, int> _importSlots = new();
         private readonly List<PefileImport> _imports = new();
         private readonly List<IrVirtualRegister> _sysArgs = new();
 
@@ -126,12 +126,20 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 }
             }
 
-            foreach (var importName in _program.Imports)
+            var seenImports = new HashSet<IrImport>();
+            foreach (var import in _program.Imports)
             {
+                // 去重（运行时所 + 用户 extern 可能同名同 DLL）
+                if (!seenImports.Add(import))
+                {
+                    continue;
+                }
+
                 var symbol = _a.CreateDataSymbol();
                 _a.MarkDataSymbol(symbol);
-                _importSlots.Add(importName, symbol);
+                _importSlots.Add(import, symbol);
 
+                // IAT 槽：函数地址槽 + 紧随其后的 UTF-16 DLL 名（NUL 结尾，stub 的 LoadLibraryA 参数）
                 if (_isX64)
                 {
                     _a.WriteDataInt64(0);
@@ -140,11 +148,28 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 {
                     _a.WriteDataInt32(0);
                 }
+
+                var nameBytes = new List<byte>();
+                foreach (var c in import.DllName)
+                {
+                    nameBytes.Add((byte)c);
+                    nameBytes.Add(0);
+                }
+
+                nameBytes.Add(0);
+                nameBytes.Add(0);
+                _a.WriteDataBytes(nameBytes);
+                _a.AlignData(4);
             }
 
-            foreach (var importName in _program.Imports)
+            foreach (var import in _program.Imports)
             {
-                _imports.Add(new PefileImport(importName, _a.GetDataOffset(_importSlots[importName])));
+                if (!seenImports.Contains(import))
+                {
+                    continue;
+                }
+
+                _imports.Add(new PefileImport(import.DllName, import.Name, _a.GetDataOffset(_importSlots[import])));
             }
         }
 
@@ -622,6 +647,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         private void EmitCall(IrInstruction instruction)
         {
+            _sysArgs.Clear();
+
             var aligned = false;
 
             if (instruction.A.Kind == IrOperandKind.Runtime)
@@ -649,6 +676,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         private void EmitCallReg(IrInstruction instruction)
         {
+            _sysArgs.Clear();
+
             LoadSlot(X64Register.EAX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
             var aligned = EmitAlign(0);
 
@@ -793,7 +822,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         private void EmitSysCall(IrInstruction instruction)
         {
-            var import = _importSlots[(string)instruction.A.Symbol!];
+            var import = (IrImport)instruction.A.Symbol!;
+            var importSlot = _importSlots[import];
             var argCount = (int)instruction.B.Imm;
             var dst = instruction.Dst;
 
@@ -830,7 +860,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     }
                 }
 
-                _a.CallRip(import);
+                _a.CallRip(importSlot);
                 _a.Add(X64Size.Qword, X64Register.RSP, 0x30);
                 _stackDepth -= 6;
 
@@ -842,7 +872,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             }
             else
             {
-                // stdcall：参数右 → 左 push，被调方清栈（第 5 参恒为 0）
+                // 约定：stdcall（运行时所/默认）被调方清栈；cdecl（用户 extern 声明）调用方清栈
                 var pushed = 0;
                 if (argCount >= 5)
                 {
@@ -866,8 +896,13 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     _stackDepth++;
                 }
 
-                _a.CallRip(import);
+                _a.CallRip(importSlot);
                 _stackDepth -= pushed;
+
+                if (import.Cdecl && pushed > 0)
+                {
+                    _a.Add(X64Size.Dword, X64Register.ESP, pushed * 4);
+                }
             }
 
             if (dst != null)
