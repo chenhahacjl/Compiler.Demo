@@ -237,21 +237,30 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
         public IReadOnlyList<PeImportDllLayout> Dlls { get; }
     }
 
-    /// <summary>按 DLL 分组的导入表构建器：DLL 名 / INT / HintName / descriptor 组 + 全零终止。IAT 槽位于镜像内 data 区，由运行期 stub 填充。</summary>
+    /// <summary>按 DLL 分组的导入表构建器：DLL 名 / INT / HintName / descriptor 组 + 全零终止。
+    /// 6c-2：IAT 槽位于镜像内 data 区（外部），由 OS 加载器按描述符 FirstThunk 启动时填充；blob 内不再生成 IAT 副本。</summary>
     internal static class ImportTableBuilder
     {
-        public static PeImportTableLayout Build(IReadOnlyList<PeImportSpec> specs, uint blobBaseRva = 0, bool pe32 = false)
+        public static PeImportTableLayout Build(
+            IReadOnlyList<PeImportSpec> specs,
+            uint blobBaseRva = 0,
+            bool pe32 = false,
+            IReadOnlyList<int>? externalIatOffsets = null,
+            uint externalIatRva = 0)
         {
             var dllNames = new List<string>();
             var byDll = new List<List<PeImportSpec>>();
+            var firstIndexByDll = new List<int>();
 
-            foreach (var spec in specs)
+            for (var s = 0; s < specs.Count; s++)
             {
+                var spec = specs[s];
                 var index = dllNames.IndexOf(spec.DllName);
                 if (index < 0)
                 {
                     dllNames.Add(spec.DllName);
                     byDll.Add(new List<PeImportSpec>());
+                    firstIndexByDll.Add(s);
                     index = byDll.Count - 1;
                 }
 
@@ -287,13 +296,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 
                 WriteThunk(parts, null, blobBaseRva, pe32);
 
-                var iatOffset = parts.Count;
-                foreach (var entry in entries)
-                {
-                    WriteThunk(parts, entry, blobBaseRva, pe32);
-                }
+                // 外部 IAT 模式：FirstThunk 指向 data 区槽数组（加载器填充），blob 内不生成副本
+                var iatOffset = externalIatOffsets != null
+                    ? externalIatOffsets[firstIndexByDll[dllNames.IndexOf(dll)]]
+                    : parts.Count;
 
-                WriteThunk(parts, null, blobBaseRva, pe32);
+                if (externalIatOffsets == null)
+                {
+                    foreach (var entry in entries)
+                    {
+                        WriteThunk(parts, entry, blobBaseRva, pe32);
+                    }
+
+                    WriteThunk(parts, null, blobBaseRva, pe32);
+                }
 
                 pending.Add((dll, dllNameOffset, intOffset, iatOffset, entries));
             }
@@ -321,7 +337,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
             {
                 var layout = layouts[i];
                 WriteUInt32(parts, layout.DescriptorOffset, (int)(blobBaseRva + (uint)layout.IntOffset));
-                WriteUInt32(parts, layout.DescriptorOffset + 16, (int)(blobBaseRva + (uint)layout.IatOffset));
+                WriteUInt32(parts, layout.DescriptorOffset + 16, externalIatOffsets != null
+                    ? (int)(externalIatRva + (uint)layout.IatOffset)
+                    : (int)(blobBaseRva + (uint)layout.IatOffset));
             }
 
             return new PeImportTableLayout(parts.ToArray(), descriptorsOffset, layouts);

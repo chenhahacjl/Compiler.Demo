@@ -78,10 +78,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Runtime.Windows.X86
                 imports.Add(new PefileImport("kernel32.dll", name, a.GetDataOffset(slot)));
             }
 
-            var stub = a.CreateLabel();
-            a.MarkLabel(stub);
-            ImportResolverStubEmitterX86.Emit(a, entryPointLabel, imports, PefileWriter.DataRva);
-
             var labels = new RuntimeLabels();
 
             var writeStr = EmitWriteStr(a, importSlots);
@@ -105,7 +101,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Runtime.Windows.X86
             labels.DivByZero = EmitError(a, data.DivZeroMessage, labels.PrintString, importSlots);
             labels.StackOverflow = EmitError(a, data.StackOverflowMessage, labels.PrintString, importSlots);
 
-            return new RuntimeResult(labels, data, imports, importSlots, stub);
+            return new RuntimeResult(labels, data, imports, importSlots, entryPointLabel);
         }
 
         private static int EmitWriteStr(IAssembler a, IReadOnlyDictionary<string, int> slots)

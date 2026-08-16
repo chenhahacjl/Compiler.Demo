@@ -126,20 +126,24 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 }
             }
 
+            // 分组内聚：kernel32 组（运行时基础）全部在前，其余 DLL 组按首见顺序聚合，组内保持相对顺序。
+            // IAT 由 OS 加载器按描述符 FirstThunk 连续填充，槽数组必须与 specs 分组顺序一致。
             var seenImports = new HashSet<IrImport>();
-            foreach (var import in _program.Imports)
-            {
-                // 去重（运行时所 + 用户 extern 可能同名同 DLL）
-                if (!seenImports.Add(import))
-                {
-                    continue;
-                }
+            var imports = _program.Imports.Where(seenImports.Add).ToList();
+            var kernel32Group = imports.Where(i => string.Equals(i.DllName, "kernel32.dll", StringComparison.OrdinalIgnoreCase)).ToList();
+            var otherGroups = imports.Where(i => !string.Equals(i.DllName, "kernel32.dll", StringComparison.OrdinalIgnoreCase))
+                                     .GroupBy(i => i.DllName, StringComparer.OrdinalIgnoreCase)
+                                     .SelectMany(g => g)
+                                     .ToList();
+            var reordered = kernel32Group.Concat(otherGroups).ToList();
 
+            foreach (var import in reordered)
+            {
                 var symbol = _a.CreateDataSymbol();
                 _a.MarkDataSymbol(symbol);
                 _importSlots.Add(import, symbol);
 
-                // IAT 槽：函数地址槽 + 紧随其后的 UTF-16 DLL 名（NUL 结尾，stub 的 LoadLibraryA 参数）
+                // IAT 槽（8/4 字节）：磁盘初值 0，OS 加载器启动时按导入描述符填充
                 if (_isX64)
                 {
                     _a.WriteDataInt64(0);
@@ -148,27 +152,10 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 {
                     _a.WriteDataInt32(0);
                 }
-
-                var nameBytes = new List<byte>();
-                foreach (var c in import.DllName)
-                {
-                    nameBytes.Add((byte)c);
-                    nameBytes.Add(0);
-                }
-
-                nameBytes.Add(0);
-                nameBytes.Add(0);
-                _a.WriteDataBytes(nameBytes);
-                _a.AlignData(4);
             }
 
-            foreach (var import in _program.Imports)
+            foreach (var import in reordered)
             {
-                if (!seenImports.Contains(import))
-                {
-                    continue;
-                }
-
                 _imports.Add(new PefileImport(import.DllName, import.Name, _a.GetDataOffset(_importSlots[import])));
             }
         }
@@ -177,6 +164,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         {
             if (_emitStub == null)
             {
+                // 无自解析 stub（6c-2）：入口即用户入口
+                _stubLabel = _entryLabel;
                 return;
             }
 

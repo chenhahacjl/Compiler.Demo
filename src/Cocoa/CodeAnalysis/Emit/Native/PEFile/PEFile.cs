@@ -53,15 +53,42 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 specs.Add(new PeImportSpec(import.DllName, import.Name));
             }
 
-            var importLayout = ImportTableBuilder.Build(specs, (uint)idataRva, pe32);
+            var slotOffsets = imports.Select(i => i.IatOffset).ToList();
+            var importLayout = ImportTableBuilder.Build(specs, (uint)idataRva, pe32, slotOffsets, (uint)dataRva);
+
+            // 6c-2：IAT 槽磁盘初值 = hintname RVA（mingw fake-IAT 惯例）。Windows 加载器对
+            // 初值为 0 的槽视为已填充而跳过（bound-import 语义），只有指向 INT 区域的“伪值”
+            // 才会被替换为解析后的真实函数地址，故槽不能留零。
+            var slotData = new byte[data.Length];
+            Array.Copy(data, slotData, data.Length);
+            foreach (var dll in importLayout.Dlls)
+            {
+                for (var e = 0; e < dll.Entries.Count; e++)
+                {
+                    var entry = dll.Entries[e];
+                    var import = imports.First(i =>
+                        string.Equals(i.DllName, entry.Spec.DllName, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(i.Name, entry.Spec.FunctionName, StringComparison.OrdinalIgnoreCase));
+                    var hintNameRva = (uint)idataRva + (uint)entry.HintNameOffset;
+                    if (pe32)
+                    {
+                        WriteUInt32(slotData, import.IatOffset, (int)hintNameRva);
+                    }
+                    else
+                    {
+                        WriteUInt64(slotData, import.IatOffset, hintNameRva);
+                    }
+                }
+            }
 
             var directories = new List<(PeDataDirectoryEntry Entry, uint Rva, uint Size)>();
             if (imports.Count > 0)
             {
                 var iatEntrySize = pe32 ? ImageThunkData32.SizeOfEntry : ImageThunkData64.SizeOfEntry;
                 var iatSlotCount = importLayout.Dlls.Sum(d => d.Entries.Count);
+                var firstIatRva = (uint)dataRva + (uint)importLayout.Dlls[0].IatOffset;
                 directories.Add((PeDataDirectoryEntry.Import, (uint)idataRva + (uint)importLayout.DescriptorsOffset, (uint)((importLayout.Dlls.Count + 1) * ImageImportDescriptor.SizeOfEntry)));
-                directories.Add((PeDataDirectoryEntry.Iat, (uint)idataRva + (uint)importLayout.Dlls[0].IatOffset, (uint)(iatSlotCount * iatEntrySize)));
+                directories.Add((PeDataDirectoryEntry.Iat, firstIatRva, (uint)(iatSlotCount * iatEntrySize)));
             }
 
             // 可执行节虚拟大小不得超过 SectionAlignment（0x1000），故代码按页拆分为多个 .text 节；
@@ -80,7 +107,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 codeSectionIndex++;
             }
 
-            sections.Add(new(".data", data, (uint)dataRva, PeSectionCharacteristics.Data));
+            sections.Add(new(".data", slotData, (uint)dataRva, PeSectionCharacteristics.Data));
             sections.Add(new(".idata", importLayout.Blob, (uint)idataRva, PeSectionCharacteristics.Data));
 
             var config = new PeImageConfig(
@@ -93,6 +120,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 
             var image = PeImageBuilder.Build(config, sections, directories, pe32 ? PeFileCharacteristics.RelocsStripped : (ushort)0);
             File.WriteAllBytes(outputPath, image);
+        }
+
+        private static void WriteUInt32(byte[] bytes, int offset, int value)
+        {
+            bytes[offset] = (byte)value;
+            bytes[offset + 1] = (byte)(value >> 8);
+            bytes[offset + 2] = (byte)(value >> 16);
+            bytes[offset + 3] = (byte)(value >> 24);
+        }
+
+        private static void WriteUInt64(byte[] bytes, int offset, long value)
+        {
+            for (var i = 0; i < 8; i++)
+            {
+                bytes[offset + i] = (byte)(value >> (i * 8));
+            }
         }
     }
 }

@@ -30,7 +30,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native
             var ir = BoundTreeToIr.Generate(program);
             RuntimeEmitterIR.Append(ir, platform);
 
-            var result = IrToAssembler.Emit(a, ir, entryLabel, platform, (imports, stubLabel) => EmitImportStub(a, entryLabel, imports, platform, dataRva));
+            // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
+            var result = IrToAssembler.Emit(a, ir, entryLabel, platform, null);
 
             a.Patch(dataRva - PefileWriter.TextRva, PefileWriter.ImageBaseOf(platform.Arch));
             var code = a.ToArray();
@@ -52,21 +53,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native
             var ir = BoundTreeToIr.Generate(program);
             RuntimeEmitterIR.Append(ir, platform);
 
-            IrToAssembler.Emit(a, ir, entryLabel, platform, (imports, stubLabel) => EmitImportStub(a, entryLabel, imports, platform, 0));
+            IrToAssembler.Emit(a, ir, entryLabel, platform, null);
 
             return PefileWriter.ComputeDataRva(a.ToArray().Length);
-        }
-
-        private static void EmitImportStub(IAssembler a, int entryLabel, IReadOnlyList<PefileImport> imports, TargetPlatform platform, int dataRva)
-        {
-            if (platform.Arch == Architecture.X64)
-            {
-                ImportResolverStubEmitter.Emit(a, entryLabel, imports, dataRva);
-            }
-            else
-            {
-                ImportResolverStubEmitterX86.Emit(a, entryLabel, imports, dataRva);
-            }
         }
     }
 }
