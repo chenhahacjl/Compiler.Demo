@@ -746,7 +746,17 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             if (_currentFunction.Name == _program.EntryFunctionName)
             {
-                _a.Xor(X64Size.Dword, X64Register.ECX, X64Register.ECX);
+                // 入口返回 = 进程退出码：int main 用返回值；void main 默认 0。
+                // （Loader 直接进入 main，无 C runtime 包装，故此处显式退出进程。）
+                if (returnSize > 0)
+                {
+                    _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.EAX);
+                }
+                else
+                {
+                    _a.Xor(X64Size.Dword, X64Register.ECX, X64Register.ECX);
+                }
+
                 var aligned = EmitAlign(0);
                 _a.Call(_nameToLabel["ExitProcess"]);
                 if (aligned)

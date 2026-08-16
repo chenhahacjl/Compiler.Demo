@@ -116,7 +116,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 if (mainFunction != null)
                 {
-                    if (mainFunction.ReturnType != TypeSymbol.Void || mainFunction.Parameters.Any())
+                    var returnTypeOk = mainFunction.ReturnType == TypeSymbol.Void || mainFunction.ReturnType == TypeSymbol.Int32;
+                    if (mainFunction.Parameters.Any() || !returnTypeOk)
                     {
                         binder.Diagnostics.ReportMainMustHaveCorrectSignature(mainFunction.Declaration!.Identifier.Location);
                     }

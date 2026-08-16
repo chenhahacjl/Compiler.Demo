@@ -202,6 +202,33 @@ function main()
         }
 
         [Fact]
+        public void Native_MainWithIntReturn_ExitCode()
+        {
+            // main(): int 的返回值成为进程退出码（EAX → ECX → ExitProcess）
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function main(): int
+{
+    return 42
+}", "native-main-int-return", X64);
+
+            Assert.Equal(42, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
+        public void Native_X86_MainWithIntReturn_ExitCode()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function main(): int
+{
+    return 42
+}", "native-x86-main-int-return", X86);
+
+            Assert.Equal(42, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
         public void Native_UnknownSymbol_ReportsWarningDiagnostic()
         {
             var syntaxTree = SyntaxTree.Parse(@"

@@ -273,5 +273,68 @@ function main()
             Assert.Equal(0, exitCode);
             Assert.Equal("a1b2cCocoa\r\n55\r\nCocoa!\r\n", stdout);
         }
+
+        [Fact]
+        public void Run_CocoaProgram_MainWithIntReturn_OnDotnetHost()
+        {
+            // main(): int 的返回值成为进程退出码（入口统一为 static int Main()）
+            var (exitCode, stdout) = EmitAndRun(@"
+function main(): int
+{
+    return 7
+}", "e2e-main-int-return");
+
+            Assert.Equal(7, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
+        public void Main_WithIntReturnAndMissingReturn_OnDotnetHost_ReportsError()
+        {
+            // main(): int 缺 return 与其他非 void 函数一致：必须返回
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
+function main(): int
+{
+    print(""hi"")
+}
+");
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var diagnostics = compilation.Emit("e2e-main-int-missing-return", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, GetOutputPath("e2e-main-int-missing-return"));
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("Not all code paths return a value", diagnostic.Message);
+        }
+
+        [Fact]
+        public void Main_WithArguments_OnDotnetHost_ReportsError()
+        {
+            // 数组参数版（string[] args）待数组类型实现后支持
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
+function main(x: int)
+{
+}
+");
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var diagnostics = compilation.Emit("e2e-main-args", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, GetOutputPath("e2e-main-args"));
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("main must not take arguments", diagnostic.Message);
+        }
+
+        [Fact]
+        public void Main_WithBoolReturn_OnDotnetHost_ReportsError()
+        {
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
+function main(): bool
+{
+    return true
+}
+");
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var diagnostics = compilation.Emit("e2e-main-bool-return", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, GetOutputPath("e2e-main-bool-return"));
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("must return either void or int", diagnostic.Message);
+        }
     }
 }

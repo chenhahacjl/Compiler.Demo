@@ -21,6 +21,9 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
         private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
 
+        private FunctionSymbol? _entryFunction;
+        private bool _entryVoidMain;
+
         private readonly IlTypeRef _objectType;
         private readonly IlTypeRef _stringType;
         private readonly IlTypeDef _typeDefinition;
@@ -80,6 +83,8 @@ namespace Cocoa.CodeAnalysis.Emit
 
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
         {
+            _entryFunction = program.MainFunction;
+
             foreach (var functionWithBody in program.Functions)
             {
                 EmitFunctionDeclaration(functionWithBody.Key);
@@ -97,6 +102,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
                 var method = _methods[functionWithBody.Key];
                 methods.Add(method);
+                _entryVoidMain = _entryFunction == functionWithBody.Key && functionWithBody.Key.ReturnType == TypeSymbol.Void;
                 var (code, localSigToken, maxStack) = EmitFunctionBody(method, functionWithBody.Value);
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack));
             }
@@ -131,7 +137,10 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitFunctionDeclaration(FunctionSymbol function)
         {
-            var returnType = ToIlType(function.ReturnType);
+            // 入口统一为 static int Main()：语言 void main（默认返回 0）→ IL 返回 int，尾部补 0
+            var returnType = _entryFunction == function && function.ReturnType == TypeSymbol.Void
+                ? ToIlType(TypeSymbol.Int32)
+                : ToIlType(function.ReturnType);
             var parameterTypes = new List<IlType>();
             foreach (var parameter in function.Parameters)
             {
@@ -371,6 +380,11 @@ namespace Cocoa.CodeAnalysis.Emit
             if (node.Expression != null)
             {
                 EmitExpression(il, node.Expression);
+            }
+            else if (_entryVoidMain)
+            {
+                // void main() 的（显式 return; 或隐式函数尾）返回 = 默认退出码 0
+                il.Emit(IlOpCodes.Get("Ldc_I4_0"));
             }
 
             il.Emit(IlOpCodes.Get("Ret"));
