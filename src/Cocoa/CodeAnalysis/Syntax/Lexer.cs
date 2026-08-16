@@ -353,6 +353,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                     _position++;
                     break;
                 }
+                case '[':
+                {
+                    _kind = SyntaxKind.OpenBracketToken;
+                    _position++;
+                    break;
+                }
+                case ']':
+                {
+                    _kind = SyntaxKind.CloseBracketToken;
+                    _position++;
+                    break;
+                }
                 case '{':
                 {
                     _kind = SyntaxKind.OpenBraceToken;

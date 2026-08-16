@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _newLine = "";
+                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _newLine = "";
 
             public Emitter(IrProgram program, TargetPlatform platform)
             {
@@ -87,6 +87,10 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 EmitRandom();
                 _ = BeginFunction("ObjectEquals", 8, 8);
                 EmitObjectEquals();
+                _ = BeginFunction("NewArray", 4, 4);
+                EmitNewArray();
+                _ = BeginFunction("ArrayBoundsCheck", 4, 4);
+                EmitArrayBoundsCheck();
                 _ = BeginFunction("ExitProcess", 4);
                 var exitProcess = _currentFunction!;
                 EmitExitProcess();
@@ -111,6 +115,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 _emptyString = _program.AddData(IrDataItem.Utf16(Prefix + "EmptyString", ""));
                 _divZeroMessage = _program.AddData(IrDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
                 _stackOverflowMessage = _program.AddData(IrDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
+                _arrayBoundsMessage = _program.AddData(IrDataItem.Utf16(Prefix + "ArrayBoundsMessage", "error: array index out of range"));
                 _newLine = _program.AddData(IrDataItem.Utf16(Prefix + "NewLine", "\r\n"));
 
                 _program.Imports.AddRange(Kernel32Imports.Select(n => new IrImport("kernel32.dll", n, false)));
@@ -972,6 +977,65 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             {
                 var code = _args[0];
                 SysCall(null, "ExitProcess", 1, code);
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // ------------------------------------------------------------------
+            // NewArray(size:4, elementSize:4) → ptr:8
+            // 布局：[0..4) 长度；[8..) 元素区（8 字节对齐，内存零初始化）
+            // ------------------------------------------------------------------
+
+            private void EmitNewArray()
+            {
+                var size = _args[0];
+                var elementSize = _args[1];
+                var oom = NewLabel();
+                var done = NewLabel();
+
+                var total = NewReg(4);
+                Imul(total, size, elementSize);
+                AddI(total, total, 7);
+                Shr(total, total, 3);
+                Shl(total, total, 3);
+                AddI(total, total, 8);
+
+                var obj = NewReg(8);
+                CallRuntime(obj, "Alloc", total);
+                Cmp(obj, 0);
+                Jcc(IrCond.Equal, oom);
+                Store(obj, 0, size, 4);
+                StoreRet(obj);
+                Jmp(done);
+
+                Mark(oom);
+                var zero = C(8, 0);
+                StoreRet(zero);
+
+                Mark(done);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
+            // ArrayBoundsCheck(index:4, length:4) — 越界时报错退出
+            // ------------------------------------------------------------------
+
+            private void EmitArrayBoundsCheck()
+            {
+                var index = _args[0];
+                var length = _args[1];
+                var error = NewLabel();
+
+                Cmp(index, 0);
+                Jcc(IrCond.Less, error);
+                Cmp(index, length);
+                Jcc(IrCond.GreaterOrEqual, error);
+                EndFunction(_currentFunction!, 0);
+
+                Mark(error);
+                var message = NewReg(8);
+                LeaData(message, _arrayBoundsMessage);
+                CallRuntime(null, "PrintString", message);
+                CallRuntime(null, "ExitProcess", C(4, 1));
                 EndFunction(_currentFunction!, 0);
             }
 

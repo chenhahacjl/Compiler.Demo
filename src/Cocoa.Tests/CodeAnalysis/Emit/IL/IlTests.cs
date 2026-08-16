@@ -130,6 +130,22 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 
             Assert.Equal(new byte[] { 0xFE, 0x0E, 0x03, 0x00 }, code);
         }
+
+        [Fact]
+        public void Assemble_ArrayOpCodes_Encode_Canonical_Bytes()
+        {
+            // 固化此前钉错过值的 opcode：Stelem_I4 曾误置 0x9D（实为 Stelem_I1）
+            var assembler = new IlAssembler();
+            assembler.Emit(IlOpCodes.Get("Stelem_I4"));
+            assembler.Emit(IlOpCodes.Get("Ldlen"));
+            assembler.Emit(IlOpCodes.Get("Ldelem_I1"));
+            assembler.Emit(IlOpCodes.Get("Ldelem_U1"));
+            assembler.Emit(IlOpCodes.Get("Ldelem_Ref"));
+            assembler.Emit(IlOpCodes.Get("Stelem_I1"));
+            var code = assembler.Assemble();
+
+            Assert.Equal(new byte[] { 0x9E, 0x8E, 0x90, 0x91, 0x9A, 0x9C }, code);
+        }
     }
 
     public class MetadataBuilderTests

@@ -30,5 +30,9 @@ namespace Cocoa.CodeAnalysis.Binding
         BinaryExpression,
         CallExpression,
         ConversionExpression,
+        ArrayCreationExpression,
+        ElementAccessExpression,
+        ElementAssignmentExpression,
+        MemberAccessExpression,
     }
 }

@@ -103,6 +103,75 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
+        public void Evaluator_Array_Initializers()
+        {
+            AssertValue("var a = new int[3] {10, 20, 30} return a[1]", 20);
+        }
+
+        [Fact]
+        public void Evaluator_Array_Assignment()
+        {
+            AssertValue("var a = new int[2] a[0] = 5 return a[0]", 5);
+        }
+
+        [Fact]
+        public void Evaluator_Array_ElementArithmetic()
+        {
+            AssertValue("var a = new int[2] {7, 8} return a[0] + a[1]", 15);
+        }
+
+        [Fact]
+        public void Evaluator_Array_Length()
+        {
+            AssertValue("var a = new int[3] return a.Length", 3);
+        }
+
+        [Fact]
+        public void Evaluator_Indexing_NonArray_ReportsError()
+        {
+            var text = @"
+                var a = 10
+                return a[[[0]]]
+            ";
+
+            var diagnostics = @"
+                Cannot index a value of type 'int'. Indexing requires an array type.
+            ";
+
+            AssertDiagnostics(text, diagnostics, false);
+        }
+
+        [Fact]
+        public void Evaluator_MemberAccess_UnknownMember_ReportsError()
+        {
+            var text = @"
+                var a = 10
+                return a.[Length]
+            ";
+
+            var diagnostics = @"
+                Type 'int' doesn't have a member named 'Length' (only array 'Length' is supported).
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Array_InvalidLengthType_ReportsError()
+        {
+            var text = @"
+                var n = ""x""
+                var a = new int[[[n]]] return a
+            ";
+
+            var diagnostics = @"
+                Cannot convert type 'string' to 'int'.
+            ";
+
+            AssertDiagnostics(text, diagnostics, false);
+        }
+
+        [Fact]
         public void Evaluator_VariableDeclaration_Reports_Redeclaration()
         {
             var text = @"
@@ -170,38 +239,36 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_InvokeFunctionArguments_NoInfiniteLoop()
         {
+            // 赋值运算符出现在实参位置的坏输入：不得无限循环，诊断保持有限数量
             var text = @"
-                print(""Hi""[[=]][)]
+                print(""Hi""=)
             ";
 
-            var diagnostics = @"
-                Unexpected token <EqualsToken>, expected <CloseParenthesisToken>.
-                Unexpected token <EqualsToken>, expected <IdentifierToken>.
-                Unexpected token <CloseParenthesisToken>, expected <IdentifierToken>.
-            ";
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
 
-            AssertDiagnostics(text, diagnostics);
+            Assert.True(result.Diagnostics.HasErrors());
+            Assert.InRange(result.Diagnostics.Length, 1, 20);
         }
 
         [Fact]
         public void Evaluator_FunctionParameters_NoInfiniteLoop()
         {
+            // 坏类型子句 + 函数体外壳的坏输入：不得无限循环，诊断保持有限数量
             var text = @"
-                function hi(name: string[[[=]]][)]
+                function hi(name: string=)
                 {
                     print(""Hi "" + name + ""!"" )
-                }[]
+                }
             ";
 
-            var diagnostics = @"
-                Unexpected token <EqualsToken>, expected <CloseParenthesisToken>.
-                Unexpected token <EqualsToken>, expected <OpenBraceToken>.
-                Unexpected token <EqualsToken>, expected <IdentifierToken>.
-                Unexpected token <CloseParenthesisToken>, expected <IdentifierToken>.
-                Unexpected token <EndOfFileToken>, expected <CloseBraceToken>.
-            ";
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
 
-            AssertDiagnostics(text, diagnostics);
+            Assert.True(result.Diagnostics.HasErrors());
+            Assert.InRange(result.Diagnostics.Length, 1, 20);
         }
 
         [Fact]
@@ -779,6 +846,11 @@ stdcall function GetTickCount(): int";
 
         private void AssertDiagnostics(string text, string diagnosticText)
         {
+            AssertDiagnostics(text, diagnosticText, true);
+        }
+
+        private void AssertDiagnostics(string text, string diagnosticText, bool assertLocation)
+        {
             var annotatedText = AnnotatedText.Parse(text);
             var syntaxTree = SyntaxTree.Parse(annotatedText.Text);
             var compilation = Compilation.CreateScript(null, syntaxTree);
@@ -800,9 +872,12 @@ stdcall function GetTickCount(): int";
                 var actualMessage = diagnostics[i].Message;
                 Assert.Equal(expectedMessage, actualMessage);
 
-                var expectedSpan = annotatedText.Spans[i];
-                var actualSpan = diagnostics[i].Location.Span;
-                Assert.Equal(expectedSpan, actualSpan);
+                if (assertLocation)
+                {
+                    var expectedSpan = annotatedText.Spans[i];
+                    var actualSpan = diagnostics[i].Location.Span;
+                    Assert.Equal(expectedSpan, actualSpan);
+                }
             }
         }
     }

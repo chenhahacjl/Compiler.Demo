@@ -73,7 +73,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             return Is8ByteType(type) ? 8 : 4;
         }
 
-        private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any;
+        private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null;
 
         // ------------------------------------------------------------------
         // 函数
@@ -316,6 +316,18 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 case BoundNodeKind.ConversionExpression:
                     return EmitConversionExpression((BoundConversionExpression)node);
 
+                case BoundNodeKind.ArrayCreationExpression:
+                    return EmitArrayCreationExpression((BoundArrayCreationExpression)node);
+
+                case BoundNodeKind.ElementAccessExpression:
+                    return EmitElementAccessExpression((BoundElementAccessExpression)node);
+
+                case BoundNodeKind.ElementAssignmentExpression:
+                    return EmitElementAssignmentExpression((BoundElementAssignmentExpression)node);
+
+                case BoundNodeKind.MemberAccessExpression:
+                    return EmitMemberAccessExpression((BoundMemberAccessExpression)node);
+
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
 
@@ -381,6 +393,116 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             var register = AllocateRegister(8);
             Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.LeaData, register, IrOperand.Data(key)));
             return register;
+        }
+
+        private static int ElementSize(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Boolean)
+            {
+                return 1;
+            }
+
+            return type == TypeSymbol.Int32 ? 4 : 8;
+        }
+
+        // ------------------------------------------------------------------
+        // 数组
+        // ------------------------------------------------------------------
+
+        private IrVirtualRegister EmitArrayCreationExpression(BoundArrayCreationExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var elementType = node.Type.ElementType!;
+            var elementSize = ElementSize(elementType);
+
+            var length = EmitExpression(node.Length);
+            var array = AllocateRegister(8);
+            var elementSizeRegister = EmitConst(elementSize);
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(length)));
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(elementSizeRegister)));
+            Add(instructions, new IrInstruction(IrOpCode.Call, array, IrOperand.Runtime("NewArray"), IrOperand.Constant(0)));
+
+            for (var i = 0; i < node.Initializers.Length; i++)
+            {
+                var index = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.Const, index, IrOperand.Constant(i)));
+                EmitArrayBoundsCheck(instructions, index, length);
+
+                var address = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(array), IrOperand.None, 8 + i * elementSize, 0));
+                var value = EmitExpression(node.Initializers[i]);
+                Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(address), IrOperand.Reg(value), 0, elementSize));
+            }
+
+            return array;
+        }
+
+        private IrVirtualRegister EmitElementAccessExpression(BoundElementAccessExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var elementType = node.Type;
+            var elementSize = ElementSize(elementType);
+
+            var array = EmitExpression(node.Target);
+            var index = EmitExpression(node.Index);
+            var address = EmitElementAddress(instructions, array, index, elementSize);
+
+            var result = AllocateRegister(elementSize == 8 ? 8 : 4);
+            Add(instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(address), IrOperand.None, 0, elementSize));
+            return result;
+        }
+
+        private IrVirtualRegister EmitElementAssignmentExpression(BoundElementAssignmentExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var elementType = node.Target.Type;
+            var elementSize = ElementSize(elementType);
+
+            var array = EmitExpression(node.Target.Target);
+            var index = EmitExpression(node.Target.Index);
+            var address = EmitElementAddress(instructions, array, index, elementSize);
+            var value = EmitExpression(node.Expression);
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(address), IrOperand.Reg(value), 0, elementSize));
+            return value;
+        }
+
+        private IrVirtualRegister EmitMemberAccessExpression(BoundMemberAccessExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var array = EmitExpression(node.Target);
+            var length = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(array), IrOperand.None, 0, 4));
+            return length;
+        }
+
+        private IrVirtualRegister EmitElementAddress(List<IrInstruction> instructions, IrVirtualRegister array, IrVirtualRegister index, int elementSize)
+        {
+            var length = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(array), IrOperand.None, 0, 4));
+            EmitArrayBoundsCheck(instructions, index, length);
+
+            var offset = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Mov, offset, IrOperand.Reg(index)));
+            if (elementSize == 4)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(2)));
+            }
+            else if (elementSize == 8)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(3)));
+            }
+
+            var address = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(array), IrOperand.None, 8, 0));
+            Add(instructions, new IrInstruction(IrOpCode.Add, address, IrOperand.Reg(address), IrOperand.Reg(offset)));
+            return address;
+        }
+
+        private void EmitArrayBoundsCheck(List<IrInstruction> instructions, IrVirtualRegister index, IrVirtualRegister length)
+        {
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(index)));
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(length)));
+            Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("ArrayBoundsCheck"), IrOperand.Constant(0)));
         }
 
         private IrVirtualRegister EmitUnaryExpression(BoundUnaryExpression node)

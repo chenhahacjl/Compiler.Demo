@@ -90,6 +90,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.ConversionExpression:
                     WriteConversionExpression((BoundConversionExpression)node, writer);
                     break;
+                case BoundNodeKind.ArrayCreationExpression:
+                    WriteArrayCreationExpression((BoundArrayCreationExpression)node, writer);
+                    break;
+                case BoundNodeKind.ElementAccessExpression:
+                    WriteElementAccessExpression((BoundElementAccessExpression)node, writer);
+                    break;
+                case BoundNodeKind.ElementAssignmentExpression:
+                    WriteElementAssignmentExpression((BoundElementAssignmentExpression)node, writer);
+                    break;
+                case BoundNodeKind.MemberAccessExpression:
+                    WriteMemberAccessExpression((BoundMemberAccessExpression)node, writer);
+                    break;
                 default:
                     throw new Exception($"Unexpected node {node.Kind}");
             }
@@ -416,6 +428,51 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WritePunctuation(SyntaxKind.OpenParenthesisToken);
             node.Expression.WriteTo(writer);
             writer.WritePunctuation(SyntaxKind.CloseParenthesisToken);
+        }
+
+        private static void WriteArrayCreationExpression(BoundArrayCreationExpression node, IndentedTextWriter writer)
+        {
+            writer.WriteKeyword(SyntaxKind.NewKeyword);
+            writer.WriteSpace();
+            writer.WriteIdentifier(node.Type.Name);
+            writer.WriteSpace();
+            writer.WritePunctuation(SyntaxKind.OpenBracketToken);
+            node.Length.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.CloseBracketToken);
+
+            foreach (var initializer in node.Initializers)
+            {
+                writer.WritePunctuation(SyntaxKind.OpenBraceToken);
+                initializer.WriteTo(writer);
+                writer.WritePunctuation(SyntaxKind.CloseBraceToken);
+            }
+        }
+
+        private static void WriteElementAccessExpression(BoundElementAccessExpression node, IndentedTextWriter writer)
+        {
+            node.Target.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.OpenBracketToken);
+            node.Index.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.CloseBracketToken);
+        }
+
+        private static void WriteElementAssignmentExpression(BoundElementAssignmentExpression node, IndentedTextWriter writer)
+        {
+            node.Target.Target.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.OpenBracketToken);
+            node.Target.Index.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.CloseBracketToken);
+            writer.WriteSpace();
+            writer.WritePunctuation(SyntaxKind.EqualsToken);
+            writer.WriteSpace();
+            node.Expression.WriteTo(writer);
+        }
+
+        private static void WriteMemberAccessExpression(BoundMemberAccessExpression node, IndentedTextWriter writer)
+        {
+            node.Target.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.DotToken);
+            writer.WriteIdentifier(node.Identifier);
         }
     }
 }

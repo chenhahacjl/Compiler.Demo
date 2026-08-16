@@ -239,6 +239,22 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteConversionExpression((BoundConversionExpression)node);
                 }
+                case BoundNodeKind.ArrayCreationExpression:
+                {
+                    return RewriteArrayCreationExpression((BoundArrayCreationExpression)node);
+                }
+                case BoundNodeKind.ElementAccessExpression:
+                {
+                    return RewriteElementAccessExpression((BoundElementAccessExpression)node);
+                }
+                case BoundNodeKind.ElementAssignmentExpression:
+                {
+                    return RewriteElementAssignmentExpression((BoundElementAssignmentExpression)node);
+                }
+                case BoundNodeKind.MemberAccessExpression:
+                {
+                    return RewriteMemberAccessExpression((BoundMemberAccessExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -350,6 +366,86 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundConversionExpression(node.Syntax, node.Type, expression);
+        }
+
+        protected virtual BoundExpression RewriteArrayCreationExpression(BoundArrayCreationExpression node)
+        {
+            var length = RewriteExpression(node.Length);
+            var initializers = RewriteExpressions(node.Initializers);
+
+            if (length == node.Length && initializers == node.Initializers)
+            {
+                return node;
+            }
+
+            return new BoundArrayCreationExpression(node.Syntax, node.Type, length, initializers);
+        }
+
+        protected virtual BoundExpression RewriteElementAccessExpression(BoundElementAccessExpression node)
+        {
+            var target = RewriteExpression(node.Target);
+            var index = RewriteExpression(node.Index);
+
+            if (target == node.Target && index == node.Index)
+            {
+                return node;
+            }
+
+            return new BoundElementAccessExpression(node.Syntax, node.Type, target, index);
+        }
+
+        protected virtual BoundExpression RewriteElementAssignmentExpression(BoundElementAssignmentExpression node)
+        {
+            var target = (BoundElementAccessExpression)RewriteExpression(node.Target);
+            var expression = RewriteExpression(node.Expression);
+
+            if (target == node.Target && expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundElementAssignmentExpression(node.Syntax, node.Type, target, expression);
+        }
+
+        protected virtual BoundExpression RewriteMemberAccessExpression(BoundMemberAccessExpression node)
+        {
+            var target = RewriteExpression(node.Target);
+            if (target == node.Target)
+            {
+                return node;
+            }
+
+            return new BoundMemberAccessExpression(node.Syntax, node.Type, target, node.Identifier);
+        }
+
+        private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)
+        {
+            ImmutableArray<BoundExpression>.Builder? builder = null;
+
+            for (var i = 0; i < expressions.Length; i++)
+            {
+                var oldExpression = expressions[i];
+                var newExpression = RewriteExpression(oldExpression);
+                if (newExpression != oldExpression)
+                {
+                    if (builder == null)
+                    {
+                        builder = ImmutableArray.CreateBuilder<BoundExpression>(expressions.Length);
+
+                        for (var j = 0; j < i; j++)
+                        {
+                            builder.Add(expressions[j]);
+                        }
+                    }
+                }
+
+                if (builder != null)
+                {
+                    builder.Add(newExpression);
+                }
+            }
+
+            return builder == null ? expressions : builder.MoveToImmutable();
         }
     }
 }

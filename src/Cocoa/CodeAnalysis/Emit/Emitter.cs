@@ -19,6 +19,8 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly string _moduleName;
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
         private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
+        private readonly Dictionary<BoundExpression, int> _temporaryLocalIndices = new Dictionary<BoundExpression, int>();
+        private List<IlType>? _currentFunctionLocals;
         private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
 
         private FunctionSymbol? _entryFunction;
@@ -163,11 +165,13 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             _locals.Clear();
             _labelTargets.Clear();
+            _temporaryLocalIndices.Clear();
 
             var assembler = new IlAssembler();
 
             // 预收集局部变量（按声明顺序分配索引）
             var localTypes = new List<IlType>();
+            _currentFunctionLocals = localTypes;
             CollectLocals(body, localTypes);
 
             // 预收集 label 占位（前向引用需要目标指令对象）
@@ -271,6 +275,11 @@ namespace Cocoa.CodeAnalysis.Emit
             if (type == TypeSymbol.Void)
             {
                 return IlType.Void;
+            }
+
+            if (type.ElementType != null)
+            {
+                return IlType.SzArrayOf(ToIlType(type.ElementType));
             }
 
             throw new System.Exception($"Unexpected type {type}");
@@ -436,6 +445,18 @@ namespace Cocoa.CodeAnalysis.Emit
                     break;
                 case BoundNodeKind.ConversionExpression:
                     EmitConversionExpression(il, (BoundConversionExpression)node);
+                    break;
+                case BoundNodeKind.ArrayCreationExpression:
+                    EmitArrayCreationExpression(il, (BoundArrayCreationExpression)node);
+                    break;
+                case BoundNodeKind.ElementAccessExpression:
+                    EmitElementAccessExpression(il, (BoundElementAccessExpression)node);
+                    break;
+                case BoundNodeKind.ElementAssignmentExpression:
+                    EmitElementAssignmentExpression(il, (BoundElementAssignmentExpression)node);
+                    break;
+                case BoundNodeKind.MemberAccessExpression:
+                    EmitMemberAccessExpression(il, (BoundMemberAccessExpression)node);
                     break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
@@ -776,6 +797,114 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 throw new System.Exception($"Unexpected conversion from {node.Expression.Type} to {node.Type}");
             }
+        }
+
+        private void EmitArrayCreationExpression(IlAssembler il, BoundArrayCreationExpression node)
+        {
+            EmitExpression(il, node.Length);
+            il.Emit(IlOpCodes.Get("Newarr"), RequireType(RequireArrayElementTypeName(node.Type)));
+
+            for (var i = 0; i < node.Initializers.Length; i++)
+            {
+                il.Emit(IlOpCodes.Get("Dup"));
+                il.Emit(IlOpCodes.Get("Ldc_I4"), i);
+                EmitExpression(il, node.Initializers[i]);
+                EmitElementStore(il, node.Type.ElementType!);
+            }
+        }
+
+        private static string RequireArrayElementTypeName(TypeSymbol arrayType)
+        {
+            if (arrayType.ElementType == TypeSymbol.Int32)
+            {
+                return "System.Int32";
+            }
+
+            if (arrayType.ElementType == TypeSymbol.Boolean)
+            {
+                return "System.Boolean";
+            }
+
+            if (arrayType.ElementType == TypeSymbol.String)
+            {
+                return "System.String";
+            }
+
+            throw new System.NotSupportedException($"Array of '{arrayType.ElementType}' is not yet supported by the IL emitter.");
+        }
+
+        private void EmitElementAccessExpression(IlAssembler il, BoundElementAccessExpression node)
+        {
+            EmitExpression(il, node.Target);
+            EmitExpression(il, node.Index);
+
+            if (node.Type == TypeSymbol.Boolean)
+            {
+                il.Emit(IlOpCodes.Get("Ldelem_I1"));
+            }
+            else if (node.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodes.Get("Ldelem_Ref"));
+            }
+            else if (node.Type.ElementType != null)
+            {
+                throw new System.NotSupportedException("Jagged arrays are not yet supported by the IL emitter.");
+            }
+            else
+            {
+                il.Emit(IlOpCodes.Get("Ldelem_I4"));
+            }
+        }
+
+        private void EmitElementAssignmentExpression(IlAssembler il, BoundElementAssignmentExpression node)
+        {
+            var temporaryLocal = AllocateTemporaryLocal(node);
+
+            EmitExpression(il, node.Target.Target);
+            EmitExpression(il, node.Target.Index);
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodes.Get("Dup"));
+            il.Emit(IlOpCodes.Get("Stloc"), (ushort)temporaryLocal);
+            EmitElementStore(il, node.Type);
+            il.Emit(IlOpCodes.Get("Ldloc"), (ushort)temporaryLocal);
+        }
+
+        private int AllocateTemporaryLocal(BoundExpression node)
+        {
+            if (!_temporaryLocalIndices.TryGetValue(node, out var index))
+            {
+                index = _currentFunctionLocals!.Count;
+                _temporaryLocalIndices.Add(node, index);
+                _currentFunctionLocals.Add(ToIlType(node.Type));
+            }
+
+            return index;
+        }
+
+        private static void EmitElementStore(IlAssembler il, TypeSymbol elementType)
+        {
+            if (elementType == TypeSymbol.Boolean)
+            {
+                il.Emit(IlOpCodes.Get("Stelem_I1"));
+            }
+            else if (elementType == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodes.Get("Stelem_Ref"));
+            }
+            else if (elementType.ElementType != null)
+            {
+                throw new System.NotSupportedException("Jagged arrays are not yet supported by the IL emitter.");
+            }
+            else
+            {
+                il.Emit(IlOpCodes.Get("Stelem_I4"));
+            }
+        }
+
+        private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
+        {
+            EmitExpression(il, node.Target);
+            il.Emit(IlOpCodes.Get("Ldlen"));
         }
     }
 }

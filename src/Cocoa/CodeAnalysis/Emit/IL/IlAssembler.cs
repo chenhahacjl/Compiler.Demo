@@ -146,7 +146,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case IlOperandType.InlineMethod:
                     return StackDeltaInlineMethod(instruction);
                 case IlOperandType.InlineType:
-                    return 0; // Box/Newarr 等进出相抵
+                    return 0; // Newarr/Box/Castclass 等弹 1 压 1，净增量 0
                 case IlOperandType.InlineBrTarget:
                 case IlOperandType.ShortInlineBrTarget:
                     return 0; // Br/Leave 不动栈；Brtrue/Brfalse 见 InlineNone 分派
@@ -206,13 +206,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x61: // Xor
                 case 0x62: // Shl
                 case 0x63: // Shr
-                case 0x8E: // Ldlen
                 case 0x94: // Ldelem_I4
+                case 0x90: // Ldelem_I1
+                case 0x91: // Ldelem_U1
                 case 0x92: // Ldelem_I2
                 case 0x93: // Ldelem_U2
-                case 0xA0: // Ldelem_Ref
+                case 0x9A: // Ldelem_Ref
                     return -1;
-                case 0x9D: // Stelem_I4
+                case 0x8E: // Ldlen（弹数组引用，压长度）
+                    return 0;
+                case 0x9C: // Stelem_I1
+                case 0x9E: // Stelem_I4
                 case 0xA2: // Stelem_Ref
                     return -3;
                 case 0x65: // Neg

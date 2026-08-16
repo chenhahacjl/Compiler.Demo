@@ -95,6 +95,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.IfKeyword;
                 case "import":
                     return SyntaxKind.ImportKeyword;
+                case "new":
+                    return SyntaxKind.NewKeyword;
                 case "let":
                     return SyntaxKind.LetKeyword;
                 case "return":
@@ -210,6 +212,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ",";
                 case SyntaxKind.DotToken:
                     return ".";
+                case SyntaxKind.OpenBracketToken:
+                    return "[";
+                case SyntaxKind.CloseBracketToken:
+                    return "]";
                 case SyntaxKind.BreakKeyword:
                     return "break";
                 case SyntaxKind.CdeclKeyword:
@@ -228,6 +234,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "if";
                 case SyntaxKind.ImportKeyword:
                     return "import";
+                case SyntaxKind.NewKeyword:
+                    return "new";
                 case SyntaxKind.LetKeyword:
                     return "let";
                 case SyntaxKind.ReturnKeyword:

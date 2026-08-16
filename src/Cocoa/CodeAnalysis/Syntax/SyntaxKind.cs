@@ -50,6 +50,8 @@ namespace Cocoa.CodeAnalysis.Syntax
 ColonToken,               // :
         CommaToken,               // ,
         DotToken,                 // .
+        OpenBracketToken,         // [
+        CloseBracketToken,        // ]
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -63,6 +65,7 @@ ColonToken,               // :
         IfKeyword,                // if
         ImportKeyword,            // import
         LetKeyword,               // let
+        NewKeyword,               // new
         ReturnKeyword,            // return
         StdcallKeyword,           // stdcall
         ToKeyword,                // to
@@ -78,6 +81,7 @@ ColonToken,               // :
         GlobalStatement,          // 全局声明
         Parameter,                // 参数
         TypeClause,               // 类型 语句
+        ArrayTypeClause,          // 数组类型
         ElseClause,               // ELSE 子语句
 
         // Statements
@@ -101,5 +105,8 @@ ColonToken,               // :
         ParenthesizedExpression,  // 括号表达式
         AssignmentExpression,     // 赋值表达式
         CallExpression,           // 函数调用表达式
+        ArrayCreationExpression,  // 数组创建表达式
+        ElementAccessExpression,  // 数组索引表达式
+        MemberAccessExpression,   // 成员访问表达式
     }
 }

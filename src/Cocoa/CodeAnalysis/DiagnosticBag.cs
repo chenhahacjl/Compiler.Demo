@@ -124,6 +124,18 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportIndexRequiresArray(TextLocation location, TypeSymbol type)
+        {
+            var message = $"Cannot index a value of type '{type}'. Indexing requires an array type.";
+            ReportError(location, message);
+        }
+
+        public void ReportUnknownMember(TextLocation location, string name, TypeSymbol type)
+        {
+            var message = $"Type '{type}' doesn't have a member named '{name}' (only array 'Length' is supported).";
+            ReportError(location, message);
+        }
+
         public void ReportUndefinedFunction(TextLocation location, string name)
         {
             var message = $"Function '{name}' doesn't exist.";

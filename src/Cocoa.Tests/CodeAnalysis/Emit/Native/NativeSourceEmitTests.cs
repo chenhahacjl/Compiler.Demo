@@ -456,5 +456,106 @@ function main()
 
             Assert.Equal("error: division by zero\r\n", output);
         }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Array_ReadWriteAndLength(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var a = new int[3] {10, 20, 30}
+    a[1] = 99
+    print(a[0])
+    print(a[1])
+    print(a[2])
+    print(a.Length)
+}", "src-array", target);
+
+            Assert.Equal("10\r\n99\r\n30\r\n3\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Array_BoolElements(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var b = new bool[2]
+    b[0] = true
+    b[1] = false
+    print(b[0])
+    print(b[1])
+}", "src-array-bool", target);
+
+            Assert.Equal("True\r\nFalse\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Array_IndexInLoop(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var a = new int[5]
+    var i = 0
+    while i < 5
+    {
+        a[i] = i * 10
+        i = i + 1
+    }
+    var sum = 0
+    i = 0
+    while i < 5
+    {
+        sum = sum + a[i]
+        i = i + 1
+    }
+    print(sum)
+}", "src-array-loop", target);
+
+            Assert.Equal("100\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Array_OutOfBounds(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var a = new int[2]
+    a[0] = 1
+    a[1] = 2
+    print(a[5])
+}", "src-array-oob", target, expectedExitCode: 1);
+
+            Assert.Equal("error: array index out of range\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_JaggedArray_ReportsError(string target)
+        {
+            TargetPlatform.TryParse(target, out var platform);
+            var syntaxTree = SyntaxTree.Parse(@"
+function main()
+{
+    var rows = new int[2]
+    var row = new int[2] {5, 6}
+    rows[0] = row
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            var diagnostics = compilation.EmitNative("test", GetExePath("src-array-jagged", target), platform);
+
+            Assert.Contains(diagnostics, d => d.Message == "Cannot convert type 'int[]' to 'int'.");
+        }
     }
 }

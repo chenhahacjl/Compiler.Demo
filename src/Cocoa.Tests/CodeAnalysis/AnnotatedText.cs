@@ -25,9 +25,23 @@ namespace Cocoa.Tests.CodeAnalysis
 
             var position = 0;
 
-            foreach (var c in text)
+            for (var i = 0; i < text.Length; i++)
             {
-                if (c == '[')
+                var c = text[i];
+
+                if (c == '[' && i + 1 < text.Length && text[i + 1] == '[')
+                {
+                    position++;
+                    textBuilder.Append('[');
+                    i++;
+                }
+                else if (c == ']' && i + 1 < text.Length && text[i + 1] == ']')
+                {
+                    position++;
+                    textBuilder.Append(']');
+                    i++;
+                }
+                else if (c == '[')
                 {
                     startStack.Push(position);
                 }

@@ -1,6 +1,6 @@
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    public sealed partial class TypeClauseSyntax : SyntaxNode
+    public partial class TypeClauseSyntax : SyntaxNode
     {
         internal TypeClauseSyntax(SyntaxTree syntaxTree, SyntaxToken colonToken, SyntaxToken identifier)
             : base(syntaxTree)

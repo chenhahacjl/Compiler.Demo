@@ -166,6 +166,11 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
+            if (program.Diagnostics.HasErrors())
+            {
+                return program.Diagnostics;
+            }
+
             if (program.MainFunction == null)
             {
                 var location = new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));

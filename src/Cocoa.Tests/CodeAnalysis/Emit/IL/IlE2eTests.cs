@@ -336,5 +336,82 @@ function main(): bool
             var diagnostic = Assert.Single(diagnostics);
             Assert.Contains("must return either void or int", diagnostic.Message);
         }
+
+        [Fact]
+        public void Array_ReadWriteAndLength_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var a = new int[3] {10, 20, 30}
+    a[1] = 99
+    print(a[0])
+    print(a[1])
+    print(a[2])
+    print(a.Length)
+}", "e2e-array");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\r\n99\r\n30\r\n3\r\n", stdout);
+        }
+
+        [Fact]
+        public void Array_BoolElements_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var b = new bool[2]
+    b[0] = true
+    b[1] = false
+    print(b[0])
+    print(b[1])
+}", "e2e-array-bool");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("True\r\nFalse\r\n", stdout);
+        }
+
+        [Fact]
+        public void Array_OutOfBounds_OnDotnetHost_ExitsNonZero()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var a = new int[2]
+    a[0] = 1
+    a[1] = 2
+    print(a[5])
+}", "e2e-array-oob");
+
+            Assert.NotEqual(0, exitCode);
+        }
+
+        [Fact]
+        public void Array_IndexInLoop_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var a = new int[5]
+    var i = 0
+    while i < 5
+    {
+        a[i] = i * 10
+        i = i + 1
+    }
+    var sum = 0
+    i = 0
+    while i < 5
+    {
+        sum = sum + a[i]
+        i = i + 1
+    }
+    print(sum)
+}", "e2e-array-loop");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("100\r\n", stdout);
+        }
     }
 }

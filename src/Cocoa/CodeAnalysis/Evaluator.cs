@@ -163,6 +163,14 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateCallExpression((BoundCallExpression)node);
                 case BoundNodeKind.ConversionExpression:
                     return EvaluateConversionExpression((BoundConversionExpression)node);
+                case BoundNodeKind.ArrayCreationExpression:
+                    return EvaluateArrayCreationExpression((BoundArrayCreationExpression)node);
+                case BoundNodeKind.ElementAccessExpression:
+                    return EvaluateElementAccessExpression((BoundElementAccessExpression)node);
+                case BoundNodeKind.ElementAssignmentExpression:
+                    return EvaluateElementAssignmentExpression((BoundElementAssignmentExpression)node);
+                case BoundNodeKind.MemberAccessExpression:
+                    return EvaluateMemberAccessExpression((BoundMemberAccessExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -337,6 +345,50 @@ namespace Cocoa.CodeAnalysis
             {
                 throw new Exception($"Unexpected type {node.Type}");
             }
+        }
+
+        private object EvaluateArrayCreationExpression(BoundArrayCreationExpression node)
+        {
+            var length = Convert.ToInt32(EvaluateExpression(node.Length));
+            var array = new object[length];
+
+            for (var i = 0; i < node.Initializers.Length; i++)
+            {
+                array[i] = EvaluateExpression(node.Initializers[i])!;
+            }
+
+            return array;
+        }
+
+        private object EvaluateElementAccessExpression(BoundElementAccessExpression node)
+        {
+            var array = (object[])EvaluateExpression(node.Target)!;
+            var index = Convert.ToInt32(EvaluateExpression(node.Index));
+
+            return array[index]!;
+        }
+
+        private object EvaluateElementAssignmentExpression(BoundElementAssignmentExpression node)
+        {
+            var array = (object[])EvaluateExpression(node.Target.Target)!;
+            var index = Convert.ToInt32(EvaluateExpression(node.Target.Index));
+            var value = EvaluateExpression(node.Expression)!;
+
+            array[index] = value;
+
+            return value;
+        }
+
+        private object EvaluateMemberAccessExpression(BoundMemberAccessExpression node)
+        {
+            var array = (object[])EvaluateExpression(node.Target)!;
+
+            if (node.Identifier == "Length")
+            {
+                return array.Length;
+            }
+
+            throw new Exception($"Unexpected member {node.Identifier}");
         }
 
         private void Assign(VariableSymbol variable, object value)
