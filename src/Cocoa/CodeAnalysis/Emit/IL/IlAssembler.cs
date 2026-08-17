@@ -216,6 +216,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x8E: // Ldlen（弹数组引用，压长度）
                     return 0;
                 case 0x9C: // Stelem_I1
+                case 0x9D: // Stelem_I2
                 case 0x9E: // Stelem_I4
                 case 0xA2: // Stelem_Ref
                     return -3;

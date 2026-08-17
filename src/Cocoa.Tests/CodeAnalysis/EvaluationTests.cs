@@ -150,7 +150,94 @@ namespace Cocoa.Tests.CodeAnalysis
             ";
 
             var diagnostics = @"
-                Type 'int' doesn't have a member named 'Length' (only array 'Length' is supported).
+                Type 'int' doesn't have a member named 'Length' (only array/string 'Length' is supported).
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_String_Index_Returns_Char()
+        {
+            AssertValue("var s = \"hello\" return s[1]", 'e');
+        }
+
+        [Fact]
+        public void Evaluator_String_Length()
+        {
+            AssertValue("var s = \"hello\" return s.Length", 5);
+        }
+
+        [Fact]
+        public void Evaluator_String_Substring()
+        {
+            AssertValue("var s = \"hello\" return s.substring(1, 3)", "ell");
+        }
+
+        [Fact]
+        public void Evaluator_Char_ConvertToInt()
+        {
+            AssertValue("var c = 'a' return int(c)", 97);
+        }
+
+        [Fact]
+        public void Evaluator_Int_ConvertToChar()
+        {
+            AssertValue("var i = 98 return char(i)", 'b');
+        }
+
+        [Fact]
+        public void Evaluator_Char_Equality()
+        {
+            AssertValue("var c = 'a' return c == 'a'", true);
+        }
+
+        [Fact]
+        public void Evaluator_Char_Array()
+        {
+            AssertValue("var a = new char[2] {'x', 'y'} a[0] = 'z' return a[0]", 'z');
+        }
+
+        [Fact]
+        public void Evaluator_String_IndexAssignment_ReportsError()
+        {
+            var text = @"
+                var s = ""abc""
+                s[[[0]]] = 'x'
+            ";
+
+            var diagnostics = @"
+                A string index is read-only and cannot be assigned to.
+            ";
+
+            AssertDiagnostics(text, diagnostics, false);
+        }
+
+        [Fact]
+        public void Evaluator_Substring_WrongArgumentCount_ReportsError()
+        {
+            var text = @"
+                var s = ""abc""
+                return s.[substring](1)
+            ";
+
+            var diagnostics = @"
+                Function 'substring' requires 2 arguments but was given 1.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Substring_UnknownMember_ReportsError()
+        {
+            var text = @"
+                var n = 10
+                return n.[substring](1, 2)
+            ";
+
+            var diagnostics = @"
+                Type 'int' doesn't have a member named 'substring' (only array/string 'Length' is supported).
             ";
 
             AssertDiagnostics(text, diagnostics);

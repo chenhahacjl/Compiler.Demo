@@ -171,6 +171,8 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateElementAssignmentExpression((BoundElementAssignmentExpression)node);
                 case BoundNodeKind.MemberAccessExpression:
                     return EvaluateMemberAccessExpression((BoundMemberAccessExpression)node);
+                case BoundNodeKind.MemberCallExpression:
+                    return EvaluateMemberCallExpression((BoundMemberCallExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -337,6 +339,10 @@ namespace Cocoa.CodeAnalysis
             {
                 return Convert.ToInt32(value);
             }
+            else if (node.Type == TypeSymbol.Char)
+            {
+                return Convert.ToChar(value);
+            }
             else if (node.Type == TypeSymbol.String)
             {
                 return Convert.ToString(value);
@@ -362,9 +368,16 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateElementAccessExpression(BoundElementAccessExpression node)
         {
-            var array = (object[])EvaluateExpression(node.Target)!;
+            var target = EvaluateExpression(node.Target)!;
             var index = Convert.ToInt32(EvaluateExpression(node.Index));
 
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                var text = (string)target;
+                return text[index];
+            }
+
+            var array = (object[])target;
             return array[index]!;
         }
 
@@ -381,14 +394,29 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateMemberAccessExpression(BoundMemberAccessExpression node)
         {
-            var array = (object[])EvaluateExpression(node.Target)!;
+            var target = EvaluateExpression(node.Target)!;
 
             if (node.Identifier == "Length")
             {
+                if (node.Target.Type == TypeSymbol.String)
+                {
+                    return ((string)target).Length;
+                }
+
+                var array = (object[])target;
                 return array.Length;
             }
 
             throw new Exception($"Unexpected member {node.Identifier}");
+        }
+
+        private object? EvaluateMemberCallExpression(BoundMemberCallExpression node)
+        {
+            var target = (string)EvaluateExpression(node.Expression)!;
+            var start = Convert.ToInt32(EvaluateExpression(node.Arguments[0]));
+            var count = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));
+
+            return target.Substring(start, count);
         }
 
         private void Assign(VariableSymbol variable, object value)

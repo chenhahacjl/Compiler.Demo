@@ -610,7 +610,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 case 0x01: return IlType.Void;
                 case 0x02: return IlType.Boolean;
-                case 0x03: return IlType.Class(new IlTypeRef("System", "Char", null));
+                case 0x03: return IlType.Char;
                 case 0x04: return IlType.Class(new IlTypeRef("System", "SByte", null));
                 case 0x05: return IlType.Class(new IlTypeRef("System", "Byte", null));
                 case 0x06: return IlType.Class(new IlTypeRef("System", "Int16", null));

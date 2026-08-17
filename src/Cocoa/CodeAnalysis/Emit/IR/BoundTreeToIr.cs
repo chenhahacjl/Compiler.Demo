@@ -328,6 +328,9 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 case BoundNodeKind.MemberAccessExpression:
                     return EmitMemberAccessExpression((BoundMemberAccessExpression)node);
 
+                case BoundNodeKind.MemberCallExpression:
+                    return EmitMemberCallExpression((BoundMemberCallExpression)node);
+
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
 
@@ -353,6 +356,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             if (value is bool boolValue)
             {
                 return EmitConst(boolValue ? 1 : 0);
+            }
+
+            if (value is char charValue)
+            {
+                return EmitConst(charValue);
             }
 
             throw new Exception($"Unexpected constant: {value}");
@@ -402,6 +410,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return 1;
             }
 
+            if (type == TypeSymbol.Char)
+            {
+                return 2;
+            }
+
             return type == TypeSymbol.Int32 ? 4 : 8;
         }
 
@@ -443,13 +456,34 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             var elementType = node.Type;
             var elementSize = ElementSize(elementType);
 
-            var array = EmitExpression(node.Target);
+            var target = EmitExpression(node.Target);
             var index = EmitExpression(node.Index);
-            var address = EmitElementAddress(instructions, array, index, elementSize);
 
-            var result = AllocateRegister(elementSize == 8 ? 8 : 4);
-            Add(instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(address), IrOperand.None, 0, elementSize));
-            return result;
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                // 字符串布局 [len:4][chars:2×len]，数据区紧邻长度头（offset 4）
+                var length = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(target), IrOperand.None, 0, 4));
+                EmitArrayBoundsCheck(instructions, index, length);
+
+                var offset = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.Mov, offset, IrOperand.Reg(index)));
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(1)));
+
+                var address = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(target), IrOperand.None, 4, 0));
+                Add(instructions, new IrInstruction(IrOpCode.Add, address, IrOperand.Reg(address), IrOperand.Reg(offset)));
+
+                var result = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(address), IrOperand.None, 0, 2));
+                return result;
+            }
+
+            var array = EmitElementAddress(instructions, target, index, elementSize);
+
+            var value = AllocateRegister(elementSize == 8 ? 8 : 4);
+            Add(instructions, new IrInstruction(IrOpCode.Load, value, IrOperand.Reg(array), IrOperand.None, 0, elementSize));
+            return value;
         }
 
         private IrVirtualRegister EmitElementAssignmentExpression(BoundElementAssignmentExpression node)
@@ -469,10 +503,30 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         private IrVirtualRegister EmitMemberAccessExpression(BoundMemberAccessExpression node)
         {
             var instructions = _currentFunction.Instructions;
-            var array = EmitExpression(node.Target);
+            var target = EmitExpression(node.Target);
             var length = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(array), IrOperand.None, 0, 4));
+            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(target), IrOperand.None, 0, 4));
             return length;
+        }
+
+        private IrVirtualRegister EmitMemberCallExpression(BoundMemberCallExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var target = EmitExpression(node.Expression);
+            var start = EmitExpression(node.Arguments[0]);
+            var count = EmitExpression(node.Arguments[1]);
+
+            if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
+            {
+                var result = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(target)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(start)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(2), IrOperand.Reg(count)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Substring"), IrOperand.Constant(0)));
+                return result;
+            }
+
+            throw new Exception($"Unexpected member call {node.Identifier}");
         }
 
         private IrVirtualRegister EmitElementAddress(List<IrInstruction> instructions, IrVirtualRegister array, IrVirtualRegister index, int elementSize)
@@ -483,7 +537,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             var offset = AllocateRegister(4);
             Add(instructions, new IrInstruction(IrOpCode.Mov, offset, IrOperand.Reg(index)));
-            if (elementSize == 4)
+            if (elementSize == 2)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(1)));
+            }
+            else if (elementSize == 4)
             {
                 Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(2)));
             }
@@ -762,6 +820,14 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
             }
+            else if (type == TypeSymbol.Char)
+            {
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
+            }
             else
             {
                 throw new Exception($"Native code generation does not support printing values of type '{type}'");
@@ -822,6 +888,13 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return value;
             }
 
+            if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||
+                from == TypeSymbol.Int32 && to == TypeSymbol.Char)
+            {
+                // 同为 4 字节值，无需指令
+                return value;
+            }
+
             if (to == TypeSymbol.String)
             {
                 if (from == TypeSymbol.Int32)
@@ -829,6 +902,14 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     var result = AllocateRegister(8);
                     Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
+                    return result;
+                }
+
+                if (from == TypeSymbol.Char)
+                {
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
                     return result;
                 }
 

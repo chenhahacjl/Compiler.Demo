@@ -413,5 +413,55 @@ function main()
             Assert.Equal(0, exitCode);
             Assert.Equal("100\r\n", stdout);
         }
+
+        [Fact]
+        public void String_IndexLengthAndSubstring_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var s = ""hello""
+    print(s.Length)
+    print(s[0])
+    print(int(s[1]))
+    var c = s[2]
+    print(c)
+    print(char(97))
+    print(s.substring(1, 3))
+    print(s.substring(1, 3) + ""!"")
+}", "e2e-string-index");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("5\r\nh\r\n101\r\nl\r\na\r\nell\r\nell!\r\n", stdout);
+        }
+
+        [Fact]
+        public void CharArray_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var a = new char[2] {'x', 'y'}
+    a[0] = 'z'
+    print(a[0])
+    print(a[1])
+}", "e2e-char-array");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("z\r\ny\r\n", stdout);
+        }
+
+        [Fact]
+        public void String_IndexOutOfBounds_OnDotnetHost_ExitsNonZero()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var s = ""abc""
+    print(s[9])
+}", "e2e-string-oob");
+
+            Assert.NotEqual(0, exitCode);
+        }
     }
 }

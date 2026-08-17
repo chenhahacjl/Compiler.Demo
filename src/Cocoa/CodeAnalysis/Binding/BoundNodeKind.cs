@@ -34,5 +34,6 @@ namespace Cocoa.CodeAnalysis.Binding
         ElementAccessExpression,
         ElementAssignmentExpression,
         MemberAccessExpression,
+        MemberCallExpression,
     }
 }

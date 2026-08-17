@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _newLine = "";
+                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "";
 
             public Emitter(IrProgram program, TargetPlatform platform)
             {
@@ -81,6 +81,10 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 EmitConcat();
                 _ = BeginFunction("StrEquals", 8, 8);
                 EmitStrEquals();
+                _ = BeginFunction("Substring", 8, 4, 4);
+                EmitSubstring();
+                _ = BeginFunction("CharToString", 4);
+                EmitCharToString();
                 _ = BeginFunction("Input");
                 EmitInput();
                 _ = BeginFunction("Random", 4);
@@ -116,6 +120,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 _divZeroMessage = _program.AddData(IrDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
                 _stackOverflowMessage = _program.AddData(IrDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
                 _arrayBoundsMessage = _program.AddData(IrDataItem.Utf16(Prefix + "ArrayBoundsMessage", "error: array index out of range"));
+                _substringMessage = _program.AddData(IrDataItem.Utf16(Prefix + "SubstringMessage", "error: invalid substring arguments"));
                 _newLine = _program.AddData(IrDataItem.Utf16(Prefix + "NewLine", "\r\n"));
 
                 _program.Imports.AddRange(Kernel32Imports.Select(n => new IrImport("kernel32.dll", n, false)));
@@ -797,8 +802,107 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             }
 
             // ------------------------------------------------------------------
-            // Input() → 读入一行（UTF-16），去 CR/LF，失败返回空串
+            // Substring(s:8, start:4, count:4) → 字符串对象
+            // 参数非法（start/count < 0 或 start+count > 长度）时打印错误并退出
             // ------------------------------------------------------------------
+
+            private void EmitSubstring()
+            {
+                var s = _args[0];
+                var start = _args[1];
+                var count = _args[2];
+                var invalid = NewLabel();
+                var oom = NewLabel();
+                var done = NewLabel();
+
+                var len = NewReg(4);
+                Load(len, s, 0, 4);
+
+                Cmp(start, 0);
+                Jcc(IrCond.Less, invalid);
+                Cmp(count, 0);
+                Jcc(IrCond.Less, invalid);
+                var end = NewReg(4);
+                Mov(end, start);
+                Add(end, end, count);
+                Cmp(end, len);
+                Jcc(IrCond.Greater, invalid);
+
+                var size = NewReg(4);
+                Mov(size, count);
+                Shl(size, size, 1);
+                AddI(size, size, 3);
+                And(size, size, C(4, ~3));
+                AddI(size, size, 4);
+
+                var obj = NewReg(8);
+                CallRuntime(obj, "Alloc", size);
+                Cmp(obj, 0);
+                Jcc(IrCond.Equal, oom);
+
+                Store(obj, 0, count, 4);
+
+                var dst = NewReg(8);
+                Lea(dst, obj, 4);
+                var src = NewReg(8);
+                Lea(src, s, 4);
+                var charOffset = NewReg(4);
+                Mov(charOffset, start);
+                Shl(charOffset, charOffset, 1);
+                Add(src, src, charOffset);
+
+                var words = NewReg(4);
+                Mov(words, count);
+                Shl(words, words, 1);
+                AddI(words, words, 3);
+                Shr(words, words, 2);
+                CallRuntime(null, "CopyChars", dst, src, words);
+
+                StoreRet(obj);
+                Jmp(done);
+
+                Mark(oom);
+                var zero = C(8, 0);
+                StoreRet(zero);
+                Jmp(done);
+
+                Mark(invalid);
+                var message = NewReg(8);
+                LeaData(message, _substringMessage);
+                CallRuntime(null, "PrintString", message);
+                CallRuntime(null, "ExitProcess", C(4, 1));
+
+                Mark(done);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
+            // CharToString(c:4) → 单字符字符串对象（[len:4][char:2]）
+            // ------------------------------------------------------------------
+
+            private void EmitCharToString()
+            {
+                var c = _args[0];
+                var oom = NewLabel();
+                var done = NewLabel();
+
+                var obj = NewReg(8);
+                CallRuntime(obj, "Alloc", C(4, 8));
+                Cmp(obj, 0);
+                Jcc(IrCond.Equal, oom);
+
+                Store(obj, 0, C(4, 1), 4);
+                Store(obj, 4, c, 2);
+                StoreRet(obj);
+                Jmp(done);
+
+                Mark(oom);
+                var zero = C(8, 0);
+                StoreRet(zero);
+
+                Mark(done);
+                EndFunction(_currentFunction!, 8);
+            }
 
             private void EmitInput()
             {

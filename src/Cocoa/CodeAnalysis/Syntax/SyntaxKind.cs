@@ -18,6 +18,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         EndOfFileToken,          // <EOF>
         NumberToken,             // 数字
         StringToken,             // "
+        CharToken,               // '
         PlusToken,               // +
         PlusEqualsToken,         // +=
         MinusToken,              // -
@@ -108,5 +109,6 @@ ColonToken,               // :
         ArrayCreationExpression,  // 数组创建表达式
         ElementAccessExpression,  // 数组索引表达式
         MemberAccessExpression,   // 成员访问表达式
+        MemberCallExpression,     // 成员方法调用表达式
     }
 }

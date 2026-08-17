@@ -529,6 +529,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.StringToken:
                     return ParseStringLiteral();
 
+                case SyntaxKind.CharToken:
+                    return ParseCharLiteral();
+
                 case SyntaxKind.IdentifierToken:
                 default:
                     return ParseNameOrCallExpression();
@@ -564,6 +567,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             var stringToken = MatchToken(SyntaxKind.StringToken);
 
             return new LiteralExpressionSyntax(_syntaxTree, stringToken);
+        }
+
+        private ExpressionSyntax ParseCharLiteral()
+        {
+            var charToken = MatchToken(SyntaxKind.CharToken);
+
+            return new LiteralExpressionSyntax(_syntaxTree, charToken);
         }
 
         private ExpressionSyntax ParseNameOrCallExpression()
@@ -634,7 +644,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                 {
                     var dotToken = NextToken();
                     var identifierToken = MatchToken(SyntaxKind.IdentifierToken);
-                    expression = new MemberAccessExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken);
+
+                    if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+                    {
+                        var openParenthesisToken = NextToken();
+                        var arguments = ParseArguments();
+                        var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+                        expression = new MemberCallExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken, openParenthesisToken, arguments, closeParenthesisToken);
+                    }
+                    else
+                    {
+                        expression = new MemberAccessExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken);
+                    }
                 }
                 else
                 {

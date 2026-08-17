@@ -255,6 +255,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteMemberAccessExpression((BoundMemberAccessExpression)node);
                 }
+                case BoundNodeKind.MemberCallExpression:
+                {
+                    return RewriteMemberCallExpression((BoundMemberCallExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -416,6 +420,18 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundMemberAccessExpression(node.Syntax, node.Type, target, node.Identifier);
+        }
+
+        protected virtual BoundExpression RewriteMemberCallExpression(BoundMemberCallExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            var arguments = RewriteExpressions(node.Arguments);
+            if (expression == node.Expression && arguments == node.Arguments)
+            {
+                return node;
+            }
+
+            return new BoundMemberCallExpression(node.Syntax, expression, node.Identifier, arguments, node.Type);
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

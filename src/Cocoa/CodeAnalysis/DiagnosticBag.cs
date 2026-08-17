@@ -132,7 +132,13 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportUnknownMember(TextLocation location, string name, TypeSymbol type)
         {
-            var message = $"Type '{type}' doesn't have a member named '{name}' (only array 'Length' is supported).";
+            var message = $"Type '{type}' doesn't have a member named '{name}' (only array/string 'Length' is supported).";
+            ReportError(location, message);
+        }
+
+        public void ReportStringIndexNotAssignable(TextLocation location)
+        {
+            var message = "A string index is read-only and cannot be assigned to.";
             ReportError(location, message);
         }
 

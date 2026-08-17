@@ -161,6 +161,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 (SyntaxKind.IdentifierToken, "cmile"),
                 (SyntaxKind.StringToken, "\"Cmile\""),
                 (SyntaxKind.StringToken, "\"Cm\"\"ile\""),
+                (SyntaxKind.CharToken, "'c'"),
             };
 
             return fixedTokens.Concat(dynamicTokens);

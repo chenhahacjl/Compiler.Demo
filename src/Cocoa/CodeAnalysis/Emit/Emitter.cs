@@ -40,6 +40,9 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly IlMethodRef _convertToBooleanReference;
         private readonly IlMethodRef _convertToInt32Reference;
         private readonly IlMethodRef _convertToStringReference;
+        private readonly IlMethodRef _stringCharsReference;
+        private readonly IlMethodRef _stringLengthReference;
+        private readonly IlMethodRef _stringSubstringReference;
         private readonly IlMethodRef _randomGetSharedReference;
         private readonly IlMethodRef _randomNextReference;
         private readonly IlMethodRef _debuggableAttributeCtorReference;
@@ -63,6 +66,9 @@ namespace Cocoa.CodeAnalysis.Emit
             _convertToBooleanReference = RequireMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
             _convertToInt32Reference = RequireMethod("System.Convert", "ToInt32", new[] { "System.Object" });
             _convertToStringReference = RequireMethod("System.Convert", "ToString", new[] { "System.Object" });
+            _stringCharsReference = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
+            _stringLengthReference = RequireMethod("System.String", "get_Length", System.Array.Empty<string>());
+            _stringSubstringReference = RequireMethod("System.String", "Substring", new[] { "System.Int32", "System.Int32" });
             _randomGetSharedReference = RequireMethod("System.Random", "get_Shared", System.Array.Empty<string>());
             _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
             _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
@@ -267,6 +273,11 @@ namespace Cocoa.CodeAnalysis.Emit
                 return IlType.Int32;
             }
 
+            if (type == TypeSymbol.Char)
+            {
+                return IlType.Char;
+            }
+
             if (type == TypeSymbol.String)
             {
                 return IlType.String;
@@ -458,6 +469,9 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundNodeKind.MemberAccessExpression:
                     EmitMemberAccessExpression(il, (BoundMemberAccessExpression)node);
                     break;
+                case BoundNodeKind.MemberCallExpression:
+                    EmitMemberCallExpression(il, (BoundMemberCallExpression)node);
+                    break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
@@ -473,6 +487,11 @@ namespace Cocoa.CodeAnalysis.Emit
             else if (node.Type == TypeSymbol.Int32)
             {
                 var value = (int)node.ConstantValue.Value;
+                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+            }
+            else if (node.Type == TypeSymbol.Char)
+            {
+                var value = (int)(char)node.ConstantValue.Value;
                 il.Emit(IlOpCodes.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.String)
@@ -768,12 +787,29 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             EmitExpression(il, node.Expression);
 
-            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32;
+            if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.String)
+            {
+                var type = RequireType("System.Char");
+                il.Emit(IlOpCodes.Get("Box"), type);
+                il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int32 ||
+                node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Char)
+            {
+                // 栈上同为 4 字节，无需指令
+                return;
+            }
+
+            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char;
             if (needBoxing)
             {
                 var type = node.Expression.Type == TypeSymbol.Boolean
                     ? RequireType("System.Boolean")
-                    : RequireType("System.Int32");
+                    : node.Expression.Type == TypeSymbol.Int32
+                        ? RequireType("System.Int32")
+                        : RequireType("System.Char");
                 il.Emit(IlOpCodes.Get("Box"), type);
             }
 
@@ -820,6 +856,11 @@ namespace Cocoa.CodeAnalysis.Emit
                 return "System.Int32";
             }
 
+            if (arrayType.ElementType == TypeSymbol.Char)
+            {
+                return "System.Char";
+            }
+
             if (arrayType.ElementType == TypeSymbol.Boolean)
             {
                 return "System.Boolean";
@@ -838,7 +879,17 @@ namespace Cocoa.CodeAnalysis.Emit
             EmitExpression(il, node.Target);
             EmitExpression(il, node.Index);
 
-            if (node.Type == TypeSymbol.Boolean)
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodes.Get("Callvirt"), _stringCharsReference);
+                return;
+            }
+
+            if (node.Type == TypeSymbol.Char)
+            {
+                il.Emit(IlOpCodes.Get("Ldelem_U2"));
+            }
+            else if (node.Type == TypeSymbol.Boolean)
             {
                 il.Emit(IlOpCodes.Get("Ldelem_I1"));
             }
@@ -887,6 +938,10 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 il.Emit(IlOpCodes.Get("Stelem_I1"));
             }
+            else if (elementType == TypeSymbol.Char)
+            {
+                il.Emit(IlOpCodes.Get("Stelem_I2"));
+            }
             else if (elementType == TypeSymbol.String)
             {
                 il.Emit(IlOpCodes.Get("Stelem_Ref"));
@@ -904,7 +959,31 @@ namespace Cocoa.CodeAnalysis.Emit
         private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
         {
             EmitExpression(il, node.Target);
+
+            if (node.Target.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodes.Get("Callvirt"), _stringLengthReference);
+                return;
+            }
+
             il.Emit(IlOpCodes.Get("Ldlen"));
+        }
+
+        private void EmitMemberCallExpression(IlAssembler il, BoundMemberCallExpression node)
+        {
+            EmitExpression(il, node.Expression);
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
+            {
+                il.Emit(IlOpCodes.Get("Callvirt"), _stringSubstringReference);
+                return;
+            }
+
+            throw new System.Exception($"Unexpected member call {node.Identifier}");
         }
     }
 }

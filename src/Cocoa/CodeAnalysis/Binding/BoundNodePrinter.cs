@@ -102,6 +102,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.MemberAccessExpression:
                     WriteMemberAccessExpression((BoundMemberAccessExpression)node, writer);
                     break;
+                case BoundNodeKind.MemberCallExpression:
+                    WriteMemberCallExpression((BoundMemberCallExpression)node, writer);
+                    break;
                 default:
                     throw new Exception($"Unexpected node {node.Kind}");
             }
@@ -349,6 +352,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 value = "\"" + value.Replace("\"", "\"\"") + "\"";
                 writer.WriteString(value);
             }
+            else if (node.Type == TypeSymbol.Char)
+            {
+                var text = ((char)node.Value).ToString();
+                text = text.Replace("\\", "\\\\").Replace("\n", "\\n").Replace("\t", "\\t").Replace("'", "\\'");
+                writer.WriteString("'" + text + "'");
+            }
             else
             {
                 throw new Exception($"Unexpected type {node.Type}");
@@ -473,6 +482,32 @@ namespace Cocoa.CodeAnalysis.Binding
             node.Target.WriteTo(writer);
             writer.WritePunctuation(SyntaxKind.DotToken);
             writer.WriteIdentifier(node.Identifier);
+        }
+
+        private static void WriteMemberCallExpression(BoundMemberCallExpression node, IndentedTextWriter writer)
+        {
+            node.Expression.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.DotToken);
+            writer.WriteIdentifier(node.Identifier);
+            writer.WritePunctuation(SyntaxKind.OpenParenthesisToken);
+
+            var isFirst = true;
+            foreach (var argument in node.Arguments)
+            {
+                if (isFirst)
+                {
+                    isFirst = false;
+                }
+                else
+                {
+                    writer.WritePunctuation(SyntaxKind.CommaToken);
+                    writer.WriteSpace();
+                }
+
+                argument.WriteTo(writer);
+            }
+
+            writer.WritePunctuation(SyntaxKind.CloseParenthesisToken);
         }
     }
 }

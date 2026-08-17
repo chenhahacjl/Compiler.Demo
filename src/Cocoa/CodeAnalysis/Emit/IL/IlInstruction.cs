@@ -8,6 +8,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         Void,
         Boolean,
         Int32,
+        Char,
         Double,
         String,
         Object,
@@ -40,6 +41,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public static readonly IlType Void = new IlType(IlTypeKind.Void);
         public static readonly IlType Boolean = new IlType(IlTypeKind.Boolean);
         public static readonly IlType Int32 = new IlType(IlTypeKind.Int32);
+        public static readonly IlType Char = new IlType(IlTypeKind.Char);
         public static readonly IlType Double = new IlType(IlTypeKind.Double);
         public static readonly IlType String = new IlType(IlTypeKind.String);
         public static readonly IlType Object = new IlType(IlTypeKind.Object);
@@ -53,6 +55,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             IlTypeKind.Void => "System.Void",
             IlTypeKind.Boolean => "System.Boolean",
             IlTypeKind.Int32 => "System.Int32",
+            IlTypeKind.Char => "System.Char",
             IlTypeKind.Double => "System.Double",
             IlTypeKind.String => "System.String",
             IlTypeKind.Object => "System.Object",

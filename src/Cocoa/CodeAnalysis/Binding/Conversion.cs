@@ -46,6 +46,27 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            if (from == TypeSymbol.Char)
+            {
+                if (to == TypeSymbol.Int32)
+                {
+                    return Conversion.Implicit;
+                }
+
+                if (to == TypeSymbol.String)
+                {
+                    return Conversion.Implicit;
+                }
+            }
+
+            if (from == TypeSymbol.Int32)
+            {
+                if (to == TypeSymbol.Char)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
             if (from == TypeSymbol.String)
             {
                 if (to == TypeSymbol.Boolean || to == TypeSymbol.Int32)

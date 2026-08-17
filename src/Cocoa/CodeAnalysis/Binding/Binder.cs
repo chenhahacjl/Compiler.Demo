@@ -602,6 +602,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
                 case SyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
                 case SyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
+                case SyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
@@ -673,11 +674,17 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if (boundTarget is BoundElementAccessExpression elementTarget && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+            if (boundTarget is BoundElementAccessExpression elementTarget && elementTarget.Target.Type == TypeSymbol.String)
             {
-                var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, elementTarget.Type);
+                _diagnostics.ReportStringIndexNotAssignable(syntax.AssignmentToken.Location);
+                return boundExpression;
+            }
 
-                return new BoundElementAssignmentExpression(syntax, elementTarget.Type, elementTarget, convertedExpression);
+            if (boundTarget is BoundElementAccessExpression arrayElementTarget && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+            {
+                var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, arrayElementTarget.Type);
+
+                return new BoundElementAssignmentExpression(syntax, arrayElementTarget.Type, arrayElementTarget, convertedExpression);
             }
 
             if (boundTarget.Type != TypeSymbol.Error)
@@ -740,6 +747,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            if (boundTarget.Type == TypeSymbol.String)
+            {
+                return new BoundElementAccessExpression(syntax, TypeSymbol.Char, boundTarget, boundIndex);
+            }
+
             if (boundTarget.Type.ElementType == null)
             {
                 _diagnostics.ReportIndexRequiresArray(syntax.Location, boundTarget.Type);
@@ -759,13 +771,55 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            // 本轮仅支持数组的 Length（int 只读）；record/字符串成员访问后续里程碑
+            // 本轮仅支持数组/字符串的 Length（int 只读）；record/字符串成员访问后续里程碑
             if (boundTarget.Type.ElementType != null && identifier == "Length")
             {
                 return new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, boundTarget, identifier);
             }
 
+            if (boundTarget.Type == TypeSymbol.String && identifier == "Length")
+            {
+                return new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, boundTarget, identifier);
+            }
+
             _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundTarget.Type);
+            return new BoundErrorExpression(syntax);
+        }
+
+        private BoundExpression BindMemberCallExpression(MemberCallExpressionSyntax syntax)
+        {
+            var boundExpression = BindExpression(syntax.Expression);
+            var identifier = syntax.IdentifierToken.Text;
+
+            if (boundExpression.Type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var argument in syntax.Arguments)
+            {
+                boundArguments.Add(BindExpression(argument));
+            }
+
+            if (boundExpression.Type == TypeSymbol.String && identifier == "substring")
+            {
+                if (syntax.Arguments.Count != 2)
+                {
+                    _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, 2, syntax.Arguments.Count);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                for (var i = 0; i < 2; i++)
+                {
+                    arguments.Add(BindConversion(syntax.Arguments[i].Location, boundArguments[i], TypeSymbol.Int32));
+                }
+
+                return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), TypeSymbol.String);
+            }
+
+            _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
             return new BoundErrorExpression(syntax);
         }
 
@@ -951,6 +1005,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "any": return TypeSymbol.Any;
                 case "bool": return TypeSymbol.Boolean;
                 case "int": return TypeSymbol.Int32;
+                case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 default:
                     return null;

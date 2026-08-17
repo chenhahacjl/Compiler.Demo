@@ -557,5 +557,74 @@ function main()
 
             Assert.Contains(diagnostics, d => d.Message == "Cannot convert type 'int[]' to 'int'.");
         }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_String_IndexLengthAndSubstring(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var s = ""hello""
+    print(s.Length)
+    print(s[0])
+    print(int(s[1]))
+    var c = s[2]
+    print(c)
+    print(char(97))
+    print(s.substring(1, 3))
+    print(s.substring(1, 3) + ""!"")
+}", "src-string-index", target);
+
+            Assert.Equal("5\r\nh\r\n101\r\nl\r\na\r\nell\r\nell!\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_CharArray(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var a = new char[2] {'x', 'y'}
+    a[0] = 'z'
+    print(a[0])
+    print(a[1])
+}", "src-char-array", target);
+
+            Assert.Equal("z\r\ny\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_String_IndexOutOfBounds(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var s = ""abc""
+    print(s[9])
+}", "src-string-oob", target, expectedExitCode: 1);
+
+            Assert.Equal("error: array index out of range\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Substring_InvalidArguments(string target)
+        {
+            var output = CompileAndRun(@"
+function main()
+{
+    var s = ""abc""
+    print(s.substring(1, 99))
+}", "src-substring-invalid", target, expectedExitCode: 1);
+
+            Assert.Equal("error: invalid substring arguments\r\n", output);
+        }
     }
 }

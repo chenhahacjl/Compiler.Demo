@@ -513,6 +513,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '"':
                     ReadString();
                     break;
+                case '\'':
+                    ReadChar();
+                    break;
                 case '0':
                 case '1':
                 case '2':
@@ -604,6 +607,55 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             _kind = SyntaxKind.StringToken;
             _value = stringBuilder.ToString();
+        }
+
+        private void ReadChar()
+        {
+            // 跳过当前引号
+            _position++;
+
+            var value = '\0';
+            var hasError = false;
+
+            if (Current == '\'' || Current == '\0' || Current == '\r' || Current == '\n')
+            {
+                hasError = true;
+            }
+            else if (Current == '\\')
+            {
+                _position++;
+                switch (Current)
+                {
+                    case 'n': value = '\n'; _position++; break;
+                    case 't': value = '\t'; _position++; break;
+                    case 'r': value = '\r'; _position++; break;
+                    case '\\': value = '\\'; _position++; break;
+                    case '\'': value = '\''; _position++; break;
+                    case '"': value = '"'; _position++; break;
+                    default:
+                        hasError = true;
+                        break;
+                }
+            }
+            else
+            {
+                value = Current;
+                _position++;
+            }
+
+            if (hasError || Current != '\'')
+            {
+                var span = new TextSpan(_start, 1);
+                var location = new TextLocation(_text, span);
+                _diagnostics.ReportBadCharacter(location, Current);
+                _kind = SyntaxKind.BadToken;
+                return;
+            }
+
+            // 跳过收尾引号
+            _position++;
+            _kind = SyntaxKind.CharToken;
+            _value = value;
         }
 
         private void ReadNumber()
