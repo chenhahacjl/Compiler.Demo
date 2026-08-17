@@ -409,6 +409,18 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         [return: NotNullIfNotNull(nameof(syntax))]
+        private BoundExpression BindCastExpression(CastExpressionSyntax syntax)
+        {
+            var type = LookupType(syntax.TypeName.Text ?? "?");
+            if (type == null)
+            {
+                _diagnostics.ReportUndefinedType(syntax.TypeName.Location, syntax.TypeName.Text ?? "?");
+                return new BoundErrorExpression(syntax);
+            }
+
+            return BindConversion(syntax.Expression, type, allowExplicit: true);
+        }
+
         private TypeSymbol? BindTypeClause(TypeClauseSyntax? syntax)
         {
             if (syntax == null)
@@ -613,6 +625,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
                 case SyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
                 case SyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
+                case SyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
@@ -979,7 +992,17 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!allowExplicit && conversion.IsExplicit)
             {
-                _diagnostics.ReportCannotConvertImplicitly(diagnosticLocation, expression.Type, type);
+                if (type == TypeSymbol.Byte && TryGetIntConstant(expression, out var intValue))
+                {
+                    if (intValue < 0 || intValue > 255)
+                    {
+                        _diagnostics.ReportByteConstantOutOfRange(diagnosticLocation, intValue);
+                    }
+                }
+                else
+                {
+                    _diagnostics.ReportCannotConvertImplicitly(diagnosticLocation, expression.Type, type);
+                }
             }
 
             if (conversion.IsIdentity)
@@ -1030,6 +1053,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "any": return TypeSymbol.Any;
                 case "bool": return TypeSymbol.Boolean;
                 case "int": return TypeSymbol.Int32;
+                case "byte": return TypeSymbol.Byte;
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 default:

@@ -410,6 +410,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return 1;
             }
 
+            if (type == TypeSymbol.Byte)
+            {
+                return 1;
+            }
+
             if (type == TypeSymbol.Char)
             {
                 return 2;
@@ -814,7 +819,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol)
+            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.Byte)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintInt"), IrOperand.Constant(0)));
@@ -896,10 +901,24 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||
                 from == TypeSymbol.Int32 && to == TypeSymbol.Char ||
                 from is EnumTypeSymbol && to == TypeSymbol.Int32 ||
-                from == TypeSymbol.Int32 && to is EnumTypeSymbol)
+                from == TypeSymbol.Int32 && to is EnumTypeSymbol ||
+                from == TypeSymbol.Byte && to == TypeSymbol.Int32)
             {
                 // 同为 4 字节值，无需指令
                 return value;
+            }
+
+            if (to == TypeSymbol.Byte)
+            {
+                if (from == TypeSymbol.Int32)
+                {
+                    // 无符号字节截断，与 C# (byte)300 == 44 语义一致
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(value), IrOperand.Constant(0xFF)));
+                    return result;
+                }
+
+                throw new Exception($"Unexpected conversion from {from} to {to}");
             }
 
             if (to == TypeSymbol.String)

@@ -435,7 +435,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
             var memory = EncodeMemory(src);
             EmitRex(0x40 | (dstSize == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x04 : 0) | memory.RexB);
             EmitByte(0x0F);
-            EmitByte(0xB7);
+            EmitByte((byte)(dstSize == X64Size.Byte ? 0xB6 : 0xB7));
             EmitModRMByte(memory.Mod, (int)dst & 7, memory.Rm);
             EmitMemoryRest(src, memory);
         }

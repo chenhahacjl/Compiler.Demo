@@ -112,6 +112,12 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportByteConstantOutOfRange(TextLocation location, int value)
+        {
+            var message = $"Constant value '{value}' is out of range for 'byte' (0-255). Use an explicit cast.";
+            ReportError(location, message);
+        }
+
         public void ReportSymbolAlreadyDeclared(TextLocation location, string name)
         {
             var message = $"'{name}' is already declared.";

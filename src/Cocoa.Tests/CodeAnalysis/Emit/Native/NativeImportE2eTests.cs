@@ -145,6 +145,50 @@ function main()
         }
 
         [Fact]
+        public void Native_Byte_EndToEnd()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function main()
+{
+    var b1: byte = 65
+    print(b1)
+    var buf: byte[] = new byte[3]
+    buf[0] = 200
+    buf[1] = 0xFF
+    print(buf[0])
+    print(buf[1])
+    print((byte)300)
+    print((int)buf[0])
+    print(0xFF)
+}", "native-byte-e2e", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("65\r\n200\r\n255\r\n44\r\n200\r\n255\r\n", stdout);
+        }
+
+        [Fact]
+        public void Native_X86_Byte_EndToEnd()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function main()
+{
+    var b1: byte = 65
+    print(b1)
+    var buf: byte[] = new byte[3]
+    buf[0] = 200
+    buf[1] = 0xFF
+    print(buf[0])
+    print(buf[1])
+    print((byte)300)
+    print((int)buf[0])
+    print(0xFF)
+}", "native-byte-e2e-x86", X86);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("65\r\n200\r\n255\r\n44\r\n200\r\n255\r\n", stdout);
+        }
+
+        [Fact]
         public void Native_X86_StdCallExtern_ExitProcess_ExitCode()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"

@@ -326,6 +326,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case IlTypeKind.Char:
                     stream.WriteByte(0x03); // ELEMENT_TYPE_CHAR
                     break;
+                case IlTypeKind.U1:
+                    stream.WriteByte(0x05); // ELEMENT_TYPE_U1
+                    break;
                 case IlTypeKind.Double:
                     stream.WriteByte(0x0D);
                     break;

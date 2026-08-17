@@ -343,6 +343,11 @@ namespace Cocoa.CodeAnalysis
             {
                 return Convert.ToChar(value);
             }
+            else if (node.Type == TypeSymbol.Byte)
+            {
+                // 无符号字节截断，与 (byte)300 == 44 语义一致
+                return unchecked((byte)Convert.ToInt32(value));
+            }
             else if (node.Type == TypeSymbol.String)
             {
                 return Convert.ToString(value);

@@ -503,5 +503,28 @@ function main()
             Assert.Equal(0, exitCode);
             Assert.Equal("0\r\n1\r\n2\r\n", stdout);
         }
+
+        [Fact]
+        public void Byte_EndToEnd_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var b1: byte = 65
+    print(b1)
+    var buf: byte[] = new byte[3]
+    buf[0] = 200
+    buf[1] = 0xFF
+    print(buf[0])
+    print(buf[1])
+    print((byte)300)
+    print((int)buf[0])
+    print((byte)200 == (byte)200)
+    print(0xFF)
+}", "e2e-byte");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("65\r\n200\r\n255\r\n44\r\n200\r\nTrue\r\n255\r\n", stdout);
+        }
     }
 }

@@ -1030,6 +1030,109 @@ function main()
         }
 
         [Fact]
+        public void Evaluator_Byte_Cast_Truncates_To_Unsigned_Byte()
+        {
+            AssertValue("(byte)300", (byte)44);
+        }
+
+        [Fact]
+        public void Evaluator_Byte_Cast_From_Int_To_Byte()
+        {
+            AssertValue("(byte)42", (byte)42);
+        }
+
+        [Fact]
+        public void Evaluator_Byte_ExplicitCast_To_Int()
+        {
+            AssertValue("(int)(byte)255", 255);
+        }
+
+        [Fact]
+        public void Evaluator_Byte_Implicit_Int_Constant_Comparison()
+        {
+            AssertValue("(byte)200 == (byte)200", true);
+            AssertValue("(byte)200 != (byte)201", true);
+        }
+
+        [Fact]
+        public void Evaluator_HexLiteral_Int32()
+        {
+            AssertValue("0xFF", 255);
+            AssertValue("0x10", 16);
+        }
+
+        [Fact]
+        public void Evaluator_Byte_Constant_OutOfRange_ReportsError()
+        {
+            var text = @"
+                let b: byte = [300]
+            ";
+
+            var diagnostics = @"
+                Constant value '300' is out of range for 'byte' (0-255). Use an explicit cast.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Byte_ConstantInRange_NoError()
+        {
+            var text = @"
+                let b: byte = 255
+            ";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            Assert.False(result.Diagnostics.HasErrors());
+        }
+
+        [Fact]
+        public void Evaluator_Byte_Assignment_OutOfRange_ReportsError()
+        {
+            var text = @"
+                var b: byte = 1
+                b = [300]
+            ";
+
+            var diagnostics = @"
+                Constant value '300' is out of range for 'byte' (0-255). Use an explicit cast.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Byte_ExplicitCast_Allows_OutOfRange()
+        {
+            var text = @"
+                let b: byte = (byte)300
+            ";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            Assert.False(result.Diagnostics.HasErrors());
+        }
+
+        [Fact]
+        public void Evaluator_Byte_UndefinedType_ReportsError()
+        {
+            var text = @"
+                let b: [btye] = 1
+            ";
+
+            var diagnostics = @"
+                Type 'btye' doesn't exist.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
         public void Evaluator_ExternFunction_WithoutImport_ReportsError()
         {
             var text = @"

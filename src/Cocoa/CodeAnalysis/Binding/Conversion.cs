@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Explicit;
             }
 
-            if (from == TypeSymbol.Boolean || from == TypeSymbol.Int32)
+            if (from == TypeSymbol.Boolean || from == TypeSymbol.Int32 || from == TypeSymbol.Byte)
             {
                 if (to == TypeSymbol.String)
                 {
@@ -64,6 +64,19 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (to == TypeSymbol.Char)
                 {
                     return Conversion.Explicit;
+                }
+
+                if (to == TypeSymbol.Byte)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
+            if (from == TypeSymbol.Byte)
+            {
+                if (to == TypeSymbol.Int32)
+                {
+                    return Conversion.Implicit;
                 }
             }
 

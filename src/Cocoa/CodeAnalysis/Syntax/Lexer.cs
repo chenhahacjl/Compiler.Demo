@@ -660,15 +660,38 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private void ReadNumber()
         {
-            while (char.IsDigit(Current))
+            var length = 0;
+            var isHex = false;
+
+            if (Current == '0' && Peek(1) == 'x')
             {
-                _position++;
+                isHex = true;
+                _position += 2;
+                length = 2;
+
+                while (IsHexDigit(Current))
+                {
+                    _position++;
+                    length++;
+                }
+            }
+            else
+            {
+                while (char.IsDigit(Current))
+                {
+                    _position++;
+                    length++;
+                }
             }
 
-            var length = _position - _start;
             var text = _text.ToString(_start, length);
 
-            if (!int.TryParse(text, out var value))
+            var value = 0;
+            var parsed = isHex
+                ? int.TryParse(text.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out value)
+                : int.TryParse(text, out value);
+
+            if (!parsed)
             {
                 var span = new TextSpan(_start, length);
                 var location = new TextLocation(_text, span);
@@ -677,6 +700,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             _value = value;
             _kind = SyntaxKind.NumberToken;
+        }
+
+        private static bool IsHexDigit(char c)
+        {
+            return char.IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
         }
 
         private void ReadIdentifierOrKeyword()

@@ -108,6 +108,7 @@ ColonToken,               // :
         BinaryExpression,         // 二元表达式
         CompoundAssignmentExpression, // 复合赋值表达式
         ParenthesizedExpression,  // 括号表达式
+        CastExpression,           // 类型转换表达式
         AssignmentExpression,     // 赋值表达式
         CallExpression,           // 函数调用表达式
         ArrayCreationExpression,  // 数组创建表达式

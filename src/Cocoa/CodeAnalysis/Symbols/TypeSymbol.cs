@@ -9,11 +9,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly TypeSymbol Any = new TypeSymbol("any");
         public static readonly TypeSymbol Boolean = new TypeSymbol("bool");
         public static readonly TypeSymbol Int32 = new TypeSymbol("int");
+        public static readonly TypeSymbol Byte = new TypeSymbol("byte");
         public static readonly TypeSymbol Char = new TypeSymbol("char");
         public static readonly TypeSymbol String = new TypeSymbol("string");
         public static readonly TypeSymbol Void = new TypeSymbol("void");
 
-        private static readonly Dictionary<TypeSymbol, TypeSymbol> _arrayTypes = new Dictionary<TypeSymbol, TypeSymbol>();
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<TypeSymbol, TypeSymbol> _arrayTypes = new System.Collections.Concurrent.ConcurrentDictionary<TypeSymbol, TypeSymbol>();
 
         internal TypeSymbol(string name)
             : base(name)
@@ -32,13 +33,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public static TypeSymbol ArrayOf(TypeSymbol elementType)
         {
-            if (!_arrayTypes.TryGetValue(elementType, out var arrayType))
-            {
-                arrayType = new TypeSymbol(elementType);
-                _arrayTypes.Add(elementType, arrayType);
-            }
-
-            return arrayType;
+            return _arrayTypes.GetOrAdd(elementType, static e => new TypeSymbol(e));
         }
 
         public override SymbolKind Kind => SymbolKind.Type;

@@ -278,6 +278,11 @@ namespace Cocoa.CodeAnalysis.Emit
                 return IlType.Char;
             }
 
+            if (type == TypeSymbol.Byte)
+            {
+                return IlType.Byte;
+            }
+
             if (type == TypeSymbol.String)
             {
                 return IlType.String;
@@ -497,6 +502,11 @@ namespace Cocoa.CodeAnalysis.Emit
             else if (node.Type == TypeSymbol.Char)
             {
                 var value = (int)(char)node.ConstantValue.Value;
+                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+            }
+            else if (node.Type == TypeSymbol.Byte)
+            {
+                var value = Convert.ToInt32(node.ConstantValue.Value);
                 il.Emit(IlOpCodes.Get("Ldc_I4"), value);
             }
             else if (node.Type is EnumTypeSymbol)
@@ -805,6 +815,19 @@ namespace Cocoa.CodeAnalysis.Emit
                 return;
             }
 
+            if (node.Expression.Type == TypeSymbol.Byte && node.Type == TypeSymbol.Int32)
+            {
+                // 栈上同为 4 字节，无需指令
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Byte)
+            {
+                // 无符号字节截断，与 C# (byte)300 == 44 语义一致
+                il.Emit(IlOpCodes.Get("Conv_U1"));
+                return;
+            }
+
             if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int32 ||
                 node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Char ||
                 node.Expression.Type is EnumTypeSymbol && node.Type == TypeSymbol.Int32 ||
@@ -814,7 +837,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 return;
             }
 
-            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char || node.Expression.Type is EnumTypeSymbol;
+            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char || node.Expression.Type == TypeSymbol.Byte || node.Expression.Type is EnumTypeSymbol;
             if (needBoxing)
             {
                 var type = node.Expression.Type == TypeSymbol.Boolean
@@ -823,7 +846,9 @@ namespace Cocoa.CodeAnalysis.Emit
                         ? RequireType("System.Int32")
                         : node.Expression.Type == TypeSymbol.Char
                             ? RequireType("System.Char")
-                            : RequireType("System.Int32");
+                            : node.Expression.Type == TypeSymbol.Byte
+                                ? RequireType("System.Byte")
+                                : RequireType("System.Int32");
                 il.Emit(IlOpCodes.Get("Box"), type);
             }
 
@@ -875,6 +900,11 @@ namespace Cocoa.CodeAnalysis.Emit
                 return "System.Char";
             }
 
+            if (arrayType.ElementType == TypeSymbol.Byte)
+            {
+                return "System.Byte";
+            }
+
             if (arrayType.ElementType is EnumTypeSymbol)
             {
                 return "System.Int32";
@@ -908,9 +938,9 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 il.Emit(IlOpCodes.Get("Ldelem_U2"));
             }
-            else if (node.Type == TypeSymbol.Boolean)
+            else if (node.Type == TypeSymbol.Boolean || node.Type == TypeSymbol.Byte)
             {
-                il.Emit(IlOpCodes.Get("Ldelem_I1"));
+                il.Emit(IlOpCodes.Get("Ldelem_U1"));
             }
             else if (node.Type == TypeSymbol.String)
             {
@@ -953,7 +983,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private static void EmitElementStore(IlAssembler il, TypeSymbol elementType)
         {
-            if (elementType == TypeSymbol.Boolean)
+            if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.Byte)
             {
                 il.Emit(IlOpCodes.Get("Stelem_I1"));
             }

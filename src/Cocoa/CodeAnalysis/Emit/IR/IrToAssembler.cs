@@ -409,6 +409,10 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             {
                 _a.Movzx(X64Size.Word, X64Register.EAX, operand);
             }
+            else if (instruction.ByteSize == 1)
+            {
+                _a.Movzx(X64Size.Byte, X64Register.EAX, operand);
+            }
             else
             {
                 _a.Mov(ToSize(instruction.ByteSize), X64Register.EAX, operand);

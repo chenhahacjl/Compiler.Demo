@@ -579,6 +579,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             switch (Current.Kind)
             {
                 case SyntaxKind.OpenParenthesisToken:
+                    if (IsCastStart())
+                    {
+                        return ParseCastExpression();
+                    }
+
                     return ParseParenthesizedExpression();
 
                 case SyntaxKind.NewKeyword:
@@ -601,6 +606,42 @@ namespace Cocoa.CodeAnalysis.Syntax
                 default:
                     return ParseNameOrCallExpression();
             }
+        }
+
+        private bool IsCastStart()
+        {
+            if (Peek(1).Kind != SyntaxKind.IdentifierToken || Peek(2).Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                return false;
+            }
+
+            switch (Peek(3).Kind)
+            {
+                case SyntaxKind.IdentifierToken:
+                case SyntaxKind.NumberToken:
+                case SyntaxKind.StringToken:
+                case SyntaxKind.CharToken:
+                case SyntaxKind.OpenParenthesisToken:
+                case SyntaxKind.NewKeyword:
+                case SyntaxKind.TrueKeyword:
+                case SyntaxKind.FalseKeyword:
+                case SyntaxKind.BangToken:
+                case SyntaxKind.MinusToken:
+                case SyntaxKind.PlusToken:
+                case SyntaxKind.TildeToken:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private ExpressionSyntax ParseCastExpression()
+        {
+            var openParenthesisToken = NextToken();
+            var typeName = NextToken();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var expression = ParseBinaryExpression(6); // 一元优先级：cast 体只消费一元表达式
+            return new CastExpressionSyntax(_syntaxTree, openParenthesisToken, typeName, closeParenthesisToken, expression);
         }
 
         private ExpressionSyntax ParseParenthesizedExpression()
