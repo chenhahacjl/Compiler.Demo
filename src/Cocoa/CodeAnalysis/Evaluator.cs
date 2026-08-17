@@ -347,6 +347,11 @@ namespace Cocoa.CodeAnalysis
             {
                 return Convert.ToString(value);
             }
+            else if (node.Type is EnumTypeSymbol)
+            {
+                // 枚举底层为 int，无操作
+                return Convert.ToInt32(value);
+            }
             else
             {
                 throw new Exception($"Unexpected type {node.Type}");

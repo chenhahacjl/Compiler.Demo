@@ -160,7 +160,72 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseFunctionDeclaration();
             }
 
+            if (Current.Kind == SyntaxKind.PublicKeyword ||
+                Current.Kind == SyntaxKind.EnumKeyword)
+            {
+                return ParseEnumDeclaration();
+            }
+
             return ParseGlobalStatement();
+        }
+
+        private MemberSyntax ParseEnumDeclaration()
+        {
+            SyntaxToken? publicKeyword = null;
+
+            if (Current.Kind == SyntaxKind.PublicKeyword)
+            {
+                publicKeyword = MatchToken(SyntaxKind.PublicKeyword);
+            }
+
+            var enumKeyword = MatchToken(SyntaxKind.EnumKeyword);
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+            var members = ParseEnumMemberList();
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new EnumDeclarationSyntax(_syntaxTree, publicKeyword, enumKeyword, identifier, openBraceToken, members, closeBraceToken);
+        }
+
+        private SeparatedSyntaxList<EnumMemberSyntax> ParseEnumMemberList()
+        {
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+
+            var parseNextMember = true;
+            while (parseNextMember &&
+                Current.Kind != SyntaxKind.CloseBraceToken &&
+                Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var member = ParseEnumMember();
+                nodesAndSeparators.Add(member);
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    var comma = MatchToken(SyntaxKind.CommaToken);
+                    nodesAndSeparators.Add(comma);
+                }
+                else
+                {
+                    parseNextMember = false;
+                }
+            }
+
+            return new SeparatedSyntaxList<EnumMemberSyntax>(nodesAndSeparators.ToImmutable());
+        }
+
+        private EnumMemberSyntax ParseEnumMember()
+        {
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? value = null;
+
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                value = ParseExpression();
+            }
+
+            return new EnumMemberSyntax(_syntaxTree, identifier, equalsToken, value);
         }
 
         private MemberSyntax ParseImportClause()

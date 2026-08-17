@@ -113,6 +113,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.WhileKeyword;
                 case "do":
                     return SyntaxKind.DoKeyword;
+                case "enum":
+                    return SyntaxKind.EnumKeyword;
+                case "public":
+                    return SyntaxKind.PublicKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -252,6 +256,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "while";
                 case SyntaxKind.DoKeyword:
                     return "do";
+                case SyntaxKind.EnumKeyword:
+                    return "enum";
+                case SyntaxKind.PublicKeyword:
+                    return "public";
                 default:
                     return null;
             }

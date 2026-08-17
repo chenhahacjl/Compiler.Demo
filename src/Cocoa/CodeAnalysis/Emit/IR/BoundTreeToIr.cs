@@ -415,6 +415,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return 2;
             }
 
+            if (type is EnumTypeSymbol)
+            {
+                return 4;
+            }
+
             return type == TypeSymbol.Int32 ? 4 : 8;
         }
 
@@ -809,7 +814,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int32)
+            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintInt"), IrOperand.Constant(0)));
@@ -889,7 +894,9 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             }
 
             if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||
-                from == TypeSymbol.Int32 && to == TypeSymbol.Char)
+                from == TypeSymbol.Int32 && to == TypeSymbol.Char ||
+                from is EnumTypeSymbol && to == TypeSymbol.Int32 ||
+                from == TypeSymbol.Int32 && to is EnumTypeSymbol)
             {
                 // 同为 4 字节值，无需指令
                 return value;

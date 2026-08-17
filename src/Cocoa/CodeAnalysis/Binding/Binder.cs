@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Binding
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.Any())
             {
-                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty);
+                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty);
             }
 
             var globalStatements = syntaxTrees.SelectMany(st => st.Root.Members)
@@ -60,6 +60,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is FunctionDeclarationSyntax function)
                 {
                     binder.BindFunctionDeclaration(function, importedDll);
+                }
+                else if (member is EnumDeclarationSyntax enumDeclaration)
+                {
+                    binder.BindEnumDeclaration(enumDeclaration);
                 }
             }
 
@@ -143,13 +147,14 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var diagnostics = binder.Diagnostics.ToImmutableArray();
             var variables = binder._scope.GetDeclaredVariables();
+            var enums = binder._scope.GetDeclaredEnums();
 
             if (previous != null)
             {
                 diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
             }
 
-            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, variables, statements.ToImmutable());
+            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, variables, statements.ToImmutable());
         }
 
         public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope)
@@ -292,6 +297,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 foreach (var f in previous.Functions)
                 {
                     scope.TryDeclareFunction(f);
+                }
+
+                foreach (var e in previous.Enums)
+                {
+                    scope.TryDeclareEnum(e);
                 }
 
                 foreach (var v in previous.Variables)
@@ -763,6 +773,21 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindMemberAccessExpression(MemberAccessExpressionSyntax syntax)
         {
+            // 枚举成员访问（Color.Red）：左侧为枚举类型名 → 折叠为常量字面量
+            if (syntax.Expression is NameExpressionSyntax nameExpression)
+            {
+                if (LookupType(nameExpression.IdentifierToken.Text) is EnumTypeSymbol enumType)
+                {
+                    if (enumType.TryGetMember(syntax.IdentifierToken.Text, out var value))
+                    {
+                        return new BoundLiteralExpression(syntax, value, enumType);
+                    }
+
+                    _diagnostics.ReportEnumMemberNotDefined(syntax.IdentifierToken.Location, enumType.Name, syntax.IdentifierToken.Text);
+                    return new BoundErrorExpression(syntax);
+                }
+            }
+
             var boundTarget = BindExpression(syntax.Expression);
             var identifier = syntax.IdentifierToken.Text;
 
@@ -1008,7 +1033,69 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 default:
-                    return null;
+                    return _scope.TryLookupSymbol(name) as EnumTypeSymbol;
+            }
+        }
+
+        private static bool TryGetIntConstant(BoundExpression expression, out int value)
+        {
+            if (expression.ConstantValue?.Value is int intValue)
+            {
+                value = intValue;
+                return true;
+            }
+
+            if (expression is BoundUnaryExpression unary &&
+                unary.Op.Kind == BoundUnaryOperatorKind.Negation &&
+                unary.Operand.ConstantValue?.Value is int operandValue)
+            {
+                value = -operandValue;
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        private void BindEnumDeclaration(EnumDeclarationSyntax syntax)
+        {
+            var members = new Dictionary<string, int>();
+            var nextValue = 0;
+
+            foreach (var member in syntax.Members)
+            {
+                var memberName = member.Identifier.Text;
+
+                if (members.ContainsKey(memberName))
+                {
+                    _diagnostics.ReportSymbolAlreadyDeclared(member.Identifier.Location, memberName);
+                }
+                else if (member.Value != null)
+                {
+                    var boundValue = BindExpression(member.Value);
+                    if (TryGetIntConstant(boundValue, out var intValue))
+                    {
+                        nextValue = intValue;
+                        members.Add(memberName, nextValue);
+                    }
+                    else
+                    {
+                        _diagnostics.ReportEnumMemberValueMustBeInt(member.Value.Location, memberName);
+                    }
+                }
+                else
+                {
+                    members.Add(memberName, nextValue);
+                }
+
+                nextValue = nextValue + 1;
+            }
+
+            var enumType = new EnumTypeSymbol(syntax.Identifier.Text, members);
+
+            if (!_scope.TryDeclareEnum(enumType))
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
             }
         }
     }

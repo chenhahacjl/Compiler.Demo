@@ -259,6 +259,138 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
+        public void Evaluator_Enum_ImplicitValues()
+        {
+            AssertValue("public enum Color { Red, Green, Blue } return int(Color.Red)", 0);
+            AssertValue("public enum Color { Red, Green, Blue } return int(Color.Green)", 1);
+            AssertValue("public enum Color { Red, Green, Blue } return int(Color.Blue)", 2);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_ExplicitValues()
+        {
+            AssertValue("public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 } return int(HttpStatus.NotFound)", 404);
+            AssertValue("public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 } return int(HttpStatus.InternalServerError)", 500);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_MixedValues()
+        {
+            AssertValue("public enum E { A, B = 10, C, D = 20, E } return int(E.C)", 11);
+            AssertValue("public enum E { A, B = 10, C, D = 20, E } return int(E.E)", 21);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_Equality()
+        {
+            AssertValue("public enum Color { Red, Green, Blue } var c = Color.Green return c == Color.Green", true);
+            AssertValue("public enum Color { Red, Green, Blue } var c = Color.Green return c == Color.Red", false);
+            AssertValue("public enum Color { Red, Green, Blue } var c = Color.Green return c != Color.Red", true);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_ExplicitConversions()
+        {
+            AssertValue("public enum Color { Red, Green, Blue } return int(Color(5))", 5);
+            AssertValue("public enum Color { Red, Green, Blue } return int(Color(5)) == 5", true);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_FunctionParameterAndReturn()
+        {
+            AssertValue(@"
+public enum Color { Red, Green, Blue }
+function f(c: Color): int { return int(c) }
+function g(): Color { return Color.Blue }
+return int(f(g()))", 2);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_Array()
+        {
+            AssertValue(@"
+public enum Color { Red, Green, Blue }
+var a = new Color[2] {Color.Red, Color.Green}
+return int(a[1])", 1);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_UnknownMember_ReportsError()
+        {
+            var text = @"
+public enum Color { Red, Green, Blue }
+return Color.[Purple]
+            ";
+
+            var diagnostics = @"
+                Enum 'Color' doesn't have a member named 'Purple'.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_DuplicateMember_ReportsError()
+        {
+            var text = @"
+public enum Color { Red, [Red], Blue }
+            ";
+
+            var diagnostics = @"
+                'Red' is already declared.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_NonIntValue_ReportsError()
+        {
+            var text = @"
+public enum Bad { A = [""x""] }
+            ";
+
+            var diagnostics = @"
+                The value of enum member 'A' must be an int constant.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_NameConflict_ReportsError()
+        {
+            var text = @"
+public enum Foo { Red }
+function [Foo]() { }
+            ";
+
+            var diagnostics = @"
+                'Foo' is already declared.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Enum_IntToEnumImplicit_ReportsError()
+        {
+            var text = @"
+public enum Color { Red, Green }
+function f(c: Color) { }
+function main()
+{
+    f([1])
+}";
+
+            var diagnostics = @"
+                Cannot convert type 'int' to 'Color'. An explicit conversion exists (are you missing a cast?)
+            ";
+
+            AssertDiagnostics(text, diagnostics, false);
+        }
+
+        [Fact]
         public void Evaluator_VariableDeclaration_Reports_Redeclaration()
         {
             var text = @"

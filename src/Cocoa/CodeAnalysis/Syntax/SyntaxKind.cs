@@ -59,7 +59,9 @@ ColonToken,               // :
         BreakKeyword,             // break
         CdeclKeyword,             // cdecl
         ContinueKeyword,          // continue
+        DoKeyword,                // do
         ElseKeyword,              // else
+        EnumKeyword,              // enum
         FalseKeyword,             // false
         ForKeyword,               // for
         FunctionKeyword,          // function
@@ -67,13 +69,13 @@ ColonToken,               // :
         ImportKeyword,            // import
         LetKeyword,               // let
         NewKeyword,               // new
+        PublicKeyword,            // public
         ReturnKeyword,            // return
         StdcallKeyword,           // stdcall
         ToKeyword,                // to
         TrueKeyword,              // true
         VarKeyword,               // var
         WhileKeyword,             // while
-        DoKeyword,                // do
 
         // Nodes
         CompilationUnit,          // 编译单元
@@ -84,6 +86,8 @@ ColonToken,               // :
         TypeClause,               // 类型 语句
         ArrayTypeClause,          // 数组类型
         ElseClause,               // ELSE 子语句
+        EnumDeclaration,          // 枚举声明
+        EnumMember,               // 枚举成员
 
         // Statements
         BlockStatement,           // 块语句

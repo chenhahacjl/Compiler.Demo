@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis.Symbols
 {
-    public sealed class TypeSymbol : Symbol
+    public class TypeSymbol : Symbol
     {
         public static readonly TypeSymbol Error = new TypeSymbol("?");
         public static readonly TypeSymbol Any = new TypeSymbol("any");

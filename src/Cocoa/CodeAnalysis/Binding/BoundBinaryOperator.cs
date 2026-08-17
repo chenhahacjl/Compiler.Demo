@@ -70,6 +70,14 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static BoundBinaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol leftType, TypeSymbol rightType)
         {
+            if (leftType is EnumTypeSymbol enumType && leftType == rightType)
+            {
+                if (syntaxKind == SyntaxKind.EqualsEqualsToken)
+                    return new BoundBinaryOperator(syntaxKind, BoundBinaryOperatorKind.Equals, enumType, TypeSymbol.Boolean);
+                if (syntaxKind == SyntaxKind.BangEqualsToken)
+                    return new BoundBinaryOperator(syntaxKind, BoundBinaryOperatorKind.NotEquals, enumType, TypeSymbol.Boolean);
+            }
+
             foreach (var op in _operators)
             {
                 if (op.SyntaxKind == syntaxKind && op.LeftType == leftType && op.RightType == rightType)

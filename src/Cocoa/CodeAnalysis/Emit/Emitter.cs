@@ -288,6 +288,11 @@ namespace Cocoa.CodeAnalysis.Emit
                 return IlType.Void;
             }
 
+            if (type is EnumTypeSymbol)
+            {
+                return IlType.Int32;
+            }
+
             if (type.ElementType != null)
             {
                 return IlType.SzArrayOf(ToIlType(type.ElementType));
@@ -492,6 +497,11 @@ namespace Cocoa.CodeAnalysis.Emit
             else if (node.Type == TypeSymbol.Char)
             {
                 var value = (int)(char)node.ConstantValue.Value;
+                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+            }
+            else if (node.Type is EnumTypeSymbol)
+            {
+                var value = (int)node.ConstantValue.Value;
                 il.Emit(IlOpCodes.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.String)
@@ -796,20 +806,24 @@ namespace Cocoa.CodeAnalysis.Emit
             }
 
             if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int32 ||
-                node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Char)
+                node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Char ||
+                node.Expression.Type is EnumTypeSymbol && node.Type == TypeSymbol.Int32 ||
+                node.Expression.Type == TypeSymbol.Int32 && node.Type is EnumTypeSymbol)
             {
                 // 栈上同为 4 字节，无需指令
                 return;
             }
 
-            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char;
+            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char || node.Expression.Type is EnumTypeSymbol;
             if (needBoxing)
             {
                 var type = node.Expression.Type == TypeSymbol.Boolean
                     ? RequireType("System.Boolean")
                     : node.Expression.Type == TypeSymbol.Int32
                         ? RequireType("System.Int32")
-                        : RequireType("System.Char");
+                        : node.Expression.Type == TypeSymbol.Char
+                            ? RequireType("System.Char")
+                            : RequireType("System.Int32");
                 il.Emit(IlOpCodes.Get("Box"), type);
             }
 
@@ -859,6 +873,11 @@ namespace Cocoa.CodeAnalysis.Emit
             if (arrayType.ElementType == TypeSymbol.Char)
             {
                 return "System.Char";
+            }
+
+            if (arrayType.ElementType is EnumTypeSymbol)
+            {
+                return "System.Int32";
             }
 
             if (arrayType.ElementType == TypeSymbol.Boolean)

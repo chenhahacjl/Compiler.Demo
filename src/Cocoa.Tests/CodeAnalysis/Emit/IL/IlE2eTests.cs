@@ -463,5 +463,45 @@ function main()
 
             Assert.NotEqual(0, exitCode);
         }
+
+        [Fact]
+        public void Enum_EndToEnd_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public enum Color { Red, Green, Blue }
+public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
+function f(c: Color): int { return int(c) }
+function main()
+{
+    var c = Color.Green
+    print(int(c))
+    print(int(HttpStatus.NotFound))
+    print(c == Color.Green)
+    print(c == Color.Red)
+    print(int(f(Color.Blue)))
+    print(int(Color(99)) == 99)
+}", "e2e-enum");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1\r\n404\r\nTrue\r\nFalse\r\n2\r\nTrue\r\n", stdout);
+        }
+
+        [Fact]
+        public void EnumArray_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public enum Color { Red, Green, Blue }
+function main()
+{
+    var a = new Color[2] {Color.Red, Color.Green}
+    print(int(a[0]))
+    print(int(a[1]))
+    a[1] = Color.Blue
+    print(int(a[1]))
+}", "e2e-enum-array");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("0\r\n1\r\n2\r\n", stdout);
+        }
     }
 }

@@ -142,6 +142,18 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportEnumMemberNotDefined(TextLocation location, string enumName, string memberName)
+        {
+            var message = $"Enum '{enumName}' doesn't have a member named '{memberName}'.";
+            ReportError(location, message);
+        }
+
+        public void ReportEnumMemberValueMustBeInt(TextLocation location, string memberName)
+        {
+            var message = $"The value of enum member '{memberName}' must be an int constant.";
+            ReportError(location, message);
+        }
+
         public void ReportUndefinedFunction(TextLocation location, string name)
         {
             var message = $"Function '{name}' doesn't exist.";

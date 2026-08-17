@@ -9,20 +9,28 @@ namespace Cocoa.CodeAnalysis.Binding
     internal sealed class BoundLiteralExpression : BoundExpression
     {
         public BoundLiteralExpression(SyntaxNode syntax, object value)
+            : this(syntax, value, InferType(value))
+        {
+        }
+
+        public BoundLiteralExpression(SyntaxNode syntax, object value, TypeSymbol type)
             : base(syntax)
         {
-            if (value is bool)
-                Type = TypeSymbol.Boolean;
-            else if (value is int)
-                Type = TypeSymbol.Int32;
-            else if (value is char)
-                Type = TypeSymbol.Char;
-            else if (value is string)
-                Type = TypeSymbol.String;
-            else
-                throw new Exception($"Unexpected literal '{value}' of type {value.GetType()}");
-
+            Type = type;
             ConstantValue = new BoundConstant(value);
+        }
+
+        private static TypeSymbol InferType(object value)
+        {
+            if (value is bool)
+                return TypeSymbol.Boolean;
+            if (value is int)
+                return TypeSymbol.Int32;
+            if (value is char)
+                return TypeSymbol.Char;
+            if (value is string)
+                return TypeSymbol.String;
+            throw new Exception($"Unexpected literal '{value}' of type {value.GetType()}");
         }
 
         public override BoundNodeKind Kind => BoundNodeKind.LiteralExpression;

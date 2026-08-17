@@ -626,5 +626,47 @@ function main()
 
             Assert.Equal("error: invalid substring arguments\r\n", output);
         }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Enum_EndToEnd(string target)
+        {
+            var output = CompileAndRun(@"
+public enum Color { Red, Green, Blue }
+public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
+function f(c: Color): int { return int(c) }
+function main()
+{
+    var c = Color.Green
+    print(int(c))
+    print(int(HttpStatus.NotFound))
+    print(c == Color.Green)
+    print(c == Color.Red)
+    print(int(f(Color.Blue)))
+    print(int(Color(99)) == 99)
+}", "src-enum", target);
+
+            Assert.Equal("1\r\n404\r\nTrue\r\nFalse\r\n2\r\nTrue\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_EnumArray(string target)
+        {
+            var output = CompileAndRun(@"
+public enum Color { Red, Green, Blue }
+function main()
+{
+    var a = new Color[2] {Color.Red, Color.Green}
+    print(int(a[0]))
+    print(int(a[1]))
+    a[1] = Color.Blue
+    print(int(a[1]))
+}", "src-enum-array", target);
+
+            Assert.Equal("0\r\n1\r\n2\r\n", output);
+        }
     }
 }

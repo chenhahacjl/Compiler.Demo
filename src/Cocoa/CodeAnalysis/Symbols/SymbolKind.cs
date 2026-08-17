@@ -7,5 +7,6 @@ namespace Cocoa.CodeAnalysis.Symbols
         LocalVariable,
         Parameter,
         Type,
+        Enum,
     }
 }

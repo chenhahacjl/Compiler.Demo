@@ -75,6 +75,16 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            if (from is EnumTypeSymbol && to == TypeSymbol.Int32)
+            {
+                return Conversion.Explicit;
+            }
+
+            if (from == TypeSymbol.Int32 && to is EnumTypeSymbol)
+            {
+                return Conversion.Explicit;
+            }
+
             return Conversion.None;
         }
     }
