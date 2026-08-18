@@ -240,14 +240,22 @@ namespace Cocoa.CodeAnalysis
             switch (binary.Op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    return binary.Type == TypeSymbol.Int32 ?
-                        (int)left + (int)right :
-                        (string)left + (string)right;
+                    if (binary.Type == TypeSymbol.Int32)
+                        return (int)left + (int)right;
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left + (double)right;
+                    return (string)left + (string)right;
                 case BoundBinaryOperatorKind.Subtraction:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left - (double)right;
                     return (int)left - (int)right;
                 case BoundBinaryOperatorKind.Multiplication:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left * (double)right;
                     return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left / (double)right;
                     return (int)left / (int)right;
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     return binary.Type == TypeSymbol.Int32 ?
@@ -270,12 +278,20 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.NotEquals:
                     return !Equals(left, right);
                 case BoundBinaryOperatorKind.Less:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left < (double)right;
                     return (int)left < (int)right;
                 case BoundBinaryOperatorKind.LessOrEquals:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left <= (double)right;
                     return (int)left <= (int)right;
                 case BoundBinaryOperatorKind.Greater:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left > (double)right;
                     return (int)left > (int)right;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
+                    if (binary.Type == TypeSymbol.Double)
+                        return (double)left >= (double)right;
                     return (int)left >= (int)right;
                 default:
                     throw new Exception($"Unexpected binary operator {binary.Op}");
@@ -337,6 +353,11 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Type == TypeSymbol.Int32)
             {
+                if (value is double doubleValue)
+                {
+                    return (int)doubleValue;
+                }
+
                 return Convert.ToInt32(value);
             }
             else if (node.Type == TypeSymbol.Char)
@@ -345,8 +366,17 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Type == TypeSymbol.Byte)
             {
+                if (value is double byteDouble)
+                {
+                    return unchecked((byte)(int)byteDouble);
+                }
+
                 // 无符号字节截断，与 (byte)300 == 44 语义一致
                 return unchecked((byte)Convert.ToInt32(value));
+            }
+            else if (node.Type == TypeSymbol.Double)
+            {
+                return Convert.ToDouble(value);
             }
             else if (node.Type == TypeSymbol.String)
             {

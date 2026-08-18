@@ -50,7 +50,7 @@ namespace Cocoa.Tests.Compiler
             var sourcePath = Path.Combine(dir, "cli-smoke.co");
             var outputPath = Path.Combine(dir, "cli-smoke.exe");
             File.WriteAllText(sourcePath, @"
-function double(x: int): int
+function twice(x: int): int
 {
     return x * 2
 }
@@ -58,7 +58,7 @@ function double(x: int): int
 function main()
 {
     var name = input()
-    print(double(21))
+    print(twice(21))
     print(""hello "" + name)
 }");
 

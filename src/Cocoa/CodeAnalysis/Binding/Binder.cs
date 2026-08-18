@@ -887,6 +887,21 @@ namespace Cocoa.CodeAnalysis.Binding
             var boundRight = BindExpression(syntax.Right);
             var boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
 
+            if (boundOperator == null && boundLeft.Type != TypeSymbol.Error && boundRight.Type != TypeSymbol.Error &&
+                IsNumeric(boundLeft.Type) && IsNumeric(boundRight.Type))
+            {
+                if (Conversion.Classify(boundLeft.Type, boundRight.Type).IsImplicit)
+                {
+                    boundLeft = BindConversion(boundLeft.Syntax.Location, boundLeft, boundRight.Type, allowExplicit: false);
+                    boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
+                }
+                else if (Conversion.Classify(boundRight.Type, boundLeft.Type).IsImplicit)
+                {
+                    boundRight = BindConversion(boundRight.Syntax.Location, boundRight, boundLeft.Type, allowExplicit: false);
+                    boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
+                }
+            }
+
             if (boundLeft.Type == TypeSymbol.Error || boundRight.Type == TypeSymbol.Error)
             {
                 return new BoundErrorExpression(syntax);
@@ -1054,6 +1069,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "bool": return TypeSymbol.Boolean;
                 case "int": return TypeSymbol.Int32;
                 case "byte": return TypeSymbol.Byte;
+                case "double": return TypeSymbol.Double;
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 default:
@@ -1079,6 +1095,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
             value = 0;
             return false;
+        }
+
+        private static bool IsNumeric(TypeSymbol type)
+        {
+            return type == TypeSymbol.Int32 || type == TypeSymbol.Byte || type == TypeSymbol.Double;
         }
 
         private void BindEnumDeclaration(EnumDeclarationSyntax syntax)

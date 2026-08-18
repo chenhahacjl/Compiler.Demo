@@ -594,6 +594,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseBooleanLiteral();
 
                 case SyntaxKind.NumberToken:
+                case SyntaxKind.DoubleToken:
                     return ParseNumberLiteral();
 
                 case SyntaxKind.StringToken:
@@ -619,6 +620,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case SyntaxKind.IdentifierToken:
                 case SyntaxKind.NumberToken:
+                case SyntaxKind.DoubleToken:
                 case SyntaxKind.StringToken:
                 case SyntaxKind.CharToken:
                 case SyntaxKind.OpenParenthesisToken:
@@ -663,7 +665,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private ExpressionSyntax ParseNumberLiteral()
         {
-            var numberToken = MatchToken(SyntaxKind.NumberToken);
+            var numberToken = Current.Kind == SyntaxKind.DoubleToken
+                ? MatchToken(SyntaxKind.DoubleToken)
+                : MatchToken(SyntaxKind.NumberToken);
 
             return new LiteralExpressionSyntax(_syntaxTree, numberToken);
         }

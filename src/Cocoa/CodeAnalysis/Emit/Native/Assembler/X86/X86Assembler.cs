@@ -7,9 +7,9 @@ using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
 {
     /// <summary>
-    /// 32 位 x86 汇编器。与 X64Assembler 共用寄存器/尺寸枚举：
-    ///  - 仅低 8 个寄存器可用（RAX..RDI），高 8 个抛异常
-    ///  - X64Size.Qword 静默降级为 32 位（指针宽度 4 字节）
+    /// 32 �?x86 汇编器。与 X64Assembler 共用寄存�?尺寸枚举�?
+    ///  - 仅低 8 个寄存器可用（RAX..RDI），�?8 个抛异常
+    ///  - X64Size.Qword 静默降级�?32 位（指针宽度 4 字节�?
     ///  - 数据引用（MovRip/LeaRip/CallRip）使用绝对地址 [disp32] 而非 RIP 相对
     /// </summary>
     internal sealed class X86Assembler : IAssembler
@@ -449,6 +449,45 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
             EmitByte(0x90);
         }
 
+        // ------------------------------------------------------------------
+        // SSE（double，IEEE-754 binary64�?
+        // ------------------------------------------------------------------
+
+        public void Movsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x10, 0xF2, xmmDst, xmmSrc);
+        public void Movsd(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(0x10, 0xF2, xmmDst, src);
+        public void Movsd(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(0x11, 0xF2, dst, xmmSrc);
+        public void Addsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x58, 0xF2, xmmDst, xmmSrc);
+        public void Subsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5C, 0xF2, xmmDst, xmmSrc);
+        public void Mulsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x59, 0xF2, xmmDst, xmmSrc);
+        public void Divsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5E, 0xF2, xmmDst, xmmSrc);
+        public void Cvtsi2sd(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF2, xmmDst, r32Src);
+        public void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF2, r32Dst, xmmSrc);
+        public void Ucomisd(X64Register xmmA, X64Register xmmB) => EmitSseRegReg(0x2E, 0x66, xmmA, xmmB);
+        public void MovdGprToXmm(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r32Src);
+        public void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x7E, 0x66, r32Dst, xmmSrc);
+        public void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm) => EmitSseRegImm(0x22, 0x66, xmmDst, r32Src, imm);
+        public void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x16, 0x66, r32Dst, xmmSrc, imm);
+
+        public void MovqGprToXmm(X64Register xmmDst, X64Register r64Src)
+        {
+            throw new NotSupportedException("MOVQ (xmm, r64) is not supported on x86.");
+        }
+
+        public void MovqXmmToGpr(X64Register r64Dst, X64Register xmmSrc)
+        {
+            throw new NotSupportedException("MOVQ (r64, xmm) is not supported on x86.");
+        }
+
+        public void MovsdRip(X64Register xmmDst, int symbol)
+        {
+            EmitByte(0xF2);
+            EmitByte(0x0F);
+            EmitByte(0x10);
+            EmitModRMByte(0, (int)xmmDst & 7, 5);
+            _dataFixups.Add((Position, symbol));
+            EmitInt32(0);
+        }
+
         private static byte JccOpcode(X64CondCode cond) => cond switch
         {
             X64CondCode.Equal => 0x84,
@@ -461,6 +500,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
             X64CondCode.LessOrEqual => 0x8E,
             X64CondCode.Greater => 0x8F,
             X64CondCode.GreaterOrEqual => 0x8D,
+            X64CondCode.Parity => 0x8A,
+            X64CondCode.NoParity => 0x8B,
             _ => throw new ArgumentOutOfRangeException(nameof(cond)),
         };
 
@@ -476,8 +517,48 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
             X64CondCode.LessOrEqual => 0x9E,
             X64CondCode.Greater => 0x9F,
             X64CondCode.GreaterOrEqual => 0x9D,
+            X64CondCode.Parity => 0x9A,
+            X64CondCode.NoParity => 0x9B,
             _ => throw new ArgumentOutOfRangeException(nameof(cond)),
         };
+
+        private void EmitSseRegReg(byte opcode, byte prefix, X64Register reg, X64Register rm)
+        {
+            EmitByte(prefix);
+            EmitByte(0x0F);
+            EmitByte(opcode);
+            EmitModRMByte(3, (int)reg & 7, (int)rm & 7);
+        }
+
+        private void EmitSseRegMem(byte opcode, byte prefix, X64Register reg, X64MemoryOperand mem)
+        {
+            var memory = EncodeMemory(mem);
+            EmitByte(prefix);
+            EmitByte(0x0F);
+            EmitByte(opcode);
+            EmitModRMByte(memory.Mod, (int)reg & 7, memory.Rm);
+            EmitMemoryRest(mem, memory);
+        }
+
+        private void EmitSseMemReg(byte opcode, byte prefix, X64MemoryOperand mem, X64Register reg)
+        {
+            var memory = EncodeMemory(mem);
+            EmitByte(prefix);
+            EmitByte(0x0F);
+            EmitByte(opcode);
+            EmitModRMByte(memory.Mod, (int)reg & 7, memory.Rm);
+            EmitMemoryRest(mem, memory);
+        }
+
+        private void EmitSseRegImm(byte opcode, byte prefix, X64Register reg, X64Register rm, byte imm)
+        {
+            EmitByte(prefix);
+            EmitByte(0x0F);
+            EmitByte(0x3A);
+            EmitByte(opcode);
+            EmitModRMByte(3, (int)reg & 7, (int)rm & 7);
+            EmitByte(imm);
+        }
 
         private void EmitRegReg(byte opcode, X64Size size, X64Register reg, X64Register rm)
         {
@@ -587,3 +668,4 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
         }
     }
 }
+

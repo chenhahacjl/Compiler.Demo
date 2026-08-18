@@ -40,6 +40,23 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         EBP = 5,
         ESI = 6,
         EDI = 7,
+
+        XMM0 = 16,
+        XMM1 = 17,
+        XMM2 = 18,
+        XMM3 = 19,
+        XMM4 = 20,
+        XMM5 = 21,
+        XMM6 = 22,
+        XMM7 = 23,
+        XMM8 = 24,
+        XMM9 = 25,
+        XMM10 = 26,
+        XMM11 = 27,
+        XMM12 = 28,
+        XMM13 = 29,
+        XMM14 = 30,
+        XMM15 = 31,
     }
 
     internal enum X64CondCode
@@ -54,6 +71,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         BelowOrEqual,
         Above,
         AboveOrEqual,
+        Parity,
+        NoParity,
     }
 
     internal readonly struct X64MemoryOperand
@@ -556,6 +575,38 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
             EmitByte(0x90);
         }
 
+        // ------------------------------------------------------------------
+        // SSE（double，IEEE-754 binary64�?
+        // ------------------------------------------------------------------
+
+        public void Movsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x10, 0xF2, xmmDst, xmmSrc);
+        public void Movsd(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(0x10, 0xF2, xmmDst, src);
+        public void Movsd(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(0x11, 0xF2, dst, xmmSrc);
+        public void Addsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x58, 0xF2, xmmDst, xmmSrc);
+        public void Subsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5C, 0xF2, xmmDst, xmmSrc);
+        public void Mulsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x59, 0xF2, xmmDst, xmmSrc);
+        public void Divsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5E, 0xF2, xmmDst, xmmSrc);
+        public void Cvtsi2sd(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF2, xmmDst, r32Src);
+        public void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF2, r32Dst, xmmSrc);
+        public void Ucomisd(X64Register xmmA, X64Register xmmB) => EmitSseRegReg(0x2E, 0x66, xmmA, xmmB);
+        public void MovdGprToXmm(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r32Src);
+        public void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x7E, 0x66, xmmSrc, r32Dst);
+        public void MovqGprToXmm(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(0x7E, 0xF3, xmmDst, r64Src, rexW: true);
+        public void MovqXmmToGpr(X64Register r64Dst, X64Register xmmSrc) => EmitSseRegReg(0xD6, 0x66, xmmSrc, r64Dst, rexW: true);
+        public void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm) => EmitSseRegImm(0x22, 0x66, xmmDst, r32Src, imm);
+        public void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x16, 0x66, r32Dst, xmmSrc, imm);
+
+        public void MovsdRip(X64Register xmmDst, int symbol)
+        {
+            EmitRex(0x40 | (((int)xmmDst & 8) != 0 ? 0x04 : 0));
+            EmitByte(0xF2);
+            EmitByte(0x0F);
+            EmitByte(0x10);
+            EmitModRMByte(0, (int)xmmDst & 7, 5);
+            _dataFixups.Add((Position, symbol));
+            EmitInt32(0);
+        }
+
         private static byte JccOpcode(X64CondCode cond) => cond switch
         {
             X64CondCode.Equal => 0x84,
@@ -568,6 +619,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
             X64CondCode.LessOrEqual => 0x8E,
             X64CondCode.Greater => 0x8F,
             X64CondCode.GreaterOrEqual => 0x8D,
+            X64CondCode.Parity => 0x8A,
+            X64CondCode.NoParity => 0x8B,
             _ => throw new ArgumentOutOfRangeException(nameof(cond)),
         };
 
@@ -583,8 +636,52 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
             X64CondCode.LessOrEqual => 0x9E,
             X64CondCode.Greater => 0x9F,
             X64CondCode.GreaterOrEqual => 0x9D,
+            X64CondCode.Parity => 0x9A,
+            X64CondCode.NoParity => 0x9B,
             _ => throw new ArgumentOutOfRangeException(nameof(cond)),
         };
+
+        private void EmitSseRegReg(byte opcode, byte prefix, X64Register reg, X64Register rm, bool rexW = false)
+        {
+            EmitByte(prefix);
+            EmitRex(0x40 | (rexW ? 0x08 : 0) | (((int)reg & 8) != 0 ? 0x04 : 0) | (((int)rm & 8) != 0 ? 0x01 : 0));
+            EmitByte(0x0F);
+            EmitByte(opcode);
+            EmitModRMByte(3, (int)reg & 7, (int)rm & 7);
+        }
+
+        private void EmitSseRegMem(byte opcode, byte prefix, X64Register reg, X64MemoryOperand mem)
+        {
+            var memory = EncodeMemory(mem);
+            EmitByte(prefix);
+            EmitRex(0x40 | (((int)reg & 8) != 0 ? 0x04 : 0) | memory.RexB);
+            EmitByte(0x0F);
+            EmitByte(opcode);
+            EmitModRMByte(memory.Mod, (int)reg & 7, memory.Rm);
+            EmitMemoryRest(mem, memory);
+        }
+
+        private void EmitSseMemReg(byte opcode, byte prefix, X64MemoryOperand mem, X64Register reg)
+        {
+            var memory = EncodeMemory(mem);
+            EmitByte(prefix);
+            EmitRex(0x40 | (((int)reg & 8) != 0 ? 0x04 : 0) | memory.RexB);
+            EmitByte(0x0F);
+            EmitByte(opcode);
+            EmitModRMByte(memory.Mod, (int)reg & 7, memory.Rm);
+            EmitMemoryRest(mem, memory);
+        }
+
+        private void EmitSseRegImm(byte opcode, byte prefix, X64Register reg, X64Register rm, byte imm)
+        {
+            EmitByte(prefix);
+            EmitRex(0x40 | (((int)reg & 8) != 0 ? 0x04 : 0) | (((int)rm & 8) != 0 ? 0x01 : 0));
+            EmitByte(0x0F);
+            EmitByte(0x3A);
+            EmitByte(opcode);
+            EmitModRMByte(3, (int)reg & 7, (int)rm & 7);
+            EmitByte(imm);
+        }
 
         private void EmitRegReg(byte opcode, X64Size size, X64Register reg, X64Register rm)
         {

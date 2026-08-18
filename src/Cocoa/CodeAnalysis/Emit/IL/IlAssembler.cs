@@ -211,6 +211,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x91: // Ldelem_U1
                 case 0x92: // Ldelem_I2
                 case 0x93: // Ldelem_U2
+                case 0x99: // Ldelem_R8
                 case 0x9A: // Ldelem_Ref
                     return -1;
                 case 0x8E: // Ldlen（弹数组引用，压长度）
@@ -218,6 +219,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x9C: // Stelem_I1
                 case 0x9D: // Stelem_I2
                 case 0x9E: // Stelem_I4
+                case 0xA1: // Stelem_R8
                 case 0xA2: // Stelem_Ref
                     return -3;
                 case 0x65: // Neg
@@ -230,6 +232,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x6C: // Conv_R8
                 case 0x6D: // Conv_U4
                 case 0x6E: // Conv_U8
+                case 0xD2: // Conv_U1
                     return 0;
                 case 0xFE01: // Ceq
                 case 0xFE02: // Cgt

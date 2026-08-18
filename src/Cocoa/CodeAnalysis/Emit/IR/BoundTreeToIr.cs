@@ -73,7 +73,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             return Is8ByteType(type) ? 8 : 4;
         }
 
-        private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null;
+        private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
+            type == TypeSymbol.Double || type.ElementType != null;
 
         // ------------------------------------------------------------------
         // 函数
@@ -363,6 +364,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return EmitConst(charValue);
             }
 
+            if (value is double doubleValue)
+            {
+                return EmitDoubleConst(doubleValue);
+            }
+
             throw new Exception($"Unexpected constant: {value}");
         }
 
@@ -385,6 +391,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return EmitConst(boolValue ? 1 : 0);
             }
 
+            if (value is double doubleValue)
+            {
+                return EmitDoubleConst(doubleValue);
+            }
+
             throw new Exception($"Unexpected literal: {value}");
         }
 
@@ -400,6 +411,20 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             var key = _irProgram.InternString(text);
             var register = AllocateRegister(8);
             Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.LeaData, register, IrOperand.Data(key)));
+            return register;
+        }
+
+        private IrVirtualRegister EmitDoubleConst(double value)
+        {
+            var bits = unchecked((long)BitConverter.DoubleToInt64Bits(value));
+            var key = "d:" + unchecked((ulong)bits).ToString("X16");
+            _irProgram.AddData(IrDataItem.ByteArray(key, new[]
+            {
+                (byte)bits, (byte)(bits >> 8), (byte)(bits >> 16), (byte)(bits >> 24),
+                (byte)(bits >> 32), (byte)(bits >> 40), (byte)(bits >> 48), (byte)(bits >> 56),
+            }));
+            var register = AllocateRegister(8);
+            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.FConst, register, IrOperand.Data(key)));
             return register;
         }
 
@@ -585,10 +610,18 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
                 case BoundUnaryOperatorKind.Negation:
                     {
-                        var result = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(operand)));
-                        Add(instructions, new IrInstruction(IrOpCode.Neg, result));
-                        return result;
+                        if (node.Operand.Type == TypeSymbol.Double)
+                        {
+                            var result = AllocateRegister(8);
+                            Add(instructions, new IrInstruction(IrOpCode.FMov, result, IrOperand.Reg(operand)));
+                            Add(instructions, new IrInstruction(IrOpCode.FNeg, result));
+                            return result;
+                        }
+
+                        var resultInt = AllocateRegister(4);
+                        Add(instructions, new IrInstruction(IrOpCode.Mov, resultInt, IrOperand.Reg(operand)));
+                        Add(instructions, new IrInstruction(IrOpCode.Neg, resultInt));
+                        return resultInt;
                     }
 
                 case BoundUnaryOperatorKind.LogicalNegation:
@@ -619,7 +652,21 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             if (op == BoundBinaryOperatorKind.Addition && node.Left.Type == TypeSymbol.String)
             {
-                return EmitRuntimeBinary(node, "Concat", 8);
+                var concatLeft = EmitExpression(node.Left);
+                var concatRight = EmitExpression(node.Right);
+                if (node.Right.Type == TypeSymbol.Double)
+                {
+                    var text = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(concatRight)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                    concatRight = text;
+                }
+
+                var concatResult = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(concatLeft)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(concatRight)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, concatResult, IrOperand.Runtime("Concat"), IrOperand.Constant(0)));
+                return concatResult;
             }
 
             if ((op == BoundBinaryOperatorKind.Equals || op == BoundBinaryOperatorKind.NotEquals) &&
@@ -632,6 +679,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 node.Left.Type == TypeSymbol.Any)
             {
                 return EmitRuntimeBinary(node, "ObjectEquals", 4, invert: op == BoundBinaryOperatorKind.NotEquals);
+            }
+
+            if (node.Left.Type == TypeSymbol.Double)
+            {
+                return EmitFloatBinary(node);
             }
 
             var left = EmitExpression(node.Left);
@@ -703,6 +755,76 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             }
 
             return result;
+        }
+
+        private IrVirtualRegister EmitFloatBinary(BoundBinaryExpression node)
+        {
+            var op = node.Op.Kind;
+            var instructions = _currentFunction.Instructions;
+            var left = EmitExpression(node.Left);
+            var right = EmitExpression(node.Right);
+
+            switch (op)
+            {
+                case BoundBinaryOperatorKind.Addition:
+                case BoundBinaryOperatorKind.Subtraction:
+                case BoundBinaryOperatorKind.Multiplication:
+                case BoundBinaryOperatorKind.Division:
+                    {
+                        var result = AllocateRegister(8);
+                        var fOp = op switch
+                        {
+                            BoundBinaryOperatorKind.Addition => IrOpCode.FAdd,
+                            BoundBinaryOperatorKind.Subtraction => IrOpCode.FSub,
+                            BoundBinaryOperatorKind.Multiplication => IrOpCode.FMul,
+                            _ => IrOpCode.FDiv,
+                        };
+                        Add(instructions, new IrInstruction(fOp, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                        return result;
+                    }
+
+                case BoundBinaryOperatorKind.Equals:
+                case BoundBinaryOperatorKind.NotEquals:
+                case BoundBinaryOperatorKind.Less:
+                case BoundBinaryOperatorKind.LessOrEquals:
+                case BoundBinaryOperatorKind.Greater:
+                case BoundBinaryOperatorKind.GreaterOrEquals:
+                    {
+                        var result = AllocateRegister(4);
+                        Add(instructions, new IrInstruction(IrOpCode.FCmp, IrOperand.Reg(left), IrOperand.Reg(right)));
+
+                        // ucomisd 在 unordered（NaN 参与）时置 ZF=PF=CF=1；
+                        // 全部 6 个比较条件对 NaN 一律 false、!= 对 NaN 为 true（IEEE-754 语义）。
+                        var (main, fixup) = op switch
+                        {
+                            BoundBinaryOperatorKind.Equals => (IrCond.Equal, IrCond.NoParity),
+                            BoundBinaryOperatorKind.NotEquals => (IrCond.NotEqual, IrCond.Parity),
+                            BoundBinaryOperatorKind.Less => (IrCond.Below, IrCond.NoParity),
+                            BoundBinaryOperatorKind.LessOrEquals => (IrCond.BelowOrEqual, IrCond.NoParity),
+                            BoundBinaryOperatorKind.Greater => (IrCond.Above, IrCond.NoParity),
+                            _ => (IrCond.AboveOrEqual, IrCond.NoParity),
+                        };
+
+                        Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)main)));
+                        if (fixup == IrCond.NoParity)
+                        {
+                            var clear = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.Setcc, clear, IrOperand.Constant((int)IrCond.NoParity)));
+                            Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(result), IrOperand.Reg(clear)));
+                        }
+                        else
+                        {
+                            var mark = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.Setcc, mark, IrOperand.Constant((int)IrCond.Parity)));
+                            Add(instructions, new IrInstruction(IrOpCode.Or, result, IrOperand.Reg(result), IrOperand.Reg(mark)));
+                        }
+
+                        return result;
+                    }
+
+                default:
+                    throw new Exception($"Unexpected float binary operator: {op}");
+            }
         }
 
         private IrVirtualRegister EmitRuntimeBinary(BoundBinaryExpression node, string runtimeName, int resultSize, bool invert = false)
@@ -838,6 +960,14 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
             }
+            else if (type == TypeSymbol.Double)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
+            }
             else
             {
                 throw new Exception($"Native code generation does not support printing values of type '{type}'");
@@ -908,8 +1038,33 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 return value;
             }
 
+            if (from == TypeSymbol.Double && to == TypeSymbol.Int32)
+            {
+                var result = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSD, result, IrOperand.Reg(value)));
+                return result;
+            }
+
+            if (from == TypeSymbol.Int32 && to == TypeSymbol.Double ||
+                from == TypeSymbol.Byte && to == TypeSymbol.Double)
+            {
+                var result = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSI, result, IrOperand.Reg(value)));
+                return result;
+            }
+
             if (to == TypeSymbol.Byte)
             {
+                if (from == TypeSymbol.Double)
+                {
+                    // 与 C# 语义一致：(byte) 3.9 == 3（先截断到 int 再取低 8 位）
+                    var truncated = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD, truncated, IrOperand.Reg(value)));
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(truncated), IrOperand.Constant(0xFF)));
+                    return result;
+                }
+
                 if (from == TypeSymbol.Int32)
                 {
                     // 无符号字节截断，与 C# (byte)300 == 44 语义一致
@@ -923,6 +1078,14 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
             if (to == TypeSymbol.String)
             {
+                if (from == TypeSymbol.Double)
+                {
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                    return result;
+                }
+
                 if (from == TypeSymbol.Int32)
                 {
                     var result = AllocateRegister(8);

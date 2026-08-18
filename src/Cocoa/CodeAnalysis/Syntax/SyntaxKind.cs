@@ -17,6 +17,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         // Tokens
         EndOfFileToken,          // <EOF>
         NumberToken,             // 数字
+        DoubleToken,             // 浮点数
         StringToken,             // "
         CharToken,               // '
         PlusToken,               // +

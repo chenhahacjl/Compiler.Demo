@@ -62,6 +62,20 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         Push,        // Push <src>
         Pop,         // Pop <dst>
 
+        // 浮点（double，IEEE-754 binary64）。值在槽中以 64 位位模式存放；
+        // x64 槽 8 字节，x86 槽 4 字节×2（低地址=低 32 位）。
+        FConst,      // FConst <dst> <data-key>       — 数据段 8 字节 double 位模式载入
+        FMov,        // FMov <dst> <src>              — double 槽间搬运
+        FAdd,        // FAdd <dst> <srcA> <srcB>
+        FSub,        // FSub <dst> <srcA> <srcB>
+        FMul,        // FMul <dst> <srcA> <srcB>
+        FDiv,        // FDiv <dst> <srcA> <srcB>
+        FNeg,        // FNeg <dst> <src>              — 符号位翻转
+        FCmp,        // FCmp <srcA> <srcB>            — ucomisd（NaN 由 Setcc(Parity/NoParity) 修正）
+        FCvtSI,      // FCvtSI <dst> <src>            — int → double
+        FCvtSD,      // FCvtSD <dst> <src>            — double → int（截断）
+        SetArg64,    // SetArg64 <ordinal> <src>      — double 参数（x86 拆 low/high 两寄存器）
+
         // 调试/信息
         Nop,         // Nop
         SeqPoint,    // SeqPoint <file> <line>

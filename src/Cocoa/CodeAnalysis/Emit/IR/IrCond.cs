@@ -13,5 +13,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         BelowOrEqual,
         Above,
         AboveOrEqual,
+        Parity,
+        NoParity,
     }
 }

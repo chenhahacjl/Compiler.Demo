@@ -526,5 +526,35 @@ function main()
             Assert.Equal(0, exitCode);
             Assert.Equal("65\r\n200\r\n255\r\n44\r\n200\r\nTrue\r\n255\r\n", stdout);
         }
+
+        [Fact]
+        public void Double_EndToEnd_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    var d: double = 3.14
+    print(d)
+    print(1.5 + 2.25)
+    print(10.0 / 4)
+    print(2.5 * 2)
+    print(7 - 1.5)
+    print(1.5 < 2.5)
+    print(1.5 == 1.5)
+    print((int)3.9)
+    print((byte)3.9)
+    print((double)3)
+    var arr: double[] = new double[2] {1.5, 2.5}
+    arr[0] = 3.5
+    print(arr[0])
+    print(arr[1])
+    var sum: double = 0.0
+    sum = sum + arr[0]
+    print(sum)
+}", "e2e-double");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("3.14\r\n3.75\r\n2.5\r\n5\r\n5.5\r\nTrue\r\nTrue\r\n3\r\n3\r\n3\r\n3.5\r\n2.5\r\n3.5\r\n", stdout);
+        }
     }
 }

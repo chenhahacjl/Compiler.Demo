@@ -157,6 +157,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             {
                 (SyntaxKind.NumberToken, "9"),
                 (SyntaxKind.NumberToken, "9696"),
+                (SyntaxKind.DoubleToken, "9.5"),
+                (SyntaxKind.DoubleToken, "3.14"),
                 (SyntaxKind.IdentifierToken, "c"),
                 (SyntaxKind.IdentifierToken, "cmile"),
                 (SyntaxKind.StringToken, "\"Cmile\""),
@@ -216,6 +218,19 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             if (t1Kind == SyntaxKind.NumberToken && t2Kind == SyntaxKind.NumberToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.DoubleToken && t2Kind == SyntaxKind.NumberToken ||
+                t1Kind == SyntaxKind.NumberToken && t2Kind == SyntaxKind.DoubleToken ||
+                t1Kind == SyntaxKind.DoubleToken && t2Kind == SyntaxKind.DoubleToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.IdentifierToken && t2Kind == SyntaxKind.DoubleToken ||
+                t1IsKeyword && t2Kind == SyntaxKind.DoubleToken)
             {
                 return true;
             }

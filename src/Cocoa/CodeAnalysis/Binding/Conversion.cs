@@ -70,13 +70,26 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return Conversion.Explicit;
                 }
+
+                if (to == TypeSymbol.Double)
+                {
+                    return Conversion.Implicit;
+                }
             }
 
             if (from == TypeSymbol.Byte)
             {
-                if (to == TypeSymbol.Int32)
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.Double)
                 {
                     return Conversion.Implicit;
+                }
+            }
+
+            if (from == TypeSymbol.Double)
+            {
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.Byte || to == TypeSymbol.String)
+                {
+                    return Conversion.Explicit;
                 }
             }
 

@@ -1036,6 +1036,51 @@ function main()
         }
 
         [Fact]
+        public void Evaluator_Double_Literal()
+        {
+            AssertValue("3.14", 3.14);
+            AssertValue("0.5", 0.5);
+            AssertValue("2.0", 2.0);
+        }
+
+        [Fact]
+        public void Evaluator_Double_Arithmetic()
+        {
+            AssertValue("1.5 + 2.25", 3.75);
+            AssertValue("3.5 - 1.25", 2.25);
+            AssertValue("2.5 * 2", 5.0);
+            AssertValue("10.0 / 4", 2.5);
+        }
+
+        [Fact]
+        public void Evaluator_Double_Comparison()
+        {
+            AssertValue("1.5 < 2.5", true);
+            AssertValue("2.5 <= 2.5", true);
+            AssertValue("3.0 > 2.5", true);
+            AssertValue("3.0 >= 3.5", false);
+            AssertValue("1.5 == 1.5", true);
+            AssertValue("1.5 != 2.0", true);
+        }
+
+        [Fact]
+        public void Evaluator_Double_Conversions()
+        {
+            AssertValue("(double)3", 3.0);
+            AssertValue("(int)3.9", 3);
+            AssertValue("(byte)3.9", (byte)3);
+            AssertValue("(int)3.14 + 1", 4);
+        }
+
+        [Fact]
+        public void Evaluator_Double_Byte_EndToEnd()
+        {
+            AssertValue("(double)255 == 255.0", true);
+            AssertValue("(int)(3.5 + 0.5)", 4);
+        }
+
+
+        [Fact]
         public void Evaluator_Byte_Cast_From_Int_To_Byte()
         {
             AssertValue("(byte)42", (byte)42);

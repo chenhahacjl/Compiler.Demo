@@ -28,6 +28,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.Int32;
             if (value is char)
                 return TypeSymbol.Char;
+            if (value is double)
+                return TypeSymbol.Double;
             if (value is string)
                 return TypeSymbol.String;
             throw new Exception($"Unexpected literal '{value}' of type {value.GetType()}");

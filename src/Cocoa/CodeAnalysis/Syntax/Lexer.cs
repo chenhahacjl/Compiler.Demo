@@ -682,9 +682,35 @@ namespace Cocoa.CodeAnalysis.Syntax
                     _position++;
                     length++;
                 }
+
+                if (Current == '.' && char.IsDigit(Peek(1)))
+                {
+                    _position++;
+                    length++;
+                    while (char.IsDigit(Current))
+                    {
+                        _position++;
+                        length++;
+                    }
+                }
             }
 
             var text = _text.ToString(_start, length);
+
+            if (!isHex && text.Contains('.'))
+            {
+                var doubleValue = 0.0;
+                if (!double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out doubleValue))
+                {
+                    var span = new TextSpan(_start, length);
+                    var location = new TextLocation(_text, span);
+                    _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Double);
+                }
+
+                _value = doubleValue;
+                _kind = SyntaxKind.DoubleToken;
+                return;
+            }
 
             var value = 0;
             var parsed = isHex

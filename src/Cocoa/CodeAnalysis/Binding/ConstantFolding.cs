@@ -11,8 +11,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 switch (op.Kind)
                 {
                     case BoundUnaryOperatorKind.Identity:
+                        if (operand.Type == TypeSymbol.Double)
+                            return new BoundConstant((double)operand.ConstantValue.Value);
                         return new BoundConstant((int)operand.ConstantValue.Value);
                     case BoundUnaryOperatorKind.Negation:
+                        if (operand.Type == TypeSymbol.Double)
+                            return new BoundConstant(-(double)operand.ConstantValue.Value);
                         return new BoundConstant(-(int)operand.ConstantValue.Value);
                     case BoundUnaryOperatorKind.LogicalNegation:
                         return new BoundConstant(!(bool)operand.ConstantValue.Value);
@@ -62,14 +66,25 @@ namespace Cocoa.CodeAnalysis.Binding
             switch (op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    return left.Type == TypeSymbol.Int32 ?
-                        new BoundConstant((int)leftConstant.Value + (int)rightConstant.Value) :
-                        new BoundConstant((string)leftConstant.Value + (string)rightConstant.Value);
+                    if (left.Type == TypeSymbol.Int32)
+                        return new BoundConstant((int)leftConstant.Value + (int)rightConstant.Value);
+                    if (left.Type == TypeSymbol.Double)
+                        return new BoundConstant((double)leftConstant.Value + (double)rightConstant.Value);
+                    // string + double：运行时按定点格式拼接，编译期不折叠（避免与 .NET ToString 格式不一致）
+                    if (right.Type == TypeSymbol.Double)
+                        return null;
+                    return new BoundConstant((string)leftConstant.Value + (string)rightConstant.Value);
                 case BoundBinaryOperatorKind.Subtraction:
-                    return new BoundConstant((int)leftConstant.Value - (int)rightConstant.Value);
+                    return left.Type == TypeSymbol.Double
+                        ? new BoundConstant((double)leftConstant.Value - (double)rightConstant.Value)
+                        : new BoundConstant((int)leftConstant.Value - (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.Multiplication:
-                    return new BoundConstant((int)leftConstant.Value * (int)rightConstant.Value);
+                    return left.Type == TypeSymbol.Double
+                        ? new BoundConstant((double)leftConstant.Value * (double)rightConstant.Value)
+                        : new BoundConstant((int)leftConstant.Value * (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.Division:
+                    if (left.Type == TypeSymbol.Double)
+                        return new BoundConstant((double)leftConstant.Value / (double)rightConstant.Value);
                     // 除零不折叠，交给运行时 DivByZero 处理
                     return (int)rightConstant.Value == 0 ? null : new BoundConstant((int)leftConstant.Value / (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.BitwiseAnd:
@@ -93,13 +108,21 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundBinaryOperatorKind.NotEquals:
                     return new BoundConstant(!Equals(leftConstant.Value, rightConstant.Value));
                 case BoundBinaryOperatorKind.Less:
-                    return new BoundConstant((int)leftConstant.Value < (int)rightConstant.Value);
+                    return left.Type == TypeSymbol.Double
+                        ? new BoundConstant((double)leftConstant.Value < (double)rightConstant.Value)
+                        : new BoundConstant((int)leftConstant.Value < (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.LessOrEquals:
-                    return new BoundConstant((int)leftConstant.Value <= (int)rightConstant.Value);
+                    return left.Type == TypeSymbol.Double
+                        ? new BoundConstant((double)leftConstant.Value <= (double)rightConstant.Value)
+                        : new BoundConstant((int)leftConstant.Value <= (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.Greater:
-                    return new BoundConstant((int)leftConstant.Value > (int)rightConstant.Value);
+                    return left.Type == TypeSymbol.Double
+                        ? new BoundConstant((double)leftConstant.Value > (double)rightConstant.Value)
+                        : new BoundConstant((int)leftConstant.Value > (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.GreaterOrEquals:
-                    return new BoundConstant((int)leftConstant.Value >= (int)rightConstant.Value);
+                    return left.Type == TypeSymbol.Double
+                        ? new BoundConstant((double)leftConstant.Value >= (double)rightConstant.Value)
+                        : new BoundConstant((int)leftConstant.Value >= (int)rightConstant.Value);
                 default:
                     throw new Exception($"Unexpected binary operator {op.Kind}");
             }

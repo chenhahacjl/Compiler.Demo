@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
 namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
 {
     /// <summary>
-    /// 汇编器抽象：标签/数据符号/指令编码。X64 与 X86 各有一个实现。
+    /// 汇编器抽象：标签/数据符号/指令编码。X64 �?X86 各有一个实现�?
     /// </summary>
     internal interface IAssembler
     {
@@ -105,7 +105,27 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         void CallRip(int symbol);
         void Setcc(X64CondCode cond, X64Register dst);
 
+        // SSE（double�?
+        void Movsd(X64Register xmmDst, X64Register xmmSrc);
+        void Movsd(X64Register xmmDst, X64MemoryOperand src);
+        void Movsd(X64MemoryOperand dst, X64Register xmmSrc);
+        void MovsdRip(X64Register xmmDst, int symbol);
+        void Addsd(X64Register xmmDst, X64Register xmmSrc);
+        void Subsd(X64Register xmmDst, X64Register xmmSrc);
+        void Mulsd(X64Register xmmDst, X64Register xmmSrc);
+        void Divsd(X64Register xmmDst, X64Register xmmSrc);
+        void Cvtsi2sd(X64Register xmmDst, X64Register r32Src);
+        void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc);
+        void Ucomisd(X64Register xmmA, X64Register xmmB);
+        void MovdGprToXmm(X64Register xmmDst, X64Register r32Src);
+        void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc);
+        void MovqGprToXmm(X64Register xmmDst, X64Register r64Src);
+        void MovqXmmToGpr(X64Register r64Dst, X64Register xmmSrc);
+        void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm);
+        void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm);
+
         void Ret();
         void Nop();
     }
 }
+
