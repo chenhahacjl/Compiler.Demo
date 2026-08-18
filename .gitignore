@@ -34,3 +34,12 @@ TestResult.xml
 *.pdb
 *.tmp
 *.log
+
+# Cocoa build artifacts
+*.exe
+*.dll
+*.cod
+# Cocoa 集中状态目录（仿 .vs）
+.coc/
+# Cocoa 用户级配置（IDE/个人覆盖）
+*.coproj.user

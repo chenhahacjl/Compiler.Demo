@@ -1,0 +1,6 @@
+name = Util
+output = exe
+platform = x64
+
+[sources]
+*.co

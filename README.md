@@ -2,7 +2,7 @@
 
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
-> 当前阶段：阶段 0 — 修复 x86 Native 崩溃（见 [`docs/开发计划.md`](docs/开发计划.md)）
+> 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs/开发计划.md`](docs/开发计划.md)）
 
 ## 路线图（摘要）
 
@@ -26,9 +26,9 @@ src\build.cmd
 # 编译单文件（默认 exe）
 coc hello.co
 
-# 编译项目 / 解决方案
-coc build -p src/MyApp/MyApp.coproj
-coc build -p src/MyApp.cosln
+# 编译仓库自带项目 / 解决方案样例
+coc build -p samples/DemoSolution/DemoSolution.cosln
+coc build -p samples/DemoSolution/App/App.coproj
 
 # 指定输出格式
 coc build -p foo.coproj -f dll

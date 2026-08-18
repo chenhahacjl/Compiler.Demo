@@ -10,6 +10,11 @@ namespace Cocoa.Compiler
     {
         private static int Main(string[] args)
         {
+            if (args.Length > 0 && args[0] == "build")
+            {
+                return BuildCommand.Run(args.Skip(1).ToArray());
+            }
+
             var outputPath = (string?)null;
             var moduleName = (string?)null;
             var backendText = (string?)null;
@@ -229,7 +234,11 @@ namespace Cocoa.Compiler
 
         private static void PrintHelp()
         {
-            Console.WriteLine("usage: coc <source-paths> [options]");
+            Console.WriteLine("usage: coc build <project-or-solution> [options]");
+            Console.WriteLine("       coc <source-paths> [options]");
+            Console.WriteLine();
+            Console.WriteLine("commands:");
+            Console.WriteLine("  build              Builds a .coproj project or .cosln solution (see 'coc build -h')");
             Console.WriteLine();
             Console.WriteLine("options:");
             Console.WriteLine("  -r <path>        The path of an assembly to reference");
