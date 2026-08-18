@@ -556,5 +556,20 @@ function main()
             Assert.Equal(0, exitCode);
             Assert.Equal("3.14\r\n3.75\r\n2.5\r\n5\r\n5.5\r\nTrue\r\nTrue\r\n3\r\n3\r\n3\r\n3.5\r\n2.5\r\n3.5\r\n", stdout);
         }
+
+        [Fact]
+        public void String_PlusDouble_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function main()
+{
+    print(""d="" + 1.5)
+    print(""x="" + (double)3)
+    print((string)2.75)
+}", "e2e-string-double");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("d=1.5\r\nx=3\r\n2.75\r\n", stdout);
+        }
     }
 }

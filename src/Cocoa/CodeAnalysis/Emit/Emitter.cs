@@ -590,6 +590,16 @@ namespace Cocoa.CodeAnalysis.Emit
                     EmitStringConcatExpression(il, node);
                     return;
                 }
+
+                if (node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.Double)
+                {
+                    EmitExpression(il, node.Left);
+                    EmitExpression(il, node.Right);
+                    il.Emit(IlOpCodes.Get("Box"), RequireType("System.Double"));
+                    il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
+                    il.Emit(IlOpCodes.Get("Call"), _stringConcat2Reference);
+                    return;
+                }
             }
 
             EmitExpression(il, node.Left);
