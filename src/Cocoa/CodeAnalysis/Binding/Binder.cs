@@ -4,6 +4,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -251,7 +252,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
 
-            var isExtern = syntax.CallingConventionKeyword != null;
+            var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
 
             if (isExtern)
             {
@@ -266,7 +267,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            var callingConvention = syntax.CallingConventionKeyword?.Kind switch
+            var callingConvention = syntax.Modifiers.Select(m => m.Kind)
+                .FirstOrDefault(k => k == SyntaxKind.CdeclKeyword || k == SyntaxKind.StdcallKeyword) switch
             {
                 SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
                 SyntaxKind.StdcallKeyword => CallingConvention.StdCall,

@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     public sealed partial class ImportClauseSyntax : MemberSyntax
     {
         public ImportClauseSyntax(SyntaxTree syntaxTree, SyntaxToken importKeyword, ImmutableArray<SyntaxToken> nameTokens)
-            : base(syntaxTree)
+            : base(syntaxTree, ImmutableArray<SyntaxToken>.Empty)
         {
             ImportKeyword = importKeyword;
             NameTokens = nameTokens;

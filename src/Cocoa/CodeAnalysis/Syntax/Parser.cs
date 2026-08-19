@@ -148,43 +148,53 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseImportClause();
             }
 
+            // 统一修饰符：public/private/stdcall/cdecl（顺序无关）
+            var modifiers = ParseModifiers();
+
             if (Current.Kind == SyntaxKind.CdeclKeyword ||
-                Current.Kind == SyntaxKind.StdcallKeyword)
+                Current.Kind == SyntaxKind.StdcallKeyword ||
+                Current.Kind == SyntaxKind.FunctionKeyword)
             {
-                var callingConvention = MatchToken(Current.Kind);
-                return ParseFunctionDeclaration(callingConvention);
+                return ParseFunctionDeclaration(modifiers);
             }
 
-            if (Current.Kind == SyntaxKind.FunctionKeyword)
+            if (Current.Kind == SyntaxKind.EnumKeyword)
             {
-                return ParseFunctionDeclaration();
+                return ParseEnumDeclaration(modifiers);
             }
 
-            if (Current.Kind == SyntaxKind.PublicKeyword ||
-                Current.Kind == SyntaxKind.EnumKeyword)
+            if (modifiers.Any())
             {
-                return ParseEnumDeclaration();
+                // 修饰符后非法声明：报错并继续按全局语句解析
+                _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.FunctionKeyword);
             }
 
             return ParseGlobalStatement();
         }
 
-        private MemberSyntax ParseEnumDeclaration()
+        private ImmutableArray<SyntaxToken> ParseModifiers()
         {
-            SyntaxToken? publicKeyword = null;
-
-            if (Current.Kind == SyntaxKind.PublicKeyword)
+            var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (Current.Kind == SyntaxKind.PublicKeyword ||
+                   Current.Kind == SyntaxKind.PrivateKeyword ||
+                   Current.Kind == SyntaxKind.CdeclKeyword ||
+                   Current.Kind == SyntaxKind.StdcallKeyword)
             {
-                publicKeyword = MatchToken(SyntaxKind.PublicKeyword);
+                modifiers.Add(NextToken());
             }
 
+            return modifiers.ToImmutable();
+        }
+
+        private MemberSyntax ParseEnumDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
             var enumKeyword = MatchToken(SyntaxKind.EnumKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
             var members = ParseEnumMemberList();
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new EnumDeclarationSyntax(_syntaxTree, publicKeyword, enumKeyword, identifier, openBraceToken, members, closeBraceToken);
+            return new EnumDeclarationSyntax(_syntaxTree, modifiers, enumKeyword, identifier, openBraceToken, members, closeBraceToken);
         }
 
         private SeparatedSyntaxList<EnumMemberSyntax> ParseEnumMemberList()
@@ -244,8 +254,9 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ImportClauseSyntax(_syntaxTree, importKeyword, nameTokens.ToImmutable());
         }
 
-        private MemberSyntax ParseFunctionDeclaration(SyntaxToken? callingConventionKeyword = null)
+        private MemberSyntax ParseFunctionDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
+            // 若修饰符中夹带 stdcall/cdecl（历史写法 `stdcall function`），它们在 ParseModifiers 已收集
             var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
@@ -254,12 +265,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParseOptionalTypeClause();
             BlockStatementSyntax? body = null;
 
-            if (callingConventionKeyword == null || Current.Kind == SyntaxKind.OpenBraceToken)
+            // extern 函数（stdcall/cdecl 修饰）无方法体
+            var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+            if (!isExtern || Current.Kind == SyntaxKind.OpenBraceToken)
             {
                 body = ParseBlockStatement();
             }
 
-            return new FunctionDeclarationSyntax(_syntaxTree, callingConventionKeyword, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()

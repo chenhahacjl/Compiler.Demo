@@ -1,11 +1,12 @@
+using System.Collections.Immutable;
+
 namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class EnumDeclarationSyntax : MemberSyntax
     {
-        internal EnumDeclarationSyntax(SyntaxTree syntaxTree, SyntaxToken? publicKeyword, SyntaxToken enumKeyword, SyntaxToken identifier, SyntaxToken openBraceToken, SeparatedSyntaxList<EnumMemberSyntax> members, SyntaxToken closeBraceToken)
-            : base(syntaxTree)
+        internal EnumDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken enumKeyword, SyntaxToken identifier, SyntaxToken openBraceToken, SeparatedSyntaxList<EnumMemberSyntax> members, SyntaxToken closeBraceToken)
+            : base(syntaxTree, modifiers)
         {
-            PublicKeyword = publicKeyword;
             EnumKeyword = enumKeyword;
             Identifier = identifier;
             OpenBraceToken = openBraceToken;
@@ -15,7 +16,6 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override SyntaxKind Kind => SyntaxKind.EnumDeclaration;
 
-        public SyntaxToken? PublicKeyword { get; }
         public SyntaxToken EnumKeyword { get; }
         public SyntaxToken Identifier { get; }
         public SyntaxToken OpenBraceToken { get; }

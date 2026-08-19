@@ -117,6 +117,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.EnumKeyword;
                 case "public":
                     return SyntaxKind.PublicKeyword;
+                case "private":
+                    return SyntaxKind.PrivateKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -260,6 +262,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "enum";
                 case SyntaxKind.PublicKeyword:
                     return "public";
+                case SyntaxKind.PrivateKeyword:
+                    return "private";
                 default:
                     return null;
             }

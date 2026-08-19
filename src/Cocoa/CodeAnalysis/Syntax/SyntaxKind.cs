@@ -70,6 +70,7 @@ ColonToken,               // :
         ImportKeyword,            // import
         LetKeyword,               // let
         NewKeyword,               // new
+        PrivateKeyword,           // private
         PublicKeyword,            // public
         ReturnKeyword,            // return
         StdcallKeyword,           // stdcall

@@ -150,7 +150,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var member = Assert.Single(root.Members);
             var function = Assert.IsType<FunctionDeclarationSyntax>(member);
 
-            Assert.Equal(SyntaxKind.StdcallKeyword, function.CallingConventionKeyword!.Kind);
+            Assert.Equal(SyntaxKind.StdcallKeyword, Assert.Single(function.Modifiers).Kind);
             Assert.Null(function.Body);
 
             using (var e = new AssertingEnumerator(member))
@@ -179,7 +179,7 @@ cdecl function double(x: int): int
             var member = Assert.Single(root.Members);
             var function = Assert.IsType<FunctionDeclarationSyntax>(member);
 
-            Assert.Equal(SyntaxKind.CdeclKeyword, function.CallingConventionKeyword!.Kind);
+            Assert.Equal(SyntaxKind.CdeclKeyword, Assert.Single(function.Modifiers).Kind);
             Assert.NotNull(function.Body);
         }
 

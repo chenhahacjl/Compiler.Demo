@@ -1,9 +1,11 @@
+using System.Collections.Immutable;
+
 namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class GlobalStatementSyntax : MemberSyntax
     {
         internal GlobalStatementSyntax(SyntaxTree syntaxTree, StatementSyntax statement)
-            : base(syntaxTree)
+            : base(syntaxTree, ImmutableArray<SyntaxToken>.Empty)
         {
             Statement = statement;
         }

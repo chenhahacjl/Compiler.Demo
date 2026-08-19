@@ -53,7 +53,7 @@ namespace Cocoa.Generators
                     using var classCurly = new CurlyIndenter(indentedTextWriter, $"partial class {type.Name}");
                     using var getChildCurly = new CurlyIndenter(indentedTextWriter, "public override IEnumerable<SyntaxNode> GetChildren()");
 
-                    foreach (var property in type.GetMembers().OfType<IPropertySymbol>())
+                    foreach (var property in GetInheritedProperties(type, syntaxNodeType))
                     {
                         if (property.Type is INamedTypeSymbol propertyType)
                         {
@@ -124,6 +124,26 @@ namespace Cocoa.Generators
                     GetAllTypes(result, nsChild);
                 }
             }
+        }
+
+        /// <summary>收集类型自身及其基类声明的实例属性（基类在前，保持源码顺序）。</summary>
+        private IReadOnlyList<IPropertySymbol> GetInheritedProperties(INamedTypeSymbol type, INamedTypeSymbol syntaxNodeType)
+        {
+            var levels = new List<List<IPropertySymbol>>();
+            var current = type;
+
+            while (current != null &&
+                   !SymbolEqualityComparer.Default.Equals(current, syntaxNodeType) &&
+                   current.SpecialType != SpecialType.System_Object)
+            {
+                levels.Add(current.GetMembers().OfType<IPropertySymbol>().Where(p => !p.IsStatic).ToList());
+
+                current = current.BaseType;
+            }
+
+            levels.Reverse();
+
+            return levels.SelectMany(l => l).ToList();
         }
 
         private bool IsDerivedFrom(ITypeSymbol type, INamedTypeSymbol baseType)

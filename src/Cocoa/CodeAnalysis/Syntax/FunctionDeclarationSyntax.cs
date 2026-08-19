@@ -1,11 +1,12 @@
+using System.Collections.Immutable;
+
 namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class FunctionDeclarationSyntax : MemberSyntax
     {
-        internal FunctionDeclarationSyntax(SyntaxTree syntaxTree, SyntaxToken? callingConventionKeyword, SyntaxToken functionKeyword, SyntaxToken identifier, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenthesisToken, TypeClauseSyntax? type, BlockStatementSyntax? body)
-            : base(syntaxTree)
+        internal FunctionDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken functionKeyword, SyntaxToken identifier, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenthesisToken, TypeClauseSyntax? type, BlockStatementSyntax? body)
+            : base(syntaxTree, modifiers)
         {
-            CallingConventionKeyword = callingConventionKeyword;
             FunctionKeyword = functionKeyword;
             Identifier = identifier;
             OpenParenthesisToken = openParenthesisToken;
@@ -17,7 +18,6 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override SyntaxKind Kind => SyntaxKind.FunctionDeclaration;
 
-        public SyntaxToken? CallingConventionKeyword { get; }
         public SyntaxToken FunctionKeyword { get; }
         public SyntaxToken Identifier { get; }
         public SyntaxToken OpenParenthesisToken { get; }
