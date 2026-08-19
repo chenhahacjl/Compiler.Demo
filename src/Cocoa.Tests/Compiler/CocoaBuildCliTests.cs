@@ -74,7 +74,7 @@ platform = x64
             var projectPath = CreateProject(
                 "native-run",
                 "App",
-                "function add(a: int, b: int): int { return a + b }\n\nfunction main()\n{\n    print(add(20, 22))\n}\n");
+                "function add(a: int, b: int): int { return a + b }\n\nfunction Main()\n{\n    print(add(20, 22))\n}\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native");
             Assert.True(exitCode == 0, $"build failed: {stderr}");
@@ -88,7 +88,7 @@ platform = x64
         [Fact]
         public void Build_Project_SecondRun_IsUpToDate()
         {
-            var projectPath = CreateProject("incremental", "App", "function main() { print(1) }");
+            var projectPath = CreateProject("incremental", "App", "function Main() { print(1) }");
 
             var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
@@ -102,13 +102,13 @@ platform = x64
         [Fact]
         public void Build_Project_SourceChange_Invalidates()
         {
-            var projectPath = CreateProject("invalidate", "App", "function main() { print(1) }");
+            var projectPath = CreateProject("invalidate", "App", "function Main() { print(1) }");
 
             var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
 
             var sourcePath = Path.Combine(Path.GetDirectoryName(projectPath)!, "App.co");
-            File.WriteAllText(sourcePath, "function main() { print(2) }");
+            File.WriteAllText(sourcePath, "function Main() { print(2) }");
 
             var second = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, second.ExitCode);
@@ -121,7 +121,7 @@ platform = x64
         [Fact]
         public void Build_Project_NoIncremental_ForcesRebuild()
         {
-            var projectPath = CreateProject("no-incremental", "App", "function main() { print(1) }");
+            var projectPath = CreateProject("no-incremental", "App", "function Main() { print(1) }");
 
             var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
@@ -134,7 +134,7 @@ platform = x64
         [Fact]
         public void Build_Project_OutputOverride_Respected()
         {
-            var projectPath = CreateProject("output-override", "App", "function main() { }");
+            var projectPath = CreateProject("output-override", "App", "function Main() { }");
             var overrideFile = Path.Combine(Path.GetDirectoryName(projectPath)!, "renamed.exe");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native -o \"{overrideFile}\"");
@@ -153,7 +153,7 @@ platform = x64
             {
                 var projectDir = Path.Combine(dir, name);
                 Directory.CreateDirectory(projectDir);
-                File.WriteAllText(Path.Combine(projectDir, name + ".co") + "", $"function main() {{ print(\"{name}\") }}");
+                File.WriteAllText(Path.Combine(projectDir, name + ".co") + "", $"function Main() {{ print(\"{name}\") }}");
                 File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"
 name = {name}
 [sources]
@@ -187,7 +187,7 @@ App/App.coproj
             {
                 var projectDir = Path.Combine(dir, name);
                 Directory.CreateDirectory(projectDir);
-                File.WriteAllText(Path.Combine(projectDir, name + ".co"), "function main() { }");
+                File.WriteAllText(Path.Combine(projectDir, name + ".co"), "function Main() { }");
             }
 
             Func<string, string> other = name => name == "A" ? "../B/B.cod" : "../A/A.cod";
@@ -220,7 +220,7 @@ output = cocoa
             var run = "cod-format";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "Lib.co"), "function main() { }");
+            File.WriteAllText(Path.Combine(dir, "Lib.co"), "function Main() { }");
             var projectPath = Path.Combine(dir, "Lib.coproj");
             File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
@@ -232,7 +232,7 @@ output = cocoa
         [Fact]
         public void Build_InvalidFormat_ReportsError()
         {
-            var projectPath = CreateProject("invalid-format", "App", "function main() { }");
+            var projectPath = CreateProject("invalid-format", "App", "function Main() { }");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -f elf");
             Assert.Equal(1, exitCode);
@@ -245,7 +245,7 @@ output = cocoa
             var run = "malformed";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "App.co"), "function main() { }");
+            File.WriteAllText(Path.Combine(dir, "App.co"), "function Main() { }");
             var projectPath = Path.Combine(dir, "App.coproj");
             File.WriteAllText(projectPath, "name = App\n\n[sources]\n*.co\n[options]\nincremental = maybe\n");
 

@@ -1,9 +1,9 @@
-function greeting(name: string): string
+function Greeting(name: string): string
 {
     return "Hello, " + name + "!"
 }
 
-function sum(a: int, b: int): int
+function Sum(a: int, b: int): int
 {
     return a + b
 }

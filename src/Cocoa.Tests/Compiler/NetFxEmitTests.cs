@@ -82,7 +82,7 @@ namespace Cocoa.Tests.Compiler
         public void NetFx_Exe_Runs_Directly_WithoutDotnetHost()
         {
             var exe = EmitNetFx(@"
-function main()
+function Main()
 {
     print(""hello netfx"")
     print(40 + 2)
@@ -96,7 +96,7 @@ function main()
         [Fact]
         public void NetFx_Exe_Loads_Via_AssemblyLoadFile()
         {
-            var exe = EmitNetFx("function main() { }", "netfx-loadfile");
+            var exe = EmitNetFx("function Main() { }", "netfx-loadfile");
 
             // Windows PowerShell 5.1 运行在 .NET Framework 上，可验证 CLR 4.8 能加载该镜像
             var psi = new ProcessStartInfo("powershell.exe",
@@ -115,7 +115,7 @@ function main()
         public void NetFx_MainArgs_Receives_CommandLine()
         {
             var exe = EmitNetFx(@"
-function main(args: string[])
+function Main(args: string[])
 {
     print(args.Length)
     if args.Length > 0

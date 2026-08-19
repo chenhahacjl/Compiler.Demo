@@ -85,7 +85,7 @@ import user32.dll
 
 stdcall function MessageBoxW(hWnd: int, lpText: int, lpCaption: int, uType: int): int
 
-function main()
+function Main()
 {
     var m = MessageBoxW(0, 0, 0, 0)
     ExitProcess(m)

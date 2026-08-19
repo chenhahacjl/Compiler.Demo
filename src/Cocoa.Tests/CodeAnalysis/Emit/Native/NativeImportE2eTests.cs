@@ -64,7 +64,7 @@ import kernel32.dll
 
 stdcall function ExitProcess(exitCode: int)
 
-function main()
+function Main()
 {
     ExitProcess(42)
 }", "native-import-exitprocess", X64);
@@ -81,7 +81,7 @@ import kernel32.dll
 
 cdecl function ExitProcess(exitCode: int)
 
-function main()
+function Main()
 {
     ExitProcess(7)
 }", "native-import-cdecl-exitprocess", X64);
@@ -103,7 +103,7 @@ import user32.dll
 
 stdcall function MessageBeep(uType: int): int
 
-function main()
+function Main()
 {
     var t = GetTickCount()
     var b = MessageBeep(0)
@@ -126,7 +126,7 @@ import kernel32.dll
 
 stdcall function GetStdHandle(nStdHandle: int): int
 
-function main()
+function Main()
 {
     var h = GetStdHandle(0 - 10)
     if h != 0
@@ -148,7 +148,7 @@ function main()
         public void Native_Byte_EndToEnd()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function main()
+function Main()
 {
     var b1: byte = 65
     print(b1)
@@ -170,7 +170,7 @@ function main()
         public void Native_X86_Byte_EndToEnd()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function main()
+function Main()
 {
     var b1: byte = 65
     print(b1)
@@ -196,7 +196,7 @@ import kernel32.dll
 
 stdcall function ExitProcess(exitCode: int)
 
-function main()
+function Main()
 {
     ExitProcess(42)
 }", "native-import-x86-exitprocess", X86);
@@ -213,7 +213,7 @@ import kernel32.dll
 
 cdecl function ExitProcess(exitCode: int)
 
-function main()
+function Main()
 {
     ExitProcess(5)
 }", "native-import-x86-cdecl", X86);
@@ -231,7 +231,7 @@ import user32.dll
 
 stdcall function MessageBeep(uType: int): int
 
-function main()
+function Main()
 {
     var b = MessageBeep(0)
     if b != 0
@@ -250,7 +250,7 @@ function main()
         {
             // main(): int 的返回值成为进程退出码（EAX → ECX → ExitProcess）
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function main(): int
+function Main(): int
 {
     return 42
 }", "native-main-int-return", X64);
@@ -263,7 +263,7 @@ function main(): int
         public void Native_X86_MainWithIntReturn_ExitCode()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function main(): int
+function Main(): int
 {
     return 42
 }", "native-x86-main-int-return", X86);
@@ -280,7 +280,7 @@ import kernel32.dll
 
 stdcall function NotARealSymbol(x: int): int
 
-function main()
+function Main()
 {
     var v = NotARealSymbol(1)
 }

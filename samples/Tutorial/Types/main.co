@@ -1,4 +1,4 @@
-function main()
+function Main()
 {
     let x = 42
     var y = 10
@@ -12,6 +12,6 @@ function main()
     print(name)
     print(pi)
     print(flag)
-    print(plus(x, y))
-    print(concatName("Cocoa", "Lang"))
+    print(Plus(x, y))
+    print(ConcatName("Cocoa", "Lang"))
 }

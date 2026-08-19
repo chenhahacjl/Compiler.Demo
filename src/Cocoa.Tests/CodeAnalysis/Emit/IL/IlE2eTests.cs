@@ -46,7 +46,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Run_CocoaProgram_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var sum = 0
     var i = 0
@@ -103,7 +103,7 @@ function isPositive(n: int): bool
     return n > 0
 }
 
-function main()
+function Main()
 {
     print(add(2, 3))
     print(square(add(1, 2)))
@@ -126,7 +126,7 @@ import kernel32.dll
 
 stdcall function GetTickCount(): int
 
-function main()
+function Main()
 {
     var t = GetTickCount()
     if t > 0
@@ -147,7 +147,7 @@ import kernel32.dll
 
 stdcall function ExitProcess(exitCode: int)
 
-function main()
+function Main()
 {
     ExitProcess(42)
 }", "e2e-pinvoke-stdcall-args");
@@ -165,7 +165,7 @@ import kernel32.dll
 
 cdecl function ExitProcess(exitCode: int)
 
-function main()
+function Main()
 {
     ExitProcess(7)
 }", "e2e-pinvoke-cdecl-args");
@@ -183,7 +183,7 @@ import kernel32.dll
 
 stdcall function GetModuleHandleW(moduleName: int): int
 
-function main()
+function Main()
 {
     var h = GetModuleHandleW(0)
     if h != 0
@@ -201,7 +201,7 @@ function main()
         public void Run_CocoaProgram_WithControlFlow_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var total = 0
     for i = 1 to 5
@@ -260,7 +260,7 @@ function sum10(a: int, b: int, c: int, d: int, e: int, f: int, g: int, h: int, i
     return a + b + c + d + e + f + g + h + i + j
 }
 
-function main()
+function Main()
 {
     let name = ""Cocoa""
     var x = ""1""
@@ -279,7 +279,7 @@ function main()
         {
             // main(): int 的返回值成为进程退出码（入口统一为 static int Main()）
             var (exitCode, stdout) = EmitAndRun(@"
-function main(): int
+function Main(): int
 {
     return 7
 }", "e2e-main-int-return");
@@ -293,7 +293,7 @@ function main(): int
         {
             // main(): int 缺 return 与其他非 void 函数一致：必须返回
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
-function main(): int
+function Main(): int
 {
     print(""hi"")
 }
@@ -309,7 +309,7 @@ function main(): int
         public void Main_WithNonArrayArgument_OnDotnetHost_ReportsError()
         {
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
-function main(x: int)
+function Main(x: int)
 {
 }
 ");
@@ -324,7 +324,7 @@ function main(x: int)
         public void Main_WithStringArrayArgument_EmitsClean()
         {
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
-function main(args: string[])
+function Main(args: string[])
 {
 }
 ");
@@ -338,7 +338,7 @@ function main(args: string[])
         public void Main_WithBoolReturn_OnDotnetHost_ReportsError()
         {
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
-function main(): bool
+function Main(): bool
 {
     return true
 }
@@ -354,7 +354,7 @@ function main(): bool
         public void Array_ReadWriteAndLength_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var a = new int[3] {10, 20, 30}
     a[1] = 99
@@ -372,7 +372,7 @@ function main()
         public void Array_BoolElements_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var b = new bool[2]
     b[0] = true
@@ -389,7 +389,7 @@ function main()
         public void Array_OutOfBounds_OnDotnetHost_ExitsNonZero()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var a = new int[2]
     a[0] = 1
@@ -404,7 +404,7 @@ function main()
         public void Array_IndexInLoop_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var a = new int[5]
     var i = 0
@@ -431,7 +431,7 @@ function main()
         public void String_IndexLengthAndSubstring_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var s = ""hello""
     print(s.Length)
@@ -452,7 +452,7 @@ function main()
         public void CharArray_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var a = new char[2] {'x', 'y'}
     a[0] = 'z'
@@ -468,7 +468,7 @@ function main()
         public void String_IndexOutOfBounds_OnDotnetHost_ExitsNonZero()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var s = ""abc""
     print(s[9])
@@ -484,7 +484,7 @@ function main()
 public enum Color { Red, Green, Blue }
 public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
 function f(c: Color): int { return int(c) }
-function main()
+function Main()
 {
     var c = Color.Green
     print(int(c))
@@ -504,7 +504,7 @@ function main()
         {
             var (exitCode, stdout) = EmitAndRun(@"
 public enum Color { Red, Green, Blue }
-function main()
+function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
     print(int(a[0]))
@@ -521,7 +521,7 @@ function main()
         public void Byte_EndToEnd_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var b1: byte = 65
     print(b1)
@@ -544,7 +544,7 @@ function main()
         public void Double_EndToEnd_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     var d: double = 3.14
     print(d)
@@ -574,7 +574,7 @@ function main()
         public void String_PlusDouble_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-function main()
+function Main()
 {
     print(""d="" + 1.5)
     print(""x="" + (double)3)

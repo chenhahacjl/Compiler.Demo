@@ -55,7 +55,7 @@ function twice(x: int): int
     return x * 2
 }
 
-function main()
+function Main()
 {
     var name = input()
     print(twice(21))
@@ -88,7 +88,7 @@ function main()
         {
             var dir = GetTempDir();
             var sourcePath = Path.Combine(dir, "cli-error.co");
-            File.WriteAllText(sourcePath, "function main() { }");
+            File.WriteAllText(sourcePath, "function Main() { }");
 
             var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b foo");
             Assert.Equal(1, exitCode);

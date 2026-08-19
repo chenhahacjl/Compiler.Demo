@@ -1,12 +1,12 @@
-function main()
+function Main()
 {
     var s = "hello"
     print(s.Length)
     print(s[0])
     print(int(s[1]))
-    print(middle(s))
-    print(middle(s) + "!")
-    print(firstChar(s))
+    print(Middle(s))
+    print(Middle(s) + "!")
+    print(FirstChar(s))
 
     var c = 'a'
     print(c)

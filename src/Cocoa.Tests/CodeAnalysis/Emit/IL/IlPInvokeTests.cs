@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -83,7 +83,7 @@ import kernel32.dll
 
 stdcall function GetCurrentProcessId(): int
 
-function main()
+function Main()
 {
     var t = GetCurrentProcessId()
     print(t)

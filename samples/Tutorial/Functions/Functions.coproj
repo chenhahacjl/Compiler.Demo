@@ -1,7 +1,7 @@
 name = Functions
 output = executable
 platform = x64
-entry = run
+entry = Run
 dotnetRuntime = net40
 
 [sources]

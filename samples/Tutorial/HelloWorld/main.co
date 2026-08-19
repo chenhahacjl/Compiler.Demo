@@ -1,5 +1,5 @@
-function main()
+function Main()
 {
-    print(greeting("Cocoa"))
-    print(sum(20, 22))
+    print(Greeting("Cocoa"))
+    print(Sum(20, 22))
 }

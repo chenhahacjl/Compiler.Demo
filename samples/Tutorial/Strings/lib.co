@@ -1,19 +1,19 @@
-function middle(s: string): string
+function Middle(s: string): string
 {
     return s.substring(1, 3)
 }
 
-function firstChar(s: string): char
+function FirstChar(s: string): char
 {
     return s[0]
 }
 
-function charCode(s: string, index: int): int
+function CharCode(s: string, index: int): int
 {
     return int(s[index])
 }
 
-function lengthOf(s: string): int
+function LengthOf(s: string): int
 {
     return s.Length
 }

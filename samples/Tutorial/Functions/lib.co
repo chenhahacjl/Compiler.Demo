@@ -1,23 +1,23 @@
-function add(a: int, b: int): int
+function Add(a: int, b: int): int
 {
     return a + b
 }
 
-function square(x: int): int
+function Square(x: int): int
 {
     return x * x
 }
 
-function factorial(n: int): int
+function Factorial(n: int): int
 {
     if n <= 1
     {
         return 1
     }
-    return n * factorial(n - 1)
+    return n * Factorial(n - 1)
 }
 
-function greet(name: string): string
+function Greet(name: string): string
 {
     return "Hello, " + name + "!"
 }

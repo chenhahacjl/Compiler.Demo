@@ -83,7 +83,7 @@ namespace Cocoa.Tests.Projects
         public void Fingerprint_SourceContentChange_Invalidates()
         {
             var source = Path.Combine(_directory, "a.co");
-            File.WriteAllText(source, "function main()");
+            File.WriteAllText(source, "function Main()");
 
             var before = BuildCache.ComputeFingerprint(
                 ImmutableArray.Create(source), ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);

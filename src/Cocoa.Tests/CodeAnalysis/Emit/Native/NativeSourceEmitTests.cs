@@ -39,7 +39,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         public void NativeSource_EmptyMain(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
 }", "dbg-empty", target);
 
@@ -52,7 +52,7 @@ function main()
         public void NativeSource_VarOnly(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var x = 0
 }", "dbg-var", target);
@@ -66,7 +66,7 @@ function main()
         public void NativeSource_NoExit(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var x = 0
     x = 1
@@ -81,7 +81,7 @@ function main()
         public void NativeSource_PrintInt(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(42)
 }", "dbg-int", target);
@@ -95,7 +95,7 @@ function main()
         public void NativeSource_PrintString(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(""hi"")
 }", "dbg-str", target);
@@ -109,7 +109,7 @@ function main()
         public void NativeSource_PrintsExpressions(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(""Hello, World!"")
     print(42)
@@ -129,7 +129,7 @@ function main()
         public void NativeSource_VariablesAndAssignment(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var x = 10
     x = x + 5
@@ -151,7 +151,7 @@ function main()
         public void NativeSource_IfStatement(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var x = 10
     if x > 5
@@ -187,7 +187,7 @@ function square(x: int): int
     return x * x
 }
 
-function main()
+function Main()
 {
     print(add(3, 4))
     print(square(5))
@@ -223,7 +223,7 @@ function fibonacci(n: int): int
     return fibonacci(n - 1) + fibonacci(n - 2)
 }
 
-function main()
+function Main()
 {
     print(factorial(5))
     print(factorial(10))
@@ -239,7 +239,7 @@ function main()
         public void NativeSource_WhileAndBreakContinue(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var i = 0
     while true
@@ -267,7 +267,7 @@ function main()
         public void NativeSource_ForAndDoWhile(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     for j = 0 to 4
     {
@@ -297,7 +297,7 @@ function main()
         public void NativeSource_CompoundAssignment(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var x = 0
     x += 5
@@ -319,7 +319,7 @@ function main()
         public void NativeSource_StringConcatAndCompare(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var s = ""foo""
     var t = ""bar""
@@ -344,7 +344,7 @@ function greet(name: string): string
     return ""Hello, "" + name
 }
 
-function main()
+function Main()
 {
     var who = ""Cocoa""
     print(greet(who))
@@ -360,7 +360,7 @@ function main()
         public void NativeSource_NegativeNumbers(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(-5)
     print(0 - 7)
@@ -381,7 +381,7 @@ function main()
         public void NativeSource_LogicalOperators(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var a = true && false
     print(a)
@@ -400,7 +400,7 @@ function main()
         public void NativeSource_Input(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var s = input()
     print(s)
@@ -417,7 +417,7 @@ function main()
             for (var i = 0; i < 5; i++)
             {
                 var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(random(100) < 100)
 }", "src-random", target);
@@ -432,7 +432,7 @@ function main()
         public void NativeSource_Division(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(42 / 7)
     print(-42 / 7)
@@ -449,7 +449,7 @@ function main()
         public void NativeSource_DivisionByZero(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     print(1 / 0)
 }", "src-division-by-zero", target, expectedExitCode: 1);
@@ -463,7 +463,7 @@ function main()
         public void NativeSource_Array_ReadWriteAndLength(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var a = new int[3] {10, 20, 30}
     a[1] = 99
@@ -482,7 +482,7 @@ function main()
         public void NativeSource_Array_BoolElements(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var b = new bool[2]
     b[0] = true
@@ -500,7 +500,7 @@ function main()
         public void NativeSource_Array_IndexInLoop(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var a = new int[5]
     var i = 0
@@ -528,7 +528,7 @@ function main()
         public void NativeSource_Array_OutOfBounds(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var a = new int[2]
     a[0] = 1
@@ -546,7 +546,7 @@ function main()
         {
             TargetPlatform.TryParse(target, out var platform);
             var syntaxTree = SyntaxTree.Parse(@"
-function main()
+function Main()
 {
     var rows = new int[2]
     var row = new int[2] {5, 6}
@@ -564,7 +564,7 @@ function main()
         public void NativeSource_String_IndexLengthAndSubstring(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var s = ""hello""
     print(s.Length)
@@ -586,7 +586,7 @@ function main()
         public void NativeSource_CharArray(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var a = new char[2] {'x', 'y'}
     a[0] = 'z'
@@ -603,7 +603,7 @@ function main()
         public void NativeSource_String_IndexOutOfBounds(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var s = ""abc""
     print(s[9])
@@ -618,7 +618,7 @@ function main()
         public void NativeSource_Substring_InvalidArguments(string target)
         {
             var output = CompileAndRun(@"
-function main()
+function Main()
 {
     var s = ""abc""
     print(s.substring(1, 99))
@@ -636,7 +636,7 @@ function main()
 public enum Color { Red, Green, Blue }
 public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
 function f(c: Color): int { return int(c) }
-function main()
+function Main()
 {
     var c = Color.Green
     print(int(c))
@@ -657,7 +657,7 @@ function main()
         {
             var output = CompileAndRun(@"
 public enum Color { Red, Green, Blue }
-function main()
+function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
     print(int(a[0]))

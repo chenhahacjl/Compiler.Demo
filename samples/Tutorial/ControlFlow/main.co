@@ -1,11 +1,11 @@
-function main()
+function Main()
 {
-    print(classify(5))
-    print(classify(0))
-    print(classify(-3))
-    print(sumUpTo(5))
-    print(countdown(3))
-    print(doOnce())
+    print(Classify(5))
+    print(Classify(0))
+    print(Classify(-3))
+    print(SumUpTo(5))
+    print(Countdown(3))
+    print(DoOnce())
 
     var total = 0
     for i = 1 to 5

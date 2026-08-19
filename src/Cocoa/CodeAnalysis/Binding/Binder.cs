@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "main")
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "Main")
         {
             var parentScope = CreateParentScope(previous);
             var binder = new Binder(isScript, parentScope, null);

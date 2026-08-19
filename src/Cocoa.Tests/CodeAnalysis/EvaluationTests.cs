@@ -378,7 +378,7 @@ function [Foo]() { }
             var text = @"
 public enum Color { Red, Green }
 function f(c: Color) { }
-function main()
+function Main()
 {
     f([1])
 }";

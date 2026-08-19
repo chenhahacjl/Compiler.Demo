@@ -1,9 +1,9 @@
-function plus(a: int, b: int): int
+function Plus(a: int, b: int): int
 {
     return a + b
 }
 
-function classify(x: int): string
+function Classify(x: int): string
 {
     if x > 0
     {
@@ -16,7 +16,7 @@ function classify(x: int): string
     return "negative"
 }
 
-function sumUpTo(n: int): int
+function SumUpTo(n: int): int
 {
     var total = 0
     for i = 1 to n
@@ -26,7 +26,7 @@ function sumUpTo(n: int): int
     return total
 }
 
-function countdown(n: int): int
+function Countdown(n: int): int
 {
     var steps = 0
     var current = n
@@ -38,7 +38,7 @@ function countdown(n: int): int
     return steps
 }
 
-function doOnce(): int
+function DoOnce(): int
 {
     var i = 0
     do

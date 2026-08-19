@@ -65,7 +65,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         public void Double_EndToEnd(object platform)
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function main()
+function Main()
 {
     var d: double = 3.14
     print(d)
@@ -96,7 +96,7 @@ function main()
         public void Double_FixedPointFormatting_AndSpecialValues(object platform)
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function main()
+function Main()
 {
     print(0.0)
     print(-1.5)

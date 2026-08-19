@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "main", syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName: "Main", syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, params SyntaxTree[] syntaxTrees)
@@ -34,7 +34,7 @@ namespace Cocoa.CodeAnalysis
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: true, previous, entryPointName: "main", syntaxTrees);
+            return new Compilation(isScript: true, previous, entryPointName: "Main", syntaxTrees);
         }
 
         public bool IsScript { get; }

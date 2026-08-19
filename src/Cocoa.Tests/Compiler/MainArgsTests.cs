@@ -89,7 +89,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithStringArrayArgs_ReturnsArgCount()
         {
-            var result = EvaluateWithArgs("function main(args: string[]): int { return args.Length }", new[] { "a", "b", "c" });
+            var result = EvaluateWithArgs("function Main(args: string[]): int { return args.Length }", new[] { "a", "b", "c" });
             Assert.Empty(result.Diagnostics);
             Assert.Equal(3, result.Value);
         }
@@ -97,7 +97,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithStringArrayArgs_ReadsIndexedValue()
         {
-            var result = EvaluateWithArgs("function main(args: string[]): int { if args[1] == \"b\" { return 9 } return 0 }", new[] { "a", "b", "c" });
+            var result = EvaluateWithArgs("function Main(args: string[]): int { if args[1] == \"b\" { return 9 } return 0 }", new[] { "a", "b", "c" });
             Assert.Empty(result.Diagnostics);
             Assert.Equal(9, result.Value);
         }
@@ -105,7 +105,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithNoArgs_ReturnsZeroWhenNoArgsPassed()
         {
-            var result = EvaluateWithArgs("function main(args: string[]): int { return args.Length }", Array.Empty<string>());
+            var result = EvaluateWithArgs("function Main(args: string[]): int { return args.Length }", Array.Empty<string>());
             Assert.Empty(result.Diagnostics);
             Assert.Equal(0, result.Value);
         }
@@ -113,7 +113,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithNonArrayParameter_ReportsError()
         {
-            var compilation = Compilation.Create(SyntaxTree.Parse("function main(x: int) { return x }"));
+            var compilation = Compilation.Create(SyntaxTree.Parse("function Main(x: int) { return x }"));
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
             Assert.NotEmpty(result.Diagnostics);
         }
@@ -122,7 +122,7 @@ namespace Cocoa.Tests.Compiler
         public void Native_MainArgs_PrintsCountAndValues()
         {
             var exe = BuildCli(
-                "function main(args: string[]) {\nprint(args.Length)\nprint(args[0])\nprint(args[1])\n}",
+                "function Main(args: string[]) {\nprint(args.Length)\nprint(args[0])\nprint(args[1])\n}",
                 "native",
                 "mainargs-native.exe",
                 out _);
@@ -136,7 +136,7 @@ namespace Cocoa.Tests.Compiler
         public void Dotnet_MainArgs_PrintsCountAndValues()
         {
             var exe = BuildCli(
-                "function main(args: string[]) {\nprint(args.Length)\nprint(args[0])\nprint(args[1])\n}",
+                "function Main(args: string[]) {\nprint(args.Length)\nprint(args[0])\nprint(args[1])\n}",
                 "dotnet",
                 "mainargs-dotnet.exe",
                 out _);
@@ -150,7 +150,7 @@ namespace Cocoa.Tests.Compiler
         public void Native_MainArgs_QuotedArgument_IsSingleArg()
         {
             var exe = BuildCli(
-                "function main(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}",
+                "function Main(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}",
                 "native",
                 "mainargs-quoted-native.exe",
                 out _);
@@ -163,7 +163,7 @@ namespace Cocoa.Tests.Compiler
         public void Dotnet_MainArgs_QuotedArgument_IsSingleArg()
         {
             var exe = BuildCli(
-                "function main(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}",
+                "function Main(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}",
                 "dotnet",
                 "mainargs-quoted-dotnet.exe",
                 out _);
@@ -192,7 +192,7 @@ namespace Cocoa.Tests.Compiler
         public void Project_EntryField_Native_SelectsEntryFunction()
         {
             BuildProject(
-                "function run(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}\nfunction main() {\nprint(99)\n}",
+                "function run(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}\nfunction Main() {\nprint(99)\n}",
                 "native",
                 "entry-native",
                 "run",
@@ -207,7 +207,7 @@ namespace Cocoa.Tests.Compiler
         public void Project_EntryField_Dotnet_SelectsEntryFunction()
         {
             BuildProject(
-                "function run(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}\nfunction main() {\nprint(99)\n}",
+                "function run(args: string[]) {\nprint(args.Length)\nprint(args[0])\n}\nfunction Main() {\nprint(99)\n}",
                 "dotnet",
                 "entry-dotnet",
                 "run",

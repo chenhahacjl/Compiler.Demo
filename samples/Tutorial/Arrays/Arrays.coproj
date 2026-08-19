@@ -1,7 +1,7 @@
 name = Arrays
 output = executable
 platform = x64
-entry = main
+entry = Main
 dotnetRuntime = net40
 
 [sources]

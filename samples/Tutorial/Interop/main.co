@@ -1,7 +1,7 @@
-function main()
+function Main()
 {
-    print(isRunning())
+    print(IsRunning())
 
     var r = random(100)
-    print(inRange(r, 100))
+    print(InRange(r, 100))
 }

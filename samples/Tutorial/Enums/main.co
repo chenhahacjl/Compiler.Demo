@@ -1,12 +1,12 @@
-function main()
+function Main()
 {
     var c = Color.Green
-    print(asInt(Color.Red))
-    print(asInt(Color.Green))
-    print(asInt(Color.Blue))
-    print(isGreen(c))
+    print(AsInt(Color.Red))
+    print(AsInt(Color.Green))
+    print(AsInt(Color.Blue))
+    print(IsGreen(c))
     print(c == Color.Red)
     print(int(HttpStatus.NotFound))
     print(int(Color(99)))
-    print(asInt(Color.Green) == int(c))
+    print(AsInt(Color.Green) == int(c))
 }

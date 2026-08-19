@@ -1,18 +1,18 @@
-function main()
+function Main()
 {
     var b1: byte = 65
     print(b1)
-    print(asInt(b1))
+    print(AsInt(b1))
 
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
     print(buf[0])
     print(buf[1])
-    print(firstElement(buf))
-    print(lastElement(buf))
+    print(FirstElement(buf))
+    print(LastElement(buf))
 
-    print(wrap(300))
-    print(wrap(200) == wrap(200))
+    print(Wrap(300))
+    print(Wrap(200) == Wrap(200))
     print(0xFF)
 }

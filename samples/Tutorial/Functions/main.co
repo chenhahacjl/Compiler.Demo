@@ -1,9 +1,9 @@
-function run(args: string[])
+function Run(args: string[])
 {
-    print(add(20, 22))
-    print(square(add(1, 2)))
-    print(factorial(5))
-    print(greet("Cocoa"))
+    print(Add(20, 22))
+    print(Square(Add(1, 2)))
+    print(Factorial(5))
+    print(Greet("Cocoa"))
     print(args.Length)
     if args.Length > 0
     {
@@ -15,7 +15,7 @@ function run(args: string[])
     }
 }
 
-function main()
+function Main()
 {
     print("not used when entry = run")
 }

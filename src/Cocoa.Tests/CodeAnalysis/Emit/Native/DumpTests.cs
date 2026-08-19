@@ -27,7 +27,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         {
             TargetPlatform.TryParse(target, out var platform);
             var source = @"
-function main()
+function Main()
 {
     var x = 10
     x = x + 5

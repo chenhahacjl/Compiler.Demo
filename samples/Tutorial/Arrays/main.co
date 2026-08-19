@@ -1,4 +1,4 @@
-function main()
+function Main()
 {
     var nums = new int[3] {10, 20, 30}
     nums[1] = 99
@@ -6,9 +6,9 @@ function main()
     print(nums[1])
     print(nums[2])
     print(nums.Length)
-    print(sum(nums))
-    print(contains(nums, 99))
-    print(contains(nums, 7))
+    print(Sum(nums))
+    print(Contains(nums, 99))
+    print(Contains(nums, 7))
 
     var flags = new bool[2]
     flags[0] = true
