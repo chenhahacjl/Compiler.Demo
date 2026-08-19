@@ -170,7 +170,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Constrained", 0xFE16, IlOperandType.InlineType);
 
             // 字段/数组
+            Define("Ldsfld", 0x7E, IlOperandType.InlineField);
             Define("Ldfld", 0x7B, IlOperandType.InlineField);
+            Define("Stsfld", 0x80, IlOperandType.InlineField);
             Define("Stfld", 0x7D, IlOperandType.InlineField);
             Define("Ldlen", 0x8E, IlOperandType.InlineNone);
             Define("Ldelem_I1", 0x90, IlOperandType.InlineNone);

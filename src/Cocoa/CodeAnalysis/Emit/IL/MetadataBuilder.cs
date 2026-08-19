@@ -37,16 +37,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>我们自己的字段定义（FieldDef 表行）。</summary>
     internal sealed class IlFieldDef
     {
-        public IlFieldDef(string name, IlType type, bool isPublic)
+        public IlFieldDef(string name, IlType type, bool isPublic, bool isStatic = false)
         {
             Name = name;
             Type = type;
             IsPublic = isPublic;
+            IsStatic = isStatic;
         }
 
         public string Name { get; }
         public IlType Type { get; }
         public bool IsPublic { get; }
+        public bool IsStatic { get; }
     }
 
     /// <summary>我们自己的方法定义（MethodDef 表行 + 方法体）。</summary>
@@ -644,8 +646,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 foreach (var field in typeDef.Fields)
                 {
-                    // flags: Public=0x0006 / Private=0x0001
-                    writer.Write((ushort)(field.IsPublic ? 0x0006 : 0x0001));
+                    // flags: Public=0x0006 / Private=0x0001 + Static=0x0010
+                    var fieldFlags = field.IsPublic ? (ushort)0x0006 : (ushort)0x0001;
+                    if (field.IsStatic)
+                    {
+                        fieldFlags |= 0x0010;
+                    }
+                    writer.Write(fieldFlags);
                     WriteStringRef(field.Name, stringIsBig);
                     WriteRef(GetOrAddBlob(EncodeFieldSignature(field.Type)), blobIsBig);
                     fieldRow++;

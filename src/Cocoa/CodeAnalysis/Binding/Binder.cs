@@ -440,15 +440,23 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var member in syntax.Members)
             {
+                if (classType.IsStatic &&
+                    (member is ClassFieldDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword) ||
+                     member is FunctionDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword)))
+                {
+                    _diagnostics.ReportError(member.Location, $"静态类 {classType.Name} 只能包含静态成员。");
+                }
+
                 if (member is ClassFieldDeclarationSyntax fieldDeclaration)
                 {
                     var fieldType = BindTypeClause(fieldDeclaration.Type);
                     var fieldIsPublic = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
                     var fieldIsReadonly = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.ReadonlyKeyword);
+                    var fieldIsStatic = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
 
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
-                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldIsPublic, classType, isReadonly: fieldIsReadonly));
+                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldIsPublic, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
                     }
                     else
                     {
@@ -787,6 +795,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            if (_function?.IsStatic == true)
+            {
+                _diagnostics.ReportError(syntax.Location, "静态方法中不能使用 base。");
+                return new BoundErrorExpression(syntax);
+            }
+
             if (_currentClass.BaseType == null)
             {
                 _diagnostics.ReportError(syntax.Location, $"类型 {_currentClass.Name} 没有基类，不能使用 base。");
@@ -801,6 +815,12 @@ namespace Cocoa.CodeAnalysis.Binding
             if (_currentClass == null)
             {
                 _diagnostics.ReportError(syntax.Location, "this 只能用在类的实例方法或构造函数中。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (_function?.IsStatic == true)
+            {
+                _diagnostics.ReportError(syntax.Location, "静态方法中不能使用 this。");
                 return new BoundErrorExpression(syntax);
             }
 
@@ -1142,6 +1162,12 @@ namespace Cocoa.CodeAnalysis.Binding
                     return new BoundErrorExpression(syntax);
                 }
 
+                if (memberTarget.Field.IsReadonly && _function?.IsConstructor != true)
+                {
+                    _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, memberTarget.Field.Name);
+                    return new BoundErrorExpression(syntax);
+                }
+
                 var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, memberTarget.Type);
 
                 return new BoundMemberAssignmentExpression(syntax, memberTarget.Target, memberTarget.Field, convertedExpression);
@@ -1197,6 +1223,18 @@ namespace Cocoa.CodeAnalysis.Binding
             if (classType == null)
             {
                 _diagnostics.ReportUndefinedType(syntax.Identifier.Location, syntax.Identifier.Text);
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (classType.IsStatic)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"不能实例化静态类 '{classType.Name}'。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (classType.IsAbstract)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"不能实例化抽象类 '{classType.Name}'。");
                 return new BoundErrorExpression(syntax);
             }
 
@@ -1258,6 +1296,17 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindMemberAccessExpression(MemberAccessExpressionSyntax syntax)
         {
+            var identifier = syntax.IdentifierToken.Text;
+
+            // 静态字段访问：MathHelpers.Count
+            if (syntax.Expression is NameExpressionSyntax staticNameExpr &&
+                LookupType(staticNameExpr.IdentifierToken.Text) is ClassTypeSymbol staticType &&
+                staticType.GetField(identifier) is FieldSymbol staticField &&
+                staticField.IsStatic)
+            {
+                return new BoundMemberAccessExpression(syntax, staticField.Type, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, staticField);
+            }
+
             // 枚举成员访问（Color.Red）：左侧为枚举类型名 → 折叠为常量字面量
             if (syntax.Expression is NameExpressionSyntax nameExpression)
             {
@@ -1274,7 +1323,6 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var boundTarget = BindExpression(syntax.Expression);
-            var identifier = syntax.IdentifierToken.Text;
 
             if (boundTarget.Type == TypeSymbol.Error)
             {
@@ -1317,8 +1365,36 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindMemberCallExpression(MemberCallExpressionSyntax syntax)
         {
-            var boundExpression = BindExpression(syntax.Expression);
             var identifier = syntax.IdentifierToken.Text;
+
+            // 静态方法调用：MathHelpers.Square(2)（target 是类型名）
+            if (syntax.Expression is NameExpressionSyntax staticNameExpr &&
+                LookupType(staticNameExpr.IdentifierToken.Text) is ClassTypeSymbol staticType &&
+                staticType.GetMethod(identifier) is FunctionSymbol staticMethod &&
+                staticMethod.IsStatic)
+            {
+                var staticArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                foreach (var argument in syntax.Arguments)
+                {
+                    staticArguments.Add(BindExpression(argument));
+                }
+
+                if (staticMethod.Parameters.Length != syntax.Arguments.Count)
+                {
+                    _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, staticMethod.Parameters.Length, syntax.Arguments.Count);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                for (var i = 0; i < staticArguments.Count; i++)
+                {
+                    arguments.Add(BindConversion(syntax.Arguments[i].Location, staticArguments[i], staticMethod.Parameters[i].Type));
+                }
+
+                return new BoundMemberCallExpression(syntax, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, arguments.ToImmutable(), staticMethod.ReturnType, staticMethod);
+            }
+
+            var boundExpression = BindExpression(syntax.Expression);
 
             if (boundExpression.Type == TypeSymbol.Error)
             {

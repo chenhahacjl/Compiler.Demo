@@ -275,6 +275,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteBaseExpression((BoundBaseExpression)node);
                 }
+                case BoundNodeKind.StaticTypeExpression:
+                {
+                    return RewriteStaticTypeExpression((BoundStaticTypeExpression)node);
+                }
                 case BoundNodeKind.ConstructorChainExpression:
                 {
                     return RewriteConstructorChainExpression((BoundConstructorChainExpression)node);
@@ -483,6 +487,11 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         protected virtual BoundExpression RewriteBaseExpression(BoundBaseExpression node)
+        {
+            return node;
+        }
+
+        protected virtual BoundExpression RewriteStaticTypeExpression(BoundStaticTypeExpression node)
         {
             return node;
         }

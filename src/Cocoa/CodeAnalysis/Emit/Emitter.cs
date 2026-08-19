@@ -216,7 +216,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
             foreach (var field in classType.Fields)
             {
-                var fieldDef = new IlFieldDef(field.Name, ToIlType(field.Type), isPublic: field.IsPublic);
+                var fieldDef = new IlFieldDef(field.Name, ToIlType(field.Type), isPublic: field.IsPublic, isStatic: field.IsStatic);
                 typeDef.Fields.Add(fieldDef);
                 _fieldDefs.Add(field, fieldDef);
             }
@@ -577,6 +577,8 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundNodeKind.BaseExpression:
                     EmitThisExpression(il, new BoundThisExpression(node.Syntax, (ClassTypeSymbol)node.Type));
                     break;
+                case BoundNodeKind.StaticTypeExpression:
+                    break; // 静态类型引用：无实例值
                 case BoundNodeKind.ConstructorChainExpression:
                     EmitConstructorChainExpression(il, (BoundConstructorChainExpression)node);
                     break;
@@ -1164,6 +1166,12 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
         {
+            if (node.Field != null && node.Field.IsStatic)
+            {
+                il.Emit(IlOpCodes.Get("Ldsfld"), _fieldDefs[node.Field]);
+                return;
+            }
+
             EmitExpression(il, node.Target);
 
             if (node.Field != null)
@@ -1183,7 +1191,12 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitMemberCallExpression(IlAssembler il, BoundMemberCallExpression node)
         {
-            EmitExpression(il, node.Expression);
+            var isStatic = node.Method != null && node.Method.IsStatic;
+            if (!isStatic)
+            {
+                EmitExpression(il, node.Expression);
+            }
+
             foreach (var argument in node.Arguments)
             {
                 EmitExpression(il, argument);
@@ -1209,8 +1222,9 @@ namespace Cocoa.CodeAnalysis.Emit
                     return;
                 }
 
-                // base.Method()：非虚 call（this 已在栈上）；其余实例方法：callvirt 虚分派
-                il.Emit(IlOpCodes.Get(node.IsBase ? "Call" : "Callvirt"), _methods[node.Method]);
+                // 静态方法：call；base.Method()：非虚 call；实例方法：callvirt 虚分派
+                var op = isStatic || node.IsBase ? "Call" : "Callvirt";
+                il.Emit(IlOpCodes.Get(op), _methods[node.Method]);
                 return;
             }
 
@@ -1226,6 +1240,16 @@ namespace Cocoa.CodeAnalysis.Emit
         private void EmitMemberAssignmentExpression(IlAssembler il, BoundMemberAssignmentExpression node)
         {
             var temporaryLocal = AllocateTemporaryLocal(node);
+
+            if (node.Field.IsStatic)
+            {
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodes.Get("Dup"));
+                il.Emit(IlOpCodes.Get("Stloc"), (ushort)temporaryLocal);
+                il.Emit(IlOpCodes.Get("Stsfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodes.Get("Ldloc"), (ushort)temporaryLocal);
+                return;
+            }
 
             EmitExpression(il, node.Target);
             EmitExpression(il, node.Expression);

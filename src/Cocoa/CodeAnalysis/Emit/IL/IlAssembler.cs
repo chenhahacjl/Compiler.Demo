@@ -145,6 +145,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     return IsLoadInstruction(instruction) ? 1 : -1; // Ldarg/Ldloc 入栈；Stloc/Starg 出栈
                 case IlOperandType.InlineMethod:
                     return StackDeltaInlineMethod(instruction);
+                case IlOperandType.InlineField:
+                    return instruction.OpCode.Value switch
+                    {
+                        0x7E => 1,  // Ldsfld
+                        0x80 => -1, // Stsfld
+                        _ => 0,     // Ldfld（净 0）/Stfld（弹 2 但保守 0）
+                    };
                 case IlOperandType.InlineType:
                     return 0; // Newarr/Box/Castclass 等弹 1 压 1，净增量 0
                 case IlOperandType.InlineBrTarget:
