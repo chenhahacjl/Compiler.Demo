@@ -1,9 +1,13 @@
 name = Types
 output = executable
 platform = x64
+entry = main
+dotnetRuntime = net40
 
 [sources]
 *.co
 
 [options]
+incremental = true
+debug = false
 outputPath = out

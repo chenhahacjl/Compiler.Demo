@@ -2,9 +2,12 @@ name = Functions
 output = executable
 platform = x64
 entry = run
+dotnetRuntime = net40
 
 [sources]
 *.co
 
 [options]
+incremental = true
+debug = false
 outputPath = out

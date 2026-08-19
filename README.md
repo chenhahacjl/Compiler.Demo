@@ -26,9 +26,10 @@ src\build.cmd
 # 编译单文件（默认 exe）
 coc hello.co
 
-# 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe）
+# 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net40，直接运行）
 coc build -p samples/Tutorial/Tutorial.cosln
 coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
+./samples/Tutorial/HelloWorld/out/HelloWorld.exe
 
 # 指定输出格式与 .NET 目标框架
 coc build -p foo.coproj -f library

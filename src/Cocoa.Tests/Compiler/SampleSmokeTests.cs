@@ -159,12 +159,13 @@ namespace Cocoa.Tests.Compiler
             Assert.DoesNotContain("alpha", noArgs);
         }
 
-        private static string Build(string backend)
+        private static string Build(string backend, string? dotnetRuntime = null)
         {
             var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
             CopyDirectory(FindTutorialDir(), runDir);
 
-            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\" -b {backend}";
+            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\" -b {backend}"
+                + (dotnetRuntime == null ? "" : $" --dotnet-runtime {dotnetRuntime}");
             var first = RunCli(arg);
             Assert.True(first.ExitCode == 0, $"first build failed: {first.Stdout}{first.Stderr}");
 
@@ -230,7 +231,8 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Tutorial_DotNet_AllBlocks_BuildAndRun()
         {
-            var runDir = Build(backend: "dotnet");
+            // 样例 coproj 默认 dotnetRuntime = net40；netcore 分支需显式覆盖回 net9.0
+            var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0");
             AssertBlocks(RunDotnet, runDir);
             AssertFunctionsEntry(RunDotnet, runDir);
         }
@@ -238,6 +240,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Tutorial_NetFx_AllBlocks_BuildAndDirectRun()
         {
+            // 样例 coproj 默认 dotnetRuntime = net40，构建 netfx 后直接运行
             var runDir = BuildNetFx("net40");
             AssertBlocks(RunNetFx, runDir);
             AssertFunctionsEntry(RunNetFx, runDir);
