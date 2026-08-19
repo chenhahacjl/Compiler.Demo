@@ -273,6 +273,216 @@ function Main()
             Assert.Contains(diagnostics, d => d.Message.Contains("Cannot assign") || d.Message.Contains("X"));
         }
 
+        [Fact]
+        public void Class_InternalMember_AccessibleInSameCompilation()
+        {
+            var code = @"
+public class Foo
+{
+    internal _x: int
+
+    internal function Bar(): int
+    {
+        return 42
+    }
+}
+
+function Main()
+{
+    var f = new Foo()
+    f._x = 1
+    print(f.Bar() + f._x)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_ProtectedMember_DerivedClass_Accessible()
+        {
+            var code = @"
+public class Animal
+{
+    protected _age: int
+
+    protected function Age(): int
+    {
+        return _age
+    }
+
+    protected property AgeProp: int
+    {
+        get { return _age }
+    }
+}
+
+public class Dog: Animal
+{
+    public constructor(age: int)
+    {
+        _age = age
+    }
+
+    public function GetAge(): int
+    {
+        return _age + Age() + AgeProp
+    }
+}
+
+function Main()
+{
+    var d = new Dog(3)
+    print(d.GetAge())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_ProtectedMember_GrandChild_Accessible()
+        {
+            var code = @"
+public class Animal
+{
+    protected _age: int
+}
+
+public class Dog: Animal { }
+
+public class Puppy: Dog
+{
+    public constructor(age: int)
+    {
+        _age = age
+    }
+
+    public function GetAge(): int
+    {
+        return _age
+    }
+}
+
+function Main()
+{
+    var p = new Puppy(5)
+    print(p.GetAge())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_ProtectedField_UnrelatedClass_ReportsError()
+        {
+            var code = @"
+public class Animal
+{
+    protected _age: int
+}
+
+public class Keeper
+{
+    public function ReadAge(a: Animal): int
+    {
+        return a._age
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("protected"));
+        }
+
+        [Fact]
+        public void Class_ProtectedMethod_OutsideClassHierarchy_ReportsError()
+        {
+            var code = @"
+public class Animal
+{
+    protected function Eat(): int
+    {
+        return 1
+    }
+}
+
+function Main()
+{
+    var a = new Animal()
+    print(a.Eat())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("protected"));
+        }
+
+        [Fact]
+        public void Class_PrivateCtor_OutsideClass_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    private constructor() { }
+}
+
+function Main()
+{
+    var f = new Foo()
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("private"));
+        }
+
+        [Fact]
+        public void Class_PrivateOnClass_ReportsError()
+        {
+            var code = @"
+private class Foo
+{
+}
+
+function Main()
+{
+    var f = new Foo()
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("可见性"));
+        }
+
+        [Fact]
+        public void Class_ProtectedOnClass_ReportsError()
+        {
+            var code = @"
+protected class Foo
+{
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("可见性"));
+        }
+
+        [Fact]
+        public void Class_InternalClass_DeclaresOk()
+        {
+            var code = @"
+internal class Foo
+{
+}
+
+function Main()
+{
+    var f = new Foo()
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
         private static readonly string[] References = new[]
         {
             typeof(object).Assembly.Location,

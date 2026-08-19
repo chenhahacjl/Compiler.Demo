@@ -109,12 +109,20 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.IfKeyword;
                 case "import":
                     return SyntaxKind.ImportKeyword;
+                case "interface":
+                    return SyntaxKind.InterfaceKeyword;
+                case "internal":
+                    return SyntaxKind.InternalKeyword;
                 case "new":
                     return SyntaxKind.NewKeyword;
                 case "namespace":
                     return SyntaxKind.NamespaceKeyword;
                 case "override":
                     return SyntaxKind.OverrideKeyword;
+                case "partial":
+                    return SyntaxKind.PartialKeyword;
+                case "protected":
+                    return SyntaxKind.ProtectedKeyword;
                 case "readonly":
                     return SyntaxKind.ReadonlyKeyword;
                 case "sealed":
@@ -278,6 +286,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "this";
                 case SyntaxKind.OverrideKeyword:
                     return "override";
+                case SyntaxKind.PartialKeyword:
+                    return "partial";
+                case SyntaxKind.ProtectedKeyword:
+                    return "protected";
                 case SyntaxKind.ReadonlyKeyword:
                     return "readonly";
                 case SyntaxKind.SealedKeyword:
@@ -292,6 +304,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "if";
                 case SyntaxKind.ImportKeyword:
                     return "import";
+                case SyntaxKind.InterfaceKeyword:
+                    return "interface";
+                case SyntaxKind.InternalKeyword:
+                    return "internal";
                 case SyntaxKind.NewKeyword:
                     return "new";
                 case SyntaxKind.NamespaceKeyword:

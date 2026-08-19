@@ -590,6 +590,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 var typeFullName = ns.Length == 0 ? name : ns + "." + name;
                 if (typeFullName == fullName)
                 {
+                    // 仅导出 public 类型（internal/嵌套等对外不可见）
+                    if ((BitConverter.ToUInt32(_tableData, row) & 0x7) != 0x1)
+                    {
+                        return null;
+                    }
+
                     return new AssemblyScope(AssemblyName, Version, PublicKeyOrToken, Culture, Flags);
                 }
             }
@@ -699,12 +705,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             for (var i = 0; i < typeDefCount; i++)
             {
                 var typeDefRow = _tableOffsets[0x02] + i * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                var typeFlags = BitConverter.ToUInt32(_tableData, typeDefRow);
                 var name = ReadString(ReadRef(_tableData, typeDefRow + 4, _stringIsBig));
                 var ns = ReadString(ReadRef(_tableData, typeDefRow + 4 + (_stringIsBig ? 4 : 2), _stringIsBig));
                 var typeFullName = ns.Length == 0 ? name : ns + "." + name;
                 if (typeFullName != fullName)
                 {
                     continue;
+                }
+
+                // 仅导出 public 类型（internal/嵌套等对外不可见）
+                if ((typeFlags & 0x7) != 0x1)
+                {
+                    return null;
                 }
 
                 var fieldListOffset = typeDefRow + 4 + 2 * (_stringIsBig ? 4 : 2) + (_typeDefOrRefIsBig ? 4 : 2);
@@ -744,6 +757,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     }
 
                     var isPublic = (fieldFlags & 0x0006) == 0x0006;
+                    if (!isPublic)
+                    {
+                        continue; // 仅外部可见 public 字段
+                    }
                     fields.Add(new ResolvedFieldInfo(fieldName, fieldType, isPublic));
                 }
 
@@ -773,6 +790,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     }
 
                     var isPublic = (methodFlags & 0x0006) == 0x0006;
+                    if (!isPublic)
+                    {
+                        continue; // 仅外部可见 public 方法（internal/protected/private 不导出）
+                    }
                     methods.Add(new ResolvedMethodInfo(new IlTypeRef(ns, name, null), methodName, signature.ReturnType, signature.ParameterTypes, signature.IsStatic));
                 }
 

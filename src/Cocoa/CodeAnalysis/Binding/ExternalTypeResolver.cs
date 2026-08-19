@@ -37,13 +37,13 @@ namespace Cocoa.CodeAnalysis.Binding
             var ns = dot < 0 ? "" : fullName.Substring(0, dot);
             var name = dot < 0 ? fullName : fullName.Substring(dot + 1);
 
-            var classType = new ClassTypeSymbol(name, ns, isPublic: true, declaration: null, isExternal: true);
+            var classType = new ClassTypeSymbol(name, ns, Visibility.Public, declaration: null, isExternal: true);
 
             foreach (var field in info.Fields)
             {
                 if (classType.GetField(field.Name) == null)
                 {
-                    classType.AddField(new FieldSymbol(field.Name, ToTypeSymbol(field.Type), field.IsPublic, classType));
+                    classType.AddField(new FieldSymbol(field.Name, ToTypeSymbol(field.Type), field.IsPublic ? Visibility.Public : Visibility.Private, classType));
                 }
             }
 
@@ -67,7 +67,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     ToTypeSymbol(method.ReturnType),
                     isExtern: false,
                     containingClass: classType,
-                    isPublic: true));
+                    visibility: Visibility.Public));
             }
 
             return classType;

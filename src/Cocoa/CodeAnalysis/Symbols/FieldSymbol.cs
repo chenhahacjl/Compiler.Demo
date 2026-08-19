@@ -5,10 +5,10 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class FieldSymbol : VariableSymbol
     {
-        internal FieldSymbol(string name, TypeSymbol type, bool isPublic, ClassTypeSymbol containingClass, bool isReadonly = false, bool isStatic = false)
+        internal FieldSymbol(string name, TypeSymbol type, Visibility visibility, ClassTypeSymbol containingClass, bool isReadonly = false, bool isStatic = false)
             : base(name, isReadOnly: isReadonly, type, constant: null)
         {
-            IsPublic = isPublic;
+            Visibility = visibility;
             ContainingClass = containingClass;
             IsReadonly = isReadonly;
             IsStatic = isStatic;
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public override SymbolKind Kind => SymbolKind.Field;
 
-        public bool IsPublic { get; }
+        public Visibility Visibility { get; }
 
         public ClassTypeSymbol ContainingClass { get; }
 

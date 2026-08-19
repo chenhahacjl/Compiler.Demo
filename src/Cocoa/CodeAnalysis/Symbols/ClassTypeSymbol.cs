@@ -12,11 +12,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
         private readonly ImmutableArray<PropertySymbol>.Builder _properties;
 
-        internal ClassTypeSymbol(string name, string @namespace, bool isPublic, ClassDeclarationSyntax? declaration, bool isExternal = false)
+        internal ClassTypeSymbol(string name, string @namespace, Visibility visibility, ClassDeclarationSyntax? declaration, bool isExternal = false)
             : base(name)
         {
             Namespace = @namespace ?? "";
-            IsPublic = isPublic;
+            Visibility = visibility;
             Declaration = declaration;
             IsExternal = isExternal;
             _fields = ImmutableArray.CreateBuilder<FieldSymbol>();
@@ -34,7 +34,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>完整类型名（含命名空间）。</summary>
         public string FullName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
 
-        public bool IsPublic { get; }
+        public Visibility Visibility { get; }
 
         public ClassDeclarationSyntax? Declaration { get; }
 

@@ -192,6 +192,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
             while (Current.Kind == SyntaxKind.PublicKeyword ||
                    Current.Kind == SyntaxKind.PrivateKeyword ||
+                   Current.Kind == SyntaxKind.InternalKeyword ||
+                   Current.Kind == SyntaxKind.ProtectedKeyword ||
                    Current.Kind == SyntaxKind.CdeclKeyword ||
                    Current.Kind == SyntaxKind.StdcallKeyword ||
                    Current.Kind == SyntaxKind.AbstractKeyword ||
@@ -199,7 +201,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                    Current.Kind == SyntaxKind.StaticKeyword ||
                    Current.Kind == SyntaxKind.VirtualKeyword ||
                    Current.Kind == SyntaxKind.OverrideKeyword ||
-                   Current.Kind == SyntaxKind.ReadonlyKeyword)
+                   Current.Kind == SyntaxKind.ReadonlyKeyword ||
+                   Current.Kind == SyntaxKind.PartialKeyword)
             {
                 modifiers.Add(NextToken());
             }

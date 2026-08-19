@@ -404,12 +404,59 @@ namespace Cocoa.CodeAnalysis.Binding
             return parameters.ToImmutable();
         }
 
+        /// <summary>从修饰符列表解析可见性（public &gt; internal &gt; protected &gt; private；无修饰符取默认值）。</summary>
+        private static Visibility GetVisibility(ImmutableArray<SyntaxToken> modifiers, Visibility defaultVisibility)
+        {
+            if (modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword))
+            {
+                return Visibility.Public;
+            }
+
+            if (modifiers.Any(m => m.Kind == SyntaxKind.InternalKeyword))
+            {
+                return Visibility.Internal;
+            }
+
+            if (modifiers.Any(m => m.Kind == SyntaxKind.ProtectedKeyword))
+            {
+                return Visibility.Protected;
+            }
+
+            if (modifiers.Any(m => m.Kind == SyntaxKind.PrivateKeyword))
+            {
+                return Visibility.Private;
+            }
+
+            return defaultVisibility;
+        }
+
+        /// <summary>成员可见性判定（private 仅含类；protected 含类及派生类；internal 同程序集恒可访问）。</summary>
+        private bool IsAccessibleMember(Visibility visibility, ClassTypeSymbol containingClass)
+        {
+            switch (visibility)
+            {
+                case Visibility.Public:
+                case Visibility.Internal:
+                    return true;
+                case Visibility.Protected:
+                    return _currentClass != null && (containingClass == _currentClass || containingClass.IsBaseOf(_currentClass));
+                case Visibility.Private:
+                default:
+                    return _currentClass != null && containingClass == _currentClass;
+            }
+        }
+
         private void DeclareClassDeclaration(ClassDeclarationSyntax syntax, string @namespace)
         {
             var name = syntax.Identifier.Text;
-            var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Internal);
 
-            var classType = new ClassTypeSymbol(name, @namespace, isPublic, syntax);
+            if (visibility is Visibility.Private or Visibility.Protected)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"类 '{name}' 的可见性只能为 public 或 internal。");
+            }
+
+            var classType = new ClassTypeSymbol(name, @namespace, visibility, syntax);
             classType.IsAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
             classType.IsSealed = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword);
 
@@ -471,13 +518,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (member is ClassFieldDeclarationSyntax fieldDeclaration)
                 {
                     var fieldType = BindTypeClause(fieldDeclaration.Type);
-                    var fieldIsPublic = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+                    var fieldVisibility = GetVisibility(fieldDeclaration.Modifiers, Visibility.Private);
                     var fieldIsReadonly = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.ReadonlyKeyword);
                     var fieldIsStatic = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
 
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
-                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldIsPublic, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
+                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
                     }
                     else
                     {
@@ -487,11 +534,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is ConstructorDeclarationSyntax constructorDeclaration)
                 {
                     var parameters = BindParameters(constructorDeclaration.Parameters);
-                    var isPublicCtor = constructorDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+                    var ctorVisibility = GetVisibility(constructorDeclaration.Modifiers, Visibility.Private);
 
                     if (classType.GetDeclaredMethod(classType.Name) == null)
                     {
-                        var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, isPublic: isPublicCtor) { IsConstructor = true };
+                        var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, visibility: ctorVisibility) { IsConstructor = true };
                         classType.AddMethod(ctor);
                         classFunctions.Add(ctor);
                     }
@@ -523,7 +570,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 隐式默认构造：类未声明任何构造时生成无参构造
             if (classType.GetDeclaredMethod(classType.Name) == null)
             {
-                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, isPublic: true) { IsConstructor = true };
+                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, visibility: Visibility.Public) { IsConstructor = true };
                 classType.AddMethod(ctor);
                 classFunctions.Add(ctor);
             }
@@ -557,7 +604,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)        {
             var propertyType = BindTypeClause(syntax.Type);
-            var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var isAuto = syntax.IsAuto;
 
@@ -568,7 +615,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 var backingName = "_" + syntax.Identifier.Text;
                 if (classType.GetDeclaredField(backingName) == null)
                 {
-                    backingField = new FieldSymbol(backingName, propertyType, isPublic: false, classType);
+                    backingField = new FieldSymbol(backingName, propertyType, Visibility.Private, classType);
                     classType.AddField(backingField);
                 }
             }
@@ -578,7 +625,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (syntax.Getter != null)
             {
                 getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
-                    syntax: syntax.Getter, containingClass: classType, isPublic: isPublic) { IsStatic = isStatic };
+                    syntax: syntax.Getter, containingClass: classType, visibility: visibility) { IsStatic = isStatic };
                 classType.AddMethod(getter);
                 classFunctions.Add(getter);
             }
@@ -589,14 +636,14 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 var valueParameter = new ParameterSymbol("value", propertyType, 0);
                 setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
-                    syntax: syntax.Setter, containingClass: classType, isPublic: isPublic) { IsStatic = isStatic };
+                    syntax: syntax.Setter, containingClass: classType, visibility: visibility) { IsStatic = isStatic };
                 classType.AddMethod(setter);
                 classFunctions.Add(setter);
             }
 
             if (classType.GetProperty(syntax.Identifier.Text) == null)
             {
-                classType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, classType, getter, setter, isPublic, isStatic));
+                classType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, classType, getter, setter, visibility, isStatic));
             }
             else
             {
@@ -639,14 +686,14 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
-            var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var isVirtual = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.VirtualKeyword);
             var isOverride = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.OverrideKeyword);
             var isAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
             var isSealed = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword);
 
-            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, isPublic: isPublic)
+            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, visibility: visibility)
             {
                 IsStatic = isStatic,
                 IsVirtual = isVirtual,
@@ -1217,6 +1264,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 var property = propertyGetCall.Method.ContainingClass!.GetProperty(propertyName);
                 if (property?.Setter != null && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
                 {
+                    if (!IsAccessibleMember(property.Setter.Visibility, property.Setter.ContainingClass!))
+                    {
+                        _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, propertyName, property.Setter.Visibility);
+                        return new BoundErrorExpression(syntax);
+                    }
+
                     var converted = BindConversion(syntax.Expression.Location, boundExpression, property.Type);
                     return new BoundMemberCallExpression(syntax, propertyGetCall.Expression, property.Setter.Name, ImmutableArray.Create(converted), TypeSymbol.Void, property.Setter, propertyGetCall.IsBase);
                 }
@@ -1272,9 +1325,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundTarget is BoundMemberAccessExpression memberTarget && memberTarget.Field != null && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
             {
-                if (!memberTarget.Field.IsPublic && _currentClass != memberTarget.Field.ContainingClass)
+                if (!IsAccessibleMember(memberTarget.Field.Visibility, memberTarget.Field.ContainingClass))
                 {
-                    _diagnostics.ReportCannotAccessPrivateMember(syntax.AssignmentToken.Location, memberTarget.Field.Name);
+                    _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, memberTarget.Field.Name, memberTarget.Field.Visibility);
                     return new BoundErrorExpression(syntax);
                 }
 
@@ -1363,10 +1416,19 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 参数个数校验：构造函数签名 == 实参个数
             var ctor = classType.GetMethod(classType.Name);
-            if (ctor != null && ctor.Parameters.Length != arguments.Count)
+            if (ctor != null)
             {
-                _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, classType.Name, ctor.Parameters.Length, arguments.Count);
-                return new BoundErrorExpression(syntax);
+                if (!IsAccessibleMember(ctor.Visibility, ctor.ContainingClass!))
+                {
+                    _diagnostics.ReportCannotAccessMember(syntax.Identifier.Location, classType.Name, ctor.Visibility);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                if (ctor.Parameters.Length != arguments.Count)
+                {
+                    _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, classType.Name, ctor.Parameters.Length, arguments.Count);
+                    return new BoundErrorExpression(syntax);
+                }
             }
 
             for (var i = 0; i < arguments.Count; i++)
@@ -1420,6 +1482,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 staticType.GetField(identifier) is FieldSymbol staticField &&
                 staticField.IsStatic)
             {
+                if (!IsAccessibleMember(staticField.Visibility, staticField.ContainingClass))
+                {
+                    _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, staticField.Visibility);
+                    return new BoundErrorExpression(syntax);
+                }
+
                 return new BoundMemberAccessExpression(syntax, staticField.Type, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, staticField);
             }
 
@@ -1451,9 +1519,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 var field = classType.GetField(identifier);
                 if (field != null)
                 {
-                    if (!field.IsPublic && _currentClass != classType)
+                    if (!IsAccessibleMember(field.Visibility, field.ContainingClass))
                     {
-                        _diagnostics.ReportCannotAccessPrivateMember(syntax.IdentifierToken.Location, identifier);
+                        _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, field.Visibility);
                         return new BoundErrorExpression(syntax);
                     }
 
@@ -1464,6 +1532,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 var property = classType.GetProperty(identifier);
                 if (property != null && property.Getter != null)
                 {
+                    if (!IsAccessibleMember(property.Getter.Visibility, property.Getter.ContainingClass!))
+                    {
+                        _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, property.Getter.Visibility);
+                        return new BoundErrorExpression(syntax);
+                    }
+
                     return new BoundMemberCallExpression(syntax, boundTarget, property.Getter.Name, ImmutableArray<BoundExpression>.Empty, property.Type, property.Getter);
                 }
 
@@ -1496,6 +1570,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 staticType.GetMethod(identifier) is FunctionSymbol staticMethod &&
                 staticMethod.IsStatic)
             {
+                if (!IsAccessibleMember(staticMethod.Visibility, staticMethod.ContainingClass!))
+                {
+                    _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, staticMethod.Visibility);
+                    return new BoundErrorExpression(syntax);
+                }
+
                 var staticArguments = ImmutableArray.CreateBuilder<BoundExpression>();
                 foreach (var argument in syntax.Arguments)
                 {
@@ -1535,9 +1615,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 var method = classType.GetMethod(identifier);
                 if (method != null)
                 {
-                    if (!method.IsPublic && _currentClass != classType)
+                    if (!IsAccessibleMember(method.Visibility, method.ContainingClass!))
                     {
-                        _diagnostics.ReportCannotAccessPrivateMember(syntax.IdentifierToken.Location, identifier);
+                        _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, method.Visibility);
                         return new BoundErrorExpression(syntax);
                     }
 

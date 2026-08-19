@@ -163,7 +163,114 @@ function Main()
         }
 
         [Fact]
-        public void Library_Inheritance_Property_Consumed_ViaReflection()
+        public void Library_Internal_Protected_Members_EmitCorrectFlags()
+        {
+            var code = @"
+namespace MyLib
+{
+    public class Account
+    {
+        internal _balance: int
+
+        protected function GetBalance(): int
+        {
+            return _balance
+        }
+
+        internal function Add(balance: int)
+        {
+            _balance = _balance + balance
+        }
+
+        public constructor(balance: int)
+        {
+            _balance = balance
+        }
+    }
+
+    internal class Hidden
+    {
+        public function Noop(): int
+        {
+            return 0
+        }
+    }
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "vis_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var diagnostics = compilation.Emit("vis_lib", References, path, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(diagnostics);
+
+            var assembly = Assembly.LoadFile(path);
+            var account = assembly.GetType("MyLib.Account");
+            Assert.NotNull(account);
+            Assert.True(account.IsPublic);
+
+            var balance = account.GetField("_balance", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(balance);
+            Assert.True(balance.IsAssembly, "internal 字段应为 Assembly 可见性");
+
+            var getBalance = account.GetMethod("GetBalance", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(getBalance);
+            Assert.True(getBalance.IsFamily, "protected 方法应为 Family 可见性");
+
+            var add = account.GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.NotNull(add);
+            Assert.True(add.IsAssembly, "internal 方法应为 Assembly 可见性");
+
+            // internal 类型对外不可见
+            Assert.Null(assembly.GetType("MyLib.Hidden"));
+
+            // FindTypeInfo 同样不可见 internal 类型 + 不导出 internal/protected 成员
+            var reader = new MetadataReader(new[] { path });
+            Assert.Null(reader.FindTypeInfo("MyLib.Hidden"));
+            var info = reader.FindTypeInfo("MyLib.Account");
+            Assert.NotNull(info);
+            Assert.DoesNotContain(info.Methods, m => m.Name == "GetBalance");
+            Assert.DoesNotContain(info.Methods, m => m.Name == "Add");
+            Assert.DoesNotContain(info.Fields, f => f.Name == "_balance");
+        }
+
+        [Fact]
+        public void Library_Internal_NotVisible_ToConsumer_Using()
+        {
+            var libCode = @"
+namespace MyLib
+{
+    internal class Hidden
+    {
+        public function Noop(): int
+        {
+            return 0
+        }
+    }
+}";
+            var libTree = SyntaxTree.Parse(libCode);
+            var libCompilation = Compilation.Create(libTree);
+            var libPath = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "hidden_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(libPath)!);
+            var libDiagnostics = libCompilation.Emit("hidden_lib", References, libPath, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(libDiagnostics);
+
+            var appCode = @"
+using MyLib
+
+function Main()
+{
+    var h = new Hidden()
+    print(h.Noop())
+}";
+            var appTree = SyntaxTree.Parse(appCode);
+            var appCompilation = Compilation.Create("Main", new[] { libPath }, appTree);
+            var appPath = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "hidden_app.exe");
+            var emitRefs = References.Concat(new[] { libPath }).ToArray();
+            var appDiagnostics = appCompilation.Emit("hidden_app", emitRefs, appPath, IlTarget.Parse("net9.0"));
+            Assert.Contains(appDiagnostics, d => d.Message.Contains(" undefined type") || d.Message.Contains("Hidden"));
+        }
+    }
+}
         {
             var libCode = @"
 public class Shape

@@ -73,12 +73,16 @@ ColonToken,               // :
         GetKeyword,               // get
         IfKeyword,                // if
         ImportKeyword,            // import
+        InterfaceKeyword,         // interface
+        InternalKeyword,          // internal
         LetKeyword,               // let
         NamespaceKeyword,         // namespace
         NewKeyword,               // new
         OverrideKeyword,          // override
+        PartialKeyword,           // partial
         PrivateKeyword,           // private
         PropertyKeyword,          // property
+        ProtectedKeyword,         // protected
         PublicKeyword,            // public
         ReadonlyKeyword,          // readonly
         ReturnKeyword,            // return

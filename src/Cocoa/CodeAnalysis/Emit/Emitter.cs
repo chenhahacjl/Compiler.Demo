@@ -218,6 +218,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
             var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention, isStatic: !isInstance)
             {
+                Visibility = function.Visibility,
                 IsVirtual = function.IsVirtual || function.IsOverride,
                 IsAbstract = function.IsAbstract,
                 IsSealed = function.IsSealed,
@@ -231,7 +232,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private void EmitClassDeclaration(ClassTypeSymbol classType)
         {
             var baseTypeDef = classType.BaseType != null ? _classTypeDefs[classType.BaseType] : null;
-            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, classType.BaseType == null ? _objectType : null, isPublic: classType.IsPublic, baseTypeDef: baseTypeDef)
+            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, classType.BaseType == null ? _objectType : null, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: baseTypeDef)
             {
                 IsAbstract = classType.IsAbstract,
                 IsSealed = classType.IsSealed,
@@ -240,7 +241,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
             foreach (var field in classType.Fields)
             {
-                var fieldDef = new IlFieldDef(field.Name, ToIlType(field.Type), isPublic: field.IsPublic, isStatic: field.IsStatic);
+                var fieldDef = new IlFieldDef(field.Name, ToIlType(field.Type), field.Visibility, isStatic: field.IsStatic);
                 typeDef.Fields.Add(fieldDef);
                 _fieldDefs.Add(field, fieldDef);
             }

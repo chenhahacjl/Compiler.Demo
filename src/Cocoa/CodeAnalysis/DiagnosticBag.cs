@@ -354,7 +354,19 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportCannotAccessPrivateMember(TextLocation location, string memberName)
         {
-            var message = $"成员 '{memberName}' 是 private 的，不能在当前上下文中访问。";
+            ReportCannotAccessMember(location, memberName, Visibility.Private);
+        }
+
+        /// <summary>可见性不足访问诊断（private/protected/internal 统一入口）。</summary>
+        public void ReportCannotAccessMember(TextLocation location, string memberName, Visibility visibility)
+        {
+            var visibilityName = visibility switch
+            {
+                Visibility.Protected => "protected",
+                Visibility.Internal => "internal",
+                _ => "private",
+            };
+            var message = $"成员 '{memberName}' 是 {visibilityName} 的，不能在当前上下文中访问。";
             ReportError(location, message);
         }
 

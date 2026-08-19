@@ -5,14 +5,14 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class PropertySymbol : Symbol
     {
-        internal PropertySymbol(string name, TypeSymbol type, ClassTypeSymbol containingClass, FunctionSymbol? getter, FunctionSymbol? setter, bool isPublic, bool isStatic)
+        internal PropertySymbol(string name, TypeSymbol type, ClassTypeSymbol containingClass, FunctionSymbol? getter, FunctionSymbol? setter, Visibility visibility, bool isStatic)
             : base(name)
         {
             Type = type;
             ContainingClass = containingClass;
             Getter = getter;
             Setter = setter;
-            IsPublic = isPublic;
+            Visibility = visibility;
             IsStatic = isStatic;
         }
 
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public ClassTypeSymbol ContainingClass { get; }
         public FunctionSymbol? Getter { get; }
         public FunctionSymbol? Setter { get; }
-        public bool IsPublic { get; }
+        public Visibility Visibility { get; }
         public bool IsStatic { get; }
     }
 }

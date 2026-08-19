@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Symbols;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,17 +56,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>我们自己的字段定义（FieldDef 表行）。</summary>
     internal sealed class IlFieldDef
     {
-        public IlFieldDef(string name, IlType type, bool isPublic, bool isStatic = false)
+        public IlFieldDef(string name, IlType type, Visibility visibility, bool isStatic = false)
         {
             Name = name;
             Type = type;
-            IsPublic = isPublic;
+            Visibility = visibility;
             IsStatic = isStatic;
         }
 
         public string Name { get; }
         public IlType Type { get; }
-        public bool IsPublic { get; }
+        public Visibility Visibility { get; }
         public bool IsStatic { get; }
     }
 
@@ -96,6 +97,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlCallingConvention CallingConvention { get; }
         /// <summary>实例方法（含 this，签名 HAS_THIS）。</summary>
         public bool IsStatic { get; }
+
+        public Visibility Visibility { get; set; } = Visibility.Public;
 
         public bool IsVirtual { get; set; }
 
@@ -406,6 +409,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return stream.ToArray();
         }
 
+        /// <summary>可见性 → ECMA-335 可见性掩码（MethodDef/FieldDef 共用：Public=0x6/Assembly=0x3/Family=0x4/Private=0x1）。</summary>
+        private static ushort VisibilityToFlags(Visibility visibility)
+        {
+            return visibility switch
+            {
+                Visibility.Public => 0x0006,
+                Visibility.Internal => 0x0003,
+                Visibility.Protected => 0x0004,
+                _ => 0x0001,
+            };
+        }
+
         private void EncodeType(Stream stream, IlType type)
         {
             switch (type.Kind)
@@ -685,8 +700,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 foreach (var field in typeDef.Fields)
                 {
-                    // flags: Public=0x0006 / Private=0x0001 + Static=0x0010
-                    var fieldFlags = field.IsPublic ? (ushort)0x0006 : (ushort)0x0001;
+                    // flags: Public=0x0006 / Internal(Assembly)=0x0003 / Protected(Family)=0x0004 / Private=0x0001 + Static=0x0010
+                    var fieldFlags = (ushort)(VisibilityToFlags(field.Visibility));
                     if (field.IsStatic)
                     {
                         fieldFlags |= 0x0010;
@@ -705,7 +720,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 writer.Write(methodRvas.TryGetValue(method, out var rva) ? rva : 0u);
                 var implFlags = (ushort)(method.DllName != null ? 0x0080 : 0); // ImplFlags: extern 方法 PreserveSig（对齐 csc）
                 writer.Write(implFlags);
-                var methodFlags = (ushort)(0x0096 | (method.DllName != null ? 0x2000 : 0)); // Flags: Public|Static|HideBySig|ReuseSlot|PInvokeImpl
+                var methodFlags = (ushort)(VisibilityToFlags(method.Visibility) | 0x0080 | 0x0010 | (method.DllName != null ? 0x2000 : 0)); // Flags: 可见性|HideBySig|Static|PInvokeImpl
                 if (!method.IsStatic)
                 {
                     methodFlags = (ushort)(methodFlags & ~0x0010); // 清掉 Static
