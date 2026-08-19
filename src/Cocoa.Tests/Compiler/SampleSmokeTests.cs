@@ -175,6 +175,50 @@ namespace Cocoa.Tests.Compiler
             return runDir;
         }
 
+        private static string RunNetFx(string exePath, params string[] arguments)
+        {
+            var psi = new ProcessStartInfo(exePath)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            foreach (var arg in arguments)
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
+            using var process = Process.Start(psi)!;
+            using var output = new MemoryStream();
+            var copyTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit(30000);
+            copyTask.Wait();
+            Assert.True(process.ExitCode == 0, $"netfx exe {exePath} failed with exit {process.ExitCode}; stderr=[{stderr}]");
+            var bytes = output.ToArray();
+            // netfx 的 Console 默认用系统代码页（ASCII/UTF-8）；Cocoa native 后端才是 UTF-16
+            var encoding = bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE
+                ? Encoding.Unicode
+                : Encoding.UTF8;
+            return encoding.GetString(bytes);
+        }
+
+        private static string BuildNetFx(string dotnetRuntime)
+        {
+            var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
+            CopyDirectory(FindTutorialDir(), runDir);
+
+            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\" -b dotnet --dotnet-runtime {dotnetRuntime}";
+            var first = RunCli(arg);
+            Assert.True(first.ExitCode == 0, $"first netfx build failed: {first.Stdout}{first.Stderr}");
+
+            var second = RunCli(arg);
+            Assert.True(second.ExitCode == 0, $"second netfx build failed: {second.Stdout}{second.Stderr}");
+            Assert.Contains("up to date", second.Stdout);
+
+            return runDir;
+        }
+
         [Fact]
         public void Tutorial_Native_AllBlocks_BuildAndRun()
         {
@@ -189,6 +233,14 @@ namespace Cocoa.Tests.Compiler
             var runDir = Build(backend: "dotnet");
             AssertBlocks(RunDotnet, runDir);
             AssertFunctionsEntry(RunDotnet, runDir);
+        }
+
+        [Fact]
+        public void Tutorial_NetFx_AllBlocks_BuildAndDirectRun()
+        {
+            var runDir = BuildNetFx("net40");
+            AssertBlocks(RunNetFx, runDir);
+            AssertFunctionsEntry(RunNetFx, runDir);
         }
     }
 }
