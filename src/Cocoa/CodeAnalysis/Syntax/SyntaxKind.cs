@@ -59,6 +59,8 @@ ColonToken,               // :
         // Keywords
         BreakKeyword,             // break
         CdeclKeyword,             // cdecl
+        ClassKeyword,             // class
+        ConstructorKeyword,       // constructor
         ContinueKeyword,          // continue
         DoKeyword,                // do
         ElseKeyword,              // else
@@ -82,6 +84,9 @@ ColonToken,               // :
         // Nodes
         CompilationUnit,          // 编译单元
         FunctionDeclaration,      // 函数定义
+        ClassDeclaration,         // 类定义
+        ClassFieldDeclaration,    // 类字段
+        ConstructorDeclaration,   // 构造函数
         ImportClause,             // import 声明
         GlobalStatement,          // 全局声明
         Parameter,                // 参数
@@ -114,6 +119,7 @@ ColonToken,               // :
         AssignmentExpression,     // 赋值表达式
         CallExpression,           // 函数调用表达式
         ArrayCreationExpression,  // 数组创建表达式
+        ObjectCreationExpression, // 对象创建表达式 new Foo(...)
         ElementAccessExpression,  // 数组索引表达式
         MemberAccessExpression,   // 成员访问表达式
         MemberCallExpression,     // 成员方法调用表达式

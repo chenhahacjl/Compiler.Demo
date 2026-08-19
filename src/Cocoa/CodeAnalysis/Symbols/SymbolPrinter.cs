@@ -27,6 +27,12 @@ namespace Cocoa.CodeAnalysis.Symbols
                 case SymbolKind.Enum:
                     writer.WriteIdentifier(symbol.Name);
                     break;
+                case SymbolKind.Class:
+                    writer.WriteIdentifier(symbol.Name);
+                    break;
+                case SymbolKind.Field:
+                    writer.WriteIdentifier(symbol.Name);
+                    break;
                 default:
                     throw new Exception($"Unexpected symbol: {symbol.Kind}");
             }

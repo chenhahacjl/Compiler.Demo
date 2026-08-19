@@ -6,23 +6,44 @@ using System.Text;
 
 namespace Cocoa.CodeAnalysis.Emit.IL
 {
-    /// <summary>我们自己的类型定义（TypeDef 表行）。当前仅 Program 一个。</summary>
+    /// <summary>我们自己的类型定义（TypeDef 表行）。顶层函数挂在 Program，class 各占一行。</summary>
     internal sealed class IlTypeDef
     {
-        public IlTypeDef(string name, IlTypeRef? baseTypeRef)
+        public IlTypeDef(string name, IlTypeRef? baseTypeRef, bool isPublic = true)
         {
             Name = name;
             BaseTypeRef = baseTypeRef;
+            IsPublic = isPublic;
+            Fields = new List<IlFieldDef>();
+            Methods = new List<IlMethodDef>();
         }
 
         public string Name { get; }
         public IlTypeRef? BaseTypeRef { get; }
+        public bool IsPublic { get; }
+        public List<IlFieldDef> Fields { get; }
+        public List<IlMethodDef> Methods { get; }
+    }
+
+    /// <summary>我们自己的字段定义（FieldDef 表行）。</summary>
+    internal sealed class IlFieldDef
+    {
+        public IlFieldDef(string name, IlType type, bool isPublic)
+        {
+            Name = name;
+            Type = type;
+            IsPublic = isPublic;
+        }
+
+        public string Name { get; }
+        public IlType Type { get; }
+        public bool IsPublic { get; }
     }
 
     /// <summary>我们自己的方法定义（MethodDef 表行 + 方法体）。</summary>
     internal sealed class IlMethodDef
     {
-        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body, string? dllName = null, string? importName = null, IlCallingConvention callingConvention = IlCallingConvention.Winapi)
+        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body, string? dllName = null, string? importName = null, IlCallingConvention callingConvention = IlCallingConvention.Winapi, bool isStatic = true)
         {
             Name = name;
             ReturnType = returnType;
@@ -31,6 +52,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             DllName = dllName;
             ImportName = importName;
             CallingConvention = callingConvention;
+            IsStatic = isStatic;
         }
 
         public string Name { get; }
@@ -43,6 +65,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         /// <summary>入口点名称（null = 与方法同名）。</summary>
         public string? ImportName { get; }
         public IlCallingConvention CallingConvention { get; }
+        /// <summary>实例方法（含 this，签名 HAS_THIS）。</summary>
+        public bool IsStatic { get; }
     }
 
     /// <summary>
@@ -60,10 +84,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly List<IlTypeRef> _typeRefs = new List<IlTypeRef>();
         private readonly List<IlAssemblyRef> _assemblyRefs = new List<IlAssemblyRef>();
         private readonly List<IlTypeDef> _typeDefs = new List<IlTypeDef>();
-        private readonly List<IlMethodDef> _methodDefs = new List<IlMethodDef>();
         private readonly List<IlMethodRef> _memberRefs = new List<IlMethodRef>();
         private readonly List<IlCustomAttribute> _customAttributes = new List<IlCustomAttribute>();
         private readonly List<IlStandAloneSig> _standAloneSigs = new List<IlStandAloneSig>();
+
+        /// <summary>全部方法（按类型分组：Program 在前，各 class 依序）。</summary>
+        public IReadOnlyList<IlMethodDef> MethodDefs => _typeDefs.SelectMany(t => t.Methods).ToList();
 
         private readonly Dictionary<IlTypeRef, int> _typeRefIndex = new Dictionary<IlTypeRef, int>();
         private readonly Dictionary<IlAssemblyRef, int> _assemblyRefIndex = new Dictionary<IlAssemblyRef, int>();
@@ -79,6 +105,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         // token 表号
         private const uint TypeRefTable = 0x01;
         private const uint TypeDefTable = 0x02;
+        private const uint FieldTable = 0x04;
         private const uint MethodDefTable = 0x06;
         private const uint ParamTable = 0x08;
         private const uint MemberRefTable = 0x0A;
@@ -192,9 +219,20 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 map[_typeRefs[i]] = TypeRefTable << 24 | (uint)(i + 1);
             }
 
-            for (var i = 0; i < _methodDefs.Count; i++)
+            var methodDefs = MethodDefs;
+            for (var i = 0; i < methodDefs.Count; i++)
             {
-                map[_methodDefs[i]] = MethodDefTable << 24 | (uint)(i + 1);
+                map[methodDefs[i]] = MethodDefTable << 24 | (uint)(i + 1);
+            }
+
+            var fieldRow = 1;
+            foreach (var typeDef in _typeDefs)
+            {
+                foreach (var field in typeDef.Fields)
+                {
+                    map[field] = FieldTable << 24 | (uint)fieldRow;
+                    fieldRow++;
+                }
             }
 
             for (var i = 0; i < _memberRefs.Count; i++)
@@ -264,12 +302,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         // 方法定义
         // ------------------------------------------------------------------
 
-        /// <summary>添加我们自己的方法（TypeDef Program 的方法）。返回 MethodDef token。</summary>
-        public uint AddMethodDef(IlMethodDef method)
-        {
-            _methodDefs.Add(method);
-            return MethodDefTable << 24 | (uint)_methodDefs.Count;
-        }
+        /// <summary>把方法挂到所属类型（顶层函数挂 Program）。</summary>
+        public void AddMethodDef(IlTypeDef typeDef, IlMethodDef method) => typeDef.Methods.Add(method);
+
+        /// <summary>把字段挂到所属类型。</summary>
+        public void AddFieldDef(IlTypeDef typeDef, IlFieldDef field) => typeDef.Fields.Add(field);
 
         // ------------------------------------------------------------------
         // 签名编码
@@ -300,6 +337,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 EncodeType(stream, local);
             }
 
+            return stream.ToArray();
+        }
+
+        /// <summary>字段签名：0x06 FIELD + 类型。</summary>
+        public byte[] EncodeFieldSignature(IlType type)
+        {
+            using var stream = new MemoryStream();
+            stream.WriteByte(0x06); // FIELD
+            EncodeType(stream, type);
             return stream.ToArray();
         }
 
@@ -346,7 +392,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     break;
                 case IlTypeKind.Class:
                     stream.WriteByte(0x12); // CLASS
-                    WriteCompressedInteger(stream, CodedIndexTypeDefOrRef(type.Reference!, _typeRefIndex));
+                    WriteCompressedInteger(stream, type.TypeDef != null
+                        ? CodedIndexTypeDefOrRef(type.TypeDef, _typeDefs)
+                        : CodedIndexTypeDefOrRef(type.Reference!, _typeRefIndex));
                     break;
                 case IlTypeKind.SzArray:
                     stream.WriteByte(0x1D); // SZARRAY
@@ -369,6 +417,22 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // tag 2 位：TypeDef=0, TypeRef=1
             var rowId = typeRefIndex[typeRef];
             return (rowId << 2) | 1;
+        }
+
+        private static int CodedIndexTypeDefOrRef(IlTypeDef typeDef, IReadOnlyList<IlTypeDef> typeDefs)
+        {
+            // tag 2 位：TypeDef=0, TypeRef=1；TypeDef 行号含 <Module>（行 1）
+            var rowId = 2;
+            for (var i = 0; i < typeDefs.Count; i++)
+            {
+                if (typeDefs[i] == typeDef)
+                {
+                    rowId += i;
+                    break;
+                }
+            }
+
+            return rowId << 2;
         }
 
         private static int CodedIndexMemberRef(IlMethodRef methodRef, Dictionary<IlMethodRef, int> memberRefIndex)
@@ -421,15 +485,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var typeRefCount = _typeRefs.Count;
             var assemblyRefCount = _assemblyRefs.Count;
             var typeDefCount = _typeDefs.Count + 1; // + <Module>
-            var methodDefCount = _methodDefs.Count;
-            var paramCount = _methodDefs.Sum(m => m.ParameterTypes.Count);
+            var methodDefs = MethodDefs;
+            var methodDefCount = methodDefs.Count;
+            var fieldDefCount = _typeDefs.Sum(t => t.Fields.Count);
+            var paramCount = methodDefs.Sum(m => m.ParameterTypes.Count);
             var memberRefCount = _memberRefs.Count;
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
 
-            var moduleRefs = _methodDefs.Where(m => m.DllName != null).Select(m => m.DllName!).Distinct().ToList();
+            var moduleRefs = methodDefs.Where(m => m.DllName != null).Select(m => m.DllName!).Distinct().ToList();
             var moduleRefCount = moduleRefs.Count;
-            var implMapCount = _methodDefs.Count(m => m.DllName != null);
+            var implMapCount = methodDefs.Count(m => m.DllName != null);
 
             // 列宽（行数/堆大小 > 0xFFFF → 4 字节）
             var stringIsBig = _stringHeap.Count > 0xFFFF;
@@ -438,6 +504,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var typeRefIsBig = typeRefCount > 0xFFFF;
             var typeDefIsBig = typeDefCount > 0xFFFF;
             var methodDefIsBig = methodDefCount > 0xFFFF;
+            var fieldDefIsBig = fieldDefCount > 0xFFFF;
             var paramIsBig = paramCount > 0xFFFF;
             var memberRefIsBig = memberRefCount > 0xFFFF;
             var standAloneSigIsBig = standAloneSigCount > 0xFFFF;
@@ -447,10 +514,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // coded index 宽（tag 位后余量 < 16 → 4 字节）
             var resolutionScopeIsBig = typeRefCount + assemblyRefCount + 1 > (1 << 14);
             var typeDefOrRefIsBig = typeDefCount + typeRefCount > (1 << 14);
-            var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount > (1 << 13);
+            var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount + fieldDefCount > (1 << 13);
             var hasCustomAttributeIsBig = new[] { typeRefCount, typeDefCount, methodDefCount, paramCount, memberRefCount, standAloneSigCount, 1, assemblyRefCount }.Max() > (1 << 11);
             var customAttributeTypeIsBig = Math.Max(methodDefCount, memberRefCount) > (1 << 13);
-            var memberForwardedIsBig = methodDefCount > (1 << 15); // 1 位 tag（MemberForwarded: Field=0/MethodDef=1）
+            var memberForwardedIsBig = Math.Max(methodDefCount, fieldDefCount) > (1 << 15); // 1 位 tag（MemberForwarded: Field=0/MethodDef=1）
 
             var heapSizes = (stringIsBig ? 0x01 : 0) | (guidIsBig ? 0x02 : 0) | (blobIsBig ? 0x04 : 0);
 
@@ -469,6 +536,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             SetValid(0x00); // Module（始终 1 行）
             if (typeRefCount > 0) SetValid(0x01); // TypeRef
             if (typeDefCount > 0) SetValid(0x02); // TypeDef
+            if (fieldDefCount > 0) SetValid(0x04); // Field
             if (methodDefCount > 0) SetValid(0x06); // MethodDef
             if (paramCount > 0) SetValid(0x08); // Param
             if (memberRefCount > 0) SetValid(0x0A); // MemberRef
@@ -489,6 +557,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteRowCount(1);               // Module
             WriteRowCount(typeRefCount);    // TypeRef
             WriteRowCount(typeDefCount);    // TypeDef
+            WriteRowCount(fieldDefCount);   // Field
             WriteRowCount(methodDefCount);  // MethodDef
             WriteRowCount(paramCount);      // Param
             WriteRowCount(memberRefCount);  // MemberRef
@@ -529,34 +598,57 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 WriteStringRef(typeRef.Namespace, stringIsBig);
             }
 
-            // ---- TypeDef（<Module> + Program）----
+            // ---- TypeDef（<Module> + Program + classes）----
             WriteTypeDefRow(0x00000000, "<Module>", "", 0, 1, 1);
-            if (_typeDefs.Count > 0)
+
+            // 每个类型的字段/方法起始行（Field 表、MethodDef 表按类型分组排列）
+            var fieldList = 1;
+            var methodList = 1;
+            foreach (var typeDef in _typeDefs)
             {
-                var typeDef = _typeDefs[0];
-                var flags = 0x00000001; // Public
+                var flags = typeDef.IsPublic ? 0x00000001u : 0x00000000u; // Public
                 var extends = typeDef.BaseTypeRef == null ? 0 : CodedIndexTypeDefOrRef(typeDef.BaseTypeRef);
-                WriteTypeDefRow((uint)flags, typeDef.Name, "", extends, 1, 1);
+                WriteTypeDefRow(flags, typeDef.Name, "", extends, fieldList, methodList);
+                fieldList += typeDef.Fields.Count;
+                methodList += typeDef.Methods.Count;
+            }
+
+            // ---- Field ----
+            var fieldRow = 1;
+            foreach (var typeDef in _typeDefs)
+            {
+                foreach (var field in typeDef.Fields)
+                {
+                    // flags: Public=0x0006 / Private=0x0001
+                    writer.Write((ushort)(field.IsPublic ? 0x0006 : 0x0001));
+                    WriteStringRef(field.Name, stringIsBig);
+                    WriteRef(GetOrAddBlob(EncodeFieldSignature(field.Type)), blobIsBig);
+                    fieldRow++;
+                }
             }
 
             // ---- MethodDef ----
             var paramRow = 1;
-            foreach (var method in _methodDefs)
+            foreach (var method in methodDefs)
             {
                 writer.Write(methodRvas.TryGetValue(method, out var rva) ? rva : 0u);
                 var implFlags = (ushort)(method.DllName != null ? 0x0080 : 0); // ImplFlags: extern 方法 PreserveSig（对齐 csc）
                 writer.Write(implFlags);
                 var methodFlags = (ushort)(0x0096 | (method.DllName != null ? 0x2000 : 0)); // Flags: Public|Static|HideBySig|ReuseSlot|PInvokeImpl
+                if (!method.IsStatic)
+                {
+                    methodFlags = (ushort)(methodFlags & ~0x0010); // 清掉 Static
+                }
                 writer.Write(methodFlags);
                 WriteStringRef(method.Name, stringIsBig); // Name（MethodDef 行缺 Name 曾导致后续表全部偏移 2 字节）
-                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, isStatic: true));
+                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, method.IsStatic));
                 WriteRef(methodSigBlob, blobIsBig);
                 WriteRef(paramRow, paramIsBig);
                 paramRow += method.ParameterTypes.Count;
             }
 
             // ---- Param ----
-            foreach (var method in _methodDefs)
+            foreach (var method in methodDefs)
             {
                 var sequence = 1;
                 foreach (var _ in method.ParameterTypes)
@@ -598,7 +690,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             // ---- ImplMap（按 MemberForwarded MethodDef 行递增排序；行：MappingFlags + MemberForwarded + ImportName + ImportScope）----
             var methodRow = 1;
-            foreach (var method in _methodDefs)
+            foreach (var method in methodDefs)
             {
                 if (method.DllName != null)
                 {

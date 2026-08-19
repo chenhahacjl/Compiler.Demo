@@ -29,6 +29,9 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly IlTypeRef _objectType;
         private readonly IlTypeRef _stringType;
         private readonly IlTypeDef _typeDefinition;
+        private readonly Dictionary<ClassTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<ClassTypeSymbol, IlTypeDef>();
+        private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
+        private bool _currentMethodIsInstance;
 
         private readonly IlMethodRef _objectEqualsReference;
         private readonly IlMethodRef _consoleReadLineReference;
@@ -99,6 +102,13 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             _entryFunction = program.MainFunction;
 
+            // 1. 收集 class（按出现顺序）→ 建 IlTypeDef + 字段
+            foreach (var classType in program.Classes)
+            {
+                EmitClassDeclaration(classType);
+            }
+
+            // 2. 方法声明（顺序 = 顶层 + 各 class 方法，与 typeDefs 分组一致）
             foreach (var functionWithBody in program.Functions)
             {
                 EmitFunctionDeclaration(functionWithBody.Key);
@@ -162,9 +172,29 @@ namespace Cocoa.CodeAnalysis.Emit
                 _ => IlCallingConvention.Winapi,
             };
 
-            var method = new IlMethodDef(function.Name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention);
+            var isInstance = function.ContainingClass != null;
+            var name = function.Syntax is ConstructorDeclarationSyntax ? ".ctor" : function.Name;
+
+            var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention, isStatic: !isInstance);
             _methods.Add(function, method);
-            _metadata.AddMethodDef(method);
+
+            var declaringType = isInstance ? _classTypeDefs[function.ContainingClass!] : _typeDefinition;
+            _metadata.AddMethodDef(declaringType, method);
+        }
+
+        private void EmitClassDeclaration(ClassTypeSymbol classType)
+        {
+            var typeDef = new IlTypeDef(classType.Name, _objectType, isPublic: classType.IsPublic);
+            _classTypeDefs.Add(classType, typeDef);
+
+            foreach (var field in classType.Fields)
+            {
+                var fieldDef = new IlFieldDef(field.Name, ToIlType(field.Type), isPublic: field.IsPublic);
+                typeDef.Fields.Add(fieldDef);
+                _fieldDefs.Add(field, fieldDef);
+            }
+
+            _metadata.AddTypeDef(typeDef);
         }
 
         private (byte[] Code, uint LocalSigToken, int MaxStack) EmitFunctionBody(IlMethodDef method, BoundBlockStatement body)
@@ -172,6 +202,7 @@ namespace Cocoa.CodeAnalysis.Emit
             _locals.Clear();
             _labelTargets.Clear();
             _temporaryLocalIndices.Clear();
+            _currentMethodIsInstance = !method.IsStatic;
 
             var assembler = new IlAssembler();
 
@@ -256,7 +287,7 @@ namespace Cocoa.CodeAnalysis.Emit
             }
         }
 
-        private static IlType ToIlType(TypeSymbol type)
+        private IlType ToIlType(TypeSymbol type)
         {
             if (type == TypeSymbol.Any)
             {
@@ -301,6 +332,11 @@ namespace Cocoa.CodeAnalysis.Emit
             if (type is EnumTypeSymbol)
             {
                 return IlType.Int32;
+            }
+
+            if (type is ClassTypeSymbol classType)
+            {
+                return IlType.Class(_classTypeDefs[classType]);
             }
 
             if (type.ElementType != null)
@@ -487,6 +523,15 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundNodeKind.MemberCallExpression:
                     EmitMemberCallExpression(il, (BoundMemberCallExpression)node);
                     break;
+                case BoundNodeKind.MemberAssignmentExpression:
+                    EmitMemberAssignmentExpression(il, (BoundMemberAssignmentExpression)node);
+                    break;
+                case BoundNodeKind.ObjectCreationExpression:
+                    EmitObjectCreationExpression(il, (BoundObjectCreationExpression)node);
+                    break;
+                case BoundNodeKind.ThisExpression:
+                    EmitThisExpression(il, (BoundThisExpression)node);
+                    break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
@@ -539,7 +584,9 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             if (node.Variable is ParameterSymbol parameter)
             {
-                il.Emit(IlOpCodes.Get("Ldarg"), (ushort)parameter.Ordinal);
+                // 实例方法 arg0 = this，参数从 arg1 起
+                var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
+                il.Emit(IlOpCodes.Get("Ldarg"), (ushort)argIndex);
             }
             else
             {
@@ -1071,6 +1118,12 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             EmitExpression(il, node.Target);
 
+            if (node.Field != null)
+            {
+                il.Emit(IlOpCodes.Get("Ldfld"), _fieldDefs[node.Field]);
+                return;
+            }
+
             if (node.Target.Type == TypeSymbol.String)
             {
                 il.Emit(IlOpCodes.Get("Callvirt"), _stringLengthReference);
@@ -1088,6 +1141,13 @@ namespace Cocoa.CodeAnalysis.Emit
                 EmitExpression(il, argument);
             }
 
+            if (node.Method != null)
+            {
+                // 实例方法：Callvirt（this 已在栈上）
+                il.Emit(IlOpCodes.Get("Callvirt"), _methods[node.Method]);
+                return;
+            }
+
             if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
             {
                 il.Emit(IlOpCodes.Get("Callvirt"), _stringSubstringReference);
@@ -1095,6 +1155,40 @@ namespace Cocoa.CodeAnalysis.Emit
             }
 
             throw new System.Exception($"Unexpected member call {node.Identifier}");
+        }
+
+        private void EmitMemberAssignmentExpression(IlAssembler il, BoundMemberAssignmentExpression node)
+        {
+            var temporaryLocal = AllocateTemporaryLocal(node);
+
+            EmitExpression(il, node.Target);
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodes.Get("Dup"));
+            il.Emit(IlOpCodes.Get("Stloc"), (ushort)temporaryLocal);
+            il.Emit(IlOpCodes.Get("Stfld"), _fieldDefs[node.Field]);
+            il.Emit(IlOpCodes.Get("Ldloc"), (ushort)temporaryLocal);
+        }
+
+        private void EmitObjectCreationExpression(IlAssembler il, BoundObjectCreationExpression node)
+        {
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            var classType = (ClassTypeSymbol)node.Type;
+            var ctor = classType.GetMethod(classType.Name);
+            if (ctor == null)
+            {
+                throw new System.Exception($"Class {classType.Name} has no constructor.");
+            }
+
+            il.Emit(IlOpCodes.Get("Newobj"), _methods[ctor]);
+        }
+
+        private void EmitThisExpression(IlAssembler il, BoundThisExpression node)
+        {
+            il.Emit(IlOpCodes.Get("Ldarg"), (ushort)0);
         }
     }
 }

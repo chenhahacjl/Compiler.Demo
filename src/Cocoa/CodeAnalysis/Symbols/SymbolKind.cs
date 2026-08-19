@@ -8,5 +8,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         Parameter,
         Type,
         Enum,
+        Class,
+        Field,
     }
 }

@@ -584,5 +584,128 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("d=1.5\r\nx=3\r\n2.75\r\n", stdout);
         }
+
+        [Fact]
+        public void Class_Object_Creation_MethodCall_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Point
+{
+    private _x: int
+    private _y: int
+
+    public constructor(x: int, y: int)
+    {
+        _x = x
+        _y = y
+    }
+
+    public function Area(): int
+    {
+        return _x * _y
+    }
+
+    public function Scale(factor: int)
+    {
+        _x = _x * factor
+        _y = _y * factor
+    }
+
+    public function X(): int
+    {
+        return _x
+    }
+
+    public function Y(): int
+    {
+        return _y
+    }
+}
+
+function Main()
+{
+    var p = new Point(3, 4)
+    print(p.Area())
+    p.Scale(2)
+    print(p.Area())
+    print(p.X())
+    print(p.Y())
+}", "e2e-class-object");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("12\r\n48\r\n6\r\n8\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_SelfMethodCall_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Counter
+{
+    private _count: int
+
+    public constructor(start: int)
+    {
+        _count = start
+    }
+
+    public function Increment()
+    {
+        _count = _count + 1
+    }
+
+    public function Value(): int
+    {
+        return _count
+    }
+
+    public function Double(): int
+    {
+        return Value() * 2
+    }
+}
+
+function Main()
+{
+    var c = new Counter(10)
+    c.Increment()
+    print(c.Value())
+    print(c.Double())
+}", "e2e-class-selfcall");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("11\r\n22\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_TwoInstances_IndependentFields_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Box
+{
+    private _value: int
+
+    public constructor(v: int)
+    {
+        _value = v
+    }
+
+    public function Get(): int
+    {
+        return _value
+    }
+}
+
+function Main()
+{
+    var a = new Box(1)
+    var b = new Box(2)
+    print(a.Get())
+    print(b.Get())
+}", "e2e-class-two-instances");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1\r\n2\r\n", stdout);
+        }
     }
 }

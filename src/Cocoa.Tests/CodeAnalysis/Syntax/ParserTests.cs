@@ -183,6 +183,63 @@ cdecl function double(x: int): int
             Assert.NotNull(function.Body);
         }
 
+        [Fact]
+        public void Parser_ClassDeclaration_ParsesMembers()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+public class Point
+{
+    private _x: int
+    private _y: int
+
+    public constructor(x: int, y: int)
+    {
+        _x = x
+        _y = y
+    }
+
+    public function Area(): int
+    {
+        return _x * _y
+    }
+}");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+
+            Assert.Equal("Point", classDeclaration.Identifier.Text);
+            Assert.Equal(4, classDeclaration.Members.Length);
+            Assert.IsType<ClassFieldDeclarationSyntax>(classDeclaration.Members[0]);
+            Assert.IsType<ClassFieldDeclarationSyntax>(classDeclaration.Members[1]);
+            Assert.IsType<ConstructorDeclarationSyntax>(classDeclaration.Members[2]);
+            Assert.IsType<FunctionDeclarationSyntax>(classDeclaration.Members[3]);
+
+            var field = Assert.IsType<ClassFieldDeclarationSyntax>(classDeclaration.Members[0]);
+            Assert.Equal("_x", field.Identifier.Text);
+            Assert.Equal(SyntaxKind.PrivateKeyword, Assert.Single(field.Modifiers).Kind);
+
+            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(classDeclaration.Members[2]);
+            Assert.Equal(2, constructor.Parameters.GetWithSeparators().Count(s => s is ParameterSyntax));
+        }
+
+        [Fact]
+        public void Parser_ClassDeclaration_Traversal()
+        {
+            var syntaxTree = SyntaxTree.Parse("public class Foo { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+
+            using (var e = new AssertingEnumerator(member))
+            {
+                e.AssertNode(SyntaxKind.ClassDeclaration);
+                e.AssertToken(SyntaxKind.PublicKeyword, "public");
+                e.AssertToken(SyntaxKind.ClassKeyword, "class");
+                e.AssertToken(SyntaxKind.IdentifierToken, "Foo");
+                e.AssertToken(SyntaxKind.OpenBraceToken, "{");
+                e.AssertToken(SyntaxKind.CloseBraceToken, "}");
+            }
+        }
+
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

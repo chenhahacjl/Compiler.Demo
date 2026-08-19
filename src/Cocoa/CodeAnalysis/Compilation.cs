@@ -209,6 +209,13 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(location, "native code generation requires a main function"));
             }
 
+            if (program.Classes.Length > 0)
+            {
+                var location = program.Classes[0].Declaration?.Identifier.Location
+                               ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
+                return ImmutableArray.Create(Diagnostic.Error(location, "class 暂不支持 native 后端（后置，见 docs/类库设计.md）"));
+            }
+
             var importWarnings = NativeImportValidator.Validate(program, platform.Arch);
 
             NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);

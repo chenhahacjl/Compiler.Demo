@@ -28,16 +28,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>自研元数据引用：签名与 token 分配的最小描述。</summary>
     internal sealed class IlType
     {
-        public IlType(IlTypeKind kind, IlTypeRef? reference = null, IlType? elementType = null)
+        public IlType(IlTypeKind kind, IlTypeRef? reference = null, IlType? elementType = null, IlTypeDef? typeDef = null)
         {
             Kind = kind;
             Reference = reference;
             ElementType = elementType;
+            TypeDef = typeDef;
         }
 
         public IlTypeKind Kind { get; }
         public IlTypeRef? Reference { get; }
         public IlType? ElementType { get; }
+        public IlTypeDef? TypeDef { get; }
 
         public static readonly IlType Void = new IlType(IlTypeKind.Void);
         public static readonly IlType Boolean = new IlType(IlTypeKind.Boolean);
@@ -49,6 +51,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public static readonly IlType Object = new IlType(IlTypeKind.Object);
 
         public static IlType Class(IlTypeRef reference) => new IlType(IlTypeKind.Class, reference);
+        public static IlType Class(IlTypeDef typeDef) => new IlType(IlTypeKind.Class, typeDef: typeDef);
         public static IlType SzArrayOf(IlType elementType) => new IlType(IlTypeKind.SzArray, elementType: elementType);
 
         /// <summary>CLR 元数据全名（参数类型匹配用）。</summary>
@@ -62,7 +65,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             IlTypeKind.Double => "System.Double",
             IlTypeKind.String => "System.String",
             IlTypeKind.Object => "System.Object",
-            IlTypeKind.Class => Reference!.FullName,
+            IlTypeKind.Class => TypeDef != null ? TypeDef.Name : Reference!.FullName,
             IlTypeKind.SzArray => ElementType!.FullName + "[]",
             _ => "?",
         };

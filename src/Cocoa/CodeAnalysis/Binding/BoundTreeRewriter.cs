@@ -259,6 +259,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteMemberCallExpression((BoundMemberCallExpression)node);
                 }
+                case BoundNodeKind.MemberAssignmentExpression:
+                {
+                    return RewriteMemberAssignmentExpression((BoundMemberAssignmentExpression)node);
+                }
+                case BoundNodeKind.ObjectCreationExpression:
+                {
+                    return RewriteObjectCreationExpression((BoundObjectCreationExpression)node);
+                }
+                case BoundNodeKind.ThisExpression:
+                {
+                    return RewriteThisExpression((BoundThisExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -419,7 +431,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundMemberAccessExpression(node.Syntax, node.Type, target, node.Identifier);
+            return new BoundMemberAccessExpression(node.Syntax, node.Type, target, node.Identifier, node.Field);
         }
 
         protected virtual BoundExpression RewriteMemberCallExpression(BoundMemberCallExpression node)
@@ -431,7 +443,35 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundMemberCallExpression(node.Syntax, expression, node.Identifier, arguments, node.Type);
+            return new BoundMemberCallExpression(node.Syntax, expression, node.Identifier, arguments, node.Type, node.Method);
+        }
+
+        protected virtual BoundExpression RewriteMemberAssignmentExpression(BoundMemberAssignmentExpression node)
+        {
+            var target = RewriteExpression(node.Target);
+            var expression = RewriteExpression(node.Expression);
+            if (target == node.Target && expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundMemberAssignmentExpression(node.Syntax, target, node.Field, expression);
+        }
+
+        protected virtual BoundExpression RewriteObjectCreationExpression(BoundObjectCreationExpression node)
+        {
+            var arguments = RewriteExpressions(node.Arguments);
+            if (arguments == node.Arguments)
+            {
+                return node;
+            }
+
+            return new BoundObjectCreationExpression(node.Syntax, (Symbols.ClassTypeSymbol)node.Type, arguments);
+        }
+
+        protected virtual BoundExpression RewriteThisExpression(BoundThisExpression node)
+        {
+            return node;
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

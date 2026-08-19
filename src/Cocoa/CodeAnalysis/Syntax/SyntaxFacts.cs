@@ -89,6 +89,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.FalseKeyword;
                 case "for":
                     return SyntaxKind.ForKeyword;
+                case "class":
+                    return SyntaxKind.ClassKeyword;
+                case "constructor":
+                    return SyntaxKind.ConstructorKeyword;
                 case "function":
                     return SyntaxKind.FunctionKeyword;
                 case "if":
@@ -256,6 +260,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "var";
                 case SyntaxKind.WhileKeyword:
                     return "while";
+                case SyntaxKind.ClassKeyword:
+                    return "class";
+                case SyntaxKind.ConstructorKeyword:
+                    return "constructor";
                 case SyntaxKind.DoKeyword:
                     return "do";
                 case SyntaxKind.EnumKeyword:

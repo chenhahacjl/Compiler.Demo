@@ -163,6 +163,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseEnumDeclaration(modifiers);
             }
 
+            if (Current.Kind == SyntaxKind.ClassKeyword)
+            {
+                return ParseClassDeclaration(modifiers);
+            }
+
             if (modifiers.Any())
             {
                 // 修饰符后非法声明：报错并继续按全局语句解析
@@ -273,6 +278,77 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+        }
+
+        private MemberSyntax ParseClassDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var classKeyword = MatchToken(SyntaxKind.ClassKeyword);
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+            var members = ParseClassMemberList();
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, openBraceToken, members, closeBraceToken);
+        }
+
+        private ImmutableArray<MemberSyntax> ParseClassMemberList()
+        {
+            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+
+            while (Current.Kind != SyntaxKind.CloseBraceToken &&
+                   Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                members.Add(ParseClassMember());
+            }
+
+            return members.ToImmutable();
+        }
+
+        private MemberSyntax ParseClassMember()
+        {
+            // 统一修饰符：public/private/stdcall/cdecl（顺序无关）
+            var modifiers = ParseModifiers();
+
+            if (Current.Kind == SyntaxKind.ConstructorKeyword)
+            {
+                return ParseConstructorDeclaration(modifiers);
+            }
+
+            if (Current.Kind == SyntaxKind.CdeclKeyword ||
+                Current.Kind == SyntaxKind.StdcallKeyword ||
+                Current.Kind == SyntaxKind.FunctionKeyword)
+            {
+                return ParseFunctionDeclaration(modifiers);
+            }
+
+            if (Current.Kind == SyntaxKind.IdentifierToken)
+            {
+                return ParseClassFieldDeclaration(modifiers);
+            }
+
+            _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.IdentifierToken);
+            var badColon = new SyntaxToken(_syntaxTree, SyntaxKind.BadToken, Current.Position, ":", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var badType = new SyntaxToken(_syntaxTree, SyntaxKind.BadToken, Current.Position, Current.Text, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, Current, new TypeClauseSyntax(_syntaxTree, badColon, badType));
+        }
+
+        private MemberSyntax ParseConstructorDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var constructorKeyword = MatchToken(SyntaxKind.ConstructorKeyword);
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ParseParameterList();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var body = ParseBlockStatement();
+
+            return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword, openParenthesisToken, parameters, closeParenthesisToken, body);
+        }
+
+        private MemberSyntax ParseClassFieldDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var type = ParseTypeClause();
+
+            return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()
@@ -793,6 +869,17 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var newKeyword = MatchToken(SyntaxKind.NewKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+            // new Foo(args) —— 对象创建
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+                var arguments = ParseArgumentList();
+                var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+                return new ObjectCreationExpressionSyntax(_syntaxTree, newKeyword, identifier, openParenthesisToken, arguments, closeParenthesisToken);
+            }
+
             var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);
             ExpressionSyntax? size = null;
 
@@ -814,6 +901,32 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new ArrayCreationExpressionSyntax(_syntaxTree, newKeyword, identifier, openBracketToken, size, closeBracketToken, openBraceToken, elements, closeBraceToken);
+        }
+
+        private SeparatedSyntaxList<ExpressionSyntax> ParseArgumentList()
+        {
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+
+            var parseNextArgument = true;
+            while (parseNextArgument &&
+                Current.Kind != SyntaxKind.CloseParenthesisToken &&
+                Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var argument = ParseExpression();
+                nodesAndSeparators.Add(argument);
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    var comma = MatchToken(SyntaxKind.CommaToken);
+                    nodesAndSeparators.Add(comma);
+                }
+                else
+                {
+                    parseNextArgument = false;
+                }
+            }
+
+            return new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
         }
 
         private SeparatedSyntaxList<ExpressionSyntax> ParseArrayInitializerElements()

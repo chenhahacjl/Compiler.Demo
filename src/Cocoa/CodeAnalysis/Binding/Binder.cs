@@ -16,6 +16,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;
         private readonly FunctionSymbol? _function;
+        private readonly ClassTypeSymbol? _currentClass;
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
@@ -26,6 +27,7 @@ namespace Cocoa.CodeAnalysis.Binding
             _scope = new BoundScope(parent);
             _isScript = isScript;
             _function = function;
+            _currentClass = function?.ContainingClass;
 
             if (function != null)
             {
@@ -44,13 +46,15 @@ namespace Cocoa.CodeAnalysis.Binding
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.Any())
             {
-                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty);
+                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty);
             }
 
             var globalStatements = syntaxTrees.SelectMany(st => st.Root.Members)
                                               .OfType<GlobalStatementSyntax>();
 
             string? importedDll = null;
+
+            var classFunctions = new List<FunctionSymbol>();
 
             foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
             {
@@ -65,6 +69,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is EnumDeclarationSyntax enumDeclaration)
                 {
                     binder.BindEnumDeclaration(enumDeclaration);
+                }
+                else if (member is ClassDeclarationSyntax classDeclaration)
+                {
+                    binder.BindClassDeclaration(classDeclaration, classFunctions);
                 }
             }
 
@@ -96,6 +104,10 @@ namespace Cocoa.CodeAnalysis.Binding
             // Check for main/script with global statements
 
             var functions = binder._scope.GetDeclaredFunctions();
+            if (classFunctions.Count > 0)
+            {
+                functions = functions.AddRange(classFunctions);
+            }
 
             FunctionSymbol? mainFunction;
             FunctionSymbol? scriptFunction;
@@ -151,13 +163,14 @@ namespace Cocoa.CodeAnalysis.Binding
             var diagnostics = binder.Diagnostics.ToImmutableArray();
             var variables = binder._scope.GetDeclaredVariables();
             var enums = binder._scope.GetDeclaredEnums();
+            var classes = binder._scope.GetDeclaredClasses();
 
             if (previous != null)
             {
                 diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
             }
 
-            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, variables, statements.ToImmutable());
+            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable());
         }
 
         public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope)
@@ -166,7 +179,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (globalScope.Diagnostics.Any())
             {
-                return new BoundProgram(previous, globalScope.Diagnostics, null, null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty);
+                return new BoundProgram(previous, globalScope.Diagnostics, null, null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty, globalScope.Classes);
             }
 
             var functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
@@ -180,13 +193,31 @@ namespace Cocoa.CodeAnalysis.Binding
                     continue;
                 }
 
+                var bodySyntax = function.Declaration?.Body;
+                var bodyLocation = (SyntaxNode?)function.Declaration?.Identifier ?? function.Syntax;
+
+                if (function.Syntax is ConstructorDeclarationSyntax ctorSyntax)
+                {
+                    bodySyntax = ctorSyntax.Body;
+                    bodyLocation = ctorSyntax.ConstructorKeyword;
+                }
+
+                if (bodySyntax == null || bodyLocation == null)
+                {
+                    functionBodies.Add(function, new BoundBlockStatement(function.Syntax ?? function.Declaration!, ImmutableArray<BoundStatement>.Empty));
+                    continue;
+                }
+
                 var binder = new Binder(isScript, parentScope, function);
-                var body = binder.BindStatement(function.Declaration!.Body!);
+                var body = binder.BindStatement(bodySyntax);
                 var loweredBody = Lowerer.Lower(function, body);
 
                 if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
                 {
-                    binder._diagnostics.ReportAllPathsMustReturn(function.Declaration.Identifier.Location);
+                    var location = function.Declaration != null
+                        ? function.Declaration.Identifier.Location
+                        : bodyLocation.Location;
+                    binder._diagnostics.ReportAllPathsMustReturn(location);
                 }
 
                 functionBodies.Add(function, loweredBody);
@@ -225,7 +256,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 functionBodies.Add(globalScope.ScriptFunction, body);
             }
 
-            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable());
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), globalScope.Classes);
         }
 
         private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? importedDll = null)
@@ -282,6 +313,102 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
+        private ImmutableArray<ParameterSymbol> BindParameters(SeparatedSyntaxList<ParameterSyntax> parameterSyntaxList)
+        {
+            var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
+
+            var seenParameterNames = new HashSet<string>();
+
+            foreach (var parameterSyntax in parameterSyntaxList)
+            {
+                var parameterName = parameterSyntax.Identifier.Text;
+                var parameterType = BindTypeClause(parameterSyntax.Type);
+
+                if (!seenParameterNames.Add(parameterName))
+                {
+                    _diagnostics.ReportParameterAlreadyDeclared(parameterSyntax.Location, parameterName);
+                }
+                else
+                {
+                    var parameter = new ParameterSymbol(parameterName, parameterType, parameters.Count);
+                    parameters.Add(parameter);
+                }
+            }
+
+            return parameters.ToImmutable();
+        }
+
+        private void BindClassDeclaration(ClassDeclarationSyntax syntax, List<FunctionSymbol> classFunctions)
+        {
+            var name = syntax.Identifier.Text;
+            var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+
+            var classType = new ClassTypeSymbol(name, isPublic, syntax);
+
+            if (!_scope.TryDeclareClass(classType))
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, name);
+                return;
+            }
+
+            foreach (var member in syntax.Members)
+            {
+                if (member is ClassFieldDeclarationSyntax fieldDeclaration)
+                {
+                    var fieldType = BindTypeClause(fieldDeclaration.Type);
+                    var fieldIsPublic = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+
+                    if (classType.GetField(fieldDeclaration.Identifier.Text) == null)
+                    {
+                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldIsPublic, classType));
+                    }
+                    else
+                    {
+                        _diagnostics.ReportSymbolAlreadyDeclared(fieldDeclaration.Identifier.Location, fieldDeclaration.Identifier.Text);
+                    }
+                }
+                else if (member is ConstructorDeclarationSyntax constructorDeclaration)
+                {
+                    var parameters = BindParameters(constructorDeclaration.Parameters);
+                    var isPublicCtor = constructorDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+
+                    if (classType.GetMethod(name) == null)
+                    {
+                        var ctor = new FunctionSymbol(name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, isPublic: isPublicCtor);
+                        classType.AddMethod(ctor);
+                        classFunctions.Add(ctor);
+                    }
+                    else
+                    {
+                        _diagnostics.ReportSymbolAlreadyDeclared(constructorDeclaration.ConstructorKeyword.Location, name);
+                    }
+                }
+                else if (member is FunctionDeclarationSyntax methodDeclaration)
+                {
+                    var method = BindClassMethodDeclaration(methodDeclaration, classType);
+
+                    if (classType.GetMethod(methodDeclaration.Identifier.Text) == null)
+                    {
+                        classType.AddMethod(method);
+                        classFunctions.Add(method);
+                    }
+                    else
+                    {
+                        _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
+                    }
+                }
+            }
+        }
+
+        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType)
+        {
+            var parameters = BindParameters(syntax.Parameters);
+            var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
+            var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+
+            return new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, isPublic: isPublic);
+        }
+
         private static BoundScope CreateParentScope(BoundGlobalScope? previous)
         {
             var stack = new Stack<BoundGlobalScope>();
@@ -300,12 +427,23 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 foreach (var f in previous.Functions)
                 {
+                    // class 方法/构造不进入全局函数作用域（用限定访问/this 解析），仅顶层函数可裸调用
+                    if (f.ContainingClass != null)
+                    {
+                        continue;
+                    }
+
                     scope.TryDeclareFunction(f);
                 }
 
                 foreach (var e in previous.Enums)
                 {
                     scope.TryDeclareEnum(e);
+                }
+
+                foreach (var c in previous.Classes)
+                {
+                    scope.TryDeclareClass(c);
                 }
 
                 foreach (var v in previous.Variables)
@@ -355,7 +493,9 @@ namespace Cocoa.CodeAnalysis.Binding
                                               es.Expression.Kind == BoundNodeKind.AssignmentExpression ||
                                               es.Expression.Kind == BoundNodeKind.CallExpression ||
                                               es.Expression.Kind == BoundNodeKind.CompoundAssignmentExpression ||
-                                              es.Expression.Kind == BoundNodeKind.ElementAssignmentExpression;
+                                              es.Expression.Kind == BoundNodeKind.ElementAssignmentExpression ||
+                                              es.Expression.Kind == BoundNodeKind.MemberAssignmentExpression ||
+                                              es.Expression.Kind == BoundNodeKind.MemberCallExpression;
 
                     if (!isAllowedExpression)
                         _diagnostics.ReportInvalidExpressionStatement(syntax.Location);
@@ -626,6 +766,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
                 case SyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
                 case SyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
+                case SyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
                 case SyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
                 case SyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
                 case SyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
@@ -657,11 +798,34 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            var variable = BindVariableReference(syntax.IdentifierToken);
-            if (variable == null)
-                return new BoundErrorExpression(syntax);
+            var lookup = _scope.TryLookupSymbol(name);
 
-            return new BoundVariableExpression(syntax, variable);
+            if (lookup is VariableSymbol variable)
+            {
+                return new BoundVariableExpression(syntax, variable);
+            }
+
+            // 类方法内：裸标识符可引用本类字段（this 字段）
+            if (_currentClass != null)
+            {
+                var field = _currentClass.GetField(name);
+                if (field != null)
+                {
+                    var thisExpression = new BoundThisExpression(syntax, _currentClass);
+                    return new BoundMemberAccessExpression(syntax, field.Type, thisExpression, name, field);
+                }
+            }
+
+            if (lookup == null)
+            {
+                _diagnostics.ReportUndefinedVariable(syntax.IdentifierToken.Location, name);
+            }
+            else
+            {
+                _diagnostics.ReportNotAVariable(syntax.IdentifierToken.Location, name);
+            }
+
+            return new BoundErrorExpression(syntax);
         }
 
         private BoundExpression BindAssignmentExpression(AssignmentExpressionSyntax syntax)
@@ -714,6 +878,19 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundElementAssignmentExpression(syntax, arrayElementTarget.Type, arrayElementTarget, convertedExpression);
             }
 
+            if (boundTarget is BoundMemberAccessExpression memberTarget && memberTarget.Field != null && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+            {
+                if (!memberTarget.Field.IsPublic && _currentClass != memberTarget.Field.ContainingClass)
+                {
+                    _diagnostics.ReportCannotAccessPrivateMember(syntax.AssignmentToken.Location, memberTarget.Field.Name);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, memberTarget.Type);
+
+                return new BoundMemberAssignmentExpression(syntax, memberTarget.Target, memberTarget.Field, convertedExpression);
+            }
+
             if (boundTarget.Type != TypeSymbol.Error)
             {
                 _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, boundTarget.Type.Name);
@@ -756,6 +933,41 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundArrayCreationExpression(syntax, arrayType, length, initializers.ToImmutable());
+        }
+
+        private BoundExpression BindObjectCreationExpression(ObjectCreationExpressionSyntax syntax)
+        {
+            var classType = LookupType(syntax.Identifier.Text) as ClassTypeSymbol;
+            if (classType == null)
+            {
+                _diagnostics.ReportUndefinedType(syntax.Identifier.Location, syntax.Identifier.Text);
+                return new BoundErrorExpression(syntax);
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+
+            foreach (var argumentSyntax in syntax.Arguments)
+            {
+                arguments.Add(BindExpression(argumentSyntax));
+            }
+
+            // 参数个数校验：构造函数签名 == 实参个数
+            var ctor = classType.GetMethod(classType.Name);
+            if (ctor != null && ctor.Parameters.Length != arguments.Count)
+            {
+                _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, classType.Name, ctor.Parameters.Length, arguments.Count);
+                return new BoundErrorExpression(syntax);
+            }
+
+            for (var i = 0; i < arguments.Count; i++)
+            {
+                if (ctor != null)
+                {
+                    arguments[i] = BindConversion(arguments[i].Syntax.Location, arguments[i], ctor.Parameters[i].Type);
+                }
+            }
+
+            return new BoundObjectCreationExpression(syntax, classType, arguments.ToImmutable());
         }
 
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)
@@ -813,6 +1025,25 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // 类字段访问：point._x
+            if (boundTarget.Type is ClassTypeSymbol classType)
+            {
+                var field = classType.GetField(identifier);
+                if (field != null)
+                {
+                    if (!field.IsPublic && _currentClass != classType)
+                    {
+                        _diagnostics.ReportCannotAccessPrivateMember(syntax.IdentifierToken.Location, identifier);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    return new BoundMemberAccessExpression(syntax, field.Type, boundTarget, identifier, field);
+                }
+
+                _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundTarget.Type);
+                return new BoundErrorExpression(syntax);
+            }
+
             // 本轮仅支持数组/字符串的 Length（int 只读）；record/字符串成员访问后续里程碑
             if (boundTarget.Type.ElementType != null && identifier == "Length")
             {
@@ -842,6 +1073,36 @@ namespace Cocoa.CodeAnalysis.Binding
             foreach (var argument in syntax.Arguments)
             {
                 boundArguments.Add(BindExpression(argument));
+            }
+
+            if (boundExpression.Type is ClassTypeSymbol classType)
+            {
+                var method = classType.GetMethod(identifier);
+                if (method != null)
+                {
+                    if (!method.IsPublic && _currentClass != classType)
+                    {
+                        _diagnostics.ReportCannotAccessPrivateMember(syntax.IdentifierToken.Location, identifier);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    if (method.Parameters.Length != syntax.Arguments.Count)
+                    {
+                        _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, method.Parameters.Length, syntax.Arguments.Count);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                    for (var i = 0; i < boundArguments.Count; i++)
+                    {
+                        arguments.Add(BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type));
+                    }
+
+                    return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method);
+                }
+
+                _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
+                return new BoundErrorExpression(syntax);
             }
 
             if (boundExpression.Type == TypeSymbol.String && identifier == "substring")
@@ -936,6 +1197,17 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var symbol = _scope.TryLookupSymbol(syntax.Identifier.Text);
+
+            // 类方法内：裸方法调用解析为本类方法（this.Method()）
+            if (symbol == null && _currentClass != null)
+            {
+                var method = _currentClass.GetMethod(syntax.Identifier.Text);
+                if (method != null)
+                {
+                    return BindMemberCall(syntax, new BoundThisExpression(syntax, _currentClass), method);
+                }
+            }
+
             if (symbol == null)
             {
                 _diagnostics.ReportUndefinedFunction(syntax.Identifier.Location, syntax.Identifier.Text);
@@ -987,6 +1259,29 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
+        }
+
+        private BoundExpression BindMemberCall(CallExpressionSyntax syntax, BoundExpression target, FunctionSymbol method)
+        {
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+
+            foreach (var argument in syntax.Arguments)
+            {
+                boundArguments.Add(BindExpression(argument));
+            }
+
+            if (syntax.Arguments.Count != method.Parameters.Length)
+            {
+                _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, method.Name, method.Parameters.Length, syntax.Arguments.Count);
+                return new BoundErrorExpression(syntax);
+            }
+
+            for (var i = 0; i < syntax.Arguments.Count; i++)
+            {
+                boundArguments[i] = BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type);
+            }
+
+            return new BoundMemberCallExpression(syntax, target, method.Name, boundArguments.ToImmutable(), method.ReturnType, method);
         }
 
         private BoundExpression BindConversion(ExpressionSyntax syntax, TypeSymbol type, bool allowExplicit = false)
@@ -1077,7 +1372,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 default:
-                    return _scope.TryLookupSymbol(name) as EnumTypeSymbol;
+                    return _scope.TryLookupSymbol(name) as TypeSymbol;
             }
         }
 

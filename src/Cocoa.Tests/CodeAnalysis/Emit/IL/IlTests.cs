@@ -215,7 +215,9 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Serialize_Sets_MethodDef_Bit_When_Method_Exists()
         {
             var builder = new MetadataBuilder("test", "test");
-            builder.AddMethodDef(new IlMethodDef("main", IlType.Void, new IlType[0], null));
+            var typeDef = new IlTypeDef("Program", null);
+            builder.AddTypeDef(typeDef);
+            builder.AddMethodDef(typeDef, new IlMethodDef("main", IlType.Void, new IlType[0], null));
             var blobs = builder.Serialize(new Dictionary<IlMethodDef, uint>());
             var valid = System.BitConverter.ToUInt64(blobs.Tables, 8);
             Assert.True((valid & (1UL << 0x06)) != 0); // MethodDef

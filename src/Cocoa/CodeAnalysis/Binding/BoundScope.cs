@@ -20,6 +20,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public bool TryDeclareEnum(EnumTypeSymbol enumType) => TryDeclareSymbol(enumType);
 
+        public bool TryDeclareClass(ClassTypeSymbol classType) => TryDeclareSymbol(classType);
+
         public Symbol? TryLookupSymbol(string name)
         {
             if (_symbols != null && _symbols.TryGetValue(name, out var symbol))
@@ -33,6 +35,8 @@ namespace Cocoa.CodeAnalysis.Binding
         public ImmutableArray<FunctionSymbol> GetDeclaredFunctions() => GetDeclaredSymbols<FunctionSymbol>();
 
         public ImmutableArray<EnumTypeSymbol> GetDeclaredEnums() => GetDeclaredSymbols<EnumTypeSymbol>();
+
+        public ImmutableArray<ClassTypeSymbol> GetDeclaredClasses() => GetDeclaredSymbols<ClassTypeSymbol>();
 
         private bool TryDeclareSymbol<TSymbol>(TSymbol symbol) where TSymbol : Symbol
         {

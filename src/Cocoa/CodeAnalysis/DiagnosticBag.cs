@@ -351,5 +351,11 @@ namespace Cocoa.CodeAnalysis
                 }
             }
         }
+
+        public void ReportCannotAccessPrivateMember(TextLocation location, string memberName)
+        {
+            var message = $"成员 '{memberName}' 是 private 的，不能在当前上下文中访问。";
+            ReportError(location, message);
+        }
     }
 }
