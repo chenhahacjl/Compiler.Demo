@@ -51,6 +51,7 @@ coc build -p foo.coproj --dotnet-runtime net40
 | [`docs/语法手册.md`](docs/语法手册.md) | Cocoa 语言语法参考（状态标记：✅ 已实现 · 🔧 设计中 · 📋 待实现） |
 | [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`coc build` 子命令、构建选项、增量构建） |
 | [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/.NET dll/跨程序集消费/native 后置） |
+| [`docs/OOP设计.md`](docs/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型后置） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 库格式、增量哈希 |
 | [`docs/实现目标.md`](docs/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs/开发计划.md`](docs/开发计划.md) | 阶段 0-9 路线图与里程碑 |
