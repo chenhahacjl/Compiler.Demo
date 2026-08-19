@@ -23,10 +23,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public static string[]? ResolveDefaultReferences(IlTarget target)
         {
+            // 6d-4：netfx 直接运行（mscorlib 引用 + mscoree 导入 + I386/PE32）因 CLR 4.8 元数据兼容问题暂不可用，
+            // netfx 目标暂沿用 netcore 引用（corelib + console）+ runtimeconfig，保证 `dotnet x.exe` 可运行。
+            // 待直接运行修复后再切回 FindMscorlib()。
             if (target.Runtime == IlRuntime.NetFx)
             {
-                var mscorlib = FindMscorlib();
-                return mscorlib == null ? null : new[] { mscorlib };
+                return ResolveNetCoreReferences(IlTarget.Default);
             }
 
             return ResolveNetCoreReferences(target);
