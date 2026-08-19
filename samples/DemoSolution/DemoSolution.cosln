@@ -1,5 +1,0 @@
-name = DemoSolution
-
-[projects]
-Util/Util.coproj
-App/App.coproj

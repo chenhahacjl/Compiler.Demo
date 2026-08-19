@@ -3,8 +3,7 @@ function greeting(name: string): string
     return "Hello, " + name + "!"
 }
 
-function main()
+function sum(a: int, b: int): int
 {
-    print(greeting("Cocoa"))
-    print(40 + 2)
+    return a + b
 }

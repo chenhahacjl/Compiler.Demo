@@ -1,0 +1,17 @@
+function main()
+{
+    var nums = new int[3] {10, 20, 30}
+    nums[1] = 99
+    print(nums[0])
+    print(nums[1])
+    print(nums[2])
+    print(nums.Length)
+    print(sum(nums))
+    print(contains(nums, 99))
+    print(contains(nums, 7))
+
+    var flags = new bool[2]
+    flags[0] = true
+    print(flags[0])
+    print(flags[1])
+}

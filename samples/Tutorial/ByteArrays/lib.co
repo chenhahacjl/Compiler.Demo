@@ -1,0 +1,19 @@
+function wrap(value: int): byte
+{
+    return (byte)value
+}
+
+function asInt(b: byte): int
+{
+    return int(b)
+}
+
+function firstElement(buf: byte[]): byte
+{
+    return buf[0]
+}
+
+function lastElement(buf: byte[]): byte
+{
+    return buf[buf.Length - 1]
+}

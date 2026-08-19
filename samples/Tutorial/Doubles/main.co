@@ -1,0 +1,17 @@
+function main()
+{
+    var d: double = 3.14
+    print(d)
+    print(add(1.5, 2.25))
+    print(divide(10.0, 4))
+    print(2.5 * 2)
+    print(7 - 1.5)
+    print(isBigger(1.5, 2.5))
+    print(truncated(3.9))
+    print((double)3)
+
+    var arr: double[] = new double[2] {1.5, 2.5}
+    print(arr[0])
+    print(arr[1])
+    print(add(arr[0], arr[1]))
+}

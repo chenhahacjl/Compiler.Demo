@@ -1,0 +1,9 @@
+function plus(a: int, b: int): int
+{
+    return a + b
+}
+
+function concatName(first: string, last: string): string
+{
+    return first + " " + last
+}

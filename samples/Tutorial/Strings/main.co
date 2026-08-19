@@ -1,0 +1,18 @@
+function main()
+{
+    var s = "hello"
+    print(s.Length)
+    print(s[0])
+    print(int(s[1]))
+    print(middle(s))
+    print(middle(s) + "!")
+    print(firstChar(s))
+
+    var c = 'a'
+    print(c)
+    print(c == 'a')
+    print(char(98))
+
+    print(s == "hello")
+    print(s == "world")
+}

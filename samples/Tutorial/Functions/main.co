@@ -1,0 +1,23 @@
+function run(args: string[]): int
+{
+    print(add(20, 22))
+    print(square(add(1, 2)))
+    print(factorial(5))
+    print(greet("Cocoa"))
+    print(args.Length)
+    if args.Length > 0
+    {
+        print(args[0])
+    }
+    if args.Length > 1
+    {
+        print(args[1])
+    }
+
+    return 1
+}
+
+function main()
+{
+    print("not used when entry = run")
+}

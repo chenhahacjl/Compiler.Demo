@@ -1,0 +1,13 @@
+public enum Color { Red, Green, Blue }
+
+public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
+
+function isGreen(c: Color): bool
+{
+    return c == Color.Green
+}
+
+function asInt(c: Color): int
+{
+    return int(c)
+}

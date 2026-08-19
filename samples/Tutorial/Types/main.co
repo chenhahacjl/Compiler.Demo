@@ -1,0 +1,17 @@
+function main()
+{
+    let x = 42
+    var y = 10
+    y = y + 1
+    print(x)
+    print(y)
+    print(x + y)
+    let name: string = "Alice"
+    let pi: double = 3.14
+    let flag: bool = true
+    print(name)
+    print(pi)
+    print(flag)
+    print(plus(x, y))
+    print(concatName("Cocoa", "Lang"))
+}

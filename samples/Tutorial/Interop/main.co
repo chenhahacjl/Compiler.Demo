@@ -1,0 +1,7 @@
+function main()
+{
+    print(isRunning())
+
+    var r = random(100)
+    print(inRange(r, 100))
+}

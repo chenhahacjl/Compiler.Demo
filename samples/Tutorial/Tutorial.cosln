@@ -1,0 +1,13 @@
+name = Tutorial
+
+[projects]
+HelloWorld/HelloWorld.coproj
+Types/Types.coproj
+ControlFlow/ControlFlow.coproj
+Functions/Functions.coproj
+Arrays/Arrays.coproj
+Strings/Strings.coproj
+Enums/Enums.coproj
+ByteArrays/ByteArrays.coproj
+Doubles/Doubles.coproj
+Interop/Interop.coproj

@@ -26,9 +26,9 @@ src\build.cmd
 # 编译单文件（默认 exe）
 coc hello.co
 
-# 编译仓库自带项目 / 解决方案样例
-coc build -p samples/DemoSolution/DemoSolution.cosln
-coc build -p samples/DemoSolution/App/App.coproj
+# 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe）
+coc build -p samples/Tutorial/Tutorial.cosln
+coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 
 # 指定输出格式
 coc build -p foo.coproj -f dll

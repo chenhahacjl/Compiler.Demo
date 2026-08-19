@@ -1,0 +1,5 @@
+function main()
+{
+    print(greeting("Cocoa"))
+    print(sum(20, 22))
+}

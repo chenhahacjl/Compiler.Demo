@@ -1225,6 +1225,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 case IrCond.BelowOrEqual: return X64CondCode.BelowOrEqual;
                 case IrCond.Above: return X64CondCode.Above;
                 case IrCond.AboveOrEqual: return X64CondCode.AboveOrEqual;
+                case IrCond.Parity: return X64CondCode.Parity;
+                case IrCond.NoParity: return X64CondCode.NoParity;
                 default:
                     throw new Exception($"Unknown IR cond: {cond}");
             }

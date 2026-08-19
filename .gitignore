@@ -39,6 +39,8 @@ TestResult.xml
 *.exe
 *.dll
 *.cod
+# IL 后端产物（dotnet host 运行时配置）
+*.runtimeconfig.json
 # Cocoa 集中状态目录（仿 .vs）
 .coc/
 # Cocoa 用户级配置（IDE/个人覆盖）

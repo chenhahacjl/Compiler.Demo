@@ -1,0 +1,22 @@
+import kernel32.dll
+
+stdcall function GetTickCount(): int
+
+function isRunning(): bool
+{
+    var ticks = GetTickCount()
+    if ticks > 0
+    {
+        return true
+    }
+    return false
+}
+
+function inRange(value: int, max: int): bool
+{
+    if value >= 0 && value < max
+    {
+        return true
+    }
+    return false
+}
