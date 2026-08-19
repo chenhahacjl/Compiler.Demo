@@ -483,6 +483,213 @@ function Main()
             Assert.Empty(diagnostics);
         }
 
+        [Fact]
+        public void Class_Partial_TwoParts_MergeIntoOneSymbol()
+        {
+            var code = @"
+public partial class Point
+{
+    private _x: int
+}
+
+public partial class Point
+{
+    public constructor(x: int)
+    {
+        _x = x
+    }
+
+    public function Get(): int
+    {
+        return _x
+    }
+}
+
+function Main()
+{
+    var p = new Point(3)
+    print(p.Get())
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            Assert.Equal("Point", classType.Name);
+            Assert.Contains(classType.Fields, f => f.Name == "_x");
+            Assert.Contains(classType.Methods, m => m.Name == "Get");
+            Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void Class_Partial_AcrossMultipleTrees_AllMembersBound()
+        {
+            var tree1 = SyntaxTree.Parse(@"
+public partial class Point
+{
+    private _x: int
+}
+
+function Main()
+{
+    var p = new Point(3)
+    print(p.Get())
+}");
+            var tree2 = SyntaxTree.Parse(@"
+public partial class Point
+{
+    public constructor(x: int)
+    {
+        _x = x
+    }
+
+    public function Get(): int
+    {
+        return _x
+    }
+}");
+
+            var compilation = Compilation.Create(tree1, tree2);
+
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            Assert.Contains(classType.Fields, f => f.Name == "_x");
+            Assert.Contains(classType.Methods, m => m.Name == "Get");
+
+            var path = Path.Combine(Path.GetTempPath(), "class_partial_test.exe");
+            var diagnostics = compilation.Emit("test", References, path);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_Partial_ImplicitConstructor_GeneratedOnce()
+        {
+            var code = @"
+public partial class A
+{
+    private _x: int
+}
+
+public partial class A
+{
+    public function Get(): int
+    {
+        return 42
+    }
+}
+
+function Main()
+{
+    var a = new A()
+    print(a.Get())
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            Assert.Single(classType.Methods.Where(m => m.IsConstructor));
+            Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void Class_Partial_DuplicateWithoutPartial_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+}
+
+public class Foo
+{
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("'Foo' is already declared."));
+        }
+
+        [Fact]
+        public void Class_Partial_MissingPartialOnSecondPart_ReportsError()
+        {
+            var code = @"
+public partial class Foo
+{
+}
+
+public class Foo
+{
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("'Foo' is already declared."));
+        }
+
+        [Fact]
+        public void Class_Partial_VisibilityConflict_ReportsError()
+        {
+            var code = @"
+public partial class Foo
+{
+}
+
+internal partial class Foo
+{
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("可见性不一致"));
+        }
+
+        [Fact]
+        public void Class_Partial_BaseClassMismatch_ReportsError()
+        {
+            var code = @"
+public class A { }
+public class B { }
+
+public partial class Foo: A
+{
+}
+
+public partial class Foo: B
+{
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("基类不一致"));
+        }
+
+        [Fact]
+        public void Class_Partial_OnMethod_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    public partial function Bar(): int
+    {
+        return 1
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("partial 只能用于类声明"));
+        }
+
         private static readonly string[] References = new[]
         {
             typeof(object).Assembly.Location,

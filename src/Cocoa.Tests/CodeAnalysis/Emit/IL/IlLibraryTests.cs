@@ -220,8 +220,10 @@ namespace MyLib
             Assert.NotNull(add);
             Assert.True(add.IsAssembly, "internal 方法应为 Assembly 可见性");
 
-            // internal 类型对外不可见
-            Assert.Null(assembly.GetType("MyLib.Hidden"));
+            // internal 类型对外不可见（IsPublic=false，GetType 仅能取到、但不可作为公共 API）
+            var hidden = assembly.GetType("MyLib.Hidden");
+            Assert.NotNull(hidden);
+            Assert.False(hidden!.IsPublic, "internal 类型应为 NotPublic");
 
             // FindTypeInfo 同样不可见 internal 类型 + 不导出 internal/protected 成员
             var reader = new MetadataReader(new[] { path });
@@ -269,8 +271,9 @@ function Main()
             var appDiagnostics = appCompilation.Emit("hidden_app", emitRefs, appPath, IlTarget.Parse("net9.0"));
             Assert.Contains(appDiagnostics, d => d.Message.Contains(" undefined type") || d.Message.Contains("Hidden"));
         }
-    }
-}
+
+        [Fact]
+        public void Library_Inheritance_Property_Consumed_ViaReflection()
         {
             var libCode = @"
 public class Shape

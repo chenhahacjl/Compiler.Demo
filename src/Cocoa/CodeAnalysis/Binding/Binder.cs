@@ -92,20 +92,40 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 阶段 2：声明所有类壳（两阶段：类可前向引用基类）
+            // 阶段 2：声明所有类壳（部分类按全名分组合并为同一符号；两阶段：类可前向引用基类）
+            var classGroups = new List<(ClassTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)>();
+            var classByName = new Dictionary<string, List<(ClassDeclarationSyntax Syntax, string Namespace)>>();
+
             foreach (var (syntax, ns) in allClasses)
             {
-                binder.DeclareClassDeclaration(syntax, ns);
+                var fullName = ns.Length == 0 ? syntax.Identifier.Text : ns + "." + syntax.Identifier.Text;
+                if (!classByName.TryGetValue(fullName, out var parts))
+                {
+                    parts = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();
+                    classByName.Add(fullName, parts);
+                }
+
+                parts.Add((syntax, ns));
             }
 
-            // 阶段 3：绑定类成员（字段/方法/构造/基类）
-            foreach (var (syntax, ns) in allClasses)
+            foreach (var parts in classByName.Values)
             {
-                var classType = binder._scope.TryLookupSymbol(syntax.Identifier.Text) as ClassTypeSymbol;
-                if (classType != null)
+                classGroups.Add((binder.DeclareClassGroup(parts), parts));
+            }
+
+            // 阶段 3：绑定类成员（字段/方法/构造/基类）——部分类每个部分分别绑定，隐式默认构造在所有部分之后统一生成
+            foreach (var (classType, parts) in classGroups)
+            {
+                var primary = parts[0].Syntax;
+
+                for (var i = 0; i < parts.Count; i++)
                 {
+                    var (syntax, ns) = parts[i];
+                    binder.BindClassBase(syntax, classType);
                     binder.BindClassMembers(syntax, classType, classFunctions, ns);
                 }
+
+                binder.DeclareImplicitConstructor(classType, classFunctions, primary);
             }
 
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
@@ -446,29 +466,55 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private void DeclareClassDeclaration(ClassDeclarationSyntax syntax, string @namespace)
+        /// <summary>创建类符号；部分类（partial）的多段声明合并为同一符号（各段成员分别绑定）。</summary>
+        private ClassTypeSymbol DeclareClassGroup(List<(ClassDeclarationSyntax Syntax, string Namespace)> parts)
         {
-            var name = syntax.Identifier.Text;
-            var visibility = GetVisibility(syntax.Modifiers, Visibility.Internal);
+            var primary = parts[0];
+            var name = primary.Syntax.Identifier.Text;
+            var visibility = GetVisibility(primary.Syntax.Modifiers, Visibility.Internal);
 
-            if (visibility is Visibility.Private or Visibility.Protected)
+            if (parts.Count > 1)
             {
-                _diagnostics.ReportError(syntax.Identifier.Location, $"类 '{name}' 的可见性只能为 public 或 internal。");
+                for (var i = 1; i < parts.Count; i++)
+                {
+                    var part = parts[i];
+
+                    if (!part.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PartialKeyword))
+                    {
+                        _diagnostics.ReportSymbolAlreadyDeclared(part.Syntax.Identifier.Location, name);
+                    }
+
+                    var partVisibility = GetVisibility(part.Syntax.Modifiers, Visibility.Internal);
+                    if (partVisibility != visibility)
+                    {
+                        _diagnostics.ReportError(part.Syntax.Identifier.Location, $"部分类 '{name}' 的多个部分可见性不一致。");
+                    }
+                }
             }
 
-            var classType = new ClassTypeSymbol(name, @namespace, visibility, syntax);
-            classType.IsAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
-            classType.IsSealed = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword);
+            foreach (var (syntax, ns) in parts)
+            {
+                if (GetVisibility(syntax.Modifiers, Visibility.Internal) is Visibility.Private or Visibility.Protected)
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"类 '{name}' 的可见性只能为 public 或 internal。");
+                }
+            }
+
+            var classType = new ClassTypeSymbol(name, primary.Namespace, visibility, primary.Syntax);
+            classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword));
+            classType.IsSealed = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword));
 
             if (!_scope.TryDeclareClass(classType))
             {
-                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, name);
+                _diagnostics.ReportSymbolAlreadyDeclared(primary.Syntax.Identifier.Location, name);
             }
+
+            return classType;
         }
 
-        private void BindClassMembers(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
+        private void BindClassBase(ClassDeclarationSyntax syntax, ClassTypeSymbol classType)
         {
-            // 基类解析（`class Foo: Bar`）
+            // 基类解析（`class Foo: Bar`；部分类多段声明时基类必须一致）
             if (syntax.BaseType != null)
             {
                 var baseName = syntax.BaseType.Identifier.Text;
@@ -477,6 +523,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (baseType == null)
                 {
                     _diagnostics.ReportUndefinedType(syntax.BaseType.Location, baseName);
+                }
+                else if (classType.BaseType != null)
+                {
+                    if (classType.BaseType != baseType)
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"部分类 '{classType.Name}' 的多个部分声明的基类不一致。");
+                    }
                 }
                 else if (baseType.IsSealed)
                 {
@@ -505,9 +558,18 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                 }
             }
+        }
 
+        private void BindClassMembers(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
+        {
             foreach (var member in syntax.Members)
             {
+                if (member.Modifiers.Any(m => m.Kind == SyntaxKind.PartialKeyword))
+                {
+                    _diagnostics.ReportError(member.Location, "partial 只能用于类声明。");
+                    continue;
+                }
+
                 if (classType.IsStatic &&
                     (member is ClassFieldDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword) ||
                      member is FunctionDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword)))
@@ -566,8 +628,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     BindPropertyDeclaration(propertyDeclaration, classType, classFunctions);
                 }
             }
+        }
 
-            // 隐式默认构造：类未声明任何构造时生成无参构造
+        /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>
+        private void DeclareImplicitConstructor(ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
+        {
             if (classType.GetDeclaredMethod(classType.Name) == null)
             {
                 var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, visibility: Visibility.Public) { IsConstructor = true };
@@ -1235,6 +1300,20 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     var thisExpression = new BoundThisExpression(syntax, _currentClass);
                     return new BoundMemberAccessExpression(syntax, field.Type, thisExpression, name, field);
+                }
+
+                // 裸标识符可引用本类/基类属性（getter）
+                var property = _currentClass.GetProperty(name);
+                if (property != null && property.Getter != null)
+                {
+                    if (!IsAccessibleMember(property.Getter.Visibility, property.Getter.ContainingClass!))
+                    {
+                        _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, name, property.Getter.Visibility);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    var thisExpression = new BoundThisExpression(syntax, _currentClass);
+                    return new BoundMemberCallExpression(syntax, thisExpression, property.Getter.Name, ImmutableArray<BoundExpression>.Empty, property.Type, property.Getter);
                 }
             }
 
