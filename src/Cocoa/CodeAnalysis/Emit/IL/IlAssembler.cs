@@ -271,12 +271,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 _ => 0,
             };
 
-            var returnsValue = instruction.Operand switch
-            {
-                IlMethodRef methodRef => methodRef.ReturnType.Kind != IlTypeKind.Void,
-                IlMethodDef methodDef => methodDef.ReturnType.Kind != IlTypeKind.Void,
-                _ => false,
-            };
+            var returnsValue = instruction.OpCode.Value == 0x73 // Newobj：压入新对象实例（.ctor 返回 void 但压栈 1）
+                ? true
+                : instruction.Operand switch
+                {
+                    IlMethodRef methodRef => methodRef.ReturnType.Kind != IlTypeKind.Void,
+                    IlMethodDef methodDef => methodDef.ReturnType.Kind != IlTypeKind.Void,
+                    _ => false,
+                };
 
             var instanceCount = instruction.OpCode.Value == 0x6F ? 1 : 0; // Callvirt 额外弹 this
             return (returnsValue ? 1 : 0) - parameterCount - instanceCount;

@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
@@ -75,6 +76,13 @@ namespace Cocoa.Projects
             var cacheRoot = options.CacheRoot ?? BuildCache.GetDefaultCacheRoot(project.Directory);
             var cachePath = BuildCache.GetCachePath(cacheRoot, project.Directory, project.Name);
 
+            var dotnetRuntime = options.DotnetRuntimeOverride ?? project.DotnetRuntime ?? "net9.0";
+            if (dotnetRuntime != null && !IlTarget.TryParse(dotnetRuntime, out _))
+            {
+                messageWriter.WriteLine($"error: invalid dotnetRuntime '{dotnetRuntime}'. Expected e.g. net9.0 (netcore) or net40~net48 (netfx)");
+                return ProjectBuildResult.Failed;
+            }
+
             var optionTokens = new[]
             {
                 $"format={format}",
@@ -83,6 +91,7 @@ namespace Cocoa.Projects
                 $"debug={options.DebugOverride ?? project.Debug}",
                 $"output={outputFile}",
                 $"entry={project.Entry}",
+                $"dotnetRuntime={dotnetRuntime}",
             };
 
             var fingerprint = BuildCache.ComputeFingerprint(
@@ -111,11 +120,13 @@ namespace Cocoa.Projects
                 }
                 else
                 {
+                    var target = IlTarget.Parse(dotnetRuntime!);
                     var referencePaths = references.Count == 0
-                        ? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location }
+                        ? IlReferenceResolver.ResolveDefaultReferences(target)
+                            ?? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location }
                         : references.ToArray();
 
-                    diagnostics = compilation.Emit(project.Name, referencePaths, outputFile);
+                    diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target);
                 }
             }
             catch (NotSupportedException ex)

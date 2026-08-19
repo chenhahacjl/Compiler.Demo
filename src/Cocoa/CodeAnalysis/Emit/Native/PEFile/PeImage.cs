@@ -44,6 +44,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
         public ushort MinorOperatingSystemVersion { get; init; } = 0;
         public ushort MajorSubsystemVersion { get; init; } = 6;
         public ushort MinorSubsystemVersion { get; init; } = 0;
+        public ushort FileCharacteristicsOverride { get; init; } = 0;
     }
 
     /// <summary>PE 镜像组装器：DOS 头 + PE 签名 + COFF + 可选头 + 节表 + 各节 raw。</summary>
@@ -97,6 +98,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
             var sizeOfCode = 0u;
             var sizeOfInitializedData = 0u;
             uint lastSectionEnd = 0;
+            uint baseOfCode = 0;
+            uint baseOfData = 0;
             for (var i = 0; i < sections.Count; i++)
             {
                 var section = sections[i];
@@ -108,10 +111,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 
                 if ((section.Characteristics & PeSectionCharacteristics.CntCode) != 0)
                 {
+                    if (baseOfCode == 0) baseOfCode = section.VirtualAddress;
                     sizeOfCode += Align((uint)section.RawData.Length, config.FileAlignment);
                 }
                 else if ((section.Characteristics & PeSectionCharacteristics.CntInitializedData) != 0)
                 {
+                    if (baseOfData == 0) baseOfData = section.VirtualAddress;
                     sizeOfInitializedData += Align((uint)section.RawData.Length, config.FileAlignment);
                 }
             }
@@ -125,8 +130,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                     sizeOfInitializedData,
                     0,
                     config.AddressOfEntryPoint,
-                    0x1000,
-                    0x2000,
+                    baseOfCode,
+                    baseOfData,
                     (uint)config.ImageBase,
                     config.SectionAlignment,
                     config.FileAlignment,
@@ -189,7 +194,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 (ushort)sections.Count,
                 0, 0, 0,
                 (ushort)optionalHeaderSize,
-                (ushort)(PeFileCharacteristics.CurrentImage | additionalFileCharacteristics));
+                config.FileCharacteristicsOverride != 0
+                    ? config.FileCharacteristicsOverride
+                    : (ushort)(PeFileCharacteristics.CurrentImage | additionalFileCharacteristics));
             fileHeader.Write(headers.AsSpan(PeConstants.DosHeaderSize + DosStubSize + 4));
 
             headers[PeConstants.DosHeaderSize + DosStubSize] = 0x50; // 'P'

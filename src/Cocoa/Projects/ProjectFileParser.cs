@@ -15,6 +15,7 @@ namespace Cocoa.Projects
         public bool? Incremental { get; set; }
         public bool? Debug { get; set; }
         public string? OutputPath { get; set; }
+        public string? DotnetRuntime { get; set; }
     }
 
     public static class ProjectFileParser
@@ -22,12 +23,13 @@ namespace Cocoa.Projects
         public static CocoaProjectFile ParseProject(string text, string fileName)
         {
             var name = (string?)null;
-            var outputText = "exe";
+            var outputText = "executable";
             var platformText = "x64";
             var entry = (string?)null;
             var incremental = true;
             var debug = false;
             var outputPath = (string?)null;
+            var dotnetRuntime = (string?)null;
             var sources = new List<string>();
             var references = new List<string>();
             var imports = new List<string>();
@@ -78,6 +80,9 @@ namespace Cocoa.Projects
                             break;
                         case "entry":
                             entry = value;
+                            break;
+                        case "dotnetRuntime":
+                            dotnetRuntime = value;
                             break;
                     }
                 }
@@ -147,7 +152,8 @@ namespace Cocoa.Projects
                 imports.ToImmutableArray(),
                 incremental,
                 debug,
-                outputPath);
+                outputPath,
+                dotnetRuntime);
         }
 
         public static CocoaSolutionFile ParseSolution(string text, string fileName)
@@ -264,6 +270,9 @@ namespace Cocoa.Projects
                         case "entry":
                             overrides.Entry = value;
                             break;
+                        case "dotnetRuntime":
+                            overrides.DotnetRuntime = value;
+                            break;
                     }
                 }
                 else
@@ -298,10 +307,10 @@ namespace Cocoa.Projects
         {
             return text.ToLowerInvariant() switch
             {
-                "exe" => ProjectOutputFormat.Exe,
-                "dll" => ProjectOutputFormat.Dll,
-                "cod" => ProjectOutputFormat.Cod,
-                _ => throw new ProjectFileFormatException($"invalid output '{text}'. Expected: exe, dll, cod"),
+                "executable" => ProjectOutputFormat.Exe,
+                "library" => ProjectOutputFormat.Dll,
+                "cocoa" => ProjectOutputFormat.Cod,
+                _ => throw new ProjectFileFormatException($"invalid output '{text}'. Expected: executable, library, cocoa"),
             };
         }
 

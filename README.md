@@ -30,9 +30,9 @@ coc hello.co
 coc build -p samples/Tutorial/Tutorial.cosln
 coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 
-# 指定输出格式
-coc build -p foo.coproj -f dll
-coc build -p foo.coproj -f cod
+# 指定输出格式与 .NET 目标框架
+coc build -p foo.coproj -f library
+coc build -p foo.coproj --dotnet-runtime net8.0
 ```
 
 ## 文档

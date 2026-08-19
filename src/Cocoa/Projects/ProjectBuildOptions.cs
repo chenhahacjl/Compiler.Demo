@@ -10,7 +10,7 @@ namespace Cocoa.Projects
 
     public sealed class ProjectBuildOptions
     {
-        public const ProjectBackend DefaultBackend = ProjectBackend.Native;
+        public const ProjectBackend DefaultBackend = ProjectBackend.DotNet;
 
         public ProjectOutputFormat? FormatOverride { get; set; }
         public string? PlatformOverride { get; set; }
@@ -19,6 +19,7 @@ namespace Cocoa.Projects
         public string? OutputFileOverride { get; set; }
         public ImmutableArray<string> ReferenceOverrides { get; set; } = ImmutableArray<string>.Empty;
         public ProjectBackend? Backend { get; set; }
+        public string? DotnetRuntimeOverride { get; set; }
         public string? CacheRoot { get; set; }
     }
 

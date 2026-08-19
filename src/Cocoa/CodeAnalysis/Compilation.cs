@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Emit;
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -165,6 +166,9 @@ namespace Cocoa.CodeAnalysis
 
         // TODO: References should be part of the compilation, not arguments for Emit
         public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath)
+            => Emit(moduleName, references, outputPath, IlTarget.Default);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -176,7 +180,7 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            return Emitter.Emit(program, moduleName, references, outputPath);
+            return Emitter.Emit(program, moduleName, references, outputPath, target);
         }
 
         /// <summary>

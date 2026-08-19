@@ -1,4 +1,4 @@
-function run(args: string[]): int
+function run(args: string[])
 {
     print(add(20, 22))
     print(square(add(1, 2)))
@@ -13,8 +13,6 @@ function run(args: string[]): int
     {
         print(args[1])
     }
-
-    return 1
 }
 
 function main()

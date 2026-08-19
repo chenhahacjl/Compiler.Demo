@@ -62,7 +62,7 @@ function main()
     print(""hello "" + name)
 }");
 
-            var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -backend dotnet -o \"{outputPath}\"");
+            var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b dotnet -o \"{outputPath}\"");
             Assert.True(exitCode == 0, $"CLI failed with exit {exitCode}: {stderr}");
             Assert.Contains(outputPath, stdout);
             Assert.True(File.Exists(outputPath));
@@ -90,7 +90,7 @@ function main()
             var sourcePath = Path.Combine(dir, "cli-error.co");
             File.WriteAllText(sourcePath, "function main() { }");
 
-            var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -backend foo");
+            var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b foo");
             Assert.Equal(1, exitCode);
             Assert.Contains("unknown backend 'foo'", stderr);
         }

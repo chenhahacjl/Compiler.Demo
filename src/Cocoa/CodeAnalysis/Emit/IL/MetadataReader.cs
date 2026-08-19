@@ -134,6 +134,22 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public string Culture => _culture;
         public uint Flags => _flags;
 
+        public string DebugDump()
+        {
+            if (_data == null) return "no data";
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"tableRva={_tableRva} stringsRva={_stringsRva} blobRva={_blobRva} heapSizes=0x{_heapSizes:X2}");
+            sb.AppendLine($"valid=0x{_valid:X16}");
+            var assemblyOffset = _tableOffsets[0x20];
+            sb.AppendLine($"assemblyTableOffset={assemblyOffset}");
+            if (assemblyOffset >= 0 && assemblyOffset < _data.Length)
+            {
+                var row = _data.AsSpan(assemblyOffset, Math.Min(64, _data.Length - assemblyOffset));
+                sb.AppendLine($"assemblyRowBytes={BitConverter.ToString(row.ToArray())}");
+            }
+            return sb.ToString();
+        }
+
         internal AssemblyReader(string? path)
         {
             if (path == null)
@@ -307,9 +323,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 _flags = BitConverter.ToUInt32(data, (int)row + 12);
                 var pktSize = blobIsBig ? 4 : 2;
                 var strSize2 = stringIsBig ? 4 : 2;
-                _publicKeyOrToken = ReadBlob(ReadRef(data, row + 16, blobIsBig));
+                var publicKey = ReadBlob(ReadRef(data, row + 16, blobIsBig));
                 _assemblyName = ReadString(ReadRef(data, row + 16 + pktSize, stringIsBig));
                 _culture = ReadString(ReadRef(data, row + 16 + pktSize + strSize2, stringIsBig));
+
+                // AssemblyRef 需要 PublicKeyToken（Flags=0x0 表示 token；0x1 才是 full public key）。
+                // mscorlib 的 Assembly 表存 16 字节 ECMA 占位公钥（非真实 RSA 密钥），其 token 是固定 b77a5c561934e089；
+                // 真实强名程序集按 SHA1(publicKey) 末 8 字节倒序计算。
+                _publicKeyOrToken = ComputePublicKeyToken(publicKey, _flags);
+                // Flags 置 0（PublicKeyToken 语义）：AssemblyRef 的 PublicKeyOrToken 列在无 PublicKey 标志时按 token 解释
+                _flags = 0;
             }
 
             // 读取 AssemblyRef（表 0x23）——仅当无 Assembly 表时回退
@@ -348,17 +371,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             int B() => blobIsBig ? 4 : 2;
             int G() => (_heapSizes & 0x02) != 0 ? 4 : 2; // GUID 堆索引
             int L(int count) => count > 0xFFFF ? 4 : 2; // 表行号引用
-            int C(int tagBits, params int[] targets) // coded index：SUM(目标表行数) 超过 2^(16-tagBits) → 4 字节
+            int C(int tagBits, params int[] targets) // coded index：MAX(目标表行数) 超过 2^(16-tagBits) → 4 字节（ECMA-335 II.24.2.6）
             {
-                long total = 0;
+                long max = 0;
                 foreach (var tg in targets)
                 {
                     if (tg < 0) continue;
                     var c = RowCount(tg);
                     if (c == 0 && (tg == 0x00 || tg == 0x20)) c = 1; // Module/Assembly 恒有 1 行
-                    total += c;
+                    if (c > max) max = c;
                 }
-                return total > (1L << (16 - tagBits)) ? 4 : 2;
+                return max > (1L << (16 - tagBits)) ? 4 : 2;
             }
 
             var typeDefCount = RowCount(0x02);
@@ -426,6 +449,36 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         private static int AssemblyRefRowSize(bool stringIsBig, bool blobIsBig) => 8 + 4 + (blobIsBig ? 4 : 2) + 2 * (stringIsBig ? 4 : 2) + (blobIsBig ? 4 : 2);
+
+        /// <summary>
+        /// 由 Assembly 表的 PublicKey 计算 PublicKeyToken（AssemblyRef 使用）：
+        /// - ECMA 占位公钥（mscorlib，16 字节 000000000400000000000000）→ 固定 token b77a5c561934e089；
+        /// - 真实强名公钥 → SHA1(publicKey) 末 8 字节倒序（.NET 标准算法）。
+        /// </summary>
+        private static byte[] ComputePublicKeyToken(byte[] publicKey, uint assemblyFlags)
+        {
+            if (publicKey.Length == 0)
+            {
+                return Array.Empty<byte>();
+            }
+
+            // AssemblyFlags.PublicKey = 0x0001；PublicKeyToken = 0x0002
+            var ecmaPlaceholder = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0 };
+            if (publicKey.AsSpan().SequenceEqual(ecmaPlaceholder))
+            {
+                return new byte[] { 0xB7, 0x7A, 0x5C, 0x56, 0x19, 0x34, 0xE0, 0x89 };
+            }
+
+            using var sha1 = System.Security.Cryptography.SHA1.Create();
+            var hash = sha1.ComputeHash(publicKey);
+            var token = new byte[8];
+            for (var i = 0; i < 8; i++)
+            {
+                token[i] = hash[hash.Length - 1 - i];
+            }
+
+            return token;
+        }
 
         private int ReadRef(byte[] data, int pos, bool isBig) => isBig ? (int)BitConverter.ToUInt32(data, (int)pos) : BitConverter.ToUInt16(data, (int)pos);
 

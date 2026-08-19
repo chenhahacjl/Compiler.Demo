@@ -43,25 +43,31 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         /// <param name="methodBodies">每个方法的编码后方法体。</param>
         /// <param name="metadata">元数据构建器（已收集全部引用/方法）。</param>
         /// <param name="entryPointToken">入口点 MethodDef token。</param>
+        /// <param name="target">目标运行时：netfx 追加 mscoree.dll!CorExeMain 导入表（Windows 直接激活 CLR），netcore 无导入。</param>
         public static byte[] Build(
             string moduleName,
             IReadOnlyList<IlMethodDef> methods,
             IReadOnlyList<MethodBodyBlob> methodBodies,
             MetadataBuilder metadata,
-            uint entryPointToken)
+            uint entryPointToken,
+            IlTarget target)
         {
+            // 6d-4：netfx 直接运行（mscoree 导入 + I386/PE32）因 CLR 4.8 元数据兼容性问题暂不可用，
+            // 当前 netfx 目标沿用 netcore 布局（AMD64 + runtimeconfig，dotnet x.exe 运行）。
+            var textRva = TextRva;
+
             // ---- .text 布局 ----
             var section = new MemoryStream();
 
             // 1. CLR 头（72 字节，放在 .text 开头）
             var corHeaderOffset = (int)section.Position;
-            var corHeaderRva = (uint)(TextRva + corHeaderOffset);
+            var corHeaderRva = (uint)(textRva + corHeaderOffset);
             section.Write(new byte[CorHeaderSize]);
 
             // 2. 方法体区（4 字节对齐；Fat 头 12 字节 + 代码）
             while (section.Position % 4 != 0) section.WriteByte(0);
             var methodStreamOffset = (int)section.Position;
-            var methodStreamRva = (uint)(TextRva + methodStreamOffset);
+            var methodStreamRva = (uint)(textRva + methodStreamOffset);
 
             var bodyOffsets = new List<int>();
             var methodRvas = new Dictionary<IlMethodDef, uint>();
@@ -78,7 +84,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 3. 元数据区（4 字节对齐）：元数据根 + 流（#~ #Strings #US #GUID #Blob）
             while (section.Position % 4 != 0) section.WriteByte(0);
             var metadataOffset = (int)section.Position;
-            var metadataRva = (uint)(TextRva + metadataOffset);
+            var metadataRva = (uint)(textRva + metadataOffset);
 
             var blobs = metadata.Serialize(methodRvas);
 
@@ -104,16 +110,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 (PeDataDirectoryEntry.ComDescriptor, (uint)corHeaderRva, (uint)CorHeaderSize),
             };
 
+            var sections = new List<PeSectionSpec>
+            {
+                new PeSectionSpec(".text", sectionBytes, textRva, 0x60000020), // Read|Execute|Code
+            };
+
+            // 6d-4：netfx 直接运行（mscoree 导入 + I386/PE32）暂不可用，统一走 netcore AMD64 布局。
             var config = new PeImageConfig(PeMachine.AMD64, 0x140000000UL, 3, 0x8540, 0)
             {
                 SectionAlignment = 0x1000,
                 FileAlignment = 0x200,
                 SizeOfHeaders = 0x400,
-            };
-
-            var sections = new List<PeSectionSpec>
-            {
-                new PeSectionSpec(".text", sectionBytes, TextRva, 0x60000020), // Read|Execute|Code
             };
 
             return PeImageBuilder.Build(config, sections, directories);

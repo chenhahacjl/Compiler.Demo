@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.Projects;
 using System;
 using System.Collections.Generic;
@@ -19,6 +20,7 @@ namespace Cocoa.Compiler
             var debugRequested = false;
             var releaseRequested = false;
             var backendText = (string?)null;
+            var dotnetRuntimeText = (string?)null;
             var helpRequested = false;
 
             for (var i = 0; i < args.Length; i++)
@@ -36,6 +38,7 @@ namespace Cocoa.Compiler
                 switch (name)
                 {
                     case "-p":
+                    case "--path":
                         if (!TryTakeValue(args, ref i, inlineValue, out projectPath))
                         {
                             return 1;
@@ -43,6 +46,7 @@ namespace Cocoa.Compiler
 
                         break;
                     case "-f":
+                    case "--format":
                         if (!TryTakeValue(args, ref i, inlineValue, out formatText))
                         {
                             return 1;
@@ -57,6 +61,7 @@ namespace Cocoa.Compiler
 
                         break;
                     case "-o":
+                    case "--output":
                         if (!TryTakeValue(args, ref i, inlineValue, out outputFile))
                         {
                             return 1;
@@ -64,6 +69,7 @@ namespace Cocoa.Compiler
 
                         break;
                     case "-r":
+                    case "--reference":
                         if (!TryTakeValue(args, ref i, inlineValue, out var reference))
                         {
                             return 1;
@@ -71,8 +77,16 @@ namespace Cocoa.Compiler
 
                         referencePaths.Add(reference);
                         break;
-                    case "-backend":
+                    case "-b":
+                    case "--backend":
                         if (!TryTakeValue(args, ref i, inlineValue, out backendText))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "--dotnet-runtime":
+                        if (!TryTakeValue(args, ref i, inlineValue, out dotnetRuntimeText))
                         {
                             return 1;
                         }
@@ -133,15 +147,15 @@ namespace Cocoa.Compiler
             {
                 format = formatText.ToLowerInvariant() switch
                 {
-                    "exe" => ProjectOutputFormat.Exe,
-                    "dll" => ProjectOutputFormat.Dll,
-                    "cod" => ProjectOutputFormat.Cod,
+                    "executable" => ProjectOutputFormat.Exe,
+                    "library" => ProjectOutputFormat.Dll,
+                    "cocoa" => ProjectOutputFormat.Cod,
                     _ => null,
                 };
 
                 if (format == null)
                 {
-                    Console.Error.WriteLine($"error: invalid format '{formatText}'. Expected: exe, dll, cod");
+                    Console.Error.WriteLine($"error: invalid format '{formatText}'. Expected: executable, library, cocoa");
                     return 1;
                 }
             }
@@ -155,14 +169,20 @@ namespace Cocoa.Compiler
 
             var backend = backendText switch
             {
-                null => ProjectBackend.Native,
-                "native" => ProjectBackend.Native,
+                null => ProjectBackend.DotNet,
                 "dotnet" => ProjectBackend.DotNet,
+                "native" => ProjectBackend.Native,
                 _ => (ProjectBackend?)null,
             };
             if (backend == null)
             {
                 Console.Error.WriteLine($"error: unknown backend '{backendText}'. Supported backends: dotnet, native");
+                return 1;
+            }
+
+            if (dotnetRuntimeText != null && !IlTarget.TryParse(dotnetRuntimeText, out _))
+            {
+                Console.Error.WriteLine($"error: invalid target framework '{dotnetRuntimeText}'. Expected e.g. net9.0 (netcore) or net40~net48 (netfx)");
                 return 1;
             }
 
@@ -181,6 +201,7 @@ namespace Cocoa.Compiler
                 OutputFileOverride = outputFile,
                 ReferenceOverrides = referencePaths.ToImmutableArray(),
                 Backend = backend.Value,
+                DotnetRuntimeOverride = dotnetRuntimeText,
             };
 
             try
@@ -243,11 +264,12 @@ namespace Cocoa.Compiler
             Console.WriteLine();
             Console.WriteLine("options:");
             Console.WriteLine("  -p <path>          The path to a .coproj or .cosln file");
-            Console.WriteLine("  -f <format>        The output format: exe (default), dll, cod");
+            Console.WriteLine("  -f <format>        The output format: executable (default), library, cocoa");
             Console.WriteLine("  --platform <arch>  The native target platform: x86 or x64 (default: project setting)");
             Console.WriteLine("  -o <path>          The output file path");
             Console.WriteLine("  -r <path>          The path of a reference to add (can be repeated)");
-            Console.WriteLine("  -backend <name>    The code generation backend: native (default) or dotnet");
+            Console.WriteLine("  -b <name>          The code generation backend: dotnet (default) or native");
+            Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net9.0 (default) or net40~net48. Only used with -b dotnet");
             Console.WriteLine("  --no-incremental   Force a full rebuild");
             Console.WriteLine("  --debug / --release  Build mode (default: project setting / release)");
             Console.WriteLine("  -?, -h, --help     Prints help");

@@ -1,5 +1,5 @@
 name = Arrays
-output = exe
+output = executable
 platform = x64
 
 [sources]

@@ -164,7 +164,7 @@ namespace Cocoa.Tests.Compiler
             var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
             CopyDirectory(FindTutorialDir(), runDir);
 
-            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\"" + (string.IsNullOrEmpty(backend) ? "" : " -backend " + backend);
+            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\" -b {backend}";
             var first = RunCli(arg);
             Assert.True(first.ExitCode == 0, $"first build failed: {first.Stdout}{first.Stderr}");
 
@@ -178,7 +178,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Tutorial_Native_AllBlocks_BuildAndRun()
         {
-            var runDir = Build(backend: "");
+            var runDir = Build(backend: "native");
             AssertBlocks(RunNative, runDir);
             AssertFunctionsEntry(RunNative, runDir);
         }

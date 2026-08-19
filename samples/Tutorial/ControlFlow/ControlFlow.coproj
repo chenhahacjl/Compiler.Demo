@@ -1,5 +1,5 @@
 name = ControlFlow
-output = exe
+output = executable
 platform = x64
 
 [sources]

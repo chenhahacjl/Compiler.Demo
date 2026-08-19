@@ -28,7 +28,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
                 }
             }
 
-            return ManagedPEWriter.Build("test", withBodies, bodies, metadata, 0);
+            return ManagedPEWriter.Build("test", withBodies, bodies, metadata, 0, IlTarget.Default);
         }
 
         private static byte[] GetMetadataRoot(byte[] pe)

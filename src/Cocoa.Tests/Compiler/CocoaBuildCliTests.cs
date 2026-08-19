@@ -58,7 +58,7 @@ namespace Cocoa.Tests.Compiler
             File.WriteAllText(Path.Combine(directory, projectName + ".co"), source);
             File.WriteAllText(Path.Combine(directory, projectName + ".coproj"), $@"
 name = {projectName}
-output = exe
+output = executable
 platform = x64
 
 [sources]
@@ -76,7 +76,7 @@ platform = x64
                 "App",
                 "function add(a: int, b: int): int { return a + b }\n\nfunction main()\n{\n    print(add(20, 22))\n}\n");
 
-            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
+            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native");
             Assert.True(exitCode == 0, $"build failed: {stderr}");
 
             var outputFile = stdout.Trim();
@@ -90,11 +90,11 @@ platform = x64
         {
             var projectPath = CreateProject("incremental", "App", "function main() { print(1) }");
 
-            var first = Run($"build \"{projectPath}\"");
+            var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
             Assert.DoesNotContain("up to date", first.Stdout);
 
-            var second = Run($"build \"{projectPath}\"");
+            var second = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, second.ExitCode);
             Assert.Contains("'App' is up to date", second.Stdout);
         }
@@ -104,13 +104,13 @@ platform = x64
         {
             var projectPath = CreateProject("invalidate", "App", "function main() { print(1) }");
 
-            var first = Run($"build \"{projectPath}\"");
+            var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
 
             var sourcePath = Path.Combine(Path.GetDirectoryName(projectPath)!, "App.co");
             File.WriteAllText(sourcePath, "function main() { print(2) }");
 
-            var second = Run($"build \"{projectPath}\"");
+            var second = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, second.ExitCode);
             Assert.DoesNotContain("up to date", second.Stdout);
 
@@ -123,10 +123,10 @@ platform = x64
         {
             var projectPath = CreateProject("no-incremental", "App", "function main() { print(1) }");
 
-            var first = Run($"build \"{projectPath}\"");
+            var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
 
-            var second = Run($"build \"{projectPath}\" --no-incremental");
+            var second = Run($"build \"{projectPath}\" -b native --no-incremental");
             Assert.Equal(0, second.ExitCode);
             Assert.DoesNotContain("up to date", second.Stdout);
         }
@@ -137,7 +137,7 @@ platform = x64
             var projectPath = CreateProject("output-override", "App", "function main() { }");
             var overrideFile = Path.Combine(Path.GetDirectoryName(projectPath)!, "renamed.exe");
 
-            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -o \"{overrideFile}\"");
+            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native -o \"{overrideFile}\"");
             Assert.True(exitCode == 0, $"build failed: {stderr}");
             Assert.True(File.Exists(overrideFile));
         }
@@ -196,7 +196,7 @@ App/App.coproj
                 var projectDir = Path.Combine(dir, name);
                 File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"
 name = {name}
-output = cod
+output = cocoa
 
 [sources]
 *.co
@@ -222,7 +222,7 @@ output = cod
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "function main() { }");
             var projectPath = Path.Combine(dir, "Lib.coproj");
-            File.WriteAllText(projectPath, "name = Lib\noutput = cod\n\n[sources]\n*.co\n");
+            File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(1, exitCode);

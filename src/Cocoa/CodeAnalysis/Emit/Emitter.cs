@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly IlMethodRef _stringCharsReference;
         private readonly IlMethodRef _stringLengthReference;
         private readonly IlMethodRef _stringSubstringReference;
-        private readonly IlMethodRef _randomGetSharedReference;
+        private readonly IlMethodRef _randomCtorReference;
         private readonly IlMethodRef _randomNextReference;
         private readonly IlMethodRef _debuggableAttributeCtorReference;
 
@@ -69,7 +69,7 @@ namespace Cocoa.CodeAnalysis.Emit
             _stringCharsReference = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
             _stringLengthReference = RequireMethod("System.String", "get_Length", System.Array.Empty<string>());
             _stringSubstringReference = RequireMethod("System.String", "Substring", new[] { "System.Int32", "System.Int32" });
-            _randomGetSharedReference = RequireMethod("System.Random", "get_Shared", System.Array.Empty<string>());
+            _randomCtorReference = RequireMethod("System.Random", ".ctor", System.Array.Empty<string>());
             _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
             _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
 
@@ -78,6 +78,9 @@ namespace Cocoa.CodeAnalysis.Emit
         }
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
+            => Emit(program, moduleName, references, outputPath, IlTarget.Default);
+
+        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target)
         {
             if (program.Diagnostics.HasErrors())
             {
@@ -86,10 +89,13 @@ namespace Cocoa.CodeAnalysis.Emit
 
             var emitter = new Emitter(moduleName, references);
 
-            return emitter.Emit(program, outputPath);
+            return emitter.Emit(program, outputPath, target);
         }
 
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
+            => Emit(program, outputPath, IlTarget.Default);
+
+        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target)
         {
             _entryFunction = program.MainFunction;
 
@@ -118,29 +124,22 @@ namespace Cocoa.CodeAnalysis.Emit
             _metadata.AddCustomAttribute(new IlCustomAttribute(_debuggableAttributeCtorReference, MetadataBuilder.EncodeDebuggableAttributeBlob()));
 
             var entryPointToken = program.MainFunction == null ? 0 : _metadata.BuildTokenMap()[_methods[program.MainFunction]];
-            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken);
+            var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target);
 
             File.WriteAllBytes(outputPath, pe);
-            WriteRuntimeConfig(outputPath);
+            if (target.Runtime == IlRuntime.NetCore)
+            {
+                WriteRuntimeConfig(outputPath, target);
+            }
 
             return ImmutableArray<Diagnostic>.Empty;
         }
 
-        /// <summary>framework-dependent 运行所需的 runtimeconfig.json。</summary>
-        private static void WriteRuntimeConfig(string outputPath)
+        /// <summary>framework-dependent 运行所需的 runtimeconfig.json（仅 netcore）。</summary>
+        private static void WriteRuntimeConfig(string outputPath, IlTarget target)
         {
             var runtimeConfigPath = Path.ChangeExtension(outputPath, ".runtimeconfig.json");
-            var json =
-                "{\n" +
-                "  \"runtimeOptions\": {\n" +
-                "    \"tfm\": \"net9.0\",\n" +
-                "    \"framework\": {\n" +
-                "      \"name\": \"Microsoft.NETCore.App\",\n" +
-                "      \"version\": \"9.0.0\"\n" +
-                "    }\n" +
-                "  }\n" +
-                "}\n";
-            File.WriteAllText(runtimeConfigPath, json);
+            File.WriteAllText(runtimeConfigPath, target.GetRuntimeConfigJson());
         }
 
         private void EmitFunctionDeclaration(FunctionSymbol function)
@@ -793,7 +792,8 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             if (node.Function == BuiltinFunctions.Random)
             {
-                il.Emit(IlOpCodes.Get("Call"), _randomGetSharedReference);
+                // 6d-4：Random.get_Shared 是 .NET 6+ API，mscorlib 没有；改用 new Random() 双运行时兼容。
+                il.Emit(IlOpCodes.Get("Newobj"), _randomCtorReference);
                 foreach (var argument in node.Arguments)
                 {
                     EmitExpression(il, argument);

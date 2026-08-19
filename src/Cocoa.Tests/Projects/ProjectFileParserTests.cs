@@ -14,7 +14,7 @@ namespace Cocoa.Tests.Projects
             var text = @"
 # 项目属性
 name = MyApp
-output = exe
+output = executable
 platform = x64
 entry = main
 
@@ -64,7 +64,7 @@ outputPath = bin
         [Fact]
         public void ParseProject_NoSuffix_TopLevelUsesCasedValue()
         {
-            var project = ProjectFileParser.ParseProject("output = DLL\n[sources]\n*.co", "x.coproj");
+            var project = ProjectFileParser.ParseProject("output = LIBRARY\n[sources]\n*.co", "x.coproj");
 
             Assert.Equal(ProjectOutputFormat.Dll, project.Output);
         }
@@ -194,7 +194,7 @@ src/App/App.coproj
         {
             var text = @"
 name = MyLocal
-output = dll
+output = library
 platform = x86
 entry = run
 
@@ -282,7 +282,7 @@ anything = goes
         public void Load_MergesUserFileWhenPresent()
         {
             var projectPath = Path.Combine(_directory, "App.coproj");
-            File.WriteAllText(projectPath, "name = App\noutput = exe\nplatform = x64\n\n[sources]\n*.co\n");
+            File.WriteAllText(projectPath, "name = App\noutput = executable\nplatform = x64\n\n[sources]\n*.co\n");
             File.WriteAllText(projectPath + ".user", "platform = x86\n\n[options]\nincremental = false\noutputPath = local-bin\n");
 
             var project = CocoaProjectFile.Load(projectPath);

@@ -91,9 +91,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _moduleName = moduleName;
             _assemblyName = assemblyName;
 
+            // 索引 0 预置为空条目：GetOrAddString("")/GetOrAddBlob(empty) 必须返回 0，
+            // 否则 AssemblyRef 的 Culture/HashValue 会指向非空堆条目，CLR 4.8 拒绝加载。
             _stringHeap.Add(0);
+            _strings.Add("", 0);
             _usHeap.Add(0);
             _blobHeap.Add(0);
+            _blobs.Add(new BlobKey(Array.Empty<byte>()), 0);
         }
 
         // ------------------------------------------------------------------
@@ -107,6 +111,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 _assemblyRefIndex.Add(reference, _assemblyRefs.Count + 1);
                 _assemblyRefs.Add(reference);
+                // 预置 pkt blob：让 AssemblyRef 的 PublicKeyOrToken 位于 blob 堆前部（与 csc 布局一致）
+                GetOrAddBlob(publicKeyOrToken);
             }
 
             return reference;

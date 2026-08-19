@@ -30,7 +30,8 @@ namespace Cocoa.Projects
             ImmutableArray<string> imports,
             bool incremental,
             bool debug,
-            string? outputPath)
+            string? outputPath,
+            string? dotnetRuntime)
         {
             FilePath = Path.GetFullPath(filePath);
             Directory = Path.GetDirectoryName(FilePath) ?? ".";
@@ -44,6 +45,7 @@ namespace Cocoa.Projects
             Incremental = incremental;
             Debug = debug;
             OutputPath = outputPath;
+            DotnetRuntime = dotnetRuntime;
         }
 
         public string FilePath { get; }
@@ -58,6 +60,7 @@ namespace Cocoa.Projects
         public bool Incremental { get; }
         public bool Debug { get; }
         public string? OutputPath { get; }
+        public string? DotnetRuntime { get; }
 
         public static CocoaProjectFile Load(string path)
         {
@@ -82,7 +85,8 @@ namespace Cocoa.Projects
                 project.Imports,
                 overrides.Incremental ?? project.Incremental,
                 overrides.Debug ?? project.Debug,
-                overrides.OutputPath ?? project.OutputPath);
+                overrides.OutputPath ?? project.OutputPath,
+                overrides.DotnetRuntime ?? project.DotnetRuntime);
         }
 
         /// <summary>解析输出目录（相对项目文件目录），未配置时默认项目目录。</summary>

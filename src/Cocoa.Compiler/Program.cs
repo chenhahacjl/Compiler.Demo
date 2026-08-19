@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
@@ -18,7 +19,8 @@ namespace Cocoa.Compiler
             var outputPath = (string?)null;
             var moduleName = (string?)null;
             var backendText = (string?)null;
-            var targetText = (string?)null;
+            var platformText = (string?)null;
+            var dotnetRuntimeText = (string?)null;
             var referencePaths = new List<string>();
             var sourcePaths = new List<string>();
             var helpRequested = false;
@@ -54,23 +56,30 @@ namespace Cocoa.Compiler
                         }
 
                         break;
-                    case "-m":
-                    case "--module":
+                    case "--dotnet-module":
                         if (!TryTakeValue(args, ref i, inlineValue, out moduleName))
                         {
                             return 1;
                         }
 
                         break;
-                    case "-backend":
+                    case "-b":
+                    case "--backend":
                         if (!TryTakeValue(args, ref i, inlineValue, out backendText))
                         {
                             return 1;
                         }
 
                         break;
-                    case "-target":
-                        if (!TryTakeValue(args, ref i, inlineValue, out targetText))
+                    case "--platform":
+                        if (!TryTakeValue(args, ref i, inlineValue, out platformText))
+                        {
+                            return 1;
+                        }
+
+                        break;
+                    case "--dotnet-runtime":
+                        if (!TryTakeValue(args, ref i, inlineValue, out dotnetRuntimeText))
                         {
                             return 1;
                         }
@@ -112,18 +121,28 @@ namespace Cocoa.Compiler
                 return 1;
             }
 
-            var target = TargetPlatform.Default;
-            if (targetText != null)
+            var platform = ParsePlatform(platformText) ?? Architecture.X64;
+            if (platformText != null && ParsePlatform(platformText) == null)
             {
-                if (!TargetPlatform.TryParse(targetText, out target))
+                Console.Error.WriteLine($"error: invalid platform '{platformText}'. Expected: x86, x64");
+                return 1;
+            }
+
+            IlTarget? target = null;
+            if (dotnetRuntimeText != null)
+            {
+                if (!IlTarget.TryParse(dotnetRuntimeText, out var parsed))
                 {
-                    Console.Error.WriteLine($"error: unknown target '{targetText}'. Supported targets: {TargetPlatform.SupportedTargets}");
+                    Console.Error.WriteLine($"error: invalid target framework '{dotnetRuntimeText}'. Expected e.g. net9.0 (netcore) or net40~net48 (netfx)");
                     return 1;
                 }
 
-                if (backend != CodeBackend.Native)
+                target = parsed;
+
+                if (backend != CodeBackend.DotNet)
                 {
-                    Console.Error.WriteLine("warning: -target is only used with -backend native and was ignored");
+                    Console.Error.WriteLine("warning: --dotnet-runtime is only used with -b dotnet and was ignored");
+                    target = null;
                 }
             }
 
@@ -170,18 +189,28 @@ namespace Cocoa.Compiler
 
             var compilation = Compilation.Create(syntaxTrees.ToArray());
 
+            var effectiveTarget = target ?? IlTarget.Default;
+
             if (referencePaths.Count == 0)
             {
-                referencePaths.Add(typeof(object).Assembly.Location);
-                referencePaths.Add(typeof(System.Console).Assembly.Location);
+                var resolved = IlReferenceResolver.ResolveDefaultReferences(effectiveTarget);
+                if (resolved != null)
+                {
+                    referencePaths.AddRange(resolved);
+                }
+                else
+                {
+                    referencePaths.Add(typeof(object).Assembly.Location);
+                    referencePaths.Add(typeof(System.Console).Assembly.Location);
+                }
             }
 
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
                 diagnostics = backend == CodeBackend.Native
-                    ? compilation.EmitNative(moduleName, outputPath, target)
-                    : compilation.Emit(moduleName, referencePaths.ToArray(), outputPath);
+                    ? compilation.EmitNative(moduleName, outputPath, new TargetPlatform(TargetOS.Windows, platform))
+                    : compilation.Emit(moduleName, referencePaths.ToArray(), outputPath, effectiveTarget);
             }
             catch (NotSupportedException ex)
             {
@@ -232,6 +261,21 @@ namespace Cocoa.Compiler
             };
         }
 
+        private static Architecture? ParsePlatform(string? text)
+        {
+            if (text == null)
+            {
+                return Architecture.X64;
+            }
+
+            return text.ToLowerInvariant() switch
+            {
+                "x64" or "amd64" => Architecture.X64,
+                "x86" or "i386" => Architecture.X86,
+                _ => null,
+            };
+        }
+
         private static void PrintHelp()
         {
             Console.WriteLine("usage: coc build <project-or-solution> [options]");
@@ -241,12 +285,13 @@ namespace Cocoa.Compiler
             Console.WriteLine("  build              Builds a .coproj project or .cosln solution (see 'coc build -h')");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -r <path>        The path of an assembly to reference");
-            Console.WriteLine("  -o <path>        The output path of the assembly to create");
-            Console.WriteLine("  -m <name>        The name of the module");
-            Console.WriteLine("  -backend <name>  The code generation backend: dotnet (default) or native");
-            Console.WriteLine("  -target <name>   The native target platform, e.g. windows-x64 (default). Only used with -backend native");
-            Console.WriteLine("  -?, -h, --help   Prints help");
+            Console.WriteLine("  -r <path>          The path of an assembly to reference");
+            Console.WriteLine("  -o <path>          The output path of the assembly to create");
+            Console.WriteLine("  -b <name>          The code generation backend: dotnet (default) or native");
+            Console.WriteLine("  --platform <arch>  The native target architecture: x86 or x64 (default x64). Only used with -b native");
+            Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net9.0 (default) or net40~net48. Only used with -b dotnet");
+            Console.WriteLine("  --dotnet-module <name>  The module name (dotnet backend only; defaults to the output file name)");
+            Console.WriteLine("  -?, -h, --help     Prints help");
         }
     }
 }

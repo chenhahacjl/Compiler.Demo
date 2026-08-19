@@ -1,5 +1,5 @@
 name = Interop
-output = exe
+output = executable
 platform = x64
 
 [sources]
