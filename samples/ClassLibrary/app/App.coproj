@@ -1,0 +1,14 @@
+name = App
+output = executable
+platform = x64
+entry = Main
+dotnetRuntime = net9.0
+
+[sources]
+*.co
+
+[references]
+../mylib/out/MyLib.dll
+
+[options]
+outputPath = out

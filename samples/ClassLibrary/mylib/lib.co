@@ -1,0 +1,29 @@
+namespace MyLib
+{
+    public class Point
+    {
+        private _x: int
+        private _y: int
+
+        public constructor(x: int, y: int)
+        {
+            _x = x
+            _y = y
+        }
+
+        public function X(): int
+        {
+            return _x
+        }
+
+        public function Y(): int
+        {
+            return _y
+        }
+
+        public function Area(): int
+        {
+            return _x * _y
+        }
+    }
+}

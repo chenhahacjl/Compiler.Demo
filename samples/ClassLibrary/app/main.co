@@ -1,0 +1,9 @@
+using MyLib
+
+function Main()
+{
+    var p = new Point(3, 4)
+    print(p.X())
+    print(p.Y())
+    print(p.Area())
+}

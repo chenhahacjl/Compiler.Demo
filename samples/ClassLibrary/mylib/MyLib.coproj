@@ -1,0 +1,10 @@
+name = MyLib
+output = library
+platform = x64
+dotnetRuntime = net9.0
+
+[sources]
+*.co
+
+[options]
+outputPath = out

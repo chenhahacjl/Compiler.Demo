@@ -35,6 +35,10 @@ coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 coc build -p foo.coproj -f library
 coc build -p foo.coproj --dotnet-runtime net8.0
 
+# 类库（dll）→ 消费：写 `using MyLib` + 引用库
+coc build -p mylib.coproj -f library
+coc build -p app.coproj -r out/mylib.dll
+
 # netfx：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
 coc build -p foo.coproj --dotnet-runtime net40
 ./foo.exe
@@ -46,6 +50,7 @@ coc build -p foo.coproj --dotnet-runtime net40
 |------|------|
 | [`docs/语法手册.md`](docs/语法手册.md) | Cocoa 语言语法参考（状态标记：✅ 已实现 · 🔧 设计中 · 📋 待实现） |
 | [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`coc build` 子命令、构建选项、增量构建） |
+| [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/.NET dll/跨程序集消费/native 后置） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 库格式、增量哈希 |
 | [`docs/实现目标.md`](docs/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs/开发计划.md`](docs/开发计划.md) | 阶段 0-9 路线图与里程碑 |
