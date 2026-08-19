@@ -70,6 +70,7 @@ namespace Cocoa.Projects
                 OutputFileOverride = options.OutputFileOverride,
                 ReferenceOverrides = options.ReferenceOverrides,
                 Backend = options.Backend,
+                DotnetRuntimeOverride = options.DotnetRuntimeOverride,
                 CacheRoot = BuildCache.GetDefaultCacheRoot(anchorDirectory),
             };
         }

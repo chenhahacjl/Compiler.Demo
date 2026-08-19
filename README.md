@@ -33,6 +33,10 @@ coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 # 指定输出格式与 .NET 目标框架
 coc build -p foo.coproj -f library
 coc build -p foo.coproj --dotnet-runtime net8.0
+
+# netfx：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
+coc build -p foo.coproj --dotnet-runtime net40
+./foo.exe
 ```
 
 ## 文档

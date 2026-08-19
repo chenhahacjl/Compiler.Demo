@@ -127,10 +127,11 @@ namespace Cocoa.CodeAnalysis.Emit
             var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target);
 
             File.WriteAllBytes(outputPath, pe);
-            // 6d-4：netfx 目前回退 netcore 行为（corelib 引用 + AMD64），故始终写 runtimeconfig；
-            // netfx 用 netcore 默认（net9.0）。待 netfx 直接运行（mscoree）实现后，netfx 不再写 runtimeconfig。
-            var runtimeTarget = target.Runtime == IlRuntime.NetCore ? target : IlTarget.Default;
-            WriteRuntimeConfig(outputPath, runtimeTarget);
+            // netfx 直接运行（mscoree 导入，Windows 激活 CLR）不写 runtimeconfig；netcore 写。
+            if (target.Runtime == IlRuntime.NetCore)
+            {
+                WriteRuntimeConfig(outputPath, target);
+            }
 
             return ImmutableArray<Diagnostic>.Empty;
         }

@@ -480,7 +480,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (assemblyRefCount > 0) SetValid(0x23); // AssemblyRef
             writer.Write(valid);
 
-            var sorted = (1UL << 0x0C) | (1UL << 0x1C); // CustomAttribute | ImplMap（ECMA-335 II.24.2.6）
+            // Sorted bitmask（ECMA-335 II.24.2.6）：标记「要求排序」的表。取值与 ilasm/csc 一致
+            // （0x000016003325FA00）。CLR 4.8 对带 native 导入（mscoree）的镜像校验该位掩码。
+            const ulong sorted = 0x000016003325FA00UL;
             writer.Write(sorted);
 
             void WriteRowCount(int count) { if (count > 0) writer.Write((uint)count); }

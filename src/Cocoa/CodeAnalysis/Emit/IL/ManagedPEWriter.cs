@@ -52,14 +52,24 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             uint entryPointToken,
             IlTarget target)
         {
-            // 6d-4：netfx 直接运行（mscoree 导入 + I386/PE32）因 CLR 4.8 元数据兼容性问题暂不可用，
-            // 当前 netfx 目标沿用 netcore 布局（AMD64 + runtimeconfig，dotnet x.exe 运行）。
-            var textRva = TextRva;
+            // 6d-4：netfx（I386/PE32，AnyCPU）用 csc 同款节对齐 0x2000、.text 起始 0x2000；
+            // netcore（AMD64）保持 0x1000/.text 0x1000。
+            var textRva = target.IsNetFx ? 0x2000u : TextRva;
 
             // ---- .text 布局 ----
             var section = new MemoryStream();
 
-            // 1. CLR 头（72 字节，放在 .text 开头）
+            // netfx：IAT 槽数组前置 .text（RVA 0x2000，csc 同款——描述符 FirstThunk 指向此处）。
+            var iatOffsetInText = -1;
+            var iatSlotRva = 0u;
+            if (target.IsNetFx)
+            {
+                iatOffsetInText = (int)section.Position;
+                iatSlotRva = (uint)(textRva + iatOffsetInText);
+                section.Write(new byte[2 * ImageThunkData32.SizeOfEntry]); // 1 槽 + null 终止
+            }
+
+            // 1. CLR 头（72 字节，放在 .text 开头；netfx 在 IAT 之后）
             var corHeaderOffset = (int)section.Position;
             var corHeaderRva = (uint)(textRva + corHeaderOffset);
             section.Write(new byte[CorHeaderSize]);
@@ -115,15 +125,135 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 new PeSectionSpec(".text", sectionBytes, textRva, 0x60000020), // Read|Execute|Code
             };
 
-            // 6d-4：netfx 直接运行（mscoree 导入 + I386/PE32）暂不可用，统一走 netcore AMD64 布局。
-            var config = new PeImageConfig(PeMachine.AMD64, 0x140000000UL, 3, 0x8540, 0)
+            var pe32 = target.IsNetFx;
+            var addressOfEntryPoint = 0u;
+            if (target.IsNetFx)
             {
-                SectionAlignment = 0x1000,
-                FileAlignment = 0x200,
-                SizeOfHeaders = 0x400,
-            };
+                // netfx：导入表（描述符+INT+hint/name）内嵌 .text（csc 同款），IAT 槽前置 .text（外部 IAT）。
+                var blobBaseRva = (uint)(textRva + sectionBytes.Length);
+                var importLayout = BuildMscoreeImport(blobBaseRva, iatSlotRva);
 
-            return PeImageBuilder.Build(config, sections, directories);
+                // 入口 stub：FF 25 <u32> = jmp dword ptr [u32]（跳 IAT 槽，加载器已填 _CorExeMain）
+                var stubTarget = 0x400000u + iatSlotRva;
+                var stub = new byte[] { 0xFF, 0x25,
+                    (byte)stubTarget, (byte)(stubTarget >> 8), (byte)(stubTarget >> 16), (byte)(stubTarget >> 24) };
+
+                var newText = new byte[sectionBytes.Length + importLayout.Blob.Length + stub.Length];
+                Array.Copy(sectionBytes, newText, sectionBytes.Length);
+                Array.Copy(importLayout.Blob, 0, newText, sectionBytes.Length, importLayout.Blob.Length);
+                Array.Copy(stub, 0, newText, sectionBytes.Length + importLayout.Blob.Length, stub.Length);
+                sections[0] = new PeSectionSpec(".text", newText, textRva, 0x60000020);
+                addressOfEntryPoint = (uint)(blobBaseRva + importLayout.Blob.Length);
+
+                // IAT 槽磁盘初值 = hint/name RVA（6c-2 fake-IAT：槽不能留零）
+                var iatSlotValue = blobBaseRva + importLayout.HintNameRva;
+                WriteUInt32(newText, iatOffsetInText, (int)iatSlotValue);
+
+                directories.Add((PeDataDirectoryEntry.Import, importLayout.ImportRva, importLayout.ImportSize));
+                directories.Add((PeDataDirectoryEntry.Iat, iatSlotRva, (uint)(2 * ImageThunkData32.SizeOfEntry)));
+
+                // .reloc：stub 的 jmp 操作数（64 位 AnyCPU 进程 FF 25 按 RIP 相对解码）需 HIGHLOW 重定位
+                AppendReloc(sections, directories, addressOfEntryPoint + 2);
+            }
+
+            var config = pe32
+                // 6d-4 netfx：csc 同款布局（节对齐 0x2000、OS/子系统 4.0、SizeOfHeaders 0x200）；
+                // ASLR（0x8540）开，.reloc 节已提供重定位。
+                ? new PeImageConfig(PeMachine.I386, 0x400000UL, 3, 0x8540, addressOfEntryPoint)
+                {
+                    SectionAlignment = 0x2000,
+                    FileAlignment = 0x200,
+                    SizeOfHeaders = 0x200,
+                    MajorOperatingSystemVersion = 4,
+                    MinorOperatingSystemVersion = 0,
+                    MajorSubsystemVersion = 4,
+                    MinorSubsystemVersion = 0,
+                    FileCharacteristicsOverride = (ushort)(PeFileCharacteristics.ExecutableImage | PeFileCharacteristics.Machine32Bit),
+                }
+                : new PeImageConfig(PeMachine.AMD64, 0x140000000UL, 3, 0x8540, 0)
+                {
+                    SectionAlignment = 0x1000,
+                    FileAlignment = 0x200,
+                    SizeOfHeaders = 0x400,
+                };
+
+            return PeImageBuilder.Build(config, sections, directories, (ushort)(pe32 ? PeFileCharacteristics.Machine32Bit : 0));
+        }
+
+        /// <summary>mscoree 导入表布局（外部 IAT：槽数组独立置于 .text 起始）。</summary>
+        private sealed class IlImportLayout
+        {
+            public byte[] Blob = Array.Empty<byte>();
+            public uint ImportRva;
+            public uint ImportSize;
+            public uint HintNameRva;
+        }
+
+        /// <summary>构建 mscoree.dll!_CorExeMain 导入表 blob（描述符 + INT + hint/name；IAT 槽外部）。</summary>
+        private static IlImportLayout BuildMscoreeImport(uint blobBaseRva, uint externalIatRva)
+        {
+            var specs = new List<PeImportSpec> { new PeImportSpec("mscoree.dll", "_CorExeMain") };
+            var slotOffsets = new List<int> { 0 };
+            var layout = ImportTableBuilder.Build(specs, blobBaseRva, pe32: true, slotOffsets, externalIatRva);
+
+            return new IlImportLayout
+            {
+                Blob = layout.Blob,
+                ImportRva = blobBaseRva + (uint)layout.DescriptorsOffset,
+                ImportSize = (uint)((layout.Dlls.Count + 1) * ImageImportDescriptor.SizeOfEntry),
+                HintNameRva = (uint)layout.Dlls[0].Entries[0].HintNameOffset,
+            };
+        }
+
+        /// <summary>追加 .reloc 节：HIGHLOW 重定位指向 stub 的 jmp 操作数。</summary>
+        private static void AppendReloc(
+            List<PeSectionSpec> sections,
+            List<(PeDataDirectoryEntry Entry, uint Rva, uint Size)> directories,
+            uint operandRva)
+        {
+            const uint sectionAlignment = 0x2000;
+            // .reloc 放在所有现有节（.text/.idata）的虚拟末端之后，避免节重叠
+            var lastEnd = 0u;
+            foreach (var section in sections)
+            {
+                var end = section.VirtualAddress + (uint)section.RawData.Length;
+                if (end > lastEnd) lastEnd = end;
+            }
+
+            var relocRva = (uint)Align((int)lastEnd, (int)sectionAlignment);
+
+            var page = operandRva & ~0xFFFu;
+            var offsetInPage = (int)(operandRva & 0xFFF);
+            var block = new byte[12];
+            WriteUInt32(block, 0, (int)page);
+            WriteUInt32(block, 4, 12);
+            WriteUInt16(block, 8, (ushort)(((int)PeRelocType.HighLow << 12) | offsetInPage));
+            WriteUInt16(block, 10, 0); // ABS 终止
+
+            directories.Add((PeDataDirectoryEntry.BaseReloc, relocRva, 12));
+            // .reloc 必须为 Discardable|Read|InitData（0x42000040，不可写）：
+            // CLR 4.8 对可写（0xC0000040）的 .reloc 节镜像报 0x80131018 not an assembly manifest。
+            sections.Add(new PeSectionSpec(".reloc", block, relocRva, 0x42000040));
+        }
+
+        private static void WriteUInt32(byte[] bytes, int offset, int value)
+        {
+            bytes[offset] = (byte)value;
+            bytes[offset + 1] = (byte)(value >> 8);
+            bytes[offset + 2] = (byte)(value >> 16);
+            bytes[offset + 3] = (byte)(value >> 24);
+        }
+
+        private static void WriteUInt16(byte[] bytes, int offset, ushort value)
+        {
+            bytes[offset] = (byte)value;
+            bytes[offset + 1] = (byte)(value >> 8);
+        }
+
+        private static int Align(int value, int alignment)
+        {
+            var remainder = value % alignment;
+            return remainder == 0 ? value : value + alignment - remainder;
         }
 
         private static void WriteFatMethodHeader(Stream section, MethodBodyBlob body)
