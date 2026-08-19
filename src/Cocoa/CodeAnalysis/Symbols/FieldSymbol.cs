@@ -5,11 +5,13 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class FieldSymbol : VariableSymbol
     {
-        internal FieldSymbol(string name, TypeSymbol type, bool isPublic, ClassTypeSymbol containingClass)
-            : base(name, isReadOnly: false, type, constant: null)
+        internal FieldSymbol(string name, TypeSymbol type, bool isPublic, ClassTypeSymbol containingClass, bool isReadonly = false, bool isStatic = false)
+            : base(name, isReadOnly: isReadonly, type, constant: null)
         {
             IsPublic = isPublic;
             ContainingClass = containingClass;
+            IsReadonly = isReadonly;
+            IsStatic = isStatic;
         }
 
         public override SymbolKind Kind => SymbolKind.Field;
@@ -17,5 +19,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsPublic { get; }
 
         public ClassTypeSymbol ContainingClass { get; }
+
+        /// <summary>readonly 字段（仅构造内可赋值）。</summary>
+        public bool IsReadonly { get; }
+
+        public bool IsStatic { get; internal set; }
     }
 }

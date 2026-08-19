@@ -36,5 +36,21 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>可见性（仅类方法/构造有意义）。</summary>
         public bool IsPublic { get; }
+
+        public bool IsVirtual { get; internal set; }
+
+        public bool IsOverride { get; internal set; }
+
+        public bool IsAbstract { get; internal set; }
+
+        public bool IsSealed { get; internal set; }
+
+        public bool IsStatic { get; internal set; }
+
+        /// <summary>构造函数（显式或隐式默认构造）。</summary>
+        public bool IsConstructor { get; internal set; }
+
+        /// <summary>override 方法在基类中的对应虚方法（沿继承链）。</summary>
+        public FunctionSymbol? OverriddenMethod { get; internal set; }
     }
 }

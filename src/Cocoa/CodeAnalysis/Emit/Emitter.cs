@@ -108,10 +108,21 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             _entryFunction = emitLibrary ? null : program.MainFunction;
 
-            // 1. 收集 class（按出现顺序）→ 建 IlTypeDef + 字段
-            foreach (var classType in program.Classes)
+            // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
+            var classes = program.Classes.ToList();
+            var emitted = new HashSet<ClassTypeSymbol>();
+            while (classes.Count > 0)
             {
-                EmitClassDeclaration(classType);
+                for (var i = classes.Count - 1; i >= 0; i--)
+                {
+                    var classType = classes[i];
+                    if (classType.BaseType == null || emitted.Contains(classType.BaseType))
+                    {
+                        EmitClassDeclaration(classType);
+                        emitted.Add(classType);
+                        classes.RemoveAt(i);
+                    }
+                }
             }
 
             // 2. 方法声明（顺序 = 顶层 + 各 class 方法，与 typeDefs 分组一致）
@@ -125,7 +136,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
             foreach (var functionWithBody in program.Functions)
             {
-                if (functionWithBody.Key.IsExtern)
+                if (functionWithBody.Key.IsExtern || functionWithBody.Key.IsAbstract)
                 {
                     continue;
                 }
@@ -178,10 +189,15 @@ namespace Cocoa.CodeAnalysis.Emit
                 _ => IlCallingConvention.Winapi,
             };
 
-            var isInstance = function.ContainingClass != null;
-            var name = function.Syntax is ConstructorDeclarationSyntax ? ".ctor" : function.Name;
+            var isInstance = function.ContainingClass != null && !function.IsStatic;
+            var name = function.IsConstructor ? ".ctor" : function.Name;
 
-            var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention, isStatic: !isInstance);
+            var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention, isStatic: !isInstance)
+            {
+                IsVirtual = function.IsVirtual || function.IsOverride,
+                IsAbstract = function.IsAbstract,
+                IsSealed = function.IsSealed,
+            };
             _methods.Add(function, method);
 
             var declaringType = isInstance ? _classTypeDefs[function.ContainingClass!] : _typeDefinition;
@@ -190,7 +206,12 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitClassDeclaration(ClassTypeSymbol classType)
         {
-            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, _objectType, isPublic: classType.IsPublic);
+            var baseTypeDef = classType.BaseType != null ? _classTypeDefs[classType.BaseType] : null;
+            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, classType.BaseType == null ? _objectType : null, isPublic: classType.IsPublic, baseTypeDef: baseTypeDef)
+            {
+                IsAbstract = classType.IsAbstract,
+                IsSealed = classType.IsSealed,
+            };
             _classTypeDefs.Add(classType, typeDef);
 
             foreach (var field in classType.Fields)
@@ -552,6 +573,12 @@ namespace Cocoa.CodeAnalysis.Emit
                     break;
                 case BoundNodeKind.ThisExpression:
                     EmitThisExpression(il, (BoundThisExpression)node);
+                    break;
+                case BoundNodeKind.BaseExpression:
+                    EmitThisExpression(il, new BoundThisExpression(node.Syntax, (ClassTypeSymbol)node.Type));
+                    break;
+                case BoundNodeKind.ConstructorChainExpression:
+                    EmitConstructorChainExpression(il, (BoundConstructorChainExpression)node);
                     break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
@@ -1182,8 +1209,8 @@ namespace Cocoa.CodeAnalysis.Emit
                     return;
                 }
 
-                // 本地实例方法：Callvirt（this 已在栈上）
-                il.Emit(IlOpCodes.Get("Callvirt"), _methods[node.Method]);
+                // base.Method()：非虚 call（this 已在栈上）；其余实例方法：callvirt 虚分派
+                il.Emit(IlOpCodes.Get(node.IsBase ? "Call" : "Callvirt"), _methods[node.Method]);
                 return;
             }
 
@@ -1247,6 +1274,37 @@ namespace Cocoa.CodeAnalysis.Emit
         private void EmitThisExpression(IlAssembler il, BoundThisExpression node)
         {
             il.Emit(IlOpCodes.Get("Ldarg"), (ushort)0);
+        }
+
+        private void EmitConstructorChainExpression(IlAssembler il, BoundConstructorChainExpression node)
+        {
+            // this(arg0) + args → call 基类/本类 .ctor
+            il.Emit(IlOpCodes.Get("Ldarg"), (ushort)0);
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            var target = node.Constructor;
+            if (target.ContainingClass!.IsExternal)
+            {
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                var methodRef = _reader.FindMethod(target.ContainingClass.FullName, ".ctor", parameterNames, _metadata);
+                if (methodRef == null)
+                {
+                    throw new System.Exception($"外部构造函数 {target.ContainingClass.FullName} 未找到。");
+                }
+
+                il.Emit(IlOpCodes.Get("Call"), ResolveMethodRef(methodRef));
+                return;
+            }
+
+            il.Emit(IlOpCodes.Get("Call"), _methods[target]);
         }
     }
 }

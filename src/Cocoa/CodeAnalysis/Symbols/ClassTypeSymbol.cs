@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 namespace Cocoa.CodeAnalysis.Symbols
 {
     /// <summary>
-    /// 类类型：承载字段/方法/构造函数成员。
+    /// 类类型：承载字段/方法/构造函数成员，支持单继承。
     /// </summary>
     public sealed class ClassTypeSymbol : TypeSymbol
     {
@@ -36,6 +36,15 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public ClassDeclarationSyntax? Declaration { get; }
 
+        /// <summary>基类（null = System.Object）。</summary>
+        public ClassTypeSymbol? BaseType { get; set; }
+
+        public bool IsAbstract { get; internal set; }
+
+        public bool IsSealed { get; internal set; }
+
+        public bool IsStatic => IsAbstract && IsSealed;
+
         internal void AddField(FieldSymbol field) => _fields.Add(field);
 
         internal void AddMethod(FunctionSymbol method) => _methods.Add(method);
@@ -44,7 +53,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public ImmutableArray<FunctionSymbol> Methods => _methods.ToImmutable();
 
-        public FieldSymbol? GetField(string name)
+        /// <summary>本类直接声明的字段（不含基类）。</summary>
+        public FieldSymbol? GetDeclaredField(string name)
         {
             foreach (var field in _fields)
             {
@@ -57,7 +67,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
-        public FunctionSymbol? GetMethod(string name)
+        /// <summary>本类直接声明的方法（不含基类）。</summary>
+        public FunctionSymbol? GetDeclaredMethod(string name)
         {
             foreach (var method in _methods)
             {
@@ -68,6 +79,50 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
 
             return null;
+        }
+
+        /// <summary>字段查找（沿继承链向上）。</summary>
+        public FieldSymbol? GetField(string name)
+        {
+            for (var type = this; type != null; type = type.BaseType)
+            {
+                var field = type.GetDeclaredField(name);
+                if (field != null)
+                {
+                    return field;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>方法查找（沿继承链向上）。</summary>
+        public FunctionSymbol? GetMethod(string name)
+        {
+            for (var type = this; type != null; type = type.BaseType)
+            {
+                var method = type.GetDeclaredMethod(name);
+                if (method != null)
+                {
+                    return method;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>this 是否为 base（含同一类型）或其派生类型。</summary>
+        public bool IsBaseOf(ClassTypeSymbol type)
+        {
+            for (var current = type; current != null; current = current.BaseType)
+            {
+                if (current == this)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

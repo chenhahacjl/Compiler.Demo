@@ -271,6 +271,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteThisExpression((BoundThisExpression)node);
                 }
+                case BoundNodeKind.BaseExpression:
+                {
+                    return RewriteBaseExpression((BoundBaseExpression)node);
+                }
+                case BoundNodeKind.ConstructorChainExpression:
+                {
+                    return RewriteConstructorChainExpression((BoundConstructorChainExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -443,7 +451,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundMemberCallExpression(node.Syntax, expression, node.Identifier, arguments, node.Type, node.Method);
+            return new BoundMemberCallExpression(node.Syntax, expression, node.Identifier, arguments, node.Type, node.Method, node.IsBase);
         }
 
         protected virtual BoundExpression RewriteMemberAssignmentExpression(BoundMemberAssignmentExpression node)
@@ -472,6 +480,22 @@ namespace Cocoa.CodeAnalysis.Binding
         protected virtual BoundExpression RewriteThisExpression(BoundThisExpression node)
         {
             return node;
+        }
+
+        protected virtual BoundExpression RewriteBaseExpression(BoundBaseExpression node)
+        {
+            return node;
+        }
+
+        protected virtual BoundExpression RewriteConstructorChainExpression(BoundConstructorChainExpression node)
+        {
+            var arguments = RewriteExpressions(node.Arguments);
+            if (arguments == node.Arguments)
+            {
+                return node;
+            }
+
+            return new BoundConstructorChainExpression(node.Syntax, node.InitializerKind, node.Constructor, arguments);
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

@@ -57,6 +57,8 @@ ColonToken,               // :
         IdentifierToken,         // 标识符
 
         // Keywords
+        AbstractKeyword,          // abstract
+        BaseKeyword,              // base
         BreakKeyword,             // break
         CdeclKeyword,             // cdecl
         ClassKeyword,             // class
@@ -73,14 +75,20 @@ ColonToken,               // :
         LetKeyword,               // let
         NamespaceKeyword,         // namespace
         NewKeyword,               // new
+        OverrideKeyword,          // override
         PrivateKeyword,           // private
         PublicKeyword,            // public
+        ReadonlyKeyword,          // readonly
         ReturnKeyword,            // return
+        SealedKeyword,            // sealed
+        StaticKeyword,            // static
         StdcallKeyword,           // stdcall
+        ThisKeyword,              // this
         ToKeyword,                // to
         TrueKeyword,              // true
         UsingKeyword,             // using
         VarKeyword,               // var
+        VirtualKeyword,           // virtual
         WhileKeyword,             // while
 
         // Nodes
@@ -124,6 +132,8 @@ ColonToken,               // :
         CallExpression,           // 函数调用表达式
         ArrayCreationExpression,  // 数组创建表达式
         ObjectCreationExpression, // 对象创建表达式 new Foo(...)
+        BaseExpression,           // base 表达式
+        ThisExpression,          // this 表达式
         ElementAccessExpression,  // 数组索引表达式
         MemberAccessExpression,   // 成员访问表达式
         MemberCallExpression,     // 成员方法调用表达式

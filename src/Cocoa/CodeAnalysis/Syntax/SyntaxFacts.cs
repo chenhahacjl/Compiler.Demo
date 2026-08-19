@@ -77,6 +77,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             switch (text)
             {
+                case "abstract":
+                    return SyntaxKind.AbstractKeyword;
+                case "base":
+                    return SyntaxKind.BaseKeyword;
                 case "break":
                     return SyntaxKind.BreakKeyword;
                 case "cdecl":
@@ -103,8 +107,20 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.NewKeyword;
                 case "namespace":
                     return SyntaxKind.NamespaceKeyword;
+                case "override":
+                    return SyntaxKind.OverrideKeyword;
+                case "readonly":
+                    return SyntaxKind.ReadonlyKeyword;
+                case "sealed":
+                    return SyntaxKind.SealedKeyword;
+                case "static":
+                    return SyntaxKind.StaticKeyword;
+                case "this":
+                    return SyntaxKind.ThisKeyword;
                 case "using":
                     return SyntaxKind.UsingKeyword;
+                case "virtual":
+                    return SyntaxKind.VirtualKeyword;
                 case "let":
                     return SyntaxKind.LetKeyword;
                 case "return":
@@ -242,6 +258,22 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "false";
                 case SyntaxKind.ForKeyword:
                     return "for";
+                case SyntaxKind.AbstractKeyword:
+                    return "abstract";
+                case SyntaxKind.BaseKeyword:
+                    return "base";
+                case SyntaxKind.ThisKeyword:
+                    return "this";
+                case SyntaxKind.OverrideKeyword:
+                    return "override";
+                case SyntaxKind.ReadonlyKeyword:
+                    return "readonly";
+                case SyntaxKind.SealedKeyword:
+                    return "sealed";
+                case SyntaxKind.StaticKeyword:
+                    return "static";
+                case SyntaxKind.VirtualKeyword:
+                    return "virtual";
                 case SyntaxKind.FunctionKeyword:
                     return "function";
                 case SyntaxKind.IfKeyword:

@@ -33,10 +33,12 @@ ConversionExpression,
 ArrayCreationExpression,
 ObjectCreationExpression,
 ThisExpression,
+BaseExpression,
 ElementAccessExpression,
 ElementAssignmentExpression,
 MemberAccessExpression,
 MemberCallExpression,
 MemberAssignmentExpression,
+ConstructorChainExpression,
     }
 }

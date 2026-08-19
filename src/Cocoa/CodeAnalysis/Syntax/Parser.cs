@@ -193,7 +193,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             while (Current.Kind == SyntaxKind.PublicKeyword ||
                    Current.Kind == SyntaxKind.PrivateKeyword ||
                    Current.Kind == SyntaxKind.CdeclKeyword ||
-                   Current.Kind == SyntaxKind.StdcallKeyword)
+                   Current.Kind == SyntaxKind.StdcallKeyword ||
+                   Current.Kind == SyntaxKind.AbstractKeyword ||
+                   Current.Kind == SyntaxKind.SealedKeyword ||
+                   Current.Kind == SyntaxKind.StaticKeyword ||
+                   Current.Kind == SyntaxKind.VirtualKeyword ||
+                   Current.Kind == SyntaxKind.OverrideKeyword ||
+                   Current.Kind == SyntaxKind.ReadonlyKeyword)
             {
                 modifiers.Add(NextToken());
             }
@@ -321,9 +327,10 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParseOptionalTypeClause();
             BlockStatementSyntax? body = null;
 
-            // extern 函数（stdcall/cdecl 修饰）无方法体
+            // extern（stdcall/cdecl）与 abstract 方法无方法体
             var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
-            if (!isExtern || Current.Kind == SyntaxKind.OpenBraceToken)
+            var isAbstract = modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
+            if ((!isExtern && !isAbstract) || Current.Kind == SyntaxKind.OpenBraceToken)
             {
                 body = ParseBlockStatement();
             }
@@ -335,11 +342,19 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var classKeyword = MatchToken(SyntaxKind.ClassKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            TypeClauseSyntax? baseType = null;
+
+            // class Foo: Bar —— 基类（类型子句 `: Bar`）
+            if (Current.Kind == SyntaxKind.ColonToken)
+            {
+                baseType = ParseTypeClause();
+            }
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
             var members = ParseClassMemberList();
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, openBraceToken, members, closeBraceToken);
+            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, baseType, openBraceToken, members, closeBraceToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseClassMemberList()
@@ -389,9 +404,29 @@ namespace Cocoa.CodeAnalysis.Syntax
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            // `: base(...)` / `: this(...)` 构造链
+            SyntaxToken? initializerKeyword = null;
+            var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
+            if (Current.Kind == SyntaxKind.ColonToken)
+            {
+                NextToken(); // :
+                if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
+                {
+                    initializerKeyword = NextToken();
+                    var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+                    initializerArguments = ParseArgumentList();
+                    MatchToken(SyntaxKind.CloseParenthesisToken);
+                }
+                else
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.BaseKeyword);
+                }
+            }
+
             var body = ParseBlockStatement();
 
-            return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword, openParenthesisToken, parameters, closeParenthesisToken, body);
+            return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
         }
 
         private MemberSyntax ParseClassFieldDeclaration(ImmutableArray<SyntaxToken> modifiers)
@@ -742,6 +777,12 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 case SyntaxKind.CharToken:
                     return ParseCharLiteral();
+
+                case SyntaxKind.ThisKeyword:
+                    return new ThisExpressionSyntax(_syntaxTree, NextToken());
+
+                case SyntaxKind.BaseKeyword:
+                    return new BaseExpressionSyntax(_syntaxTree, NextToken());
 
                 case SyntaxKind.IdentifierToken:
                 default:

@@ -60,7 +60,9 @@ namespace Cocoa.CodeAnalysis.Binding
             string? importedDll = null;
 
             var classFunctions = new List<FunctionSymbol>();
+            var allClasses = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();
 
+            // 阶段 1：处理 import/function/enum/using + 收集所有类声明（递归 namespace）
             foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
             {
                 if (member is ImportClauseSyntax importClause)
@@ -77,15 +79,32 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is ClassDeclarationSyntax classDeclaration)
                 {
-                    binder.BindClassDeclaration(classDeclaration, classFunctions, "");
+                    allClasses.Add((classDeclaration, ""));
                 }
                 else if (member is NamespaceDeclarationSyntax namespaceDeclaration)
                 {
-                    binder.BindNamespaceDeclaration(namespaceDeclaration, classFunctions);
+                    binder.CollectClasses(namespaceDeclaration, "", allClasses);
+                    binder.BindNamespaceFunctions(namespaceDeclaration, importedDll);
                 }
                 else if (member is UsingDirectiveSyntax usingDirective)
                 {
                     binder._usingNamespaces.Add(usingDirective.Name);
+                }
+            }
+
+            // 阶段 2：声明所有类壳（两阶段：类可前向引用基类）
+            foreach (var (syntax, ns) in allClasses)
+            {
+                binder.DeclareClassDeclaration(syntax, ns);
+            }
+
+            // 阶段 3：绑定类成员（字段/方法/构造/基类）
+            foreach (var (syntax, ns) in allClasses)
+            {
+                var classType = binder._scope.TryLookupSymbol(syntax.Identifier.Text) as ClassTypeSymbol;
+                if (classType != null)
+                {
+                    binder.BindClassMembers(syntax, classType, classFunctions, ns);
                 }
             }
 
@@ -216,17 +235,43 @@ namespace Cocoa.CodeAnalysis.Binding
                     bodyLocation = ctorSyntax.ConstructorKeyword;
                 }
 
-                if (bodySyntax == null || bodyLocation == null)
+                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces);
+                BoundBlockStatement body;
+
+                if (bodySyntax == null)
                 {
-                    functionBodies.Add(function, new BoundBlockStatement(function.Syntax ?? function.Declaration!, ImmutableArray<BoundStatement>.Empty));
-                    continue;
+                    // 无方法体（extern/abstract/隐式构造）：空 body
+                    body = new BoundBlockStatement(function.Syntax ?? function.Declaration!, ImmutableArray<BoundStatement>.Empty);
+                }
+                else
+                {
+                    body = (BoundBlockStatement)binder.BindStatement(bodySyntax);
                 }
 
-                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces);
-                var body = binder.BindStatement(bodySyntax);
+                // 构造函数链：`base(...)` / `this(...)` → 函数体开头
+                if (function.Syntax is ConstructorDeclarationSyntax chainCtor && chainCtor.InitializerKeyword != null)
+                {
+                    var chain = binder.BindConstructorChain(chainCtor, function.ContainingClass!);
+                    if (chain != null)
+                    {
+                        body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, new[] { new BoundExpressionStatement(chainCtor, chain) }.Concat(body.Statements).ToImmutableArray());
+                    }
+                }
+                // 隐式默认构造：基类非 Object 时插入 base() 链调用
+                else if (function.Syntax is ClassDeclarationSyntax implicitCtor && function.ContainingClass != null &&
+                         function.ContainingClass.BaseType != null)
+                {
+                    var baseCtor = function.ContainingClass.BaseType.GetMethod(function.ContainingClass.BaseType.Name);
+                    if (baseCtor != null)
+                    {
+                        var chain = new BoundConstructorChainExpression(implicitCtor, ConstructorInitializerKind.Base, baseCtor, ImmutableArray<BoundExpression>.Empty);
+                        body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, new[] { new BoundExpressionStatement(implicitCtor, chain) }.Concat(body.Statements).ToImmutableArray());
+                    }
+                }
+
                 var loweredBody = Lowerer.Lower(function, body);
 
-                if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
+                if (function.ReturnType != TypeSymbol.Void && !function.IsAbstract && !ControlFlowGraph.AllPathsReturn(loweredBody))
                 {
                     var location = function.Declaration != null
                         ? function.Declaration.Identifier.Location
@@ -352,17 +397,45 @@ namespace Cocoa.CodeAnalysis.Binding
             return parameters.ToImmutable();
         }
 
-        private void BindClassDeclaration(ClassDeclarationSyntax syntax, List<FunctionSymbol> classFunctions, string @namespace)
+        private void DeclareClassDeclaration(ClassDeclarationSyntax syntax, string @namespace)
         {
             var name = syntax.Identifier.Text;
             var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
 
             var classType = new ClassTypeSymbol(name, @namespace, isPublic, syntax);
+            classType.IsAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
+            classType.IsSealed = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword);
 
             if (!_scope.TryDeclareClass(classType))
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, name);
-                return;
+            }
+        }
+
+        private void BindClassMembers(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
+        {
+            // 基类解析（`class Foo: Bar`）
+            if (syntax.BaseType != null)
+            {
+                var baseName = syntax.BaseType.Identifier.Text;
+                var baseType = _scope.TryLookupSymbol(baseName) as ClassTypeSymbol;
+
+                if (baseType == null)
+                {
+                    _diagnostics.ReportUndefinedType(syntax.BaseType.Location, baseName);
+                }
+                else if (baseType.IsSealed)
+                {
+                    _diagnostics.ReportCannotInheritSealed(syntax.Identifier.Location, baseName);
+                }
+                else if (baseType.IsBaseOf(classType))
+                {
+                    _diagnostics.ReportCircularInheritance(syntax.Identifier.Location, baseName);
+                }
+                else
+                {
+                    classType.BaseType = baseType;
+                }
             }
 
             foreach (var member in syntax.Members)
@@ -371,10 +444,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     var fieldType = BindTypeClause(fieldDeclaration.Type);
                     var fieldIsPublic = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+                    var fieldIsReadonly = fieldDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.ReadonlyKeyword);
 
-                    if (classType.GetField(fieldDeclaration.Identifier.Text) == null)
+                    if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
-                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldIsPublic, classType));
+                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldIsPublic, classType, isReadonly: fieldIsReadonly));
                     }
                     else
                     {
@@ -386,22 +460,22 @@ namespace Cocoa.CodeAnalysis.Binding
                     var parameters = BindParameters(constructorDeclaration.Parameters);
                     var isPublicCtor = constructorDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
 
-                    if (classType.GetMethod(name) == null)
+                    if (classType.GetDeclaredMethod(classType.Name) == null)
                     {
-                        var ctor = new FunctionSymbol(name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, isPublic: isPublicCtor);
+                        var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, isPublic: isPublicCtor) { IsConstructor = true };
                         classType.AddMethod(ctor);
                         classFunctions.Add(ctor);
                     }
                     else
                     {
-                        _diagnostics.ReportSymbolAlreadyDeclared(constructorDeclaration.ConstructorKeyword.Location, name);
+                        _diagnostics.ReportSymbolAlreadyDeclared(constructorDeclaration.ConstructorKeyword.Location, classType.Name);
                     }
                 }
                 else if (member is FunctionDeclarationSyntax methodDeclaration)
                 {
                     var method = BindClassMethodDeclaration(methodDeclaration, classType);
 
-                    if (classType.GetMethod(methodDeclaration.Identifier.Text) == null)
+                    if (classType.GetDeclaredMethod(methodDeclaration.Identifier.Text) == null)
                     {
                         classType.AddMethod(method);
                         classFunctions.Add(method);
@@ -412,20 +486,44 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                 }
             }
+
+            // 隐式默认构造：类未声明任何构造时生成无参构造
+            if (classType.GetDeclaredMethod(classType.Name) == null)
+            {
+                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, isPublic: true) { IsConstructor = true };
+                classType.AddMethod(ctor);
+                classFunctions.Add(ctor);
+            }
         }
 
-        private void BindNamespaceDeclaration(NamespaceDeclarationSyntax syntax, List<FunctionSymbol> classFunctions)
+        private void CollectClasses(NamespaceDeclarationSyntax syntax, string parentNamespace, List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses)
         {
+            var ns = parentNamespace.Length == 0 ? syntax.Name : parentNamespace + "." + syntax.Name;
+
             foreach (var member in syntax.Members)
             {
                 if (member is ClassDeclarationSyntax classDeclaration)
                 {
-                    BindClassDeclaration(classDeclaration, classFunctions, syntax.Name);
+                    allClasses.Add((classDeclaration, ns));
                 }
-                else if (member is FunctionDeclarationSyntax functionDeclaration)
+                else if (member is NamespaceDeclarationSyntax nested)
                 {
-                    // 顶层函数（可放 namespace 内），保持全局注册
-                    BindFunctionDeclaration(functionDeclaration);
+                    CollectClasses(nested, ns, allClasses);
+                }
+            }
+        }
+
+        private void BindNamespaceFunctions(NamespaceDeclarationSyntax syntax, string? importedDll)
+        {
+            foreach (var member in syntax.Members)
+            {
+                if (member is FunctionDeclarationSyntax functionDeclaration)
+                {
+                    BindFunctionDeclaration(functionDeclaration, importedDll);
+                }
+                else if (member is NamespaceDeclarationSyntax nested)
+                {
+                    BindNamespaceFunctions(nested, importedDll);
                 }
             }
         }
@@ -435,8 +533,106 @@ namespace Cocoa.CodeAnalysis.Binding
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
             var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+            var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
+            var isVirtual = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.VirtualKeyword);
+            var isOverride = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.OverrideKeyword);
+            var isAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
+            var isSealed = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword);
 
-            return new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, isPublic: isPublic);
+            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, isPublic: isPublic)
+            {
+                IsStatic = isStatic,
+                IsVirtual = isVirtual,
+                IsOverride = isOverride,
+                IsAbstract = isAbstract,
+                IsSealed = isSealed,
+            };
+
+            // override 语义：绑定到基类同签名 virtual/abstract 方法
+            if (isOverride)
+            {
+                if (classType.BaseType == null)
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"方法 '{syntax.Identifier.Text}' 标记 override，但类型没有基类。");
+                }
+                else
+                {
+                    var baseMethod = classType.BaseType.GetMethod(syntax.Identifier.Text);
+                    if (baseMethod == null || !baseMethod.IsVirtual && !baseMethod.IsAbstract || baseMethod.IsSealed)
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"基类中找不到可重写的 virtual/abstract 方法 '{syntax.Identifier.Text}'。");
+                    }
+                    else
+                    {
+                        method.OverriddenMethod = baseMethod;
+                    }
+                }
+            }
+            else if (isVirtual && classType.BaseType?.GetMethod(syntax.Identifier.Text)?.IsOverride == true)
+            {
+                // 隐藏基类 override 方法（允许，IL newslot）
+            }
+
+            return method;
+        }
+
+        private BoundConstructorChainExpression? BindConstructorChain(ConstructorDeclarationSyntax syntax, ClassTypeSymbol classType)
+        {
+            var isBase = syntax.InitializerKeyword!.Kind == SyntaxKind.BaseKeyword;
+            var targetClass = isBase ? classType.BaseType : classType;
+
+            if (targetClass == null)
+            {
+                _diagnostics.ReportError(syntax.InitializerKeyword!.Location, "类型没有基类，不能调用 base(...)。");
+                return null;
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var argumentSyntax in syntax.InitializerArguments)
+            {
+                arguments.Add(BindExpression(argumentSyntax));
+            }
+
+            var ctorName = targetClass.Name;
+            var candidates = targetClass.Methods.Where(m => m.Name == ctorName && (isBase || m != _function)).ToArray();
+
+            FunctionSymbol? target = null;
+            foreach (var candidate in candidates)
+            {
+                if (candidate.Parameters.Length != arguments.Count)
+                {
+                    continue;
+                }
+
+                var match = true;
+                for (var i = 0; i < arguments.Count; i++)
+                {
+                    if (arguments[i].Type != candidate.Parameters[i].Type)
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                {
+                    target = candidate;
+                    break;
+                }
+            }
+
+            if (target == null)
+            {
+                _diagnostics.ReportWrongArgumentCount(syntax.InitializerKeyword!.Location, (isBase ? "base" : "this"), candidates.Length > 0 ? candidates[0].Parameters.Length : 0, arguments.Count);
+                return null;
+            }
+
+            for (var i = 0; i < arguments.Count; i++)
+            {
+                arguments[i] = BindConversion(arguments[i].Syntax.Location, arguments[i], target.Parameters[i].Type);
+            }
+
+            return new BoundConstructorChainExpression(syntax, isBase ? ConstructorInitializerKind.Base : ConstructorInitializerKind.This, target, arguments.ToImmutable());
         }
 
         private static BoundScope CreateParentScope(BoundGlobalScope? previous)
@@ -583,6 +779,34 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         [return: NotNullIfNotNull(nameof(syntax))]
+        private BoundExpression BindBaseExpression(BaseExpressionSyntax syntax)
+        {
+            if (_currentClass == null)
+            {
+                _diagnostics.ReportError(syntax.Location, "base 只能用在类的实例方法或构造函数中。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (_currentClass.BaseType == null)
+            {
+                _diagnostics.ReportError(syntax.Location, $"类型 {_currentClass.Name} 没有基类，不能使用 base。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            return new BoundBaseExpression(syntax, _currentClass.BaseType);
+        }
+
+        private BoundExpression BindThisExpression(ThisExpressionSyntax syntax)
+        {
+            if (_currentClass == null)
+            {
+                _diagnostics.ReportError(syntax.Location, "this 只能用在类的实例方法或构造函数中。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            return new BoundThisExpression(syntax, _currentClass);
+        }
+
         private BoundExpression BindCastExpression(CastExpressionSyntax syntax)
         {
             var type = LookupType(syntax.TypeName.Text ?? "?");
@@ -801,6 +1025,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
                 case SyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
                 case SyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
+                case SyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
+                case SyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
@@ -1122,13 +1348,15 @@ namespace Cocoa.CodeAnalysis.Binding
                         return new BoundErrorExpression(syntax);
                     }
 
+                    var isBase = boundExpression is BoundBaseExpression;
+
                     var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
                     for (var i = 0; i < boundArguments.Count; i++)
                     {
                         arguments.Add(BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type));
                     }
 
-                    return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method);
+                    return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method, isBase);
                 }
 
                 _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);

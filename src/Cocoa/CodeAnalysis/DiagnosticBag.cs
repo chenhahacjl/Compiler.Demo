@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis
             _diagnostics.AddRange(diagnostics);
         }
 
-        private void ReportError(TextLocation location, string message)
+        internal void ReportError(TextLocation location, string message)
         {
             var diagnostic = Diagnostic.Error(location, message);
             _diagnostics.Add(diagnostic);
@@ -355,6 +355,18 @@ namespace Cocoa.CodeAnalysis
         public void ReportCannotAccessPrivateMember(TextLocation location, string memberName)
         {
             var message = $"成员 '{memberName}' 是 private 的，不能在当前上下文中访问。";
+            ReportError(location, message);
+        }
+
+        public void ReportCircularInheritance(TextLocation location, string baseName)
+        {
+            var message = $"循环继承：'{baseName}' 形成继承环。";
+            ReportError(location, message);
+        }
+
+        public void ReportCannotInheritSealed(TextLocation location, string baseName)
+        {
+            var message = $"不能继承 sealed 类 '{baseName}'。";
             ReportError(location, message);
         }
     }

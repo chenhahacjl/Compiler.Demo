@@ -9,11 +9,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>我们自己的类型定义（TypeDef 表行）。顶层函数挂在 Program，class 各占一行。</summary>
     internal sealed class IlTypeDef
     {
-        public IlTypeDef(string name, string @namespace, IlTypeRef? baseTypeRef, bool isPublic = true)
+        public IlTypeDef(string name, string @namespace, IlTypeRef? baseTypeRef, bool isPublic = true, IlTypeDef? baseTypeDef = null)
         {
             Name = name;
             Namespace = @namespace ?? "";
             BaseTypeRef = baseTypeRef;
+            BaseTypeDef = baseTypeDef;
             IsPublic = isPublic;
             Fields = new List<IlFieldDef>();
             Methods = new List<IlMethodDef>();
@@ -22,7 +23,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public string Name { get; }
         public string Namespace { get; }
         public IlTypeRef? BaseTypeRef { get; }
+
+        /// <summary>本程序集内的基类 TypeDef（优先于 BaseTypeRef）。</summary>
+        public IlTypeDef? BaseTypeDef { get; }
+
         public bool IsPublic { get; }
+        public bool IsAbstract { get; set; }
+        public bool IsSealed { get; set; }
         public List<IlFieldDef> Fields { get; }
         public List<IlMethodDef> Methods { get; }
     }
@@ -69,6 +76,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlCallingConvention CallingConvention { get; }
         /// <summary>实例方法（含 this，签名 HAS_THIS）。</summary>
         public bool IsStatic { get; }
+
+        public bool IsVirtual { get; set; }
+
+        public bool IsAbstract { get; set; }
+
+        public bool IsSealed { get; set; }
     }
 
     /// <summary>
@@ -609,7 +622,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var typeDef in _typeDefs)
             {
                 var flags = typeDef.IsPublic ? 0x00000001u : 0x00000000u; // Public
-                var extends = typeDef.BaseTypeRef == null ? 0 : CodedIndexTypeDefOrRef(typeDef.BaseTypeRef);
+                if (typeDef.IsAbstract)
+                {
+                    flags |= 0x00000080u; // Abstract
+                }
+                if (typeDef.IsSealed)
+                {
+                    flags |= 0x00000100u; // Sealed
+                }
+                var extends = typeDef.BaseTypeDef != null
+                    ? CodedIndexTypeDefOrRef(typeDef.BaseTypeDef, _typeDefs)
+                    : typeDef.BaseTypeRef == null ? 0 : CodedIndexTypeDefOrRef(typeDef.BaseTypeRef);
                 WriteTypeDefRow(flags, typeDef.Name, typeDef.Namespace, extends, fieldList, methodList);
                 fieldList += typeDef.Fields.Count;
                 methodList += typeDef.Methods.Count;
@@ -640,6 +663,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 if (!method.IsStatic)
                 {
                     methodFlags = (ushort)(methodFlags & ~0x0010); // 清掉 Static
+                }
+                if (method.IsVirtual)
+                {
+                    methodFlags = (ushort)(methodFlags | 0x0040); // Virtual
+                }
+                if (method.IsAbstract)
+                {
+                    methodFlags = (ushort)(methodFlags | 0x0040 | 0x0400); // 抽象方法必须 Virtual + Abstract
+                }
+                if (method.IsSealed)
+                {
+                    methodFlags = (ushort)(methodFlags | 0x0020); // Final
                 }
                 if (method.Name == ".ctor")
                 {
