@@ -31,7 +31,25 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public bool IsAbstract { get; set; }
         public bool IsSealed { get; set; }
         public List<IlFieldDef> Fields { get; }
+        public List<IlPropertyDef> Properties { get; } = new List<IlPropertyDef>();
         public List<IlMethodDef> Methods { get; }
+    }
+
+    /// <summary>我们自己的属性定义（Property 表行 + MethodSemantics）。</summary>
+    internal sealed class IlPropertyDef
+    {
+        public IlPropertyDef(string name, IlType type, IlMethodDef? getter, IlMethodDef? setter)
+        {
+            Name = name;
+            Type = type;
+            Getter = getter;
+            Setter = setter;
+        }
+
+        public string Name { get; }
+        public IlType Type { get; }
+        public IlMethodDef? Getter { get; }
+        public IlMethodDef? Setter { get; }
     }
 
     /// <summary>我们自己的字段定义（FieldDef 表行）。</summary>
@@ -366,6 +384,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return stream.ToArray();
         }
 
+        /// <summary>属性签名：0x08 PROPERTY + 0x20 HAS_THIS + 类型。</summary>
+        public byte[] EncodePropertySignature(IlType type)
+        {
+            using var stream = new MemoryStream();
+            stream.WriteByte(0x08 | 0x20); // PROPERTY | HAS_THIS
+            EncodeType(stream, type);
+            return stream.ToArray();
+        }
+
         /// <summary>DebuggableAttribute(bool, bool) 固定参数：prolog + 2 个 ELEMENT_TYPE_BOOLEAN(true)。</summary>
         public static byte[] EncodeDebuggableAttributeBlob()
         {
@@ -505,6 +532,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var methodDefs = MethodDefs;
             var methodDefCount = methodDefs.Count;
             var fieldDefCount = _typeDefs.Sum(t => t.Fields.Count);
+            var propertyCount = _typeDefs.Sum(t => t.Properties.Count);
+            var propertyMapCount = _typeDefs.Count(t => t.Properties.Count > 0);
+            var methodSemanticsCount = _typeDefs.Sum(t => t.Properties.Sum(p => (p.Getter != null ? 1 : 0) + (p.Setter != null ? 1 : 0)));
             var paramCount = methodDefs.Sum(m => m.ParameterTypes.Count);
             var memberRefCount = _memberRefs.Count;
             var customAttributeCount = _customAttributes.Count;
@@ -522,6 +552,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var typeDefIsBig = typeDefCount > 0xFFFF;
             var methodDefIsBig = methodDefCount > 0xFFFF;
             var fieldDefIsBig = fieldDefCount > 0xFFFF;
+            var propertyIsBig = propertyCount > 0xFFFF;
             var paramIsBig = paramCount > 0xFFFF;
             var memberRefIsBig = memberRefCount > 0xFFFF;
             var standAloneSigIsBig = standAloneSigCount > 0xFFFF;
@@ -535,6 +566,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var hasCustomAttributeIsBig = new[] { typeRefCount, typeDefCount, methodDefCount, paramCount, memberRefCount, standAloneSigCount, 1, assemblyRefCount }.Max() > (1 << 11);
             var customAttributeTypeIsBig = Math.Max(methodDefCount, memberRefCount) > (1 << 13);
             var memberForwardedIsBig = Math.Max(methodDefCount, fieldDefCount) > (1 << 15); // 1 位 tag（MemberForwarded: Field=0/MethodDef=1）
+            var hasConstantIsBig = new[] { fieldDefCount, paramCount, propertyCount }.Max() > (1 << 14); // HasConstant: Field=0/Param=1/Property=2
+            var hasSemanticsIsBig = Math.Max(propertyCount, 1) > (1 << 15); // HasSemantics: Event=0/Property=1
 
             var heapSizes = (stringIsBig ? 0x01 : 0) | (guidIsBig ? 0x02 : 0) | (blobIsBig ? 0x04 : 0);
 
@@ -559,6 +592,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (memberRefCount > 0) SetValid(0x0A); // MemberRef
             if (customAttributeCount > 0) SetValid(0x0C); // CustomAttribute
             if (standAloneSigCount > 0) SetValid(0x11); // StandAloneSig
+            if (propertyMapCount > 0) SetValid(0x15); // PropertyMap
+            if (propertyCount > 0) SetValid(0x17); // Property
+            if (methodSemanticsCount > 0) SetValid(0x18); // MethodSemantics
             if (moduleRefCount > 0) SetValid(0x1A); // ModuleRef
             if (implMapCount > 0) SetValid(0x1C); // ImplMap
             SetValid(0x20); // Assembly（始终 1 行）
@@ -580,6 +616,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteRowCount(memberRefCount);  // MemberRef
             WriteRowCount(customAttributeCount);
             WriteRowCount(standAloneSigCount);
+            WriteRowCount(propertyMapCount);    // PropertyMap
+            WriteRowCount(propertyCount);       // Property
+            WriteRowCount(methodSemanticsCount); // MethodSemantics
             WriteRowCount(moduleRefCount);  // ModuleRef
             WriteRowCount(implMapCount);    // ImplMap
             WriteRowCount(1);               // Assembly
@@ -728,6 +767,69 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var sig in _standAloneSigs)
             {
                 WriteRef(GetOrAddBlob(sig.Signature), blobIsBig);
+            }
+
+            // ---- PropertyMap（行：Parent(TypeDef 行) + PropertyList(Property 行)）----
+            var propertyRow = 1;
+            var typeDefRowNumber = 1; // 1 = <Module>
+            foreach (var typeDef in _typeDefs)
+            {
+                typeDefRowNumber++;
+                if (typeDef.Properties.Count > 0)
+                {
+                    WriteRef(typeDefRowNumber, typeDefIsBig);
+                    WriteRef(propertyRow, propertyIsBig);
+                    propertyRow += typeDef.Properties.Count;
+                }
+            }
+
+            // ---- Property（行：Flags(2) + Name + Type(PropertySignature)）----
+            foreach (var typeDef in _typeDefs)
+            {
+                foreach (var property in typeDef.Properties)
+                {
+                    writer.Write((ushort)0x0000); // PropertyAttributes: None
+                    WriteStringRef(property.Name, stringIsBig);
+                    WriteRef(GetOrAddBlob(EncodePropertySignature(property.Type)), blobIsBig);
+                }
+            }
+
+            // ---- MethodSemantics（行：Semantics(2) + Method(MethodDef 行) + Association(HasSemantics coded)）----
+            if (methodSemanticsCount > 0)
+            {
+                var methodRowMap = new Dictionary<IlMethodDef, int>();
+                for (var i = 0; i < methodDefs.Count; i++)
+                {
+                    methodRowMap[methodDefs[i]] = i + 1;
+                }
+
+                var semantics = new List<(ushort Semantics, int MethodRow, int PropertyRow)>();
+                var propertyRowForSemantics = 1;
+                foreach (var typeDef in _typeDefs)
+                {
+                    foreach (var property in typeDef.Properties)
+                    {
+                        if (property.Getter != null)
+                        {
+                            semantics.Add((0x0002, methodRowMap[property.Getter], propertyRowForSemantics)); // Getter=0x2
+                        }
+                        if (property.Setter != null)
+                        {
+                            semantics.Add((0x0001, methodRowMap[property.Setter], propertyRowForSemantics)); // Setter=0x1
+                        }
+                        propertyRowForSemantics++;
+                    }
+                }
+
+                // ECMA-335 II.22.24：MethodSemantics 表按 Method 列排序
+                semantics.Sort((a, b) => a.MethodRow.CompareTo(b.MethodRow));
+
+                foreach (var entry in semantics)
+                {
+                    writer.Write(entry.Semantics);
+                    WriteRef(entry.MethodRow, methodDefIsBig);
+                    WriteCoded((entry.PropertyRow << 1) | 1, hasSemanticsIsBig); // HasSemantics: Property, tag=1
+                }
             }
 
             // ---- ModuleRef（行：Name #Strings）----

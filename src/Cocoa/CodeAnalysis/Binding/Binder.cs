@@ -435,13 +435,27 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     _diagnostics.ReportCannotInheritSealed(syntax.Identifier.Location, baseName);
                 }
-                else if (baseType.IsBaseOf(classType))
-                {
-                    _diagnostics.ReportCircularInheritance(syntax.Identifier.Location, baseName);
-                }
                 else
                 {
                     classType.BaseType = baseType;
+
+                    // 循环继承检测：沿基类链查找本类
+                    var seen = new HashSet<ClassTypeSymbol>();
+                    var circular = false;
+                    for (var current = baseType; current != null && seen.Add(current); current = current.BaseType)
+                    {
+                        if (current == classType)
+                        {
+                            circular = true;
+                            break;
+                        }
+                    }
+
+                    if (circular)
+                    {
+                        _diagnostics.ReportCircularInheritance(syntax.Identifier.Location, baseName);
+                        classType.BaseType = null;
+                    }
                 }
             }
 

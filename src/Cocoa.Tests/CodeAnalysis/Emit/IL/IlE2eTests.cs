@@ -707,5 +707,64 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("1\r\n2\r\n", stdout);
         }
+
+        [Fact]
+        public void Oop_Inheritance_Polymorphism_Static_Property_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Shape
+{
+    private _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public virtual function Describe(): string
+    {
+        return _name
+    }
+}
+
+public class Circle: Shape
+{
+    private _radius: int
+
+    public constructor(name: string, radius: int): base(name)
+    {
+        _radius = radius
+    }
+
+    public override function Describe(): string
+    {
+        return base.Describe() + (string)_radius
+    }
+
+    public property Area: int
+    {
+        get { return _radius * _radius }
+    }
+}
+
+public static class MathHelpers
+{
+    public static function Square(x: int): int
+    {
+        return x * x
+    }
+}
+
+function Main()
+{
+    var c = new Circle(""big"", 4)
+    print(c.Describe())
+    print(c.Area)
+    print(MathHelpers.Square(7))
+}", "e2e-oop");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("big4" + "\r\n16\r\n49\r\n", stdout);
+        }
     }
 }

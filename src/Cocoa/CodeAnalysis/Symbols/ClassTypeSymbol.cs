@@ -134,10 +134,11 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
-        /// <summary>this 是否为 base（含同一类型）或其派生类型。</summary>
+        /// <summary>this 是否为 base（含同一类型）或其派生类型（防循环继承死循环）。</summary>
         public bool IsBaseOf(ClassTypeSymbol type)
         {
-            for (var current = type; current != null; current = current.BaseType)
+            var seen = new System.Collections.Generic.HashSet<ClassTypeSymbol>();
+            for (var current = type; current != null && seen.Add(current); current = current.BaseType)
             {
                 if (current == this)
                 {

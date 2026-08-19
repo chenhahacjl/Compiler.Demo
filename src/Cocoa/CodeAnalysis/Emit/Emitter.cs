@@ -131,6 +131,30 @@ namespace Cocoa.CodeAnalysis.Emit
                 EmitFunctionDeclaration(functionWithBody.Key);
             }
 
+            // 2.5 属性定义（getter/setter 方法已发射）
+            foreach (var classType in program.Classes)
+            {
+                var typeDef = _classTypeDefs[classType];
+                foreach (var property in classType.Properties)
+                {
+                    IlMethodDef? getterMethod = null;
+                    IlMethodDef? setterMethod = null;
+                    if (property.Getter != null && _methods.TryGetValue(property.Getter, out var gm))
+                    {
+                        getterMethod = gm;
+                    }
+                    if (property.Setter != null && _methods.TryGetValue(property.Setter, out var sm))
+                    {
+                        setterMethod = sm;
+                    }
+
+                    if (getterMethod != null)
+                    {
+                        typeDef.Properties.Add(new IlPropertyDef(property.Name, ToIlType(property.Type), getterMethod, setterMethod));
+                    }
+                }
+            }
+
             var bodies = new List<ManagedPEWriter.MethodBodyBlob>();
             var methods = new List<IlMethodDef>();
 

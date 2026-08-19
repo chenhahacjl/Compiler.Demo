@@ -163,6 +163,116 @@ function Main()
             Assert.Contains("private", error.Message);
         }
 
+        [Fact]
+        public void Oop_AbstractClass_Instantiation_ReportsError()
+        {
+            var code = @"
+public abstract class Animal
+{
+    public abstract function Sound(): string
+}
+
+function Main()
+{
+    var a = new Animal()
+}";
+            var diagnostics = GetDiagnostics(code);
+            var error = Assert.Single(diagnostics);
+            Assert.Contains("抽象类", error.Message);
+        }
+
+        [Fact]
+        public void Oop_CircularInheritance_ReportsError()
+        {
+            var code = @"
+public class A: B { }
+public class B: A { }
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("循环继承"));
+        }
+
+        [Fact]
+        public void Oop_StaticContext_This_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    public static function Bar(): int
+    {
+        return this._x
+    }
+
+    private _x: int
+}
+
+function Main()
+{
+    print(Foo.Bar())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("this"));
+        }
+
+        [Fact]
+        public void Oop_ReadonlyField_OutsideConstructor_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    private readonly _x: int
+
+    public constructor(x: int)
+    {
+        _x = x
+    }
+
+    public function Reset()
+    {
+        _x = 0
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("only variable") || d.Message.Contains("_x"));
+        }
+
+        [Fact]
+        public void Oop_Property_WithoutSetter_Assignment_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    private _x: int
+
+    public constructor(x: int)
+    {
+        _x = x
+    }
+
+    public property X: int
+    {
+        get { return _x }
+    }
+}
+
+function Main()
+{
+    var f = new Foo(1)
+    f.X = 2
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("Cannot assign") || d.Message.Contains("X"));
+        }
+
         private static readonly string[] References = new[]
         {
             typeof(object).Assembly.Location,

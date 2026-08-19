@@ -161,5 +161,73 @@ function Main()
             Assert.Equal(0, process.ExitCode);
             Assert.Equal("5\r\n8\r\n", stdout);
         }
+
+        [Fact]
+        public void Library_Inheritance_Property_Consumed_ViaReflection()
+        {
+            var libCode = @"
+public class Shape
+{
+    private _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public virtual function Describe(): string
+    {
+        return _name
+    }
+
+    public property Name: string
+    {
+        get { return _name }
+        set { _name = value }
+    }
+}
+
+public class Circle: Shape
+{
+    private _radius: int
+
+    public constructor(name: string, radius: int): base(name)
+    {
+        _radius = radius
+    }
+
+    public override function Describe(): string
+    {
+        return base.Describe() + (string)_radius
+    }
+}";
+            var libTree = SyntaxTree.Parse(libCode);
+            var libCompilation = Compilation.Create(libTree);
+            var libPath = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "oop_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(libPath)!);
+            var libDiagnostics = libCompilation.Emit("oop_lib", References, libPath, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(libDiagnostics);
+
+            var assembly = Assembly.LoadFile(libPath);
+            var shape = assembly.GetType("Shape");
+            var circle = assembly.GetType("Circle");
+            Assert.True(shape.BaseType == typeof(object) || shape.BaseType.Name == "Object");
+            Assert.True(circle.BaseType == shape, "Circle 应继承 Shape");
+
+            var ctor = circle.GetConstructor(new[] { typeof(string), typeof(int) });
+            Assert.NotNull(ctor);
+            var obj = ctor.Invoke(new object[] { "big", 4 });
+
+            var describe = circle.GetMethod("Describe");
+            Assert.NotNull(describe);
+            Assert.True(describe.IsVirtual);
+            Assert.Equal("big4", describe.Invoke(obj, null));
+
+            var nameProperty = shape.GetProperty("Name");
+            Assert.NotNull(nameProperty);
+            Assert.Equal("big", nameProperty.GetValue(obj));
+            nameProperty.SetValue(obj, "renamed");
+            Assert.Equal("renamed", nameProperty.GetValue(obj));
+        }
     }
 }
