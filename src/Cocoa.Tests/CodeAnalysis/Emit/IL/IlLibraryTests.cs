@@ -61,24 +61,105 @@ public class Point
         }
 
         [Fact]
-        public void Library_NoMain_DoesNotRequireEntryPoint()
+        public void MetadataReader_FindsTypeInfo_InCocoaLibrary()
         {
             var code = @"
-public class Greeter
+namespace MyLib
 {
-    public function Hello(): string
+    public class Point
     {
-        return ""hi""
+        private _x: int
+
+        public constructor(x: int)
+        {
+            _x = x
+        }
+
+        public function Get(): int
+        {
+            return _x
+        }
     }
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
-            var path = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "greeter.dll");
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "mylib_info.dll");
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            var diagnostics = compilation.Emit("greeter", References, path, IlTarget.Parse("net9.0"), emitLibrary: true);
+            var diagnostics = compilation.Emit("mylib", References, path, IlTarget.Parse("net9.0"), emitLibrary: true);
             Assert.Empty(diagnostics);
-            Assert.True(File.Exists(path));
+
+            var reader = new MetadataReader(new[] { path });
+            var info = reader.FindTypeInfo("MyLib.Point");
+            Assert.NotNull(info);
+            Assert.Equal("MyLib.Point", info.FullName);
+            Assert.Contains(info.Methods, m => m.Name == ".ctor" && m.ParameterTypes.Count == 1 && m.ParameterTypes[0].FullName == "System.Int32");
+            Assert.Contains(info.Methods, m => m.Name == "Get");
+
+            var builder = new MetadataBuilder("test", "test");
+            var method = reader.FindMethod("MyLib.Point", ".ctor", new[] { "System.Int32" }, builder);
+            Assert.NotNull(method);
+        }
+
+        [Fact]
+        public void Library_Consumed_ByAnotherCompilation_WithUsing()
+        {
+            var libCode = @"
+namespace MyLib
+{
+    public class Point
+    {
+        private _x: int
+
+        public constructor(x: int)
+        {
+            _x = x
+        }
+
+        public function Get(): int
+        {
+            return _x
+        }
+
+        public function Add(other: int): int
+        {
+            return _x + other
+        }
+    }
+}";
+            var libTree = SyntaxTree.Parse(libCode);
+            var libCompilation = Compilation.Create(libTree);
+            var libPath = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "consume_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(libPath)!);
+            var libDiagnostics = libCompilation.Emit("consume_lib", References, libPath, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(libDiagnostics);
+
+            var appCode = @"
+using MyLib
+
+function Main()
+{
+    var p = new Point(5)
+    print(p.Get())
+    print(p.Add(3))
+}";
+            var appTree = SyntaxTree.Parse(appCode);
+            var appCompilation = Compilation.Create("Main", new[] { libPath }, appTree);
+            var appPath = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "consume_app.exe");
+            var emitRefs = References.Concat(new[] { libPath }).ToArray();
+            var appDiagnostics = appCompilation.Emit("consume_app", emitRefs, appPath, IlTarget.Parse("net9.0"));
+            Assert.Empty(appDiagnostics);
+
+            var psi = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{appPath}\"")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            using var process = System.Diagnostics.Process.Start(psi)!;
+            var stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(15000);
+            Assert.Equal(0, process.ExitCode);
+            Assert.Equal("5\r\n8\r\n", stdout);
         }
     }
 }

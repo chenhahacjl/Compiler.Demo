@@ -17,17 +17,22 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly bool _isScript;
         private readonly FunctionSymbol? _function;
         private readonly ClassTypeSymbol? _currentClass;
+        private readonly string[] _references;
+
+        private readonly List<string> _usingNamespaces = new List<string>();
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
 
-        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function)
+        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
             _function = function;
             _currentClass = function?.ContainingClass;
+            _references = references.ToArray();
+            _usingNamespaces.AddRange(usingNamespaces);
 
             if (function != null)
             {
@@ -38,15 +43,15 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "Main")
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null)
         {
             var parentScope = CreateParentScope(previous);
-            var binder = new Binder(isScript, parentScope, null);
+            var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.Any())
             {
-                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty);
+                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
             }
 
             var globalStatements = syntaxTrees.SelectMany(st => st.Root.Members)
@@ -72,7 +77,15 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is ClassDeclarationSyntax classDeclaration)
                 {
-                    binder.BindClassDeclaration(classDeclaration, classFunctions);
+                    binder.BindClassDeclaration(classDeclaration, classFunctions, "");
+                }
+                else if (member is NamespaceDeclarationSyntax namespaceDeclaration)
+                {
+                    binder.BindNamespaceDeclaration(namespaceDeclaration, classFunctions);
+                }
+                else if (member is UsingDirectiveSyntax usingDirective)
+                {
+                    binder._usingNamespaces.Add(usingDirective.Name);
                 }
             }
 
@@ -164,13 +177,14 @@ namespace Cocoa.CodeAnalysis.Binding
             var variables = binder._scope.GetDeclaredVariables();
             var enums = binder._scope.GetDeclaredEnums();
             var classes = binder._scope.GetDeclaredClasses();
+            var usingNamespaces = binder._usingNamespaces.ToImmutableArray();
 
             if (previous != null)
             {
                 diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
             }
 
-            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable());
+            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, (references ?? Array.Empty<string>()).ToImmutableArray());
         }
 
         public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope)
@@ -208,7 +222,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     continue;
                 }
 
-                var binder = new Binder(isScript, parentScope, function);
+                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces);
                 var body = binder.BindStatement(bodySyntax);
                 var loweredBody = Lowerer.Lower(function, body);
 
@@ -338,12 +352,12 @@ namespace Cocoa.CodeAnalysis.Binding
             return parameters.ToImmutable();
         }
 
-        private void BindClassDeclaration(ClassDeclarationSyntax syntax, List<FunctionSymbol> classFunctions)
+        private void BindClassDeclaration(ClassDeclarationSyntax syntax, List<FunctionSymbol> classFunctions, string @namespace)
         {
             var name = syntax.Identifier.Text;
             var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
 
-            var classType = new ClassTypeSymbol(name, isPublic, syntax);
+            var classType = new ClassTypeSymbol(name, @namespace, isPublic, syntax);
 
             if (!_scope.TryDeclareClass(classType))
             {
@@ -396,6 +410,22 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
                     }
+                }
+            }
+        }
+
+        private void BindNamespaceDeclaration(NamespaceDeclarationSyntax syntax, List<FunctionSymbol> classFunctions)
+        {
+            foreach (var member in syntax.Members)
+            {
+                if (member is ClassDeclarationSyntax classDeclaration)
+                {
+                    BindClassDeclaration(classDeclaration, classFunctions, syntax.Name);
+                }
+                else if (member is FunctionDeclarationSyntax functionDeclaration)
+                {
+                    // 顶层函数（可放 namespace 内），保持全局注册
+                    BindFunctionDeclaration(functionDeclaration);
                 }
             }
         }
@@ -1372,7 +1402,26 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 default:
-                    return _scope.TryLookupSymbol(name) as TypeSymbol;
+                {
+                    var lookup = _scope.TryLookupSymbol(name);
+                    if (lookup is TypeSymbol declaredType)
+                    {
+                        return declaredType;
+                    }
+
+                    // 外部类型：using 前缀 + 名字 → 引用程序集
+                    foreach (var ns in _usingNamespaces)
+                    {
+                        var fullName = ns.Length == 0 ? name : ns + "." + name;
+                        var externalType = ExternalTypeResolver.TryResolve(fullName, _references);
+                        if (externalType != null)
+                        {
+                            return externalType;
+                        }
+                    }
+
+                    return null;
+                }
             }
         }
 

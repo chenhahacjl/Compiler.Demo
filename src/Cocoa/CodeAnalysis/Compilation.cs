@@ -13,28 +13,40 @@ namespace Cocoa.CodeAnalysis
     {
         private BoundGlobalScope? _globalScope;
         private readonly string _entryPointName;
+        private readonly string[] _references;
 
-        private Compilation(bool isScript, Compilation? previous, string entryPointName, params SyntaxTree[] syntaxTrees)
+        private Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
             Previous = previous;
             _entryPointName = entryPointName;
+            _references = references ?? Array.Empty<string>();
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "Main", syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references: null, syntaxTrees);
+        }
+
+        public static Compilation Create(string[] references, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references, syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName, references: null, syntaxTrees);
+        }
+
+        public static Compilation Create(string entryPointName, string[] references, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, entryPointName, references, syntaxTrees);
         }
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: true, previous, entryPointName: "Main", syntaxTrees);
+            return new Compilation(isScript: true, previous, entryPointName: "Main", references: null, syntaxTrees);
         }
 
         public bool IsScript { get; }
@@ -50,7 +62,7 @@ namespace Cocoa.CodeAnalysis
             {
                 if (_globalScope == null)
                 {
-                    var globalScope = Binding.Binder.BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName);
+                    var globalScope = Binding.Binder.BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references);
                     Interlocked.CompareExchange(ref _globalScope, globalScope, null);
                 }
 

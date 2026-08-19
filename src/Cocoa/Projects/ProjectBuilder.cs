@@ -108,8 +108,8 @@ namespace Cocoa.Projects
 
             var syntaxTrees = expansion.Files.Select(f => SyntaxTree.Load(f)).ToArray();
             var compilation = project.Entry == null
-                ? Compilation.Create(syntaxTrees)
-                : Compilation.Create(project.Entry, syntaxTrees);
+                ? Compilation.Create(references.ToArray(), syntaxTrees)
+                : Compilation.Create(project.Entry, references.ToArray(), syntaxTrees);
 
             ImmutableArray<Diagnostic> diagnostics;
             try
@@ -127,10 +127,12 @@ namespace Cocoa.Projects
                 else
                 {
                     var target = IlTarget.Parse(dotnetRuntime!);
+                    var defaultRefs = IlReferenceResolver.ResolveDefaultReferences(target)
+                        ?? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location };
+
                     var referencePaths = references.Count == 0
-                        ? IlReferenceResolver.ResolveDefaultReferences(target)
-                            ?? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location }
-                        : references.ToArray();
+                        ? defaultRefs
+                        : references.Concat(defaultRefs).Distinct().ToArray();
 
                     var emitLibrary = project.Output == ProjectOutputFormat.Dll;
                     diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary);

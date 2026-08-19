@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundGlobalScope
     {
-        public BoundGlobalScope(BoundGlobalScope? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableArray<FunctionSymbol> functions, ImmutableArray<EnumTypeSymbol> enums, ImmutableArray<ClassTypeSymbol> classes, ImmutableArray<VariableSymbol> variables, ImmutableArray<BoundStatement> statements)
+        public BoundGlobalScope(BoundGlobalScope? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableArray<FunctionSymbol> functions, ImmutableArray<EnumTypeSymbol> enums, ImmutableArray<ClassTypeSymbol> classes, ImmutableArray<VariableSymbol> variables, ImmutableArray<BoundStatement> statements, ImmutableArray<string> usingNamespaces, ImmutableArray<string> references)
         {
             Previous = previous;
             Diagnostics = diagnostics;
@@ -16,6 +16,8 @@ namespace Cocoa.CodeAnalysis.Binding
             Classes = classes;
             Variables = variables;
             Statements = statements;
+            UsingNamespaces = usingNamespaces;
+            References = references;
         }
 
         public BoundGlobalScope? Previous { get; }
@@ -27,5 +29,7 @@ namespace Cocoa.CodeAnalysis.Binding
         public ImmutableArray<ClassTypeSymbol> Classes { get; }
         public ImmutableArray<VariableSymbol> Variables { get; }
         public ImmutableArray<BoundStatement> Statements { get; }
+        public ImmutableArray<string> UsingNamespaces { get; }
+        public ImmutableArray<string> References { get; }
     }
 }

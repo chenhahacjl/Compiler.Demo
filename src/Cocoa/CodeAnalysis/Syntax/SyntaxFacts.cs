@@ -101,6 +101,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ImportKeyword;
                 case "new":
                     return SyntaxKind.NewKeyword;
+                case "namespace":
+                    return SyntaxKind.NamespaceKeyword;
+                case "using":
+                    return SyntaxKind.UsingKeyword;
                 case "let":
                     return SyntaxKind.LetKeyword;
                 case "return":
@@ -246,6 +250,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "import";
                 case SyntaxKind.NewKeyword:
                     return "new";
+                case SyntaxKind.NamespaceKeyword:
+                    return "namespace";
+                case SyntaxKind.UsingKeyword:
+                    return "using";
                 case SyntaxKind.LetKeyword:
                     return "let";
                 case SyntaxKind.ReturnKeyword:

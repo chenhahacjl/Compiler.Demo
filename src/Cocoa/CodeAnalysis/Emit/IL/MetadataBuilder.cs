@@ -9,9 +9,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>我们自己的类型定义（TypeDef 表行）。顶层函数挂在 Program，class 各占一行。</summary>
     internal sealed class IlTypeDef
     {
-        public IlTypeDef(string name, IlTypeRef? baseTypeRef, bool isPublic = true)
+        public IlTypeDef(string name, string @namespace, IlTypeRef? baseTypeRef, bool isPublic = true)
         {
             Name = name;
+            Namespace = @namespace ?? "";
             BaseTypeRef = baseTypeRef;
             IsPublic = isPublic;
             Fields = new List<IlFieldDef>();
@@ -19,6 +20,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         public string Name { get; }
+        public string Namespace { get; }
         public IlTypeRef? BaseTypeRef { get; }
         public bool IsPublic { get; }
         public List<IlFieldDef> Fields { get; }
@@ -608,7 +610,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 var flags = typeDef.IsPublic ? 0x00000001u : 0x00000000u; // Public
                 var extends = typeDef.BaseTypeRef == null ? 0 : CodedIndexTypeDefOrRef(typeDef.BaseTypeRef);
-                WriteTypeDefRow(flags, typeDef.Name, "", extends, fieldList, methodList);
+                WriteTypeDefRow(flags, typeDef.Name, typeDef.Namespace, extends, fieldList, methodList);
                 fieldList += typeDef.Fields.Count;
                 methodList += typeDef.Methods.Count;
             }

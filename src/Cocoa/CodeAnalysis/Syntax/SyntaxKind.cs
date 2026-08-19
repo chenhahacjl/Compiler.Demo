@@ -71,6 +71,7 @@ ColonToken,               // :
         IfKeyword,                // if
         ImportKeyword,            // import
         LetKeyword,               // let
+        NamespaceKeyword,         // namespace
         NewKeyword,               // new
         PrivateKeyword,           // private
         PublicKeyword,            // public
@@ -78,6 +79,7 @@ ColonToken,               // :
         StdcallKeyword,           // stdcall
         ToKeyword,                // to
         TrueKeyword,              // true
+        UsingKeyword,             // using
         VarKeyword,               // var
         WhileKeyword,             // while
 
@@ -87,6 +89,8 @@ ColonToken,               // :
         ClassDeclaration,         // 类定义
         ClassFieldDeclaration,    // 类字段
         ConstructorDeclaration,   // 构造函数
+        NamespaceDeclaration,     // 命名空间声明
+        UsingDirective,           // using 导入
         ImportClause,             // import 声明
         GlobalStatement,          // 全局声明
         Parameter,                // 参数

@@ -76,7 +76,7 @@ namespace Cocoa.CodeAnalysis.Emit
             _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
             _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
 
-            _typeDefinition = new IlTypeDef("Program", _objectType);
+            _typeDefinition = new IlTypeDef("Program", "", _objectType);
             _metadata.AddTypeDef(_typeDefinition);
         }
 
@@ -190,7 +190,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitClassDeclaration(ClassTypeSymbol classType)
         {
-            var typeDef = new IlTypeDef(classType.Name, _objectType, isPublic: classType.IsPublic);
+            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, _objectType, isPublic: classType.IsPublic);
             _classTypeDefs.Add(classType, typeDef);
 
             foreach (var field in classType.Fields)
@@ -342,6 +342,11 @@ namespace Cocoa.CodeAnalysis.Emit
 
             if (type is ClassTypeSymbol classType)
             {
+                if (classType.IsExternal)
+                {
+                    return IlType.Class(ResolveExternalTypeRef(classType));
+                }
+
                 return IlType.Class(_classTypeDefs[classType]);
             }
 
@@ -358,6 +363,11 @@ namespace Cocoa.CodeAnalysis.Emit
             return _reader.FindType(fullName, _metadata) ?? throw new System.Exception($"Type '{fullName}' not found in references.");
         }
 
+        private IlTypeRef ResolveExternalTypeRef(ClassTypeSymbol classType)
+        {
+            return RequireType(classType.FullName);
+        }
+
         private IlMethodRef RequireMethod(string typeFullName, string methodName, string[] parameterTypeNames)
         {
             var resolved = _reader.FindMethod(typeFullName, methodName, parameterTypeNames, _metadata);
@@ -366,6 +376,11 @@ namespace Cocoa.CodeAnalysis.Emit
                 throw new System.Exception($"Method '{typeFullName}.{methodName}' not found in references.");
             }
 
+            return ResolveMethodRef(resolved);
+        }
+
+        private IlMethodRef ResolveMethodRef(ResolvedMethodInfo resolved)
+        {
             var returnType = ResolveClassType(resolved.ReturnType);
             var parameterTypes = new List<IlType>(resolved.ParameterTypes.Count);
             foreach (var parameterType in resolved.ParameterTypes)
@@ -1149,7 +1164,25 @@ namespace Cocoa.CodeAnalysis.Emit
 
             if (node.Method != null)
             {
-                // 实例方法：Callvirt（this 已在栈上）
+                if (node.Method.ContainingClass!.IsExternal)
+                {
+                    var parameterNames = new string[node.Arguments.Length];
+                    for (var i = 0; i < node.Arguments.Length; i++)
+                    {
+                        parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                    }
+
+                    var methodRef = _reader.FindMethod(node.Method.ContainingClass.FullName, node.Identifier, parameterNames, _metadata);
+                    if (methodRef == null)
+                    {
+                        throw new System.Exception($"外部方法 {node.Method.ContainingClass.FullName}.{node.Identifier} 未找到。");
+                    }
+
+                    il.Emit(IlOpCodes.Get("Callvirt"), ResolveMethodRef(methodRef));
+                    return;
+                }
+
+                // 本地实例方法：Callvirt（this 已在栈上）
                 il.Emit(IlOpCodes.Get("Callvirt"), _methods[node.Method]);
                 return;
             }
@@ -1183,6 +1216,25 @@ namespace Cocoa.CodeAnalysis.Emit
             }
 
             var classType = (ClassTypeSymbol)node.Type;
+
+            if (classType.IsExternal)
+            {
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                var ctorRef = _reader.FindMethod(classType.FullName, ".ctor", parameterNames, _metadata);
+                if (ctorRef == null)
+                {
+                    throw new System.Exception($"外部类型 {classType.FullName} 的构造函数未找到。");
+                }
+
+                il.Emit(IlOpCodes.Get("Newobj"), ResolveMethodRef(ctorRef));
+                return;
+            }
+
             var ctor = classType.GetMethod(classType.Name);
             if (ctor == null)
             {

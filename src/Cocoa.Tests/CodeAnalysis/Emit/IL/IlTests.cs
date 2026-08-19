@@ -215,7 +215,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Serialize_Sets_MethodDef_Bit_When_Method_Exists()
         {
             var builder = new MetadataBuilder("test", "test");
-            var typeDef = new IlTypeDef("Program", null);
+            var typeDef = new IlTypeDef("Program", "", null);
             builder.AddTypeDef(typeDef);
             builder.AddMethodDef(typeDef, new IlMethodDef("main", IlType.Void, new IlType[0], null));
             var blobs = builder.Serialize(new Dictionary<IlMethodDef, uint>());

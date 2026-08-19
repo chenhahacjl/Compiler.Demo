@@ -24,6 +24,35 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public bool IsStatic { get; }
     }
 
+    /// <summary>外部类型的成员描述（字段/方法签名）。</summary>
+    internal sealed class ResolvedTypeInfo
+    {
+        public ResolvedTypeInfo(string fullName, List<ResolvedFieldInfo> fields, List<ResolvedMethodInfo> methods)
+        {
+            FullName = fullName;
+            Fields = fields;
+            Methods = methods;
+        }
+
+        public string FullName { get; }
+        public List<ResolvedFieldInfo> Fields { get; }
+        public List<ResolvedMethodInfo> Methods { get; }
+    }
+
+    internal sealed class ResolvedFieldInfo
+    {
+        public ResolvedFieldInfo(string name, IlType type, bool isPublic)
+        {
+            Name = name;
+            Type = type;
+            IsPublic = isPublic;
+        }
+
+        public string Name { get; }
+        public IlType Type { get; }
+        public bool IsPublic { get; }
+    }
+
     /// <summary>
     /// ECMA-335 元数据读取器（最小子集）：解析 references 程序集，
     /// 按「类型 FullName + 方法名 + 参数类型名」查找方法，产出 IL 引用（IlTypeRef/IlAssemblyRef/签名类型）。
@@ -60,6 +89,21 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     var ns = dot < 0 ? "" : fullName.Substring(0, dot);
                     var name = dot < 0 ? fullName : fullName.Substring(dot + 1);
                     return builder.DefineTypeRef(assemblyRef, ns, name);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>读取引用程序集中类型的定义（public 字段/方法签名）。</summary>
+        public ResolvedTypeInfo? FindTypeInfo(string fullName)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                var result = assembly.FindTypeInfo(fullName);
+                if (result != null)
+                {
+                    return result;
                 }
             }
 
@@ -574,7 +618,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     continue;
                 }
 
-                var endMethod = methodList + 1;
+                var endMethod = methodDefCount;
                 if (i + 1 < typeDefCount)
                 {
                     var nextRow = _tableOffsets[0x02] + (i + 1) * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
@@ -636,6 +680,106 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             return true;
+        }
+
+        /// <summary>读取类型的 public 字段与方法签名。</summary>
+        internal ResolvedTypeInfo? FindTypeInfo(string fullName)
+        {
+            if (_tableData == null)
+            {
+                return null;
+            }
+
+            var typeDefCount = RowCount(0x02);
+            var methodDefCount = RowCount(0x06);
+            var fieldCount = RowCount(0x04);
+            var fieldListIsBig = fieldCount > 0xFFFF;
+            var methodListIsBig = methodDefCount > 0xFFFF;
+
+            for (var i = 0; i < typeDefCount; i++)
+            {
+                var typeDefRow = _tableOffsets[0x02] + i * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                var name = ReadString(ReadRef(_tableData, typeDefRow + 4, _stringIsBig));
+                var ns = ReadString(ReadRef(_tableData, typeDefRow + 4 + (_stringIsBig ? 4 : 2), _stringIsBig));
+                var typeFullName = ns.Length == 0 ? name : ns + "." + name;
+                if (typeFullName != fullName)
+                {
+                    continue;
+                }
+
+                var fieldListOffset = typeDefRow + 4 + 2 * (_stringIsBig ? 4 : 2) + (_typeDefOrRefIsBig ? 4 : 2);
+                var fieldList = ReadRef(_tableData, fieldListOffset, fieldListIsBig) - 1;
+                var methodListOffset = fieldListOffset + (fieldListIsBig ? 4 : 2);
+                var methodList = ReadRef(_tableData, methodListOffset, methodListIsBig) - 1;
+
+                var fields = new List<ResolvedFieldInfo>();
+                var fieldEnd = fieldCount;
+                if (i + 1 < typeDefCount)
+                {
+                    var nextRow = _tableOffsets[0x02] + (i + 1) * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                    fieldEnd = ReadRef(_tableData, nextRow + 4 + 2 * (_stringIsBig ? 4 : 2) + (_typeDefOrRefIsBig ? 4 : 2), fieldListIsBig) - 1;
+                }
+
+                for (var f = fieldList; f < fieldEnd && f < fieldCount; f++)
+                {
+                    var fieldRow = _tableOffsets[0x04] + f * RowSize(0x04, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                    var fieldFlags = BitConverter.ToUInt16(_tableData, fieldRow);
+                    var fieldName = ReadString(ReadRef(_tableData, fieldRow + 2, _stringIsBig));
+                    var sigBlobIndex = ReadRef(_tableData, fieldRow + 2 + (_stringIsBig ? 4 : 2), _blobIsBig);
+                    var sigBlob = ReadBlob(sigBlobIndex);
+                    if (sigBlob.Length < 1 || sigBlob[0] != 0x06)
+                    {
+                        continue;
+                    }
+
+                    var pos = 1;
+                    IlType fieldType;
+                    try
+                    {
+                        fieldType = ParseType(sigBlob, ref pos);
+                    }
+                    catch (BadImageFormatException)
+                    {
+                        continue;
+                    }
+
+                    var isPublic = (fieldFlags & 0x0006) == 0x0006;
+                    fields.Add(new ResolvedFieldInfo(fieldName, fieldType, isPublic));
+                }
+
+                var methods = new List<ResolvedMethodInfo>();
+                var methodEnd = methodDefCount;
+                if (i + 1 < typeDefCount)
+                {
+                    var nextRow = _tableOffsets[0x02] + (i + 1) * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                    methodEnd = ReadRef(_tableData, nextRow + 4 + 2 * (_stringIsBig ? 4 : 2) + (_typeDefOrRefIsBig ? 4 : 2) + (fieldListIsBig ? 4 : 2), methodListIsBig) - 1;
+                }
+
+                for (var m = methodList; m < methodEnd && m < methodDefCount; m++)
+                {
+                    var methodRow = _tableOffsets[0x06] + m * RowSize(0x06, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                    var methodFlags = BitConverter.ToUInt16(_tableData, methodRow + 6);
+                    var methodName = ReadString(ReadRef(_tableData, methodRow + 8, _stringIsBig));
+                    var signatureBlobIndex = ReadRef(_tableData, methodRow + 8 + (_stringIsBig ? 4 : 2), _blobIsBig);
+
+                    ResolvedMethodSignature? signature;
+                    try
+                    {
+                        signature = ParseMethodSignature(ReadBlob(signatureBlobIndex));
+                    }
+                    catch (BadImageFormatException)
+                    {
+                        continue;
+                    }
+
+                    var isPublic = (methodFlags & 0x0006) == 0x0006;
+                    methods.Add(new ResolvedMethodInfo(new IlTypeRef(ns, name, null), methodName, signature.ReturnType, signature.ParameterTypes, signature.IsStatic));
+                }
+
+                return new ResolvedTypeInfo(fullName, fields, methods);
+            }
+
+            return null;
         }
 
         /// <summary>解析方法签名 blob：返回类型 + 参数类型（ElementType → 类型名）。</summary>

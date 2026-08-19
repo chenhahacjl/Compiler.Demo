@@ -11,16 +11,26 @@ namespace Cocoa.CodeAnalysis.Symbols
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
 
-        internal ClassTypeSymbol(string name, bool isPublic, ClassDeclarationSyntax? declaration)
+        internal ClassTypeSymbol(string name, string @namespace, bool isPublic, ClassDeclarationSyntax? declaration, bool isExternal = false)
             : base(name)
         {
+            Namespace = @namespace ?? "";
             IsPublic = isPublic;
             Declaration = declaration;
+            IsExternal = isExternal;
             _fields = ImmutableArray.CreateBuilder<FieldSymbol>();
             _methods = ImmutableArray.CreateBuilder<FunctionSymbol>();
         }
 
         public override SymbolKind Kind => SymbolKind.Class;
+
+        public string Namespace { get; }
+
+        /// <summary>外部引用程序集类型（消费 -r 库时 true）。</summary>
+        public bool IsExternal { get; }
+
+        /// <summary>完整类型名（含命名空间）。</summary>
+        public string FullName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
 
         public bool IsPublic { get; }
 

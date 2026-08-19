@@ -148,6 +148,16 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseImportClause();
             }
 
+            if (Current.Kind == SyntaxKind.UsingKeyword)
+            {
+                return ParseUsingDirective();
+            }
+
+            if (Current.Kind == SyntaxKind.NamespaceKeyword)
+            {
+                return ParseNamespaceDeclaration();
+            }
+
             // 统一修饰符：public/private/stdcall/cdecl（顺序无关）
             var modifiers = ParseModifiers();
 
@@ -257,6 +267,47 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new ImportClauseSyntax(_syntaxTree, importKeyword, nameTokens.ToImmutable());
+        }
+
+        private MemberSyntax ParseUsingDirective()
+        {
+            var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
+            var nameTokens = ParseQualifiedName();
+
+            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, nameTokens);
+        }
+
+        private MemberSyntax ParseNamespaceDeclaration()
+        {
+            var namespaceKeyword = MatchToken(SyntaxKind.NamespaceKeyword);
+            var nameTokens = ParseQualifiedName();
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+
+            while (Current.Kind != SyntaxKind.CloseBraceToken &&
+                   Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                members.Add(ParseMember());
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new NamespaceDeclarationSyntax(_syntaxTree, namespaceKeyword, nameTokens, openBraceToken, members.ToImmutable(), closeBraceToken);
+        }
+
+        private ImmutableArray<SyntaxToken> ParseQualifiedName()
+        {
+            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
+
+            nameTokens.Add(MatchToken(SyntaxKind.IdentifierToken));
+
+            while (Current.Kind == SyntaxKind.DotToken)
+            {
+                nameTokens.Add(MatchToken(SyntaxKind.DotToken));
+                nameTokens.Add(MatchToken(SyntaxKind.IdentifierToken));
+            }
+
+            return nameTokens.ToImmutable();
         }
 
         private MemberSyntax ParseFunctionDeclaration(ImmutableArray<SyntaxToken> modifiers)

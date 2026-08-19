@@ -15,7 +15,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         private static byte[] BuildPe(params IlMethodDef[] methods)
         {
             var metadata = new MetadataBuilder("test", "test");
-            var typeDef = new IlTypeDef("Program", null);
+            var typeDef = new IlTypeDef("Program", "", null);
             metadata.AddTypeDef(typeDef);
             var bodies = new List<ManagedPEWriter.MethodBodyBlob>();
             var withBodies = new List<IlMethodDef>();

@@ -65,7 +65,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             IlTypeKind.Double => "System.Double",
             IlTypeKind.String => "System.String",
             IlTypeKind.Object => "System.Object",
-            IlTypeKind.Class => TypeDef != null ? TypeDef.Name : Reference!.FullName,
+            IlTypeKind.Class => TypeDef != null
+                ? (TypeDef.Namespace.Length == 0 ? TypeDef.Name : TypeDef.Namespace + "." + TypeDef.Name)
+                : Reference!.FullName,
             IlTypeKind.SzArray => ElementType!.FullName + "[]",
             _ => "?",
         };
