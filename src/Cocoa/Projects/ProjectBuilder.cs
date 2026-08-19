@@ -22,6 +22,8 @@ namespace Cocoa.Projects
                 return ProjectBuildResult.Failed;
             }
 
+            var backend = options.Backend ?? ProjectBuildOptions.DefaultBackend;
+
             var platform = ParseTargetPlatform(options.PlatformOverride, project.Platform);
 
             var outputDirectory = project.GetOutputDirectory();
@@ -77,9 +79,10 @@ namespace Cocoa.Projects
             {
                 $"format={format}",
                 $"platform={platform}",
-                $"backend={options.Backend}",
+                $"backend={backend}",
                 $"debug={options.DebugOverride ?? project.Debug}",
                 $"output={outputFile}",
+                $"entry={project.Entry}",
             };
 
             var fingerprint = BuildCache.ComputeFingerprint(
@@ -95,12 +98,14 @@ namespace Cocoa.Projects
             }
 
             var syntaxTrees = expansion.Files.Select(f => SyntaxTree.Load(f)).ToArray();
-            var compilation = Compilation.Create(syntaxTrees);
+            var compilation = project.Entry == null
+                ? Compilation.Create(syntaxTrees)
+                : Compilation.Create(project.Entry, syntaxTrees);
 
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
-                if (options.Backend == ProjectBackend.Native)
+                if (backend == ProjectBackend.Native)
                 {
                     diagnostics = compilation.EmitNative(project.Name, outputFile, platform);
                 }

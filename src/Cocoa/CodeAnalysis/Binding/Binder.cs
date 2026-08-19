@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees)
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "main")
         {
             var parentScope = CreateParentScope(previous);
             var binder = new Binder(isScript, parentScope, null);
@@ -116,12 +116,14 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 scriptFunction = null;
 
-                mainFunction = functions.SingleOrDefault(f => f.Name == "main");
+                mainFunction = functions.SingleOrDefault(f => f.Name == entryPointName);
 
                 if (mainFunction != null)
                 {
                     var returnTypeOk = mainFunction.ReturnType == TypeSymbol.Void || mainFunction.ReturnType == TypeSymbol.Int32;
-                    if (mainFunction.Parameters.Any() || !returnTypeOk)
+                    var parametersOk = mainFunction.Parameters.Length == 0 ||
+                                       (mainFunction.Parameters.Length == 1 && mainFunction.Parameters[0].Type == TypeSymbol.ArrayOf(TypeSymbol.String));
+                    if (!parametersOk || !returnTypeOk)
                     {
                         binder.Diagnostics.ReportMainMustHaveCorrectSignature(mainFunction.Declaration!.Identifier.Location);
                     }
@@ -140,7 +142,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                     else
                     {
-                        mainFunction = new FunctionSymbol("main", ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null);
+                        mainFunction = new FunctionSymbol(entryPointName, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null);
                     }
                 }
             }

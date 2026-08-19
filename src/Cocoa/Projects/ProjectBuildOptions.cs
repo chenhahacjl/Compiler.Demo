@@ -10,13 +10,15 @@ namespace Cocoa.Projects
 
     public sealed class ProjectBuildOptions
     {
+        public const ProjectBackend DefaultBackend = ProjectBackend.Native;
+
         public ProjectOutputFormat? FormatOverride { get; set; }
         public string? PlatformOverride { get; set; }
         public bool NoIncremental { get; set; }
         public bool? DebugOverride { get; set; }
         public string? OutputFileOverride { get; set; }
         public ImmutableArray<string> ReferenceOverrides { get; set; } = ImmutableArray<string>.Empty;
-        public ProjectBackend Backend { get; set; } = ProjectBackend.Native;
+        public ProjectBackend? Backend { get; set; }
         public string? CacheRoot { get; set; }
     }
 

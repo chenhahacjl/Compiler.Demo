@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         private static readonly string[] Kernel32Imports =
         {
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc",
-            "GetFileType", "ReadConsoleW", "WriteConsoleW",
+            "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW",
         };
 
         public static void Append(IrProgram program, TargetPlatform platform)
@@ -107,6 +107,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 EmitNewArray();
                 _ = BeginFunction("ArrayBoundsCheck", 4, 4);
                 EmitArrayBoundsCheck();
+                _ = BeginFunction("BuildArgs");
+                EmitBuildArgs();
                 _ = BeginFunction("ExitProcess", 4);
                 var exitProcess = _currentFunction!;
                 EmitExitProcess();
@@ -1910,6 +1912,230 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 CallRuntime(null, "PrintString", message);
                 CallRuntime(null, "ExitProcess", C(4, 1));
                 EndFunction(_currentFunction!, 0);
+            }
+
+            // ------------------------------------------------------------------
+            // BuildArgs() → ptr（string[]）
+            // 用 GetCommandLineW 读取命令行（UTF-16），跳过程序名，按 MS 风格解析
+            // 剩余参数：空白（空格/制表符）分隔；引号包裹的空白不分割；引号本身从
+            // 参数内容中剥离。构建 string[]（布局同 NewArray），失败（OOM）返回 0。
+            // ------------------------------------------------------------------
+
+            private void EmitBuildArgs()
+            {
+                var elementSize = _isX64 ? 8 : 4;
+
+                var cmd = NewReg(8);
+                SysCall(cmd, "GetCommandLineW", 0);
+
+                var p = NewReg(8);
+                Mov(p, cmd);
+                var inQuotes = C(4, 0);
+                var ch = NewReg(4);
+                var count = C(4, 0);
+
+                // ---- 定位程序名后的第一个参数位置（first）----
+                var skipProg = NewLabel();
+                var skipProgCheck = NewLabel();
+                var skipProgNext = NewLabel();
+                var skipProgFound = NewLabel();
+
+                Mark(skipProg);
+                Load(ch, p, 0, 2);
+                Cmp(ch, 0);
+                Jcc(IrCond.Equal, skipProgFound);
+                Cmp(ch, 34);
+                Jcc(IrCond.NotEqual, skipProgCheck);
+                Xor(inQuotes, inQuotes, C(4, 1));
+                Jmp(skipProgNext);
+                Mark(skipProgCheck);
+                Cmp(inQuotes, 0);
+                Jcc(IrCond.NotEqual, skipProgNext);
+                Cmp(ch, 32);
+                Jcc(IrCond.Equal, skipProgFound);
+                Cmp(ch, 9);
+                Jcc(IrCond.Equal, skipProgFound);
+                Mark(skipProgNext);
+                Lea(p, p, 2);
+                Jmp(skipProg);
+
+                Mark(skipProgFound);
+                var first = NewReg(8);
+                Mov(first, p);
+
+                // ---- pass 1: 计数（count）----
+                var countWs = NewLabel();
+                var countWsNext = NewLabel();
+                var countDone = NewLabel();
+                var countTok = NewLabel();
+                var countTokNoQuote = NewLabel();
+                var countTokEnd = NewLabel();
+                var countTokNext = NewLabel();
+
+                Mark(countWs);
+                Load(ch, p, 0, 2);
+                Cmp(ch, 32);
+                Jcc(IrCond.Equal, countWsNext);
+                Cmp(ch, 9);
+                Jcc(IrCond.Equal, countWsNext);
+                Cmp(ch, 0);
+                Jcc(IrCond.Equal, countDone);
+                Jmp(countTok);
+                Mark(countWsNext);
+                Lea(p, p, 2);
+                Jmp(countWs);
+
+                Mark(countTok);
+                Load(ch, p, 0, 2);
+                Cmp(ch, 0);
+                Jcc(IrCond.Equal, countTokEnd);
+                Cmp(ch, 34);
+                Jcc(IrCond.NotEqual, countTokNoQuote);
+                Xor(inQuotes, inQuotes, C(4, 1));
+                Jmp(countTokNext);
+                Mark(countTokNoQuote);
+                Cmp(inQuotes, 0);
+                Jcc(IrCond.NotEqual, countTokNext);
+                Cmp(ch, 32);
+                Jcc(IrCond.Equal, countTokEnd);
+                Cmp(ch, 9);
+                Jcc(IrCond.Equal, countTokEnd);
+                Jmp(countTokNext);
+                Mark(countTokEnd);
+                AddI(count, count, 1);
+                Jmp(countWs);
+                Mark(countTokNext);
+                Lea(p, p, 2);
+                Jmp(countTok);
+
+                Mark(countDone);
+
+                // ---- 分配数组 ----
+                var elementSizeReg = C(4, elementSize);
+                var arr = NewReg(8);
+                SetArg(0, count);
+                SetArg(1, elementSizeReg);
+                Add(IrOpCode.Call, arr, IrOperand.Runtime("NewArray"), IrOperand.Constant(0));
+
+                var oom = NewLabel();
+                var finish = NewLabel();
+                var done = NewLabel();
+                Cmp(arr, 0);
+                Jcc(IrCond.Equal, oom);
+
+                // ---- pass 2: 逐个参数构造 string 并写入数组 ----
+                Mov(p, first);
+                var slot = NewReg(8);
+                var slotBase = NewReg(8);
+                Lea(slotBase, arr, 8);
+                Mov(slot, slotBase);
+
+                var buildWs = NewLabel();
+                var buildWsNext = NewLabel();
+                var buildTok = NewLabel();
+                var buildTokNoQuote = NewLabel();
+                var buildTokChar = NewLabel();
+                var buildTokScan = NewLabel();
+                var buildStr = NewLabel();
+                var buildTokNext = NewLabel();
+                var buildStrNext = NewLabel();
+                var copyLoop = NewLabel();
+                var copySkip = NewLabel();
+                var copyDone = NewLabel();
+
+                Mark(buildWs);
+                Load(ch, p, 0, 2);
+                Cmp(ch, 32);
+                Jcc(IrCond.Equal, buildWsNext);
+                Cmp(ch, 9);
+                Jcc(IrCond.Equal, buildWsNext);
+                Cmp(ch, 0);
+                Jcc(IrCond.Equal, finish);
+                Jmp(buildTok);
+                Mark(buildWsNext);
+                Lea(p, p, 2);
+                Jmp(buildWs);
+
+                Mark(buildTok);
+                var start = NewReg(8);
+                Mov(start, p);
+                var lenChars = C(4, 0);
+                Jmp(buildTokScan);
+
+                Mark(buildTokNext);
+                Lea(p, p, 2);
+
+                Mark(buildTokScan);
+                Load(ch, p, 0, 2);
+                Cmp(ch, 0);
+                Jcc(IrCond.Equal, buildStr);
+                Cmp(ch, 34);
+                Jcc(IrCond.NotEqual, buildTokNoQuote);
+                Xor(inQuotes, inQuotes, C(4, 1));
+                Jmp(buildTokNext);
+                Mark(buildTokNoQuote);
+                Cmp(inQuotes, 0);
+                Jcc(IrCond.NotEqual, buildTokChar);
+                Cmp(ch, 32);
+                Jcc(IrCond.Equal, buildStr);
+                Cmp(ch, 9);
+                Jcc(IrCond.Equal, buildStr);
+                Mark(buildTokChar);
+                AddI(lenChars, lenChars, 1);
+                Jmp(buildTokNext);
+
+                // ---- 构造字符串：Alloc(lenChars*2+4 对齐 4)，剥离引号拷贝 ----
+                Mark(buildStr);
+                var bytes = NewReg(4);
+                Mov(bytes, lenChars);
+                Shl(bytes, bytes, 1);
+                AddI(bytes, bytes, 4);
+                AddI(bytes, bytes, 3);
+                And(bytes, bytes, C(4, 0xFFFFFFFC));
+                var obj = NewReg(8);
+                CallRuntime(obj, "Alloc", bytes);
+                Cmp(obj, 0);
+                Jcc(IrCond.Equal, buildStrNext);
+
+Store(obj, 0, lenChars, 4);
+                var dst = NewReg(8);
+                Lea(dst, obj, 4);
+                var src = NewReg(8);
+                Mov(src, start);
+                var remaining = NewReg(4);
+                Mov(remaining, lenChars);
+
+                Mark(copyLoop);
+                Cmp(remaining, 0);
+                Jcc(IrCond.Equal, copyDone);
+                Load(ch, src, 0, 2);
+                Cmp(ch, 34);
+                Jcc(IrCond.Equal, copySkip);
+                Store(dst, 0, ch, 2);
+                Lea(dst, dst, 2);
+                AddI(remaining, remaining, -1);
+                Mark(copySkip);
+                Lea(src, src, 2);
+                Jmp(copyLoop);
+
+                Mark(copyDone);
+                Store(slot, 0, obj, elementSize);
+
+                Mark(buildStrNext);
+                Lea(slot, slot, elementSize);
+                Jmp(buildWs);
+
+                Mark(finish);
+                StoreRet(arr);
+                Jmp(done);
+
+                Mark(oom);
+                var zero = C(8, 0);
+                StoreRet(zero);
+                Jmp(done);
+
+                Mark(done);
+                EndFunction(_currentFunction!, 8);
             }
         }
     }

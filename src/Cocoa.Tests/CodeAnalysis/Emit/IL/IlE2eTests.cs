@@ -306,9 +306,8 @@ function main(): int
         }
 
         [Fact]
-        public void Main_WithArguments_OnDotnetHost_ReportsError()
+        public void Main_WithNonArrayArgument_OnDotnetHost_ReportsError()
         {
-            // 数组参数版（string[] args）待数组类型实现后支持
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
 function main(x: int)
 {
@@ -318,7 +317,21 @@ function main(x: int)
             var diagnostics = compilation.Emit("e2e-main-args", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, GetOutputPath("e2e-main-args"));
 
             var diagnostic = Assert.Single(diagnostics);
-            Assert.Contains("main must not take arguments", diagnostic.Message);
+            Assert.Contains("single string[] parameter", diagnostic.Message);
+        }
+
+        [Fact]
+        public void Main_WithStringArrayArgument_EmitsClean()
+        {
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
+function main(args: string[])
+{
+}
+");
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var diagnostics = compilation.Emit("e2e-main-args-ok", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, GetOutputPath("e2e-main-args-ok"));
+
+            Assert.Empty(diagnostics);
         }
 
         [Fact]

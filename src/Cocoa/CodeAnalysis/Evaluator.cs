@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Diagnostics;
+using System.Linq;
 
 namespace Cocoa.CodeAnalysis
 {
@@ -42,11 +43,21 @@ namespace Cocoa.CodeAnalysis
 
         public object? Evaluate()
         {
+            return Evaluate(null);
+        }
+
+        public object? Evaluate(string[]? args)
+        {
             var function = _program.MainFunction ?? _program.ScriptFunction;
 
             if (function == null)
             {
                 return null;
+            }
+
+            if (function.Parameters.Length > 0)
+            {
+                _locals.Peek()[function.Parameters[0]] = (args ?? Array.Empty<string>()).Cast<object>().ToArray();
             }
 
             var body = _functions[function];

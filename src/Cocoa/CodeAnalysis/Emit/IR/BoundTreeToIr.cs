@@ -93,7 +93,15 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             foreach (var parameter in function.Parameters)
             {
                 var register = AllocateRegister(parameter, ReturnSize(parameter.Type));
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(parameter.Ordinal)));
+                if (function.Name == _irProgram.EntryFunctionName)
+                {
+                    // 入口函数参数（main(args: string[])）由运行时从命令行构造，无需 ABI 传参。
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Call, register, IrOperand.Runtime("BuildArgs")));
+                }
+                else
+                {
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(parameter.Ordinal)));
+                }
             }
 
             EmitStatement(body);

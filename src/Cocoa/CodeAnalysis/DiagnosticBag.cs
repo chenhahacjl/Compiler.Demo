@@ -240,7 +240,7 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportMainMustHaveCorrectSignature(TextLocation location)
         {
-            var message = $"main must not take arguments and must return either void or int (or nothing, which defaults to 0; string[] args support awaits the array type).";
+            var message = $"main must take no parameters or a single string[] parameter, and must return either void or int (or nothing, which defaults to 0).";
             ReportError(location, message);
         }
 

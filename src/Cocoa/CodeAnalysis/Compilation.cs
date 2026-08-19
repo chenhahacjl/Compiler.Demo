@@ -11,22 +11,29 @@ namespace Cocoa.CodeAnalysis
     public class Compilation
     {
         private BoundGlobalScope? _globalScope;
+        private readonly string _entryPointName;
 
-        private Compilation(bool isScript, Compilation? previous, params SyntaxTree[] syntaxTrees)
+        private Compilation(bool isScript, Compilation? previous, string entryPointName, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
             Previous = previous;
+            _entryPointName = entryPointName;
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName: "main", syntaxTrees);
+        }
+
+        public static Compilation Create(string entryPointName, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, entryPointName, syntaxTrees);
         }
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: true, previous, syntaxTrees);
+            return new Compilation(isScript: true, previous, entryPointName: "main", syntaxTrees);
         }
 
         public bool IsScript { get; }
@@ -42,7 +49,7 @@ namespace Cocoa.CodeAnalysis
             {
                 if (_globalScope == null)
                 {
-                    var globalScope = Binding.Binder.BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees);
+                    var globalScope = Binding.Binder.BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName);
                     Interlocked.CompareExchange(ref _globalScope, globalScope, null);
                 }
 
@@ -102,6 +109,27 @@ namespace Cocoa.CodeAnalysis
             var evaluator = new Evaluator(program, variables);
 
             var value = evaluator.Evaluate();
+
+            return new EvaluationResult(program.Diagnostics, value);
+        }
+
+        public EvaluationResult Evaluate(string[] args, Dictionary<VariableSymbol, object> variables)
+        {
+            if (GlobalScope.Diagnostics.Any())
+            {
+                return new EvaluationResult(GlobalScope.Diagnostics, null);
+            }
+
+            var program = GetProgram();
+
+            if (program.Diagnostics.HasErrors())
+            {
+                return new EvaluationResult(program.Diagnostics, null);
+            }
+
+            var evaluator = new Evaluator(program, variables);
+
+            var value = evaluator.Evaluate(args);
 
             return new EvaluationResult(program.Diagnostics, value);
         }
