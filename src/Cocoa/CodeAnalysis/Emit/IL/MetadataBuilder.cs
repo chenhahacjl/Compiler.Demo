@@ -639,6 +639,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 {
                     methodFlags = (ushort)(methodFlags & ~0x0010); // 清掉 Static
                 }
+                if (method.Name == ".ctor")
+                {
+                    methodFlags = (ushort)(methodFlags | 0x0800 | 0x1000); // SpecialName | RTSpecialName
+                }
                 writer.Write(methodFlags);
                 WriteStringRef(method.Name, stringIsBig); // Name（MethodDef 行缺 Name 曾导致后续表全部偏移 2 字节）
                 var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, method.IsStatic));

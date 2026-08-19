@@ -166,9 +166,12 @@ namespace Cocoa.CodeAnalysis
 
         // TODO: References should be part of the compilation, not arguments for Emit
         public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath)
-            => Emit(moduleName, references, outputPath, IlTarget.Default);
+            => Emit(moduleName, references, outputPath, IlTarget.Default, emitLibrary: false);
 
         public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target)
+            => Emit(moduleName, references, outputPath, target, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -180,7 +183,7 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            return Emitter.Emit(program, moduleName, references, outputPath, target);
+            return Emitter.Emit(program, moduleName, references, outputPath, target, emitLibrary);
         }
 
         /// <summary>

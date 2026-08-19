@@ -17,9 +17,9 @@ namespace Cocoa.Projects
         {
             var format = options.FormatOverride ?? project.Output;
 
-            if (format != ProjectOutputFormat.Exe)
+            if (format == ProjectOutputFormat.Cod)
             {
-                messageWriter.WriteLine($"error: output format '{format.ToString().ToLowerInvariant()}' is not implemented yet (only 'exe' is supported)");
+                messageWriter.WriteLine($"error: output format 'cocoa' is not implemented yet (use 'executable' or 'library')");
                 return ProjectBuildResult.Failed;
             }
 
@@ -116,6 +116,12 @@ namespace Cocoa.Projects
             {
                 if (backend == ProjectBackend.Native)
                 {
+                    if (project.Output == ProjectOutputFormat.Dll)
+                    {
+                        messageWriter.WriteLine($"error: library (dll) output 仅支持 .NET 后端（-b dotnet），native 后端暂不支持");
+                        return ProjectBuildResult.Failed;
+                    }
+
                     diagnostics = compilation.EmitNative(project.Name, outputFile, platform);
                 }
                 else
@@ -126,7 +132,8 @@ namespace Cocoa.Projects
                             ?? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location }
                         : references.ToArray();
 
-                    diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target);
+                    var emitLibrary = project.Output == ProjectOutputFormat.Dll;
+                    diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary);
                 }
             }
             catch (NotSupportedException ex)

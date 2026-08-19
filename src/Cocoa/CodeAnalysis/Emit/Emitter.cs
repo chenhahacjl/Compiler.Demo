@@ -81,9 +81,12 @@ namespace Cocoa.CodeAnalysis.Emit
         }
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath)
-            => Emit(program, moduleName, references, outputPath, IlTarget.Default);
+            => Emit(program, moduleName, references, outputPath, IlTarget.Default, emitLibrary: false);
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target)
+            => Emit(program, moduleName, references, outputPath, target, emitLibrary: false);
+
+        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
         {
             if (program.Diagnostics.HasErrors())
             {
@@ -92,15 +95,18 @@ namespace Cocoa.CodeAnalysis.Emit
 
             var emitter = new Emitter(moduleName, references);
 
-            return emitter.Emit(program, outputPath, target);
+            return emitter.Emit(program, outputPath, target, emitLibrary);
         }
 
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
             => Emit(program, outputPath, IlTarget.Default);
 
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target)
+            => Emit(program, outputPath, target, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target, bool emitLibrary)
         {
-            _entryFunction = program.MainFunction;
+            _entryFunction = emitLibrary ? null : program.MainFunction;
 
             // 1. 收集 class（按出现顺序）→ 建 IlTypeDef + 字段
             foreach (var classType in program.Classes)
@@ -137,8 +143,8 @@ namespace Cocoa.CodeAnalysis.Emit
             var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target);
 
             File.WriteAllBytes(outputPath, pe);
-            // netfx 直接运行（mscoree 导入，Windows 激活 CLR）不写 runtimeconfig；netcore 写。
-            if (target.Runtime == IlRuntime.NetCore)
+            // 库（dll）不直接运行，不写 runtimeconfig；netcore exe 写。
+            if (!emitLibrary && target.Runtime == IlRuntime.NetCore)
             {
                 WriteRuntimeConfig(outputPath, target);
             }
