@@ -387,6 +387,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseFunctionDeclaration(modifiers);
             }
 
+            if (Current.Kind == SyntaxKind.PropertyKeyword)
+            {
+                return ParsePropertyDeclaration(modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.IdentifierToken)
             {
                 return ParseClassFieldDeclaration(modifiers);
@@ -435,6 +440,54 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParseTypeClause();
 
             return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type);
+        }
+
+        private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var propertyKeyword = MatchToken(SyntaxKind.PropertyKeyword);
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var type = ParseTypeClause();
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            PropertyAccessorSyntax? getter = null;
+            PropertyAccessorSyntax? setter = null;
+            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                {
+                    var accessor = ParsePropertyAccessor();
+                    if (accessor.IsGet)
+                    {
+                        getter = accessor;
+                    }
+                    else
+                    {
+                        setter = accessor;
+                    }
+                }
+                else
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword);
+                    NextToken();
+                }
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken);
+        }
+
+        private PropertyAccessorSyntax ParsePropertyAccessor()
+        {
+            var keyword = NextToken();
+            BlockStatementSyntax? body = null;
+
+            if (Current.Kind == SyntaxKind.OpenBraceToken)
+            {
+                body = ParseBlockStatement();
+            }
+
+            return new PropertyAccessorSyntax(_syntaxTree, keyword, body, semicolonToken: null);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()

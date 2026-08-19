@@ -10,6 +10,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
+        private readonly ImmutableArray<PropertySymbol>.Builder _properties;
 
         internal ClassTypeSymbol(string name, string @namespace, bool isPublic, ClassDeclarationSyntax? declaration, bool isExternal = false)
             : base(name)
@@ -20,6 +21,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             IsExternal = isExternal;
             _fields = ImmutableArray.CreateBuilder<FieldSymbol>();
             _methods = ImmutableArray.CreateBuilder<FunctionSymbol>();
+            _properties = ImmutableArray.CreateBuilder<PropertySymbol>();
         }
 
         public override SymbolKind Kind => SymbolKind.Class;
@@ -49,9 +51,30 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         internal void AddMethod(FunctionSymbol method) => _methods.Add(method);
 
+        internal void AddProperty(PropertySymbol property) => _properties.Add(property);
+
         public ImmutableArray<FieldSymbol> Fields => _fields.ToImmutable();
 
         public ImmutableArray<FunctionSymbol> Methods => _methods.ToImmutable();
+
+        public ImmutableArray<PropertySymbol> Properties => _properties.ToImmutable();
+
+        /// <summary>属性查找（沿继承链向上）。</summary>
+        public PropertySymbol? GetProperty(string name)
+        {
+            for (var type = this; type != null; type = type.BaseType)
+            {
+                foreach (var property in type._properties)
+                {
+                    if (property.Name == name)
+                    {
+                        return property;
+                    }
+                }
+            }
+
+            return null;
+        }
 
         /// <summary>本类直接声明的字段（不含基类）。</summary>
         public FieldSymbol? GetDeclaredField(string name)

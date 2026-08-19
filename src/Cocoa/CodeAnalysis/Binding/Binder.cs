@@ -238,7 +238,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces);
                 BoundBlockStatement body;
 
-                if (bodySyntax == null)
+                if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
+                {
+                    bodyLocation = accessorSyntax.Keyword;
+                    body = accessorSyntax.Body != null
+                        ? (BoundBlockStatement)binder.BindStatement(accessorSyntax.Body)
+                        : binder.BindAutoPropertyBody(accessorSyntax, function);
+                }
+                else if (bodySyntax == null)
                 {
                     // 无方法体（extern/abstract/隐式构造）：空 body
                     body = new BoundBlockStatement(function.Syntax ?? function.Declaration!, ImmutableArray<BoundStatement>.Empty);
@@ -493,6 +500,10 @@ namespace Cocoa.CodeAnalysis.Binding
                         _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
                     }
                 }
+                else if (member is PropertyDeclarationSyntax propertyDeclaration)
+                {
+                    BindPropertyDeclaration(propertyDeclaration, classType, classFunctions);
+                }
             }
 
             // 隐式默认构造：类未声明任何构造时生成无参构造
@@ -504,8 +515,82 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private void CollectClasses(NamespaceDeclarationSyntax syntax, string parentNamespace, List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses)
+        /// <summary>自动属性合成体：getter → return _Name；setter → _Name = value。</summary>
+        private BoundBlockStatement BindAutoPropertyBody(PropertyAccessorSyntax accessor, FunctionSymbol function)
         {
+            var classType = function.ContainingClass!;
+            var propName = function.Name.Substring(4); // get_X / set_X → X
+            var field = classType.GetDeclaredField("_" + propName);
+            if (field == null)
+            {
+                _diagnostics.ReportError(accessor.Keyword.Location, $"自动属性 '{propName}' 缺少后备字段。");
+                return new BoundBlockStatement(accessor, ImmutableArray<BoundStatement>.Empty);
+            }
+
+            var thisExpression = new BoundThisExpression(accessor, classType);
+
+            if (accessor.IsGet)
+            {
+                var memberAccess = new BoundMemberAccessExpression(accessor, field.Type, thisExpression, field.Name, field);
+                return new BoundBlockStatement(accessor, ImmutableArray.Create<BoundStatement>(new BoundReturnStatement(accessor, memberAccess)));
+            }
+
+            var valueVariable = function.Parameters[0];
+            var valueExpression = new BoundVariableExpression(accessor, valueVariable);
+            var memberAssignment = new BoundMemberAssignmentExpression(accessor, thisExpression, field, valueExpression);
+            return new BoundBlockStatement(accessor, ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(accessor, memberAssignment)));
+        }
+
+        private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)        {
+            var propertyType = BindTypeClause(syntax.Type);
+            var isPublic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.PublicKeyword);
+            var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
+            var isAuto = syntax.IsAuto;
+
+            // 后备字段（自动属性）
+            FieldSymbol? backingField = null;
+            if (isAuto)
+            {
+                var backingName = "_" + syntax.Identifier.Text;
+                if (classType.GetDeclaredField(backingName) == null)
+                {
+                    backingField = new FieldSymbol(backingName, propertyType, isPublic: false, classType);
+                    classType.AddField(backingField);
+                }
+            }
+
+            // getter：get_Name
+            FunctionSymbol? getter = null;
+            if (syntax.Getter != null)
+            {
+                getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
+                    syntax: syntax.Getter, containingClass: classType, isPublic: isPublic) { IsStatic = isStatic };
+                classType.AddMethod(getter);
+                classFunctions.Add(getter);
+            }
+
+            // setter：set_Name（value 隐式参数）
+            FunctionSymbol? setter = null;
+            if (syntax.Setter != null)
+            {
+                var valueParameter = new ParameterSymbol("value", propertyType, 0);
+                setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
+                    syntax: syntax.Setter, containingClass: classType, isPublic: isPublic) { IsStatic = isStatic };
+                classType.AddMethod(setter);
+                classFunctions.Add(setter);
+            }
+
+            if (classType.GetProperty(syntax.Identifier.Text) == null)
+            {
+                classType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, classType, getter, setter, isPublic, isStatic));
+            }
+            else
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
+            }
+        }
+
+        private void CollectClasses(NamespaceDeclarationSyntax syntax, string parentNamespace, List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses)        {
             var ns = parentNamespace.Length == 0 ? syntax.Name : parentNamespace + "." + syntax.Name;
 
             foreach (var member in syntax.Members)
@@ -1109,6 +1194,23 @@ namespace Cocoa.CodeAnalysis.Binding
             var boundTarget = BindExpression(syntax.Target);
             var boundExpression = BindExpression(syntax.Expression);
 
+            // 属性写：obj.Name = v → set_Name(v)
+            if (boundTarget is BoundMemberCallExpression propertyGetCall &&
+                propertyGetCall.Method != null &&
+                propertyGetCall.Method.Name.StartsWith("get_"))
+            {
+                var propertyName = propertyGetCall.Method.Name.Substring(4);
+                var property = propertyGetCall.Method.ContainingClass!.GetProperty(propertyName);
+                if (property?.Setter != null && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+                {
+                    var converted = BindConversion(syntax.Expression.Location, boundExpression, property.Type);
+                    return new BoundMemberCallExpression(syntax, propertyGetCall.Expression, property.Setter.Name, ImmutableArray.Create(converted), TypeSymbol.Void, property.Setter, propertyGetCall.IsBase);
+                }
+
+                _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, propertyName);
+                return new BoundErrorExpression(syntax);
+            }
+
             if (boundTarget is BoundVariableExpression variableTarget)
             {
                 var variable = variableTarget.Variable;
@@ -1342,6 +1444,13 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     return new BoundMemberAccessExpression(syntax, field.Type, boundTarget, identifier, field);
+                }
+
+                // 属性读：obj.Name → get_Name()
+                var property = classType.GetProperty(identifier);
+                if (property != null && property.Getter != null)
+                {
+                    return new BoundMemberCallExpression(syntax, boundTarget, property.Getter.Name, ImmutableArray<BoundExpression>.Empty, property.Type, property.Getter);
                 }
 
                 _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundTarget.Type);

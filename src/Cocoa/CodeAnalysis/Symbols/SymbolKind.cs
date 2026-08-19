@@ -10,5 +10,6 @@ namespace Cocoa.CodeAnalysis.Symbols
         Enum,
         Class,
         Field,
+        Property,
     }
 }

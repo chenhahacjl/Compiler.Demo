@@ -33,6 +33,9 @@ namespace Cocoa.CodeAnalysis.Symbols
                 case SymbolKind.Field:
                     writer.WriteIdentifier(symbol.Name);
                     break;
+                case SymbolKind.Property:
+                    writer.WriteIdentifier(symbol.Name);
+                    break;
                 default:
                     throw new Exception($"Unexpected symbol: {symbol.Kind}");
             }

@@ -93,6 +93,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.FalseKeyword;
                 case "for":
                     return SyntaxKind.ForKeyword;
+                case "get":
+                    return SyntaxKind.GetKeyword;
+                case "set":
+                    return SyntaxKind.SetKeyword;
+                case "property":
+                    return SyntaxKind.PropertyKeyword;
                 case "class":
                     return SyntaxKind.ClassKeyword;
                 case "constructor":
@@ -258,6 +264,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "false";
                 case SyntaxKind.ForKeyword:
                     return "for";
+                case SyntaxKind.GetKeyword:
+                    return "get";
+                case SyntaxKind.SetKeyword:
+                    return "set";
+                case SyntaxKind.PropertyKeyword:
+                    return "property";
                 case SyntaxKind.AbstractKeyword:
                     return "abstract";
                 case SyntaxKind.BaseKeyword:

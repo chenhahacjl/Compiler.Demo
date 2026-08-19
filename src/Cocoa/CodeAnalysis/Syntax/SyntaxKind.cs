@@ -70,6 +70,7 @@ ColonToken,               // :
         FalseKeyword,             // false
         ForKeyword,               // for
         FunctionKeyword,          // function
+        GetKeyword,               // get
         IfKeyword,                // if
         ImportKeyword,            // import
         LetKeyword,               // let
@@ -77,10 +78,12 @@ ColonToken,               // :
         NewKeyword,               // new
         OverrideKeyword,          // override
         PrivateKeyword,           // private
+        PropertyKeyword,          // property
         PublicKeyword,            // public
         ReadonlyKeyword,          // readonly
         ReturnKeyword,            // return
         SealedKeyword,            // sealed
+        SetKeyword,               // set
         StaticKeyword,            // static
         StdcallKeyword,           // stdcall
         ThisKeyword,              // this
@@ -97,6 +100,8 @@ ColonToken,               // :
         ClassDeclaration,         // 类定义
         ClassFieldDeclaration,    // 类字段
         ConstructorDeclaration,   // 构造函数
+        PropertyDeclaration,      // 属性声明
+        PropertyAccessor,         // get/set 访问器
         NamespaceDeclaration,     // 命名空间声明
         UsingDirective,           // using 导入
         ImportClause,             // import 声明
