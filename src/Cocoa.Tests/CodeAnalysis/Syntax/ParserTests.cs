@@ -500,6 +500,44 @@ for (var i = 0; i < 10; i++)
             Assert.IsType<CStyleForStatementSyntax>(globalStatement.Statement);
         }
 
+        [Fact]
+        public void Parser_Constructor_ExtendsBaseKeyword()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { constructor(x: int) extends base(x) { } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal(SyntaxKind.BaseKeyword, constructor.InitializerKeyword!.Kind);
+            Assert.Equal(1, constructor.InitializerArguments.Count);
+        }
+
+        [Fact]
+        public void Parser_Constructor_ExtendsThisKeyword()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { constructor(x: int) extends this(x) { } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal(SyntaxKind.ThisKeyword, constructor.InitializerKeyword!.Kind);
+        }
+
+        [Fact]
+        public void Parser_Constructor_ExtendsInvalidInitializer_ReportsError()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { constructor() extends foo() { } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Null(constructor.InitializerKeyword);
+            Assert.Contains(syntaxTree.Diagnostics, d => d.Message.Contains("expected <BaseKeyword>"));
+        }
+
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

@@ -419,12 +419,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            // `: base(...)` / `: this(...)` 构造链
+            // `: base(...)` / `: this(...)` 或 `extends base(...)` / `extends this(...)` 构造链
             SyntaxToken? initializerKeyword = null;
             var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
-            if (Current.Kind == SyntaxKind.ColonToken)
+            if (Current.Kind == SyntaxKind.ColonToken ||
+                Current.Kind == SyntaxKind.ExtendsKeyword)
             {
-                NextToken(); // :
+                NextToken(); // : / extends
                 if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
                 {
                     initializerKeyword = NextToken();

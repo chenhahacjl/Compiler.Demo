@@ -1193,6 +1193,68 @@ function Main()
         }
 
         [Fact]
+        public void Class_ExtendsKeyword_ConstructorChain_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Animal
+{
+    private _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public function Name(): string
+    {
+        return _name
+    }
+}
+
+public class Dog extends Animal
+{
+    private _tricks: int
+
+    public constructor(name: string): base(name)
+    {
+        _tricks = 0
+    }
+
+    public function Tricks(): int
+    {
+        return _tricks
+    }
+}
+
+public class Puppy extends Dog
+{
+    public constructor(name: string) extends base(name)
+    {
+    }
+}
+
+public class BigPuppy extends Puppy
+{
+    public constructor(name: string) extends base(name)
+    {
+    }
+}
+
+function Main()
+{
+    var p = new Puppy(""Rex"")
+    print(p.Name())
+    print(p.Tricks())
+    var b = new BigPuppy(""Buddy"")
+    print(b.Name())
+    print(b.Tricks())
+}", "e2e-extends-constructor-chain");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("Rex\r\n0\r\nBuddy\r\n0\r\n", stdout);
+        }
+
+        [Fact]
         public void Interface_ExtendsKeyword_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

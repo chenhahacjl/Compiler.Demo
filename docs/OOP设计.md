@@ -64,7 +64,7 @@ public class Dog: Animal
 }
 ```
 
-- 构造签名后 `: base(...)` / `: this(...)`（可选的构造初始参数列表）
+- 构造签名后 `: base(...)` / `: this(...)`（可选的构造初始参数列表）；前缀支持 `:` 或 `extends`（`constructor(...) extends base(...)` 等价）
 - 子类构造必须（直接或经 this(...)）调用基类构造，否则隐式 `base()`（基类需有 0 参构造）
 - `base(...)` 不能与 `this(...)` 同时出现
 
