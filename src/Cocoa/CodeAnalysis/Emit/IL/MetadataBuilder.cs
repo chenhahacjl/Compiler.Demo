@@ -272,6 +272,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 map[_typeRefs[i]] = TypeRefTable << 24 | (uint)(i + 1);
             }
 
+            var typeDefRow = 1;
+            foreach (var typeDef in _typeDefs)
+            {
+                map[typeDef] = TypeDefTable << 24 | (uint)typeDefRow;
+                typeDefRow++;
+            }
+
             var methodDefs = MethodDefs;
             for (var i = 0; i < methodDefs.Count; i++)
             {

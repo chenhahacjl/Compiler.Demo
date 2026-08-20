@@ -856,5 +856,122 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("25\r\nred\r\n36\r\n", stdout);
         }
+
+        [Fact]
+        public void Oop_Interface_BaseChain_Downcast_ParameterReturn_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public interface IAnimal
+{
+    function Speak(): string
+    property Age: int { get set }
+}
+
+public class Dog: IAnimal
+{
+    private _age: int
+
+    public constructor(age: int)
+    {
+        _age = age
+    }
+
+    public function Speak(): string
+    {
+        return ""woof""
+    }
+
+    public property Age: int
+    {
+        get { return _age }
+        set { _age = value }
+    }
+}
+
+public class Puppy: Dog
+{
+    public constructor(age: int): base(age)
+    {
+    }
+}
+
+public function CallSpeak(a: IAnimal): string
+{
+    return a.Speak()
+}
+
+public function MakeAnimal(): IAnimal
+{
+    return new Dog(3)
+}
+
+function Main()
+{
+    var s: IAnimal = new Puppy(1)
+    print(s.Speak())
+    print(s.Age)
+    var d = (Dog)s
+    print(d.Speak())
+    d.Age = 7
+    print(d.Age)
+    print(CallSpeak(s))
+    var r = MakeAnimal()
+    print(r.Speak())
+    var r2: IAnimal = r
+    print(r2.Age)
+}", "e2e-interface-basechain");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("woof\r\n1\r\nwoof\r\n7\r\nwoof\r\nwoof\r\n3\r\n", stdout);
+        }
+
+        [Fact]
+        public void Oop_Interface_AbstractClass_ImplementsInterface_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public interface IFighter
+{
+    function Power(): int
+    function Name(): string
+}
+
+public abstract class BaseUnit: IFighter
+{
+    public function Name(): string
+    {
+        return ""unit""
+    }
+
+    public abstract function Power(): int
+}
+
+public class Knight: BaseUnit
+{
+    public function Power(): int
+    {
+        return 10
+    }
+}
+
+public class Archer: BaseUnit
+{
+    public function Power(): int
+    {
+        return 5
+    }
+}
+
+function Main()
+{
+    var k: IFighter = new Knight()
+    print(k.Power())
+    print(k.Name())
+    var a: IFighter = new Archer()
+    print(a.Power())
+}", "e2e-interface-abstract");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\r\nunit\r\n5\r\n", stdout);
+        }
     }
 }

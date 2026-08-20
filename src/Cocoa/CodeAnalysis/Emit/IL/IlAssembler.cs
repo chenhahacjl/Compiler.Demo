@@ -67,13 +67,30 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             foreach (var fixup in _tokenFixups)
             {
-                var token = tokens[fixup.Key];
+                var key = NormalizeTokenKey(fixup.Key);
+                var token = tokens[key];
                 var offset = fixup.Offset;
                 code[offset] = (byte)token;
                 code[offset + 1] = (byte)(token >> 8);
                 code[offset + 2] = (byte)(token >> 16);
                 code[offset + 3] = (byte)(token >> 24);
             }
+        }
+
+        /// <summary>InlineType 指令（Box/Newarr/Castclass/Isinst 等）的 operand 可能是 IlType 包裹对象，规范化到其底层 TypeDef/TypeRef。</summary>
+        private static object NormalizeTokenKey(object key)
+        {
+            if (key is IlType { TypeDef: not null } typeWithDef)
+            {
+                return typeWithDef.TypeDef;
+            }
+
+            if (key is IlType { Reference: not null } typeWithRef)
+            {
+                return typeWithRef.Reference;
+            }
+
+            return key;
         }
 
         /// <summary>回填 #US 字符串 token。</summary>

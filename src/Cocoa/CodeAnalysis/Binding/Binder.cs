@@ -62,6 +62,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var classFunctions = new List<FunctionSymbol>();
             var allClasses = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();
             var allInterfaces = new List<(InterfaceDeclarationSyntax Syntax, string Namespace)>();
+            var pendingFunctions = new List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)>();
 
             // 阶段 1：处理 import/function/enum/using + 收集所有类/接口声明（递归 namespace）
             foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
@@ -72,7 +73,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is FunctionDeclarationSyntax function)
                 {
-                    binder.BindFunctionDeclaration(function, importedDll);
+                    // 函数签名延后到阶段 2.5（接口声明）之后绑定：签名类型可引用接口。
+                    // 快照当前 import DLL —— 多个 import 声明各自对应其后的 extern 函数
+                    pendingFunctions.Add((function, "", importedDll));
                 }
                 else if (member is EnumDeclarationSyntax enumDeclaration)
                 {
@@ -90,7 +93,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     binder.CollectClasses(namespaceDeclaration, "", allClasses);
                     binder.CollectInterfaces(namespaceDeclaration, "", allInterfaces);
-                    binder.BindNamespaceFunctions(namespaceDeclaration, importedDll);
+                    binder.CollectNamespaceFunctions(namespaceDeclaration, "", importedDll, pendingFunctions);
                 }
                 else if (member is UsingDirectiveSyntax usingDirective)
                 {
@@ -152,6 +155,12 @@ namespace Cocoa.CodeAnalysis.Binding
             foreach (var (classType, parts) in classGroups)
             {
                 binder.CheckInterfaceImplementation(classType);
+            }
+
+// 阶段 4.5：绑定全局函数签名（类型可引用接口/类）
+            foreach (var (function, _, dll) in pendingFunctions)
+            {
+                binder.BindFunctionDeclaration(function, dll);
             }
 
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
@@ -985,17 +994,18 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private void BindNamespaceFunctions(NamespaceDeclarationSyntax syntax, string? importedDll)
+        private void CollectNamespaceFunctions(NamespaceDeclarationSyntax syntax, string parentNamespace, string? importedDll, List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)> functions)
         {
             foreach (var member in syntax.Members)
             {
                 if (member is FunctionDeclarationSyntax functionDeclaration)
                 {
-                    BindFunctionDeclaration(functionDeclaration, importedDll);
+                    functions.Add((functionDeclaration, parentNamespace, importedDll));
                 }
                 else if (member is NamespaceDeclarationSyntax nested)
                 {
-                    BindNamespaceFunctions(nested, importedDll);
+                    var ns = parentNamespace.Length == 0 ? nested.Name : parentNamespace + "." + nested.Name;
+                    CollectNamespaceFunctions(nested, ns, importedDll, functions);
                 }
             }
         }

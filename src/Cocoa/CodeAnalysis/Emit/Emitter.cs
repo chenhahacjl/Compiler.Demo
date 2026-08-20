@@ -1044,7 +1044,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     (toClass.IsBaseOf(fromClass) || toClass.GetAllInterfaces().Contains(fromClass)))
                 {
                     // 接口 → 类：显式向下引用转换（castclass）
-                    il.Emit(IlOpCodes.Get("CastClass"), ToIlType(toClass));
+                    il.Emit(IlOpCodes.Get("Castclass"), ToIlType(toClass));
                     return;
                 }
 
