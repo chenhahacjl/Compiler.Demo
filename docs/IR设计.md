@@ -10,12 +10,12 @@
 - 作为绑定树（Lowerer 输出）与 IAssembler 之间的统一中间表示
 - x86/x64 双后端共用同一 IR，平台差异收敛到指令选择
 - IR 文本打印器（测试断言基础）
-- 同一 IR 序列化后即 `.cod` 程序集格式（阶段 6b，Cocoa 内部库/系统库分发）
+- **IR 仅服务 native 后端**（IL 后端从 `BoundProgram` 直接发射，不走 IR）；`.cod` 程序集序列化的是**语义层 `BoundProgram`**（见 §7），与 IR 解耦
 
 ```
 BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后端 ──► x86 / x64 机器码
                  │
-                 └──► 打印器 ──► 文本 IR / .cod 序列化
+                 └──► 打印器 ──► 文本 IR（测试断言，不直接产出 .cod）
 ```
 
 ## 2. 指令形态
@@ -33,14 +33,13 @@ BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后
 
 `call` / `load` / `store` 的目标或内存基址可以是三种符号，由 `ExternalSymbolKind` 区分：
 
-| 种类 | 解析目标 | 适用后端 |
-|------|---------|---------|
-| `IrFunction` | 合并编译单元内的 IR 函数（含来自 `.cod` 的） | Native / IL |
-| `Metadata` | .NET 元数据引用（TypeRef/MethodRef/FieldRef → AssemblyRef） | IL（Native 需阶段 9 CLR Hosting） |
-| `NativeImport` | `import kernel32.dll` 声明 → 导入表 IAT 槽 | Native（IL 路径经 DllImport/P-Invoke） |
+| 种类 | 解析目标 | 说明 |
+|------|---------|------|
+| `IrFunction` | 编译单元内的 IR 函数（含来自 `.cod` 的，阶段 6b 合并后） | 本单元函数 |
+| `Metadata` | .NET 元数据引用（TypeRef/MethodRef/FieldRef → AssemblyRef） | 仅 IL 路径可达（native 需阶段 9 CLR Hosting） |
+| `NativeImport` | `import kernel32.dll` 声明 → 导入表 IAT 槽 | native 后端 |
 
-- `.cod` 程序集内部引用的外部符号，经**依赖清单**（`docs/项目格式规范.md` §4.1）传递给消费方编译器
-- 这是 `.cod` 与 .NET 程序集在同一次编译中混用的基础（见 `docs/互操作手册.md` §3.2）
+> 注：IR 是 native 后端专用中间表示；`.cod` 程序集序列化的是**语义层 `BoundProgram`**（见 §7），其引用的后端约束（.NET API / OOP / native import）由依赖清单的 `requires` 声明并在消费时校验（`docs/项目格式规范.md` §4.1、`docs/互操作手册.md` §3）。
 
 ## 3. 指令集（草案）
 
@@ -89,10 +88,19 @@ Emit/IR/
 
 `.cod` = Cocoa 程序集（等价 .NET dll：每库一个/多个 `namespace`、无入口点、公共符号表按命名空间组织）。
 
-- 文本形态：`IrPrinter` 输出可直接再解析（round-trip）
-- 二进制形态：阶段 6b 定稿（头：魔数 COCOD + 版本 + 平台要求；**依赖清单**：.NET 程序集引用 + native 导入列表 + 被引用 `.cod`（递归）；**公共符号表**：public 类型/函数/枚举/全局变量，按命名空间组织；**代码区**：公共符号 + 私有依赖闭包）
-- `.cod` 反序列化 → `IrProgram` 合并到编译单元（`docs/互操作手册.md` §3），数据段符号跨单元去重/重编号
-- 依赖清单规则见 `docs/项目格式规范.md` §4.1；无入口点校验（`output = cocoa` 禁止 `Main`）
+**序列化的是语义层 `BoundProgram`（降级绑定树 + 符号表），不是 native 三地址码 IR**——因为 IL 后端从 `BoundProgram` 直接发射（不经 IR），只有存语义层才能双后端通用（对应 .NET 的 IL 程序集概念）。
+
+```
+.cod
+├─ 头            魔数 COCOD + 版本 + 平台要求 + backend 要求（requires）
+├─ 依赖清单      .NET 程序集引用 + native 导入列表 + 被引用 .cod（递归）
+├─ 公共符号表    public 类型/函数/枚举/全局变量，按命名空间组织
+└─ 代码区        序列化 BoundProgram（函数体 + 类成员，后端无关）+ 私有依赖闭包
+```
+
+- **文本形态（阶段 6b 先做）**：BoundProgram round-trip 序列化（可调试/可 diff）；二进制形态后置
+- `.cod` 反序列化 → 符号表 + `BoundProgram` 片段 → 消费方 Binder 符号注入 + BoundProgram 层合并（`docs/互操作手册.md` §3）
+- 依赖清单规则见 `docs/项目格式规范.md` §4.1；`requires` 后端约束（`dotnet`/`native`/`any`）+ 平台要求由消费方编译期校验，不匹配报错；无入口点校验（`output = cocoa` 禁止 `Main`）
 
 ## 8. 验收标准（阶段 3）
 
