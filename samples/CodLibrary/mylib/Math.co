@@ -1,0 +1,41 @@
+// Cocoa 内部库：output = cocoa → .cod 语义层程序集（编译期 IR 合并，native/IL 双后端通用）
+//
+// 规则（见 docs/项目格式规范.md §4）：
+//   - 每库一个/多个 namespace
+//   - 无入口点（不能有 Main）
+//   - 消费方 `[references]` 引用 .cod → 编译期合并 → 独立 dll/exe
+
+namespace MathLib
+{
+    enum Day { Mon, Tue, Wed, Thu, Fri, Sat, Sun }
+
+    function Add(a: int, b: int): int
+    {
+        return a + b
+    }
+
+    function Mul(a: int, b: int): int
+    {
+        return a * b
+    }
+
+    function Factorial(n: int): int
+    {
+        var result = 1
+        for var i = 1 to n
+        {
+            result = result * i
+        }
+        return result
+    }
+
+    function IsWeekend(d: Day): bool
+    {
+        return d == Day.Sat || d == Day.Sun
+    }
+
+    function Greet(name: string): string
+    {
+        return "Hello, " + name
+    }
+}

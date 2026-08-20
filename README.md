@@ -44,16 +44,26 @@ coc build -p samples/Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
 coc build -p samples/CSharpClass/CSharpClass.coproj
 ./samples/CSharpClass/out/CSharpClass.exe
 
+# .cod 语义层程序集闭环（samples/CodLibrary：cocoa 库 → [references] 消费，native + dotnet 双后端）
+# mylib output=cocoa → .cod；app [references] 引用 → 编译期 IR 合并 → 独立 exe（CopyLocal 自动复制 .cod）
+# 默认 dotnetRuntime = net40（netfx），产物直接运行（无需 dotnet 前缀）
+coc build -p samples/CodLibrary/mylib/MyLib.coproj
+coc build -p samples/CodLibrary/app/App.coproj -b native
+./samples/CodLibrary/app/out/App.exe
+coc build -p samples/CodLibrary/app/App.coproj -b dotnet
+./samples/CodLibrary/app/out/App.exe
+
 # 指定输出格式与 .NET 目标框架
 coc build -p foo.coproj -f library
-coc build -p foo.coproj --dotnet-runtime net8.0
+coc build -p foo.coproj --dotnet-runtime net9.0
 
-# 类库（dll）→ 消费：写 `using MyLib` + 引用库
-coc build -p mylib.coproj -f library
-coc build -p app.coproj -r out/mylib.dll
+# 类库（dll）→ 消费：写 `using MyLib` + 引用库（samples/ClassLibrary，CopyLocal 自动复制 dll 到输出目录）
+coc build -p samples/ClassLibrary/mylib/MyLib.coproj -b dotnet
+coc build -p samples/ClassLibrary/app/App.coproj -b dotnet
+./samples/ClassLibrary/app/out/App.exe
 
-# netfx：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
-coc build -p foo.coproj --dotnet-runtime net40
+# netfx 默认：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
+coc build -p foo.coproj -b dotnet
 ./foo.exe
 ```
 

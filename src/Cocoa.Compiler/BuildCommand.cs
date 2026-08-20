@@ -182,7 +182,7 @@ namespace Cocoa.Compiler
 
             if (dotnetRuntimeText != null && !IlTarget.TryParse(dotnetRuntimeText, out _))
             {
-                Console.Error.WriteLine($"error: invalid target framework '{dotnetRuntimeText}'. Expected e.g. net9.0 (netcore) or net40~net48 (netfx)");
+                Console.Error.WriteLine($"error: invalid target framework '{dotnetRuntimeText}'. Expected e.g. net40~net48 (netfx, default) or net8.0/net9.0 (netcore)");
                 return 1;
             }
 
@@ -269,7 +269,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("  -o <path>          The output file path");
             Console.WriteLine("  -r <path>          The path of a reference to add (can be repeated)");
             Console.WriteLine("  -b <name>          The code generation backend: dotnet (default) or native");
-            Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net9.0 (default) or net40~net48. Only used with -b dotnet");
+            Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net40~net48 (netfx, default) or net8.0/net9.0 (netcore). Only used with -b dotnet");
             Console.WriteLine("  --no-incremental   Force a full rebuild");
             Console.WriteLine("  --debug / --release  Build mode (default: project setting / release)");
             Console.WriteLine("  -?, -h, --help     Prints help");

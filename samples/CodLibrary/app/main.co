@@ -1,0 +1,13 @@
+// 消费 .cod 库：`[references]` 引用 mylib 的 .cod → 编译期 IR 合并 → 独立 exe
+//
+// 顶层函数当前是全局作用域（namespace 限定函数解析后置），库函数裸名调用即可；
+// 枚举已注入作用域，Day.Sat 可直接解析。
+
+function Main()
+{
+    print(Add(2, 3))                        // 5
+    print(Mul(3, 4))                        // 12
+    print(Factorial(5))                     // 120
+    if IsWeekend(Day.Sat) { print("weekend") } else { print("weekday") }
+    print(Greet("Cocoa"))                   // Hello, Cocoa
+}

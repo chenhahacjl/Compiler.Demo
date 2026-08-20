@@ -67,7 +67,8 @@ function Main()
             Assert.Contains(outputPath, stdout);
             Assert.True(File.Exists(outputPath));
 
-            var psi = new ProcessStartInfo("dotnet", $"\"{outputPath}\"")
+            // 默认 dotnetRuntime = net40（netfx）：产物直接运行，无需 dotnet 前缀
+            var psi = new ProcessStartInfo(outputPath)
             {
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,

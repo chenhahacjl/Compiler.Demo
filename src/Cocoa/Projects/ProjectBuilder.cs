@@ -68,10 +68,10 @@ namespace Cocoa.Projects
             var cacheRoot = options.CacheRoot ?? BuildCache.GetDefaultCacheRoot(project.Directory);
             var cachePath = BuildCache.GetCachePath(cacheRoot, project.Directory, project.Name);
 
-            var dotnetRuntime = options.DotnetRuntimeOverride ?? project.DotnetRuntime ?? "net9.0";
+            var dotnetRuntime = options.DotnetRuntimeOverride ?? project.DotnetRuntime ?? "net40";
             if (dotnetRuntime != null && !IlTarget.TryParse(dotnetRuntime, out _))
             {
-                messageWriter.WriteLine($"error: invalid dotnetRuntime '{dotnetRuntime}'. Expected e.g. net9.0 (netcore) or net40~net48 (netfx)");
+                messageWriter.WriteLine($"error: invalid dotnetRuntime '{dotnetRuntime}'. Expected e.g. net40~net48 (netfx, default) or net8.0/net9.0 (netcore)");
                 return ProjectBuildResult.Failed;
             }
 

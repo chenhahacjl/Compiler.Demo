@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public string Tfm => Runtime == IlRuntime.NetCore ? $"net{Version.Major}.{Version.Minor}" : $"net{Version.Major}{Version.Minor}";
 
-        public static readonly IlTarget Default = Parse("net9.0");
+        public static readonly IlTarget Default = Parse("net40");
 
         public static IlTarget Parse(string text)
         {

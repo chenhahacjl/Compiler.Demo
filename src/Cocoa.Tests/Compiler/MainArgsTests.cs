@@ -75,7 +75,8 @@ namespace Cocoa.Tests.Compiler
             var sourcePath = Path.Combine(root, "app.co");
             File.WriteAllText(sourcePath, source);
             outputPath = Path.Combine(root, outputName);
-            var (exitCode, stdout, stderr) = InvokeCli($"\"{sourcePath}\" -o \"{outputPath}\" -b {backend}");
+            var runtime = backend == "dotnet" ? " --dotnet-runtime net9.0" : "";
+            var (exitCode, stdout, stderr) = InvokeCli($"\"{sourcePath}\" -o \"{outputPath}\" -b {backend}{runtime}");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
             return outputPath;
         }
@@ -182,7 +183,8 @@ namespace Cocoa.Tests.Compiler
             var projectPath = Path.Combine(appDir, "App.coproj");
             File.WriteAllText(projectPath,
                 $"name=App\nplatform=x64\nentry={entryName}\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
-            var (exitCode, stdout, stderr) = InvokeCli($"build \"{projectPath}\" --no-incremental -b {backend}");
+            var runtime = backend == "dotnet" ? " --dotnet-runtime net9.0" : "";
+            var (exitCode, stdout, stderr) = InvokeCli($"build \"{projectPath}\" --no-incremental -b {backend}{runtime}");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
             exePath = Path.Combine(appDir, "app.exe");
             return projectPath;
