@@ -1516,6 +1516,16 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 var isTrue = NewLabel();
                 var done = NewLabel();
 
+                // 指针相同（含双 null）→ 相等
+                Cmp(a, b);
+                Jcc(IrCond.Equal, isTrue);
+
+                // 任一为 null → 不等
+                Cmp(a, C(8, 0));
+                Jcc(IrCond.Equal, isFalse);
+                Cmp(b, C(8, 0));
+                Jcc(IrCond.Equal, isFalse);
+
                 var lenA = NewReg(4);
                 Load(lenA, a, 0, 4);
                 var lenB = NewReg(4);

@@ -240,6 +240,36 @@ public class Point
             }
         }
 
+        [Fact]
+        public void Parser_Parses_ConstVariableDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("const x: int = 5");
+            var root = Assert.IsType<CompilationUnitSyntax>(syntaxTree.Root);
+            var member = Assert.IsType<GlobalStatementSyntax>(Assert.Single(root.Members));
+            var statement = Assert.IsType<VariableDeclarationSyntax>(member.Statement);
+
+            Assert.Equal(SyntaxKind.ConstKeyword, statement.Keyword.Kind);
+            Assert.Equal("x", statement.Identifier.Text);
+            Assert.NotNull(statement.TypeClause);
+            Assert.NotNull(statement.EqualsToken);
+            Assert.NotNull(statement.Initializer);
+        }
+
+        [Fact]
+        public void Parser_Parses_VariableDeclaration_WithoutInitializer()
+        {
+            var syntaxTree = SyntaxTree.Parse("var a: int");
+            var root = Assert.IsType<CompilationUnitSyntax>(syntaxTree.Root);
+            var member = Assert.IsType<GlobalStatementSyntax>(Assert.Single(root.Members));
+            var statement = Assert.IsType<VariableDeclarationSyntax>(member.Statement);
+
+            Assert.Equal(SyntaxKind.VarKeyword, statement.Keyword.Kind);
+            Assert.Equal("a", statement.Identifier.Text);
+            Assert.NotNull(statement.TypeClause);
+            Assert.Null(statement.EqualsToken);
+            Assert.Null(statement.Initializer);
+        }
+
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

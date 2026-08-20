@@ -92,6 +92,33 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_DefaultInitializedVariables(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var a: int
+    var b: bool
+    var d: double
+    var c: char
+    var by: byte
+    var s: string
+    print(a)
+    print(b)
+    print(d)
+    print(int(c))
+    print(int(by))
+    print(s == s)
+    const k: int = 7
+    print(k)
+}", "dbg-default", target);
+
+            Assert.Equal("0\r\nFalse\r\n0\r\n0\r\n0\r\nTrue\r\n7\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_PrintString(string target)
         {
             var output = CompileAndRun(@"

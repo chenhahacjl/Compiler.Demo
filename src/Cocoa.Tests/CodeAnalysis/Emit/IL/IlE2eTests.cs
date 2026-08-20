@@ -72,6 +72,37 @@ function Main()
         }
 
         [Fact]
+        public void Run_DefaultInitializedVariables_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    var a: int
+    var b: bool
+    var d: double
+    var c: char
+    var by: byte
+    var s: string
+    print(a)
+    print(b)
+    print(d)
+    print(int(c))
+    print(int(by))
+    print(s == s)
+    const x: int = 42
+    print(x)
+    const y = 7
+    print(y + 1)
+    var t = x
+    t = t + 1
+    print(t)
+}", "e2e-default-init");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("0\r\nFalse\r\n0\r\n0\r\n0\r\nTrue\r\n42\r\n8\r\n43\r\n", stdout);
+        }
+
+        [Fact]
         public void Run_CocoaProgram_WithUserFunctions_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

@@ -62,6 +62,7 @@ ColonToken,               // :
         BreakKeyword,             // break
         CdeclKeyword,             // cdecl
         ClassKeyword,             // class
+        ConstKeyword,             // const
         ConstructorKeyword,       // constructor
         ContinueKeyword,          // continue
         DoKeyword,                // do

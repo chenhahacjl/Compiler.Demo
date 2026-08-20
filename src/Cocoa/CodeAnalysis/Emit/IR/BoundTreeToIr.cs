@@ -350,7 +350,14 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         private IrVirtualRegister EmitConstant(BoundExpression node)
         {
-            var value = node.ConstantValue!.Value!;
+            var value = node.ConstantValue!.Value;
+
+            if (value == null)
+            {
+                var register = AllocateRegister(8);
+                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Const, register, IrOperand.Constant(0)));
+                return register;
+            }
 
             if (value is string stringValue)
             {
@@ -383,6 +390,13 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         private IrVirtualRegister EmitLiteralExpression(BoundLiteralExpression node)
         {
             var value = node.Value;
+
+            if (value == null)
+            {
+                var register = AllocateRegister(8);
+                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Const, register, IrOperand.Constant(0)));
+                return register;
+            }
 
             if (value is string stringValue)
             {

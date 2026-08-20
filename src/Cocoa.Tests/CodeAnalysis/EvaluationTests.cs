@@ -102,6 +102,93 @@ namespace Cocoa.Tests.CodeAnalysis
             AssertValue(text, expectedValue);
         }
 
+        [Theory]
+        [InlineData("var a: int return a", 0)]
+        [InlineData("var a: int a = 5 return a", 5)]
+        [InlineData("var a: int return a + 1", 1)]
+        [InlineData("var a: int a = 5 a = a + 1 return a", 6)]
+        [InlineData("var b: bool return b", false)]
+        [InlineData("var d: double return d", 0.0)]
+        [InlineData("var c: char return int(c)", 0)]
+        [InlineData("var b: byte return int(b)", 0)]
+        [InlineData("public enum Color { Red, Green, Blue } var c: Color return int(c)", 0)]
+        [InlineData("var s: string return s == s", true)]
+        [InlineData("var s: string s = \"abc\" return s", "abc")]
+        [InlineData("const x = 5 return x", 5)]
+        [InlineData("const x = 5 return x + 1", 6)]
+        [InlineData("const x: int = 5 return x", 5)]
+        public void Evaluator_DefaultInitialization_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_Var_WithType_NoInitializer_ReportsNoDiagnostics()
+        {
+            var text = @"
+                var a: int
+            ";
+
+            AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_Let_WithoutInitializer_ReportsError()
+        {
+            var text = @"
+                [let x: int]
+            ";
+
+            var diagnostics = @"
+                let 变量必须提供初始值。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Const_WithoutInitializer_ReportsError()
+        {
+            var text = @"
+                [const x: int]
+            ";
+
+            var diagnostics = @"
+                const 变量必须提供初始值。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Var_WithoutTypeAndInitializer_ReportsError()
+        {
+            var text = @"
+                [var x]
+            ";
+
+            var diagnostics = @"
+                变量声明必须指定类型或初始值。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Const_Reassignment_ReportsCannotAssign()
+        {
+            var text = @"
+                const x = 10
+                x [=] 0
+            ";
+
+            var diagnostics = @"
+                Variable 'x' is read-only and cannot be assigned to.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
         [Fact]
         public void Evaluator_Array_Initializers()
         {

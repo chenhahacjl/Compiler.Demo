@@ -608,6 +608,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseBlockStatement();
                 case SyntaxKind.LetKeyword:
                 case SyntaxKind.VarKeyword:
+                case SyntaxKind.ConstKeyword:
                     return ParseVariableDeclaration();
                 case SyntaxKind.IfKeyword:
                     return ParseIfStatement();
@@ -661,12 +662,14 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private StatementSyntax ParseVariableDeclaration()
         {
-            var expected = Current.Kind == SyntaxKind.LetKeyword ? SyntaxKind.LetKeyword : SyntaxKind.VarKeyword;
+            var expected = Current.Kind == SyntaxKind.LetKeyword ? SyntaxKind.LetKeyword
+                         : Current.Kind == SyntaxKind.ConstKeyword ? SyntaxKind.ConstKeyword
+                         : SyntaxKind.VarKeyword;
             var keyword = MatchToken(expected);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var typeClause = ParseOptionalTypeClause();
-            var equals = MatchToken(SyntaxKind.EqualsToken);
-            var initializer = ParseExpression();
+            var equals = Current.Kind == SyntaxKind.EqualsToken ? MatchToken(SyntaxKind.EqualsToken) : null;
+            var initializer = equals == null ? null : ParseExpression();
 
             return new VariableDeclarationSyntax(_syntaxTree, keyword, identifier, typeClause, equals, initializer);
         }

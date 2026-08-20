@@ -101,6 +101,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.PropertyKeyword;
                 case "class":
                     return SyntaxKind.ClassKeyword;
+                case "const":
+                    return SyntaxKind.ConstKeyword;
                 case "constructor":
                     return SyntaxKind.ConstructorKeyword;
                 case "function":
@@ -330,6 +332,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "while";
                 case SyntaxKind.ClassKeyword:
                     return "class";
+                case SyntaxKind.ConstKeyword:
+                    return "const";
                 case SyntaxKind.ConstructorKeyword:
                     return "constructor";
                 case SyntaxKind.DoKeyword:

@@ -337,6 +337,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static void WriteLiteralExpression(BoundLiteralExpression node, IndentedTextWriter writer)
         {
+            if (node.Value == null)
+            {
+                writer.Write("null");
+                return;
+            }
+
             var value = node.Value.ToString()!;
 
             if (node.Type == TypeSymbol.Boolean)

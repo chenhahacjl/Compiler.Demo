@@ -639,7 +639,11 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitConstantExpression(IlAssembler il, BoundExpression node)
         {
-            if (node.Type == TypeSymbol.Boolean)
+            if (node.ConstantValue!.Value == null)
+            {
+                il.Emit(IlOpCodes.Get("Ldnull"));
+            }
+            else if (node.Type == TypeSymbol.Boolean)
             {
                 var value = (bool)node.ConstantValue.Value;
                 il.Emit(IlOpCodes.Get(value ? "Ldc_I4_1" : "Ldc_I4_0"));

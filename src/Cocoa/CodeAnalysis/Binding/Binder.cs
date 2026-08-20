@@ -1250,14 +1250,74 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)
         {
-            var isReadOnly = syntax.Keyword.Kind == SyntaxKind.LetKeyword;
+            var isReadOnly = syntax.Keyword.Kind == SyntaxKind.LetKeyword ||
+                             syntax.Keyword.Kind == SyntaxKind.ConstKeyword;
             var type = BindTypeClause(syntax.TypeClause);
-            var initializer = BindExpression(syntax.Initializer);
-            var variableType = type ?? initializer.Type;
+            var initializer = syntax.Initializer == null ? null : BindExpression(syntax.Initializer);
+            var variableType = type ?? initializer?.Type ?? TypeSymbol.Error;
+
+            if (initializer == null)
+            {
+                if (syntax.Keyword.Kind == SyntaxKind.LetKeyword ||
+                    syntax.Keyword.Kind == SyntaxKind.ConstKeyword)
+                {
+                    _diagnostics.ReportError(syntax.Location, $"{syntax.Keyword.Text} 变量必须提供初始值。");
+                }
+                else if (syntax.TypeClause == null)
+                {
+                    _diagnostics.ReportError(syntax.Location, "变量声明必须指定类型或初始值。");
+                }
+
+                if (variableType == TypeSymbol.Error)
+                {
+                    var errorExpression = new BoundErrorExpression(syntax.Identifier);
+                    var errorVariable = BindVariableDeclaration(syntax.Identifier, isReadOnly, TypeSymbol.Error);
+
+                    return new BoundVariableDeclaration(syntax, errorVariable, errorExpression);
+                }
+
+                initializer = new BoundLiteralExpression(syntax, GetDefaultValue(variableType), variableType);
+            }
+
             var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly, variableType, initializer.ConstantValue);
-            var convertedInitializer = BindConversion(syntax.Initializer.Location, initializer, variableType);
+            var convertedInitializer = BindConversion(syntax.Initializer?.Location ?? syntax.Location, initializer, variableType);
 
             return new BoundVariableDeclaration(syntax, variable, convertedInitializer);
+        }
+
+        private static object GetDefaultValue(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Boolean)
+            {
+                return false;
+            }
+
+            if (type == TypeSymbol.Int32 || type == TypeSymbol.Byte)
+            {
+                return 0;
+            }
+
+            if (type == TypeSymbol.Char)
+            {
+                return '\0';
+            }
+
+            if (type == TypeSymbol.Double)
+            {
+                return 0.0;
+            }
+
+            if (type == TypeSymbol.String || type is ClassTypeSymbol || type.ElementType != null)
+            {
+                return null!;
+            }
+
+            if (type is EnumTypeSymbol)
+            {
+                return 0;
+            }
+
+            throw new System.Exception($"Unexpected type {type}");
         }
 
         [return: NotNullIfNotNull(nameof(syntax))]

@@ -141,11 +141,9 @@ namespace Cocoa.CodeAnalysis
         {
             var value = EvaluateExpression(node.Initializer);
 
-            Debug.Assert(value != null);
-
             _lastValue = value;
 
-            Assign(node.Variable, value);
+            Assign(node.Variable, value!);
         }
 
         private void EvaluateExpressionStatement(BoundExpressionStatement node)
@@ -246,7 +244,9 @@ namespace Cocoa.CodeAnalysis
             var left = EvaluateExpression(binary.Left);
             var right = EvaluateExpression(binary.Right);
 
-            Debug.Assert(left != null && right != null);
+            Debug.Assert(left != null && right != null ||
+                         binary.Op.Kind == BoundBinaryOperatorKind.Equals ||
+                         binary.Op.Kind == BoundBinaryOperatorKind.NotEquals);
 
             switch (binary.Op.Kind)
             {
@@ -470,16 +470,16 @@ namespace Cocoa.CodeAnalysis
             return target.Substring(start, count);
         }
 
-        private void Assign(VariableSymbol variable, object value)
+        private void Assign(VariableSymbol variable, object? value)
         {
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
-                _globals[variable] = value;
+                _globals[variable] = value!;
             }
             else
             {
                 var locals = _locals.Peek();
-                locals[variable] = value;
+                locals[variable] = value!;
             }
         }
     }
