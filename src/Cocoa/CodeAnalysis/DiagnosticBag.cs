@@ -52,6 +52,12 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        internal void ReportUnrecognizedEscape(TextLocation location, string text)
+        {
+            var message = $"Unrecognized escape sequence '\\{text}'.";
+            ReportError(location, message);
+        }
+
         internal void ReportUnterminatedMultiLineComment(TextLocation location)
         {
             var message = $"Unterminated multi-line comment.";

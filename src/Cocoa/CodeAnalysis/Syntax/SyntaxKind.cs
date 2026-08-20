@@ -19,6 +19,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         NumberToken,             // 数字
         DoubleToken,             // 浮点数
         StringToken,             // "
+        VerbatimStringToken,     // @"
+        RawStringToken,          // """
+        InterpolatedStringToken, // $"
         CharToken,               // '
         PlusToken,               // +
         PlusEqualsToken,         // +=
@@ -163,5 +166,8 @@ ColonToken,               // :
         ElementAccessExpression,  // 数组索引表达式
         MemberAccessExpression,   // 成员访问表达式
         MemberCallExpression,     // 成员方法调用表达式
+        InterpolatedStringExpression, // 插值字符串 $"..."
+        InterpolatedStringText,   // 插值字符串字面量段
+        Interpolation,            // 插值洞 {expr}
     }
 }

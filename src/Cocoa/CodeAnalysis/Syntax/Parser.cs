@@ -1568,6 +1568,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseNumberLiteral();
 
                 case SyntaxKind.StringToken:
+                case SyntaxKind.VerbatimStringToken:
+                case SyntaxKind.RawStringToken:
                     return ParseStringLiteral();
 
                 case SyntaxKind.CharToken:
@@ -1598,6 +1600,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.NumberToken:
                 case SyntaxKind.DoubleToken:
                 case SyntaxKind.StringToken:
+                case SyntaxKind.VerbatimStringToken:
+                case SyntaxKind.RawStringToken:
+                case SyntaxKind.InterpolatedStringToken:
                 case SyntaxKind.CharToken:
                 case SyntaxKind.OpenParenthesisToken:
                 case SyntaxKind.NewKeyword:
@@ -1650,7 +1655,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private ExpressionSyntax ParseStringLiteral()
         {
-            var stringToken = MatchToken(SyntaxKind.StringToken);
+            var stringToken = Current.Kind is SyntaxKind.StringToken or SyntaxKind.VerbatimStringToken or SyntaxKind.RawStringToken
+                ? NextToken()
+                : MatchToken(SyntaxKind.StringToken);
 
             return new LiteralExpressionSyntax(_syntaxTree, stringToken);
         }

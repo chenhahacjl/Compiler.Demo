@@ -123,6 +123,159 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Equal(name, token.Text);
         }
 
+        [Fact]
+        public void Lexer_Lexes_StringEscapes()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"a\\nb\\tc\\\\d\\\"e\\0f\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.StringToken, token.Kind);
+            Assert.Equal("a\nb\tc\\d\"e\0f", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Theory]
+        [InlineData("\"\\u0041\"", "A")]
+        [InlineData("\"\\x41\"", "A")]
+        [InlineData("\"\\x42X\"", "BX")]
+        [InlineData("\"\\U0001F600\"", "\U0001F600")]
+        public void Lexer_Lexes_UnicodeEscapes(string source, string expected)
+        {
+            var tokens = SyntaxTree.ParseTokens(source, out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.StringToken, token.Kind);
+            Assert.Equal(expected, token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_UnrecognizedEscape()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"a\\qb\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.StringToken, token.Kind);
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("escape", diagnostic.Message);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_VerbatimString()
+        {
+            var tokens = SyntaxTree.ParseTokens("@\"hi\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.VerbatimStringToken, token.Kind);
+            Assert.Equal("hi", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_VerbatimString_EscapedQuote()
+        {
+            var tokens = SyntaxTree.ParseTokens("@\"a\"\"b\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.VerbatimStringToken, token.Kind);
+            Assert.Equal("a\"b", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_VerbatimString_BackslashIsLiteral()
+        {
+            var tokens = SyntaxTree.ParseTokens("@\"a\\nb\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.VerbatimStringToken, token.Kind);
+            Assert.Equal("a\\nb", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_VerbatimString_Multiline()
+        {
+            var tokens = SyntaxTree.ParseTokens("@\"line1\nline2\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.VerbatimStringToken, token.Kind);
+            Assert.Equal("line1\nline2", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_UnterminatedVerbatimString()
+        {
+            var tokens = SyntaxTree.ParseTokens("@\"abc", out var diagnostics).ToArray();
+            Assert.Single(diagnostics);
+            Assert.Contains("Unterminated", diagnostics[0].Message);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_VerbatimIdentifier()
+        {
+            var tokens = SyntaxTree.ParseTokens("@class", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.IdentifierToken, token.Kind);
+            Assert.Equal("@class", token.Text);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_At_NotIdentifierOrString_ReportsBadCharacter()
+        {
+            var tokens = SyntaxTree.ParseTokens("@1", out var diagnostics).ToArray();
+            Assert.Contains(diagnostics, d => d.Message.Contains("Bad character"));
+        }
+
+        [Fact]
+        public void Lexer_Lexes_RawString()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"\"\"hi\"\"\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.RawStringToken, token.Kind);
+            Assert.Equal("hi", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_RawString_EmbeddedQuotes()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"\"\"a\"b\"\"\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.RawStringToken, token.Kind);
+            Assert.Equal("a\"b", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_RawString_MultilineIndentStripping()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"\"\"\n    line1\n    line2\n    \"\"\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.RawStringToken, token.Kind);
+            Assert.Equal("line1\nline2", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_RawString_LongerDelimiter()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"\"\"\"a\"\"\"b\"\"\"\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.RawStringToken, token.Kind);
+            Assert.Equal("a\"\"\"b", token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_AllQuoteRawString_ReportsUnterminated()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"\"\"\"\"\"", out var diagnostics).ToArray();
+            Assert.Contains(diagnostics, d => d.Message.Contains("Unterminated"));
+        }
+
+        [Fact]
+        public void Lexer_Lexes_UnterminatedRawString()
+        {
+            var tokens = SyntaxTree.ParseTokens("\"\"\"abc", out var diagnostics).ToArray();
+            Assert.Contains(diagnostics, d => d.Message.Contains("Unterminated"));
+        }
+
         public static IEnumerable<object[]> GetTokensData()
         {
             foreach (var (kind, text) in GetTokens())
@@ -173,6 +326,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 (SyntaxKind.IdentifierToken, "cmile"),
                 (SyntaxKind.StringToken, "\"Cmile\""),
                 (SyntaxKind.StringToken, "\"Cm\"\"ile\""),
+                (SyntaxKind.VerbatimStringToken, "@\"Cm\""),
+                (SyntaxKind.RawStringToken, "\"\"\"Cm\"\"\""),
+                (SyntaxKind.InterpolatedStringToken, "$\"Cm\""),
                 (SyntaxKind.CharToken, "'c'"),
             };
 
@@ -194,6 +350,12 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
         private static bool RequiresSeparator(SyntaxKind t1Kind, SyntaxKind t2Kind)
         {
+            // 字符串字面量族相邻会因引号转义/定界符合并成一个 token：任何两种字符串字面量之间须分隔
+            if (IsStringLiteralKind(t1Kind) && IsStringLiteralKind(t2Kind))
+            {
+                return true;
+            }
+
             var t1IsKeyword = t1Kind.IsKeyword();
             var t2IsKeyword = t2Kind.IsKeyword();
 
@@ -508,6 +670,14 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             }
 
             return false;
+        }
+
+        private static bool IsStringLiteralKind(SyntaxKind kind)
+        {
+            return kind == SyntaxKind.StringToken ||
+                   kind == SyntaxKind.VerbatimStringToken ||
+                   kind == SyntaxKind.RawStringToken ||
+                   kind == SyntaxKind.InterpolatedStringToken;
         }
 
         private static IEnumerable<(SyntaxKind t1Kind, string t1Text, SyntaxKind t2Kind, string t2Text)> GetTokenPairs()

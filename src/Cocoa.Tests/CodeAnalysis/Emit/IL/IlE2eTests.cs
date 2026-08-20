@@ -1898,6 +1898,50 @@ function Main()
         }
 
         [Fact]
+        public void StringEscapes_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    print(\"a\\nb\\tc\\\\d\\\"e\\0f\")\n" +
+"    print(\"\\u0041\\u03A9\")\n" +
+"    print(\"\\U0001F600\".Length)\n" +
+"}", "e2e-string-escapes");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("a\nb\tc\\d\"e\0f\r\nAΩ\r\n2\r\n", stdout);
+        }
+
+        [Fact]
+        public void VerbatimString_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    print(@\"a\\b\"\"c\")\n" +
+"    print(@\"line1\n" +
+"line2\")\n" +
+"}", "e2e-verbatim-string");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("a\\b\"c\r\nline1\nline2\r\n", stdout);
+        }
+
+        [Fact]
+        public void RawString_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    print(\"\"\"hi\"\"\")\n" +
+"    print(\"\"\"a\"b\"\"\")\n" +
+"}", "e2e-raw-string");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("hi\r\na\"b\r\n", stdout);
+        }
+
+        [Fact]
         public void Class_MultipleInterfaces_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

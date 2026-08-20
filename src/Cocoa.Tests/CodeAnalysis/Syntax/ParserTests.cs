@@ -768,6 +768,43 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
+        public void Parser_VerbatimStringLiteral_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"@""hi""");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var literal = Assert.IsType<LiteralExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
+            Assert.Equal(SyntaxKind.VerbatimStringToken, literal.LiteralToken.Kind);
+            Assert.Equal("hi", literal.Value);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_RawStringLiteral_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse("function Main() { print(\"\"\"hi\"\"\") }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<FunctionDeclarationSyntax>(member);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CastWithVerbatimString_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"(string)@""hi""");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var cast = Assert.IsType<CastExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
+            Assert.Equal("string", cast.TypeName.Text);
+            var literal = Assert.IsType<LiteralExpressionSyntax>(cast.Expression);
+            Assert.Equal(SyntaxKind.VerbatimStringToken, literal.LiteralToken.Kind);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
         public void Parser_CSharpStyleLocalVariable_BindsToVariableDeclaration()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { public void Bar() { int x = 10; print(x); } }");
