@@ -339,5 +339,49 @@ public class Circle: Shape
             nameProperty.SetValue(obj, "renamed");
             Assert.Equal("renamed", nameProperty.GetValue(obj));
         }
+
+        [Fact]
+        public void Library_ExternalInterface_Idisposable_ImplementAndReadBack()
+        {
+            var code = @"
+using System
+
+public class Resource: IDisposable
+{
+    private _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public function Dispose()
+    {
+        print(""disposing "" + _name)
+    }
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(References, syntaxTree);
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "idisposable_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+            var diagnostics = compilation.Emit("idisposable_lib", References, path, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(diagnostics);
+
+            var assembly = Assembly.LoadFile(path);
+            var resource = assembly.GetType("Resource");
+            Assert.NotNull(resource);
+
+            var interfaces = resource.GetInterfaces();
+            Assert.Contains(interfaces, i => i.FullName == "System.IDisposable");
+
+            var dispose = resource.GetMethod("Dispose", BindingFlags.Public | BindingFlags.Instance);
+            Assert.NotNull(dispose);
+
+            var ctor = resource.GetConstructor(new[] { typeof(string) });
+            Assert.NotNull(ctor);
+            var obj = ctor.Invoke(new object[] { "file.dat" });
+            Assert.Null(dispose.Invoke(obj, null)); // void 方法调用返回 null
+        }
     }
 }

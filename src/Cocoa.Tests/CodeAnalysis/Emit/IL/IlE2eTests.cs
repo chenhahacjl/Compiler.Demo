@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using Cocoa.CodeAnalysis.Emit.IL;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
@@ -17,7 +18,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string? input = null)
         {
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
-            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
             var exePath = GetOutputPath(name);
             var diagnostics = compilation.Emit(name, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
 
@@ -972,6 +973,39 @@ function Main()
 
             Assert.Equal(0, exitCode);
             Assert.Equal("10\r\nunit\r\n5\r\n", stdout);
+        }
+
+        [Fact]
+        public void ExternalInterface_Idisposable_ImplementAndCall_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+using System
+
+public class Resource: IDisposable
+{
+    private _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public function Dispose()
+    {
+        print(""disposing "" + _name)
+    }
+}
+
+function Main()
+{
+    var d: IDisposable = new Resource(""file1"")
+    d.Dispose()
+    var r = new Resource(""file2"")
+    r.Dispose()
+}", "e2e-external-idisposable");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("disposing file1\r\ndisposing file2\r\n", stdout);
         }
     }
 }
