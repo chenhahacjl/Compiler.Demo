@@ -668,5 +668,34 @@ function Main()
 
             Assert.Equal("0\r\n1\r\n2\r\n", output);
         }
+
+        [Fact]
+        public void NativeSource_Interface_ReportsUnsupported()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+public interface IShape
+{
+    function Area(): int
+}
+
+public class Circle: IShape
+{
+    public function Area(): int
+    {
+        return 1
+    }
+}
+
+function Main()
+{
+    var s: IShape = new Circle()
+    print(s.Area())
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            TargetPlatform.TryParse(X64, out var platform);
+            var diagnostics = compilation.EmitNative("test", GetExePath("native-interface", X64), platform);
+            Assert.NotEmpty(diagnostics);
+            Assert.Contains(diagnostics, d => d.Message.Contains("class 暂不支持 native 后端"));
+        }
     }
 }
