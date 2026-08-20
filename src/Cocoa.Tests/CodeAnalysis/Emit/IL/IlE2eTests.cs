@@ -1992,5 +1992,187 @@ public class B { }
 public class C: A, B { }", "Main");
             Assert.Contains(messages, m => m.Contains("只能有一个非接口基类"));
         }
+
+        [Fact]
+        public void Class_StaticConstructor_SetsStaticField_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Config
+{
+    public static int Max;
+
+    static Config()
+    {
+        Max = 42;
+    }
+
+    public static int GetMax()
+    {
+        return Max;
+    }
+}
+
+function Main()
+{
+    print(Config.GetMax())
+} ", "e2e-static-ctor-csharp-style");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_CocoaStyle_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Config
+{
+    public static int Max;
+
+    static constructor()
+    {
+        Max = 7;
+    }
+
+    public static function GetMax(): int
+    {
+        return Max
+    }
+}
+
+function Main()
+{
+    print(Config.GetMax())
+} ", "e2e-static-ctor-cocoa-style");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("7\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_FieldInitializerOrdering_OnDotnetHost()
+        {
+            // C# 语义：静态字段初始化器（按文本序）先于静态构造体执行 → 最终值 2
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Config
+{
+    public static int Order = 1;
+
+    static Config()
+    {
+        Order = 2;
+    }
+
+    public static int GetOrder()
+    {
+        return Order;
+    }
+}
+
+function Main()
+{
+    print(Config.GetOrder())
+} ", "e2e-static-ctor-ordering");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("2\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_RunsBeforeInstanceConstructor_OnDotnetHost()
+        {
+            // .cctor 先于首次实例构造触发：实例构造中可读到静态构造写入的静态字段
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Account
+{
+    public static int Seq;
+
+    static Account()
+    {
+        Seq = 100;
+    }
+
+    public int _base;
+
+    public constructor()
+    {
+        _base = Seq;
+    }
+
+    public function GetBase(): int
+    {
+        return _base
+    }
+}
+
+function Main()
+{
+    var a = new Account()
+    print(a.GetBase())
+    print(Account.Seq)
+} ", "e2e-static-ctor-before-instance");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("100\r\n100\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_WithParameters_ReportsError()
+        {
+            var messages = GetEmitDiagnostics(@"
+public class Foo
+{
+    static Foo(int x)
+    {
+    }
+}", "Main");
+            Assert.Contains(messages, m => m.Contains("参数"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_WithChain_ReportsError()
+        {
+            var messages = GetEmitDiagnostics(@"
+public class Base { }
+public class Foo: Base
+{
+    static Foo(): base()
+    {
+    }
+}", "Main");
+            Assert.Contains(messages, m => m.Contains("构造链"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_ThisAccess_ReportsError()
+        {
+            var messages = GetEmitDiagnostics(@"
+public class Foo
+{
+    private _x: int
+
+    static Foo()
+    {
+        this._x = 1;
+    }
+}", "Main");
+            Assert.Contains(messages, m => m.Contains("this"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_InstanceFieldAccess_ReportsError()
+        {
+            var messages = GetEmitDiagnostics(@"
+public class Foo
+{
+    private _x: int
+
+    static Foo()
+    {
+        _x = 1;
+    }
+}", "Main");
+            Assert.Contains(messages, m => m.Contains("实例字段"));
+        }
     }
 }

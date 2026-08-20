@@ -1023,6 +1023,36 @@ for (var i = 0; i < 10; i++)
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
+        [Fact]
+        public void Parser_StaticConstructor_CSharpStyle_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { static Foo() { x = 1; } }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var ctor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Contains(ctor.Modifiers, m => m.Kind == SyntaxKind.StaticKeyword);
+            Assert.Null(ctor.ConstructorKeyword);
+            Assert.Empty(ctor.Parameters);
+            Assert.Null(ctor.InitializerKeyword);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_StaticConstructor_CocoaStyle_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { static constructor() { x = 1; } }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var ctor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Contains(ctor.Modifiers, m => m.Kind == SyntaxKind.StaticKeyword);
+            Assert.Equal(SyntaxKind.ConstructorKeyword, ctor.ConstructorKeyword!.Kind);
+            Assert.Empty(ctor.Parameters);
+            Assert.Null(ctor.InitializerKeyword);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

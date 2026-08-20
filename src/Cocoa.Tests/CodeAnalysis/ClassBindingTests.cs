@@ -813,6 +813,215 @@ function Main()
         }
 
         [Fact]
+        public void Class_UserStaticConstructor_CreatesCctorSymbol()
+        {
+            var code = @"
+public class Config
+{
+    public static int Max;
+
+    static Config()
+    {
+        Max = 42;
+    }
+}
+
+function Main()
+{
+    print(Config.Max)
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            var cctor = Assert.Single(classType.Methods.Where(m => m.Name == ".cctor" && m.IsStatic && m.IsConstructor));
+            Assert.Empty(cctor.Parameters);
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_UserStaticConstructor_CocoaStyle_CreatesCctorSymbol()
+        {
+            var code = @"
+public class Config
+{
+    public static int Max;
+
+    static constructor()
+    {
+        Max = 7;
+    }
+}
+
+function Main()
+{
+    print(Config.Max)
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            var cctor = Assert.Single(classType.Methods.Where(m => m.Name == ".cctor" && m.IsStatic && m.IsConstructor));
+            Assert.Empty(cctor.Parameters);
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_UserStaticConstructor_NoImplicitCctorDuplicate()
+        {
+            var code = @"
+public class Config
+{
+    public static int Max;
+
+    static Config()
+    {
+        Max = 42;
+    }
+}
+
+function Main()
+{
+    print(Config.Max)
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            Assert.Single(classType.Methods.Where(m => m.Name == ".cctor"));
+            Assert.Equal(2, classType.Methods.Count(m => m.IsConstructor)); // 用户 .cctor + 隐式实例构造
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_WithParameters_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    static Foo(int x)
+    {
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("参数"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_WithChain_ReportsError()
+        {
+            var code = @"
+public class Base
+{
+}
+
+public class Foo: Base
+{
+    static Foo(): base()
+    {
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("构造链"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_WithVisibilityModifier_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    public static Foo()
+    {
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("可见性修饰符"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_ThisAccess_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    private _x: int
+
+    static Foo()
+    {
+        this._x = 1;
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("this"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_InstanceFieldAccess_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    private _x: int
+
+    static Foo()
+    {
+        _x = 1;
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("实例字段"));
+        }
+
+        [Fact]
+        public void Class_StaticConstructor_Duplicate_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    static Foo()
+    {
+    }
+
+    static constructor()
+    {
+    }
+}
+
+function Main()
+{
+    print(1)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("already declared") || d.Message.Contains("已声明"));
+        }
+
+        [Fact]
         public void Class_ReadonlyFieldWithInitializer_BindsWithoutErrors()
         {
             var code = @"

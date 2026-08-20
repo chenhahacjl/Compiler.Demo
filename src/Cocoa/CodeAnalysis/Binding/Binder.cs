@@ -760,21 +760,60 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is ConstructorDeclarationSyntax constructorDeclaration)
                 {
-                    var parameters = BindParameters(constructorDeclaration.Parameters);
-                    var ctorVisibility = GetVisibility(constructorDeclaration.Modifiers, Visibility.Private);
+                    var isStatic = constructorDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
 
-                    if (classType.GetDeclaredMethod(classType.Name) == null)
+                    if (isStatic)
                     {
-                        var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, visibility: ctorVisibility) { IsConstructor = true };
-                        classType.AddMethod(ctor);
-                        classFunctions.Add(ctor);
-                    }
-                    else
-                    {
+                        // 静态构造函数（C# 式 `static Foo()` / Cocoa 式 `static constructor()`）→ `.cctor` 符号
                         var location = constructorDeclaration.ConstructorKeyword != null
                             ? constructorDeclaration.ConstructorKeyword.Location
                             : constructorDeclaration.OpenParenthesisToken.Location;
-                        _diagnostics.ReportSymbolAlreadyDeclared(location, classType.Name);
+
+                        if (HasVisibilityModifier(constructorDeclaration.Modifiers))
+                        {
+                            _diagnostics.ReportError(location, "静态构造函数不能有可见性修饰符（public/private/internal/protected）。");
+                        }
+
+                        if (constructorDeclaration.Parameters.Count > 0)
+                        {
+                            _diagnostics.ReportError(constructorDeclaration.OpenParenthesisToken.Location, "静态构造函数不能有参数。");
+                        }
+
+                        if (constructorDeclaration.InitializerKeyword != null)
+                        {
+                            _diagnostics.ReportError(constructorDeclaration.InitializerKeyword.Location, "静态构造函数不能有构造链（base/this）。");
+                        }
+
+                        if (classType.GetDeclaredMethod(".cctor") == null)
+                        {
+                            var cctor = new FunctionSymbol(".cctor", ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null,
+                                syntax: constructorDeclaration, containingClass: classType, visibility: Visibility.Private) { IsConstructor = true, IsStatic = true };
+                            classType.AddMethod(cctor);
+                            classFunctions.Add(cctor);
+                        }
+                        else
+                        {
+                            _diagnostics.ReportSymbolAlreadyDeclared(location, ".cctor");
+                        }
+                    }
+                    else
+                    {
+                        var parameters = BindParameters(constructorDeclaration.Parameters);
+                        var ctorVisibility = GetVisibility(constructorDeclaration.Modifiers, Visibility.Private);
+
+                        if (classType.GetDeclaredMethod(classType.Name) == null)
+                        {
+                            var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, visibility: ctorVisibility) { IsConstructor = true };
+                            classType.AddMethod(ctor);
+                            classFunctions.Add(ctor);
+                        }
+                        else
+                        {
+                            var location = constructorDeclaration.ConstructorKeyword != null
+                                ? constructorDeclaration.ConstructorKeyword.Location
+                                : constructorDeclaration.OpenParenthesisToken.Location;
+                            _diagnostics.ReportSymbolAlreadyDeclared(location, classType.Name);
+                        }
                     }
                 }
                 else if (member is FunctionDeclarationSyntax methodDeclaration)
@@ -1978,6 +2017,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 var field = _currentClass.GetField(name);
                 if (field != null)
                 {
+                    if (_function?.IsStatic == true && !field.IsStatic)
+                    {
+                        _diagnostics.ReportError(syntax.IdentifierToken.Location, $"静态方法中不能访问实例字段 '{name}'。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
                     var thisExpression = new BoundThisExpression(syntax, _currentClass);
                     return new BoundMemberAccessExpression(syntax, field.Type, thisExpression, name, field);
                 }
@@ -1986,6 +2031,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 var property = _currentClass.GetProperty(name);
                 if (property != null && property.Getter != null)
                 {
+                    if (_function?.IsStatic == true && !property.Getter.IsStatic)
+                    {
+                        _diagnostics.ReportError(syntax.IdentifierToken.Location, $"静态方法中不能访问实例属性 '{name}'。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
                     if (!IsAccessibleMember(property.Getter.Visibility, property.Getter.ContainingClass!))
                     {
                         _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, name, property.Getter.Visibility);
