@@ -4,7 +4,7 @@ using System.Collections.Specialized;
 using System.Reflection;
 using System.Text;
 
-namespace Cocoa.Interactive
+namespace Cocoa.Compiler
 {
     internal abstract class Repl
     {

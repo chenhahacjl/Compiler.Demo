@@ -259,8 +259,8 @@ namespace Cocoa.Compiler
 
         private static void PrintHelp()
         {
-            Console.WriteLine("usage: coc build <project-or-solution> [options]");
-            Console.WriteLine("       coc build -p <project-or-solution> [options]");
+            Console.WriteLine("usage: cocoa build <project-or-solution> [options]");
+            Console.WriteLine("       cocoa build -p <project-or-solution> [options]");
             Console.WriteLine();
             Console.WriteLine("options:");
             Console.WriteLine("  -p <path>          The path to a .coproj or .cosln file");

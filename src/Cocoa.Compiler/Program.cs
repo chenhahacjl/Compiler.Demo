@@ -11,11 +11,51 @@ namespace Cocoa.Compiler
     {
         private static int Main(string[] args)
         {
-            if (args.Length > 0 && args[0] == "build")
+            if (args.Length == 0)
             {
-                return BuildCommand.Run(args.Skip(1).ToArray());
+                PrintHelp();
+                return 0;
             }
 
+            if (args[0] is "-?" or "-h" or "--help")
+            {
+                PrintHelp();
+                return 0;
+            }
+
+            switch (args[0])
+            {
+                case "build":
+                    return BuildCommand.Run(args.Skip(1).ToArray());
+                case "new":
+                    return NewCommand.Run(args.Skip(1).ToArray());
+                case "list":
+                    return ListCommand.Run(args.Skip(1).ToArray());
+                case "add":
+                    return ReferenceCommand.RunAdd(args.Skip(1).ToArray());
+                case "remove":
+                    return ReferenceCommand.RunRemove(args.Skip(1).ToArray());
+                case "run":
+                    return RunCommand.Run(args.Skip(1).ToArray());
+                case "clean":
+                    return CleanCommand.Run(args.Skip(1).ToArray());
+                case "-i":
+                case "--interactive":
+                    new CocoaRepl().Run();
+                    return 0;
+            }
+
+            if (args.Any(a => a is "-i" or "--interactive"))
+            {
+                new CocoaRepl().Run();
+                return 0;
+            }
+
+            return Compile(args);
+        }
+
+        private static int Compile(string[] args)
+        {
             var outputPath = (string?)null;
             var moduleName = (string?)null;
             var backendText = (string?)null;
@@ -300,20 +340,28 @@ namespace Cocoa.Compiler
 
         private static void PrintHelp()
         {
-            Console.WriteLine("usage: coc build <project-or-solution> [options]");
-            Console.WriteLine("       coc <source-paths> [options]");
+            Console.WriteLine("usage: cocoa <command> [options]");
+            Console.WriteLine("       cocoa <source-paths> [options]");
             Console.WriteLine();
             Console.WriteLine("commands:");
-            Console.WriteLine("  build              Builds a .coproj project or .cosln solution (see 'coc build -h')");
+            Console.WriteLine("  new <template> [name]  Creates a new project or solution (console, library, cocoa, solution)");
+            Console.WriteLine("  build                  Builds a .coproj project or .cosln solution (see 'cocoa build -h')");
+            Console.WriteLine("  run                    Builds and runs a project or solution");
+            Console.WriteLine("  list                   Lists templates, projects, or references");
+            Console.WriteLine("  add reference          Adds a reference to a project");
+            Console.WriteLine("  remove reference       Removes a reference from a project");
+            Console.WriteLine("  clean                  Cleans build caches (.cocoa/) and outputs");
+            Console.WriteLine("  -i, --interactive      Launches the interactive REPL");
             Console.WriteLine();
-            Console.WriteLine("options:");
+            Console.WriteLine("direct compile options:");
             Console.WriteLine("  -r <path>          The path of an assembly to reference");
             Console.WriteLine("  -o <path>          The output path of the assembly to create");
             Console.WriteLine("  -b <name>          The code generation backend: dotnet (default) or native");
             Console.WriteLine("  --platform <arch>  The native target architecture: x86 or x64 (default x64). Only used with -b native");
             Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore). Only used with -b dotnet");
             Console.WriteLine("  --dotnet-module <name>  The module name (dotnet backend only; defaults to the output file name)");
-            Console.WriteLine("  -?, -h, --help     Prints help");
+            Console.WriteLine("  -i, --interactive   Launches the interactive REPL");
+            Console.WriteLine("  -?, -h, --help      Prints help");
         }
     }
 }

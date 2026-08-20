@@ -3,7 +3,7 @@
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
 > 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs/开发计划.md`](docs/开发计划.md)）
-> 最新：6e-M11 P3 已全部落地（2026-08-20）：属性访问器修饰符 `public int X { get; private set; }`（严格对齐 C#：访问器可见性须严格比属性更受限 + 至多一个访问器带修饰符）+ 表达式体成员 `public int Area() => _x * _y;` / `public int X => _x;`（C#/Cocoa 双风格）；P1 顶层 C# 式函数 / P2a 入口限定名+命名空间访问+using 分号 / P2b const C# 式+类多接口 已落地；P4~P7 规划中（静态构造 / 字符串插值 / foreach / switch，见 [`docs/语法手册.md`](docs/语法手册.md) §45）
+> 最新：6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）
 
 ## 路线图（摘要）
 
@@ -24,47 +24,53 @@
 # 构建（Windows）
 src\build.cmd
 
+# 创建新项目（模板 + 名称，仿 dotnet new）：console / library / cocoa / solution
+cocoa new console MyApp
+
 # 编译单文件（默认 exe）
-coc hello.co
+cocoa hello.co
+
+# 交互式 REPL
+cocoa -i
 
 # 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net48，直接运行）
-coc build -p samples/Tutorial/Tutorial.cosln
-coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
+cocoa build -p samples/Tutorial/Tutorial.cosln
+cocoa build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 ./samples/Tutorial/HelloWorld/out/HelloWorld.exe
 
 # C# 式语法对照（Tutorial/CsStyle：C# 式参数/局部变量/分号 ↔ Cocoa 式，native + dotnet 双后端）
-coc build -p samples/Tutorial/CsStyle/CsStyle.coproj
+cocoa build -p samples/Tutorial/CsStyle/CsStyle.coproj
 ./samples/Tutorial/CsStyle/out/CsStyle.exe
 
 # C# 式顶层函数（Tutorial/TopLevelFunctions：`public static void Main()` / `public int Add(int x)` / Cocoa 无关键字 `Main(): void`）
-coc build -p samples/Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
+cocoa build -p samples/Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
 ./samples/Tutorial/TopLevelFunctions/out/TopLevelFunctions.exe
 
 # C# 式类语法 + 字段/自动属性初始化器（samples/CSharpClass，仅 IL 后端）
-coc build -p samples/CSharpClass/CSharpClass.coproj
+cocoa build -p samples/CSharpClass/CSharpClass.coproj
 ./samples/CSharpClass/out/CSharpClass.exe
 
 # .cod 语义层程序集闭环（samples/CodLibrary：cocoa 库 → [references] 消费，native + dotnet 双后端）
 # mylib output=cocoa → .cod；app [references] 引用 → 编译期 IR 合并 → 独立 exe（CopyLocal 自动复制 .cod）
 # 默认 dotnetRuntime = net48（netfx），产物直接运行（无需 dotnet 前缀）
-coc build -p samples/CodLibrary/mylib/MyLib.coproj
-coc build -p samples/CodLibrary/app/App.coproj -b native
+cocoa build -p samples/CodLibrary/mylib/MyLib.coproj
+cocoa build -p samples/CodLibrary/app/App.coproj -b native
 ./samples/CodLibrary/app/out/App.exe
-coc build -p samples/CodLibrary/app/App.coproj -b dotnet
+cocoa build -p samples/CodLibrary/app/App.coproj -b dotnet
 ./samples/CodLibrary/app/out/App.exe
 
 # 指定输出格式与 .NET 目标框架
-coc build -p foo.coproj -f library
-coc build -p foo.coproj --dotnet-runtime net9.0
+cocoa build -p foo.coproj -f library
+cocoa build -p foo.coproj --dotnet-runtime net9.0
 # netcore 产物 = 托管 x.dll + 原生 apphost x.exe（SDK 标准布局）：x.exe 直接/双击运行，dotnet x.dll 亦可
 
 # 类库（dll）→ 消费：写 `using MyLib` + 引用库（samples/ClassLibrary，CopyLocal 自动复制 dll 到输出目录）
-coc build -p samples/ClassLibrary/mylib/MyLib.coproj -b dotnet
-coc build -p samples/ClassLibrary/app/App.coproj -b dotnet
+cocoa build -p samples/ClassLibrary/mylib/MyLib.coproj -b dotnet
+cocoa build -p samples/ClassLibrary/app/App.coproj -b dotnet
 ./samples/ClassLibrary/app/out/App.exe
 
 # netfx 默认：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
-coc build -p foo.coproj -b dotnet
+cocoa build -p foo.coproj -b dotnet
 ./foo.exe
 ```
 
@@ -73,7 +79,7 @@ coc build -p foo.coproj -b dotnet
 | 文档 | 说明 |
 |------|------|
 | [`docs/语法手册.md`](docs/语法手册.md) | Cocoa 语言语法参考（状态标记：✅ 已实现 · 🔧 设计中 · 📋 待实现） |
-| [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`coc build` 子命令、构建选项、增量构建） |
+| [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`cocoa` 子命令：`new`/`build`/`run`/`list`/`add reference`/`remove reference`/`clean`、`-i` REPL、构建选项、增量构建） |
 | [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/三格式分工：`.cod` Cocoa 程序集 / .NET dll 跨语言桥 / native 后置） |
 | [`docs/OOP设计.md`](docs/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型后置） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |

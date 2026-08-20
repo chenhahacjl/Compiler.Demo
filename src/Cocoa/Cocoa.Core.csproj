@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
-    <InternalsVisibleTo Include="coc" />
+    <InternalsVisibleTo Include="cocoa" />
   </ItemGroup>
 
   <ItemGroup>

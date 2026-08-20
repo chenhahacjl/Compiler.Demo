@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
 
-namespace Cocoa.Interactive
+namespace Cocoa.Compiler
 {
     internal sealed class CocoaRepl : Repl
     {

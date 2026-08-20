@@ -6,7 +6,7 @@ Cocoa Language is a Visual Studio Code extension providing rich language support
 
 **Key decisions:**
 
-- **No language server**: All features run in-process via VS Code provider APIs. This eliminates the need for a separate compiler executable (e.g., `coc.exe`) and avoids process-management complexity.
+- **No language server**: All features run in-process via VS Code provider APIs. This eliminates the need for a separate compiler executable (e.g., `cocoa.exe`) and avoids process-management complexity.
 - **Single-pass symbol table**: A combined regex approach scans declarations and references in two linear passes, with caching by document version to avoid redundant work.
 - **Chinese descriptions**: All user-facing descriptions (keywords, builtins, types, hover text) are localized in Chinese.
 

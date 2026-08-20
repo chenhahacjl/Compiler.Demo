@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
     {
         private static string GetCocDllPath()
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "coc.dll");
+            var path = Path.Combine(AppContext.BaseDirectory, "cocoa.dll");
             Assert.True(File.Exists(path), $"CLI assembly not found at '{path}'. Build Cocoa.Compiler first.");
             return path;
         }
@@ -405,7 +405,7 @@ entry = Main
         {
             var (exitCode, stdout, stderr) = Run("build -h");
             Assert.Equal(0, exitCode);
-            Assert.Contains("usage: coc build", stdout);
+            Assert.Contains("usage: cocoa build", stdout);
         }
     }
 }

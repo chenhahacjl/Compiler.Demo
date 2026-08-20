@@ -11,7 +11,7 @@ namespace Cocoa.Projects
     public static class BuildCache
     {
         /// <summary>集中式状态目录名（仿 C# 解决方案级 .vs/）。</summary>
-        public const string CacheDirectoryName = ".coc";
+        public const string CacheDirectoryName = ".cocoa";
 
         public static string GetDefaultCacheRoot(string anchorDirectory)
         {

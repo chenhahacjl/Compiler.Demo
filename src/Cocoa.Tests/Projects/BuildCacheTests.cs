@@ -27,7 +27,7 @@ namespace Cocoa.Tests.Projects
             var cacheRoot = BuildCache.GetDefaultCacheRoot(_directory);
             var path = BuildCache.GetCachePath(cacheRoot, _directory, "App");
 
-            Assert.Equal(Path.Combine(_directory, ".coc", "App.cache"), path);
+            Assert.Equal(Path.Combine(_directory, ".cocoa", "App.cache"), path);
         }
 
         [Fact]
@@ -36,7 +36,7 @@ namespace Cocoa.Tests.Projects
             var cacheRoot = BuildCache.GetDefaultCacheRoot(_directory);
             var path = BuildCache.GetCachePath(cacheRoot, Path.Combine(_directory, "App"), "App");
 
-            Assert.Equal(Path.Combine(_directory, ".coc", "App", "App.cache"), path);
+            Assert.Equal(Path.Combine(_directory, ".cocoa", "App", "App.cache"), path);
         }
 
         [Fact]
@@ -47,8 +47,8 @@ namespace Cocoa.Tests.Projects
             var b = BuildCache.GetCachePath(cacheRoot, Path.Combine(_directory, "B"), "Core");
 
             Assert.NotEqual(a, b);
-            Assert.Equal(Path.Combine(_directory, ".coc", "A", "Core.cache"), a);
-            Assert.Equal(Path.Combine(_directory, ".coc", "B", "Core.cache"), b);
+            Assert.Equal(Path.Combine(_directory, ".cocoa", "A", "Core.cache"), a);
+            Assert.Equal(Path.Combine(_directory, ".cocoa", "B", "Core.cache"), b);
         }
 
         [Fact]
