@@ -76,7 +76,9 @@ namespace Cocoa.CodeAnalysis.Emit
             _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
             _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
 
-            _typeDefinition = new IlTypeDef("Program", "", _objectType);
+            // 顶层函数容器 TypeDef。名字用尖括号（非法标识符）杜绝与用户类同名冲突
+            // （否则用户定义 `class Program` 时与默认 "Program" TypeDef 撞名 → BadImageFormatException）。
+            _typeDefinition = new IlTypeDef("<CocoaTopLevel>", "", _objectType);
             _metadata.AddTypeDef(_typeDefinition);
         }
 

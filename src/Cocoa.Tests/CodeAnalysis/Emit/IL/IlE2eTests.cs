@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Xunit;
-
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlE2eTests
@@ -16,16 +16,25 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         }
 
         private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string? input = null)
+            => EmitAndRun(source, name, "Main", input, null);
+
+        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string entryPointName, string? input = null, string[]? processArgs = null)
         {
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
-            var compilation = Cocoa.CodeAnalysis.Compilation.Create(new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
             var exePath = GetOutputPath(name);
             var diagnostics = compilation.Emit(name, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
 
             Assert.Empty(diagnostics);
             Assert.True(File.Exists(exePath));
 
-            var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")
+            var arguments = $"\"{exePath}\"";
+            if (processArgs != null)
+            {
+                arguments += " " + string.Join(" ", processArgs);
+            }
+
+            var psi = new ProcessStartInfo("dotnet", arguments)
             {
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
@@ -1476,6 +1485,415 @@ function Main()
 
             Assert.Equal(0, exitCode);
             Assert.Equal("11\r\n", stdout);
+        }
+
+        [Fact]
+        public void CSharpStyle_TopLevelFunctions_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public static void Main()
+{
+    print(Add(2, 3))
+    print(Square(4))
+    print(Double(""hi""))
+}
+
+public int Add(int x, int y)
+{
+    return x + y;
+}
+
+public int Square(int n)
+{
+    return n * n;
+}
+
+public string Double(string s)
+{
+    return s + s;
+}", "e2e-cs-top-level-functions");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("5\r\n16\r\nhihi\r\n", stdout);
+        }
+
+        [Fact]
+        public void NoKeyword_TopLevelFunction_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+Main(): void
+{
+    print(Add(2, 3))
+}
+
+Add(a: int, b: int): int
+{
+    return a + b
+}", "e2e-no-keyword-top-level");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("5\r\n", stdout);
+        }
+
+        [Fact]
+        public void NoKeyword_TopLevelFunction_WithoutReturnType_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+Main()
+{
+    Greet()
+}
+
+Greet()
+{
+    print(""hello"")
+}", "e2e-no-keyword-top-level-noret");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("hello\r\n", stdout);
+        }
+
+        [Fact]
+        public void CSharpStyle_TopLevelFunction_ArrayReturnType_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public static void Main()
+{
+    var nums = GetNums()
+    print(nums.Length)
+    print(nums[0] + nums[1])
+}
+
+public int[] GetNums()
+{
+    return new int[] { 3, 4 };
+}", "e2e-cs-top-level-array-return");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("2\r\n7\r\n", stdout);
+        }
+
+        [Fact]
+        public void Entry_QualifiedClassMethod_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Program
+{
+    public static void Main()
+    {
+        print(""hello from class"")
+    }
+}", "e2e-entry-class", "Program.Main");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("hello from class\r\n", stdout);
+        }
+
+        [Fact]
+        public void Entry_NamespaceQualifiedClassMethod_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+namespace My.App
+{
+    public class Program
+    {
+        public static void Main()
+        {
+            print(""hello from namespace"")
+        }
+    }
+}", "e2e-entry-namespace", "My.App.Program.Main");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("hello from namespace\r\n", stdout);
+        }
+
+        [Fact]
+        public void Entry_QualifiedClassMethod_WithArgs_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Program
+{
+    public static void Main(string[] args)
+    {
+        print(args.Length)
+        print(args[0])
+    }
+}", "e2e-entry-class-args", "Program.Main", processArgs: new[] { "abc" });
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1\r\nabc\r\n", stdout);
+        }
+
+        [Fact]
+        public void Entry_SimpleName_UniqueClassStaticMain_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class App
+{
+    public static void Main()
+    {
+        print(""class main only"")
+    }
+}", "e2e-entry-class-simple");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("class main only\r\n", stdout);
+        }
+
+        [Fact]
+        public void DottedAccess_NamespaceStaticMethod_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+namespace My.App
+{
+    public class Utils
+    {
+        public static int Square(int x)
+        {
+            return x * x;
+        }
+    }
+
+    public enum Color { Red, Green, Blue }
+
+    public class Config
+    {
+        public static int Version = 7;
+    }
+}
+
+function Main()
+{
+    print(My.App.Utils.Square(4))
+    print(My.App.Config.Version)
+    print(int(My.App.Color.Green))
+}", "e2e-dotted-access");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("16\r\n7\r\n1\r\n", stdout);
+        }
+
+        [Fact]
+        public void UsingInternalNamespace_ThenSimpleName_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+namespace Foo.Bar
+{
+    public class Point
+    {
+        public int X()
+        {
+            return 3;
+        }
+    }
+}
+
+using Foo.Bar;
+
+function Main()
+{
+    var p = new Point()
+    print(p.X())
+}", "e2e-using-internal");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("3\r\n", stdout);
+        }
+
+        [Fact]
+        public void TopLevelMain_And_UserClassNamedProgram_OnDotnetHost()
+        {
+            // 回归：默认容器 TypeDef 改 `<CocoaTopLevel>`，用户 `class Program` 不再撞名
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    print(Program.X())
+}
+
+public class Program
+{
+    public static int X()
+    {
+        return 42;
+    }
+}", "e2e-top-level-program-collision");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\r\n", stdout);
+        }
+
+        private static string[] GetEmitDiagnostics(string source, string entryPointName)
+        {
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", "entry-diag.exe");
+            var diagnostics = compilation.Emit("entry-diag", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
+            return diagnostics.Select(d => d.Message).ToArray();
+        }
+
+        [Fact]
+        public void Entry_QualifiedClassNotFound_Diagnostic()
+        {
+            var messages = GetEmitDiagnostics("function Main() { }", "Foo.Main");
+            Assert.Contains(messages, m => m.Contains("入口函数指定的类 'Foo' 不存在"));
+        }
+
+        [Fact]
+        public void Entry_QualifiedMethodNotFound_Diagnostic()
+        {
+            var messages = GetEmitDiagnostics("public class Foo { public static int Bar() { return 1; } }", "Foo.Main");
+            Assert.Contains(messages, m => m.Contains("类 'Foo' 中不存在静态入口方法 'Main'"));
+        }
+
+        [Fact]
+        public void Entry_QualifiedMethodNotStatic_Diagnostic()
+        {
+            var messages = GetEmitDiagnostics("public class Foo { public void Main() { } }", "Foo.Main");
+            Assert.Contains(messages, m => m.Contains("类 'Foo' 中不存在静态入口方法 'Main'"));
+        }
+
+        [Fact]
+        public void Entry_AmbiguousTopLevelAndClassStatic_Diagnostic()
+        {
+            // 回归：原 SingleOrDefault 崩溃 → 歧义诊断
+            var messages = GetEmitDiagnostics(@"
+function Main() { print(1) }
+public class Foo { public static void Main() { print(2) } }", "Main");
+            Assert.Contains(messages, m => m.Contains("入口函数 'Main' 存在多个匹配"));
+        }
+
+        [Fact]
+        public void Entry_NamespaceQualifiedClassNotFound_Diagnostic()
+        {
+            var messages = GetEmitDiagnostics("function Main() { }", "My.App.Program.Main");
+            Assert.Contains(messages, m => m.Contains("入口函数指定的类 'My.App.Program' 不存在"));
+        }
+
+        [Fact]
+        public void CSharpStyleConstLocal_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    const int x = 10;
+    print(x);
+    const string s = ""hi"";
+    print(s);
+    const double d = 3.5;
+    print(d);
+}", "e2e-cs-const");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\r\nhi\r\n3.5\r\n", stdout);
+        }
+
+        [Fact]
+        public void CSharpStyleConstLocal_NotAssignable_ReportsError()
+        {
+            var messages = GetEmitDiagnostics(@"
+function Main()
+{
+    const int x = 10;
+    x = 20;
+}", "Main");
+            Assert.Contains(messages, m => m.Contains("read-only and cannot be assigned"));
+        }
+
+        [Fact]
+        public void Class_MultipleInterfaces_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public interface IShape
+{
+    function Area(): int
+}
+
+public interface ICloneable
+{
+    function Clone(): string
+}
+
+public class Rectangle: IShape, ICloneable
+{
+    private _w: int
+    private _h: int
+
+    public constructor(w: int, h: int)
+    {
+        _w = w
+        _h = h
+    }
+
+    public function Area(): int
+    {
+        return _w * _h
+    }
+
+    public function Clone(): string
+    {
+        return ""rect""
+    }
+}
+
+function Main()
+{
+    var r = new Rectangle(3, 4)
+    var s: IShape = r
+    var c: ICloneable = r
+    print(s.Area())
+    print(c.Clone())
+}", "e2e-multi-interface");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("12\r\nrect\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_BaseClassAndInterface_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Base
+{
+    public function B(): int
+    {
+        return 5
+    }
+}
+
+public interface IExtra
+{
+    function X(): int
+}
+
+public class Derived: Base, IExtra
+{
+    public function X(): int
+    {
+        return 7
+    }
+}
+
+function Main()
+{
+    var d = new Derived()
+    print(d.B())
+    var e: IExtra = d
+    print(e.X())
+}", "e2e-base-plus-interface");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("5\r\n7\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_TwoNonInterfaceBaseTypes_ReportsError()
+        {
+            var messages = GetEmitDiagnostics(@"
+public class A { }
+public class B { }
+public class C: A, B { }", "Main");
+            Assert.Contains(messages, m => m.Contains("只能有一个非接口基类"));
         }
     }
 }

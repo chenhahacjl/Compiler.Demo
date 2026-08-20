@@ -217,5 +217,34 @@ namespace Cocoa.Tests.Compiler
             Assert.Contains("abc", output);
             Assert.DoesNotContain("99", output);
         }
+
+        [Fact]
+        public void Project_EntryField_NamespaceQualifiedClassMethod_Dotnet()
+        {
+            BuildProject(
+                "namespace My.App { public class Program { public static void Main() { print(7) } } }",
+                "dotnet",
+                "entry-qualified",
+                "My.App.Program.Main",
+                out var exe);
+            var output = RunOutput(exe, "", runViaDotnet: true);
+            Assert.Contains("7", output);
+        }
+
+        [Fact]
+        public void Project_EntryField_QualifiedClassMethod_Native_RejectsClass()
+        {
+            // native 后端不支持 class：限定入口指向类 → 既有 class 拒绝诊断
+            var root = NewRoot("entry-qualified-native");
+            var appDir = Path.Combine(root, "App");
+            Directory.CreateDirectory(appDir);
+            File.WriteAllText(Path.Combine(appDir, "App.co"),
+                "namespace My.App { public class Program { public static void Main() { print(7) } } }");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"),
+                $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
+            var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");
+            Assert.Equal(1, exitCode);
+            Assert.Contains("class 暂不支持 native 后端", stdout + stderr);
+        }
     }
 }

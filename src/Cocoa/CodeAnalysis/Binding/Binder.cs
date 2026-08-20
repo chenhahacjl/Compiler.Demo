@@ -62,9 +62,10 @@ namespace Cocoa.CodeAnalysis.Binding
             var classFunctions = new List<FunctionSymbol>();
             var allClasses = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();
             var allInterfaces = new List<(InterfaceDeclarationSyntax Syntax, string Namespace)>();
+            var allEnums = new List<(EnumDeclarationSyntax Syntax, string Namespace)>();
             var pendingFunctions = new List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)>();
 
-            // 阶段 1：处理 import/function/enum/using + 收集所有类/接口声明（递归 namespace）
+            // 阶段 1：处理 import/function/enum/using + 收集所有类/接口/枚举声明（递归 namespace）
             foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
             {
                 if (member is ImportClauseSyntax importClause)
@@ -79,7 +80,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is EnumDeclarationSyntax enumDeclaration)
                 {
-                    binder.BindEnumDeclaration(enumDeclaration);
+                    allEnums.Add((enumDeclaration, ""));
                 }
                 else if (member is ClassDeclarationSyntax classDeclaration)
                 {
@@ -93,12 +94,19 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     binder.CollectClasses(namespaceDeclaration, "", allClasses);
                     binder.CollectInterfaces(namespaceDeclaration, "", allInterfaces);
+                    binder.CollectEnums(namespaceDeclaration, "", allEnums);
                     binder.CollectNamespaceFunctions(namespaceDeclaration, "", importedDll, pendingFunctions);
                 }
                 else if (member is UsingDirectiveSyntax usingDirective)
                 {
                     binder._usingNamespaces.Add(usingDirective.Name);
                 }
+            }
+
+            // 阶段 1.5：绑定枚举（顶层 + 命名空间内）
+            foreach (var (syntax, ns) in allEnums)
+            {
+                binder.BindEnumDeclaration(syntax, ns);
             }
 
             // 阶段 2：声明所有类壳（部分类按全名分组合并为同一符号；两阶段：类可前向引用基类）
@@ -217,7 +225,30 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 scriptFunction = null;
 
-                mainFunction = functions.SingleOrDefault(f => f.Name == entryPointName);
+                // 入口解析：`ClassName.Method` / `Namespace.ClassName.Method`（带点）或顶层/类静态函数名（无点）
+                var entryLocation = new TextLocation(syntaxTrees[0].Text, new TextSpan(0, 0));
+                if (entryPointName.IndexOf('.') >= 0)
+                {
+                    mainFunction = ResolveQualifiedEntryPoint(binder, entryPointName, entryLocation);
+                }
+                else
+                {
+                    var entryCandidates = functions.Where(f => f.Name == entryPointName).ToArray();
+                    if (entryCandidates.Length == 1)
+                    {
+                        mainFunction = entryCandidates[0];
+                    }
+                    else if (entryCandidates.Length > 1)
+                    {
+                        // 顶层函数与类静态方法并存（或多个类同名静态方法）→ 歧义诊断，替代 SingleOrDefault 崩溃
+                        binder.Diagnostics.ReportAmbiguousEntryPoint(entryLocation, entryPointName);
+                        mainFunction = null;
+                    }
+                    else
+                    {
+                        mainFunction = null;
+                    }
+                }
 
                 if (mainFunction != null)
                 {
@@ -573,53 +604,64 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private void BindClassBase(ClassDeclarationSyntax syntax, ClassTypeSymbol classType)
         {
-            // 基类型解析（`class Foo: Bar`；部分类多段声明时基类必须一致）
-            if (syntax.BaseType != null)
+            // 基类型解析（`class Foo: Bar, IA, IB`；首个非接口 = 基类，其余须为接口；部分类多段声明时基类必须一致）
+            var seenNonInterface = false;
+            foreach (var baseClause in syntax.BaseTypes)
             {
-                var baseName = syntax.BaseType.Identifier.Text;
+                var baseName = baseClause.Identifier.Text;
                 var baseType = LookupType(baseName) as ClassTypeSymbol;
 
                 if (baseType == null)
                 {
-                    _diagnostics.ReportUndefinedType(syntax.BaseType.Location, baseName);
+                    _diagnostics.ReportUndefinedType(baseClause.Location, baseName);
                 }
                 else if (baseType.IsInterface)
                 {
                     // 类实现接口：`class Rectangle: IShape`
                     classType.AddInterface(baseType);
                 }
-                else if (classType.BaseType != null)
-                {
-                    if (classType.BaseType != baseType)
-                    {
-                        _diagnostics.ReportError(syntax.Identifier.Location, $"部分类 '{classType.Name}' 的多个部分声明的基类不一致。");
-                    }
-                }
-                else if (baseType.IsSealed)
-                {
-                    _diagnostics.ReportCannotInheritSealed(syntax.Identifier.Location, baseName);
-                }
                 else
                 {
-                    classType.BaseType = baseType;
-
-                    // 循环继承检测：沿基类链查找本类
-                    var seen = new HashSet<ClassTypeSymbol>();
-                    var circular = false;
-                    for (var current = baseType; current != null && seen.Add(current); current = current.BaseType)
+                    // 非接口基类：至多一个
+                    if (seenNonInterface)
                     {
-                        if (current == classType)
+                        _diagnostics.ReportError(baseClause.Location, $"类 '{classType.Name}' 只能有一个非接口基类。");
+                    }
+                    else if (classType.BaseType != null)
+                    {
+                        if (classType.BaseType != baseType)
                         {
-                            circular = true;
-                            break;
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"部分类 '{classType.Name}' 的多个部分声明的基类不一致。");
+                        }
+                    }
+                    else if (baseType.IsSealed)
+                    {
+                        _diagnostics.ReportCannotInheritSealed(syntax.Identifier.Location, baseName);
+                    }
+                    else
+                    {
+                        classType.BaseType = baseType;
+
+                        // 循环继承检测：沿基类链查找本类
+                        var seen = new HashSet<ClassTypeSymbol>();
+                        var circular = false;
+                        for (var current = baseType; current != null && seen.Add(current); current = current.BaseType)
+                        {
+                            if (current == classType)
+                            {
+                                circular = true;
+                                break;
+                            }
+                        }
+
+                        if (circular)
+                        {
+                            _diagnostics.ReportCircularInheritance(syntax.Identifier.Location, baseName);
+                            classType.BaseType = null;
                         }
                     }
 
-                    if (circular)
-                    {
-                        _diagnostics.ReportCircularInheritance(syntax.Identifier.Location, baseName);
-                        classType.BaseType = null;
-                    }
+                    seenNonInterface = true;
                 }
             }
         }
@@ -1090,6 +1132,23 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is NamespaceDeclarationSyntax nested)
                 {
                     CollectInterfaces(nested, ns, allInterfaces);
+                }
+            }
+        }
+
+        private void CollectEnums(NamespaceDeclarationSyntax syntax, string parentNamespace, List<(EnumDeclarationSyntax Syntax, string Namespace)> allEnums)
+        {
+            var ns = parentNamespace.Length == 0 ? syntax.Name : parentNamespace + "." + syntax.Name;
+
+            foreach (var member in syntax.Members)
+            {
+                if (member is EnumDeclarationSyntax enumDeclaration)
+                {
+                    allEnums.Add((enumDeclaration, ns));
+                }
+                else if (member is NamespaceDeclarationSyntax nested)
+                {
+                    CollectEnums(nested, ns, allEnums);
                 }
             }
         }
@@ -2133,9 +2192,9 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var identifier = syntax.IdentifierToken.Text;
 
-            // 静态字段访问：MathHelpers.Count
-            if (syntax.Expression is NameExpressionSyntax staticNameExpr &&
-                LookupType(staticNameExpr.IdentifierToken.Text) is ClassTypeSymbol staticType &&
+            // 静态字段访问：MathHelpers.Count / My.App.Utils.Count
+            if (ResolveDottedTypeName(syntax.Expression) is string staticTypeName &&
+                LookupType(staticTypeName) is ClassTypeSymbol staticType &&
                 staticType.GetField(identifier) is FieldSymbol staticField &&
                 staticField.IsStatic)
             {
@@ -2148,19 +2207,17 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundMemberAccessExpression(syntax, staticField.Type, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, staticField);
             }
 
-            // 枚举成员访问（Color.Red）：左侧为枚举类型名 → 折叠为常量字面量
-            if (syntax.Expression is NameExpressionSyntax nameExpression)
+            // 枚举成员访问（Color.Red / My.App.Color.Red）：左侧为枚举类型名 → 折叠为常量字面量
+            if (ResolveDottedTypeName(syntax.Expression) is string enumTypeName &&
+                LookupType(enumTypeName) is EnumTypeSymbol enumType)
             {
-                if (LookupType(nameExpression.IdentifierToken.Text) is EnumTypeSymbol enumType)
+                if (enumType.TryGetMember(syntax.IdentifierToken.Text, out var value))
                 {
-                    if (enumType.TryGetMember(syntax.IdentifierToken.Text, out var value))
-                    {
-                        return new BoundLiteralExpression(syntax, value, enumType);
-                    }
-
-                    _diagnostics.ReportEnumMemberNotDefined(syntax.IdentifierToken.Location, enumType.Name, syntax.IdentifierToken.Text);
-                    return new BoundErrorExpression(syntax);
+                    return new BoundLiteralExpression(syntax, value, enumType);
                 }
+
+                _diagnostics.ReportEnumMemberNotDefined(syntax.IdentifierToken.Location, enumType.Name, syntax.IdentifierToken.Text);
+                return new BoundErrorExpression(syntax);
             }
 
             var boundTarget = BindExpression(syntax.Expression);
@@ -2221,9 +2278,9 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var identifier = syntax.IdentifierToken.Text;
 
-            // 静态方法调用：MathHelpers.Square(2)（target 是类型名）
-            if (syntax.Expression is NameExpressionSyntax staticNameExpr &&
-                LookupType(staticNameExpr.IdentifierToken.Text) is ClassTypeSymbol staticType &&
+            // 静态方法调用：MathHelpers.Square(2) / My.App.Utils.Square(2)（target 是类型名，可为点号全名）
+            if (ResolveDottedTypeName(syntax.Expression) is string staticTypeName &&
+                LookupType(staticTypeName) is ClassTypeSymbol staticType &&
                 staticType.GetMethod(identifier) is FunctionSymbol staticMethod &&
                 staticMethod.IsStatic)
             {
@@ -2623,10 +2680,40 @@ namespace Cocoa.CodeAnalysis.Binding
                         return declaredType;
                     }
 
-                    // 外部类型：using 前缀 + 名字 → 引用程序集
+                    // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
+                    if (name.IndexOf('.') >= 0)
+                    {
+                        var fullNameClass = FindDeclaredClassByFullName(name);
+                        if (fullNameClass != null)
+                        {
+                            return fullNameClass;
+                        }
+
+                        var fullNameEnum = FindDeclaredEnumByFullName(name);
+                        if (fullNameEnum != null)
+                        {
+                            return fullNameEnum;
+                        }
+
+                        return ExternalTypeResolver.TryResolve(name, _references);
+                    }
+
+                    // using 前缀：`using Foo.Bar;` 后 `LookupType("Point")` → 内部命名空间类/枚举 + 引用程序集
                     foreach (var ns in _usingNamespaces)
                     {
                         var fullName = ns.Length == 0 ? name : ns + "." + name;
+                        var internalClass = FindDeclaredClassByFullName(fullName);
+                        if (internalClass != null)
+                        {
+                            return internalClass;
+                        }
+
+                        var internalEnum = FindDeclaredEnumByFullName(fullName);
+                        if (internalEnum != null)
+                        {
+                            return internalEnum;
+                        }
+
                         var externalType = ExternalTypeResolver.TryResolve(fullName, _references);
                         if (externalType != null)
                         {
@@ -2637,6 +2724,100 @@ namespace Cocoa.CodeAnalysis.Binding
                     return null;
                 }
             }
+        }
+
+        /// <summary>按全名（`Namespace.ClassName`）沿作用域链查找内部声明的类。</summary>
+        private ClassTypeSymbol? FindDeclaredClassByFullName(string fullName)
+        {
+            for (var scope = _scope; scope != null; scope = scope.Parent)
+            {
+                foreach (var cls in scope.GetDeclaredClasses())
+                {
+                    if (cls.FullName == fullName)
+                    {
+                        return cls;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>按全名（`Namespace.EnumName`）沿作用域链查找内部声明的枚举。</summary>
+        private EnumTypeSymbol? FindDeclaredEnumByFullName(string fullName)
+        {
+            for (var scope = _scope; scope != null; scope = scope.Parent)
+            {
+                foreach (var enumType in scope.GetDeclaredEnums())
+                {
+                    if (enumType.FullName == fullName)
+                    {
+                        return enumType;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>纯标识符成员链拍平成点号字符串（`Foo.Bar.Program`）；含调用/索引等非纯链返回 null。</summary>
+        private static string? ResolveDottedTypeName(ExpressionSyntax expr)
+        {
+            if (expr is NameExpressionSyntax nameExpr)
+            {
+                return nameExpr.IdentifierToken.Text;
+            }
+
+            if (expr is MemberAccessExpressionSyntax memberAccess &&
+                memberAccess.IdentifierToken.Text.Length > 0)
+            {
+                var left = ResolveDottedTypeName(memberAccess.Expression);
+                return left == null ? null : left + "." + memberAccess.IdentifierToken.Text;
+            }
+
+            return null;
+        }
+
+        /// <summary>限定入口解析：`ClassName.Method` / `Namespace.ClassName.Method` → 类静态方法。</summary>
+        private static FunctionSymbol? ResolveQualifiedEntryPoint(Binder binder, string entryPointName, TextLocation location)
+        {
+            var lastDot = entryPointName.LastIndexOf('.');
+            var className = entryPointName.Substring(0, lastDot);
+            var methodName = entryPointName.Substring(lastDot + 1);
+
+            var classMatches = new List<ClassTypeSymbol>();
+            for (var scope = binder._scope; scope != null; scope = scope.Parent)
+            {
+                foreach (var cls in scope.GetDeclaredClasses())
+                {
+                    if (cls.Name == className || cls.FullName == className)
+                    {
+                        classMatches.Add(cls);
+                    }
+                }
+            }
+
+            if (classMatches.Count == 0)
+            {
+                binder.Diagnostics.ReportEntryClassNotFound(location, className);
+                return null;
+            }
+
+            if (classMatches.Count > 1)
+            {
+                binder.Diagnostics.ReportEntryClassAmbiguous(location, className);
+                return null;
+            }
+
+            var classType = classMatches[0];
+            var method = classType.IsInterface ? null : classType.GetDeclaredMethod(methodName);
+            if (method == null || !method.IsStatic)
+            {
+                binder.Diagnostics.ReportEntryMethodNotFound(location, className, methodName);
+                return null;
+            }
+
+            return method;
         }
 
         private static bool TryGetIntConstant(BoundExpression expression, out int value)
@@ -2664,7 +2845,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return type == TypeSymbol.Int32 || type == TypeSymbol.Byte || type == TypeSymbol.Double;
         }
 
-        private void BindEnumDeclaration(EnumDeclarationSyntax syntax)
+        private void BindEnumDeclaration(EnumDeclarationSyntax syntax, string @namespace = "")
         {
             var members = new Dictionary<string, int>();
             var nextValue = 0;
@@ -2698,7 +2879,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 nextValue = nextValue + 1;
             }
 
-            var enumType = new EnumTypeSymbol(syntax.Identifier.Text, members);
+            var enumType = new EnumTypeSymbol(syntax.Identifier.Text, members, @namespace);
 
             if (!_scope.TryDeclareEnum(enumType))
             {

@@ -371,9 +371,9 @@ for (var i = 0; i < 10; i++)
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
 
             Assert.Equal("Foo", classDeclaration.Identifier.Text);
-            Assert.NotNull(classDeclaration.BaseType);
-            Assert.Equal(SyntaxKind.ExtendsKeyword, classDeclaration.BaseType!.ColonToken!.Kind);
-            Assert.Equal("Bar", classDeclaration.BaseType!.Identifier.Text);
+            var baseType = Assert.Single(classDeclaration.BaseTypes);
+            Assert.Equal(SyntaxKind.ExtendsKeyword, baseType.ColonToken!.Kind);
+            Assert.Equal("Bar", baseType.Identifier.Text);
         }
 
         [Fact]
@@ -709,6 +709,213 @@ for (var i = 0; i < 10; i++)
             Assert.Null(method.Body);
             var property = Assert.IsType<PropertyDeclarationSyntax>(interfaceDeclaration.Members[1]);
             Assert.Equal("Name", property.Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleTopLevelFunction_BindsToFunctionDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("public static void Main() { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Equal(2, function.Modifiers.Length);
+            Assert.Equal(SyntaxKind.PublicKeyword, function.Modifiers[0].Kind);
+            Assert.Equal(SyntaxKind.StaticKeyword, function.Modifiers[1].Kind);
+            Assert.Null(function.FunctionKeyword);
+            Assert.Equal("Main", function.Identifier.Text);
+            Assert.Equal("void", function.Type!.Identifier.Text);
+            Assert.NotNull(function.Body);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleTopLevelFunction_WithParamsAndReturnType()
+        {
+            var syntaxTree = SyntaxTree.Parse("public int Add(int x, int y) { return x + y; }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Equal("Add", function.Identifier.Text);
+            Assert.Equal("int", function.Type!.Identifier.Text);
+            Assert.Equal(2, function.Parameters.Count);
+            Assert.Equal("x", function.Parameters[0].Identifier.Text);
+            Assert.Equal("int", function.Parameters[0].Type.Identifier.Text);
+            Assert.Equal("y", function.Parameters[1].Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleTopLevelFunction_ArrayReturnType()
+        {
+            var syntaxTree = SyntaxTree.Parse("int[] GetNums() { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.IsType<ArrayTypeClauseSyntax>(function.Type);
+            Assert.Equal("GetNums", function.Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleTopLevelFunction_SemicolonNoBody()
+        {
+            var syntaxTree = SyntaxTree.Parse("public void Setup();");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Null(function.Body);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_NoKeywordTopLevelFunction_WithReturnType()
+        {
+            var syntaxTree = SyntaxTree.Parse("Main(): void { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Null(function.FunctionKeyword);
+            Assert.Equal("Main", function.Identifier.Text);
+            Assert.Equal("void", function.Type!.Identifier.Text);
+            Assert.NotNull(function.Body);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_NoKeywordTopLevelFunction_WithoutReturnType()
+        {
+            var syntaxTree = SyntaxTree.Parse("Main() { print(1) }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Null(function.FunctionKeyword);
+            Assert.Equal("Main", function.Identifier.Text);
+            Assert.Null(function.Type);
+            Assert.NotNull(function.Body);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_NoKeywordTopLevelFunction_WithModifiers()
+        {
+            var syntaxTree = SyntaxTree.Parse("public Main(): void { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+
+            Assert.Equal(SyntaxKind.PublicKeyword, Assert.Single(function.Modifiers).Kind);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_GlobalCallStatement_NotConfusedWithFunction()
+        {
+            var syntaxTree = SyntaxTree.Parse("print(\"hi\")");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement);
+            Assert.IsType<CallExpressionSyntax>(statement.Expression);
+        }
+
+        [Fact]
+        public void Parser_GlobalStatement_NestedParens_NotConfusedWithFunction()
+        {
+            var syntaxTree = SyntaxTree.Parse("print(Foo(x))");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_UsingDirective_WithSemicolon_NoDiagnostics()
+        {
+            var syntaxTree = SyntaxTree.Parse("using Foo.Bar;");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var usingDirective = Assert.IsType<UsingDirectiveSyntax>(member);
+
+            Assert.Equal("Foo.Bar", usingDirective.Name);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_UsingDirective_WithoutSemicolon_NoDiagnostics()
+        {
+            var syntaxTree = SyntaxTree.Parse("using Foo.Bar");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var usingDirective = Assert.IsType<UsingDirectiveSyntax>(member);
+
+            Assert.Equal("Foo.Bar", usingDirective.Name);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_TopLevelStatement_WithTrailingSemicolon_NoDiagnostics()
+        {
+            var syntaxTree = SyntaxTree.Parse("print(1);");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleConstLocal_BindsToVariableDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public void Bar() { const int x = 10; print(x); } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var block = method.Body!;
+            var declaration = Assert.IsType<VariableDeclarationSyntax>(block.Statements[0]);
+
+            Assert.Equal(SyntaxKind.ConstKeyword, declaration.Keyword!.Kind);
+            Assert.Equal("x", declaration.Identifier.Text);
+            Assert.Equal("int", declaration.TypeClause!.Identifier.Text);
+            Assert.NotNull(declaration.EqualsToken);
+            Assert.IsType<LiteralExpressionSyntax>(declaration.Initializer);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_ClassDeclaration_MultipleBaseTypes()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo: Bar, IA, IB { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+
+            Assert.Equal(3, classDeclaration.BaseTypes.Length);
+            Assert.Equal("Bar", classDeclaration.BaseTypes[0].Identifier.Text);
+            Assert.Equal("IA", classDeclaration.BaseTypes[1].Identifier.Text);
+            Assert.Equal("IB", classDeclaration.BaseTypes[2].Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_ClassDeclaration_Extends_MultipleBaseTypes()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo extends Bar, IA { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+
+            Assert.Equal(2, classDeclaration.BaseTypes.Length);
+            Assert.Equal(SyntaxKind.ExtendsKeyword, classDeclaration.BaseTypes[0].ColonToken!.Kind);
+            Assert.Equal("IA", classDeclaration.BaseTypes[1].Identifier.Text);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 

@@ -244,6 +244,30 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportEntryClassNotFound(TextLocation location, string className)
+        {
+            var message = $"入口函数指定的类 '{className}' 不存在。";
+            ReportError(location, message);
+        }
+
+        public void ReportEntryClassAmbiguous(TextLocation location, string className)
+        {
+            var message = $"入口函数指定的类 '{className}' 存在多个匹配（不同命名空间），请使用命名空间全名（如 Namespace.ClassName）限定。";
+            ReportError(location, message);
+        }
+
+        public void ReportEntryMethodNotFound(TextLocation location, string className, string methodName)
+        {
+            var message = $"类 '{className}' 中不存在静态入口方法 '{methodName}'（入口方法必须为 static）。";
+            ReportError(location, message);
+        }
+
+        public void ReportAmbiguousEntryPoint(TextLocation location, string entryName)
+        {
+            var message = $"入口函数 '{entryName}' 存在多个匹配（顶层函数与类静态方法并存），请用 `entry = ClassName.{entryName}`（或命名空间全名）限定。";
+            ReportError(location, message);
+        }
+
         public void ReportCannotMixMainAndGlobalStatements(TextLocation location)
         {
             var message = $"Cannot declare main function when global statements are used.";

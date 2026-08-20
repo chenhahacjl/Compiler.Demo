@@ -120,6 +120,13 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             while (Current.Kind != SyntaxKind.EndOfFileToken)
             {
+                // 语句边界的分号可选：跳过孤立 ';'（`using Foo.Bar;`、顶层 `print(1);` 等 C# 式结尾）
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
                 var startToken = Current;
 
                 var member = ParseMember();
@@ -183,6 +190,19 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseInterfaceDeclaration(modifiers);
             }
 
+            // P1（6e-M11）：C# 式顶层函数 `type name(params)`（类型前置，可带 `[]` 返回类型）
+            if (IsCSharpStyleTopLevelFunction())
+            {
+                return ParseCSharpStyleTopLevelFunction(modifiers);
+            }
+
+            // P1（6e-M11）：Cocoa 式无关键字顶层函数 `name(params) [ : type ] { ... }`
+            // 括号扫描消歧：`)` 后紧跟 `{`/`:` 判定为函数声明，否则是全局表达式语句（如 `print("hi")`）
+            if (IsNoKeywordTopLevelFunction())
+            {
+                return ParseNoKeywordTopLevelFunction(modifiers);
+            }
+
             if (modifiers.Any())
             {
                 // 修饰符后非法声明：报错并继续按全局语句解析
@@ -190,6 +210,87 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return ParseGlobalStatement();
+        }
+
+        /// <summary>C# 式顶层函数判定：`type name(` 或 `type[] name(`（返回类型可带数组后缀）。</summary>
+        private bool IsCSharpStyleTopLevelFunction()
+        {
+            var offset = 0;
+            if (Peek(offset).Kind != SyntaxKind.IdentifierToken)
+            {
+                return false;
+            }
+
+            // 类型后缀 `[]`：`int[] name(` / `string[][] name(`
+            offset++;
+            while (Peek(offset).Kind == SyntaxKind.OpenBracketToken &&
+                   Peek(offset + 1).Kind == SyntaxKind.CloseBracketToken)
+            {
+                offset += 2;
+            }
+
+            if (Peek(offset).Kind != SyntaxKind.IdentifierToken)
+            {
+                return false;
+            }
+
+            return Peek(offset + 1).Kind == SyntaxKind.OpenParenthesisToken;
+        }
+
+        /// <summary>Cocoa 式无关键字顶层函数判定：`name(...)` 的 `)` 后紧跟 `{` 或 `:`。</summary>
+        private bool IsNoKeywordTopLevelFunction()
+        {
+            if (Current.Kind != SyntaxKind.IdentifierToken ||
+                Peek(1).Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                return false;
+            }
+
+            var depth = 0;
+            for (var offset = 1; ; offset++)
+            {
+                var token = Peek(offset);
+                if (token.Kind == SyntaxKind.EndOfFileToken)
+                {
+                    return false;
+                }
+
+                if (token.Kind == SyntaxKind.OpenParenthesisToken)
+                {
+                    depth++;
+                }
+                else if (token.Kind == SyntaxKind.CloseParenthesisToken)
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        var next = Peek(offset + 1);
+                        return next.Kind == SyntaxKind.OpenBraceToken || next.Kind == SyntaxKind.ColonToken;
+                    }
+                }
+            }
+        }
+
+        /// <summary>C# 式顶层函数：`type name(params) { ... }` / `type name(params);`。</summary>
+        private MemberSyntax ParseCSharpStyleTopLevelFunction(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var type = ParsePrefixTypeClause();
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+            return ParseCSharpStyleMethod(modifiers, type, identifier);
+        }
+
+        /// <summary>Cocoa 式无关键字顶层函数：`name(params) [ : type ] { ... }`（归一 FunctionDeclarationSyntax）。</summary>
+        private MemberSyntax ParseNoKeywordTopLevelFunction(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ParseParameterList();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var type = ParseOptionalTypeClause();
+            var body = ParseBlockStatement();
+
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
 
         private ImmutableArray<SyntaxToken> ParseModifiers()
@@ -350,20 +451,27 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var classKeyword = MatchToken(SyntaxKind.ClassKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            TypeClauseSyntax? baseType = null;
+            var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
 
-            // class Foo: Bar / class Foo extends Bar —— 基类
+            // class Foo: Bar, IA, IB / class Foo extends Bar, IA —— 基类型列表（首个非接口 = 基类，其余须为接口）
             if (Current.Kind == SyntaxKind.ColonToken ||
                 Current.Kind == SyntaxKind.ExtendsKeyword)
             {
-                baseType = ParseBaseTypeClause();
+                var prefixToken = NextToken(); // : / extends
+                baseTypes.Add(CreateBaseTypeClause(prefixToken));
+
+                while (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken(); // ,
+                    baseTypes.Add(CreateBaseTypeClause(null));
+                }
             }
 
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
             var members = ParseClassMemberList(identifier.Text);
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, baseType, openBraceToken, members, closeBraceToken);
+            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, baseTypes.ToImmutable(), openBraceToken, members, closeBraceToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseClassMemberList(string className)
@@ -922,6 +1030,25 @@ namespace Cocoa.CodeAnalysis.Syntax
                          : Current.Kind == SyntaxKind.ConstKeyword ? SyntaxKind.ConstKeyword
                          : SyntaxKind.VarKeyword;
             var keyword = MatchToken(expected);
+
+            // C# 式：`const int x = 10;`（类型前置；const 才有此形式，let/var 无 C# 对应写法）
+            if (keyword.Kind == SyntaxKind.ConstKeyword &&
+                Current.Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                var csType = ParsePrefixTypeClause();
+                var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
+                SyntaxToken? csEquals = null;
+                ExpressionSyntax? csInitializer = null;
+                if (Current.Kind == SyntaxKind.EqualsToken)
+                {
+                    csEquals = MatchToken(SyntaxKind.EqualsToken);
+                    csInitializer = ParseExpression();
+                }
+
+                return new VariableDeclarationSyntax(_syntaxTree, keyword, csIdentifier, csType, csEquals, csInitializer);
+            }
+
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var typeClause = ParseOptionalTypeClause();
             var equals = Current.Kind == SyntaxKind.EqualsToken ? MatchToken(SyntaxKind.EqualsToken) : null;

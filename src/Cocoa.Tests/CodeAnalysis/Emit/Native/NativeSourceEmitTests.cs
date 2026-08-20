@@ -849,5 +849,66 @@ function Main()
             Assert.NotEmpty(diagnostics);
             Assert.Contains(diagnostics, d => d.Message.Contains("class 暂不支持 native 后端"));
         }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_CSharpStyleTopLevelFunctions(string target)
+        {
+            var output = CompileAndRun(@"
+public static void Main()
+{
+    print(Add(2, 3))
+    print(Square(4))
+}
+
+public int Add(int x, int y)
+{
+    return x + y;
+}
+
+public int Square(int n)
+{
+    return n * n;
+}", "src-cs-top-level", target);
+
+            Assert.Equal("5\r\n16\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_NoKeywordTopLevelFunction(string target)
+        {
+            var output = CompileAndRun(@"
+Main(): void
+{
+    print(Add(2, 3))
+}
+
+Add(a: int, b: int): int
+{
+    return a + b
+}", "src-no-keyword-top-level", target);
+
+            Assert.Equal("5\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_CSharpStyleConstLocal(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    const int x = 10;
+    print(x);
+    const string s = ""hi"";
+    print(s);
+}", "src-cs-const", target);
+
+            Assert.Equal("10\r\nhi\r\n", output);
+        }
     }
 }

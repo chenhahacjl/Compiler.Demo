@@ -3,7 +3,7 @@
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
 > 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs/开发计划.md`](docs/开发计划.md)）
-> 最新：6e-M10 C# 兼容语法 + 字段/自动属性初始化器已落地（2026-08-20）；6e-M11 规划中（顶层 C# 函数 / const / using 分号 / 类多接口 / 访问器修饰符 / 静态构造 / 表达式体 / 字符串插值 / foreach / switch，见 [`docs/语法手册.md`](docs/语法手册.md) §45）
+> 最新：6e-M11 P2 已全部落地（2026-08-20）：P2a 入口限定名 + 命名空间访问 + using 分号（`entry = ClassName.Method` / `Namespace.ClassName.Method`、`Foo.Bar.Program.StaticMethod()` 点号全名、`using Foo.Bar;` 分号可选）；P2b const C# 式 `const int x = 10;` + 类多接口 `class Foo: IA, IB`；P1 顶层 C# 式函数已落地；P3~P7 规划中（访问器修饰符 / 静态构造 / 表达式体 / 字符串插值 / foreach / switch，见 [`docs/语法手册.md`](docs/语法手册.md) §45）
 
 ## 路线图（摘要）
 
@@ -35,6 +35,10 @@ coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 # C# 式语法对照（Tutorial/CsStyle：C# 式参数/局部变量/分号 ↔ Cocoa 式，native + dotnet 双后端）
 coc build -p samples/Tutorial/CsStyle/CsStyle.coproj
 ./samples/Tutorial/CsStyle/out/CsStyle.exe
+
+# C# 式顶层函数（Tutorial/TopLevelFunctions：`public static void Main()` / `public int Add(int x)` / Cocoa 无关键字 `Main(): void`）
+coc build -p samples/Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
+./samples/Tutorial/TopLevelFunctions/out/TopLevelFunctions.exe
 
 # C# 式类语法 + 字段/自动属性初始化器（samples/CSharpClass，仅 IL 后端）
 coc build -p samples/CSharpClass/CSharpClass.coproj

@@ -9,13 +9,19 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         private readonly Dictionary<string, int> _members;
 
-        internal EnumTypeSymbol(string name, Dictionary<string, int> members)
+        internal EnumTypeSymbol(string name, Dictionary<string, int> members, string @namespace = "")
             : base(name)
         {
+            Namespace = @namespace ?? "";
             _members = members;
         }
 
         public override SymbolKind Kind => SymbolKind.Enum;
+
+        public string Namespace { get; }
+
+        /// <summary>完整类型名（含命名空间）。</summary>
+        public string FullName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
 
         public bool TryGetMember(string name, out int value) => _members.TryGetValue(name, out value);
 

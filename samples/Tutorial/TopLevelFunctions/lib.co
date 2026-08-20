@@ -1,0 +1,22 @@
+// C# 式顶层函数（6e-M11 P1）：类型前置，无 function 关键字
+public int Add(int a, int b)
+{
+    return a + b;
+}
+
+// C# 式顶层函数：数组返回类型
+public int[] GetNumbers()
+{
+    return new int[] { 7, 8, 9 };
+}
+
+// C# 式顶层函数：字符串参数与返回
+public string Repeat(string s, int n)
+{
+    var result = "";
+    for var i = 0 to n
+    {
+        result = result + s;
+    }
+    return result;
+}
