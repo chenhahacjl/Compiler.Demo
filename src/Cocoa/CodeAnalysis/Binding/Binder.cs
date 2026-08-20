@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Lowering;
+using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
@@ -43,9 +44,10 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null)
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null, ImmutableArray<CodProgram> codLibraries = default)
         {
             var parentScope = CreateParentScope(previous);
+            InjectCodSymbols(parentScope, codLibraries);
             var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
@@ -293,9 +295,10 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, (references ?? Array.Empty<string>()).ToImmutableArray());
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default)
         {
             var parentScope = CreateParentScope(globalScope);
+            InjectCodSymbols(parentScope, codLibraries);
 
             if (globalScope.Diagnostics.Any())
             {
@@ -430,6 +433,21 @@ namespace Cocoa.CodeAnalysis.Binding
                 var body = Lowerer.Lower(globalScope.ScriptFunction, new BoundBlockStatement(compilationUnit!, statements));
 
                 functionBodies.Add(globalScope.ScriptFunction, body);
+            }
+
+            // 合并 `.cod` 库函数体（语义层 BoundProgram 合并）；消费方同名函数优先
+            if (!codLibraries.IsDefaultOrEmpty)
+            {
+                foreach (var library in codLibraries)
+                {
+                    foreach (var (fn, body) in library.Bodies)
+                    {
+                        if (!functionBodies.ContainsKey(fn))
+                        {
+                            functionBodies.Add(fn, body);
+                        }
+                    }
+                }
             }
 
             return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), globalScope.Classes);
@@ -1334,6 +1352,31 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return result;
+        }
+
+        /// <summary>把 `.cod` 库的公共符号注入作用域（顶层函数 + 枚举），供消费方绑定解析。</summary>
+        private static void InjectCodSymbols(BoundScope scope, ImmutableArray<CodProgram> codLibraries)
+        {
+            if (codLibraries.IsDefaultOrEmpty)
+            {
+                return;
+            }
+
+            foreach (var library in codLibraries)
+            {
+                foreach (var function in library.Functions)
+                {
+                    if (function.ContainingClass == null)
+                    {
+                        scope.TryDeclareFunction(function);
+                    }
+                }
+
+                foreach (var enumType in library.Enums)
+                {
+                    scope.TryDeclareEnum(enumType);
+                }
+            }
         }
 
         public DiagnosticBag Diagnostics => _diagnostics;

@@ -17,12 +17,6 @@ namespace Cocoa.Projects
         {
             var format = options.FormatOverride ?? project.Output;
 
-            if (format == ProjectOutputFormat.Cod)
-            {
-                messageWriter.WriteLine($"error: output format 'cocoa' is not implemented yet (use 'executable' or 'library')");
-                return ProjectBuildResult.Failed;
-            }
-
             var backend = options.Backend ?? ProjectBuildOptions.DefaultBackend;
 
             var platform = ParseTargetPlatform(options.PlatformOverride, project.Platform);
@@ -54,11 +48,9 @@ namespace Cocoa.Projects
 
                 if (path.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                 {
-                    messageWriter.WriteLine($"error: reference to '.cod' library '{path}' is not implemented yet");
-                    return ProjectBuildResult.Failed;
+                    // `.cod` 语义层程序集引用：Compilation 加载 + 符号注入 + BoundProgram 合并
                 }
-
-                if (!File.Exists(path))
+                else if (!File.Exists(path))
                 {
                     messageWriter.WriteLine($"error: file '{path}' doesn't exist!");
                     return ProjectBuildResult.Failed;
@@ -114,7 +106,12 @@ namespace Cocoa.Projects
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
-                if (backend == ProjectBackend.Native)
+                if (format == ProjectOutputFormat.Cod)
+                {
+                    // `.cod` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关
+                    diagnostics = compilation.EmitCocoa(project.Name, outputFile);
+                }
+                else if (backend == ProjectBackend.Native)
                 {
                     if (project.Output == ProjectOutputFormat.Dll)
                     {
@@ -156,6 +153,13 @@ namespace Cocoa.Projects
                 return new ProjectBuildResult(success: false, upToDate: false);
             }
 
+            // CopyLocal：把引用的 `.dll`/`.cod` 条件复制到输出目录（仿 VS 复制引用依赖；
+            // 框架引用集由 IlReferenceResolver 在 Emit 时注入，天然排除）。`cocoa` 产物无运行期依赖，不复制。
+            if (format != ProjectOutputFormat.Cod)
+            {
+                CopyReferencesToOutput(references, outputDirectory);
+            }
+
             if (useIncremental)
             {
                 BuildCache.Write(cachePath, fingerprint);
@@ -164,6 +168,48 @@ namespace Cocoa.Projects
             messageWriter.WriteLine(outputFile);
 
             return new ProjectBuildResult(success: true, upToDate: false);
+        }
+
+        /// <summary>条件复制引用产物到输出目录：源与目标的 Length + LastWriteTimeUtc 相同则跳过。</summary>
+        private static void CopyReferencesToOutput(IReadOnlyList<string> references, string outputDirectory)
+        {
+            Directory.CreateDirectory(outputDirectory);
+
+            foreach (var reference in references)
+            {
+                var extension = Path.GetExtension(reference);
+                if (!extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) &&
+                    !extension.Equals(".cod", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (!File.Exists(reference))
+                {
+                    continue;
+                }
+
+                var destination = Path.Combine(outputDirectory, Path.GetFileName(reference));
+                if (!NeedsCopy(reference, destination))
+                {
+                    continue;
+                }
+
+                File.Copy(reference, destination, overwrite: true);
+            }
+        }
+
+        private static bool NeedsCopy(string source, string destination)
+        {
+            if (!File.Exists(destination))
+            {
+                return true;
+            }
+
+            var sourceInfo = new FileInfo(source);
+            var destinationInfo = new FileInfo(destination);
+            return sourceInfo.Length != destinationInfo.Length
+                || sourceInfo.LastWriteTimeUtc != destinationInfo.LastWriteTimeUtc;
         }
 
         private static TargetPlatform ParseTargetPlatform(string? overrideText, CocoaProjectPlatform projectPlatform)

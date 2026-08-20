@@ -31,5 +31,19 @@ namespace Cocoa.CodeAnalysis.Symbols
                                        .Select(f => (FunctionSymbol?)f.GetValue(null))
                                        .Where(f => f != null)
                                        .Select(f => f!);
+
+        /// <summary>按名查找内置函数（`.cod` 反序列化时复用单例，保证发射器识别内置）。</summary>
+        internal static FunctionSymbol? GetByName(string name)
+        {
+            foreach (var function in GetAll())
+            {
+                if (function.Name == name)
+                {
+                    return function;
+                }
+            }
+
+            return null;
+        }
     }
 }

@@ -1,0 +1,66 @@
+using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Symbols;
+using System.Collections.Immutable;
+
+namespace Cocoa.CodeAnalysis.Cod
+{
+    /// <summary>
+    /// `.cod` 程序集的内存模型：符号表 + 函数体（语义层 BoundProgram 片段）+ 依赖清单。
+    /// </summary>
+    internal sealed class CodProgram
+    {
+        public CodProgram(
+            ImmutableArray<FunctionSymbol> functions,
+            ImmutableArray<GlobalVariableSymbol> globals,
+            ImmutableArray<EnumTypeSymbol> enums,
+            ImmutableDictionary<FunctionSymbol, BoundBlockStatement> bodies,
+            CodRequirement requires,
+            ImmutableArray<string> platforms,
+            ImmutableArray<string> dotnetReferences,
+            ImmutableArray<string> nativeImports,
+            ImmutableArray<string> codReferences,
+            ImmutableArray<string> namespaces)
+        {
+            Functions = functions;
+            Globals = globals;
+            Enums = enums;
+            Bodies = bodies;
+            Requires = requires;
+            Platforms = platforms;
+            DotnetReferences = dotnetReferences;
+            NativeImports = nativeImports;
+            CodReferences = codReferences;
+            Namespaces = namespaces;
+        }
+
+        /// <summary>库的顶层函数（含 extern 声明，无入口点）。</summary>
+        public ImmutableArray<FunctionSymbol> Functions { get; }
+
+        /// <summary>库的全局变量。</summary>
+        public ImmutableArray<GlobalVariableSymbol> Globals { get; }
+
+        /// <summary>库的枚举类型。</summary>
+        public ImmutableArray<EnumTypeSymbol> Enums { get; }
+
+        /// <summary>函数体（语义层 BoundProgram 片段，已降级）。</summary>
+        public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Bodies { get; }
+
+        /// <summary>后端要求。</summary>
+        public CodRequirement Requires { get; }
+
+        /// <summary>空 = 平台无关；否则仅列出的平台可消费。</summary>
+        public ImmutableArray<string> Platforms { get; }
+
+        /// <summary>依赖的 .NET 程序集引用（依赖清单传递）。</summary>
+        public ImmutableArray<string> DotnetReferences { get; }
+
+        /// <summary>依赖的 native DLL（import 声明）。</summary>
+        public ImmutableArray<string> NativeImports { get; }
+
+        /// <summary>依赖的被引用 `.cod`（递归加载）。</summary>
+        public ImmutableArray<string> CodReferences { get; }
+
+        /// <summary>库声明的命名空间。</summary>
+        public ImmutableArray<string> Namespaces { get; }
+    }
+}

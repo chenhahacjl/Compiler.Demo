@@ -215,9 +215,25 @@ output = cocoa
         }
 
         [Fact]
-        public void Build_CodFormat_NotImplemented()
+        public void Build_CodFormat_EmitsCodFile()
         {
             var run = "cod-format";
+            var dir = NewRunDir(run);
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "Lib.co"), "namespace MyLib\n{\n    function Add(a: int, b: int): int\n    {\n        return a + b\n    }\n}\n");
+            var projectPath = Path.Combine(dir, "Lib.coproj");
+            File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
+
+            var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
+            Assert.Equal(0, exitCode);
+            Assert.True(File.Exists(Path.Combine(dir, "Lib.cod")), $"expected Lib.cod; stdout=[{stdout}] stderr=[{stderr}]");
+            Assert.Contains("COCOD", File.ReadAllText(Path.Combine(dir, "Lib.cod")));
+        }
+
+        [Fact]
+        public void Build_CodFormat_RejectsEntry()
+        {
+            var run = "cod-entry";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "function Main() { }");
@@ -226,7 +242,137 @@ output = cocoa
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(1, exitCode);
-            Assert.Contains("not implemented", stdout);
+            Assert.Contains("入口", stdout);
+        }
+
+        private static (string LibDir, string AppDir) CreateCodLibraryAndApp(string run, string backend)
+        {
+            var root = NewRunDir(run);
+            var libDir = Path.Combine(root, "Lib");
+            var appDir = Path.Combine(root, "App");
+            Directory.CreateDirectory(libDir);
+            Directory.CreateDirectory(appDir);
+
+            File.WriteAllText(Path.Combine(libDir, "Lib.co"), @"
+namespace MyLib
+{
+    function Add(a: int, b: int): int
+    {
+        return a + b
+    }
+
+    function Triple(x: int): int
+    {
+        return Add(x, Add(x, x))
+    }
+}
+");
+            File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
+
+            File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    print(Triple(3))\n}\n");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), $@"
+name = App
+output = executable
+entry = Main
+
+[sources]
+*.co
+
+[references]
+../Lib/Lib.cod
+");
+            return (libDir, appDir);
+        }
+
+        private static int RunProcess(string fileName, string arguments, out string stdout)
+        {
+            var psi = new ProcessStartInfo(fileName, arguments)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+            };
+            using var process = Process.Start(psi)!;
+            stdout = process.StandardOutput.ReadToEnd();
+            var stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit(30000);
+            if (process.ExitCode != 0)
+            {
+                stdout += stderr;
+            }
+
+            return process.ExitCode;
+        }
+
+        [Theory]
+        [InlineData("native")]
+        [InlineData("dotnet")]
+        public void Build_CodReference_Consume_Runs(string backend)
+        {
+            var (libDir, appDir) = CreateCodLibraryAndApp("cod-consume-" + backend, backend);
+            var libProject = Path.Combine(libDir, "Lib.coproj");
+            var appProject = Path.Combine(appDir, "App.coproj");
+
+            var libResult = Run($"build \"{libProject}\"");
+            Assert.Equal(0, libResult.ExitCode);
+            Assert.True(File.Exists(Path.Combine(libDir, "Lib.cod")));
+
+            var appArgs = backend == "native" ? $"build \"{appProject}\" -b native" : $"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0";
+            var appResult = Run(appArgs);
+            Assert.Equal(0, appResult.ExitCode);
+
+            var exePath = Path.Combine(appDir, "App.exe");
+            Assert.True(File.Exists(exePath));
+
+            int exitCode;
+            string output;
+            if (backend == "native")
+            {
+                exitCode = RunProcess(exePath, "", out output);
+            }
+            else
+            {
+                exitCode = RunProcess("dotnet", $"\"{exePath}\"", out output);
+            }
+
+            Assert.Equal(0, exitCode);
+            Assert.Contains("9", output);
+        }
+
+        [Fact]
+        public void Build_CodReference_CopiedToOutput()
+        {
+            var (libDir, appDir) = CreateCodLibraryAndApp("copylocal-cod", "dotnet");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"");
+            Assert.Equal(0, libResult.ExitCode);
+
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
+            Assert.Equal(0, appResult.ExitCode);
+            Assert.True(File.Exists(Path.Combine(appDir, "Lib.cod")), "Lib.cod 应复制到 app 输出目录");
+        }
+
+        [Fact]
+        public void Build_DllReference_CopiedToOutput()
+        {
+            var root = NewRunDir("copylocal-dll");
+            var libDir = Path.Combine(root, "Lib");
+            var appDir = Path.Combine(root, "App");
+            Directory.CreateDirectory(libDir);
+            Directory.CreateDirectory(appDir);
+
+            File.WriteAllText(Path.Combine(libDir, "lib.co"), "namespace MyLib\n{\n    public class Util\n    {\n        public function Double(x: int): int\n        {\n            return x * 2\n        }\n    }\n}\n");
+            File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = library\n\n[sources]\n*.co\n");
+
+            File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    print(\"hi\")\n}\n");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.dll\n");
+
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b dotnet");
+            Assert.Equal(0, libResult.ExitCode);
+            Assert.True(File.Exists(Path.Combine(libDir, "Lib.dll")));
+
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
+            Assert.Equal(0, appResult.ExitCode);
+            Assert.True(File.Exists(Path.Combine(appDir, "Lib.dll")), "Lib.dll 应复制到 app 输出目录");
         }
 
         [Fact]
