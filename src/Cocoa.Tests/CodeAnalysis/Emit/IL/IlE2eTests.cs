@@ -766,5 +766,95 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("big4" + "\r\n16\r\n49\r\n", stdout);
         }
+
+        [Fact]
+        public void Oop_Interface_Implementation_MethodAndProperty_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public interface IShape
+{
+    function Area(): int
+    property Name: string { get }
+}
+
+public class Circle: IShape
+{
+    private _radius: int
+
+    public constructor(radius: int)
+    {
+        _radius = radius
+    }
+
+    public function Area(): int
+    {
+        return _radius * _radius
+    }
+
+    public property Name: string
+    {
+        get { return ""circle"" }
+    }
+}
+
+function Main()
+{
+    var s: IShape = new Circle(3)
+    print(s.Area())
+    print(s.Name)
+    var c = new Circle(4)
+    print(c.Area())
+}", "e2e-interface");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("9\r\ncircle\r\n16\r\n", stdout);
+        }
+
+        [Fact]
+        public void Oop_Interface_Inheritance_MultiLevel_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public interface IShape
+{
+    function Area(): int
+}
+
+public interface IColoredShape: IShape
+{
+    function Color(): string
+}
+
+public class ColoredSquare: IColoredShape
+{
+    private _side: int
+
+    public constructor(side: int)
+    {
+        _side = side
+    }
+
+    public function Area(): int
+    {
+        return _side * _side
+    }
+
+    public function Color(): string
+    {
+        return ""red""
+    }
+}
+
+function Main()
+{
+    var s: IColoredShape = new ColoredSquare(5)
+    print(s.Area())
+    print(s.Color())
+    var b: IShape = new ColoredSquare(6)
+    print(b.Area())
+}", "e2e-interface-inheritance");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("25\r\nred\r\n36\r\n", stdout);
+        }
     }
 }

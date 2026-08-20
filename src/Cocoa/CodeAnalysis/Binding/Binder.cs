@@ -61,8 +61,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var classFunctions = new List<FunctionSymbol>();
             var allClasses = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();
+            var allInterfaces = new List<(InterfaceDeclarationSyntax Syntax, string Namespace)>();
 
-            // 阶段 1：处理 import/function/enum/using + 收集所有类声明（递归 namespace）
+            // 阶段 1：处理 import/function/enum/using + 收集所有类/接口声明（递归 namespace）
             foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
             {
                 if (member is ImportClauseSyntax importClause)
@@ -81,9 +82,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     allClasses.Add((classDeclaration, ""));
                 }
+                else if (member is InterfaceDeclarationSyntax interfaceDeclaration)
+                {
+                    allInterfaces.Add((interfaceDeclaration, ""));
+                }
                 else if (member is NamespaceDeclarationSyntax namespaceDeclaration)
                 {
                     binder.CollectClasses(namespaceDeclaration, "", allClasses);
+                    binder.CollectInterfaces(namespaceDeclaration, "", allInterfaces);
                     binder.BindNamespaceFunctions(namespaceDeclaration, importedDll);
                 }
                 else if (member is UsingDirectiveSyntax usingDirective)
@@ -113,7 +119,21 @@ namespace Cocoa.CodeAnalysis.Binding
                 classGroups.Add((binder.DeclareClassGroup(parts), parts));
             }
 
-            // 阶段 3：绑定类成员（字段/方法/构造/基类）——部分类每个部分分别绑定，隐式默认构造在所有部分之后统一生成
+            // 阶段 2.5：声明接口（先于类，类可实现后声明的接口）
+            var interfaceSymbols = new List<(InterfaceDeclarationSyntax Syntax, string Namespace, ClassTypeSymbol Symbol)>();
+            foreach (var (syntax, ns) in allInterfaces)
+            {
+                var symbol = binder.DeclareInterfaceSymbol(syntax, ns);
+                interfaceSymbols.Add((syntax, ns, symbol));
+            }
+
+            // 阶段 3：绑定接口（基接口 + 抽象成员）→ 类成员 → 接口实现完整性检查
+            foreach (var (syntax, ns, symbol) in interfaceSymbols)
+            {
+                binder.BindInterfaceDeclaration(syntax, symbol, classFunctions);
+            }
+
+            // 阶段 3.5：绑定类成员（字段/方法/构造/基类）——部分类每个部分分别绑定，隐式默认构造在所有部分之后统一生成
             foreach (var (classType, parts) in classGroups)
             {
                 var primary = parts[0].Syntax;
@@ -126,6 +146,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 binder.DeclareImplicitConstructor(classType, classFunctions, primary);
+            }
+
+            // 阶段 4：接口实现完整性检查（类须实现其所有接口的全部成员）
+            foreach (var (classType, parts) in classGroups)
+            {
+                binder.CheckInterfaceImplementation(classType);
             }
 
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
@@ -242,6 +268,13 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 if (function.IsExtern)
                 {
+                    functionBodies.Add(function, new BoundBlockStatement(function.Declaration!, ImmutableArray<BoundStatement>.Empty));
+                    continue;
+                }
+
+                if (function.IsAbstract)
+                {
+                    // 抽象成员（接口/抽象类）无实现：空 body
                     functionBodies.Add(function, new BoundBlockStatement(function.Declaration!, ImmutableArray<BoundStatement>.Empty));
                     continue;
                 }
@@ -514,15 +547,20 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private void BindClassBase(ClassDeclarationSyntax syntax, ClassTypeSymbol classType)
         {
-            // 基类解析（`class Foo: Bar`；部分类多段声明时基类必须一致）
+            // 基类型解析（`class Foo: Bar`；部分类多段声明时基类必须一致）
             if (syntax.BaseType != null)
             {
                 var baseName = syntax.BaseType.Identifier.Text;
-                var baseType = _scope.TryLookupSymbol(baseName) as ClassTypeSymbol;
+                var baseType = LookupType(baseName) as ClassTypeSymbol;
 
                 if (baseType == null)
                 {
                     _diagnostics.ReportUndefinedType(syntax.BaseType.Location, baseName);
+                }
+                else if (baseType.IsInterface)
+                {
+                    // 类实现接口：`class Rectangle: IShape`
+                    classType.AddInterface(baseType);
                 }
                 else if (classType.BaseType != null)
                 {
@@ -641,6 +679,204 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
+        /// <summary>创建接口符号（不可实例化、成员无实现）。</summary>
+        private ClassTypeSymbol DeclareInterfaceSymbol(InterfaceDeclarationSyntax syntax, string @namespace)
+        {
+            var name = syntax.Identifier.Text;
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Internal);
+
+            if (visibility is Visibility.Private or Visibility.Protected)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"接口 '{name}' 的可见性只能为 public 或 internal。");
+            }
+
+            var classType = new ClassTypeSymbol(name, @namespace, visibility, declaration: null)
+            {
+                IsInterface = true,
+                IsAbstract = true,
+            };
+
+            if (!_scope.TryDeclareClass(classType))
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, name);
+            }
+
+            return classType;
+        }
+
+        /// <summary>绑定接口声明：基接口列表 + 抽象成员（函数签名/属性访问器）。</summary>
+        private void BindInterfaceDeclaration(InterfaceDeclarationSyntax syntax, ClassTypeSymbol interfaceType, List<FunctionSymbol> classFunctions)
+        {
+            // 基接口（仅允许接口）
+            foreach (var baseClause in syntax.BaseTypes)
+            {
+                var baseName = baseClause.Identifier.Text;
+                var baseType = LookupType(baseName) as ClassTypeSymbol;
+
+                if (baseType == null)
+                {
+                    _diagnostics.ReportUndefinedType(baseClause.Location, baseName);
+                }
+                else if (!baseType.IsInterface)
+                {
+                    _diagnostics.ReportError(baseClause.Location, $"接口 '{interfaceType.Name}' 只能继承接口，不能继承类 '{baseName}'。");
+                }
+                else
+                {
+                    interfaceType.AddBaseInterface(baseType);
+                }
+            }
+
+            // 成员：函数签名（抽象）+ 属性访问器（抽象）
+            foreach (var member in syntax.Members)
+            {
+                if (member is FunctionDeclarationSyntax methodDeclaration)
+                {
+                    var visibility = GetVisibility(methodDeclaration.Modifiers, Visibility.Public);
+                    var parameters = BindParameters(methodDeclaration.Parameters);
+                    var returnType = BindTypeClause(methodDeclaration.Type) ?? TypeSymbol.Void;
+
+                    if (interfaceType.GetDeclaredMethod(methodDeclaration.Identifier.Text) == null)
+                    {
+                        var method = new FunctionSymbol(methodDeclaration.Identifier.Text, parameters, returnType, methodDeclaration, containingClass: interfaceType, visibility: visibility)
+                        {
+                            IsAbstract = true,
+                            IsVirtual = true,
+                        };
+                        interfaceType.AddMethod(method);
+                        classFunctions.Add(method);
+                    }
+                    else
+                    {
+                        _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
+                    }
+                }
+                else if (member is PropertyDeclarationSyntax propertyDeclaration)
+                {
+                    BindInterfacePropertyDeclaration(propertyDeclaration, interfaceType, classFunctions);
+                }
+            }
+        }
+
+        /// <summary>接口属性：getter/setter 访问器（无实现、抽象）。</summary>
+        private void BindInterfacePropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol interfaceType, List<FunctionSymbol> classFunctions)
+        {
+            var propertyType = BindTypeClause(syntax.Type);
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
+
+            if (interfaceType.GetProperty(syntax.Identifier.Text) != null)
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
+                return;
+            }
+
+            FunctionSymbol? getter = null;
+            if (syntax.Getter != null)
+            {
+                getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
+                    syntax: syntax.Getter, containingClass: interfaceType, visibility: visibility)
+                {
+                    IsAbstract = true,
+                    IsVirtual = true,
+                };
+                interfaceType.AddMethod(getter);
+                classFunctions.Add(getter);
+            }
+
+            FunctionSymbol? setter = null;
+            if (syntax.Setter != null)
+            {
+                var valueParameter = new ParameterSymbol("value", propertyType, 0);
+                setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
+                    syntax: syntax.Setter, containingClass: interfaceType, visibility: visibility)
+                {
+                    IsAbstract = true,
+                    IsVirtual = true,
+                };
+                interfaceType.AddMethod(setter);
+                classFunctions.Add(setter);
+            }
+
+            interfaceType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, interfaceType, getter, setter, visibility, isStatic: false));
+        }
+
+        /// <summary>接口实现完整性：类（含继承链）须实现其全部接口的每个成员（方法签名/属性访问器）。</summary>
+        private void CheckInterfaceImplementation(ClassTypeSymbol classType)
+        {
+            foreach (var iface in classType.GetAllInterfaces())
+            {
+                foreach (var method in iface.Methods)
+                {
+                    if (FindImplementation(classType, method) == null)
+                    {
+                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 未实现接口 '{iface.Name}' 的方法 '{method.Name}'。");
+                    }
+                }
+
+                foreach (var property in iface.Properties)
+                {
+                    var implementation = classType.GetProperty(property.Name);
+                    if (implementation == null)
+                    {
+                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 未实现接口 '{iface.Name}' 的属性 '{property.Name}'。");
+                        continue;
+                    }
+
+                    if (property.Getter != null && implementation.Getter == null)
+                    {
+                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 的属性 '{property.Name}' 缺少接口 '{iface.Name}' 要求的 getter。");
+                    }
+
+                    if (property.Setter != null && implementation.Setter == null)
+                    {
+                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 的属性 '{property.Name}' 缺少接口 '{iface.Name}' 要求的 setter。");
+                    }
+                }
+            }
+        }
+
+        /// <summary>查找类（含继承链）中对接口方法的实现：名称 + 参数类型 + 返回类型匹配且 public。</summary>
+        private static FunctionSymbol? FindImplementation(ClassTypeSymbol classType, FunctionSymbol interfaceMethod)
+        {
+            for (var current = classType; current != null; current = current.BaseType)
+            {
+                var method = current.GetDeclaredMethod(interfaceMethod.Name);
+                if (method == null)
+                {
+                    continue;
+                }
+
+                if (method.Visibility != Visibility.Public)
+                {
+                    continue;
+                }
+
+                if (method.Parameters.Length != interfaceMethod.Parameters.Length)
+                {
+                    continue;
+                }
+
+                var parametersMatch = true;
+                for (var i = 0; i < method.Parameters.Length; i++)
+                {
+                    if (method.Parameters[i].Type != interfaceMethod.Parameters[i].Type)
+                    {
+                        parametersMatch = false;
+                        break;
+                    }
+                }
+
+                if (!parametersMatch || method.ReturnType != interfaceMethod.ReturnType)
+                {
+                    continue;
+                }
+
+                return method;
+            }
+
+            return null;
+        }
+
         /// <summary>自动属性合成体：getter → return _Name；setter → _Name = value。</summary>
         private BoundBlockStatement BindAutoPropertyBody(PropertyAccessorSyntax accessor, FunctionSymbol function)
         {
@@ -706,7 +942,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 classFunctions.Add(setter);
             }
 
-            if (classType.GetProperty(syntax.Identifier.Text) == null)
+            if (classType.GetDeclaredProperty(syntax.Identifier.Text) == null)
             {
                 classType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, classType, getter, setter, visibility, isStatic));
             }
@@ -728,6 +964,23 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is NamespaceDeclarationSyntax nested)
                 {
                     CollectClasses(nested, ns, allClasses);
+                }
+            }
+        }
+
+        private void CollectInterfaces(NamespaceDeclarationSyntax syntax, string parentNamespace, List<(InterfaceDeclarationSyntax Syntax, string Namespace)> allInterfaces)
+        {
+            var ns = parentNamespace.Length == 0 ? syntax.Name : parentNamespace + "." + syntax.Name;
+
+            foreach (var member in syntax.Members)
+            {
+                if (member is InterfaceDeclarationSyntax interfaceDeclaration)
+                {
+                    allInterfaces.Add((interfaceDeclaration, ns));
+                }
+                else if (member is NamespaceDeclarationSyntax nested)
+                {
+                    CollectInterfaces(nested, ns, allInterfaces);
                 }
             }
         }
@@ -1477,6 +1730,12 @@ namespace Cocoa.CodeAnalysis.Binding
             if (classType.IsStatic)
             {
                 _diagnostics.ReportError(syntax.Identifier.Location, $"不能实例化静态类 '{classType.Name}'。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (classType.IsInterface)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"不能实例化接口 '{classType.Name}'。");
                 return new BoundErrorExpression(syntax);
             }
 

@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Syntax;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Symbols
@@ -11,6 +12,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
         private readonly ImmutableArray<PropertySymbol>.Builder _properties;
+        private readonly List<ClassTypeSymbol> _interfaces = new List<ClassTypeSymbol>();
+        private readonly List<ClassTypeSymbol> _baseInterfaces = new List<ClassTypeSymbol>();
 
         internal ClassTypeSymbol(string name, string @namespace, Visibility visibility, ClassDeclarationSyntax? declaration, bool isExternal = false)
             : base(name)
@@ -30,6 +33,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>外部引用程序集类型（消费 -r 库时 true）。</summary>
         public bool IsExternal { get; }
+
+        /// <summary>是否为接口（interface 声明；不可实例化、成员无实现）。</summary>
+        public bool IsInterface { get; internal set; }
 
         /// <summary>完整类型名（含命名空间）。</summary>
         public string FullName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
@@ -53,13 +59,68 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         internal void AddProperty(PropertySymbol property) => _properties.Add(property);
 
+        /// <summary>类直接实现的接口（`class C: I` 的基类型列表中的接口）。</summary>
+        internal void AddInterface(ClassTypeSymbol interfaceType) => _interfaces.Add(interfaceType);
+
+        /// <summary>接口直接继承的基接口（`interface IBird: IAnimal, IFlyable`）。</summary>
+        internal void AddBaseInterface(ClassTypeSymbol interfaceType) => _baseInterfaces.Add(interfaceType);
+
+        /// <summary>类/接口直接列出的接口（不含继承）。</summary>
+        public ImmutableArray<ClassTypeSymbol> Interfaces => _interfaces.ToImmutableArray();
+
+        /// <summary>接口直接继承的基接口（不含递归）。</summary>
+        public ImmutableArray<ClassTypeSymbol> BaseInterfaces => _baseInterfaces.ToImmutableArray();
+
+        /// <summary>全部接口（本类直接实现 + 基类链 + 接口继承链，去重）。</summary>
+        public ImmutableArray<ClassTypeSymbol> GetAllInterfaces()
+        {
+            var seen = new HashSet<ClassTypeSymbol>();
+
+            for (var current = this; current != null; current = current.BaseType)
+            {
+                foreach (var iface in current._interfaces)
+                {
+                    CollectInterfaceHierarchy(iface, seen);
+                }
+            }
+
+            return seen.ToImmutableArray();
+        }
+
+        private static void CollectInterfaceHierarchy(ClassTypeSymbol iface, HashSet<ClassTypeSymbol> seen)
+        {
+            if (!seen.Add(iface))
+            {
+                return;
+            }
+
+            foreach (var baseIface in iface._baseInterfaces)
+            {
+                CollectInterfaceHierarchy(baseIface, seen);
+            }
+        }
+
         public ImmutableArray<FieldSymbol> Fields => _fields.ToImmutable();
 
         public ImmutableArray<FunctionSymbol> Methods => _methods.ToImmutable();
 
         public ImmutableArray<PropertySymbol> Properties => _properties.ToImmutable();
 
-        /// <summary>属性查找（沿继承链向上）。</summary>
+        /// <summary>本类直接声明的属性（不含基类）。</summary>
+        public PropertySymbol? GetDeclaredProperty(string name)
+        {
+            foreach (var property in _properties)
+            {
+                if (property.Name == name)
+                {
+                    return property;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>属性查找（沿继承链向上，含接口继承链）。</summary>
         public PropertySymbol? GetProperty(string name)
         {
             for (var type = this; type != null; type = type.BaseType)
@@ -67,6 +128,24 @@ namespace Cocoa.CodeAnalysis.Symbols
                 foreach (var property in type._properties)
                 {
                     if (property.Name == name)
+                    {
+                        return property;
+                    }
+                }
+
+                foreach (var iface in type._interfaces)
+                {
+                    var property = iface.GetInterfaceInheritedProperty(name);
+                    if (property != null)
+                    {
+                        return property;
+                    }
+                }
+
+                if (type.IsInterface)
+                {
+                    var property = type.GetInterfaceInheritedProperty(name);
+                    if (property != null)
                     {
                         return property;
                     }
@@ -119,7 +198,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
-        /// <summary>方法查找（沿继承链向上）。</summary>
+        /// <summary>方法查找（沿继承链向上，含接口继承链）。</summary>
         public FunctionSymbol? GetMethod(string name)
         {
             for (var type = this; type != null; type = type.BaseType)
@@ -128,6 +207,68 @@ namespace Cocoa.CodeAnalysis.Symbols
                 if (method != null)
                 {
                     return method;
+                }
+
+                foreach (var iface in type._interfaces)
+                {
+                    var interfaceMethod = iface.GetInterfaceInheritedMethod(name);
+                    if (interfaceMethod != null)
+                    {
+                        return interfaceMethod;
+                    }
+                }
+
+                if (type.IsInterface)
+                {
+                    var interfaceMethod = type.GetInterfaceInheritedMethod(name);
+                    if (interfaceMethod != null)
+                    {
+                        return interfaceMethod;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>接口成员查找：本接口声明 + 基接口链（接口继承）。</summary>
+        private FunctionSymbol? GetInterfaceInheritedMethod(string name)
+        {
+            var declared = GetDeclaredMethod(name);
+            if (declared != null)
+            {
+                return declared;
+            }
+
+            foreach (var baseIface in _baseInterfaces)
+            {
+                var interfaceMethod = baseIface.GetInterfaceInheritedMethod(name);
+                if (interfaceMethod != null)
+                {
+                    return interfaceMethod;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>接口属性查找：本接口声明 + 基接口链（接口继承）。</summary>
+        private PropertySymbol? GetInterfaceInheritedProperty(string name)
+        {
+            foreach (var property in _properties)
+            {
+                if (property.Name == name)
+                {
+                    return property;
+                }
+            }
+
+            foreach (var baseIface in _baseInterfaces)
+            {
+                var interfaceProperty = baseIface.GetInterfaceInheritedProperty(name);
+                if (interfaceProperty != null)
+                {
+                    return interfaceProperty;
                 }
             }
 

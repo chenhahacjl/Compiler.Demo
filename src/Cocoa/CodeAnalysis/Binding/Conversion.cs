@@ -111,6 +111,39 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Explicit;
             }
 
+            if (from is ClassTypeSymbol fromClass && to is ClassTypeSymbol toClass)
+            {
+                if (toClass.IsInterface)
+                {
+                    // 类/接口 → 其实现的接口（含继承链）：隐式
+                    if (fromClass == toClass || fromClass.IsBaseOf(toClass) || fromClass.GetAllInterfaces().Contains(toClass))
+                    {
+                        return Conversion.Implicit;
+                    }
+                }
+                else if (fromClass.IsInterface)
+                {
+                    // 接口 → 类：仅显式（cast）
+                    if (toClass.IsBaseOf(fromClass) || toClass.GetAllInterfaces().Contains(fromClass))
+                    {
+                        return Conversion.Explicit;
+                    }
+                }
+                else
+                {
+                    // 派生类 → 基类：隐式；基类 → 派生类：显式（cast）
+                    if (fromClass.IsBaseOf(toClass))
+                    {
+                        return Conversion.Implicit;
+                    }
+
+                    if (toClass.IsBaseOf(fromClass))
+                    {
+                        return Conversion.Explicit;
+                    }
+                }
+            }
+
             return Conversion.None;
         }
     }

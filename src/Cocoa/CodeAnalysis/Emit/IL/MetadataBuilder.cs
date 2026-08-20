@@ -31,9 +31,24 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public bool IsPublic { get; }
         public bool IsAbstract { get; set; }
         public bool IsSealed { get; set; }
+        public bool IsInterface { get; set; }
+        public List<IlInterfaceImpl> Interfaces { get; } = new List<IlInterfaceImpl>();
         public List<IlFieldDef> Fields { get; }
         public List<IlPropertyDef> Properties { get; } = new List<IlPropertyDef>();
         public List<IlMethodDef> Methods { get; }
+    }
+
+    /// <summary>InterfaceImpl 表行：类 → 接口（TypeDefOrRef：本程序集 TypeDef 或外部 TypeRef）。</summary>
+    internal sealed class IlInterfaceImpl
+    {
+        public IlInterfaceImpl(IlTypeDef? typeDef, IlTypeRef? typeRef)
+        {
+            TypeDef = typeDef;
+            TypeRef = typeRef;
+        }
+
+        public IlTypeDef? TypeDef { get; }
+        public IlTypeRef? TypeRef { get; }
     }
 
     /// <summary>我们自己的属性定义（Property 表行 + MethodSemantics）。</summary>
@@ -551,6 +566,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var propertyMapCount = _typeDefs.Count(t => t.Properties.Count > 0);
             var methodSemanticsCount = _typeDefs.Sum(t => t.Properties.Sum(p => (p.Getter != null ? 1 : 0) + (p.Setter != null ? 1 : 0)));
             var paramCount = methodDefs.Sum(m => m.ParameterTypes.Count);
+            var interfaceImplCount = _typeDefs.Sum(t => t.Interfaces.Count);
             var memberRefCount = _memberRefs.Count;
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
@@ -604,6 +620,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (fieldDefCount > 0) SetValid(0x04); // Field
             if (methodDefCount > 0) SetValid(0x06); // MethodDef
             if (paramCount > 0) SetValid(0x08); // Param
+            if (interfaceImplCount > 0) SetValid(0x09); // InterfaceImpl
             if (memberRefCount > 0) SetValid(0x0A); // MemberRef
             if (customAttributeCount > 0) SetValid(0x0C); // CustomAttribute
             if (standAloneSigCount > 0) SetValid(0x11); // StandAloneSig
@@ -628,6 +645,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteRowCount(fieldDefCount);   // Field
             WriteRowCount(methodDefCount);  // MethodDef
             WriteRowCount(paramCount);      // Param
+            WriteRowCount(interfaceImplCount); // InterfaceImpl
             WriteRowCount(memberRefCount);  // MemberRef
             WriteRowCount(customAttributeCount);
             WriteRowCount(standAloneSigCount);
@@ -678,6 +696,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var typeDef in _typeDefs)
             {
                 var flags = typeDef.IsPublic ? 0x00000001u : 0x00000000u; // Public
+                if (typeDef.IsInterface)
+                {
+                    flags |= 0x00000020u; // Interface
+                }
                 if (typeDef.IsAbstract)
                 {
                     flags |= 0x00000080u; // Abstract
@@ -731,7 +753,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
                 if (method.IsAbstract)
                 {
-                    methodFlags = (ushort)(methodFlags | 0x0040 | 0x0400); // 抽象方法必须 Virtual + Abstract
+                    methodFlags = (ushort)(methodFlags | 0x0040 | 0x0100 | 0x0400); // 抽象方法必须 Virtual + NewSlot + Abstract
                 }
                 if (method.IsSealed)
                 {
@@ -759,6 +781,41 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     writer.Write((ushort)sequence++);
                     WriteStringRef("", stringIsBig);
                 }
+            }
+
+            // ---- InterfaceImpl（行：Class(TypeDef) + Interface(TypeDefOrRef)；表 0x09 要求按 (Class, Interface) 排序）----
+            foreach (var typeDef in _typeDefs)
+            {
+                if (typeDef.Interfaces.Count == 0)
+                {
+                    continue;
+                }
+
+                var typeDefRowIndex = 2;
+                for (var i = 0; i < _typeDefs.Count; i++)
+                {
+                    if (_typeDefs[i] == typeDef)
+                    {
+                        typeDefRowIndex += i;
+                        break;
+                    }
+                }
+
+                foreach (var impl in typeDef.Interfaces.OrderBy(InterfaceCodedValue))
+                {
+                    var interfaceCoded = impl.TypeDef != null
+                        ? CodedIndexTypeDefOrRef(impl.TypeDef, _typeDefs)
+                        : CodedIndexTypeDefOrRef(impl.TypeRef!, _typeRefIndex);
+                    WriteRef(typeDefRowIndex, typeDefIsBig);
+                    WriteRef(interfaceCoded, typeDefOrRefIsBig);
+                }
+            }
+
+            int InterfaceCodedValue(IlInterfaceImpl impl)
+            {
+                return impl.TypeDef != null
+                    ? CodedIndexTypeDefOrRef(impl.TypeDef, _typeDefs)
+                    : CodedIndexTypeDefOrRef(impl.TypeRef!, _typeRefIndex);
             }
 
             // ---- MemberRef ----

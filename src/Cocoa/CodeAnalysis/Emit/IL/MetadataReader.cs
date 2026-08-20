@@ -27,14 +27,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>外部类型的成员描述（字段/方法签名）。</summary>
     internal sealed class ResolvedTypeInfo
     {
-        public ResolvedTypeInfo(string fullName, List<ResolvedFieldInfo> fields, List<ResolvedMethodInfo> methods)
+        public ResolvedTypeInfo(string fullName, bool isInterface, List<ResolvedFieldInfo> fields, List<ResolvedMethodInfo> methods)
         {
             FullName = fullName;
+            IsInterface = isInterface;
             Fields = fields;
             Methods = methods;
         }
 
         public string FullName { get; }
+        public bool IsInterface { get; }
         public List<ResolvedFieldInfo> Fields { get; }
         public List<ResolvedMethodInfo> Methods { get; }
     }
@@ -797,7 +799,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     methods.Add(new ResolvedMethodInfo(new IlTypeRef(ns, name, null), methodName, signature.ReturnType, signature.ParameterTypes, signature.IsStatic));
                 }
 
-                return new ResolvedTypeInfo(fullName, fields, methods);
+                return new ResolvedTypeInfo(fullName, (typeFlags & 0x20) != 0, fields, methods);
             }
 
             return null;

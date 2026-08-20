@@ -102,6 +102,7 @@ ColonToken,               // :
         CompilationUnit,          // 编译单元
         FunctionDeclaration,      // 函数定义
         ClassDeclaration,         // 类定义
+        InterfaceDeclaration,     // 接口定义
         ClassFieldDeclaration,    // 类字段
         ConstructorDeclaration,   // 构造函数
         PropertyDeclaration,      // 属性声明

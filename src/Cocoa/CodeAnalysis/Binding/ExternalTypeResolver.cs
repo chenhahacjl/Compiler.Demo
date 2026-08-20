@@ -37,7 +37,10 @@ namespace Cocoa.CodeAnalysis.Binding
             var ns = dot < 0 ? "" : fullName.Substring(0, dot);
             var name = dot < 0 ? fullName : fullName.Substring(dot + 1);
 
-            var classType = new ClassTypeSymbol(name, ns, Visibility.Public, declaration: null, isExternal: true);
+            var classType = new ClassTypeSymbol(name, ns, Visibility.Public, declaration: null, isExternal: true)
+            {
+                IsInterface = info.IsInterface,
+            };
 
             foreach (var field in info.Fields)
             {

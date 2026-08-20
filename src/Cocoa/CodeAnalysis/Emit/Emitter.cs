@@ -125,6 +125,23 @@ namespace Cocoa.CodeAnalysis.Emit
                 }
             }
 
+            // 1.5 InterfaceImpl：所有 TypeDef 就绪后，把类实现/继承的接口（含基类链与接口继承）写入各自 TypeDef
+            foreach (var classType in program.Classes)
+            {
+                var typeDef = _classTypeDefs[classType];
+                foreach (var iface in classType.GetAllInterfaces())
+                {
+                    if (iface.IsExternal)
+                    {
+                        typeDef.Interfaces.Add(new IlInterfaceImpl(null, ResolveExternalTypeRef(iface)));
+                    }
+                    else
+                    {
+                        typeDef.Interfaces.Add(new IlInterfaceImpl(_classTypeDefs[iface], null));
+                    }
+                }
+            }
+
             // 2. 方法声明（顺序 = 顶层 + 各 class 方法，与 typeDefs 分组一致）
             foreach (var functionWithBody in program.Functions)
             {
@@ -216,10 +233,15 @@ namespace Cocoa.CodeAnalysis.Emit
             var isInstance = function.ContainingClass != null && !function.IsStatic;
             var name = function.IsConstructor ? ".ctor" : function.Name;
 
+            var implementsInterfaceMember = isInstance &&
+                function.ContainingClass!.GetAllInterfaces().Any(i =>
+                    i.GetDeclaredMethod(function.Name) != null ||
+                    i.Properties.Any(p => p.Getter?.Name == function.Name || p.Setter?.Name == function.Name));
+
             var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention, isStatic: !isInstance)
             {
                 Visibility = function.Visibility,
-                IsVirtual = function.IsVirtual || function.IsOverride,
+                IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember,
                 IsAbstract = function.IsAbstract,
                 IsSealed = function.IsSealed,
             };
@@ -232,10 +254,13 @@ namespace Cocoa.CodeAnalysis.Emit
         private void EmitClassDeclaration(ClassTypeSymbol classType)
         {
             var baseTypeDef = classType.BaseType != null ? _classTypeDefs[classType.BaseType] : null;
-            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, classType.BaseType == null ? _objectType : null, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: baseTypeDef)
+            // 接口在元数据中不能有基类（Extends = 0），否则 CoreCLR 加载时报 TypeLoadException
+            var baseTypeRef = classType.IsInterface ? null : (classType.BaseType == null ? _objectType : null);
+            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, baseTypeRef, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: baseTypeDef)
             {
                 IsAbstract = classType.IsAbstract,
                 IsSealed = classType.IsSealed,
+                IsInterface = classType.IsInterface,
             };
             _classTypeDefs.Add(classType, typeDef);
 
@@ -1004,6 +1029,30 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 // 栈上同为 4 字节，无需指令
                 return;
+            }
+
+            if (node.Expression.Type is ClassTypeSymbol fromClass && node.Type is ClassTypeSymbol toClass)
+            {
+                if (toClass.IsInterface &&
+                    (fromClass == toClass || fromClass.IsBaseOf(toClass) || fromClass.GetAllInterfaces().Contains(toClass)))
+                {
+                    // 类/接口 → 其实现的接口（含继承链）：引用转换，栈上引用不变
+                    return;
+                }
+
+                if (fromClass.IsInterface &&
+                    (toClass.IsBaseOf(fromClass) || toClass.GetAllInterfaces().Contains(fromClass)))
+                {
+                    // 接口 → 类：显式向下引用转换（castclass）
+                    il.Emit(IlOpCodes.Get("CastClass"), ToIlType(toClass));
+                    return;
+                }
+
+                if (!toClass.IsInterface && fromClass.IsBaseOf(toClass))
+                {
+                    // 派生类 → 基类：引用转换，无指令
+                    return;
+                }
             }
 
             var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char || node.Expression.Type == TypeSymbol.Byte || node.Expression.Type == TypeSymbol.Double || node.Expression.Type is EnumTypeSymbol;

@@ -178,6 +178,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseClassDeclaration(modifiers);
             }
 
+            if (Current.Kind == SyntaxKind.InterfaceKeyword)
+            {
+                return ParseInterfaceDeclaration(modifiers);
+            }
+
             if (modifiers.Any())
             {
                 // 修饰符后非法声明：报错并继续按全局语句解析
@@ -435,6 +440,67 @@ namespace Cocoa.CodeAnalysis.Syntax
             var body = ParseBlockStatement();
 
             return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
+        }
+
+        private MemberSyntax ParseInterfaceDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var interfaceKeyword = MatchToken(SyntaxKind.InterfaceKeyword);
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
+
+            // interface IBird: IAnimal, IFlyable —— 基接口列表
+            if (Current.Kind == SyntaxKind.ColonToken)
+            {
+                baseTypes.Add(ParseTypeClause());
+
+                while (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken(); // ,
+                    baseTypes.Add(ParseTypeClause());
+                }
+            }
+
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+            var members = ParseInterfaceMemberList();
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new InterfaceDeclarationSyntax(_syntaxTree, modifiers, interfaceKeyword, identifier, baseTypes.ToImmutable(), openBraceToken, members, closeBraceToken);
+        }
+
+        private ImmutableArray<MemberSyntax> ParseInterfaceMemberList()
+        {
+            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+
+            while (Current.Kind != SyntaxKind.CloseBraceToken &&
+                   Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var modifiers = ParseModifiers();
+
+                if (Current.Kind == SyntaxKind.CdeclKeyword ||
+                    Current.Kind == SyntaxKind.StdcallKeyword ||
+                    Current.Kind == SyntaxKind.FunctionKeyword)
+                {
+                    // 接口成员：函数签名（无方法体）
+                    var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
+                    var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
+                    var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+                    var parameters = ParseParameterList();
+                    var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+                    var type = ParseOptionalTypeClause();
+                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, memberIdentifier, openParenthesisToken, parameters, closeParenthesisToken, type, body: null));
+                }
+                else if (Current.Kind == SyntaxKind.PropertyKeyword)
+                {
+                    members.Add(ParsePropertyDeclaration(modifiers));
+                }
+                else
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.FunctionKeyword);
+                    NextToken();
+                }
+            }
+
+            return members.ToImmutable();
         }
 
         private MemberSyntax ParseClassFieldDeclaration(ImmutableArray<SyntaxToken> modifiers)
