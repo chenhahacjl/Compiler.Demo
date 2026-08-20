@@ -11,8 +11,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     }
 
     /// <summary>
-    /// dotnet 后端目标：由 TFM 解析（net9.0 → NetCore 9.0；net40~net48 → NetFx 4.x）。
-    /// 决定引用程序集、runtimeconfig.json、宿主机制（netfx 直接运行 / netcore 走 dotnet host）。
+    /// dotnet 后端目标：由 TFM 解析（net9.0 → NetCore 9.0；net40~net48 → NetFx 4.x，默认 net48）。
+    /// 决定引用程序集、runtimeconfig.json、宿主机制（netfx 直接运行 / netcore 走原生 apphost 或 dotnet host）。
     /// </summary>
     public sealed class IlTarget
     {
@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public string Tfm => Runtime == IlRuntime.NetCore ? $"net{Version.Major}.{Version.Minor}" : $"net{Version.Major}{Version.Minor}";
 
-        public static readonly IlTarget Default = Parse("net40");
+        public static readonly IlTarget Default = Parse("net48");
 
         public static IlTarget Parse(string text)
         {

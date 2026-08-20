@@ -2,7 +2,7 @@ name = Functions
 output = executable
 platform = x64
 entry = Run
-dotnetRuntime = net40
+dotnetRuntime = net48
 
 [sources]
 *.co

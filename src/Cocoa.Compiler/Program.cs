@@ -133,7 +133,7 @@ namespace Cocoa.Compiler
             {
                 if (!IlTarget.TryParse(dotnetRuntimeText, out var parsed))
                 {
-                    Console.Error.WriteLine($"error: invalid target framework '{dotnetRuntimeText}'. Expected e.g. net40~net48 (netfx, default) or net8.0/net9.0 (netcore)");
+                    Console.Error.WriteLine($"error: invalid target framework '{dotnetRuntimeText}'. Expected e.g. net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore)");
                     return 1;
                 }
 
@@ -208,9 +208,31 @@ namespace Cocoa.Compiler
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
-                diagnostics = backend == CodeBackend.Native
-                    ? compilation.EmitNative(moduleName, outputPath, new TargetPlatform(TargetOS.Windows, platform))
-                    : compilation.Emit(moduleName, referencePaths.ToArray(), outputPath, effectiveTarget);
+                if (backend == CodeBackend.Native)
+                {
+                    diagnostics = compilation.EmitNative(moduleName, outputPath, new TargetPlatform(TargetOS.Windows, platform));
+                }
+                else if (effectiveTarget.Runtime == IlRuntime.NetCore)
+                {
+                    // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局）
+                    var managedDllPath = Path.ChangeExtension(outputPath, ".dll");
+                    diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), managedDllPath, effectiveTarget);
+                    if (!diagnostics.Any())
+                    {
+                        var template = AppHostPatcher.FindDefaultTemplate();
+                        var outputDir = Path.GetDirectoryName(outputPath);
+                        if (string.IsNullOrEmpty(outputDir))
+                        {
+                            outputDir = ".";
+                        }
+
+                        AppHostPatcher.Patch(template, outputPath, Path.GetRelativePath(outputDir, managedDllPath));
+                    }
+                }
+                else
+                {
+                    diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), outputPath, effectiveTarget);
+                }
             }
             catch (NotSupportedException ex)
             {
@@ -289,7 +311,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("  -o <path>          The output path of the assembly to create");
             Console.WriteLine("  -b <name>          The code generation backend: dotnet (default) or native");
             Console.WriteLine("  --platform <arch>  The native target architecture: x86 or x64 (default x64). Only used with -b native");
-            Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net40~net48 (netfx, default) or net8.0/net9.0 (netcore). Only used with -b dotnet");
+            Console.WriteLine("  --dotnet-runtime <tfm>  The .NET target framework: net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore). Only used with -b dotnet");
             Console.WriteLine("  --dotnet-module <name>  The module name (dotnet backend only; defaults to the output file name)");
             Console.WriteLine("  -?, -h, --help     Prints help");
         }

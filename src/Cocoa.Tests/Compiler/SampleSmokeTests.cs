@@ -91,28 +91,6 @@ namespace Cocoa.Tests.Compiler
             return Encoding.Unicode.GetString(output.ToArray());
         }
 
-        private static string RunDotnet(string exePath, params string[] arguments)
-        {
-            var psi = new ProcessStartInfo("dotnet")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-            };
-            psi.ArgumentList.Add(exePath);
-            foreach (var arg in arguments)
-            {
-                psi.ArgumentList.Add(arg);
-            }
-
-            using var process = Process.Start(psi)!;
-            var stdout = process.StandardOutput.ReadToEnd();
-            var stderr = process.StandardError.ReadToEnd();
-            process.WaitForExit(30000);
-            Assert.True(string.IsNullOrEmpty(stderr), $"dotnet host stderr for {exePath}: {stderr}");
-            return stdout;
-        }
-
         private static string BlockExe(string runDir, string block)
             => Path.Combine(runDir, block, "out", block + ".exe");
 
@@ -178,7 +156,7 @@ namespace Cocoa.Tests.Compiler
             return runDir;
         }
 
-        private static string RunNetFx(string exePath, params string[] arguments)
+        private static string RunDirectExe(string exePath, params string[] arguments)
         {
             var psi = new ProcessStartInfo(exePath)
             {
@@ -197,9 +175,10 @@ namespace Cocoa.Tests.Compiler
             var stderr = process.StandardError.ReadToEnd();
             process.WaitForExit(30000);
             copyTask.Wait();
-            Assert.True(process.ExitCode == 0, $"netfx exe {exePath} failed with exit {process.ExitCode}; stderr=[{stderr}]");
+            Assert.True(process.ExitCode == 0, $"exe {exePath} failed with exit {process.ExitCode}; stderr=[{stderr}]");
+            Assert.True(string.IsNullOrEmpty(stderr), $"host stderr for {exePath}: {stderr}");
             var bytes = output.ToArray();
-            // netfx 的 Console 默认用系统代码页（ASCII/UTF-8）；Cocoa native 后端才是 UTF-16
+            // netfx/apphost 的 Console 默认用系统代码页（ASCII/UTF-8）；Cocoa native 后端才是 UTF-16
             var encoding = bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE
                 ? Encoding.Unicode
                 : Encoding.UTF8;
@@ -233,19 +212,20 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Tutorial_DotNet_AllBlocks_BuildAndRun()
         {
-            // 样例 coproj 默认 dotnetRuntime = net40；netcore 分支需显式覆盖回 net9.0
+            // 样例 coproj 默认 dotnetRuntime = net48（netfx）；netcore 分支需显式覆盖回 net9.0。
+            // netcore 产物含原生 apphost：直接运行（双击等价）。
             var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0");
-            AssertBlocks(RunDotnet, runDir);
-            AssertFunctionsEntry(RunDotnet, runDir);
+            AssertBlocks(RunDirectExe, runDir);
+            AssertFunctionsEntry(RunDirectExe, runDir);
         }
 
         [Fact]
         public void Tutorial_NetFx_AllBlocks_BuildAndDirectRun()
         {
-            // 样例 coproj 默认 dotnetRuntime = net40，构建 netfx 后直接运行
-            var runDir = BuildNetFx("net40");
-            AssertBlocks(RunNetFx, runDir);
-            AssertFunctionsEntry(RunNetFx, runDir);
+            // 样例 coproj 默认 dotnetRuntime = net48，构建 netfx 后直接运行
+            var runDir = BuildNetFx("net48");
+            AssertBlocks(RunDirectExe, runDir);
+            AssertFunctionsEntry(RunDirectExe, runDir);
         }
     }
 }

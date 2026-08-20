@@ -7,7 +7,7 @@ using Xunit;
 namespace Cocoa.Tests.Compiler
 {
     /// <summary>
-    /// netfx 目标（--dotnet-runtime net40）回归测试：
+    /// netfx 目标（--dotnet-runtime net48，默认）回归测试：
     /// 产出 I386/PE32 + mscoree 导入的镜像，可直接执行（Windows 激活 .NET Framework CLR），
     /// 并可通过 Assembly.LoadFile 加载。
     /// </summary>
@@ -44,7 +44,7 @@ namespace Cocoa.Tests.Compiler
             var sourcePath = Path.Combine(dir, name + ".co");
             File.WriteAllText(sourcePath, source);
             var exePath = Path.Combine(dir, name + ".exe");
-            var (exitCode, stdout, stderr) = InvokeCli($"\"{sourcePath}\" -o \"{exePath}\" --dotnet-runtime net40");
+            var (exitCode, stdout, stderr) = InvokeCli($"\"{sourcePath}\" -o \"{exePath}\" --dotnet-runtime net48");
             Assert.True(exitCode == 0, $"emit failed ({exitCode}): {stdout}{stderr}");
             Assert.True(File.Exists(exePath), "exe not produced");
             return exePath;

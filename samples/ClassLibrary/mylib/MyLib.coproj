@@ -1,7 +1,7 @@
 name = MyLib
 output = library
 platform = x64
-dotnetRuntime = net40
+dotnetRuntime = net48
 
 [sources]
 *.co

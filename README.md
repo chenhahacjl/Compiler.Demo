@@ -27,7 +27,7 @@ src\build.cmd
 # 编译单文件（默认 exe）
 coc hello.co
 
-# 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net40，直接运行）
+# 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net48，直接运行）
 coc build -p samples/Tutorial/Tutorial.cosln
 coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 ./samples/Tutorial/HelloWorld/out/HelloWorld.exe
@@ -46,7 +46,7 @@ coc build -p samples/CSharpClass/CSharpClass.coproj
 
 # .cod 语义层程序集闭环（samples/CodLibrary：cocoa 库 → [references] 消费，native + dotnet 双后端）
 # mylib output=cocoa → .cod；app [references] 引用 → 编译期 IR 合并 → 独立 exe（CopyLocal 自动复制 .cod）
-# 默认 dotnetRuntime = net40（netfx），产物直接运行（无需 dotnet 前缀）
+# 默认 dotnetRuntime = net48（netfx），产物直接运行（无需 dotnet 前缀）
 coc build -p samples/CodLibrary/mylib/MyLib.coproj
 coc build -p samples/CodLibrary/app/App.coproj -b native
 ./samples/CodLibrary/app/out/App.exe
@@ -56,6 +56,7 @@ coc build -p samples/CodLibrary/app/App.coproj -b dotnet
 # 指定输出格式与 .NET 目标框架
 coc build -p foo.coproj -f library
 coc build -p foo.coproj --dotnet-runtime net9.0
+# netcore 产物 = 托管 x.dll + 原生 apphost x.exe（SDK 标准布局）：x.exe 直接/双击运行，dotnet x.dll 亦可
 
 # 类库（dll）→ 消费：写 `using MyLib` + 引用库（samples/ClassLibrary，CopyLocal 自动复制 dll 到输出目录）
 coc build -p samples/ClassLibrary/mylib/MyLib.coproj -b dotnet

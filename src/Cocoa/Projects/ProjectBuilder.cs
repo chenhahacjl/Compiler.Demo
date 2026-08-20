@@ -68,10 +68,10 @@ namespace Cocoa.Projects
             var cacheRoot = options.CacheRoot ?? BuildCache.GetDefaultCacheRoot(project.Directory);
             var cachePath = BuildCache.GetCachePath(cacheRoot, project.Directory, project.Name);
 
-            var dotnetRuntime = options.DotnetRuntimeOverride ?? project.DotnetRuntime ?? "net40";
+            var dotnetRuntime = options.DotnetRuntimeOverride ?? project.DotnetRuntime ?? "net48";
             if (dotnetRuntime != null && !IlTarget.TryParse(dotnetRuntime, out _))
             {
-                messageWriter.WriteLine($"error: invalid dotnetRuntime '{dotnetRuntime}'. Expected e.g. net40~net48 (netfx, default) or net8.0/net9.0 (netcore)");
+                messageWriter.WriteLine($"error: invalid dotnetRuntime '{dotnetRuntime}'. Expected e.g. net40~net48 (netfx, default net48) or net8.0/net9.0 (netcore)");
                 return ProjectBuildResult.Failed;
             }
 
@@ -132,7 +132,25 @@ namespace Cocoa.Projects
                         : references.Concat(defaultRefs).Distinct().ToArray();
 
                     var emitLibrary = project.Output == ProjectOutputFormat.Dll;
-                    diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary);
+                    if (!emitLibrary && target.Runtime == IlRuntime.NetCore)
+                    {
+                        // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局），
+                        // 双击/直接运行即经 apphost 激活 dotnet 宿主。netfx 仍是托管 exe（mscoree 导入）直接运行。
+                        var managedDllPath = Path.ChangeExtension(outputFile, ".dll");
+                        diagnostics = compilation.Emit(project.Name, referencePaths, managedDllPath, target, emitLibrary: false);
+                        if (!diagnostics.HasErrors())
+                        {
+                            var templatePath = AppHostPatcher.FindDefaultTemplate();
+                            AppHostPatcher.Patch(
+                                templatePath,
+                                outputFile,
+                                Path.GetRelativePath(Path.GetDirectoryName(outputFile)!, managedDllPath));
+                        }
+                    }
+                    else
+                    {
+                        diagnostics = compilation.Emit(project.Name, referencePaths, outputFile, target, emitLibrary);
+                    }
                 }
             }
             catch (NotSupportedException ex)

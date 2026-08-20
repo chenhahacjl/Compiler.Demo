@@ -47,21 +47,14 @@ namespace Cocoa.Tests.Compiler
             return dir;
         }
 
-        private static string RunOutput(string exePath, string arguments, bool runViaDotnet = false)
+        private static string RunOutput(string exePath, string arguments)
         {
-            var psi = new ProcessStartInfo(runViaDotnet ? "dotnet" : exePath)
+            var psi = new ProcessStartInfo(exePath)
             {
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
+                Arguments = arguments,
             };
-            if (runViaDotnet)
-            {
-                psi.Arguments = $"\"{exePath}\" {arguments}";
-            }
-            else
-            {
-                psi.Arguments = arguments;
-            }
 
             using var process = Process.Start(psi)!;
             var output = process.StandardOutput.ReadToEnd();
@@ -141,7 +134,8 @@ namespace Cocoa.Tests.Compiler
                 "dotnet",
                 "mainargs-dotnet.exe",
                 out _);
-            var output = RunOutput(exe, "hello world", runViaDotnet: true);
+            // netcore 产物含原生 apphost：直接运行（不经 dotnet 前缀）
+            var output = RunOutput(exe, "hello world");
             Assert.Contains("2", output);
             Assert.Contains("hello", output);
             Assert.Contains("world", output);
@@ -168,7 +162,7 @@ namespace Cocoa.Tests.Compiler
                 "dotnet",
                 "mainargs-quoted-dotnet.exe",
                 out _);
-            var output = RunOutput(exe, "\"hello world\"", runViaDotnet: true);
+            var output = RunOutput(exe, "\"hello world\"");
             Assert.Contains("1", output);
             Assert.Contains("hello world", output);
         }
@@ -214,7 +208,8 @@ namespace Cocoa.Tests.Compiler
                 "entry-dotnet",
                 "run",
                 out var exe);
-            var output = RunOutput(exe, "abc", runViaDotnet: true);
+            // netcore 产物含原生 apphost：直接运行
+            var output = RunOutput(exe, "abc");
             Assert.Contains("1", output);
             Assert.Contains("abc", output);
             Assert.DoesNotContain("99", output);
@@ -229,7 +224,7 @@ namespace Cocoa.Tests.Compiler
                 "entry-qualified",
                 "My.App.Program.Main",
                 out var exe);
-            var output = RunOutput(exe, "", runViaDotnet: true);
+            var output = RunOutput(exe, "");
             Assert.Contains("7", output);
         }
 

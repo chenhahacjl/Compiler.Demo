@@ -2,7 +2,7 @@ name = ControlFlow
 output = executable
 platform = x64
 entry = Main
-dotnetRuntime = net40
+dotnetRuntime = net48
 
 [sources]
 *.co

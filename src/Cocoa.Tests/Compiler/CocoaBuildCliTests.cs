@@ -324,16 +324,8 @@ entry = Main
             var exePath = Path.Combine(appDir, "App.exe");
             Assert.True(File.Exists(exePath));
 
-            int exitCode;
-            string output;
-            if (backend == "native")
-            {
-                exitCode = RunProcess(exePath, "", out output);
-            }
-            else
-            {
-                exitCode = RunProcess("dotnet", $"\"{exePath}\"", out output);
-            }
+            // netcore 产物含原生 apphost：直接运行（不经 dotnet 前缀）
+            var exitCode = RunProcess(exePath, "", out var output);
 
             Assert.Equal(0, exitCode);
             Assert.Contains("9", output);
