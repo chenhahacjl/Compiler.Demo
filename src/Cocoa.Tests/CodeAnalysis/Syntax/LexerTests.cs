@@ -426,6 +426,44 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.PercentToken && t2Kind == SyntaxKind.EqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.PercentToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.LessToken ||
+                t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.LessOrEqualsToken ||
+                t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.ShiftLeftToken ||
+                t1Kind == SyntaxKind.LessToken && t2Kind == SyntaxKind.ShiftLeftEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.ShiftLeftToken && t2Kind == SyntaxKind.EqualsToken ||
+                t1Kind == SyntaxKind.ShiftLeftToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.GreaterToken ||
+                t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.GreaterOrEqualsToken ||
+                t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.ShiftRightToken ||
+                t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.ShiftRightEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.ShiftRightToken && t2Kind == SyntaxKind.EqualsToken ||
+                t1Kind == SyntaxKind.ShiftRightToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
             return false;
         }
 

@@ -1201,6 +1201,7 @@ namespace Cocoa.CodeAnalysis.Binding
                                               es.Expression.Kind == BoundNodeKind.AssignmentExpression ||
                                               es.Expression.Kind == BoundNodeKind.CallExpression ||
                                               es.Expression.Kind == BoundNodeKind.CompoundAssignmentExpression ||
+                                              es.Expression.Kind == BoundNodeKind.ConditionalExpression ||
                                               es.Expression.Kind == BoundNodeKind.ElementAssignmentExpression ||
                                               es.Expression.Kind == BoundNodeKind.MemberAssignmentExpression ||
                                               es.Expression.Kind == BoundNodeKind.MemberCallExpression;
@@ -1674,6 +1675,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
                 case SyntaxKind.PostfixIncrementExpression: return BindPostfixIncrementExpression((PostfixIncrementExpressionSyntax)syntax);
                 case SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
+                case SyntaxKind.ConditionalExpression: return BindConditionalExpression((ConditionalExpressionSyntax)syntax);
                 case SyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
                 case SyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
                 case SyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
@@ -2220,6 +2222,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
         {
+            if (syntax.OperatorToken.Kind == SyntaxKind.PlusPlusToken ||
+                syntax.OperatorToken.Kind == SyntaxKind.MinusMinusToken)
+            {
+                return BindIncrementOrDecrement(syntax, syntax.Operand, syntax.OperatorToken);
+            }
+
             var boundOperand = BindExpression(syntax.Operand);
 
             if (boundOperand.Type == TypeSymbol.Error)
@@ -2271,6 +2279,49 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundBinaryExpression(syntax, boundLeft, boundOperator, boundRight);
+        }
+
+        private BoundExpression BindConditionalExpression(ConditionalExpressionSyntax syntax)
+        {
+            var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
+            var whenTrue = BindExpression(syntax.WhenTrue);
+            var whenFalse = BindExpression(syntax.WhenFalse);
+
+            TypeSymbol type;
+            if (whenTrue.Type == whenFalse.Type)
+            {
+                type = whenTrue.Type;
+            }
+            else if (whenTrue.Type == TypeSymbol.Error || whenFalse.Type == TypeSymbol.Error)
+            {
+                type = whenTrue.Type == TypeSymbol.Error ? whenFalse.Type : whenTrue.Type;
+            }
+            else if (IsNumeric(whenTrue.Type) && IsNumeric(whenFalse.Type))
+            {
+                if (Conversion.Classify(whenTrue.Type, whenFalse.Type).IsImplicit)
+                {
+                    type = whenFalse.Type;
+                }
+                else if (Conversion.Classify(whenFalse.Type, whenTrue.Type).IsImplicit)
+                {
+                    type = whenTrue.Type;
+                }
+                else
+                {
+                    _diagnostics.ReportCannotConvert(syntax.WhenFalse.Location, whenFalse.Type, whenTrue.Type);
+                    return new BoundErrorExpression(syntax);
+                }
+            }
+            else
+            {
+                _diagnostics.ReportCannotConvert(syntax.WhenFalse.Location, whenFalse.Type, whenTrue.Type);
+                return new BoundErrorExpression(syntax);
+            }
+
+            var convertedWhenTrue = BindConversion(syntax.WhenTrue.Location, whenTrue, type);
+            var convertedWhenFalse = BindConversion(syntax.WhenFalse.Location, whenFalse, type);
+
+            return new BoundConditionalExpression(syntax, condition, convertedWhenTrue, convertedWhenFalse);
         }
 
         private BoundExpression BindCallExpression(CallExpressionSyntax syntax)

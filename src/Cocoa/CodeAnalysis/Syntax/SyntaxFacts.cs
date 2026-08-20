@@ -10,6 +10,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.MinusToken:
                 case SyntaxKind.BangToken:
                 case SyntaxKind.TildeToken:
+                case SyntaxKind.PlusPlusToken:
+                case SyntaxKind.MinusMinusToken:
                 {
                     return 6;
                 }
@@ -27,12 +29,15 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case SyntaxKind.StarToken:
                 case SyntaxKind.SlashToken:
+                case SyntaxKind.PercentToken:
                 {
                     return 5;
                 }
 
                 case SyntaxKind.PlusToken:
                 case SyntaxKind.MinusToken:
+                case SyntaxKind.ShiftLeftToken:
+                case SyntaxKind.ShiftRightToken:
                 {
                     return 4;
                 }
@@ -216,6 +221,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "/";
                 case SyntaxKind.SlashEqualsToken:
                     return "/=";
+                case SyntaxKind.PercentToken:
+                    return "%";
+                case SyntaxKind.PercentEqualsToken:
+                    return "%=";
+                case SyntaxKind.ShiftLeftToken:
+                    return "<<";
+                case SyntaxKind.ShiftLeftEqualsToken:
+                    return "<<=";
+                case SyntaxKind.ShiftRightToken:
+                    return ">>";
+                case SyntaxKind.ShiftRightEqualsToken:
+                    return ">>=";
                 case SyntaxKind.BangToken:
                     return "!";
                 case SyntaxKind.EqualsToken:
@@ -270,6 +287,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "[";
                 case SyntaxKind.CloseBracketToken:
                     return "]";
+                case SyntaxKind.QuestionToken:
+                    return "?";
                 case SyntaxKind.BreakKeyword:
                     return "break";
                 case SyntaxKind.CdeclKeyword:
@@ -371,6 +390,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.StarToken;
                 case SyntaxKind.SlashEqualsToken:
                     return SyntaxKind.SlashToken;
+                case SyntaxKind.PercentEqualsToken:
+                    return SyntaxKind.PercentToken;
+                case SyntaxKind.ShiftLeftEqualsToken:
+                    return SyntaxKind.ShiftLeftToken;
+                case SyntaxKind.ShiftRightEqualsToken:
+                    return SyntaxKind.ShiftRightToken;
                 case SyntaxKind.AmpersandEqualsToken:
                     return SyntaxKind.AmpersandToken;
                 case SyntaxKind.PipeEqualsToken:

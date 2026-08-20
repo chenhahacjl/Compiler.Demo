@@ -168,6 +168,8 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateUnaryExpression((BoundUnaryExpression)node);
                 case BoundNodeKind.BinaryExpression:
                     return EvaluateBinaryExpression((BoundBinaryExpression)node);
+                case BoundNodeKind.ConditionalExpression:
+                    return EvaluateConditionalExpression((BoundConditionalExpression)node);
                 case BoundNodeKind.CallExpression:
                     return EvaluateCallExpression((BoundCallExpression)node);
                 case BoundNodeKind.ConversionExpression:
@@ -268,6 +270,12 @@ namespace Cocoa.CodeAnalysis
                     if (binary.Type == TypeSymbol.Double)
                         return (double)left / (double)right;
                     return (int)left / (int)right;
+                case BoundBinaryOperatorKind.Modulo:
+                    return (int)left % (int)right;
+                case BoundBinaryOperatorKind.ShiftLeft:
+                    return (int)left << (int)right;
+                case BoundBinaryOperatorKind.ShiftRight:
+                    return (int)left >> (int)right;
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     return binary.Type == TypeSymbol.Int32 ?
                         (int)left & (int)right :
@@ -307,6 +315,12 @@ namespace Cocoa.CodeAnalysis
                 default:
                     throw new Exception($"Unexpected binary operator {binary.Op}");
             }
+        }
+
+        private object? EvaluateConditionalExpression(BoundConditionalExpression node)
+        {
+            var condition = (bool)EvaluateExpression(node.Condition)!;
+            return EvaluateExpression(condition ? node.WhenTrue : node.WhenFalse);
         }
 
         private object? EvaluateCallExpression(BoundCallExpression node)

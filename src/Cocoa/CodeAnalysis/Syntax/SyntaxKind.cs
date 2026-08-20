@@ -28,6 +28,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         StarEqualsToken,         // *=
         SlashToken,              // /
         SlashEqualsToken,        // /=
+        PercentToken,            // %
+        PercentEqualsToken,      // %=
+        ShiftLeftToken,          // <<
+        ShiftLeftEqualsToken,    // <<=
+        ShiftRightToken,         // >>
+        ShiftRightEqualsToken,   // >>=
         BangToken,               // !
         EqualsToken,             // =
         TildeToken,              // ~
@@ -57,6 +63,7 @@ ColonToken,               // :
         SemicolonToken,           // ;
         PlusPlusToken,            // ++
         MinusMinusToken,          // --
+        QuestionToken,            // ?
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -146,6 +153,7 @@ ColonToken,               // :
         CastExpression,           // 类型转换表达式
         AssignmentExpression,     // 赋值表达式
         PostfixIncrementExpression, // 后缀自增/自减表达式 i++/i--
+        ConditionalExpression,    // 三元表达式 cond ? a : b
         CallExpression,           // 函数调用表达式
         ArrayCreationExpression,  // 数组创建表达式
         ObjectCreationExpression, // 对象创建表达式 new Foo(...)

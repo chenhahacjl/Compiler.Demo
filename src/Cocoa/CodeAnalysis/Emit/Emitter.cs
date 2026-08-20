@@ -594,6 +594,9 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundNodeKind.BinaryExpression:
                     EmitBinaryExpression(il, (BoundBinaryExpression)node);
                     break;
+                case BoundNodeKind.ConditionalExpression:
+                    EmitConditionalExpression(il, (BoundConditionalExpression)node);
+                    break;
                 case BoundNodeKind.CallExpression:
                     EmitCallExpression(il, (BoundCallExpression)node);
                     break;
@@ -792,6 +795,15 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundBinaryOperatorKind.Division:
                     il.Emit(IlOpCodes.Get("Div"));
                     break;
+                case BoundBinaryOperatorKind.Modulo:
+                    il.Emit(IlOpCodes.Get("Rem"));
+                    break;
+                case BoundBinaryOperatorKind.ShiftLeft:
+                    il.Emit(IlOpCodes.Get("Shl"));
+                    break;
+                case BoundBinaryOperatorKind.ShiftRight:
+                    il.Emit(IlOpCodes.Get("Shr"));
+                    break;
                 case BoundBinaryOperatorKind.LogicalAnd:
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     il.Emit(IlOpCodes.Get("And"));
@@ -830,6 +842,20 @@ namespace Cocoa.CodeAnalysis.Emit
                 default:
                     throw new System.Exception($"Unexpected binary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Left.Type}, {node.Right.Type})");
             }
+        }
+
+        private void EmitConditionalExpression(IlAssembler il, BoundConditionalExpression node)
+        {
+            var elseLabel = new IlInstruction(IlOpCodes.Get("Nop"), null);
+            var endLabel = new IlInstruction(IlOpCodes.Get("Nop"), null);
+
+            EmitExpression(il, node.Condition);
+            il.Emit(IlOpCodes.Get("Brfalse"), elseLabel);
+            EmitExpression(il, node.WhenTrue);
+            il.Emit(IlOpCodes.Get("Br"), endLabel);
+            il.Emit(elseLabel);
+            EmitExpression(il, node.WhenFalse);
+            il.Emit(endLabel);
         }
 
         private void EmitStringConcatExpression(IlAssembler il, BoundBinaryExpression node)

@@ -302,6 +302,9 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 case IrOpCode.Idiv:
                     EmitIdiv(instruction);
                     break;
+                case IrOpCode.Irem:
+                    EmitIrem(instruction);
+                    break;
                 case IrOpCode.Udiv:
                     EmitUdiv(instruction);
                     break;
@@ -592,6 +595,20 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             _a.Sar(X64Size.Dword, X64Register.EDX, 31);
             _a.Idiv(X64Size.Dword, X64Register.ECX);
             StoreSlot(instruction.Dst!, X64Register.EAX);
+        }
+
+        private void EmitIrem(IrInstruction instruction)
+        {
+            LoadSlot(X64Register.EAX, instruction.Dst!, RegisterSize(instruction.Dst!));
+            LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
+
+            _a.Cmp(X64Size.Dword, X64Register.ECX, 0);
+            _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+
+            _a.Mov(X64Size.Dword, X64Register.EDX, X64Register.EAX);
+            _a.Sar(X64Size.Dword, X64Register.EDX, 31);
+            _a.Idiv(X64Size.Dword, X64Register.ECX);
+            StoreSlot(instruction.Dst!, X64Register.EDX);
         }
 
         private void EmitUdiv(IrInstruction instruction)

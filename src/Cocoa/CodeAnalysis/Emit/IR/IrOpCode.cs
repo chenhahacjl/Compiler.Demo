@@ -22,6 +22,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         Sub,         // Sub <dst> <srcA> <srcB>
         Imul,        // Imul <dst> <srcA> <srcB>
         Idiv,        // Idiv <dst> <src>             — 有符号除法：dst / src → dst
+        Irem,        // Irem <dst> <src>             — 有符号取余：dst % src → dst
         Udiv,        // Udiv <dst> <src>             — 无符号除法：dst / src → dst
         Urem,        // Urem <dst> <src>             — 无符号取余：dst % src → dst
         Neg,         // Neg <dst>

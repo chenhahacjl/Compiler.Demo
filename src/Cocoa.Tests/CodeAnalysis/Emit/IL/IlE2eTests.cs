@@ -1082,6 +1082,75 @@ function Main()
         }
 
         [Fact]
+        public void ModuloAndShift_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    print(7 % 3)
+    print(-7 % 3)
+    print(10 % 2)
+    print(1 << 4)
+    print(8 >> 1)
+    print(-8 >> 1)
+    var x = 10
+    x %= 3
+    print(x)
+    x = 1
+    x <<= 4
+    print(x)
+    x = -16
+    x >>= 2
+    print(x)
+    var sum = 0
+    for var i = 1 to 5
+    {
+        if i % 2 == 0
+        {
+            continue
+        }
+        sum = sum + i
+    }
+    print(sum)
+}", "e2e-modulo-shift");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1\r\n-1\r\n0\r\n16\r\n4\r\n-4\r\n1\r\n16\r\n-4\r\n9\r\n", stdout);
+        }
+
+        [Fact]
+        public void ConditionalAndPrefix_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    var a = 5
+    var b = 10
+    print(a > b ? a : b)
+    print(1 < 2 ? 3 + 4 : 5 + 6)
+    var i = 1
+    i = ++i
+    print(i)
+    i = --i
+    print(i)
+    var d: double = 1.5
+    d = ++d
+    print(d)
+    var n = 7
+    print(n % 2 == 0 ? ""even"" : ""odd"")
+    var sum = 0
+    for var j = 1 to 5
+    {
+        sum = sum + (j % 2 == 0 ? 10 : j)
+    }
+    print(sum)
+}", "e2e-ternary-prefix");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\r\n7\r\n2\r\n1\r\n2.5\r\nodd\r\n29\r\n", stdout);
+        }
+
+        [Fact]
         public void Class_ExtendsKeyword_Inheritance_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

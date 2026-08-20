@@ -148,6 +148,73 @@ namespace Cocoa.Tests.CodeAnalysis
             AssertValue(text, expectedValue);
         }
 
+        [Theory]
+        [InlineData("{ var i = 1 return ++i }", 2)]
+        [InlineData("{ var i = 5 return --i }", 4)]
+        [InlineData("{ var i = 1 var r = ++i return r }", 2)]
+        [InlineData("{ var i = 1 var r = ++i + 10 return r }", 12)]
+        [InlineData("{ var i = 3 i = ++i return i }", 4)]
+        [InlineData("{ var d: double = 1.5 return ++d }", 2.5)]
+        public void Evaluator_PrefixIncrement_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Theory]
+        [InlineData("true ? 1 : 2", 1)]
+        [InlineData("false ? 1 : 2", 2)]
+        [InlineData("1 < 2 ? 10 : 20", 10)]
+        [InlineData("3 > 4 ? 10 : 20", 20)]
+        [InlineData("{ var a = 5 var b = 10 return a > b ? a : b }", 10)]
+        [InlineData("{ var x = 0 return true ? (x = 1) : (x = 2) }", 1)]
+        [InlineData("{ var x = 0 false ? (x = 1) : (x = 2) return x }", 2)]
+        [InlineData("true ? 1.5 : 2", 1.5)]
+        [InlineData("1 < 2 ? 3 + 4 : 5 + 6", 7)]
+        [InlineData("{ var n = 7 return n % 2 == 0 ? \"even\" : \"odd\" }", "odd")]
+        [InlineData("false ? 1 : (true ? 2 : 3)", 2)]
+        [InlineData("true ? (false ? 1 : 2) : 3", 2)]
+        public void Evaluator_Conditional_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_Conditional_ConditionNotBool_ReportsCannotConvert()
+        {
+            var text = @"
+                var n = 10
+                return [n] ? 1 : 2
+            ";
+
+            var diagnostics = @"
+                Cannot convert type 'int' to 'bool'.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Theory]
+        [InlineData("7 % 3", 1)]
+        [InlineData("10 % 2", 0)]
+        [InlineData("7 % 3 + 1", 2)]
+        [InlineData("-7 % 3", -1)]
+        [InlineData("7 % -3", 1)]
+        [InlineData("0 % 5", 0)]
+        [InlineData("(byte)5 % 2", 1)]
+        [InlineData("1 << 4", 16)]
+        [InlineData("8 >> 1", 4)]
+        [InlineData("-8 >> 1", -4)]
+        [InlineData("1 << 10", 1024)]
+        [InlineData("16 >> 2", 4)]
+        [InlineData("var x = 10 x %= 3 return x", 1)]
+        [InlineData("var x = 1 x <<= 4 return x", 16)]
+        [InlineData("var x = -16 x >>= 2 return x", -4)]
+        [InlineData("var x = 8 x %= 2 return x", 0)]
+        public void Evaluator_ModuloAndShift_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
         [Fact]
         public void Evaluator_Var_WithType_NoInitializer_ReportsNoDiagnostics()
         {

@@ -501,29 +501,75 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '<':
                 {
                     _position++;
-                    if (Current != '=')
+                    if (Current == '<')
                     {
-                        _kind = SyntaxKind.LessToken;
+                        _position++;
+                        if (Current == '=')
+                        {
+                            _kind = SyntaxKind.ShiftLeftEqualsToken;
+                            _position++;
+                        }
+                        else
+                        {
+                            _kind = SyntaxKind.ShiftLeftToken;
+                        }
                     }
-                    else
+                    else if (Current == '=')
                     {
                         _kind = SyntaxKind.LessOrEqualsToken;
                         _position++;
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.LessToken;
                     }
                     break;
                 }
                 case '>':
                 {
                     _position++;
-                    if (Current != '=')
+                    if (Current == '>')
                     {
-                        _kind = SyntaxKind.GreaterToken;
+                        _position++;
+                        if (Current == '=')
+                        {
+                            _kind = SyntaxKind.ShiftRightEqualsToken;
+                            _position++;
+                        }
+                        else
+                        {
+                            _kind = SyntaxKind.ShiftRightToken;
+                        }
                     }
-                    else
+                    else if (Current == '=')
                     {
                         _kind = SyntaxKind.GreaterOrEqualsToken;
                         _position++;
                     }
+                    else
+                    {
+                        _kind = SyntaxKind.GreaterToken;
+                    }
+                    break;
+                }
+                case '%':
+                {
+                    _position++;
+                    if (Current == '=')
+                    {
+                        _kind = SyntaxKind.PercentEqualsToken;
+                        _position++;
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.PercentToken;
+                    }
+                    break;
+                }
+                case '?':
+                {
+                    _kind = SyntaxKind.QuestionToken;
+                    _position++;
                     break;
                 }
                 case '"':

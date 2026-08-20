@@ -224,7 +224,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x59: // Sub
                 case 0x5A: // Mul
                 case 0x5B: // Div
-                case 0x5C: // Rem
+                case 0x5D: // Rem
                 case 0x5F: // And
                 case 0x60: // Or
                 case 0x61: // Xor

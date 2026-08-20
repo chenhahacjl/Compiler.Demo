@@ -319,6 +319,9 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 case BoundNodeKind.BinaryExpression:
                     return EmitBinaryExpression((BoundBinaryExpression)node);
 
+                case BoundNodeKind.ConditionalExpression:
+                    return EmitConditionalExpression((BoundConditionalExpression)node);
+
                 case BoundNodeKind.CallExpression:
                     return EmitCallExpression((BoundCallExpression)node);
 
@@ -733,6 +736,19 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     Add(instructions, new IrInstruction(IrOpCode.Idiv, result, IrOperand.Reg(right)));
                     break;
 
+                case BoundBinaryOperatorKind.Modulo:
+                    Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
+                    Add(instructions, new IrInstruction(IrOpCode.Irem, result, IrOperand.Reg(right)));
+                    break;
+
+                case BoundBinaryOperatorKind.ShiftLeft:
+                    Add(instructions, new IrInstruction(IrOpCode.Shl, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    break;
+
+                case BoundBinaryOperatorKind.ShiftRight:
+                    Add(instructions, new IrInstruction(IrOpCode.Sar, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    break;
+
                 case BoundBinaryOperatorKind.BitwiseOr:
                 case BoundBinaryOperatorKind.LogicalOr:
                     Add(instructions, new IrInstruction(IrOpCode.Or, result, IrOperand.Reg(left), IrOperand.Reg(right)));
@@ -847,6 +863,29 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 default:
                     throw new Exception($"Unexpected float binary operator: {op}");
             }
+        }
+
+        private IrVirtualRegister EmitConditionalExpression(BoundConditionalExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var result = AllocateRegister(ReturnSize(node.Type));
+            var elseLabel = AllocLabel();
+            var endLabel = AllocLabel();
+
+            var condition = EmitExpression(node.Condition);
+            Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(elseLabel)));
+
+            var whenTrue = EmitExpression(node.WhenTrue);
+            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(whenTrue)));
+            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(endLabel)));
+
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(elseLabel)));
+            var whenFalse = EmitExpression(node.WhenFalse);
+            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(whenFalse)));
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(endLabel)));
+
+            return result;
         }
 
         private IrVirtualRegister EmitRuntimeBinary(BoundBinaryExpression node, string runtimeName, int resultSize, bool invert = false)

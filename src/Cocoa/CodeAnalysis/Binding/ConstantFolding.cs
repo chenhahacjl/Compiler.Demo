@@ -87,6 +87,13 @@ namespace Cocoa.CodeAnalysis.Binding
                         return new BoundConstant((double)leftConstant.Value / (double)rightConstant.Value);
                     // 除零不折叠，交给运行时 DivByZero 处理
                     return (int)rightConstant.Value == 0 ? null : new BoundConstant((int)leftConstant.Value / (int)rightConstant.Value);
+                case BoundBinaryOperatorKind.Modulo:
+                    // 模零不折叠，交给运行时 DivByZero 处理
+                    return (int)rightConstant.Value == 0 ? null : new BoundConstant((int)leftConstant.Value % (int)rightConstant.Value);
+                case BoundBinaryOperatorKind.ShiftLeft:
+                    return new BoundConstant((int)leftConstant.Value << (int)rightConstant.Value);
+                case BoundBinaryOperatorKind.ShiftRight:
+                    return new BoundConstant((int)leftConstant.Value >> (int)rightConstant.Value);
                 case BoundBinaryOperatorKind.BitwiseAnd:
                     return left.Type == TypeSymbol.Int32 ?
                         new BoundConstant((int)leftConstant.Value & (int)rightConstant.Value) :

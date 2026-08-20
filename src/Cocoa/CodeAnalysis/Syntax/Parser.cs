@@ -958,6 +958,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                     case SyntaxKind.MinusEqualsToken:
                     case SyntaxKind.StarEqualsToken:
                     case SyntaxKind.SlashEqualsToken:
+                    case SyntaxKind.PercentEqualsToken:
+                    case SyntaxKind.ShiftLeftEqualsToken:
+                    case SyntaxKind.ShiftRightEqualsToken:
                     case SyntaxKind.AmpersandEqualsToken:
                     case SyntaxKind.PipeEqualsToken:
                     case SyntaxKind.HatEqualsToken:
@@ -981,6 +984,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.MinusEqualsToken:
                 case SyntaxKind.StarEqualsToken:
                 case SyntaxKind.SlashEqualsToken:
+                case SyntaxKind.PercentEqualsToken:
+                case SyntaxKind.ShiftLeftEqualsToken:
+                case SyntaxKind.ShiftRightEqualsToken:
                 case SyntaxKind.AmpersandEqualsToken:
                 case SyntaxKind.PipeEqualsToken:
                 case SyntaxKind.HatEqualsToken:
@@ -993,7 +999,22 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
+            if (Current.Kind == SyntaxKind.QuestionToken)
+            {
+                return ParseConditionalExpression(expression);
+            }
+
             return expression;
+        }
+
+        private ExpressionSyntax ParseConditionalExpression(ExpressionSyntax condition)
+        {
+            var questionToken = MatchToken(SyntaxKind.QuestionToken);
+            var whenTrue = ParseExpression();
+            var colonToken = MatchToken(SyntaxKind.ColonToken);
+            var whenFalse = ParseExpression();
+
+            return new ConditionalExpressionSyntax(_syntaxTree, condition, questionToken, whenTrue, colonToken, whenFalse);
         }
 
         private ExpressionSyntax ParseBinaryExpression(int parentPrecedence = 0)

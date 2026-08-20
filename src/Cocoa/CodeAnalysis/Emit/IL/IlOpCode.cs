@@ -119,7 +119,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Sub", 0x59, IlOperandType.InlineNone);
             Define("Mul", 0x5A, IlOperandType.InlineNone);
             Define("Div", 0x5B, IlOperandType.InlineNone);
-            Define("Rem", 0x5C, IlOperandType.InlineNone);
+            Define("Rem", 0x5D, IlOperandType.InlineNone);
             Define("And", 0x5F, IlOperandType.InlineNone);
             Define("Or", 0x60, IlOperandType.InlineNone);
             Define("Xor", 0x61, IlOperandType.InlineNone);

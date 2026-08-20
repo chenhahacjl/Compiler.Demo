@@ -231,6 +231,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteBinaryExpression((BoundBinaryExpression)node);
                 }
+                case BoundNodeKind.ConditionalExpression:
+                {
+                    return RewriteConditionalExpression((BoundConditionalExpression)node);
+                }
                 case BoundNodeKind.CallExpression:
                 {
                     return RewriteCallExpression((BoundCallExpression)node);
@@ -348,6 +352,19 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundBinaryExpression(node.Syntax, left, node.Op, right);
+        }
+
+        protected virtual BoundExpression RewriteConditionalExpression(BoundConditionalExpression node)
+        {
+            var condition = RewriteExpression(node.Condition);
+            var whenTrue = RewriteExpression(node.WhenTrue);
+            var whenFalse = RewriteExpression(node.WhenFalse);
+            if (condition == node.Condition && whenTrue == node.WhenTrue && whenFalse == node.WhenFalse)
+            {
+                return node;
+            }
+
+            return new BoundConditionalExpression(node.Syntax, condition, whenTrue, whenFalse);
         }
 
         protected virtual BoundExpression RewriteCallExpression(BoundCallExpression node)

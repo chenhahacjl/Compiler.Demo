@@ -84,6 +84,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.BinaryExpression:
                     WriteBinaryExpression((BoundBinaryExpression)node, writer);
                     break;
+                case BoundNodeKind.ConditionalExpression:
+                    WriteConditionalExpression((BoundConditionalExpression)node, writer);
+                    break;
                 case BoundNodeKind.CallExpression:
                     WriteCallExpression((BoundCallExpression)node, writer);
                     break;
@@ -411,6 +414,19 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WritePunctuation(node.Op.SyntaxKind);
             writer.WriteSpace();
             writer.WriteNestedExpression(precedence, node.Right);
+        }
+
+        private static void WriteConditionalExpression(BoundConditionalExpression node, IndentedTextWriter writer)
+        {
+            writer.WriteNestedExpression(0, node.Condition);
+            writer.WriteSpace();
+            writer.WritePunctuation(SyntaxKind.QuestionToken);
+            writer.WriteSpace();
+            writer.WriteNestedExpression(0, node.WhenTrue);
+            writer.WriteSpace();
+            writer.WritePunctuation(SyntaxKind.ColonToken);
+            writer.WriteSpace();
+            writer.WriteNestedExpression(0, node.WhenFalse);
         }
 
         private static void WriteCallExpression(BoundCallExpression node, IndentedTextWriter writer)

@@ -364,6 +364,88 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_ModuloAndShift(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    print(7 % 3)
+    print(-7 % 3)
+    print(10 % 2)
+    print(1 << 4)
+    print(8 >> 1)
+    print(-8 >> 1)
+    var x = 10
+    x %= 3
+    print(x)
+    x = 1
+    x <<= 4
+    print(x)
+    x = -16
+    x >>= 2
+    print(x)
+    var sum = 0
+    for var i = 1 to 5
+    {
+        if i % 2 == 0
+        {
+            continue
+        }
+        sum = sum + i
+    }
+    print(sum)
+}", "src-modulo-shift", target);
+
+            Assert.Equal("1\r\n-1\r\n0\r\n16\r\n4\r\n-4\r\n1\r\n16\r\n-4\r\n9\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_ConditionalAndPrefix(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var a = 5
+    var b = 10
+    print(a > b ? a : b)
+    print(1 < 2 ? 3 + 4 : 5 + 6)
+    var i = 1
+    i = ++i
+    print(i)
+    i = --i
+    print(i)
+    var n = 7
+    print(n % 2 == 0 ? ""even"" : ""odd"")
+    var sum = 0
+    for var j = 1 to 5
+    {
+        sum = sum + (j % 2 == 0 ? 10 : j)
+    }
+    print(sum)
+}", "src-ternary-prefix", target);
+
+            Assert.Equal("10\r\n7\r\n2\r\n1\r\nodd\r\n29\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_ModuloByZero(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    print(1 % 0)
+}", "src-modulo-zero", target, expectedExitCode: 1);
+
+            Assert.Equal("error: division by zero\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_CompoundAssignment(string target)
         {
             var output = CompileAndRun(@"
