@@ -1223,6 +1223,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
                 case SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
                 case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case SyntaxKind.CStyleForStatement: return BindCStyleForStatement((CStyleForStatementSyntax)syntax);
                 case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
@@ -1454,12 +1455,112 @@ namespace Cocoa.CodeAnalysis.Binding
 
             _scope = new BoundScope(_scope);
 
-            var variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Int32);
+            VariableSymbol variable;
+
+            if (syntax.Identifier != null)
+            {
+                if (syntax.VarKeyword != null)
+                {
+                    // var → 声明新的可变循环变量
+                    variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: false, TypeSymbol.Int32);
+                }
+                else
+                {
+                    // 无关键字 → 复用外层已存在变量（必须已声明且可变）
+                    var lookup = _scope.TryLookupSymbol(syntax.Identifier.Text);
+                    if (lookup is VariableSymbol existingVariable)
+                    {
+                        if (existingVariable.IsReadOnly)
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"循环变量 '{existingVariable.Name}' 是只读的，for 循环需要可写变量。");
+                        }
+
+                        variable = existingVariable;
+                    }
+                    else
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"循环变量 '{syntax.Identifier.Text}' 未定义。省略 var 时循环变量必须在外部作用域已声明。");
+                        variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Int32);
+                    }
+                }
+            }
+            else
+            {
+                // 纯次数循环 for (1 to 10)：隐藏计数器（不进作用域查找，用户不可见）
+                variable = new LocalVariableSymbol("__for", isReadOnly: true, TypeSymbol.Int32, constant: null);
+            }
+
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
 
             _scope = _scope.Parent!;
 
             return new BoundForStatement(syntax, variable, lowerBound, upperBound, body, breakLabel, continueLabel);
+        }
+
+        private BoundStatement BindCStyleForStatement(CStyleForStatementSyntax syntax)
+        {
+            _scope = new BoundScope(_scope);
+
+            BoundStatement? init = null;
+            if (syntax.Init != null)
+            {
+                init = BindStatement(syntax.Init);
+            }
+
+            var condition = syntax.Condition == null ? null : BindExpression(syntax.Condition, TypeSymbol.Boolean);
+            var update = syntax.Update == null ? null : BindExpression(syntax.Update);
+            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
+
+            _scope = _scope.Parent!;
+
+            // C 风格 for 在绑定期脱糖为既有的纯循环节点：
+            // {
+            //     init
+            //     while (true)
+            //     {
+            //         if (condition) { } else break;
+            //         body
+            //         continue:
+            //         update
+            //     }
+            // }
+
+            _labelCounter++;
+            var whileContinueLabel = new BoundLabel($"continue{_labelCounter}");
+
+            var whileBody = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            if (condition != null)
+            {
+                var emptyThen = new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
+                var breakGoto = new BoundGotoStatement(syntax, breakLabel);
+                var conditionCheck = new BoundIfStatement(syntax, condition, emptyThen, breakGoto);
+                whileBody.Add(conditionCheck);
+            }
+
+            whileBody.Add(body);
+            whileBody.Add(new BoundLabelStatement(syntax, continueLabel));
+
+            if (update != null)
+            {
+                whileBody.Add(new BoundExpressionStatement(syntax, update));
+            }
+
+            var whileStatement = new BoundWhileStatement(
+                syntax,
+                new BoundLiteralExpression(syntax, true),
+                new BoundBlockStatement(syntax, whileBody.ToImmutable()),
+                breakLabel,
+                whileContinueLabel);
+
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            if (init != null)
+            {
+                statements.Add(init);
+            }
+            statements.Add(whileStatement);
+
+            return new BoundBlockStatement(syntax, statements.ToImmutable());
         }
 
         private BoundStatement BindLoopBody(StatementSyntax body, out BoundLabel breakLabel, out BoundLabel continueLabel)
@@ -1571,6 +1672,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.NameExpression: return BindNameExpression((NameExpressionSyntax)syntax);
                 case SyntaxKind.AssignmentExpression: return BindAssignmentExpression((AssignmentExpressionSyntax)syntax);
                 case SyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
+                case SyntaxKind.PostfixIncrementExpression: return BindPostfixIncrementExpression((PostfixIncrementExpressionSyntax)syntax);
                 case SyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
                 case SyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
                 case SyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
@@ -1750,6 +1852,51 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return boundExpression;
+        }
+
+        private BoundExpression BindPostfixIncrementExpression(PostfixIncrementExpressionSyntax syntax)
+        {
+            return BindIncrementOrDecrement(syntax, syntax.Operand, syntax.OperatorToken);
+        }
+
+        private BoundExpression BindIncrementOrDecrement(SyntaxNode syntax, ExpressionSyntax operandSyntax, SyntaxToken operatorToken)
+        {
+            var boundTarget = BindExpression(operandSyntax);
+
+            if (boundTarget is BoundVariableExpression variableTarget)
+            {
+                var variable = variableTarget.Variable;
+
+                if (variable.IsReadOnly)
+                {
+                    _diagnostics.ReportCannotAssign(operatorToken.Location, variable.Name);
+                }
+
+                // x++/++x → x = x + 1；x--/--x → x = x - 1
+                var operatorTokenKind = operatorToken.Kind == SyntaxKind.PlusPlusToken
+                    ? SyntaxKind.PlusToken
+                    : SyntaxKind.MinusToken;
+                var boundOperator = BoundBinaryOperator.Bind(operatorTokenKind, variable.Type, variable.Type);
+
+                if (boundOperator == null)
+                {
+                    _diagnostics.ReportUndefinedBinaryOperator(operatorToken.Location, operatorToken.Text, variable.Type, variable.Type);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var one = new BoundLiteralExpression(syntax, 1);
+                var convertedOne = BindConversion(operatorToken.Location, one, variable.Type);
+                var binary = new BoundBinaryExpression(syntax, variableTarget, boundOperator, convertedOne);
+
+                return new BoundAssignmentExpression(syntax, variable, binary);
+            }
+
+            if (boundTarget.Type != TypeSymbol.Error)
+            {
+                _diagnostics.ReportCannotAssign(operatorToken.Location, boundTarget.Type.Name);
+            }
+
+            return new BoundErrorExpression(syntax);
         }
 
         private BoundExpression BindArrayCreationExpression(ArrayCreationExpressionSyntax syntax)

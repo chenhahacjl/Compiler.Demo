@@ -288,7 +288,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '+':
                 {
                     _position++;
-                    if (Current != '=')
+                    if (Current == '+')
+                    {
+                        _kind = SyntaxKind.PlusPlusToken;
+                        _position++;
+                    }
+                    else if (Current != '=')
                     {
                         _kind = SyntaxKind.PlusToken;
                     }
@@ -302,7 +307,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '-':
                 {
                     _position++;
-                    if (Current != '=')
+                    if (Current == '-')
+                    {
+                        _kind = SyntaxKind.MinusMinusToken;
+                        _position++;
+                    }
+                    else if (Current != '=')
                     {
                         _kind = SyntaxKind.MinusToken;
                     }
@@ -392,6 +402,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '.':
                 {
                     _kind = SyntaxKind.DotToken;
+                    _position++;
+                    break;
+                }
+                case ';':
+                {
+                    _kind = SyntaxKind.SemicolonToken;
                     _position++;
                     break;
                 }

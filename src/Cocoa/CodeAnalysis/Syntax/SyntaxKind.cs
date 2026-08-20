@@ -54,6 +54,9 @@ ColonToken,               // :
         DotToken,                 // .
         OpenBracketToken,         // [
         CloseBracketToken,        // ]
+        SemicolonToken,           // ;
+        PlusPlusToken,            // ++
+        MinusMinusToken,          // --
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -68,6 +71,7 @@ ColonToken,               // :
         DoKeyword,                // do
         ElseKeyword,              // else
         EnumKeyword,              // enum
+        ExtendsKeyword,           // extends
         FalseKeyword,             // false
         ForKeyword,               // for
         FunctionKeyword,          // function
@@ -126,6 +130,7 @@ ColonToken,               // :
         WhileStatement,           // WHILE 循环语句
         DoWhileStatement,         // DO-WHILE 循环语句
         ForStatement,             // FOR 循环语句
+        CStyleForStatement,       // C 风格 FOR 循环语句 for (init; cond; update)
         BreakStatement,           // BREAK 语句
         ContinueStatement,        // CONTINUE 语句
         ReturnStatement,          // RETURN 语句
@@ -140,6 +145,7 @@ ColonToken,               // :
         ParenthesizedExpression,  // 括号表达式
         CastExpression,           // 类型转换表达式
         AssignmentExpression,     // 赋值表达式
+        PostfixIncrementExpression, // 后缀自增/自减表达式 i++/i--
         CallExpression,           // 函数调用表达式
         ArrayCreationExpression,  // 数组创建表达式
         ObjectCreationExpression, // 对象创建表达式 new Foo(...)

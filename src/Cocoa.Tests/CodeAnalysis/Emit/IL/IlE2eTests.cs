@@ -236,7 +236,7 @@ function Main()
 function Main()
 {
     var total = 0
-    for i = 1 to 5
+    for var i = 1 to 5
     {
         if i == 3
         {
@@ -254,7 +254,7 @@ function Main()
     print(j)
 
     var m = 0
-    for k = 1 to 10
+    for var k = 1 to 10
     {
         if k > 2
         {
@@ -1037,6 +1037,128 @@ function Main()
 
             Assert.Equal(0, exitCode);
             Assert.Equal("disposing file1\r\ndisposing file2\r\n", stdout);
+        }
+
+        [Fact]
+        public void CStyleFor_PostfixIncrement_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    var sum = 0
+    for (var i = 0; i < 5; i++)
+    {
+        sum = sum + i
+    }
+    print(sum)
+    var j = 10
+    j--
+    print(j)
+    j++
+    print(j)
+    var total = 0
+    for (;;)
+    {
+        total = total + 1
+        if total == 3
+        {
+            break
+        }
+    }
+    print(total)
+    var k = 0
+    for (; k < 4; k = k + 1)
+    {
+        if k == 2
+        {
+            continue
+        }
+        print(k)
+    }
+}", "e2e-cstyle-for");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\r\n9\r\n10\r\n3\r\n0\r\n1\r\n3\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_ExtendsKeyword_Inheritance_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Animal
+{
+    private _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public function Name(): string
+    {
+        return _name
+    }
+}
+
+public class Dog extends Animal
+{
+    public constructor(name: string): base(name)
+    {
+    }
+
+    public function Bark(): string
+    {
+        return ""woof""
+    }
+}
+
+function Main()
+{
+    var d = new Dog(""Rex"")
+    print(d.Name())
+    print(d.Bark())
+}", "e2e-extends-keyword");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("Rex\r\nwoof\r\n", stdout);
+        }
+
+        [Fact]
+        public void Interface_ExtendsKeyword_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public interface IAnimal
+{
+    function Speak(): string
+}
+
+public interface IDog extends IAnimal
+{
+    function Bark(): string
+}
+
+public class Dog: IDog
+{
+    public function Speak(): string
+    {
+        return ""woof""
+    }
+
+    public function Bark(): string
+    {
+        return ""bark""
+    }
+}
+
+function Main()
+{
+    var d: IDog = new Dog()
+    print(d.Speak())
+    print(d.Bark())
+}", "e2e-interface-extends");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("woof\r\nbark\r\n", stdout);
         }
     }
 }

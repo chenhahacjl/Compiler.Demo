@@ -79,8 +79,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var a = 0 if a == 0 a = 10 else a = 5 return a }", 10)]
         [InlineData("{ var a = 0 if a == 4 a = 10 else a = 5 return a }", 5)]
         [InlineData("{ var i = 10 var result = 0 while i > 0 { result = result + i i = i - 1 } return result }", 55)]
-        [InlineData("{ var result = 0 for i = 1 to 10 { result = result + i } return result }", 55)]
-        [InlineData("{ var a = 10 for i = 1 to (a = a - 1) { } return a }", 9)]
+        [InlineData("{ var result = 0 for var i = 1 to 10 { result = result + i } return result }", 55)]
+        [InlineData("{ var a = 10 for var i = 1 to (a = a - 1) { } return a }", 9)]
         [InlineData("{ var a = 0 do a = a + 1 while a < 10 return a}", 10)]
         [InlineData("{ var i = 0 while i < 5 { i = i + 1 if i == 5 continue } return i }", 5)]
         [InlineData("{ var i = 0 do { i = i + 1 if i == 5 continue } while i < 5 return i }", 5)]
@@ -118,6 +118,32 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("const x = 5 return x + 1", 6)]
         [InlineData("const x: int = 5 return x", 5)]
         public void Evaluator_DefaultInitialization_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Theory]
+        [InlineData("{ var result = 0 for (var i = 0; i < 10; i++) { result = result + i } return result }", 45)]
+        [InlineData("{ var result = 0 for (var i = 0; i <= 10; i = i + 1) { result = result + i } return result }", 55)]
+        [InlineData("{ var result = 0 for (var i = 10; i > 0; i--) { result = result + i } return result }", 55)]
+        [InlineData("{ var result = 0 for (var i = 0; i < 5; i++) { if i == 2 continue result = result + i } return result }", 8)]
+        [InlineData("{ var result = 0 for (var i = 10; i > 0; i--) { if i == 5 continue result = result + i } return result }", 50)]
+        [InlineData("{ var result = 0 for (var i = 0;; i++) { result = result + 1 if result == 5 break } return result }", 5)]
+        [InlineData("{ var i = 0 for (; i < 5; i = i + 1) { } return i }", 5)]
+        [InlineData("{ var i = 0 for (; i < 5;) { i = i + 1 } return i }", 5)]
+        [InlineData("{ var result = 0 for (;;) { result = result + 1 if result == 5 break } return result }", 5)]
+        public void Evaluator_CStyleFor_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Theory]
+        [InlineData("{ var i = 1 i++ return i }", 2)]
+        [InlineData("{ var i = 5 i-- return i }", 4)]
+        [InlineData("{ var i = 1 i++ i++ return i }", 3)]
+        [InlineData("{ var i = 1 var r = i++ return r }", 2)]
+        [InlineData("{ var d: double = 1.5 d++ return d }", 2.5)]
+        public void Evaluator_PostfixIncrement_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
         }
@@ -654,7 +680,7 @@ function Main()
             var text = @"
                 {
                     var result = 0
-                    for i = [false] to 10
+                    for var i = [false] to 10
                         result = result + i
                 }
             ";
@@ -672,13 +698,140 @@ function Main()
             var text = @"
                 {
                     var result = 0
-                    for i = 1 to [true]
+                    for var i = 1 to [true]
                         result = result + i
                 }
             ";
 
             var diagnostics = @"
                 Cannot convert type 'bool' to 'int'.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Theory]
+        [InlineData("{ var result = 0 for (var i = 1 to 5) { result = result + i } return result }", 15)]
+        [InlineData("{ var result = 0 for var i = 1 to 5 { result = result + i } return result }", 15)]
+        [InlineData("{ var result = 0 for (var i = 0 to 9) { result = result + 1 } return result }", 10)]
+        [InlineData("{ var result = 0 for (1 to 5) { result = result + 1 } return result }", 5)]
+        [InlineData("{ var result = 0 for 1 to 5 { result = result + 1 } return result }", 5)]
+        [InlineData("{ var i = 0 for (i = 1 to 3) { } return i }", 4)]
+        [InlineData("{ var i = 10 for i = 1 to 3 { } return i }", 4)]
+        [InlineData("{ var sum = 0 for var i = 1 to 4 { if i == 2 continue sum = sum + i } return sum }", 8)]
+        [InlineData("{ var result = 0 for (var i = 5 to 5) { result = result + 1 } return result }", 1)]
+        [InlineData("{ var total = 0 for var i = 1 to 3 { total = total + i i = i + 1 } return total }", 4)]
+        [InlineData("{ var result = 0 for (var i = 10 to 1) { result = result + 1 } return result }", 0)]
+        public void Evaluator_RangeForForms_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_RangeFor_UndefinedVariable_ReportsError()
+        {
+            var text = @"
+                for [i] = 1 to 10
+                {
+                }
+            ";
+
+            var diagnostics = @"
+                循环变量 'i' 未定义。省略 var 时循环变量必须在外部作用域已声明。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_RangeFor_ReadOnlyVariable_ReportsError()
+        {
+            var text = @"
+                let i = 0
+                for [i] = 1 to 10
+                {
+                }
+            ";
+
+            var diagnostics = @"
+                循环变量 'i' 是只读的，for 循环需要可写变量。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_RangeFor_LetKeyword_ReportsError()
+        {
+            var text = @"
+                for [let] i = 1 to 10
+                {
+                }
+            ";
+
+            var diagnostics = @"
+                for 循环变量只能用 var 声明（不能用 let）。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_RangeFor_ConstKeyword_ReportsError()
+        {
+            var text = @"
+                for [const] i = 1 to 10
+                {
+                }
+            ";
+
+            var diagnostics = @"
+                for 循环变量只能用 var 声明（不能用 const）。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_CStyleForStatement_Reports_CannotConvert_Condition()
+        {
+            var text = @"
+                for (var i = 0; [10]; i++)
+                {
+                }
+            ";
+
+            var diagnostics = @"
+                Cannot convert type 'int' to 'bool'.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_PostfixIncrement_ReadOnly_ReportsCannotAssign()
+        {
+            var text = @"
+                let x = 10
+                x[++]
+            ";
+
+            var diagnostics = @"
+                Variable 'x' is read-only and cannot be assigned to.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_PostfixIncrement_NotAVariable_ReportsCannotAssign()
+        {
+            var text = @"
+                1[++]
+            ";
+
+            var diagnostics = @"
+                Variable 'int' is read-only and cannot be assigned to.
             ";
 
             AssertDiagnostics(text, diagnostics);

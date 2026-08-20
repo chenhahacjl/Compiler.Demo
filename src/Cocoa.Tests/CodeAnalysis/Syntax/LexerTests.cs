@@ -270,12 +270,28 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.PlusToken ||
+                t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.PlusPlusToken ||
+                t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.PlusEqualsToken ||
+                t1Kind == SyntaxKind.PlusPlusToken && t2Kind == SyntaxKind.PlusToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;
             }
 
             if (t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.MinusToken ||
+                t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.MinusMinusToken ||
+                t1Kind == SyntaxKind.MinusToken && t2Kind == SyntaxKind.MinusEqualsToken ||
+                t1Kind == SyntaxKind.MinusMinusToken && t2Kind == SyntaxKind.MinusToken)
             {
                 return true;
             }

@@ -270,6 +270,236 @@ public class Point
             Assert.Null(statement.Initializer);
         }
 
+        [Fact]
+        public void Parser_Parses_CStyleForStatement()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+for (var i = 0; i < 10; i++)
+{
+    print(i)
+}");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<CStyleForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal("for", statement.Keyword.Text);
+            Assert.Equal("(", statement.OpenParenToken.Text);
+            Assert.IsType<VariableDeclarationSyntax>(statement.Init);
+            Assert.NotNull(statement.SemicolonToken1);
+            Assert.Equal(SyntaxKind.BinaryExpression, statement.Condition!.Kind);
+            Assert.NotNull(statement.SemicolonToken2);
+            Assert.Equal(SyntaxKind.PostfixIncrementExpression, statement.Update!.Kind);
+            Assert.Equal(")", statement.CloseParenToken.Text);
+            Assert.IsType<BlockStatementSyntax>(statement.Body);
+
+            using (var e = new AssertingEnumerator(statement))
+            {
+                e.AssertNode(SyntaxKind.CStyleForStatement);
+                e.AssertToken(SyntaxKind.ForKeyword, "for");
+                e.AssertToken(SyntaxKind.OpenParenthesisToken, "(");
+                e.AssertNode(SyntaxKind.VariableDeclaration);
+                e.AssertToken(SyntaxKind.VarKeyword, "var");
+                e.AssertToken(SyntaxKind.IdentifierToken, "i");
+                e.AssertToken(SyntaxKind.EqualsToken, "=");
+                e.AssertNode(SyntaxKind.LiteralExpression);
+                e.AssertToken(SyntaxKind.NumberToken, "0");
+                e.AssertToken(SyntaxKind.SemicolonToken, ";");
+                e.AssertNode(SyntaxKind.BinaryExpression);
+                e.AssertNode(SyntaxKind.NameExpression);
+                e.AssertToken(SyntaxKind.IdentifierToken, "i");
+                e.AssertToken(SyntaxKind.LessToken, "<");
+                e.AssertNode(SyntaxKind.LiteralExpression);
+                e.AssertToken(SyntaxKind.NumberToken, "10");
+                e.AssertToken(SyntaxKind.SemicolonToken, ";");
+                e.AssertNode(SyntaxKind.PostfixIncrementExpression);
+                e.AssertNode(SyntaxKind.NameExpression);
+                e.AssertToken(SyntaxKind.IdentifierToken, "i");
+                e.AssertToken(SyntaxKind.PlusPlusToken, "++");
+                e.AssertToken(SyntaxKind.CloseParenthesisToken, ")");
+                e.AssertNode(SyntaxKind.BlockStatement);
+                e.AssertToken(SyntaxKind.OpenBraceToken, "{");
+                e.AssertNode(SyntaxKind.ExpressionStatement);
+                e.AssertNode(SyntaxKind.CallExpression);
+                e.AssertToken(SyntaxKind.IdentifierToken, "print");
+                e.AssertToken(SyntaxKind.OpenParenthesisToken, "(");
+                e.AssertNode(SyntaxKind.NameExpression);
+                e.AssertToken(SyntaxKind.IdentifierToken, "i");
+                e.AssertToken(SyntaxKind.CloseParenthesisToken, ")");
+                e.AssertToken(SyntaxKind.CloseBraceToken, "}");
+            }
+        }
+
+        [Fact]
+        public void Parser_Parses_CStyleForStatement_EmptyParts()
+        {
+            var syntaxTree = SyntaxTree.Parse("for (;;) { break }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<CStyleForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Null(statement.Init);
+            Assert.NotNull(statement.SemicolonToken1);
+            Assert.Null(statement.Condition);
+            Assert.NotNull(statement.SemicolonToken2);
+            Assert.Null(statement.Update);
+        }
+
+        [Fact]
+        public void Parser_Parses_CStyleForStatement_MissingParts()
+        {
+            var syntaxTree = SyntaxTree.Parse("for (; i < 10;) { i = i + 1 }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<CStyleForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Null(statement.Init);
+            Assert.NotNull(statement.SemicolonToken1);
+            Assert.NotNull(statement.Condition);
+            Assert.NotNull(statement.SemicolonToken2);
+            Assert.Null(statement.Update);
+        }
+
+        [Fact]
+        public void Parser_Parses_Class_ExtendsKeyword()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo extends Bar { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+
+            Assert.Equal("Foo", classDeclaration.Identifier.Text);
+            Assert.NotNull(classDeclaration.BaseType);
+            Assert.Equal(SyntaxKind.ExtendsKeyword, classDeclaration.BaseType!.ColonToken.Kind);
+            Assert.Equal("Bar", classDeclaration.BaseType!.Identifier.Text);
+        }
+
+        [Fact]
+        public void Parser_Parses_Interface_ExtendsKeyword()
+        {
+            var syntaxTree = SyntaxTree.Parse("interface IFoo extends IBar, IBaz { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var interfaceDeclaration = Assert.IsType<InterfaceDeclarationSyntax>(member);
+
+            Assert.Equal("IFoo", interfaceDeclaration.Identifier.Text);
+            Assert.Equal(2, interfaceDeclaration.BaseTypes.Length);
+            Assert.Equal(SyntaxKind.ExtendsKeyword, interfaceDeclaration.BaseTypes[0].ColonToken.Kind);
+            Assert.Equal("IBar", interfaceDeclaration.BaseTypes[0].Identifier.Text);
+            Assert.Equal("IBaz", interfaceDeclaration.BaseTypes[1].Identifier.Text);
+        }
+
+        [Fact]
+        public void Parser_Parses_PostfixIncrement()
+        {
+            var expression = ParseExpression("i++");
+
+            var postfix = Assert.IsType<PostfixIncrementExpressionSyntax>(expression);
+            Assert.IsType<NameExpressionSyntax>(postfix.Operand);
+            Assert.Equal(SyntaxKind.PlusPlusToken, postfix.OperatorToken.Kind);
+        }
+
+        [Fact]
+        public void Parser_Parses_RangeFor_ParenthesizedVar()
+        {
+            var syntaxTree = SyntaxTree.Parse("for (var i = 1 to 10) { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(SyntaxKind.OpenParenthesisToken, statement.OpenParenToken!.Kind);
+            Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
+            Assert.Equal("i", statement.Identifier!.Text);
+            Assert.Equal(SyntaxKind.EqualsToken, statement.EqualsToken!.Kind);
+            Assert.Equal(SyntaxKind.CloseParenthesisToken, statement.CloseParenToken!.Kind);
+        }
+
+        [Fact]
+        public void Parser_Parses_RangeFor_NoParens()
+        {
+            var syntaxTree = SyntaxTree.Parse("for var i = 1 to 10 { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Null(statement.OpenParenToken);
+            Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
+            Assert.Equal("i", statement.Identifier!.Text);
+            Assert.Null(statement.CloseParenToken);
+        }
+
+        [Fact]
+        public void Parser_Parses_RangeFor_ReuseExistingVariable()
+        {
+            var syntaxTree = SyntaxTree.Parse("for (i = 1 to 10) { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(SyntaxKind.OpenParenthesisToken, statement.OpenParenToken!.Kind);
+            Assert.Null(statement.VarKeyword);
+            Assert.Equal("i", statement.Identifier!.Text);
+            Assert.Equal(SyntaxKind.CloseParenthesisToken, statement.CloseParenToken!.Kind);
+        }
+
+        [Fact]
+        public void Parser_Parses_RangeFor_CountOnly()
+        {
+            var syntaxTree = SyntaxTree.Parse("for (1 to 10) { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Null(statement.VarKeyword);
+            Assert.Null(statement.Identifier);
+            Assert.Null(statement.EqualsToken);
+            Assert.Equal(SyntaxKind.LiteralExpression, statement.LowerBound.Kind);
+            Assert.Equal(SyntaxKind.LiteralExpression, statement.UpperBound.Kind);
+        }
+
+        [Fact]
+        public void Parser_Parses_RangeFor_CountOnly_NoParens()
+        {
+            var syntaxTree = SyntaxTree.Parse("for 1 to 5 { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Null(statement.Identifier);
+        }
+
+        [Fact]
+        public void Parser_RangeFor_LetKeyword_ReportsError()
+        {
+            var syntaxTree = SyntaxTree.Parse("for let i = 1 to 10 { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(SyntaxKind.LetKeyword, statement.VarKeyword!.Kind);
+            var diagnostic = Assert.Single(syntaxTree.Diagnostics);
+            Assert.Contains("只能用 var", diagnostic.Message);
+        }
+
+        [Fact]
+        public void Parser_CStyleFor_NotConfusedWithRangeFor()
+        {
+            var syntaxTree = SyntaxTree.Parse("for (var i = 0; i < 10; i++) { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+
+            Assert.IsType<CStyleForStatementSyntax>(globalStatement.Statement);
+        }
+
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

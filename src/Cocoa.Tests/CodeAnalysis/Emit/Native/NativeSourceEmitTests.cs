@@ -296,7 +296,7 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    for j = 0 to 4
+    for var j = 0 to 4
     {
         var even = j / 2 * 2 == j
         if !even
@@ -316,6 +316,49 @@ function Main()
 }", "src-for-do", target);
 
             Assert.Equal("0\r\n2\r\n4\r\nx\r\n1\r\n2\r\n3\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_CStyleFor_PostfixIncrement(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var sum = 0
+    for (var i = 0; i < 5; i++)
+    {
+        sum = sum + i
+    }
+    print(sum)
+    var j = 10
+    j--
+    print(j)
+    j++
+    print(j)
+    var total = 0
+    for (;;)
+    {
+        total = total + 1
+        if total == 3
+        {
+            break
+        }
+    }
+    print(total)
+    var k = 0
+    for (; k < 4; k = k + 1)
+    {
+        if k == 2
+        {
+            continue
+        }
+        print(k)
+    }
+}", "src-cstyle-for", target);
+
+            Assert.Equal("10\r\n9\r\n10\r\n3\r\n0\r\n1\r\n3\r\n", output);
         }
 
         [Theory]

@@ -155,6 +155,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.DoKeyword;
                 case "enum":
                     return SyntaxKind.EnumKeyword;
+                case "extends":
+                    return SyntaxKind.ExtendsKeyword;
                 case "public":
                     return SyntaxKind.PublicKeyword;
                 case "private":
@@ -196,10 +198,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case SyntaxKind.PlusToken:
                     return "+";
+                case SyntaxKind.PlusPlusToken:
+                    return "++";
                 case SyntaxKind.PlusEqualsToken:
                     return "+=";
                 case SyntaxKind.MinusToken:
                     return "-";
+                case SyntaxKind.MinusMinusToken:
+                    return "--";
                 case SyntaxKind.MinusEqualsToken:
                     return "-=";
                 case SyntaxKind.StarToken:
@@ -258,6 +264,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ",";
                 case SyntaxKind.DotToken:
                     return ".";
+                case SyntaxKind.SemicolonToken:
+                    return ";";
                 case SyntaxKind.OpenBracketToken:
                     return "[";
                 case SyntaxKind.CloseBracketToken:
@@ -340,6 +348,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "do";
                 case SyntaxKind.EnumKeyword:
                     return "enum";
+                case SyntaxKind.ExtendsKeyword:
+                    return "extends";
                 case SyntaxKind.PublicKeyword:
                     return "public";
                 case SyntaxKind.PrivateKeyword:

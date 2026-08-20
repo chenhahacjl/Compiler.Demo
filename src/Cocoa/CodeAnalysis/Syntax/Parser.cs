@@ -352,10 +352,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             TypeClauseSyntax? baseType = null;
 
-            // class Foo: Bar —— 基类（类型子句 `: Bar`）
-            if (Current.Kind == SyntaxKind.ColonToken)
+            // class Foo: Bar / class Foo extends Bar —— 基类
+            if (Current.Kind == SyntaxKind.ColonToken ||
+                Current.Kind == SyntaxKind.ExtendsKeyword)
             {
-                baseType = ParseTypeClause();
+                baseType = ParseBaseTypeClause();
             }
 
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
@@ -448,15 +449,17 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
 
-            // interface IBird: IAnimal, IFlyable —— 基接口列表
-            if (Current.Kind == SyntaxKind.ColonToken)
+            // interface IBird: IAnimal, IFlyable / interface IBird extends IAnimal, IFlyable —— 基接口列表
+            if (Current.Kind == SyntaxKind.ColonToken ||
+                Current.Kind == SyntaxKind.ExtendsKeyword)
             {
-                baseTypes.Add(ParseTypeClause());
+                var prefixToken = NextToken();
+                baseTypes.Add(CreateBaseTypeClause(prefixToken));
 
                 while (Current.Kind == SyntaxKind.CommaToken)
                 {
                     NextToken(); // ,
-                    baseTypes.Add(ParseTypeClause());
+                    baseTypes.Add(CreateBaseTypeClause(null));
                 }
             }
 
@@ -701,6 +704,34 @@ namespace Cocoa.CodeAnalysis.Syntax
             return type;
         }
 
+        // 基类/基接口子句：接受 `: T` 或 `extends T` 前缀
+        private TypeClauseSyntax ParseBaseTypeClause()
+        {
+            SyntaxToken prefixToken;
+            if (Current.Kind == SyntaxKind.ExtendsKeyword)
+            {
+                prefixToken = MatchToken(SyntaxKind.ExtendsKeyword);
+            }
+            else
+            {
+                prefixToken = MatchToken(SyntaxKind.ColonToken);
+            }
+
+            return CreateBaseTypeClause(prefixToken);
+        }
+
+        // 基类型名子句；prefixToken 为 null 时（逗号分隔的后续基接口）使用空前缀
+        private TypeClauseSyntax CreateBaseTypeClause(SyntaxToken? prefixToken)
+        {
+            if (prefixToken == null)
+            {
+                prefixToken = new SyntaxToken(_syntaxTree, SyntaxKind.ColonToken, Current.Position, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            }
+
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            return new TypeClauseSyntax(_syntaxTree, prefixToken, identifier);
+        }
+
         private StatementSyntax ParseIfStatement()
         {
             var keyword = MatchToken(SyntaxKind.IfKeyword);
@@ -746,14 +777,137 @@ namespace Cocoa.CodeAnalysis.Syntax
         private StatementSyntax ParseForStatement()
         {
             var keyword = MatchToken(SyntaxKind.ForKeyword);
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            var equalsToken = MatchToken(SyntaxKind.EqualsToken);
+
+            // for (init; cond; update) —— C 风格（括号内以顶层 ; 分隔）
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCStyleForHeader())
+            {
+                return ParseCStyleForStatement(keyword);
+            }
+
+            return ParseRangeForStatement(keyword);
+        }
+
+        // 扫描括号内的 token 消歧：含顶层 ; → C 风格；含 to → range 次数/变量循环。
+        private bool IsCStyleForHeader()
+        {
+            var index = _position;
+            var depth = 0;
+
+            while (index < _tokens.Length)
+            {
+                var token = _tokens[index];
+
+                if (token.Kind == SyntaxKind.OpenParenthesisToken)
+                {
+                    depth++;
+                }
+                else if (token.Kind == SyntaxKind.CloseParenthesisToken)
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        break;
+                    }
+                }
+                else if (depth >= 1 && token.Kind == SyntaxKind.SemicolonToken)
+                {
+                    return true;
+                }
+                else if (depth >= 1 && token.Kind == SyntaxKind.ToKeyword)
+                {
+                    return false;
+                }
+
+                index++;
+            }
+
+            return false;
+        }
+
+        private StatementSyntax ParseRangeForStatement(SyntaxToken keyword)
+        {
+            SyntaxToken? openParenToken = null;
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenToken = NextToken();
+            }
+
+            // 循环变量声明关键字：仅 var 合法；let/const 报错后按 var 恢复继续解析
+            SyntaxToken? varKeyword = null;
+            if (Current.Kind == SyntaxKind.VarKeyword ||
+                Current.Kind == SyntaxKind.LetKeyword ||
+                Current.Kind == SyntaxKind.ConstKeyword)
+            {
+                var keywordToken = NextToken();
+                if (keywordToken.Kind != SyntaxKind.VarKeyword)
+                {
+                    _diagnostics.ReportError(keywordToken.Location, $"for 循环变量只能用 var 声明（不能用 {keywordToken.Text}）。");
+                }
+
+                varKeyword = keywordToken;
+            }
+
+            // 循环变量标识符 + '='；省略则为纯次数循环 for (1 to 10)
+            SyntaxToken? identifier = null;
+            SyntaxToken? equalsToken = null;
+            if (varKeyword != null ||
+                Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.EqualsToken)
+            {
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+            }
+
             var lowerBound = ParseExpression();
             var toKeyword = MatchToken(SyntaxKind.ToKeyword);
             var upperBound = ParseExpression();
+
+            SyntaxToken? closeParenToken = null;
+            if (openParenToken != null)
+            {
+                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+
             var body = ParseStatement();
 
-            return new ForStatementSyntax(_syntaxTree, keyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, body);
+            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, closeParenToken, body);
+        }
+
+        private StatementSyntax ParseCStyleForStatement(SyntaxToken keyword)
+        {
+            var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+
+            StatementSyntax? init = null;
+            if (Current.Kind == SyntaxKind.LetKeyword ||
+                Current.Kind == SyntaxKind.VarKeyword ||
+                Current.Kind == SyntaxKind.ConstKeyword)
+            {
+                init = ParseVariableDeclaration();
+            }
+            else if (Current.Kind != SyntaxKind.SemicolonToken)
+            {
+                init = new ExpressionStatementSyntax(_syntaxTree, ParseExpression());
+            }
+
+            var semicolonToken1 = MatchToken(SyntaxKind.SemicolonToken);
+
+            ExpressionSyntax? condition = null;
+            if (Current.Kind != SyntaxKind.SemicolonToken)
+            {
+                condition = ParseExpression();
+            }
+
+            var semicolonToken2 = MatchToken(SyntaxKind.SemicolonToken);
+
+            ExpressionSyntax? update = null;
+            if (Current.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                update = ParseExpression();
+            }
+
+            var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var body = ParseStatement();
+
+            return new CStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
         }
 
         private StatementSyntax ParseBreakStatement()
@@ -1072,6 +1226,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     {
                         expression = new MemberAccessExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken);
                     }
+                }
+                else if (Current.Kind == SyntaxKind.PlusPlusToken ||
+                         Current.Kind == SyntaxKind.MinusMinusToken)
+                {
+                    var operatorToken = NextToken();
+                    expression = new PostfixIncrementExpressionSyntax(_syntaxTree, expression, operatorToken);
                 }
                 else
                 {
