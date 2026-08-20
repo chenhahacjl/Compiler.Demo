@@ -928,5 +928,27 @@ function Main()
 
             Assert.Equal("5\r\n12\r\n", output);
         }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_StringInterpolation(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var name = ""Cocoa""
+    var a = 10
+    var b = 20
+    print($""Hello {name}"")
+    print($""{a} + {b} = {a + b}"")
+    print($""{3.5}"")
+    print($""{true}"")
+    print($""{'A'}"")
+    print($""{{escaped}} {a}"")
+}", "src-interp", target);
+
+            Assert.Equal("Hello Cocoa\r\n10 + 20 = 30\r\n3.5\r\nTrue\r\nA\r\n{escaped} 10\r\n", output);
+        }
     }
 }

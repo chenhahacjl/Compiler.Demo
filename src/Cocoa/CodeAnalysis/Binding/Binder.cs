@@ -1977,9 +1977,44 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
                 case SyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
                 case SyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
+                case SyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
+        }
+
+        /// <summary>插值字符串 → 字符串 <c>+</c> 链（每洞转 string）；常量折叠天然不启用（转换节点无 ConstantValue）。</summary>
+        private BoundExpression BindInterpolatedStringExpression(InterpolatedStringExpressionSyntax syntax)
+        {
+            BoundExpression? result = null;
+
+            foreach (var content in syntax.Contents)
+            {
+                if (content is InterpolatedStringTextSyntax text)
+                {
+                    var value = (string)text.TextToken.Value!;
+                    result = AppendInterpolation(result, new BoundLiteralExpression(text, value), text);
+                }
+                else if (content is InterpolationSyntax interpolation)
+                {
+                    var bound = BindExpression(interpolation.Expression);
+                    var converted = BindConversion(interpolation.Expression.Location, bound, TypeSymbol.String, allowExplicit: true);
+                    result = AppendInterpolation(result, converted, interpolation);
+                }
+            }
+
+            return result ?? new BoundLiteralExpression(syntax, "");
+        }
+
+        private static BoundExpression AppendInterpolation(BoundExpression? left, BoundExpression right, SyntaxNode syntax)
+        {
+            if (left == null)
+            {
+                return right;
+            }
+
+            var op = BoundBinaryOperator.Bind(SyntaxKind.PlusToken, TypeSymbol.String, TypeSymbol.String)!;
+            return new BoundBinaryExpression(syntax, left, op, right);
         }
 
         private BoundExpression BindParenthesizedExpression(ParenthesizedExpressionSyntax syntax)

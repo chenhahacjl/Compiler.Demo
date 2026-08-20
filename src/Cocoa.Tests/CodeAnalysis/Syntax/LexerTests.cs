@@ -270,9 +270,63 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         }
 
         [Fact]
-        public void Lexer_Lexes_UnterminatedRawString()
+        public void Lexer_Lexes_InterpolatedString_Parts()
         {
-            var tokens = SyntaxTree.ParseTokens("\"\"\"abc", out var diagnostics).ToArray();
+            var tokens = SyntaxTree.ParseTokens("$\"a{b}c\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.InterpolatedStringToken, token.Kind);
+
+            var parts = Assert.IsType<InterpolatedStringPart[]>(token.Value);
+            Assert.Equal(3, parts.Length);
+            Assert.Equal(InterpolatedStringPartKind.Literal, parts[0].Kind);
+            Assert.Equal("a", parts[0].Text);
+            Assert.Equal(InterpolatedStringPartKind.Hole, parts[1].Kind);
+            Assert.Equal("b", parts[1].Text);
+            Assert.Equal(InterpolatedStringPartKind.Literal, parts[2].Kind);
+            Assert.Equal("c", parts[2].Text);
+            Assert.Empty(diagnostics);
+        }
+
+        [Theory]
+        [InlineData("$\"a{b}\"")]
+        [InlineData("$@\"a{b}\"")]
+        [InlineData("@$\"a{b}\"")]
+        public void Lexer_Lexes_InterpolatedString_Prefixes(string source)
+        {
+            var tokens = SyntaxTree.ParseTokens(source, out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.InterpolatedStringToken, token.Kind);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_InterpolatedString_EscapedBraces()
+        {
+            var tokens = SyntaxTree.ParseTokens("$\"a{{b}}c\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            var parts = Assert.IsType<InterpolatedStringPart[]>(token.Value);
+            var literal = Assert.Single(parts);
+            Assert.Equal(InterpolatedStringPartKind.Literal, literal.Kind);
+            Assert.Equal("a{b}c", literal.Text);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_InterpolatedString_NestedBracesInHole()
+        {
+            var tokens = SyntaxTree.ParseTokens("$\"x{new int[] {1,2}}y\"", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            var parts = Assert.IsType<InterpolatedStringPart[]>(token.Value);
+            Assert.Equal(3, parts.Length);
+            Assert.Equal(InterpolatedStringPartKind.Hole, parts[1].Kind);
+            Assert.Equal("new int[] {1,2}", parts[1].Text);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_UnterminatedInterpolatedString()
+        {
+            var tokens = SyntaxTree.ParseTokens("$\"abc", out var diagnostics).ToArray();
             Assert.Contains(diagnostics, d => d.Message.Contains("Unterminated"));
         }
 

@@ -596,10 +596,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     break;
                 case '$':
-                    // $"..." 或 $@"..."（verbatim 插值）
-                    if (Lookahead == '"' || (Lookahead == '@' && Peek(2) == '"'))
+                    // $"..."（普通插值）/ $@"..."（verbatim 插值）
+                    if (Lookahead == '"')
                     {
-                        ReadInterpolatedString();
+                        ReadInterpolatedString(verbatim: false);
+                    }
+                    else if (Lookahead == '@' && Peek(2) == '"')
+                    {
+                        ReadInterpolatedString(verbatim: true);
                     }
                     else
                     {
@@ -617,7 +621,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else if (Lookahead == '$' && Peek(2) == '"')
                     {
-                        ReadInterpolatedString();
+                        ReadInterpolatedString(verbatim: true);
                     }
                     else if (char.IsLetter(Peek(1)) || Peek(1) == '_')
                     {
@@ -990,34 +994,40 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>
-        /// 插值字符串 <c>$"..."</c>：切分为字面量文本段与洞（<c>{expr}</c>）。
-        /// 洞携带源文本与绝对 Span（含洞内字符串/注释中的 <c>{</c>/<c>}</c> 跳过），
-        /// 供 Parser 逐洞子解析并保证诊断定位。
+        /// 插值字符串 <c>$"..."</c> / <c>$@"..."</c> / <c>@$"..."</c>：切分为字面量文本段与洞（<c>{expr}</c>）。
+        /// 洞携带源文本与绝对 Span（含洞内字符串中的 <c>{</c>/<c>}</c> 跳过），供 Parser 逐洞子解析并保证诊断定位。
+        /// verbatim 模式（含 <c>@</c> 前缀）：字面量/洞允许换行原样保留、不处理 <c>\</c> 转义；
+        /// 普通模式：单行、字面量段处理 <c>\</c> 转义。
         /// </summary>
-        private void ReadInterpolatedString()
+        private void ReadInterpolatedString(bool verbatim)
         {
             var parts = new List<InterpolatedStringPart>();
             var literal = new StringBuilder();
-            var literalStart = _position;
 
-            // 跳过 $"
-            _position += 2;
+            // 消费前缀：$ 或 @，再配对前缀（$@ / @$），再开头引号
+            _position++; // 消费 '$' 或 '@'
+            if (Current == '@' || Current == '$')
+            {
+                _position++;
+            }
+            _position++; // 消费开头引号
+
+            var literalStart = _position;
 
             var done = false;
             while (!done)
             {
+                if (Current == '\0' || (!verbatim && (Current == '\r' || Current == '\n')))
+                {
+                    var span = new TextSpan(_start, 1);
+                    var location = new TextLocation(_text, span);
+                    _diagnostics.ReportUnterminatedString(location);
+                    done = true;
+                    break;
+                }
+
                 switch (Current)
                 {
-                    case '\0':
-                    case '\r':
-                    case '\n':
-                    {
-                        var span = new TextSpan(_start, 1);
-                        var location = new TextLocation(_text, span);
-                        _diagnostics.ReportUnterminatedString(location);
-                        done = true;
-                        break;
-                    }
                     case '"':
                     {
                         if (Lookahead == '"')
@@ -1048,12 +1058,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                                 literal.Clear();
                             }
 
-                            // 扫描洞到匹配 '}'（跳过洞内字符串中的 '}'/'{'）
+                            // 扫描洞到匹配 '}'（跳过洞内字符串中的 '}'/'{'；verbatim 放行换行）
                             var holeStart = _position + 1;
                             _position++; // 跳过 '{'
                             var depth = 1;
                             var holeText = new StringBuilder();
-                            while (depth > 0 && Current != '\0' && Current != '\r' && Current != '\n')
+                            while (depth > 0 && Current != '\0' && !(!verbatim && (Current == '\r' || Current == '\n')))
                             {
                                 if (Current == '{')
                                 {
@@ -1079,7 +1089,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                                     // 跳过洞内字符串（含 "" 转义）
                                     holeText.Append(Current);
                                     _position++;
-                                    while (Current != '\0' && Current != '\r' && Current != '\n')
+                                    while (Current != '\0' && !(!verbatim && (Current == '\r' || Current == '\n')))
                                     {
                                         if (Current == '"')
                                         {
@@ -1122,6 +1132,19 @@ namespace Cocoa.CodeAnalysis.Syntax
                         {
                             literal.Append('}');
                             _position += 2;
+                        }
+                        else
+                        {
+                            literal.Append(Current);
+                            _position++;
+                        }
+                        break;
+                    }
+                    case '\\':
+                    {
+                        if (!verbatim)
+                        {
+                            ReadEscape(literal);
                         }
                         else
                         {

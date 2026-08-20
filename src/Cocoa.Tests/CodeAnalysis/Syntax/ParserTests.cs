@@ -791,17 +791,56 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
-        public void Parser_CastWithVerbatimString_Parses()
+        public void Parser_InterpolatedString_Parses()
         {
-            var syntaxTree = SyntaxTree.Parse(@"(string)@""hi""");
+            var syntaxTree = SyntaxTree.Parse("$\"a{1}b\"");
             var root = syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var cast = Assert.IsType<CastExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
-            Assert.Equal("string", cast.TypeName.Text);
-            var literal = Assert.IsType<LiteralExpressionSyntax>(cast.Expression);
-            Assert.Equal(SyntaxKind.VerbatimStringToken, literal.LiteralToken.Kind);
+            var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
+
+            Assert.Equal(3, interpolated.Contents.Length);
+            Assert.IsType<InterpolatedStringTextSyntax>(interpolated.Contents[0]);
+            var hole = Assert.IsType<InterpolationSyntax>(interpolated.Contents[1]);
+            Assert.IsType<LiteralExpressionSyntax>(hole.Expression);
+            Assert.IsType<InterpolatedStringTextSyntax>(interpolated.Contents[2]);
             Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_InterpolatedString_EscapedBraces()
+        {
+            var syntaxTree = SyntaxTree.Parse("$\"a{{b}}c\"");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
+
+            var text = Assert.IsType<InterpolatedStringTextSyntax>(Assert.Single(interpolated.Contents));
+            Assert.Equal("a{b}c", text.TextToken.Value);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Theory]
+        [InlineData("$\"x{1}\"")]
+        [InlineData("$@\"x{1}\"")]
+        [InlineData("@$\"x{1}\"")]
+        public void Parser_InterpolatedString_CSharpPrefixes_Parse(string source)
+        {
+            var syntaxTree = SyntaxTree.Parse(source);
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
+            Assert.Equal(2, interpolated.Contents.Length);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_InterpolatedString_HoleDiagnostics_AreLocated()
+        {
+            var syntaxTree = SyntaxTree.Parse("$\"x{1 +}y\"");
+            Assert.Contains(syntaxTree.Diagnostics, d => d.Message.Contains("Unexpected token"));
         }
 
         [Fact]

@@ -1337,10 +1337,19 @@ function Main()
         }
 
         [Fact]
+        public void Evaluator_StringInterpolation()
+        {
+            AssertValue("var name = \"Cocoa\" return $\"Hello {name}\"", "Hello Cocoa");
+            AssertValue("var a = 10 return $\"{a} + {5} = {a + 5}\"", "10 + 5 = 15");
+            AssertValue("$\"{{escaped}} and {2}\"", "{escaped} and 2");
+        }
+
+        [Fact]
         public void Evaluator_Byte_Cast_Truncates_To_Unsigned_Byte()
         {
             AssertValue("(byte)300", (byte)44);
         }
+
 
         [Fact]
         public void Evaluator_Double_Literal()

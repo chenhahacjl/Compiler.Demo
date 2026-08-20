@@ -1942,6 +1942,86 @@ function Main()
         }
 
         [Fact]
+        public void StringInterpolation_Basic_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var name = \"Cocoa\"\n" +
+"    print($\"Hello {name}\")\n" +
+"    print($\"{name}!\")\n" +
+"    print($\"prefix\")\n" +
+"}", "e2e-interp-basic");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("Hello Cocoa\r\nCocoa!\r\nprefix\r\n", stdout);
+        }
+
+        [Fact]
+        public void StringInterpolation_ExpressionHoles_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var a = 10\n" +
+"    var b = 20\n" +
+"    print($\"{a} + {b} = {a + b}\")\n" +
+"    print($\"{a * b}\")\n" +
+"    print($\"{b > a}\")\n" +
+"}", "e2e-interp-expr");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10 + 20 = 30\r\n200\r\nTrue\r\n", stdout);
+        }
+
+        [Fact]
+        public void StringInterpolation_TypeConversions_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    print($\"{3.5}\")\n" +
+"    print($\"{true}\")\n" +
+"    print($\"{'A'}\")\n" +
+"    var b = 200\n" +
+"    print($\"{b}\")\n" +
+"}", "e2e-interp-conversions");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("3.5\r\nTrue\r\nA\r\n200\r\n", stdout);
+        }
+
+        [Fact]
+        public void StringInterpolation_EscapedBraces_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var x = 5\n" +
+"    print($\"{{escaped}} {x} {{}}\")\n" +
+"}", "e2e-interp-braces");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("{escaped} 5 {}\r\n", stdout);
+        }
+
+        [Fact]
+        public void StringInterpolation_VerbatimPrefixes_Multiline_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var x = 7\n" +
+"    print($@\"line1\n" +
+"line2 {x}\")\n" +
+"    print(@$\"pre {x}\")\n" +
+"}", "e2e-interp-verbatim");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("line1\nline2 7\r\npre 7\r\n", stdout);
+        }
+
+        [Fact]
         public void Class_MultipleInterfaces_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

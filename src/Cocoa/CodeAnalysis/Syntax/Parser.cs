@@ -72,6 +72,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             _diagnostics.AddRange(lexer.Diagnostics);
         }
 
+        /// <summary>用预词法 token 构造 Parser（插值洞的子解析；token 属同一 SyntaxTree，Span 绝对定位）。</summary>
+        public Parser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
+        {
+            _syntaxTree = syntaxTree;
+            _text = syntaxTree.Text;
+            _tokens = tokens;
+        }
+
         public DiagnosticBag Diagnostics => _diagnostics;
 
         private SyntaxToken Peek(int offset)
@@ -1572,6 +1580,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.RawStringToken:
                     return ParseStringLiteral();
 
+                case SyntaxKind.InterpolatedStringToken:
+                    return ParseInterpolatedStringExpression();
+
                 case SyntaxKind.CharToken:
                     return ParseCharLiteral();
 
@@ -1660,6 +1671,53 @@ namespace Cocoa.CodeAnalysis.Syntax
                 : MatchToken(SyntaxKind.StringToken);
 
             return new LiteralExpressionSyntax(_syntaxTree, stringToken);
+        }
+
+        /// <summary>插值字符串：字面量段合成 StringToken；洞逐个子词法 + 子解析（绝对 Span，诊断并入主 bag）。</summary>
+        private ExpressionSyntax ParseInterpolatedStringExpression()
+        {
+            var interpolatedToken = NextToken();
+            var parts = (InterpolatedStringPart[])interpolatedToken.Value!;
+            var contents = ImmutableArray.CreateBuilder<InterpolatedStringContentSyntax>();
+
+            foreach (var part in parts)
+            {
+                if (part.Kind == InterpolatedStringPartKind.Literal)
+                {
+                    var textToken = new SyntaxToken(_syntaxTree, SyntaxKind.StringToken, part.Start, part.Text, part.Text, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                    contents.Add(new InterpolatedStringTextSyntax(_syntaxTree, textToken));
+                }
+                else
+                {
+                    var expression = ParseHoleExpression(part.Start, part.End);
+                    contents.Add(new InterpolationSyntax(_syntaxTree, expression));
+                }
+            }
+
+            return new InterpolatedStringExpressionSyntax(_syntaxTree, interpolatedToken, contents.ToImmutable());
+        }
+
+        /// <summary>从洞的绝对 Span 子词法并解析表达式（同一 SyntaxTree → 诊断定位正确）。</summary>
+        private ExpressionSyntax ParseHoleExpression(int start, int end)
+        {
+            var lexer = new Lexer(_syntaxTree, start);
+            var tokens = new List<SyntaxToken>();
+            SyntaxToken token;
+            do
+            {
+                token = lexer.Lex();
+                tokens.Add(token);
+            } while (token.Kind != SyntaxKind.EndOfFileToken && token.Position < end);
+
+            if (tokens.Count == 0 || tokens[^1].Kind != SyntaxKind.EndOfFileToken)
+            {
+                tokens.Add(new SyntaxToken(_syntaxTree, SyntaxKind.EndOfFileToken, end, "\0", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
+            }
+
+            var holeParser = new Parser(_syntaxTree, tokens.ToImmutableArray());
+            var expression = holeParser.ParseExpression();
+            _diagnostics.AddRange(holeParser.Diagnostics);
+            return expression;
         }
 
         private ExpressionSyntax ParseCharLiteral()
