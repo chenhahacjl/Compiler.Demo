@@ -1,0 +1,18 @@
+function Main()
+{
+    // C# 式局部变量（类型前置 + 分号）
+    int a = 10;
+    int b = 32;
+    string msg = "C# style";
+
+    // Cocoa 式局部变量（类型后置 / 推断，无分号）
+    var c = 5
+    let d: int = 1
+
+    print(Add(a, b))
+    print(Square(c))
+    print(SumArray(new int[] {1, 2, 3, 4}))
+    print(Describe("Cocoa", 3))
+    print(msg)
+    print(d)
+}

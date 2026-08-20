@@ -1,0 +1,33 @@
+// C# 式参数（类型前置）+ 分号语句
+function Add(int a, int b): int
+{
+    int sum = a + b;
+    return sum;
+}
+
+// Cocoa 式参数（类型后置）+ 无分号语句
+function Square(x: int): int
+{
+    return x * x
+}
+
+// 混合：C# 式参数 + C# 式方法体（数组参数 int[]）
+function SumArray(int[] values): int
+{
+    int total = 0;
+    var i = 0;
+    while i < values.Length
+    {
+        total = total + values[i];
+        i = i + 1;
+    }
+    return total;
+}
+
+// C# 式局部变量 + var 类型推断 + 分号可选混用
+function Describe(name: string, age: int): string
+{
+    string greeting = "Hi, " + name;
+    var years = age * 1
+    return greeting + " (" + (string)years + ")";
+}

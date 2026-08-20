@@ -32,6 +32,14 @@ coc build -p samples/Tutorial/Tutorial.cosln
 coc build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 ./samples/Tutorial/HelloWorld/out/HelloWorld.exe
 
+# C# 式语法对照（Tutorial/CsStyle：C# 式参数/局部变量/分号 ↔ Cocoa 式，native + dotnet 双后端）
+coc build -p samples/Tutorial/CsStyle/CsStyle.coproj
+./samples/Tutorial/CsStyle/out/CsStyle.exe
+
+# C# 式类语法 + 字段/自动属性初始化器（samples/CSharpClass，仅 IL 后端）
+coc build -p samples/CSharpClass/CSharpClass.coproj
+./samples/CSharpClass/out/CSharpClass.exe
+
 # 指定输出格式与 .NET 目标框架
 coc build -p foo.coproj -f library
 coc build -p foo.coproj --dotnet-runtime net8.0

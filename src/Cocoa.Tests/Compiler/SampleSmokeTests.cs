@@ -8,7 +8,7 @@ namespace Cocoa.Tests.Compiler
 {
     /// <summary>
     /// Tutorial 样例冒烟测试：构建 samples/Tutorial/Tutorial.cosln（native + dotnet 双后端），
-    /// 逐块运行 10 个功能块 exe 并断言输出，触发第二次 build 验证增量 up-to-date，
+    /// 逐块运行 11 个功能块 exe 并断言输出，触发第二次 build 验证增量 up-to-date，
     /// 并覆盖 Functions 块 entry=run 的带参/无参两种入口路径。
     /// </summary>
     public class SampleSmokeTests
@@ -137,6 +137,7 @@ namespace Cocoa.Tests.Compiler
             AssertBlockOutput(run, runDir, "ByteArrays", new[] { "65", "200", "255", "44", "True", "255" }, Array.Empty<string>());
             AssertBlockOutput(run, runDir, "Doubles", new[] { "3.14", "3.75", "2.5", "5", "5.5", "False", "3", "1.5", "2.5", "4" }, Array.Empty<string>());
             AssertBlockOutput(run, runDir, "Interop", new[] { "True", "True" }, Array.Empty<string>());
+            AssertBlockOutput(run, runDir, "CsStyle", new[] { "42", "25", "10", "Hi, Cocoa (3)", "C# style", "1" }, Array.Empty<string>());
         }
 
         private static void AssertFunctionsEntry(Func<string, string[], string> run, string runDir)

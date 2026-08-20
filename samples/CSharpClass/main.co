@@ -1,0 +1,53 @@
+// C# 式类语法（IL 后端）：类成员双语法 + 字段/自动属性初始化器
+//
+// 双语法：C# 式 `Type name` 与 Cocoa 式 `name: Type` 可在同一类内混用。
+
+public class Person
+{
+    // C# 式字段
+    private string _name;
+    // Cocoa 式字段
+    private _age: int
+    // C# 式静态字段 + 初始化器（合成 .cctor）
+    public static int Count = 0;
+
+    // C# 式构造函数（名字 = 类名）+ C# 式参数
+    public Person(string name, int age)
+    {
+        _name = name;
+        _age = age;
+        Count = Count + 1;
+    }
+
+    // C# 式自动属性
+    public string Name { get; set; }
+
+    // C# 式自动属性 + 初始化器（作用于后备字段 _Age，构造链之后执行）
+    public int Age { get; set; } = 18;
+
+    // C# 式方法（返回类型前置 + 分号）
+    public int NextAge()
+    {
+        return Age + 1;
+    }
+
+    // Cocoa 式方法（function 关键字 + 类型后置）混用
+    public function Greet(): string
+    {
+        return "Hello, " + _name;
+    }
+}
+
+function Main()
+{
+    var p = new Person("Alice", 30)
+    p.Name = "Bob"
+    print(p.Name)
+    print(p.Age)
+    print(p.NextAge())
+    print(p.Greet())
+    print(Person.Count)
+
+    var q = new Person("Carol", 40)
+    print(Person.Count)
+}
