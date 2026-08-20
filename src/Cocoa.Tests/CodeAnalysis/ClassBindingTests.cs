@@ -690,6 +690,174 @@ function Main()
             Assert.Contains(diagnostics, d => d.Message.Contains("partial 只能用于类声明"));
         }
 
+        [Fact]
+        public void Class_CSharpStyleMembers_BindWithoutErrors()
+        {
+            var code = @"
+public class Person
+{
+    private string _name;
+    private _age: int
+
+    public Person(string name, age: int)
+    {
+        _name = name;
+        _age = age;
+    }
+
+    public string Name { get; set; }
+
+    public int GetAge()
+    {
+        return _age;
+    }
+}
+
+function Main()
+{
+    var p = new Person(""A"", 1)
+    print(p.Name)
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_InstanceFieldInitializer_BindsWithoutErrors()
+        {
+            var code = @"
+public class Counter
+{
+    private int _count = 5;
+
+    public function Get(): int
+    {
+        return _count;
+    }
+}
+
+function Main()
+{
+    var c = new Counter()
+    print(c.Get())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_AutoPropertyInitializer_BindsWithoutErrors()
+        {
+            var code = @"
+public class Point
+{
+    public int X { get; set; } = 10;
+
+    public function GetX(): int
+    {
+        return X;
+    }
+}
+
+function Main()
+{
+    var p = new Point()
+    print(p.GetX())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_StaticFieldInitializer_CreatesCctorSymbol()
+        {
+            var code = @"
+public class Config
+{
+    public static int Max = 100;
+}
+
+function Main()
+{
+    print(Config.Max)
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            Assert.True(classType.Methods.Any(m => m.Name == ".cctor" && m.IsStatic && m.IsConstructor));
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_NoStaticInitializer_NoCctor()
+        {
+            var code = @"
+public class Foo
+{
+    public static int Max;
+    private _x: int
+}
+
+function Main()
+{
+    var f = new Foo()
+    print(1)
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var classType = Assert.Single(compilation.GlobalScope.Classes);
+            Assert.DoesNotContain(classType.Methods, m => m.Name == ".cctor");
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_ReadonlyFieldWithInitializer_BindsWithoutErrors()
+        {
+            var code = @"
+public class Immutable
+{
+    public readonly int Id = 42;
+
+    public function Get(): int
+    {
+        return Id;
+    }
+}
+
+function Main()
+{
+    var i = new Immutable()
+    print(i.Get())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_CSharpStyleLocalVariables_BindWithoutErrors()
+        {
+            var code = @"
+public class Calculator
+{
+    public int Add(int a, int b)
+    {
+        int sum = a + b;
+        var product = a * b;
+        return sum + product;
+    }
+}
+
+function Main()
+{
+    var c = new Calculator()
+    print(c.Add(1, 2))
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
         private static readonly string[] References = new[]
         {
             typeof(object).Assembly.Location,

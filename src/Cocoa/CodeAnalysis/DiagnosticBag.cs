@@ -296,7 +296,8 @@ namespace Cocoa.CodeAnalysis
                 }
                 case SyntaxKind.VariableDeclaration:
                 {
-                    ReportUnreachableCode(((VariableDeclarationSyntax)node).Keyword.Location);
+                    var variableDeclaration = (VariableDeclarationSyntax)node;
+                    ReportUnreachableCode(variableDeclaration.Keyword?.Location ?? variableDeclaration.Location);
                     return;
                 }
                 case SyntaxKind.IfStatement:

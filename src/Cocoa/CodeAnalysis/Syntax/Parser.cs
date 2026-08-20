@@ -360,26 +360,33 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
-            var members = ParseClassMemberList();
+            var members = ParseClassMemberList(identifier.Text);
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
             return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, baseType, openBraceToken, members, closeBraceToken);
         }
 
-        private ImmutableArray<MemberSyntax> ParseClassMemberList()
+        private ImmutableArray<MemberSyntax> ParseClassMemberList(string className)
         {
             var members = ImmutableArray.CreateBuilder<MemberSyntax>();
 
             while (Current.Kind != SyntaxKind.CloseBraceToken &&
                    Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                members.Add(ParseClassMember());
+                // C# 式声明以 ';' 结尾：跳过孤立分号
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
+                members.Add(ParseClassMember(className));
             }
 
             return members.ToImmutable();
         }
 
-        private MemberSyntax ParseClassMember()
+        private MemberSyntax ParseClassMember(string className)
         {
             // 统一修饰符：public/private/stdcall/cdecl（顺序无关）
             var modifiers = ParseModifiers();
@@ -403,13 +410,173 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (Current.Kind == SyntaxKind.IdentifierToken)
             {
-                return ParseClassFieldDeclaration(modifiers);
+                // Cocoa 式字段：`name : type`
+                if (Peek(1).Kind == SyntaxKind.ColonToken)
+                {
+                    return ParseClassFieldDeclaration(modifiers);
+                }
+
+                // C# 式成员：`type name ...`
+                return ParseCSharpStyleMember(modifiers, className);
             }
 
             _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.IdentifierToken);
             var badColon = new SyntaxToken(_syntaxTree, SyntaxKind.BadToken, Current.Position, ":", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
             var badType = new SyntaxToken(_syntaxTree, SyntaxKind.BadToken, Current.Position, Current.Text, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
-            return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, Current, new TypeClauseSyntax(_syntaxTree, badColon, badType));
+            var badMember = new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, Current, new TypeClauseSyntax(_syntaxTree, badColon, badType));
+            NextToken();
+            return badMember;
+        }
+
+        /// <summary>C# 式成员：`type name ...`（字段/属性/方法/构造函数）。</summary>
+        private MemberSyntax ParseCSharpStyleMember(ImmutableArray<SyntaxToken> modifiers, string className)
+        {
+            // C# 式构造函数：`ClassName(params)`（单标识符 == 类名，后接 (）
+            if (Current.Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.OpenParenthesisToken &&
+                Current.Text == className)
+            {
+                return ParseCSharpStyleConstructor(modifiers);
+            }
+
+            var type = ParsePrefixTypeClause();
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+            switch (Current.Kind)
+            {
+                case SyntaxKind.SemicolonToken:
+                {
+                    MatchToken(SyntaxKind.SemicolonToken);
+                    return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type);
+                }
+
+                case SyntaxKind.EqualsToken:
+                {
+                    var equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                    var initializer = ParseExpression();
+                    return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type, equalsToken, initializer);
+                }
+
+                case SyntaxKind.OpenBraceToken:
+                    return ParseCSharpStyleProperty(modifiers, type, identifier);
+
+                case SyntaxKind.OpenParenthesisToken:
+                    return ParseCSharpStyleMethod(modifiers, type, identifier);
+
+                default:
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.SemicolonToken);
+                    return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type);
+            }
+        }
+
+        /// <summary>C# 式构造函数：`ClassName(params) [: base(...) | : this(...)] { ... }`。</summary>
+        private MemberSyntax ParseCSharpStyleConstructor(ImmutableArray<SyntaxToken> modifiers)
+        {
+            MatchToken(SyntaxKind.IdentifierToken); // 类名
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ParseParameterList();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            SyntaxToken? initializerKeyword = null;
+            var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
+            if (Current.Kind == SyntaxKind.ColonToken ||
+                Current.Kind == SyntaxKind.ExtendsKeyword)
+            {
+                NextToken(); // : / extends
+                if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
+                {
+                    initializerKeyword = NextToken();
+                    var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+                    initializerArguments = ParseArgumentList();
+                    MatchToken(SyntaxKind.CloseParenthesisToken);
+                }
+                else
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.BaseKeyword);
+                }
+            }
+
+            var body = ParseBlockStatement();
+
+            return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword: null, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
+        }
+
+        /// <summary>C# 式方法：`returnType name(params) { ... }`（返回类型前置）。</summary>
+        private MemberSyntax ParseCSharpStyleMethod(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
+        {
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ParseParameterList();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            BlockStatementSyntax? body = null;
+            if (Current.Kind == SyntaxKind.OpenBraceToken)
+            {
+                body = ParseBlockStatement();
+            }
+            else if (Current.Kind == SyntaxKind.SemicolonToken)
+            {
+                NextToken(); // 抽象/外部方法签名：`;` 结尾
+            }
+
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+        }
+
+        /// <summary>C# 式属性：`type name { get; set; }` / `{ get { ... } set { ... } }`，可带初始化器。</summary>
+        private MemberSyntax ParseCSharpStyleProperty(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
+        {
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            PropertyAccessorSyntax? getter = null;
+            PropertyAccessorSyntax? setter = null;
+            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                {
+                    var accessor = ParsePropertyAccessor();
+                    if (accessor.IsGet)
+                    {
+                        getter = accessor;
+                    }
+                    else
+                    {
+                        setter = accessor;
+                    }
+                }
+                else
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword);
+                    NextToken();
+                }
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? initializer = null;
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                initializer = ParseExpression();
+            }
+
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword: null, identifier, type, openBraceToken, getter, setter, closeBraceToken, equalsToken, initializer);
+        }
+
+        /// <summary>前缀类型：`int` / `int[]`（无冒号，C# 式类型前置）。</summary>
+        private TypeClauseSyntax ParsePrefixTypeClause()
+        {
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            TypeClauseSyntax type = new TypeClauseSyntax(_syntaxTree, colonToken: null, identifier);
+
+            while (Current.Kind == SyntaxKind.OpenBracketToken &&
+                   Peek(1).Kind == SyntaxKind.CloseBracketToken)
+            {
+                var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);
+                var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                type = new ArrayTypeClauseSyntax(_syntaxTree, null, type, openBracketToken, closeBracketToken);
+            }
+
+            return type;
         }
 
         private MemberSyntax ParseConstructorDeclaration(ImmutableArray<SyntaxToken> modifiers)
@@ -478,6 +645,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             while (Current.Kind != SyntaxKind.CloseBraceToken &&
                    Current.Kind != SyntaxKind.EndOfFileToken)
             {
+                // C# 式接口成员以 ';' 结尾：跳过孤立分号
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
                 var modifiers = ParseModifiers();
 
                 if (Current.Kind == SyntaxKind.CdeclKeyword ||
@@ -497,6 +671,30 @@ namespace Cocoa.CodeAnalysis.Syntax
                 {
                     members.Add(ParsePropertyDeclaration(modifiers));
                 }
+                else if (Current.Kind == SyntaxKind.IdentifierToken &&
+                         Peek(1).Kind == SyntaxKind.IdentifierToken)
+                {
+                    // C# 式接口成员：`type name (...)` 方法签名 / `type name { get; }` 属性
+                    var type = ParsePrefixTypeClause();
+                    var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
+
+                    if (Current.Kind == SyntaxKind.OpenBraceToken)
+                    {
+                        members.Add(ParseCSharpStyleProperty(modifiers, type, memberIdentifier));
+                    }
+                    else
+                    {
+                        var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+                        var parameters = ParseParameterList();
+                        var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+                        if (Current.Kind == SyntaxKind.SemicolonToken)
+                        {
+                            NextToken();
+                        }
+
+                        members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, memberIdentifier, openParenthesisToken, parameters, closeParenthesisToken, type, body: null));
+                    }
+                }
                 else
                 {
                     _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.FunctionKeyword);
@@ -512,7 +710,15 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var type = ParseTypeClause();
 
-            return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type);
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? initializer = null;
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                initializer = ParseExpression();
+            }
+
+            return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type, equalsToken, initializer);
         }
 
         private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)
@@ -554,13 +760,18 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var keyword = NextToken();
             BlockStatementSyntax? body = null;
+            SyntaxToken? semicolonToken = null;
 
             if (Current.Kind == SyntaxKind.OpenBraceToken)
             {
                 body = ParseBlockStatement();
             }
+            else if (Current.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolonToken = MatchToken(SyntaxKind.SemicolonToken);
+            }
 
-            return new PropertyAccessorSyntax(_syntaxTree, keyword, body, semicolonToken: null);
+            return new PropertyAccessorSyntax(_syntaxTree, keyword, body, semicolonToken);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()
@@ -591,10 +802,20 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private ParameterSyntax ParseParameter()
         {
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            var type = ParseTypeClause();
+            // 双语法参数：Cocoa `name: Type` | C# `Type name`
+            if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.ColonToken)
+            {
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                var type = ParseTypeClause();
 
-            return new ParameterSyntax(_syntaxTree, identifier, type);
+                return new ParameterSyntax(_syntaxTree, identifier, type);
+            }
+
+            var csType = ParsePrefixTypeClause();
+            var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
+
+            return new ParameterSyntax(_syntaxTree, csIdentifier, csType);
         }
 
         private MemberSyntax ParseGlobalStatement()
@@ -629,8 +850,32 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ReturnKeyword:
                     return ParseReturnStatement();
                 default:
+                    // C# 式局部变量：`type name [= expr]`
+                    if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
+                        Peek(1).Kind == SyntaxKind.IdentifierToken)
+                    {
+                        return ParseCSharpStyleVariableDeclaration();
+                    }
+
                     return ParseExpressionStatement();
             }
+        }
+
+        /// <summary>C# 式局部变量：`int x` / `int x = 10;`（无 var/let 关键字）。</summary>
+        private StatementSyntax ParseCSharpStyleVariableDeclaration()
+        {
+            var type = ParsePrefixTypeClause();
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? initializer = null;
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                initializer = ParseExpression();
+            }
+
+            return new VariableDeclarationSyntax(_syntaxTree, keyword: null, identifier, type, equalsToken, initializer);
         }
 
         private BlockStatementSyntax ParseBlockStatement()
@@ -642,6 +887,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             while (Current.Kind != SyntaxKind.EndOfFileToken &&
                 Current.Kind != SyntaxKind.CloseBraceToken)
             {
+                // 语句边界的分号可选：跳过孤立 ';'（C# 式方法体 `x = 1;` 等）
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
                 var startToken = Current;
                 var statement = ParseStatement();
                 statements.Add(statement);

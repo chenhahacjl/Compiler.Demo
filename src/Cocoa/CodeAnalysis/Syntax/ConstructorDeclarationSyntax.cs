@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed partial class ConstructorDeclarationSyntax : MemberSyntax
     {
-        internal ConstructorDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken constructorKeyword, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenthesisToken, SyntaxToken? initializerKeyword, SeparatedSyntaxList<ExpressionSyntax> initializerArguments, BlockStatementSyntax body)
+        internal ConstructorDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken? constructorKeyword, SyntaxToken openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenthesisToken, SyntaxToken? initializerKeyword, SeparatedSyntaxList<ExpressionSyntax> initializerArguments, BlockStatementSyntax body)
             : base(syntaxTree, modifiers)
         {
             ConstructorKeyword = constructorKeyword;
@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override SyntaxKind Kind => SyntaxKind.ConstructorDeclaration;
 
-        public SyntaxToken ConstructorKeyword { get; }
+        public SyntaxToken? ConstructorKeyword { get; }
         public SyntaxToken OpenParenthesisToken { get; }
         public SeparatedSyntaxList<ParameterSyntax> Parameters { get; }
         public SyntaxToken CloseParenthesisToken { get; }

@@ -149,6 +149,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 binder.DeclareImplicitConstructor(classType, classFunctions, primary);
+                binder.DeclareImplicitStaticConstructor(classType, classFunctions, primary);
             }
 
             // 阶段 4：接口实现完整性检查（类须实现其所有接口的全部成员）
@@ -294,7 +295,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (function.Syntax is ConstructorDeclarationSyntax ctorSyntax)
                 {
                     bodySyntax = ctorSyntax.Body;
-                    bodyLocation = ctorSyntax.ConstructorKeyword;
+                    bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
                 }
 
                 var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces);
@@ -318,24 +319,40 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 // 构造函数链：`base(...)` / `this(...)` → 函数体开头
+                ImmutableArray<BoundStatement> prefixStatements = ImmutableArray<BoundStatement>.Empty;
                 if (function.Syntax is ConstructorDeclarationSyntax chainCtor && chainCtor.InitializerKeyword != null)
                 {
                     var chain = binder.BindConstructorChain(chainCtor, function.ContainingClass!);
                     if (chain != null)
                     {
-                        body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, new[] { new BoundExpressionStatement(chainCtor, chain) }.Concat(body.Statements).ToImmutableArray());
+                        prefixStatements = ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(chainCtor, chain));
                     }
                 }
-                // 隐式默认构造：基类非 Object 时插入 base() 链调用
-                else if (function.Syntax is ClassDeclarationSyntax implicitCtor && function.ContainingClass != null &&
-                         function.ContainingClass.BaseType != null)
+                // 隐式 base()：实例构造无显式链（含隐式默认构造），且基类有 0 参构造
+                else if (function.IsConstructor && !function.IsStatic &&
+                         function.ContainingClass != null && function.ContainingClass.BaseType != null)
                 {
-                    var baseCtor = function.ContainingClass.BaseType.GetMethod(function.ContainingClass.BaseType.Name);
+                    var baseCtor = function.ContainingClass.BaseType.Methods.FirstOrDefault(m => m.IsConstructor && !m.IsStatic && m.Parameters.Length == 0);
                     if (baseCtor != null)
                     {
-                        var chain = new BoundConstructorChainExpression(implicitCtor, ConstructorInitializerKind.Base, baseCtor, ImmutableArray<BoundExpression>.Empty);
-                        body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, new[] { new BoundExpressionStatement(implicitCtor, chain) }.Concat(body.Statements).ToImmutableArray());
+                        var chain = new BoundConstructorChainExpression(function.Syntax ?? function.Declaration!, ConstructorInitializerKind.Base, baseCtor, ImmutableArray<BoundExpression>.Empty);
+                        prefixStatements = ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(function.Syntax ?? function.Declaration!, chain));
                     }
+                }
+
+                // 字段初始化器：实例字段 → 每个实例构造函数（构造链之后）；静态字段 → .cctor（body 即初始化语句）
+                if (function.IsConstructor && function.ContainingClass != null)
+                {
+                    var fieldInits = BindFieldInitializerStatements(binder, function.ContainingClass, function.IsStatic);
+                    if (fieldInits.Length > 0)
+                    {
+                        prefixStatements = prefixStatements.AddRange(fieldInits);
+                    }
+                }
+
+                if (!prefixStatements.IsEmpty)
+                {
+                    body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, prefixStatements.AddRange(body.Statements));
                 }
 
                 var loweredBody = Lowerer.Lower(function, body);
@@ -653,7 +670,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                     else
                     {
-                        _diagnostics.ReportSymbolAlreadyDeclared(constructorDeclaration.ConstructorKeyword.Location, classType.Name);
+                        var location = constructorDeclaration.ConstructorKeyword != null
+                            ? constructorDeclaration.ConstructorKeyword.Location
+                            : constructorDeclaration.OpenParenthesisToken.Location;
+                        _diagnostics.ReportSymbolAlreadyDeclared(location, classType.Name);
                     }
                 }
                 else if (member is FunctionDeclarationSyntax methodDeclaration)
@@ -686,6 +706,86 @@ namespace Cocoa.CodeAnalysis.Binding
                 classType.AddMethod(ctor);
                 classFunctions.Add(ctor);
             }
+        }
+
+        /// <summary>隐式静态构造（.cctor）：类含静态字段/静态自动属性初始化器时生成。</summary>
+        private void DeclareImplicitStaticConstructor(ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
+        {
+            if (classType.GetDeclaredMethod(".cctor") != null)
+            {
+                return;
+            }
+
+            var hasStaticInitializers = CollectFieldInitializers(classType).Any(fi => fi.Field.IsStatic);
+            if (!hasStaticInitializers)
+            {
+                return;
+            }
+
+            var cctor = new FunctionSymbol(".cctor", ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null,
+                syntax: syntax, containingClass: classType, visibility: Visibility.Private) { IsConstructor = true, IsStatic = true };
+            classType.AddMethod(cctor);
+            classFunctions.Add(cctor);
+        }
+
+        /// <summary>收集类的字段/自动属性初始化器（语法级，未绑定）。</summary>
+        private static ImmutableArray<(FieldSymbol Field, ExpressionSyntax Initializer)> CollectFieldInitializers(ClassTypeSymbol classType)
+        {
+            var result = ImmutableArray.CreateBuilder<(FieldSymbol, ExpressionSyntax)>();
+            if (classType.Declaration == null)
+            {
+                return result.ToImmutable();
+            }
+
+            foreach (var member in classType.Declaration.Members)
+            {
+                if (member is ClassFieldDeclarationSyntax fieldDecl && fieldDecl.Initializer != null)
+                {
+                    var field = classType.GetDeclaredField(fieldDecl.Identifier.Text);
+                    if (field != null)
+                    {
+                        result.Add((field, fieldDecl.Initializer));
+                    }
+                }
+                else if (member is PropertyDeclarationSyntax propDecl && propDecl.Initializer != null && propDecl.IsAuto)
+                {
+                    var backing = classType.GetDeclaredField("_" + propDecl.Identifier.Text);
+                    if (backing != null)
+                    {
+                        result.Add((backing, propDecl.Initializer));
+                    }
+                }
+            }
+
+            return result.ToImmutable();
+        }
+
+        /// <summary>绑定字段初始化器为赋值语句（静态或实例，取决于 isStatic）。</summary>
+        private static ImmutableArray<BoundStatement> BindFieldInitializerStatements(Binder binder, ClassTypeSymbol classType, bool isStatic)
+        {
+            var result = ImmutableArray.CreateBuilder<BoundStatement>();
+            foreach (var (field, initializer) in CollectFieldInitializers(classType))
+            {
+                if (field.IsStatic == isStatic)
+                {
+                    result.Add(BindFieldInitializer(binder, field, initializer));
+                }
+            }
+
+            return result.ToImmutable();
+        }
+
+        /// <summary>合成字段初始化赋值：`this.field = init`（实例）/ `Class.field = init`（静态）。</summary>
+        private static BoundStatement BindFieldInitializer(Binder binder, FieldSymbol field, ExpressionSyntax initializerSyntax)
+        {
+            var boundInit = binder.BindExpression(initializerSyntax);
+            var converted = binder.BindConversion(initializerSyntax.Location, boundInit, field.Type);
+
+            BoundExpression target = field.IsStatic
+                ? new BoundStaticTypeExpression(initializerSyntax, field.ContainingClass!)
+                : new BoundThisExpression(initializerSyntax, field.ContainingClass!);
+
+            return new BoundExpressionStatement(initializerSyntax, new BoundMemberAssignmentExpression(initializerSyntax, target, field, converted));
         }
 
         /// <summary>创建接口符号（不可实例化、成员无实现）。</summary>
@@ -1252,16 +1352,16 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)
         {
-            var isReadOnly = syntax.Keyword.Kind == SyntaxKind.LetKeyword ||
-                             syntax.Keyword.Kind == SyntaxKind.ConstKeyword;
+            var isReadOnly = syntax.Keyword?.Kind == SyntaxKind.LetKeyword ||
+                             syntax.Keyword?.Kind == SyntaxKind.ConstKeyword;
             var type = BindTypeClause(syntax.TypeClause);
             var initializer = syntax.Initializer == null ? null : BindExpression(syntax.Initializer);
             var variableType = type ?? initializer?.Type ?? TypeSymbol.Error;
 
             if (initializer == null)
             {
-                if (syntax.Keyword.Kind == SyntaxKind.LetKeyword ||
-                    syntax.Keyword.Kind == SyntaxKind.ConstKeyword)
+                if (syntax.Keyword?.Kind == SyntaxKind.LetKeyword ||
+                    syntax.Keyword?.Kind == SyntaxKind.ConstKeyword)
                 {
                     _diagnostics.ReportError(syntax.Location, $"{syntax.Keyword.Text} 变量必须提供初始值。");
                 }
@@ -2514,6 +2614,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "double": return TypeSymbol.Double;
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
+                case "void": return TypeSymbol.Void;
                 default:
                 {
                     var lookup = _scope.TryLookupSymbol(name);

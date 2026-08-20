@@ -766,7 +766,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 {
                     methodFlags = (ushort)(methodFlags | 0x0020); // Final
                 }
-                if (method.Name == ".ctor")
+                if (method.Name == ".ctor" || method.Name == ".cctor")
                 {
                     methodFlags = (ushort)(methodFlags | 0x0800 | 0x1000); // SpecialName | RTSpecialName
                 }

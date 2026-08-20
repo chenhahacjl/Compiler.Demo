@@ -1291,5 +1291,191 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("woof\r\nbark\r\n", stdout);
         }
+
+        [Fact]
+        public void CSharpStyle_Members_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Person
+{
+    private string _name;
+    private _age: int
+    public static int Count = 0;
+
+    public Person(string name, age: int)
+    {
+        _name = name;
+        _age = age;
+        Count = Count + 1;
+    }
+
+    public string Name { get; set; }
+
+    public int GetAge()
+    {
+        return _age;
+    }
+}
+
+function Main()
+{
+    var p = new Person(""Alice"", 30)
+    p.Name = ""Bob""
+    print(p.Name)
+    print(p.GetAge())
+    print(Person.Count)
+}", "e2e-cs-style-members");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("Bob\r\n30\r\n1\r\n", stdout);
+        }
+
+        [Fact]
+        public void FieldInitializer_Instance_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Counter
+{
+    private int _count = 5;
+
+    public int Get()
+    {
+        return _count;
+    }
+}
+
+function Main()
+{
+    var c = new Counter()
+    print(c.Get())
+}", "e2e-field-init-instance");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("5\r\n", stdout);
+        }
+
+        [Fact]
+        public void FieldInitializer_Static_Cctor_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Config
+{
+    public static int Max = 100;
+    public static int Base = 7;
+}
+
+function Main()
+{
+    print(Config.Max + Config.Base)
+}", "e2e-field-init-static");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("107\r\n", stdout);
+        }
+
+        [Fact]
+        public void FieldInitializer_AutoProperty_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Point
+{
+    public int X { get; set; } = 10;
+    public int Y { get; set; } = 20;
+}
+
+function Main()
+{
+    var p = new Point()
+    print(p.X + p.Y)
+    p.X = 99
+    print(p.X)
+}", "e2e-field-init-autoprop");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("30\r\n99\r\n", stdout);
+        }
+
+        [Fact]
+        public void FieldInitializer_Ordering_BaseThenFieldsThenBody_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Trace(tag: string): int
+{
+    Base.Text = Base.Text + tag + "";""
+    return 0
+}
+
+public class Base
+{
+    public static Text: string = """"
+
+    public constructor()
+    {
+        Base.Text = Base.Text + ""base;""
+    }
+}
+
+public class Derived: Base
+{
+    private int _x = Trace(""field"");
+
+    public constructor()
+    {
+        Base.Text = Base.Text + ""body;""
+    }
+}
+
+function Main()
+{
+    var d = new Derived()
+    print(Base.Text)
+}", "e2e-field-init-ordering");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("base;field;body;\r\n", stdout);
+        }
+
+        [Fact]
+        public void FieldInitializer_Static_Ordering_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Counter
+{
+    public static int Start = 5;
+    public static int End = Start + 10;
+}
+
+function Main()
+{
+    print(Counter.End)
+}", "e2e-field-init-static-ordering");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("15\r\n", stdout);
+        }
+
+        [Fact]
+        public void CSharpStyle_LocalVariables_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Calc
+{
+    public int Sum(int a, int b)
+    {
+        int sum = a + b;
+        var product = a * b;
+        return sum + product;
+    }
+}
+
+function Main()
+{
+    var c = new Calc()
+    print(c.Sum(2, 3))
+}", "e2e-cs-locals");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("11\r\n", stdout);
+        }
     }
 }

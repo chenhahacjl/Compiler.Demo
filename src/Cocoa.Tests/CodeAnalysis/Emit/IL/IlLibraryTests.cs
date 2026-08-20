@@ -383,5 +383,68 @@ public class Resource: IDisposable
             var obj = ctor.Invoke(new object[] { "file.dat" });
             Assert.Null(dispose.Invoke(obj, null)); // void 方法调用返回 null
         }
+
+        [Fact]
+        public void Library_StaticMethod_BelongsToClassTypeDef()
+        {
+            var code = @"
+public class MathHelpers
+{
+    public static function Square(x: int): int
+    {
+        return x * x
+    }
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "staticmethod_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+            var diagnostics = compilation.Emit("staticmethod_lib", References, path, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(diagnostics);
+
+            var assembly = Assembly.LoadFile(path);
+            var mathHelpers = assembly.GetType("MathHelpers");
+            Assert.NotNull(mathHelpers);
+
+            // 回归：静态方法必须归属所属类 TypeDef（修复前落在 Program TypeDef，此处返回 null）
+            var square = mathHelpers.GetMethod("Square", BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(square);
+            Assert.Equal(9, square.Invoke(null, new object[] { 3 }));
+        }
+
+        [Fact]
+        public void Library_StaticFieldInitializer_GeneratesCctor()
+        {
+            var code = @"
+public class Config
+{
+    public static int Max = 100;
+    public static string Name = ""cocoa"";
+}";
+            var syntaxTree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(syntaxTree);
+            var path = Path.Combine(Path.GetTempPath(), "cocoa-lib-test", "cctor_lib.dll");
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+            var diagnostics = compilation.Emit("cctor_lib", References, path, IlTarget.Parse("net9.0"), emitLibrary: true);
+            Assert.Empty(diagnostics);
+
+            var assembly = Assembly.LoadFile(path);
+            var config = assembly.GetType("Config");
+            Assert.NotNull(config);
+
+            // .cctor 静态构造器（首次静态访问/实例化前运行）
+            var cctor = config.GetConstructor(BindingFlags.Static | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            Assert.NotNull(cctor);
+
+            var maxField = config.GetField("Max", BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(maxField);
+            Assert.Equal(100, maxField.GetValue(null));
+
+            var nameField = config.GetField("Name", BindingFlags.Public | BindingFlags.Static);
+            Assert.NotNull(nameField);
+            Assert.Equal("cocoa", nameField.GetValue(null));
+        }
     }
 }

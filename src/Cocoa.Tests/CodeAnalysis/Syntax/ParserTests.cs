@@ -372,7 +372,7 @@ for (var i = 0; i < 10; i++)
 
             Assert.Equal("Foo", classDeclaration.Identifier.Text);
             Assert.NotNull(classDeclaration.BaseType);
-            Assert.Equal(SyntaxKind.ExtendsKeyword, classDeclaration.BaseType!.ColonToken.Kind);
+            Assert.Equal(SyntaxKind.ExtendsKeyword, classDeclaration.BaseType!.ColonToken!.Kind);
             Assert.Equal("Bar", classDeclaration.BaseType!.Identifier.Text);
         }
 
@@ -386,7 +386,7 @@ for (var i = 0; i < 10; i++)
 
             Assert.Equal("IFoo", interfaceDeclaration.Identifier.Text);
             Assert.Equal(2, interfaceDeclaration.BaseTypes.Length);
-            Assert.Equal(SyntaxKind.ExtendsKeyword, interfaceDeclaration.BaseTypes[0].ColonToken.Kind);
+            Assert.Equal(SyntaxKind.ExtendsKeyword, interfaceDeclaration.BaseTypes[0].ColonToken!.Kind);
             Assert.Equal("IBar", interfaceDeclaration.BaseTypes[0].Identifier.Text);
             Assert.Equal("IBaz", interfaceDeclaration.BaseTypes[1].Identifier.Text);
         }
@@ -536,6 +536,195 @@ for (var i = 0; i < 10; i++)
 
             Assert.Null(constructor.InitializerKeyword);
             Assert.Contains(syntaxTree.Diagnostics, d => d.Message.Contains("expected <BaseKeyword>"));
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleField_BindsToClassField()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { private int _x; }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal("_x", field.Identifier.Text);
+            Assert.Equal("int", field.Type.Identifier.Text);
+            Assert.False(field.HasInitializer);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleFieldWithInitializer_BindsToClassField()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { private int _x = 5; }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal("_x", field.Identifier.Text);
+            Assert.True(field.HasInitializer);
+            Assert.IsType<LiteralExpressionSyntax>(field.Initializer);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CocoaStyleFieldWithInitializer_BindsToClassField()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { private _x: int = 5 }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal("_x", field.Identifier.Text);
+            Assert.True(field.HasInitializer);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleMethod_BindsToFunctionDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public int Area() { return 1; } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal("Area", method.Identifier.Text);
+            Assert.Null(method.FunctionKeyword);
+            Assert.Equal("int", method.Type!.Identifier.Text);
+            Assert.NotNull(method.Body);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleConstructor_BindsToConstructorDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public Foo(int x, int y) { } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Null(constructor.ConstructorKeyword);
+            Assert.Equal(2, constructor.Parameters.Count);
+            Assert.Equal("x", constructor.Parameters[0].Identifier.Text);
+            Assert.Equal("int", constructor.Parameters[0].Type.Identifier.Text);
+            Assert.Equal("y", constructor.Parameters[1].Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleConstructor_BaseChain()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo: Bar { public Foo(int x) : base(x) { } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Equal(SyntaxKind.BaseKeyword, constructor.InitializerKeyword!.Kind);
+            Assert.Equal(1, constructor.InitializerArguments.Count);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleAutoProperty_BindsToPropertyDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public string Name { get; set; } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Null(property.PropertyKeyword);
+            Assert.Equal("Name", property.Identifier.Text);
+            Assert.Equal("string", property.Type.Identifier.Text);
+            Assert.True(property.IsAuto);
+            Assert.Equal(SyntaxKind.GetKeyword, property.Getter!.Keyword.Kind);
+            Assert.Equal(SyntaxKind.SetKeyword, property.Setter!.Keyword.Kind);
+            Assert.False(property.HasInitializer);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleAutoPropertyWithInitializer_BindsToPropertyDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public int X { get; set; } = 42; }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.True(property.IsAuto);
+            Assert.True(property.HasInitializer);
+            Assert.IsType<LiteralExpressionSyntax>(property.Initializer);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleArrayParameter_BindsToParameter()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public int Sum(int[] values) { return 0; } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var parameter = Assert.Single(method.Parameters);
+
+            Assert.Equal("values", parameter.Identifier.Text);
+            Assert.IsType<ArrayTypeClauseSyntax>(parameter.Type);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleLocalVariable_BindsToVariableDeclaration()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public void Bar() { int x = 10; print(x); } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var block = method.Body!;
+            var declaration = Assert.IsType<VariableDeclarationSyntax>(block.Statements[0]);
+
+            Assert.Null(declaration.Keyword);
+            Assert.Equal("x", declaration.Identifier.Text);
+            Assert.Equal("int", declaration.TypeClause!.Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleInterfaceMembers_BindToMembers()
+        {
+            var syntaxTree = SyntaxTree.Parse("interface IFoo { int Area(); string Name { get; } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var interfaceDeclaration = Assert.IsType<InterfaceDeclarationSyntax>(member);
+
+            Assert.Equal(2, interfaceDeclaration.Members.Length);
+            var method = Assert.IsType<FunctionDeclarationSyntax>(interfaceDeclaration.Members[0]);
+            Assert.Equal("Area", method.Identifier.Text);
+            Assert.Null(method.Body);
+            var property = Assert.IsType<PropertyDeclarationSyntax>(interfaceDeclaration.Members[1]);
+            Assert.Equal("Name", property.Identifier.Text);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_MixedCocoaAndCSharpStyleMembers_InOneClass()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { private _x: int public int Y { get; set; } public function Get(): int { return _x; } }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
+
+            Assert.Equal(3, classDeclaration.Members.Length);
+            Assert.IsType<ClassFieldDeclarationSyntax>(classDeclaration.Members[0]);
+            Assert.IsType<PropertyDeclarationSyntax>(classDeclaration.Members[1]);
+            Assert.IsType<FunctionDeclarationSyntax>(classDeclaration.Members[2]);
+            Assert.Empty(syntaxTree.Diagnostics);
         }
 
         private static ExpressionSyntax ParseExpression(string text)

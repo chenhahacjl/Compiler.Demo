@@ -1,9 +1,9 @@
 # Cocoa 完整 OOP 设计（M5）
 
-> 状态：设计中（M5）
+> 状态：已实现（M5）+ 6e-M10 扩展
 > 目标：在 M2 class 语言（字段/构造/方法/new/this/可见性）基础上，补齐完整 OOP：**继承、构造链、多态、static、readonly、显式 this.、属性**。
-> 相关文档：`docs/类库设计.md`（§4 class 语言）、`docs/语法手册.md`（§12 类与面向对象、§14 属性）
-> 最后更新：2026-08-19
+> 相关文档：`docs/类库设计.md`（§4 class 语言）、`docs/语法手册.md`（§12 类与面向对象、§14 属性、§44 C# 兼容语法）
+> 最后更新：2026-08-20
 
 ---
 
@@ -202,16 +202,48 @@ public property Age: int { get }
 - `get_Name`：实例方法返回 `T`；`set_Name`：实例方法参数 `T` 返回 void
 - 访问：`callvirt get_Name` / `callvirt set_Name`
 
+### 8.5 自动属性初始化器（6e-M10）
+
+```
+public int X { get; set; } = 42;      // C# 式
+public property Y: int { get set } = 10   // Cocoa 式
+```
+
+- 初始化器作用于后备字段 `_X`/`_Y`，在**每个实例构造的构造链之后**执行赋值
+- 只读自动属性 `public int X { get; } = 5;` 同样支持
+
 ---
 
-## 9. 对象模型与 native 后置
+## 9. 字段初始化器与 .cctor（6e-M10）
+
+```
+private int _x = 5;                    // 实例字段初始化器（C#/Cocoa 式均可）
+public static int Max = 100;           // 静态字段初始化器
+public readonly int Id = 42;           // readonly + 初始化器（构造内赋值合法）
+```
+
+- **实例字段**：初始化赋值注入每个实例构造函数（显式 + 隐式），位于 `base()`/`this()` 构造链**之后**、函数体**之前**
+- **静态字段**：编译器合成 `.cctor` 静态构造器（`FunctionSymbol{IsConstructor, IsStatic}`），按声明顺序初始化，首次静态访问/实例化前运行；无静态初始化器时不生成
+- **初始化顺序**：`base()` → 字段初始化器 → 构造函数体
+- **IL 映射**：`.cctor` 方法名 + `SpecialName|RTSpecialName`，MethodDef 归属所属类 TypeDef；静态方法/构造器的 `declaringType` 判据统一为 `ContainingClass != null`（修复静态方法归属 Program TypeDef 的元数据缺陷）
+- 显式构造无显式链时，若基类有 0 参构造则隐式注入 `base()`（保证继承下字段初始化顺序正确）
+
+---
+
+## 10. C# 兼容语法（6e-M10，见 `语法手册.md` §44）
+
+成员声明支持 **C# 式类型前置写法**与 Cocoa 式混用：字段 `private int _x;`、方法 `public int Area() {...}`、属性 `public string Name { get; set; }`、构造函数 `public Point(int x)`、参数 `int x`/`int[] arr`、局部变量 `int x = 10;`、语句分号可选、接口成员 `int Area();`。解析归一为同一批语法节点，绑定/发射共用管道。
+
+---
+
+## 11. 对象模型与 native 后置
 
 - IL 后端：CLR 引用类型 + 继承 + 虚分派，天然支持（无需自研布局）
 - native 后端：对象布局/虚表/所有权仍后置（`docs/类库设计.md` §8），class 程序在 native 后端继续编译期拒绝
 
 ---
 
-## 10. 测试验收
+## 12. 测试验收
 
 | 场景 | 验证 |
 |------|------|

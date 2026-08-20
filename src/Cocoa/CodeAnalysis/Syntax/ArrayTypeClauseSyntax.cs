@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed partial class ArrayTypeClauseSyntax : TypeClauseSyntax
     {
-        internal ArrayTypeClauseSyntax(SyntaxTree syntaxTree, SyntaxToken colonToken, TypeClauseSyntax elementType, SyntaxToken openBracketToken, SyntaxToken closeBracketToken)
+        internal ArrayTypeClauseSyntax(SyntaxTree syntaxTree, SyntaxToken? colonToken, TypeClauseSyntax elementType, SyntaxToken openBracketToken, SyntaxToken closeBracketToken)
             : base(syntaxTree, colonToken, elementType.Identifier)
         {
             ElementType = elementType;

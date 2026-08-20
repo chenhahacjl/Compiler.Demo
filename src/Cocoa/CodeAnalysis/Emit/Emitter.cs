@@ -231,7 +231,7 @@ namespace Cocoa.CodeAnalysis.Emit
             };
 
             var isInstance = function.ContainingClass != null && !function.IsStatic;
-            var name = function.IsConstructor ? ".ctor" : function.Name;
+            var name = function.IsConstructor ? (function.IsStatic ? ".cctor" : ".ctor") : function.Name;
 
             var implementsInterfaceMember = isInstance &&
                 function.ContainingClass!.GetAllInterfaces().Any(i =>
@@ -247,7 +247,7 @@ namespace Cocoa.CodeAnalysis.Emit
             };
             _methods.Add(function, method);
 
-            var declaringType = isInstance ? _classTypeDefs[function.ContainingClass!] : _typeDefinition;
+            var declaringType = function.ContainingClass != null ? _classTypeDefs[function.ContainingClass] : _typeDefinition;
             _metadata.AddMethodDef(declaringType, method);
         }
 

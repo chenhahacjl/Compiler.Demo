@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public partial class TypeClauseSyntax : SyntaxNode
     {
-        internal TypeClauseSyntax(SyntaxTree syntaxTree, SyntaxToken colonToken, SyntaxToken identifier)
+        internal TypeClauseSyntax(SyntaxTree syntaxTree, SyntaxToken? colonToken, SyntaxToken identifier)
             : base(syntaxTree)
         {
             ColonToken = colonToken;
@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override SyntaxKind Kind => SyntaxKind.TypeClause;
 
-        public SyntaxToken ColonToken { get; }
+        public SyntaxToken? ColonToken { get; }
         public SyntaxToken Identifier { get; }
     }
 }
