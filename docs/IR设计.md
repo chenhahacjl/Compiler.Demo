@@ -10,7 +10,7 @@
 - 作为绑定树（Lowerer 输出）与 IAssembler 之间的统一中间表示
 - x86/x64 双后端共用同一 IR，平台差异收敛到指令选择
 - IR 文本打印器（测试断言基础）
-- 同一 IR 序列化后即 `.cod` 库格式（阶段 6b）
+- 同一 IR 序列化后即 `.cod` 程序集格式（阶段 6b，Cocoa 内部库/系统库分发）
 
 ```
 BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后端 ──► x86 / x64 机器码
@@ -39,7 +39,7 @@ BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后
 | `Metadata` | .NET 元数据引用（TypeRef/MethodRef/FieldRef → AssemblyRef） | IL（Native 需阶段 9 CLR Hosting） |
 | `NativeImport` | `import kernel32.dll` 声明 → 导入表 IAT 槽 | Native（IL 路径经 DllImport/P-Invoke） |
 
-- `.cod` 库内部引用的外部符号，经**依赖清单**（`docs/项目格式规范.md` §4.1）传递给消费方编译器
+- `.cod` 程序集内部引用的外部符号，经**依赖清单**（`docs/项目格式规范.md` §4.1）传递给消费方编译器
 - 这是 `.cod` 与 .NET 程序集在同一次编译中混用的基础（见 `docs/互操作手册.md` §3.2）
 
 ## 3. 指令集（草案）
@@ -80,17 +80,19 @@ Emit/IR/
 ├── IrFunction.cs         // 函数（指令列表 + 参数）
 ├── IrInstruction.cs      // 指令（op + operands）
 ├── IrVirtualRegister.cs  // 虚拟寄存器分配器
-├── IrPrinter.cs          // 文本打印器（测试 + cod 输出）
+├── IrPrinter.cs          // 文本打印器（测试 + .cod 程序集输出）
 ├── BoundTreeToIr.cs      // 绑定树 → IR（阶段 2）
 └── IrToAssembler.cs      // IR → IAssembler（阶段 2）
 ```
 
-## 7. 序列化（.cod）
+## 7. 序列化（.cod 程序集）
+
+`.cod` = Cocoa 程序集（等价 .NET dll：每库一个/多个 `namespace`、无入口点、公共符号表按命名空间组织）。
 
 - 文本形态：`IrPrinter` 输出可直接再解析（round-trip）
-- 二进制形态：阶段 6b 定稿（头：魔数 COCOD + 版本 + 平台；**依赖清单**：.NET 程序集引用 + native 导入列表；符号表；代码区）
-- `.cod` 反序列化 → `IrProgram` 合并到编译单元（`docs/互操作手册.md` §3）
-- 依赖清单规则见 `docs/项目格式规范.md` §4.1
+- 二进制形态：阶段 6b 定稿（头：魔数 COCOD + 版本 + 平台要求；**依赖清单**：.NET 程序集引用 + native 导入列表 + 被引用 `.cod`（递归）；**公共符号表**：public 类型/函数/枚举/全局变量，按命名空间组织；**代码区**：公共符号 + 私有依赖闭包）
+- `.cod` 反序列化 → `IrProgram` 合并到编译单元（`docs/互操作手册.md` §3），数据段符号跨单元去重/重编号
+- 依赖清单规则见 `docs/项目格式规范.md` §4.1；无入口点校验（`output = cocoa` 禁止 `Main`）
 
 ## 8. 验收标准（阶段 3）
 

@@ -63,13 +63,13 @@ coc build -p foo.coproj --dotnet-runtime net40
 |------|------|
 | [`docs/语法手册.md`](docs/语法手册.md) | Cocoa 语言语法参考（状态标记：✅ 已实现 · 🔧 设计中 · 📋 待实现） |
 | [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`coc build` 子命令、构建选项、增量构建） |
-| [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/.NET dll/跨程序集消费/native 后置） |
+| [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/三格式分工：`.cod` Cocoa 程序集 / .NET dll 跨语言桥 / native 后置） |
 | [`docs/OOP设计.md`](docs/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型后置） |
-| [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 库格式、增量哈希 |
+| [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |
 | [`docs/实现目标.md`](docs/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs/开发计划.md`](docs/开发计划.md) | 阶段 0-9 路线图与里程碑 |
-| [`docs/输出格式.md`](docs/输出格式.md) | exe / dll / cod 三种输出格式规范 |
-| [`docs/互操作手册.md`](docs/互操作手册.md) | native DLL / .NET DLL / cod 导入与调用约定 |
+| [`docs/输出格式.md`](docs/输出格式.md) | executable / library / cocoa 三种输出格式规范 |
+| [`docs/互操作手册.md`](docs/互操作手册.md) | native DLL / .NET DLL / `.cod` 程序集导入与调用约定 |
 | [`docs/IR设计.md`](docs/IR设计.md) | IR 指令集、虚拟寄存器、后端映射（阶段 1-3 落地时细化） |
 
 ## 参考实现
