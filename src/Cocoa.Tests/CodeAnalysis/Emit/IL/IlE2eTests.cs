@@ -23,7 +23,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
             var exePath = GetOutputPath(name);
-            var diagnostics = compilation.Emit(name, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
+            // netcore：托管 exe + runtimeconfig，由 `dotnet <exe>` 运行（netfx 不写 runtimeconfig）
+            var diagnostics = compilation.Emit(name, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath, IlTarget.Parse("net9.0"));
 
             Assert.Empty(diagnostics);
             Assert.True(File.Exists(exePath));
@@ -747,6 +748,102 @@ function Main()
 
             Assert.Equal(0, exitCode);
             Assert.Equal("1\r\n2\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_ExpressionBodiedMethods_CSharpAndCocoaStyle_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Calc
+{
+    public int Add(int a, int b) => a + b;
+    public int Square(int x) => x * x;
+    public function Subtract(a: int, b: int): int => a - b;
+    public function Triple(x: int): int => x * 3;
+}
+
+function Main()
+{
+    var c = new Calc()
+    print(c.Add(3, 4))
+    print(c.Square(5))
+    print(c.Subtract(10, 4))
+    print(c.Triple(3))
+}", "e2e-expression-bodied-methods");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("7\r\n25\r\n6\r\n9\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_ExpressionBodiedProperties_CSharpAndCocoaStyle_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Rect
+{
+    public int _w = 3;
+    public int _h = 4;
+
+    public int Area => _w * _h;
+    public property Width: int => _w;
+    public int DoubleW { get { return _w * 2; } }
+}
+
+function Main()
+{
+    var r = new Rect()
+    print(r.Area)
+    print(r.Width)
+    print(r.DoubleW)
+}", "e2e-expression-bodied-properties");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("12\r\n3\r\n6\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_PrivateSetter_AccessibleWithinClass_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+public class Account
+{
+    public int Balance { get; private set; }
+
+    public function Deposit(amount: int)
+    {
+        Balance = Balance + amount
+    }
+}
+
+function Main()
+{
+    var a = new Account()
+    a.Deposit(100)
+    a.Deposit(50)
+    print(a.Balance)
+}", "e2e-private-setter");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("150\r\n", stdout);
+        }
+
+        [Fact]
+        public void Class_PrivateSetter_NotAccessibleOutside_ReportsDiagnostic()
+        {
+            var messages = GetEmitDiagnostics(@"
+public class Account
+{
+    public int Balance { get; private set; }
+}
+
+function Main()
+{
+    var a = new Account()
+    a.Balance = 100
+}", "Main");
+
+            Assert.NotEmpty(messages);
+            Assert.Contains(messages, m => m.Contains("不能"));
         }
 
         [Fact]

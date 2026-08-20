@@ -265,7 +265,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     if (depth == 0)
                     {
                         var next = Peek(offset + 1);
-                        return next.Kind == SyntaxKind.OpenBraceToken || next.Kind == SyntaxKind.ColonToken;
+                        return next.Kind == SyntaxKind.OpenBraceToken || next.Kind == SyntaxKind.ColonToken || next.Kind == SyntaxKind.FatArrowToken;
                     }
                 }
             }
@@ -280,7 +280,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return ParseCSharpStyleMethod(modifiers, type, identifier);
         }
 
-        /// <summary>Cocoa 式无关键字顶层函数：`name(params) [ : type ] { ... }`（归一 FunctionDeclarationSyntax）。</summary>
+        /// <summary>Cocoa 式无关键字顶层函数：`name(params) [ : type ] { ... }` / `name(params) [ : type ] => expr`（归一 FunctionDeclarationSyntax）。</summary>
         private MemberSyntax ParseNoKeywordTopLevelFunction(ImmutableArray<SyntaxToken> modifiers)
         {
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
@@ -288,7 +288,23 @@ namespace Cocoa.CodeAnalysis.Syntax
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             var type = ParseOptionalTypeClause();
-            var body = ParseBlockStatement();
+
+            BlockStatementSyntax? body;
+            if (Current.Kind == SyntaxKind.FatArrowToken)
+            {
+                var arrow = NextToken();
+                var expression = ParseExpression();
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                }
+
+                body = SynthesizeExpressionBodyBlock(expression, arrow);
+            }
+            else
+            {
+                body = ParseBlockStatement();
+            }
 
             return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
@@ -296,24 +312,35 @@ namespace Cocoa.CodeAnalysis.Syntax
         private ImmutableArray<SyntaxToken> ParseModifiers()
         {
             var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
-            while (Current.Kind == SyntaxKind.PublicKeyword ||
-                   Current.Kind == SyntaxKind.PrivateKeyword ||
-                   Current.Kind == SyntaxKind.InternalKeyword ||
-                   Current.Kind == SyntaxKind.ProtectedKeyword ||
-                   Current.Kind == SyntaxKind.CdeclKeyword ||
-                   Current.Kind == SyntaxKind.StdcallKeyword ||
-                   Current.Kind == SyntaxKind.AbstractKeyword ||
-                   Current.Kind == SyntaxKind.SealedKeyword ||
-                   Current.Kind == SyntaxKind.StaticKeyword ||
-                   Current.Kind == SyntaxKind.VirtualKeyword ||
-                   Current.Kind == SyntaxKind.OverrideKeyword ||
-                   Current.Kind == SyntaxKind.ReadonlyKeyword ||
-                   Current.Kind == SyntaxKind.PartialKeyword)
+            while (IsModifier(Current.Kind))
             {
                 modifiers.Add(NextToken());
             }
 
             return modifiers.ToImmutable();
+        }
+
+        private static bool IsModifier(SyntaxKind kind)
+        {
+            switch (kind)
+            {
+                case SyntaxKind.PublicKeyword:
+                case SyntaxKind.PrivateKeyword:
+                case SyntaxKind.InternalKeyword:
+                case SyntaxKind.ProtectedKeyword:
+                case SyntaxKind.CdeclKeyword:
+                case SyntaxKind.StdcallKeyword:
+                case SyntaxKind.AbstractKeyword:
+                case SyntaxKind.SealedKeyword:
+                case SyntaxKind.StaticKeyword:
+                case SyntaxKind.VirtualKeyword:
+                case SyntaxKind.OverrideKeyword:
+                case SyntaxKind.ReadonlyKeyword:
+                case SyntaxKind.PartialKeyword:
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private MemberSyntax ParseEnumDeclaration(ImmutableArray<SyntaxToken> modifiers)
@@ -436,12 +463,27 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParseOptionalTypeClause();
             BlockStatementSyntax? body = null;
 
-            // extern（stdcall/cdecl）与 abstract 方法无方法体
-            var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
-            var isAbstract = modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
-            if ((!isExtern && !isAbstract) || Current.Kind == SyntaxKind.OpenBraceToken)
+            // 表达式体函数：`function Foo(): int => expr`（合成 `{ return expr; }`）
+            if (Current.Kind == SyntaxKind.FatArrowToken)
             {
-                body = ParseBlockStatement();
+                var arrow = NextToken();
+                var expression = ParseExpression();
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                }
+
+                body = SynthesizeExpressionBodyBlock(expression, arrow);
+            }
+            // extern（stdcall/cdecl）与 abstract 方法无方法体
+            else
+            {
+                var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+                var isAbstract = modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
+                if ((!isExtern && !isAbstract) || Current.Kind == SyntaxKind.OpenBraceToken)
+                {
+                    body = ParseBlockStatement();
+                }
             }
 
             return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
@@ -566,6 +608,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
 
                 case SyntaxKind.OpenBraceToken:
+                case SyntaxKind.FatArrowToken:
                     return ParseCSharpStyleProperty(modifiers, type, identifier);
 
                 case SyntaxKind.OpenParenthesisToken:
@@ -609,7 +652,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword: null, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
         }
 
-        /// <summary>C# 式方法：`returnType name(params) { ... }`（返回类型前置）。</summary>
+        /// <summary>C# 式方法：`returnType name(params) { ... }` / `returnType name(params) => expr`（返回类型前置）。</summary>
         private MemberSyntax ParseCSharpStyleMethod(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
         {
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
@@ -625,20 +668,44 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 NextToken(); // 抽象/外部方法签名：`;` 结尾
             }
+            else if (Current.Kind == SyntaxKind.FatArrowToken)
+            {
+                var arrow = NextToken();
+                var expression = ParseExpression();
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                }
+
+                body = SynthesizeExpressionBodyBlock(expression, arrow);
+            }
 
             return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
 
-        /// <summary>C# 式属性：`type name { get; set; }` / `{ get { ... } set { ... } }`，可带初始化器。</summary>
+        /// <summary>C# 式属性：`type name { get; set; }` / `{ get { ... } set { ... } }` / `type name => expr`，可带初始化器。</summary>
         private MemberSyntax ParseCSharpStyleProperty(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
         {
+            // 表达式体属性：`type name => expr`（合成 get 访问器）
+            if (Current.Kind == SyntaxKind.FatArrowToken)
+            {
+                var arrow = NextToken();
+                var expression = ParseExpression();
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                }
+
+                return SynthesizeExpressionBodyProperty(modifiers, propertyKeyword: null, identifier, type, arrow, expression);
+            }
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
 
             PropertyAccessorSyntax? getter = null;
             PropertyAccessorSyntax? setter = null;
             while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
                 {
                     var accessor = ParsePropertyAccessor();
                     if (accessor.IsGet)
@@ -834,13 +901,27 @@ namespace Cocoa.CodeAnalysis.Syntax
             var propertyKeyword = MatchToken(SyntaxKind.PropertyKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var type = ParseTypeClause();
+
+            // 表达式体属性：`property X: int => expr`（合成 get 访问器）
+            if (Current.Kind == SyntaxKind.FatArrowToken)
+            {
+                var arrow = NextToken();
+                var expression = ParseExpression();
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                }
+
+                return SynthesizeExpressionBodyProperty(modifiers, propertyKeyword, identifier, type, arrow, expression);
+            }
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
 
             PropertyAccessorSyntax? getter = null;
             PropertyAccessorSyntax? setter = null;
             while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
                 {
                     var accessor = ParsePropertyAccessor();
                     if (accessor.IsGet)
@@ -866,7 +947,19 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private PropertyAccessorSyntax ParsePropertyAccessor()
         {
-            var keyword = NextToken();
+            var modifiers = ParseModifiers();
+
+            SyntaxToken keyword;
+            if (Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+            {
+                keyword = NextToken();
+            }
+            else
+            {
+                _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword);
+                keyword = new SyntaxToken(_syntaxTree, SyntaxKind.BadToken, Current.Position, Current.Text, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            }
+
             BlockStatementSyntax? body = null;
             SyntaxToken? semicolonToken = null;
 
@@ -879,7 +972,29 @@ namespace Cocoa.CodeAnalysis.Syntax
                 semicolonToken = MatchToken(SyntaxKind.SemicolonToken);
             }
 
-            return new PropertyAccessorSyntax(_syntaxTree, keyword, body, semicolonToken);
+            return new PropertyAccessorSyntax(_syntaxTree, modifiers, keyword, body, semicolonToken);
+        }
+
+        /// <summary>表达式体合成：`expr` → `{ return expr; }` 块（synthetic token 定位到 `=>` 处，表达式节点保留真实 Span）。</summary>
+        private BlockStatementSyntax SynthesizeExpressionBodyBlock(ExpressionSyntax expression, SyntaxToken arrow)
+        {
+            var openBrace = new SyntaxToken(_syntaxTree, SyntaxKind.OpenBraceToken, arrow.Position, "{", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var returnKeyword = new SyntaxToken(_syntaxTree, SyntaxKind.ReturnKeyword, arrow.Position, "return", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var closeBrace = new SyntaxToken(_syntaxTree, SyntaxKind.CloseBraceToken, arrow.Position, "}", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+
+            var returnStatement = new ReturnStatementSyntax(_syntaxTree, returnKeyword, expression);
+            return new BlockStatementSyntax(_syntaxTree, openBrace, ImmutableArray.Create<StatementSyntax>(returnStatement), closeBrace);
+        }
+
+        /// <summary>表达式体属性合成：`expr` → `get { return expr; }` 访问器（只读）。</summary>
+        private PropertyDeclarationSyntax SynthesizeExpressionBodyProperty(ImmutableArray<SyntaxToken> modifiers, SyntaxToken? propertyKeyword, SyntaxToken identifier, TypeClauseSyntax type, SyntaxToken arrow, ExpressionSyntax expression)
+        {
+            var openBrace = new SyntaxToken(_syntaxTree, SyntaxKind.OpenBraceToken, arrow.Position, "{", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var closeBrace = new SyntaxToken(_syntaxTree, SyntaxKind.CloseBraceToken, arrow.Position, "}", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var getKeyword = new SyntaxToken(_syntaxTree, SyntaxKind.GetKeyword, arrow.Position, "get", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var getter = new PropertyAccessorSyntax(_syntaxTree, ImmutableArray<SyntaxToken>.Empty, getKeyword, SynthesizeExpressionBodyBlock(expression, arrow), semicolonToken: null);
+
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBrace, getter, setter: null, closeBrace);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()

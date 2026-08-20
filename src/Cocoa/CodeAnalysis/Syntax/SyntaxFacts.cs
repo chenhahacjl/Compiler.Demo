@@ -237,6 +237,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "!";
                 case SyntaxKind.EqualsToken:
                     return "=";
+                case SyntaxKind.FatArrowToken:
+                    return "=>";
                 case SyntaxKind.TildeToken:
                     return "~";
                 case SyntaxKind.LessToken:

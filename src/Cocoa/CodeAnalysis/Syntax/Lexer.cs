@@ -472,7 +472,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '=':
                 {
                     _position++;
-                    if (Current != '=')
+                    if (Current == '>')
+                    {
+                        _position++;
+                        _kind = SyntaxKind.FatArrowToken;
+                    }
+                    else if (Current != '=')
                     {
                         _kind = SyntaxKind.EqualsToken;
                     }

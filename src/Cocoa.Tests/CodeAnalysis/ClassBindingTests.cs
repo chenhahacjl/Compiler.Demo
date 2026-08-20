@@ -858,6 +858,105 @@ function Main()
             Assert.Empty(diagnostics);
         }
 
+        [Fact]
+        public void Class_AccessorModifierMoreRestrictiveThanProperty_BindsWithoutErrors()
+        {
+            var code = @"
+public class Account
+{
+    public int Balance { get; private set; }
+
+    public function Deposit(amount: int)
+    {
+        Balance = Balance + amount
+    }
+
+    public function Get(): int
+    {
+        return Balance
+    }
+}
+
+function Main()
+{
+    var a = new Account()
+    a.Deposit(100)
+    print(a.Get())
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Class_AccessorVisibility_EqualToProperty_ReportsError()
+        {
+            // 严格对齐 C#（CS0273）：访问器可见性相等也报错
+            var code = @"
+public class Foo
+{
+    private int X { get; private set; }
+}
+
+function Main()
+{
+}";
+            var diagnostics = GetDiagnostics(code);
+            var error = Assert.Single(diagnostics.Where(d => d.IsError));
+            Assert.Contains("必须比属性更受限", error.Message);
+        }
+
+        [Fact]
+        public void Class_AccessorVisibility_MorePermissiveThanProperty_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    private int X { get; public set; }
+}
+
+function Main()
+{
+}";
+            var diagnostics = GetDiagnostics(code);
+            var error = Assert.Single(diagnostics.Where(d => d.IsError));
+            Assert.Contains("必须比属性更受限", error.Message);
+        }
+
+        [Fact]
+        public void Class_ProtectedProperty_InternalAccessor_ReportsError()
+        {
+            // internal 不严格比 protected 更受限（C# 亦报 CS0273）
+            var code = @"
+public class Foo
+{
+    protected int X { internal get; }
+}
+
+function Main()
+{
+}";
+            var diagnostics = GetDiagnostics(code);
+            var error = Assert.Single(diagnostics.Where(d => d.IsError));
+            Assert.Contains("必须比属性更受限", error.Message);
+        }
+
+        [Fact]
+        public void Class_AccessorModifierOnBothAccessors_ReportsError()
+        {
+            var code = @"
+public class Foo
+{
+    public int X { private get; private set; }
+}
+
+function Main()
+{
+}";
+            var diagnostics = GetDiagnostics(code);
+            var error = Assert.Single(diagnostics.Where(d => d.IsError));
+            Assert.Contains("不能同时带可见性修饰符", error.Message);
+        }
+
         private static readonly string[] References = new[]
         {
             typeof(object).Assembly.Location,

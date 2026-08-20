@@ -679,6 +679,95 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
+        public void Parser_CSharpStyleExpressionBodiedMethod_SynthesizesReturnBlock()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public int Area() => _x * _y; }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            var block = method.Body!;
+            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(block.Statements));
+            Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CocoaStyleExpressionBodiedFunction_SynthesizesReturnBlock()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public function Area(): int => _x * _y; }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            var block = method.Body!;
+            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(block.Statements));
+            Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleExpressionBodiedProperty_SynthesizesGetter()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public int X => _x; }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.NotNull(property.Getter);
+            Assert.Null(property.Setter);
+            Assert.False(property.IsAuto);
+            var body = property.Getter!.Body!;
+            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(body.Statements));
+            Assert.IsType<NameExpressionSyntax>(statement.Expression);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CocoaStyleExpressionBodiedProperty_SynthesizesGetter()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public property X: int => _x; }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.NotNull(property.Getter);
+            Assert.Null(property.Setter);
+            Assert.True(property.PropertyKeyword != null);
+            var body = property.Getter!.Body!;
+            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(body.Statements));
+            Assert.IsType<NameExpressionSyntax>(statement.Expression);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_CSharpStyleAccessorModifier_BindsToPropertyAccessor()
+        {
+            var syntaxTree = SyntaxTree.Parse("class Foo { public int X { get; private set; } }");
+            var root = syntaxTree.Root;
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+
+            Assert.Empty(property.Getter!.Modifiers);
+            var setterModifier = Assert.Single(property.Setter!.Modifiers);
+            Assert.Equal(SyntaxKind.PrivateKeyword, setterModifier.Kind);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_ExpressionBodiedTopLevelFunction_SynthesizesReturnBlock()
+        {
+            var syntaxTree = SyntaxTree.Parse("public static int Add(int a, int b) => a + b;");
+            var root = syntaxTree.Root;
+            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(root.Members));
+
+            var block = method.Body!;
+            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(block.Statements));
+            Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
         public void Parser_CSharpStyleLocalVariable_BindsToVariableDeclaration()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { public void Bar() { int x = 10; print(x); } }");

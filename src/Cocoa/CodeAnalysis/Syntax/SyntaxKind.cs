@@ -64,6 +64,7 @@ ColonToken,               // :
         PlusPlusToken,            // ++
         MinusMinusToken,          // --
         QuestionToken,            // ?
+        FatArrowToken,            // =>
         IdentifierToken,         // 标识符
 
         // Keywords

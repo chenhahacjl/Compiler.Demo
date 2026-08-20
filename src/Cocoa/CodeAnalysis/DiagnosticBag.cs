@@ -395,6 +395,20 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>CS0273 等价：访问器可见性修饰符必须严格比属性更受限（相等亦报错，严格对齐 C#）。</summary>
+        public void ReportAccessorVisibilityNotMoreRestrictive(TextLocation location, string propertyName)
+        {
+            var message = $"访问器 '{propertyName}' 的可见性修饰符必须比属性更受限。";
+            ReportError(location, message);
+        }
+
+        /// <summary>属性 get/set 两个访问器不能同时带可见性修饰符（C# 规则）。</summary>
+        public void ReportAccessorModifierOnBothAccessors(TextLocation location, string propertyName)
+        {
+            var message = $"属性 '{propertyName}' 的 get/set 两个访问器不能同时带可见性修饰符。";
+            ReportError(location, message);
+        }
+
         public void ReportCircularInheritance(TextLocation location, string baseName)
         {
             var message = $"循环继承：'{baseName}' 形成继承环。";

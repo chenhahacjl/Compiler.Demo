@@ -558,6 +558,47 @@ namespace Cocoa.CodeAnalysis.Binding
             return defaultVisibility;
         }
 
+        private static bool IsVisibilityModifier(SyntaxKind kind)
+        {
+            return kind == SyntaxKind.PublicKeyword ||
+                   kind == SyntaxKind.InternalKeyword ||
+                   kind == SyntaxKind.ProtectedKeyword ||
+                   kind == SyntaxKind.PrivateKeyword;
+        }
+
+        private static bool HasVisibilityModifier(ImmutableArray<SyntaxToken> modifiers)
+        {
+            return modifiers.Any(m => IsVisibilityModifier(m.Kind));
+        }
+
+        /// <summary>
+        /// 访问器可见性校验（严格对齐 C#）：① 访问器带可见性修饰符时必须严格更受限（CS0273，相等也报错）；
+        /// ② get/set 至多一个可带可见性修饰符。可见性序：Public(0) &lt; Internal(1) &lt; Protected(2) &lt; Private(3)，数值越大越受限。
+        /// </summary>
+        private void ValidateAccessorVisibility(PropertyDeclarationSyntax syntax, Visibility propertyVisibility)
+        {
+            var hasGetModifier = syntax.Getter != null && HasVisibilityModifier(syntax.Getter.Modifiers);
+            var hasSetModifier = syntax.Setter != null && HasVisibilityModifier(syntax.Setter.Modifiers);
+
+            if (hasGetModifier && hasSetModifier)
+            {
+                var location = (syntax.Setter?.Keyword ?? syntax.Getter?.Keyword).Location;
+                _diagnostics.ReportAccessorModifierOnBothAccessors(location, syntax.Identifier.Text);
+            }
+
+            if (hasGetModifier && syntax.Getter != null &&
+                GetVisibility(syntax.Getter.Modifiers, propertyVisibility) <= propertyVisibility)
+            {
+                _diagnostics.ReportAccessorVisibilityNotMoreRestrictive(syntax.Getter.Keyword.Location, syntax.Identifier.Text);
+            }
+
+            if (hasSetModifier && syntax.Setter != null &&
+                GetVisibility(syntax.Setter.Modifiers, propertyVisibility) <= propertyVisibility)
+            {
+                _diagnostics.ReportAccessorVisibilityNotMoreRestrictive(syntax.Setter.Keyword.Location, syntax.Identifier.Text);
+            }
+        }
+
         /// <summary>成员可见性判定（private 仅含类；protected 含类及派生类；internal 同程序集恒可访问）。</summary>
         private bool IsAccessibleMember(Visibility visibility, ClassTypeSymbol containingClass)
         {
@@ -933,6 +974,11 @@ namespace Cocoa.CodeAnalysis.Binding
             var propertyType = BindTypeClause(syntax.Type);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
 
+            // 访问器可见性：独立计算 + 严格 C# 校验（CS0273 / 至多一个访问器带修饰符）
+            ValidateAccessorVisibility(syntax, visibility);
+            var getterVisibility = syntax.Getter != null ? GetVisibility(syntax.Getter.Modifiers, visibility) : visibility;
+            var setterVisibility = syntax.Setter != null ? GetVisibility(syntax.Setter.Modifiers, visibility) : visibility;
+
             if (interfaceType.GetProperty(syntax.Identifier.Text) != null)
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
@@ -943,7 +989,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (syntax.Getter != null)
             {
                 getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
-                    syntax: syntax.Getter, containingClass: interfaceType, visibility: visibility)
+                    syntax: syntax.Getter, containingClass: interfaceType, visibility: getterVisibility)
                 {
                     IsAbstract = true,
                     IsVirtual = true,
@@ -957,7 +1003,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 var valueParameter = new ParameterSymbol("value", propertyType, 0);
                 setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
-                    syntax: syntax.Setter, containingClass: interfaceType, visibility: visibility)
+                    syntax: syntax.Setter, containingClass: interfaceType, visibility: setterVisibility)
                 {
                     IsAbstract = true,
                     IsVirtual = true,
@@ -1078,6 +1124,11 @@ namespace Cocoa.CodeAnalysis.Binding
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var isAuto = syntax.IsAuto;
 
+            // 访问器可见性：独立计算 + 严格 C# 校验（CS0273 / 至多一个访问器带修饰符）
+            ValidateAccessorVisibility(syntax, visibility);
+            var getterVisibility = syntax.Getter != null ? GetVisibility(syntax.Getter.Modifiers, visibility) : visibility;
+            var setterVisibility = syntax.Setter != null ? GetVisibility(syntax.Setter.Modifiers, visibility) : visibility;
+
             // 后备字段（自动属性）
             FieldSymbol? backingField = null;
             if (isAuto)
@@ -1095,7 +1146,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (syntax.Getter != null)
             {
                 getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
-                    syntax: syntax.Getter, containingClass: classType, visibility: visibility) { IsStatic = isStatic };
+                    syntax: syntax.Getter, containingClass: classType, visibility: getterVisibility) { IsStatic = isStatic };
                 classType.AddMethod(getter);
                 classFunctions.Add(getter);
             }
@@ -1106,7 +1157,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 var valueParameter = new ParameterSymbol("value", propertyType, 0);
                 setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
-                    syntax: syntax.Setter, containingClass: classType, visibility: visibility) { IsStatic = isStatic };
+                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic };
                 classType.AddMethod(setter);
                 classFunctions.Add(setter);
             }

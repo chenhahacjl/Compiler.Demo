@@ -97,6 +97,16 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Equal(t2Text, tokens[1].Text);
         }
 
+        [Fact]
+        public void Lexer_Lexes_FatArrow()
+        {
+            var tokens = SyntaxTree.ParseTokens("=>").ToArray();
+
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.FatArrowToken, token.Kind);
+            Assert.Equal("=>", token.Text);
+        }
+
         [Theory]
         [InlineData("foo")]
         [InlineData("foo42")]
@@ -454,6 +464,39 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.GreaterOrEqualsToken ||
                 t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.ShiftRightToken ||
                 t1Kind == SyntaxKind.GreaterToken && t2Kind == SyntaxKind.ShiftRightEqualsToken)
+            {
+                return true;
+            }
+
+            // `=>`（FatArrowToken）与前置运算符粘连须分隔：
+            // ① `=` + `>` / `>=` / `>>` / `>>=` / `=>`（`=` 与后置 `>` 族在边界合成 `=>`）
+            // ② 单字符运算符 + `=>`（`*`+`=` 合成 `*=` 等）
+            // ③ `<<`/`>>` + `=>`（`<<`+`=` 合成 `<<=` 等）
+            if (t1Kind == SyntaxKind.EqualsToken &&
+                (t2Kind == SyntaxKind.GreaterToken ||
+                 t2Kind == SyntaxKind.GreaterOrEqualsToken ||
+                 t2Kind == SyntaxKind.ShiftRightToken ||
+                 t2Kind == SyntaxKind.ShiftRightEqualsToken ||
+                 t2Kind == SyntaxKind.FatArrowToken))
+            {
+                return true;
+            }
+
+            if (t2Kind == SyntaxKind.FatArrowToken &&
+                (t1Kind == SyntaxKind.PlusToken ||
+                 t1Kind == SyntaxKind.MinusToken ||
+                 t1Kind == SyntaxKind.StarToken ||
+                 t1Kind == SyntaxKind.SlashToken ||
+                 t1Kind == SyntaxKind.PercentToken ||
+                 t1Kind == SyntaxKind.AmpersandToken ||
+                 t1Kind == SyntaxKind.PipeToken ||
+                 t1Kind == SyntaxKind.HatToken ||
+                 t1Kind == SyntaxKind.LessToken ||
+                 t1Kind == SyntaxKind.GreaterToken ||
+                 t1Kind == SyntaxKind.BangToken ||
+                 t1Kind == SyntaxKind.ShiftLeftToken ||
+                 t1Kind == SyntaxKind.ShiftRightToken ||
+                 t1Kind == SyntaxKind.EqualsToken))
             {
                 return true;
             }

@@ -910,5 +910,23 @@ function Main()
 
             Assert.Equal("10\r\nhi\r\n", output);
         }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_ExpressionBodiedTopLevelFunctions(string target)
+        {
+            var output = CompileAndRun(@"
+public static int Add(int a, int b) => a + b;
+public function Triple(x: int): int => x * 3;
+
+function Main()
+{
+    print(Add(2, 3))
+    print(Triple(4))
+}", "src-expression-body-top-level", target);
+
+            Assert.Equal("5\r\n12\r\n", output);
+        }
     }
 }
