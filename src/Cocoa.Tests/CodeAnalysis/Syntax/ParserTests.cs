@@ -843,6 +843,24 @@ for (var i = 0; i < 10; i++)
             Assert.Contains(syntaxTree.Diagnostics, d => d.Message.Contains("Unexpected token"));
         }
 
+        [Theory]
+        [InlineData("$\"{1.5:F2}\"", "F2")]
+        [InlineData("$\"{1.0:E}\"", "E")]
+        [InlineData("$\"{1e22:G}\"", "G")]
+        [InlineData("$\"{255:D}\"", "D")]
+        [InlineData("$\"{42,5:X2}\"", "X2")]
+        public void Parser_InterpolatedString_FormatSpecifier_ExcludesClosingBrace(string source, string expectedFormat)
+        {
+            var syntaxTree = SyntaxTree.Parse(source);
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
+            var hole = Assert.IsType<InterpolationSyntax>(Assert.Single(interpolated.Contents));
+            Assert.Equal(expectedFormat, hole.FormatToken!.Value);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
         [Fact]
         public void Parser_CSharpStyleLocalVariable_BindsToVariableDeclaration()
         {

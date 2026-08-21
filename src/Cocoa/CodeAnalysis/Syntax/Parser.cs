@@ -1761,11 +1761,17 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new LiteralExpressionSyntax(_syntaxTree, numberToken, value);
         }
 
-        /// <summary>格式说明符：<c>:</c> 之后到洞尾的原始文本（C# 式无引号，如 <c>F2</c>/<c>g</c>/<c>0.00</c>）。</summary>
+        /// <summary>格式说明符：<c>:</c> 之后到洞尾（不含闭合 <c>}</c>）的原始文本（C# 式无引号，如 <c>F2</c>/<c>g</c>/<c>0.00</c>）。</summary>
         private SyntaxToken ParseFormatSpecifier(Parser holeParser, int end)
         {
             var formatStart = holeParser.Current.Position;
-            var formatText = formatStart < end ? _text.ToString(formatStart, end - formatStart) : "";
+            var length = end - formatStart;
+            if (length > 0 && _text[end - 1] == '}')
+            {
+                length--;
+            }
+
+            var formatText = length > 0 ? _text.ToString(formatStart, length) : "";
             formatText = formatText.Trim();
             return new SyntaxToken(_syntaxTree, SyntaxKind.StringToken, formatStart, formatText, formatText, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
         }

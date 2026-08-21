@@ -2022,6 +2022,42 @@ function Main()
         }
 
         [Fact]
+        public void StringInterpolation_Double_E_Notation_And_FormatDefaults_OnDotnetHost()
+        {
+            // e-notation 字面量 + E/G 无显式精度默认值（对齐 native 运行时 StringFormat/FormatSci）。
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    print($\"{1e22:E2}\")\n" +
+"    print($\"{1.5e-3:E2}\")\n" +
+"    print($\"{5e-324:E2}\")\n" +
+"    print($\"{1e308:E2}\")\n" +
+"    print($\"{1.7976931348623157E+308:E}\")\n" +
+"    print($\"{1.7976931348623157E+308:G15}\")\n" +
+"    print($\"{1.0:E}\")\n" +
+"    print($\"{12345.678:E}\")\n" +
+"    print($\"{1.0:G}\")\n" +
+"    print($\"{123456789.0:G}\")\n" +
+"    print($\"{1e22:G}\")\n" +
+"    print($\"{1E-308:G}\")\n" +
+"}", "e2e-interp-double-enotation");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1.00E+022\r\n" +
+                         "1.50E-003\r\n" +
+                         "4.94E-324\r\n" +
+                         "1.00E+308\r\n" +
+                         "1.797693E+308\r\n" +
+                         "1.79769313486232E+308\r\n" +
+                         "1.000000E+000\r\n" +
+                         "1.234568E+004\r\n" +
+                         "1\r\n" +
+                         "123456789\r\n" +
+                         "1E+22\r\n" +
+                         "1E-308\r\n", stdout);
+        }
+
+        [Fact]
         public void Class_MultipleInterfaces_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

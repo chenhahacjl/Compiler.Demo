@@ -527,6 +527,20 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Const(n, 2);
                 Mark(fDefDone);
 
+                // E 且显式精度缺失时默认 6 位小数（对齐 .NET）
+                var eDefDone = NewLabel();
+                Cmp(code, 5); Jcc(IrCond.NotEqual, eDefDone);
+                Cmp(hasDigits, 0); Jcc(IrCond.NotEqual, eDefDone);
+                Const(n, 6);
+                Mark(eDefDone);
+
+                // G 且显式精度缺失时默认 15 位有效数字（对齐 .NET）
+                var gDefDone = NewLabel();
+                Cmp(code, 4); Jcc(IrCond.NotEqual, gDefDone);
+                Cmp(hasDigits, 0); Jcc(IrCond.NotEqual, gDefDone);
+                Const(n, 15);
+                Mark(gDefDone);
+
                 Mark(afterParse);
             }
 

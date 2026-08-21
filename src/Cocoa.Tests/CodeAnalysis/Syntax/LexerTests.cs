@@ -222,6 +222,58 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Contains(diagnostics, d => d.Message.Contains("Bad character"));
         }
 
+        [Theory]
+        [InlineData("1e3", 1000.0)]
+        [InlineData("1.5e-3", 0.0015)]
+        [InlineData("1E+10", 1e10)]
+        [InlineData("5e-324", 5e-324)]
+        [InlineData("1e308", 1e308)]
+        [InlineData("1.23456789012345E+300", 1.23456789012345E+300)]
+        public void Lexer_Lexes_ScientificNotation(string source, double expected)
+        {
+            var tokens = SyntaxTree.ParseTokens(source, out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.DoubleToken, token.Kind);
+            Assert.Equal(source, token.Text);
+            Assert.Equal(expected, (double)token.Value);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_ScientificNotation_InvalidExponent_Splits()
+        {
+            var tokens = SyntaxTree.ParseTokens("1e", out var diagnostics).ToArray();
+            Assert.Equal(2, tokens.Length);
+            Assert.Equal(SyntaxKind.NumberToken, tokens[0].Kind);
+            Assert.Equal("1", tokens[0].Text);
+            Assert.Equal(SyntaxKind.IdentifierToken, tokens[1].Kind);
+            Assert.Equal("e", tokens[1].Text);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_ScientificNotation_StopsBeforeIdentifier()
+        {
+            var tokens = SyntaxTree.ParseTokens("1e3foo", out var diagnostics).ToArray();
+            Assert.Equal(2, tokens.Length);
+            Assert.Equal(SyntaxKind.DoubleToken, tokens[0].Kind);
+            Assert.Equal("1e3", tokens[0].Text);
+            Assert.Equal(SyntaxKind.IdentifierToken, tokens[1].Kind);
+            Assert.Equal("foo", tokens[1].Text);
+            Assert.Empty(diagnostics);
+        }
+
+        [Fact]
+        public void Lexer_Lexes_Hex_NotConfusedWithExponent()
+        {
+            var tokens = SyntaxTree.ParseTokens("0x1e3", out var diagnostics).ToArray();
+            var token = Assert.Single(tokens);
+            Assert.Equal(SyntaxKind.NumberToken, token.Kind);
+            Assert.Equal("0x1e3", token.Text);
+            Assert.Equal(0x1e3, token.Value);
+            Assert.Empty(diagnostics);
+        }
+
         [Fact]
         public void Lexer_Lexes_RawString()
         {
@@ -457,6 +509,12 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
             if (t1Kind == SyntaxKind.IdentifierToken && t2Kind == SyntaxKind.DoubleToken ||
                 t1IsKeyword && t2Kind == SyntaxKind.DoubleToken)
+            {
+                return true;
+            }
+
+            // DoubleToken 后跟标识符可能被科学计数法合并（如 "1.5e3"）：须分隔
+            if (t1Kind == SyntaxKind.DoubleToken && t2Kind == SyntaxKind.IdentifierToken)
             {
                 return true;
             }

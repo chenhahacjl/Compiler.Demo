@@ -1272,6 +1272,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var length = 0;
             var isHex = false;
+            var hasExponent = false;
 
             if (Current == '0' && Peek(1) == 'x')
             {
@@ -1303,11 +1304,35 @@ namespace Cocoa.CodeAnalysis.Syntax
                         length++;
                     }
                 }
+
+                if (Current == 'e' || Current == 'E')
+                {
+                    var hasSign = Peek(1) == '+' || Peek(1) == '-';
+                    var exponentDigit = hasSign ? Peek(2) : Peek(1);
+                    if (char.IsDigit(exponentDigit))
+                    {
+                        _position++;
+                        length++;
+                        if (hasSign)
+                        {
+                            _position++;
+                            length++;
+                        }
+
+                        while (char.IsDigit(Current))
+                        {
+                            _position++;
+                            length++;
+                        }
+
+                        hasExponent = true;
+                    }
+                }
             }
 
             var text = _text.ToString(_start, length);
 
-            if (!isHex && text.Contains('.'))
+            if (!isHex && (text.Contains('.') || hasExponent))
             {
                 var doubleValue = 0.0;
                 if (!double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out doubleValue))

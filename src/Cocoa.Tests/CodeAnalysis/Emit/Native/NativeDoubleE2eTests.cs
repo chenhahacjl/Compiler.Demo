@@ -34,6 +34,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             Assert.Empty(diagnostics);
             Assert.True(File.Exists(exePath));
 
+
             var psi = new ProcessStartInfo(exePath)
             {
                 RedirectStandardOutput = true,
@@ -219,7 +220,7 @@ function Main()
     print($""{999999999.99:F2}"")
     print($""{123456789012345678.0:F0}"")
     print($""{123456789012345678.0:F2}"")
-    print($""{10000000000000000000000.0:F1}"")
+    print($""{1e22:F1}"")
     print($""{1.5:F20}"")
     print($""{1234567.89:F1}"")
     print($""{0.0:F5}"")
@@ -256,12 +257,17 @@ function Main()
     print($""{9.99:E1}"")
     print($""{0.0:E2}"")
     print($""{-0.0:E2}"")
-    print($""{10000000000000000000000.0:E2}"")
+    print($""{1e22:E2}"")
     print($""{0.00000000000000000001:E2}"")
     print($""{999999.999:E2}"")
     print($""{-12345.678:E2}"")
     print($""{12345.678:e2}"")
     print($""{12345.678:g3}"")
+    print($""{1.5e-3:E2}"")
+    print($""{0.5:E2}"")
+    print($""{1.0:E}"")
+    print($""{12345.678:E}"")
+    print($""{999.9:E}"")
     print($""{1.0/0.0:E2}"")
     print($""{0.0/0.0:E2}"")
 }", "e2e-format-e", (TargetPlatform)platform);
@@ -281,6 +287,11 @@ function Main()
                 "-1.23E+004\r\n" +
                 "1.23e+004\r\n" +
                 "1.23e+04\r\n" +
+                "1.50E-003\r\n" +
+                "5.00E-001\r\n" +
+                "1.000000E+000\r\n" +
+                "1.234568E+004\r\n" +
+                "9.999000E+002\r\n" +
                 "Infinity\r\n" +
                 "NaN\r\n", stdout);
             Assert.Equal(0, exitCode);
@@ -308,6 +319,12 @@ function Main()
     print($""{999999.999:G3}"")
     print($""{123456789012345678.0:G4}"")
     print($""{0.05:G2}"")
+    print($""{1.0:G}"")
+    print($""{123456789.0:G}"")
+    print($""{1e22:G}"")
+    print($""{1e15:G}"")
+    print($""{1e5:G}"")
+    print($""{0.0001:G}"")
 }", "e2e-format-g", (TargetPlatform)platform);
 
             Assert.Equal(
@@ -324,7 +341,46 @@ function Main()
                 "1E-05\r\n" +
                 "1E+06\r\n" +
                 "1.235E+17\r\n" +
-                "0.05\r\n", stdout);
+                "0.05\r\n" +
+                "1\r\n" +
+                "123456789\r\n" +
+                "1E+22\r\n" +
+                "1E+15\r\n" +
+                "100000\r\n" +
+                "0.0001\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Format_Codes_Double_Boundaries(object platform)
+        {
+            // 全 double 范围边界：max double / 最小亚正规 / 最小正规，e-notation 字面量。
+            // 注：MaxValue:F2 为精确大整数定点（309 位整数）——native 优于 .NET F2（内部走 Decimal 截断到 ~29 位有效数字）。
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function Main()
+{
+    print($""{1.7976931348623157E+308:E2}"")
+    print($""{1.7976931348623157E+308:G}"")
+    print($""{1.7976931348623157E+308:F2}"")
+    print($""{5E-324:E2}"")
+    print($""{5E-324:G}"")
+    print($""{5E-324:F2}"")
+    print($""{1E-308:G}"")
+    print($""{1E-308:E2}"")
+    print($""{1E-308:F5}"")
+}", "e2e-format-boundaries", (TargetPlatform)platform);
+
+            Assert.Equal(
+                "1.80E+308\r\n" +
+                "1.79769313486232E+308\r\n" +
+                "179769313486231570814527423731704356798070567525844996598917476803157260780028538760589558632766878171540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868508455133942304583236903222948165808559332123348274797826204144723168738177180919299881250404026184124858368.00\r\n" +
+                "4.94E-324\r\n" +
+                "4.94065645841247E-324\r\n" +
+                "0.00\r\n" +
+                "1E-308\r\n" +
+                "1.00E-308\r\n" +
+                "0.00000\r\n", stdout);
             Assert.Equal(0, exitCode);
         }
     }
