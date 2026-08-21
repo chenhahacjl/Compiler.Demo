@@ -102,6 +102,10 @@ Emit/IR/
 - `.cod` 反序列化 → 符号表 + `BoundProgram` 片段 → 消费方 Binder 符号注入 + BoundProgram 层合并（`docs/互操作手册.md` §3）
 - 依赖清单规则见 `docs/项目格式规范.md` §4.1；`requires` 后端约束（`dotnet`/`native`/`any`）+ 平台要求由消费方编译期校验，不匹配报错；无入口点校验（`output = cocoa` 禁止 `Main`）
 
+> **IR 归属**：IR（三地址码）是 **native 管线内部层**（`Emit/Native/IR/`），IL 后端绑定树直达、不消费 IR——目录命名已随结构治理纠正，见 `docs/代码结构.md` §2。
+
+> **`.cod` v2（6e-M14 标准库）**：`fn` 符号增加 `ns`（函数命名空间）字段；`Version` 1 → 2 硬升级，读侧校验版本、旧库报"需重新编译"。函数重载天然支持（符号按 id 序列化、调用按 id 引用）。命名空间-only 消费（`InjectCodSymbols` 不再裸注入）。详见 `docs/标准库设计.md` §5/§6。
+
 ## 8. 验收标准（阶段 3）
 
 - 同一 `.co` 文件：IR 化后端与现状后端的输出行为一致（运行对照测试）
