@@ -88,10 +88,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.BaseKeyword;
                 case "break":
                     return SyntaxKind.BreakKeyword;
+                case "case":
+                    return SyntaxKind.CaseKeyword;
                 case "cdecl":
                     return SyntaxKind.CdeclKeyword;
                 case "continue":
                     return SyntaxKind.ContinueKeyword;
+                case "default":
+                    return SyntaxKind.DefaultKeyword;
                 case "else":
                     return SyntaxKind.ElseKeyword;
                 case "false":
@@ -140,12 +144,18 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.SealedKeyword;
                 case "static":
                     return SyntaxKind.StaticKeyword;
+                case "switch":
+                    return SyntaxKind.SwitchKeyword;
                 case "this":
                     return SyntaxKind.ThisKeyword;
                 case "using":
                     return SyntaxKind.UsingKeyword;
                 case "virtual":
                     return SyntaxKind.VirtualKeyword;
+                case "when":
+                    return SyntaxKind.WhenKeyword;
+                case "while":
+                    return SyntaxKind.WhileKeyword;
                 case "let":
                     return SyntaxKind.LetKeyword;
                 case "return":
@@ -158,8 +168,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.TrueKeyword;
                 case "var":
                     return SyntaxKind.VarKeyword;
-                case "while":
-                    return SyntaxKind.WhileKeyword;
                 case "do":
                     return SyntaxKind.DoKeyword;
                 case "enum":
@@ -297,10 +305,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "?";
                 case SyntaxKind.BreakKeyword:
                     return "break";
+                case SyntaxKind.CaseKeyword:
+                    return "case";
                 case SyntaxKind.CdeclKeyword:
                     return "cdecl";
                 case SyntaxKind.ContinueKeyword:
                     return "continue";
+                case SyntaxKind.DefaultKeyword:
+                    return "default";
                 case SyntaxKind.ElseKeyword:
                     return "else";
                 case SyntaxKind.FalseKeyword:
@@ -335,8 +347,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "sealed";
                 case SyntaxKind.StaticKeyword:
                     return "static";
+                case SyntaxKind.SwitchKeyword:
+                    return "switch";
                 case SyntaxKind.VirtualKeyword:
                     return "virtual";
+                case SyntaxKind.WhenKeyword:
+                    return "when";
                 case SyntaxKind.FunctionKeyword:
                     return "function";
                 case SyntaxKind.IfKeyword:

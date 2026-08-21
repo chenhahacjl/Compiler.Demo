@@ -74,11 +74,13 @@ ColonToken,               // :
         AbstractKeyword,          // abstract
         BaseKeyword,              // base
         BreakKeyword,             // break
+        CaseKeyword,              // case
         CdeclKeyword,             // cdecl
         ClassKeyword,             // class
         ConstKeyword,             // const
         ConstructorKeyword,       // constructor
         ContinueKeyword,          // continue
+        DefaultKeyword,           // default
         DoKeyword,                // do
         ElseKeyword,              // else
         EnumKeyword,              // enum
@@ -108,12 +110,14 @@ ColonToken,               // :
         SetKeyword,               // set
         StaticKeyword,            // static
         StdcallKeyword,           // stdcall
+        SwitchKeyword,            // switch
         ThisKeyword,              // this
         ToKeyword,                // to
         TrueKeyword,              // true
         UsingKeyword,             // using
         VarKeyword,               // var
         VirtualKeyword,           // virtual
+        WhenKeyword,              // when
         WhileKeyword,             // while
 
         // Nodes
@@ -149,6 +153,9 @@ ColonToken,               // :
         ContinueStatement,        // CONTINUE 语句
         ReturnStatement,          // RETURN 语句
         ExpressionStatement,      // 表达式语句
+        SwitchStatement,          // SWITCH 语句
+        CaseClause,               // SWITCH case 子句
+        DefaultClause,            // SWITCH default 子句
 
         // Expressions
         LiteralExpression,        // 文字表达式

@@ -746,6 +746,109 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_Switch(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var x = 2
+    switch (x)
+    {
+        case 1:
+        {
+            print(""one"")
+            break
+        }
+        case 2:
+        {
+            print(""two"")
+            break
+        }
+        default:
+        {
+            print(""other"")
+            break
+        }
+    }
+    switch (x)
+    {
+        case 1:
+        case 2:
+        {
+            print(""low"")
+            break
+        }
+        default:
+        {
+            print(""high"")
+            break
+        }
+    }
+    switch (x)
+    {
+        case 1:
+        {
+            print(""one"")
+            break
+        }
+        case 2 when false:
+        {
+            print(""two-when"")
+            break
+        }
+        default:
+        {
+            print(""default"")
+            break
+        }
+    }
+    var s = ""b""
+    switch (s)
+    {
+        case ""a"":
+        {
+            print(""A"")
+            break
+        }
+        case ""b"":
+        {
+            print(""B"")
+            break
+        }
+        default:
+        {
+            print(""Z"")
+            break
+        }
+    }
+    var i = 0
+    var sum = 0
+    while i < 5
+    {
+        switch (i)
+        {
+            case 1:
+            {
+                i = i + 1
+                continue
+            }
+            case 3:
+            {
+                break
+            }
+        }
+        sum = sum + i
+        i = i + 1
+    }
+    print(sum)
+}", "src-switch", target);
+
+            Assert.Equal("two\r\nlow\r\ndefault\r\nB\r\n9\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_Array_OutOfBounds(string target)
         {
             var output = CompileAndRun(@"

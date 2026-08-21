@@ -1517,6 +1517,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
                 case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
                 case SyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
+                case SyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
                 case SyntaxKind.CStyleForStatement: return BindCStyleForStatement((CStyleForStatementSyntax)syntax);
                 case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
@@ -1868,6 +1869,163 @@ namespace Cocoa.CodeAnalysis.Binding
             return BoundNodeFactory.Block(syntax, counterInit, whileStatement);
         }
 
+        /// <summary>switch 绑定期降级为嵌套 if-else 链（不支持 fall-through）：</summary>
+        /// <remarks>
+        /// if (value == c1 && when) { body1 } else if (value == c2) { body2 } else { default }
+        /// switchend:   // 节内 break → goto 此处
+        /// </remarks>
+        private BoundStatement BindSwitchStatement(SwitchStatementSyntax syntax)
+        {
+            var value = BindExpression(syntax.Expression);
+
+            _labelCounter++;
+            var switchEndLabel = new BoundLabel($"switchend{_labelCounter}");
+
+            var defaultCount = 0;
+            foreach (var section in syntax.Sections)
+            {
+                if (section is DefaultClauseSyntax)
+                {
+                    defaultCount++;
+                }
+            }
+
+            if (defaultCount > 1)
+            {
+                _diagnostics.ReportError(syntax.Keyword.Location, "switch 不能有多个 default 子句。");
+            }
+
+            // 按源顺序绑定各节（诊断顺序稳定）：空体 case（叠标）把值合并进下一个非空节
+            var conditions = ImmutableArray.CreateBuilder<BoundExpression?>();
+            var bodies = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            var pendingValues = ImmutableArray.CreateBuilder<BoundExpression>();
+
+            foreach (var section in syntax.Sections)
+            {
+                if (section is DefaultClauseSyntax defaultClause)
+                {
+                    var defaultBodySyntax = defaultClause.Body;
+                    ReportSwitchFallThrough(defaultBodySyntax);
+
+                    _loopStack.Push((switchEndLabel, null));
+                    var defaultBody = BindStatement(defaultBodySyntax);
+                    _loopStack.Pop();
+
+                    conditions.Add(null);
+                    bodies.Add(defaultBody);
+                    continue;
+                }
+
+                var caseClause = (CaseClauseSyntax)section;
+                var clauseValues = ImmutableArray.CreateBuilder<BoundExpression>();
+                foreach (var valueSyntax in caseClause.Values)
+                {
+                    var caseValue = BindExpression(valueSyntax);
+                    if (caseValue.ConstantValue == null && caseValue.Type != TypeSymbol.Error)
+                    {
+                        _diagnostics.ReportError(valueSyntax.Location, "case 值必须是常量。");
+                    }
+
+                    clauseValues.Add(caseValue);
+                }
+
+                var isStackedLabel = caseClause.Body is BlockStatementSyntax emptyBlock && emptyBlock.Statements.Length == 0;
+                if (isStackedLabel)
+                {
+                    pendingValues.AddRange(clauseValues);
+                    continue;
+                }
+
+                // 非空节：合并之前叠标的值 + 本节的 when
+                BoundExpression? condition = null;
+                var allValues = pendingValues.ToImmutable().AddRange(clauseValues);
+                foreach (var caseValue in allValues)
+                {
+                    var equality = BoundNodeFactory.Binary(syntax, value, SyntaxKind.EqualsEqualsToken, caseValue);
+                    condition = condition == null
+                        ? equality
+                        : BoundNodeFactory.Binary(syntax, condition, SyntaxKind.PipePipeToken, equality);
+                }
+
+                pendingValues.Clear();
+
+                if (caseClause.WhenCondition != null)
+                {
+                    var whenCondition = BindExpression(caseClause.WhenCondition, TypeSymbol.Boolean);
+                    condition = condition == null
+                        ? whenCondition
+                        : BoundNodeFactory.Binary(syntax, condition, SyntaxKind.AmpersandAmpersandToken, whenCondition);
+                }
+
+                var bodySyntax = caseClause.Body;
+                ReportSwitchFallThrough(bodySyntax);
+
+                _loopStack.Push((switchEndLabel, null));
+                var body = BindStatement(bodySyntax);
+                _loopStack.Pop();
+
+                conditions.Add(condition);
+                bodies.Add(body);
+            }
+
+            // 末尾叠标（最后一个 case 体为空）：合并为一个空条件节，值匹配后无操作
+            if (pendingValues.Count > 0)
+            {
+                BoundExpression? trailingCondition = null;
+                foreach (var caseValue in pendingValues)
+                {
+                    var equality = BoundNodeFactory.Binary(syntax, value, SyntaxKind.EqualsEqualsToken, caseValue);
+                    trailingCondition = trailingCondition == null
+                        ? equality
+                        : BoundNodeFactory.Binary(syntax, trailingCondition, SyntaxKind.PipePipeToken, equality);
+                }
+
+                conditions.Add(trailingCondition);
+                bodies.Add(BoundNodeFactory.Block(syntax));
+            }
+
+            // 反向构建 if-else 链（首个 case 为最外层，保持源顺序）
+            BoundStatement? chain = null;
+            for (var i = conditions.Count - 1; i >= 0; i--)
+            {
+                var condition = conditions[i];
+                chain = condition == null
+                    ? new BoundIfStatement(syntax, BoundNodeFactory.Literal(syntax, true), bodies[i], chain)
+                    : new BoundIfStatement(syntax, condition, bodies[i], chain);
+            }
+
+            var result = ImmutableArray.CreateBuilder<BoundStatement>();
+            if (chain != null)
+            {
+                result.Add(chain);
+            }
+
+            result.Add(BoundNodeFactory.Label(syntax, switchEndLabel));
+
+            return BoundNodeFactory.Block(syntax, result.ToArray());
+        }
+
+        /// <summary>不支持 fall-through：非空节体末尾必须 break/return/continue（叠标空体除外）。</summary>
+        private void ReportSwitchFallThrough(StatementSyntax body)
+        {
+            var last = body is BlockStatementSyntax block
+                ? (block.Statements.Length > 0 ? block.Statements[^1] : null)
+                : body;
+
+            if (last == null)
+            {
+                return;
+            }
+
+            if (last.Kind is SyntaxKind.BreakStatement or SyntaxKind.ReturnStatement or SyntaxKind.ContinueStatement)
+            {
+                return;
+            }
+
+            _diagnostics.ReportError(last.Location, "switch 节体必须以 break/return/continue 结尾（不支持 fall-through）。");
+        }
+
         private BoundStatement BindCStyleForStatement(CStyleForStatementSyntax syntax)
         {
             _scope = new BoundScope(_scope);
@@ -1967,7 +2125,23 @@ namespace Cocoa.CodeAnalysis.Binding
                 return BindErrorStatement(syntax);
             }
 
-            var continueLabel = _loopStack.Peek().ContinueLabel;
+            // switch 节压入 (switchEnd, null)：continue 需穿透 switch 到最近的循环（C# 语义）
+            BoundLabel? continueLabel = null;
+            foreach (var entry in _loopStack)
+            {
+                if (entry.ContinueLabel != null)
+                {
+                    continueLabel = entry.ContinueLabel;
+                    break;
+                }
+            }
+
+            if (continueLabel == null)
+            {
+                _diagnostics.ReportError(syntax.Keyword.Location, "continue 只能出现在循环内（不能用于 switch 节）。");
+                return BindErrorStatement(syntax);
+            }
+
             return new BoundGotoStatement(syntax, continueLabel);
         }
 

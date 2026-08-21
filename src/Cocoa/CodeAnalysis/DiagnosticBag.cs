@@ -355,6 +355,11 @@ namespace Cocoa.CodeAnalysis
                     ReportUnreachableCode(((ForeachStatementSyntax)node).Keyword.Location);
                     return;
                 }
+                case SyntaxKind.SwitchStatement:
+                {
+                    ReportUnreachableCode(((SwitchStatementSyntax)node).Keyword.Location);
+                    return;
+                }
                 case SyntaxKind.BreakStatement:
                 {
                     ReportUnreachableCode(((BreakStatementSyntax)node).Keyword.Location);

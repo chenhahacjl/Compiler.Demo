@@ -1076,6 +1076,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseForStatement();
                 case SyntaxKind.ForeachKeyword:
                     return ParseForeachStatement();
+                case SyntaxKind.SwitchKeyword:
+                    return ParseSwitchStatement();
                 case SyntaxKind.BreakKeyword:
                     return ParseBreakStatement();
                 case SyntaxKind.ContinueKeyword:
@@ -1453,6 +1455,99 @@ namespace Cocoa.CodeAnalysis.Syntax
             var body = ParseStatement();
 
             return new ForeachStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, inKeyword, collection, closeParenToken, body);
+        }
+
+        private StatementSyntax ParseSwitchStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.SwitchKeyword);
+
+            SyntaxToken? openParenToken = null;
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenToken = NextToken();
+            }
+
+            var expression = ParseExpression();
+
+            SyntaxToken? closeParenToken = null;
+            if (openParenToken != null)
+            {
+                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            var sections = ImmutableArray.CreateBuilder<SwitchSectionSyntax>();
+            while (Current.Kind == SyntaxKind.CaseKeyword || Current.Kind == SyntaxKind.DefaultKeyword)
+            {
+                sections.Add(ParseSwitchSection());
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new SwitchStatementSyntax(_syntaxTree, keyword, openParenToken, expression, closeParenToken, openBraceToken, sections.ToImmutable(), closeBraceToken);
+        }
+
+        private SwitchSectionSyntax ParseSwitchSection()
+        {
+            if (Current.Kind == SyntaxKind.DefaultKeyword)
+            {
+                var defaultKeyword = MatchToken(SyntaxKind.DefaultKeyword);
+                var colon = MatchToken(SyntaxKind.ColonToken);
+                var sectionBody = ParseSwitchSectionBody();
+
+                return new DefaultClauseSyntax(_syntaxTree, defaultKeyword, colon, sectionBody);
+            }
+
+            var caseKeyword = MatchToken(SyntaxKind.CaseKeyword);
+
+            var valuesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            var parseNextValue = true;
+            while (parseNextValue)
+            {
+                var value = ParseExpression();
+                valuesAndSeparators.Add(value);
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    var comma = MatchToken(SyntaxKind.CommaToken);
+                    valuesAndSeparators.Add(comma);
+                }
+                else
+                {
+                    parseNextValue = false;
+                }
+            }
+
+            var values = new SeparatedSyntaxList<ExpressionSyntax>(valuesAndSeparators.ToImmutable());
+
+            SyntaxToken? whenKeyword = null;
+            ExpressionSyntax? whenCondition = null;
+            if (Current.Kind == SyntaxKind.WhenKeyword)
+            {
+                whenKeyword = MatchToken(SyntaxKind.WhenKeyword);
+                whenCondition = ParseExpression();
+            }
+
+            var colonToken = MatchToken(SyntaxKind.ColonToken);
+            var body = ParseSwitchSectionBody();
+
+            return new CaseClauseSyntax(_syntaxTree, caseKeyword, values, whenKeyword, whenCondition, colonToken, body);
+        }
+
+        /// <summary>节体：叠标（下一个 case/default 或闭合 `}`）时为合成空块。</summary>
+        private StatementSyntax ParseSwitchSectionBody()
+        {
+            if (Current.Kind == SyntaxKind.CaseKeyword ||
+                Current.Kind == SyntaxKind.DefaultKeyword ||
+                Current.Kind == SyntaxKind.CloseBraceToken)
+            {
+                var emptyOpen = new SyntaxToken(_syntaxTree, SyntaxKind.OpenBraceToken, Current.Position, "{", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                var emptyClose = new SyntaxToken(_syntaxTree, SyntaxKind.CloseBraceToken, Current.Position, "}", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                return new BlockStatementSyntax(_syntaxTree, emptyOpen, ImmutableArray<StatementSyntax>.Empty, emptyClose);
+            }
+
+            return ParseStatement();
         }
 
         private StatementSyntax ParseBreakStatement()

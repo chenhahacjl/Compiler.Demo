@@ -2130,6 +2130,108 @@ function Main()
         }
 
         [Fact]
+        public void Switch_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var x = 2\n" +
+"    switch (x)\n" +
+"    {\n" +
+"        case 1:\n" +
+"        {\n" +
+"            print(\"one\")\n" +
+"            break\n" +
+"        }\n" +
+"        case 2:\n" +
+"        {\n" +
+"            print(\"two\")\n" +
+"            break\n" +
+"        }\n" +
+"        default:\n" +
+"        {\n" +
+"            print(\"other\")\n" +
+"            break\n" +
+"        }\n" +
+"    }\n" +
+"    switch (x)\n" +
+"    {\n" +
+"        case 1:\n" +
+"        case 2:\n" +
+"        {\n" +
+"            print(\"low\")\n" +
+"            break\n" +
+"        }\n" +
+"        default:\n" +
+"        {\n" +
+"            print(\"high\")\n" +
+"            break\n" +
+"        }\n" +
+"    }\n" +
+"    switch (x)\n" +
+"    {\n" +
+"        case 1:\n" +
+"        {\n" +
+"            print(\"one\")\n" +
+"            break\n" +
+"        }\n" +
+"        case 2 when false:\n" +
+"        {\n" +
+"            print(\"two-when\")\n" +
+"            break\n" +
+"        }\n" +
+"        default:\n" +
+"        {\n" +
+"            print(\"default\")\n" +
+"            break\n" +
+"        }\n" +
+"    }\n" +
+"    var s = \"b\"\n" +
+"    switch (s)\n" +
+"    {\n" +
+"        case \"a\":\n" +
+"        {\n" +
+"            print(\"A\")\n" +
+"            break\n" +
+"        }\n" +
+"        case \"b\":\n" +
+"        {\n" +
+"            print(\"B\")\n" +
+"            break\n" +
+"        }\n" +
+"        default:\n" +
+"        {\n" +
+"            print(\"Z\")\n" +
+"            break\n" +
+"        }\n" +
+"    }\n" +
+"    var i = 0\n" +
+"    var sum = 0\n" +
+"    while i < 5\n" +
+"    {\n" +
+"        switch (i)\n" +
+"        {\n" +
+"            case 1:\n" +
+"            {\n" +
+"                i = i + 1\n" +
+"                continue\n" +
+"            }\n" +
+"            case 3:\n" +
+"            {\n" +
+"                break\n" +
+"            }\n" +
+"        }\n" +
+"        sum = sum + i\n" +
+"        i = i + 1\n" +
+"    }\n" +
+"    print(sum)\n" +
+"}", "e2e-switch");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("two\r\nlow\r\ndefault\r\nB\r\n9\r\n", stdout);
+        }
+
+        [Fact]
         public void Class_MultipleInterfaces_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

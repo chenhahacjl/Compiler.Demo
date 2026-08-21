@@ -546,6 +546,91 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
+        public void Parser_SwitchStatement_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+switch (x)
+{
+    case 1:
+    {
+        print(""one"")
+        break
+    }
+    case 2 when x > 0:
+    {
+        print(""two"")
+        break
+    }
+    default:
+    {
+        print(""other"")
+        break
+    }
+}");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<SwitchStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(3, statement.Sections.Length);
+            var case1 = Assert.IsType<CaseClauseSyntax>(statement.Sections[0]);
+            Assert.Single(case1.Values);
+            Assert.Null(case1.WhenCondition);
+            var case2 = Assert.IsType<CaseClauseSyntax>(statement.Sections[1]);
+            Assert.NotNull(case2.WhenKeyword);
+            Assert.NotNull(case2.WhenCondition);
+            Assert.IsType<DefaultClauseSyntax>(statement.Sections[2]);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_SwitchStatement_StackedCases_Parse()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+switch (x)
+{
+    case 1:
+    case 2:
+    {
+        print(""low"")
+        break
+    }
+}");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<SwitchStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(2, statement.Sections.Length);
+            var case1 = Assert.IsType<CaseClauseSyntax>(statement.Sections[0]);
+            var emptyBody = Assert.IsType<BlockStatementSyntax>(case1.Body);
+            Assert.Empty(emptyBody.Statements);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_SwitchStatement_MultipleValues_Parse()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+switch (x)
+{
+    case 1, 2, 3:
+    {
+        print(""low"")
+        break
+    }
+}");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<SwitchStatementSyntax>(globalStatement.Statement);
+
+            var case1 = Assert.IsType<CaseClauseSyntax>(Assert.Single(statement.Sections));
+            Assert.Equal(3, case1.Values.Count);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
         public void Parser_Constructor_ExtendsBaseKeyword()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { constructor(x: int) extends base(x) { } }");

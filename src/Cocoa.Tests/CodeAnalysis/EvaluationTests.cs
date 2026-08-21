@@ -186,6 +186,115 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Theory]
+        [InlineData("{ var x = 2 switch (x) { case 1: { return 10 } case 2: { return 20 } default: { return 30 } } }", 20)]
+        [InlineData("{ var x = 5 switch (x) { case 1: { return 10 } case 2: { return 20 } default: { return 30 } } }", 30)]
+        [InlineData("{ var x = 1 switch (x) { case 1: case 2: { return 10 } default: { return 30 } } }", 10)]
+        [InlineData("{ var x = 2 switch (x) { case 1: case 2: { return 10 } default: { return 30 } } }", 10)]
+        [InlineData("{ var x = 3 switch (x) { case 1: case 2: { return 10 } default: { return 30 } } }", 30)]
+        [InlineData("{ var x = 1 switch (x) { case 1, 2, 3: { return 7 } default: { return 0 } } }", 7)]
+        [InlineData("{ var x = 2 switch (x) { case 1: { return 1 } case 2 when true: { return 2 } default: { return 3 } } }", 2)]
+        [InlineData("{ var x = 2 switch (x) { case 1: { return 1 } case 2 when false: { return 2 } default: { return 3 } } }", 3)]
+        [InlineData("{ var s = \"b\" switch (s) { case \"a\": { return 1 } case \"b\": { return 2 } default: { return 3 } } }", 2)]
+        public void Evaluator_Switch_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_Switch_CaseValueMustBeConstant()
+        {
+            var text = @"
+                var x = 1
+                var y = 2
+                switch (x)
+                {
+                    case [y]:
+                    {
+                        print(""one"")
+                        break
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                case 值必须是常量。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Switch_MissingBreak_ReportsFallThrough()
+        {
+            var text = @"
+                var x = 1
+                switch (x)
+                {
+                    case 1:
+                    {
+                        [print(""one"")]
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                switch 节体必须以 break/return/continue 结尾（不支持 fall-through）。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Switch_ContinueInsideSwitch_ReportsError()
+        {
+            var text = @"
+                var x = 1
+                switch (x)
+                {
+                    case 1:
+                    {
+                        [continue]
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                continue 只能出现在循环内（不能用于 switch 节）。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Switch_MultipleDefault_ReportsError()
+        {
+            var text = @"
+                var x = 1
+                [switch] (x)
+                {
+                    case 1:
+                    {
+                        break
+                    }
+                    default:
+                    {
+                        break
+                    }
+                    default:
+                    {
+                        break
+                    }
+                }
+            ";
+
+            var diagnostics = @"
+                switch 不能有多个 default 子句。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Theory]
         [InlineData("{ var i = 1 i++ return i }", 2)]
         [InlineData("{ var i = 5 i-- return i }", 4)]
         [InlineData("{ var i = 1 i++ i++ return i }", 3)]
