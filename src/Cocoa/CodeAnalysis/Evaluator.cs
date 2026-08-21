@@ -367,6 +367,16 @@ namespace Cocoa.CodeAnalysis
                 case BuiltinKind.Random:
                     var max = (int)EvaluateExpression(arguments[0])!;
                     return Random.Shared.Next(max);
+                case BuiltinKind.Sleep:
+                    var ms = (int)EvaluateExpression(arguments[0])!;
+                    System.Threading.Thread.Sleep(ms);
+                    return null;
+                case BuiltinKind.Now:
+                    return Environment.TickCount;
+                case BuiltinKind.Exit:
+                    var code = (int)EvaluateExpression(arguments[0])!;
+                    Environment.Exit(code);
+                    return null;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }

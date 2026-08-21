@@ -36,6 +36,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             StringSubstring = RequireMethod("System.String", "Substring", new[] { "System.Int32", "System.Int32" });
             RandomCtor = RequireMethod("System.Random", ".ctor", Array.Empty<string>());
             RandomNext = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
+            ThreadSleep = RequireMethod("System.Threading.Thread", "Sleep", new[] { "System.Int32" });
+            EnvironmentTickCount = RequireMethod("System.Environment", "get_TickCount", Array.Empty<string>());
+            EnvironmentExit = RequireMethod("System.Environment", "Exit", new[] { "System.Int32" });
             DebuggableAttributeCtor = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
             StringFormat = RequireMethod("System.String", "Format", new[] { "System.String", "System.Object" });
         }
@@ -57,6 +60,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef StringSubstring { get; }
         public IlMethodRef RandomCtor { get; }
         public IlMethodRef RandomNext { get; }
+        public IlMethodRef ThreadSleep { get; }
+        public IlMethodRef EnvironmentTickCount { get; }
+        public IlMethodRef EnvironmentExit { get; }
         public IlMethodRef DebuggableAttributeCtor { get; }
         public IlMethodRef StringFormat { get; }
 

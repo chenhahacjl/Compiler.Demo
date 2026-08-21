@@ -637,6 +637,26 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Random"), IrOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.Sleep:
+                {
+                    var ms = EmitExpression(arguments[0]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(ms)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Sleep"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
+                case BuiltinKind.Now:
+                {
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Now"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.Exit:
+                {
+                    var code = EmitExpression(arguments[0]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(code)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("ExitProcess"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }

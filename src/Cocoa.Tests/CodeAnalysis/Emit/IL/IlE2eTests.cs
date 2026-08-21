@@ -125,6 +125,39 @@ function Main()
         }
 
         [Fact]
+        public void Run_Builtin_SleepNowExit_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    var t0 = now()
+    sleep(1)
+    var t1 = now()
+    if t1 >= t0
+    {
+        print(""ok"")
+    }
+}", "e2e-sleep-now");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Run_Builtin_Exit_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+function Main()
+{
+    exit(7)
+    print(""unreachable"")
+}", "e2e-exit");
+
+            Assert.Equal(7, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
         public void Run_DefaultInitializedVariables_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

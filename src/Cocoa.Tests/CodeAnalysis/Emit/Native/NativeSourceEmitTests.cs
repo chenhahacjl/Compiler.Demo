@@ -620,6 +620,23 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_Builtin_SleepNow(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var t0 = now()
+    sleep(1)
+    var t1 = now()
+    print(t1 >= t0)
+}", "src-sleep-now", target);
+
+            Assert.Equal("True\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_Division(string target)
         {
             var output = CompileAndRun(@"

@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private static readonly string[] Kernel32Imports =
         {
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc",
-            "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW",
+            "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
         };
 
         public static void Append(IrProgram program, TargetPlatform platform)
@@ -163,6 +163,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _ = BeginFunction("ExitProcess", 4);
                 var exitProcess = _currentFunction!;
                 EmitExitProcess();
+                _ = BeginFunction("Now");
+                EmitNow();
+                _ = BeginFunction("Sleep", 4);
+                EmitSleep();
 
                 var divByZero = BeginFunction("DivByZero");
                 EmitError(_divZeroMessage);
@@ -3543,6 +3547,23 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             {
                 var code = _args[0];
                 SysCall(null, "ExitProcess", 1, code);
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // Now() -> tick:4
+            private void EmitNow()
+            {
+                var tick = NewReg(4);
+                SysCall(tick, _tickCountImport, 0);
+                StoreRet(tick);
+                EndFunction(_currentFunction!, 4);
+            }
+
+            // Sleep(ms:4)
+            private void EmitSleep()
+            {
+                var ms = _args[0];
+                SysCall(null, "Sleep", 1, ms);
                 EndFunction(_currentFunction!, 0);
             }
 

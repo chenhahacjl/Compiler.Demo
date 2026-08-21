@@ -12,6 +12,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         Print,
         Input,
         Random,
+        Sleep,
+        Now,
+        Exit,
     }
 
     /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>
@@ -26,7 +29,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         private static readonly ImmutableArray<BuiltinSpec> _specs = ImmutableArray.Create(
             new BuiltinSpec(BuiltinKind.Print, "print", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
             new BuiltinSpec(BuiltinKind.Input, "input", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.Random, "random", TypeSymbol.Int32, new[] { ("max", TypeSymbol.Int32) }));
+            new BuiltinSpec(BuiltinKind.Random, "random", TypeSymbol.Int32, new[] { ("max", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Sleep, "sleep", TypeSymbol.Void, new[] { ("ms", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Now, "now", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.Exit, "exit", TypeSymbol.Void, new[] { ("code", TypeSymbol.Int32) }));
 
         /// <summary>
         /// 输出字符串: void print(string text)
@@ -42,6 +48,21 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// 随机数: int random(int max)
         /// </summary>
         public static readonly FunctionSymbol Random = Create(BuiltinKind.Random);
+
+        /// <summary>
+        /// 休眠: void sleep(int ms)
+        /// </summary>
+        public static readonly FunctionSymbol Sleep = Create(BuiltinKind.Sleep);
+
+        /// <summary>
+        /// 运行时长: int now()（毫秒，Environment.TickCount）
+        /// </summary>
+        public static readonly FunctionSymbol Now = Create(BuiltinKind.Now);
+
+        /// <summary>
+        /// 退出进程: void exit(int code)
+        /// </summary>
+        public static readonly FunctionSymbol Exit = Create(BuiltinKind.Exit);
 
         private static FunctionSymbol Create(BuiltinKind kind)
         {
@@ -65,6 +86,9 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.Print => Print,
                 BuiltinKind.Input => Input,
                 BuiltinKind.Random => Random,
+                BuiltinKind.Sleep => Sleep,
+                BuiltinKind.Now => Now,
+                BuiltinKind.Exit => Exit,
                 _ => null,
             };
         }

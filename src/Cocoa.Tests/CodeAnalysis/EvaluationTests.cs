@@ -1780,6 +1780,31 @@ syscall function [Random](): int";
             AssertDiagnostics(text, "A syscall function must be declared inside a class (e.g. `class Runtime { syscall function ... }`).");
         }
 
+        [Fact]
+        public void Evaluator_Builtin_Sleep_Now_Exit()
+        {
+            var text = @"
+function Main(): int
+{
+    var t0 = now()
+    sleep(1)
+    var t1 = now()
+    if t1 < t0
+    {
+        return 1
+    }
+    return 0
+}";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(0, result.Value);
+        }
+
         private void AssertDiagnostics(string text, string diagnosticText)
         {
             AssertDiagnostics(text, diagnosticText, true);

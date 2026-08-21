@@ -973,6 +973,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BuiltinKind.Input:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadLine);
                     break;
+                case BuiltinKind.Sleep:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ThreadSleep);
+                    break;
+                case BuiltinKind.Now:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.EnvironmentTickCount);
+                    break;
+                case BuiltinKind.Exit:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.EnvironmentExit);
+                    break;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }
