@@ -18,10 +18,10 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             return Path.Combine(directory, name + "-" + target + ".exe");
         }
 
-        private static string CompileAndRun(string source, string name, string target, string? input = null, int expectedExitCode = 0)
+        private static string CompileAndRun(string source, string name, string target, string? input = null, int expectedExitCode = 0, bool useCs = false)
         {
             TargetPlatform.TryParse(target, out var platform);
-            var syntaxTree = SyntaxTree.Parse(source);
+            var syntaxTree = useCs ? SyntaxTree.ParseCs(source) : SyntaxTree.Parse(source);
             var compilation = Compilation.Create(syntaxTree);
             var exePath = GetExePath(name, target);
 
@@ -321,42 +321,42 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
-        public void NativeSource_CStyleFor_PostfixIncrement(string target)
+        public void NativeSource_CSStyleFor_PostfixIncrement(string target)
         {
             var output = CompileAndRun(@"
-function Main()
+public static void Main()
 {
-    var sum = 0
+    var sum = 0;
     for (var i = 0; i < 5; i++)
     {
-        sum = sum + i
+        sum = sum + i;
     }
-    print(sum)
-    var j = 10
-    j--
-    print(j)
-    j++
-    print(j)
-    var total = 0
+    print(sum);
+    var j = 10;
+    j--;
+    print(j);
+    j++;
+    print(j);
+    var total = 0;
     for (;;)
     {
-        total = total + 1
-        if total == 3
+        total = total + 1;
+        if (total == 3)
         {
-            break
+            break;
         }
     }
-    print(total)
-    var k = 0
+    print(total);
+    var k = 0;
     for (; k < 4; k = k + 1)
     {
-        if k == 2
+        if (k == 2)
         {
-            continue
+            continue;
         }
-        print(k)
+        print(k);
     }
-}", "src-cstyle-for", target);
+}", "src-cstyle-for", target, useCs: true);
 
             Assert.Equal("10\r\n9\r\n10\r\n3\r\n0\r\n1\r\n3\r\n", output);
         }
@@ -688,7 +688,7 @@ function Main()
         print(x)
     }
     var sum = 0
-    foreach (x in arr)
+    foreach (var x in arr)
     {
         sum = sum + x
     }
@@ -1002,7 +1002,7 @@ public interface IShape
     function Area(): int
 }
 
-public class Circle: IShape
+public class Circle extends IShape
 {
     public function Area(): int
     {
@@ -1030,8 +1030,8 @@ function Main()
             var output = CompileAndRun(@"
 public static void Main()
 {
-    print(Add(2, 3))
-    print(Square(4))
+    print(Add(2, 3));
+    print(Square(4));
 }
 
 public int Add(int x, int y)
@@ -1042,7 +1042,7 @@ public int Add(int x, int y)
 public int Square(int n)
 {
     return n * n;
-}", "src-cs-top-level", target);
+}", "src-cs-top-level", target, useCs: true);
 
             Assert.Equal("5\r\n16\r\n", output);
         }
@@ -1053,12 +1053,12 @@ public int Square(int n)
         public void NativeSource_NoKeywordTopLevelFunction(string target)
         {
             var output = CompileAndRun(@"
-Main(): void
+function Main()
 {
     print(Add(2, 3))
 }
 
-Add(a: int, b: int): int
+function Add(a: int, b: int): int
 {
     return a + b
 }", "src-no-keyword-top-level", target);
@@ -1072,13 +1072,13 @@ Add(a: int, b: int): int
         public void NativeSource_CSharpStyleConstLocal(string target)
         {
             var output = CompileAndRun(@"
-function Main()
+public static void Main()
 {
     const int x = 10;
     print(x);
     const string s = ""hi"";
     print(s);
-}", "src-cs-const", target);
+}", "src-cs-const", target, useCs: true);
 
             Assert.Equal("10\r\nhi\r\n", output);
         }
@@ -1089,8 +1089,8 @@ function Main()
         public void NativeSource_ExpressionBodiedTopLevelFunctions(string target)
         {
             var output = CompileAndRun(@"
-public static int Add(int a, int b) => a + b;
-public function Triple(x: int): int => x * 3;
+function Add(a: int, b: int): int => a + b
+function Triple(x: int): int => x * 3
 
 function Main()
 {

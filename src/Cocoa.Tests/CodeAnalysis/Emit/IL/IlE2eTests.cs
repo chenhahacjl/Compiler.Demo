@@ -16,11 +16,14 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         }
 
         private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string? input = null)
-            => EmitAndRun(source, name, "Main", input, null);
+            => EmitAndRun(source, name, "Main", input, null, useCs: false);
 
-        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string entryPointName, string? input = null, string[]? processArgs = null)
+        private static (int ExitCode, string Stdout) EmitAndRunCs(string source, string name, string? input = null)
+            => EmitAndRun(source, name, "Main", input, null, useCs: true);
+
+        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string entryPointName, string? input = null, string[]? processArgs = null, bool useCs = false)
         {
-            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
+            var syntaxTree = useCs ? Cocoa.CodeAnalysis.Syntax.SyntaxTree.ParseCs(source) : Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
             var exePath = GetOutputPath(name);
             // netcore：托管 exe + runtimeconfig，由 `dotnet <exe>` 运行（netfx 不写 runtimeconfig）
@@ -756,10 +759,10 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Calc
 {
-    public int Add(int a, int b) => a + b;
-    public int Square(int x) => x * x;
-    public function Subtract(a: int, b: int): int => a - b;
-    public function Triple(x: int): int => x * 3;
+    public function Add(a: int, b: int): int => a + b
+    public function Square(x: int): int => x * x
+    public function Subtract(a: int, b: int): int => a - b
+    public function Triple(x: int): int => x * 3
 }
 
 function Main()
@@ -781,12 +784,12 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Rect
 {
-    public int _w = 3;
-    public int _h = 4;
+    private _w: int = 3
+    private _h: int = 4
 
-    public int Area => _w * _h;
-    public property Width: int => _w;
-    public int DoubleW { get { return _w * 2; } }
+    public property Area: int => _w * _h
+    public property Width: int => _w
+    public property DoubleW: int => _w * 2
 }
 
 function Main()
@@ -807,7 +810,7 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Account
 {
-    public int Balance { get; private set; }
+    public property Balance: int { get private set }
 
     public function Deposit(amount: int)
     {
@@ -833,7 +836,7 @@ function Main()
             var messages = GetEmitDiagnostics(@"
 public class Account
 {
-    public int Balance { get; private set; }
+    public property Balance: int { get private set }
 }
 
 function Main()
@@ -865,11 +868,11 @@ public class Shape
     }
 }
 
-public class Circle: Shape
+public class Circle extends Shape
 {
     private _radius: int
 
-    public constructor(name: string, radius: int): base(name)
+    public constructor(name: string, radius: int) extends base(name)
     {
         _radius = radius
     }
@@ -915,7 +918,7 @@ public interface IShape
     property Name: string { get }
 }
 
-public class Circle: IShape
+public class Circle extends IShape
 {
     private _radius: int
 
@@ -957,12 +960,12 @@ public interface IShape
     function Area(): int
 }
 
-public interface IColoredShape: IShape
+public interface IColoredShape extends IShape
 {
     function Color(): string
 }
 
-public class ColoredSquare: IColoredShape
+public class ColoredSquare extends IColoredShape
 {
     private _side: int
 
@@ -1005,7 +1008,7 @@ public interface IAnimal
     property Age: int { get set }
 }
 
-public class Dog: IAnimal
+public class Dog extends IAnimal
 {
     private _age: int
 
@@ -1026,9 +1029,9 @@ public class Dog: IAnimal
     }
 }
 
-public class Puppy: Dog
+public class Puppy extends Dog
 {
-    public constructor(age: int): base(age)
+    public constructor(age: int) extends base(age)
     {
     }
 }
@@ -1073,7 +1076,7 @@ public interface IFighter
     function Name(): string
 }
 
-public abstract class BaseUnit: IFighter
+public abstract class BaseUnit extends IFighter
 {
     public function Name(): string
     {
@@ -1083,7 +1086,7 @@ public abstract class BaseUnit: IFighter
     public abstract function Power(): int
 }
 
-public class Knight: BaseUnit
+public class Knight extends BaseUnit
 {
     public function Power(): int
     {
@@ -1091,7 +1094,7 @@ public class Knight: BaseUnit
     }
 }
 
-public class Archer: BaseUnit
+public class Archer extends BaseUnit
 {
     public function Power(): int
     {
@@ -1118,7 +1121,7 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 using System
 
-public class Resource: IDisposable
+public class Resource extends IDisposable
 {
     private _name: string
 
@@ -1146,40 +1149,40 @@ function Main()
         }
 
         [Fact]
-        public void CStyleFor_PostfixIncrement_OnDotnetHost()
+        public void CSStyleFor_PostfixIncrement_OnDotnetHost()
         {
-            var (exitCode, stdout) = EmitAndRun(@"
-function Main()
+            var (exitCode, stdout) = EmitAndRunCs(@"
+public static void Main()
 {
-    var sum = 0
+    var sum = 0;
     for (var i = 0; i < 5; i++)
     {
-        sum = sum + i
+        sum = sum + i;
     }
-    print(sum)
-    var j = 10
-    j--
-    print(j)
-    j++
-    print(j)
-    var total = 0
+    print(sum);
+    var j = 10;
+    j--;
+    print(j);
+    j++;
+    print(j);
+    var total = 0;
     for (;;)
     {
-        total = total + 1
-        if total == 3
+        total = total + 1;
+        if (total == 3)
         {
-            break
+            break;
         }
     }
-    print(total)
-    var k = 0
+    print(total);
+    var k = 0;
     for (; k < 4; k = k + 1)
     {
-        if k == 2
+        if (k == 2)
         {
-            continue
+            continue;
         }
-        print(k)
+        print(k);
     }
 }", "e2e-cstyle-for");
 
@@ -1374,7 +1377,7 @@ public interface IDog extends IAnimal
     function Bark(): string
 }
 
-public class Dog: IDog
+public class Dog extends IDog
 {
     public function Speak(): string
     {
@@ -1401,14 +1404,14 @@ function Main()
         [Fact]
         public void CSharpStyle_Members_OnDotnetHost()
         {
-            var (exitCode, stdout) = EmitAndRun(@"
+            var (exitCode, stdout) = EmitAndRunCs(@"
 public class Person
 {
     private string _name;
-    private _age: int
+    private int _age;
     public static int Count = 0;
 
-    public Person(string name, age: int)
+    public Person(string name, int age)
     {
         _name = name;
         _age = age;
@@ -1423,13 +1426,13 @@ public class Person
     }
 }
 
-function Main()
+public static void Main()
 {
-    var p = new Person(""Alice"", 30)
-    p.Name = ""Bob""
-    print(p.Name)
-    print(p.GetAge())
-    print(Person.Count)
+    var p = new Person(""Alice"", 30);
+    p.Name = ""Bob"";
+    print(p.Name);
+    print(p.GetAge());
+    print(Person.Count);
 }", "e2e-cs-style-members");
 
             Assert.Equal(0, exitCode);
@@ -1442,11 +1445,11 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Counter
 {
-    private int _count = 5;
+    private _count: int = 5
 
-    public int Get()
+    public function Get(): int
     {
-        return _count;
+        return _count
     }
 }
 
@@ -1466,8 +1469,8 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Config
 {
-    public static int Max = 100;
-    public static int Base = 7;
+    public static Max: int = 100
+    public static Base: int = 7
 }
 
 function Main()
@@ -1485,8 +1488,8 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Point
 {
-    public int X { get; set; } = 10;
-    public int Y { get; set; } = 20;
+    public property X: int { get set } = 10
+    public property Y: int { get set } = 20
 }
 
 function Main()
@@ -1521,9 +1524,9 @@ public class Base
     }
 }
 
-public class Derived: Base
+public class Derived extends Base
 {
-    private int _x = Trace(""field"");
+    private _x: int = Trace(""field"")
 
     public constructor()
     {
@@ -1547,8 +1550,8 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Counter
 {
-    public static int Start = 5;
-    public static int End = Start + 10;
+    public static Start: int = 5
+    public static End: int = Start + 10
 }
 
 function Main()
@@ -1563,7 +1566,7 @@ function Main()
         [Fact]
         public void CSharpStyle_LocalVariables_OnDotnetHost()
         {
-            var (exitCode, stdout) = EmitAndRun(@"
+            var (exitCode, stdout) = EmitAndRunCs(@"
 public class Calc
 {
     public int Sum(int a, int b)
@@ -1574,10 +1577,10 @@ public class Calc
     }
 }
 
-function Main()
+public static void Main()
 {
-    var c = new Calc()
-    print(c.Sum(2, 3))
+    var c = new Calc();
+    print(c.Sum(2, 3));
 }", "e2e-cs-locals");
 
             Assert.Equal(0, exitCode);
@@ -1587,12 +1590,12 @@ function Main()
         [Fact]
         public void CSharpStyle_TopLevelFunctions_OnDotnetHost()
         {
-            var (exitCode, stdout) = EmitAndRun(@"
+            var (exitCode, stdout) = EmitAndRunCs(@"
 public static void Main()
 {
-    print(Add(2, 3))
-    print(Square(4))
-    print(Double(""hi""))
+    print(Add(2, 3));
+    print(Square(4));
+    print(Double(""hi""));
 }
 
 public int Add(int x, int y)
@@ -1618,12 +1621,12 @@ public string Double(string s)
         public void NoKeyword_TopLevelFunction_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-Main(): void
+function Main()
 {
     print(Add(2, 3))
 }
 
-Add(a: int, b: int): int
+function Add(a: int, b: int): int
 {
     return a + b
 }", "e2e-no-keyword-top-level");
@@ -1636,12 +1639,12 @@ Add(a: int, b: int): int
         public void NoKeyword_TopLevelFunction_WithoutReturnType_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-Main()
+function Main()
 {
     Greet()
 }
 
-Greet()
+function Greet()
 {
     print(""hello"")
 }", "e2e-no-keyword-top-level-noret");
@@ -1653,12 +1656,12 @@ Greet()
         [Fact]
         public void CSharpStyle_TopLevelFunction_ArrayReturnType_OnDotnetHost()
         {
-            var (exitCode, stdout) = EmitAndRun(@"
+            var (exitCode, stdout) = EmitAndRunCs(@"
 public static void Main()
 {
-    var nums = GetNums()
-    print(nums.Length)
-    print(nums[0] + nums[1])
+    var nums = GetNums();
+    print(nums.Length);
+    print(nums[0] + nums[1]);
 }
 
 public int[] GetNums()
@@ -1676,7 +1679,7 @@ public int[] GetNums()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Program
 {
-    public static void Main()
+    public static function Main()
     {
         print(""hello from class"")
     }
@@ -1694,7 +1697,7 @@ namespace My.App
 {
     public class Program
     {
-        public static void Main()
+        public static function Main()
         {
             print(""hello from namespace"")
         }
@@ -1711,7 +1714,7 @@ namespace My.App
             var (exitCode, stdout) = EmitAndRun(@"
 public class Program
 {
-    public static void Main(string[] args)
+    public static function Main(args: string[])
     {
         print(args.Length)
         print(args[0])
@@ -1728,7 +1731,7 @@ public class Program
             var (exitCode, stdout) = EmitAndRun(@"
 public class App
 {
-    public static void Main()
+    public static function Main()
     {
         print(""class main only"")
     }
@@ -1746,9 +1749,9 @@ namespace My.App
 {
     public class Utils
     {
-        public static int Square(int x)
+        public static function Square(x: int): int
         {
-            return x * x;
+            return x * x
         }
     }
 
@@ -1756,7 +1759,7 @@ namespace My.App
 
     public class Config
     {
-        public static int Version = 7;
+        public static Version: int = 7
     }
 }
 
@@ -1779,14 +1782,14 @@ namespace Foo.Bar
 {
     public class Point
     {
-        public int X()
+        public function X(): int
         {
-            return 3;
+            return 3
         }
     }
 }
 
-using Foo.Bar;
+using Foo.Bar
 
 function Main()
 {
@@ -1810,9 +1813,9 @@ function Main()
 
 public class Program
 {
-    public static int X()
+    public static function X(): int
     {
-        return 42;
+        return 42
     }
 }", "e2e-top-level-program-collision");
 
@@ -1829,6 +1832,15 @@ public class Program
             return diagnostics.Select(d => d.Message).ToArray();
         }
 
+        private static string[] GetEmitDiagnosticsCs(string source, string entryPointName)
+        {
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.ParseCs(source);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(entryPointName, new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, syntaxTree);
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", "entry-diag-cs.exe");
+            var diagnostics = compilation.Emit("entry-diag-cs", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
+            return diagnostics.Select(d => d.Message).ToArray();
+        }
+
         [Fact]
         public void Entry_QualifiedClassNotFound_Diagnostic()
         {
@@ -1839,14 +1851,14 @@ public class Program
         [Fact]
         public void Entry_QualifiedMethodNotFound_Diagnostic()
         {
-            var messages = GetEmitDiagnostics("public class Foo { public static int Bar() { return 1; } }", "Foo.Main");
+            var messages = GetEmitDiagnostics("public class Foo { public static function Bar(): int { return 1 } }", "Foo.Main");
             Assert.Contains(messages, m => m.Contains("类 'Foo' 中不存在静态入口方法 'Main'"));
         }
 
         [Fact]
         public void Entry_QualifiedMethodNotStatic_Diagnostic()
         {
-            var messages = GetEmitDiagnostics("public class Foo { public void Main() { } }", "Foo.Main");
+            var messages = GetEmitDiagnostics("public class Foo { public function Main() { } }", "Foo.Main");
             Assert.Contains(messages, m => m.Contains("类 'Foo' 中不存在静态入口方法 'Main'"));
         }
 
@@ -1856,7 +1868,7 @@ public class Program
             // 回归：原 SingleOrDefault 崩溃 → 歧义诊断
             var messages = GetEmitDiagnostics(@"
 function Main() { print(1) }
-public class Foo { public static void Main() { print(2) } }", "Main");
+public class Foo { public static function Main() { print(2) } }", "Main");
             Assert.Contains(messages, m => m.Contains("入口函数 'Main' 存在多个匹配"));
         }
 
@@ -1870,8 +1882,8 @@ public class Foo { public static void Main() { print(2) } }", "Main");
         [Fact]
         public void CSharpStyleConstLocal_OnDotnetHost()
         {
-            var (exitCode, stdout) = EmitAndRun(@"
-function Main()
+            var (exitCode, stdout) = EmitAndRunCs(@"
+public static void Main()
 {
     const int x = 10;
     print(x);
@@ -1888,8 +1900,8 @@ function Main()
         [Fact]
         public void CSharpStyleConstLocal_NotAssignable_ReportsError()
         {
-            var messages = GetEmitDiagnostics(@"
-function Main()
+            var messages = GetEmitDiagnosticsCs(@"
+public static void Main()
 {
     const int x = 10;
     x = 20;
@@ -2069,7 +2081,7 @@ function Main()
 "        print(x)\n" +
 "    }\n" +
 "    var sum = 0\n" +
-"    foreach (x in arr)\n" +
+"    foreach (var x in arr)\n" +
 "    {\n" +
 "        sum = sum + x\n" +
 "    }\n" +
@@ -2245,7 +2257,7 @@ public interface ICloneable
     function Clone(): string
 }
 
-public class Rectangle: IShape, ICloneable
+public class Rectangle extends IShape, ICloneable
 {
     private _w: int
     private _h: int
@@ -2297,7 +2309,7 @@ public interface IExtra
     function X(): int
 }
 
-public class Derived: Base, IExtra
+public class Derived extends Base, IExtra
 {
     public function X(): int
     {
@@ -2323,7 +2335,7 @@ function Main()
             var messages = GetEmitDiagnostics(@"
 public class A { }
 public class B { }
-public class C: A, B { }", "Main");
+public class C extends A, B { }", "Main");
             Assert.Contains(messages, m => m.Contains("只能有一个非接口基类"));
         }
 
@@ -2333,16 +2345,16 @@ public class C: A, B { }", "Main");
             var (exitCode, stdout) = EmitAndRun(@"
 public class Config
 {
-    public static int Max;
+    public static Max: int
 
-    static Config()
+    static constructor()
     {
-        Max = 42;
+        Max = 42
     }
 
-    public static int GetMax()
+    public static function GetMax(): int
     {
-        return Max;
+        return Max
     }
 }
 
@@ -2361,11 +2373,11 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Config
 {
-    public static int Max;
+    public static Max: int
 
     static constructor()
     {
-        Max = 7;
+        Max = 7
     }
 
     public static function GetMax(): int
@@ -2390,16 +2402,16 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Config
 {
-    public static int Order = 1;
+    public static Order: int = 1
 
-    static Config()
+    static constructor()
     {
-        Order = 2;
+        Order = 2
     }
 
-    public static int GetOrder()
+    public static function GetOrder(): int
     {
-        return Order;
+        return Order
     }
 }
 
@@ -2419,18 +2431,18 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 public class Account
 {
-    public static int Seq;
+    public static Seq: int
 
-    static Account()
+    static constructor()
     {
-        Seq = 100;
+        Seq = 100
     }
 
-    public int _base;
+    private _base: int
 
     public constructor()
     {
-        _base = Seq;
+        _base = Seq
     }
 
     public function GetBase(): int
@@ -2468,9 +2480,9 @@ public class Foo
         {
             var messages = GetEmitDiagnostics(@"
 public class Base { }
-public class Foo: Base
+public class Foo extends Base
 {
-    static Foo(): base()
+    static constructor() extends base()
     {
     }
 }", "Main");
@@ -2485,9 +2497,9 @@ public class Foo
 {
     private _x: int
 
-    static Foo()
+    static constructor()
     {
-        this._x = 1;
+        this._x = 1
     }
 }", "Main");
             Assert.Contains(messages, m => m.Contains("this"));
@@ -2501,9 +2513,9 @@ public class Foo
 {
     private _x: int
 
-    static Foo()
+    static constructor()
     {
-        _x = 1;
+        _x = 1
     }
 }", "Main");
             Assert.Contains(messages, m => m.Contains("实例字段"));

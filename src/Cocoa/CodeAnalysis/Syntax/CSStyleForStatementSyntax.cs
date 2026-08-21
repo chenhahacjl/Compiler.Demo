@@ -1,11 +1,11 @@
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// C 风格 for 循环 `for (init; cond; update) body`，三个部分均可省略。
+    /// C# 风格 for 循环 `for (init; cond; update) body`，三个部分均可省略。
     /// </summary>
-    public sealed partial class CStyleForStatementSyntax : StatementSyntax
+    public sealed partial class CSStyleForStatementSyntax : StatementSyntax
     {
-        internal CStyleForStatementSyntax(
+        internal CSStyleForStatementSyntax(
             SyntaxTree syntaxTree,
             SyntaxToken keyword,
             SyntaxToken openParenToken,
@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             Body = body;
         }
 
-        public override SyntaxKind Kind => SyntaxKind.CStyleForStatement;
+        public override SyntaxKind Kind => SyntaxKind.CSStyleForStatement;
 
         public SyntaxToken Keyword { get; }
         public SyntaxToken OpenParenToken { get; }

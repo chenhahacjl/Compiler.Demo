@@ -184,6 +184,11 @@ namespace Cocoa.CodeAnalysis.Cod
                         registry.RegisterVariable(n.Variable);
                         CollectExpression(registry, n.LowerBound, labels);
                         CollectExpression(registry, n.UpperBound, labels);
+                        if (n.Step != null)
+                        {
+                            CollectExpression(registry, n.Step, labels);
+                        }
+
                         CollectBody(registry, n.Body, labels);
                         break;
                     }
@@ -402,6 +407,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         w.Field(registry.Get(n.Variable));
                         WriteExpression(w, registry, labels, n.LowerBound);
                         WriteExpression(w, registry, labels, n.UpperBound);
+                        WriteNullableExpression(w, registry, labels, n.Step);
                         WriteStatement(w, registry, labels, n.Body);
                         w.Field(Str(n.BreakLabel.Name));
                         w.Field(Str(n.ContinueLabel.Name));
@@ -1293,10 +1299,11 @@ namespace Cocoa.CodeAnalysis.Cod
                         var variable = (VariableSymbol)symbolsById[variableId];
                         var lowerBound = ReadExpression(reader, symbolsById, labels);
                         var upperBound = ReadExpression(reader, symbolsById, labels);
+                        var step = ReadNullableExpression(reader, symbolsById, labels);
                         var body = ReadStatement(reader, symbolsById, labels);
                         var breakLabel = GetLabel(labels, reader.ExpectString());
                         var continueLabel = GetLabel(labels, reader.ExpectString());
-                        return new BoundForStatement(null, variable, lowerBound, upperBound, body, breakLabel, continueLabel);
+                        return new BoundForStatement(null, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
                     }
                 case "label":
                     return new BoundLabelStatement(null, GetLabel(labels, reader.ExpectString()));

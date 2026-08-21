@@ -1,12 +1,12 @@
-// C# 式参数（类型前置）+ C# 式方法体（分号、类型前置局部变量）
-function Add(int a, int b): int
+// Cocoa 式参数 + Cocoa 式体
+function Add(a: int, b: int): int
 {
-    int sum = a + b;
-    return sum;
+    var sum = a + b
+    return sum
 }
 
-// C# 式参数 + 无分号 Cocoa 风格体（同一函数内两种写法可混用）
-function Square(int x): int
+// Cocoa 式参数 + Cocoa 式体
+function Square(x: int): int
 {
     return x * x
 }
@@ -21,9 +21,9 @@ function Factorial(n: int): int
     return n * Factorial(n - 1)
 }
 
-// Cocoa 式参数 + C# 式体（分号 + 类型前置局部变量）
+// Cocoa 式参数 + Cocoa 式体
 function Greet(name: string): string
 {
-    string prefix = "Hello, ";
-    return prefix + name + "!";
+    var prefix = "Hello, "
+    return prefix + name + "!"
 }

@@ -225,6 +225,22 @@ namespace Cocoa.CodeAnalysis.Lowering
             var lowerBound = VariableDeclaration(node.Syntax, node.Variable, node.LowerBound);
             var upperBound = ConstantDeclaration(node.Syntax, "upperBound", node.UpperBound);
 
+            // 步长：有 step 时 `i = i + step`，否则 `i = i + 1`
+            BoundExpressionStatement increment;
+            if (node.Step != null)
+            {
+                increment = new BoundExpressionStatement(
+                    node.Syntax,
+                    Assignment(
+                        node.Syntax,
+                        node.Variable,
+                        Add(node.Syntax, Variable(node.Syntax, node.Variable), node.Step)));
+            }
+            else
+            {
+                increment = Increment(node.Syntax, Variable(node.Syntax, node.Variable));
+            }
+
             var result = Block(
                 node.Syntax,
                 lowerBound,
@@ -239,13 +255,11 @@ namespace Cocoa.CodeAnalysis.Lowering
                         node.Syntax,
                         node.Body,
                         Label(node.Syntax, node.ContinueLabel),
-                        Increment(
-                            node.Syntax,
-                            Variable(node.Syntax, lowerBound)
-                    )
-                ),
-                node.BreakLabel,
-                continueLabel: GenerateLabel())
+                        increment
+                    ),
+                    node.BreakLabel,
+                    continueLabel: GenerateLabel()
+                )
             );
 
             return RewriteStatement(result);

@@ -24,11 +24,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override bool AllowCocoaFunctionKeywords() => false;
 
-        protected override bool AllowNoKeywordTopLevelFunction() => false;
-
         protected override bool AllowCocoaClassMemberKeywords() => false;
 
         protected override bool AllowCocoaStyleField() => false;
+
+        protected override bool AllowExtendsKeyword() => false;
 
         protected override bool AllowCocoaInterfaceKeywords() => false;
 
@@ -82,9 +82,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var keyword = MatchToken(SyntaxKind.ForKeyword);
 
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCStyleForHeader())
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCSStyleForHeader())
             {
-                return ParseCStyleForStatement(keyword);
+                return ParseCSStyleForStatement(keyword);
             }
 
             Diagnostics.ReportError(Current.Location, "C# 方言 for 循环必须为 C 风格 `for (初始化; 条件; 更新)`，不支持 `for i = 0 to n`。");
@@ -95,11 +95,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var keyword = MatchToken(SyntaxKind.ForeachKeyword);
 
-            SyntaxToken? openParenToken = null;
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            // C# 方言：条件必须带括号 `foreach (var x in collection)`
+            if (Current.Kind != SyntaxKind.OpenParenthesisToken)
             {
-                openParenToken = NextToken();
+                Diagnostics.ReportError(Current.Location, "C# 方言 foreach 必须用括号（`foreach (var x in collection)`）。");
             }
+
+            var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
 
             // C# 方言：循环变量必须为 `var`（Cocoa `foreach (x in ...)` 缺 var → 报错）
             if (Current.Kind != SyntaxKind.VarKeyword)
@@ -122,11 +124,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var inKeyword = MatchToken(SyntaxKind.InKeyword);
             var collection = ParseExpression();
 
-            SyntaxToken? closeParenToken = null;
-            if (openParenToken != null)
-            {
-                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-            }
+            var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
             var body = ParseStatement();
 
@@ -138,6 +136,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             var doKeyword = MatchToken(SyntaxKind.DoKeyword);
             var body = ParseStatement();
             var whileKeyword = MatchToken(SyntaxKind.WhileKeyword);
+
+            // C# 方言：do-while 条件必须带括号 `do { ... } while (条件);`
+            if (Current.Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                Diagnostics.ReportError(Current.Location, "C# 方言 do-while 条件必须用括号（`do { ... } while (条件);`）。");
+            }
+
             var condition = ParseExpression();
 
             if (Current.Kind == SyntaxKind.SemicolonToken)
@@ -150,6 +155,65 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new DoWhileStatementSyntax(_syntaxTree, doKeyword, body, whileKeyword, condition);
+        }
+
+        protected override StatementSyntax ParseIfStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.IfKeyword);
+
+            // C# 方言：if 条件必须带括号 `if (条件) { ... }`
+            if (Current.Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                Diagnostics.ReportError(Current.Location, "C# 方言 if 条件必须用括号（`if (条件) { ... }`）。");
+            }
+
+            var condition = ParseExpression();
+            var statement = ParseStatement();
+            var elseClause = ParseOptionalElseClause();
+
+            return new IfStatementSyntax(_syntaxTree, keyword, condition, statement, elseClause);
+        }
+
+        protected override StatementSyntax ParseWhileStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.WhileKeyword);
+
+            // C# 方言：while 条件必须带括号 `while (条件) { ... }`
+            if (Current.Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                Diagnostics.ReportError(Current.Location, "C# 方言 while 条件必须用括号（`while (条件) { ... }`）。");
+            }
+
+            var condition = ParseExpression();
+            var body = ParseStatement();
+
+            return new WhileStatementSyntax(_syntaxTree, keyword, condition, body);
+        }
+
+        protected override StatementSyntax ParseSwitchStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.SwitchKeyword);
+
+            // C# 方言：switch 表达式必须带括号 `switch (表达式) { ... }`
+            if (Current.Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                Diagnostics.ReportError(Current.Location, "C# 方言 switch 必须用括号（`switch (表达式) { ... }`）。");
+            }
+
+            var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var expression = ParseExpression();
+            var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            var sections = ImmutableArray.CreateBuilder<SwitchSectionSyntax>();
+            while (Current.Kind == SyntaxKind.CaseKeyword || Current.Kind == SyntaxKind.DefaultKeyword)
+            {
+                sections.Add(ParseSwitchSection());
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new SwitchStatementSyntax(_syntaxTree, keyword, openParenToken, expression, closeParenToken, openBraceToken, sections.ToImmutable(), closeBraceToken);
         }
 
         protected override ParameterSyntax ParseParameter()

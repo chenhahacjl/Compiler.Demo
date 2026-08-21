@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
@@ -241,6 +242,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(doneLabel)));
 
                         EmitStatement(statement.Body);
+
+                        // 递增：i = i + step（无 step 时 + 1）
+                        var stepExpression = statement.Step ?? new BoundLiteralExpression(statement.Syntax, 1);
+                        var increment = new BoundBinaryExpression(
+                            statement.Syntax,
+                            new BoundVariableExpression(statement.Syntax, statement.Variable),
+                            BoundBinaryOperator.Bind(SyntaxKind.PlusToken, TypeSymbol.Int32, TypeSymbol.Int32)!,
+                            stepExpression);
+                        EmitExpression(new BoundAssignmentExpression(statement.Syntax, statement.Variable, increment));
+
                         Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(loopLabel)));
 
                         Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(doneLabel)));

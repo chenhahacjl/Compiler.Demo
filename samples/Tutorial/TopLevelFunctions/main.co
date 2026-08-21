@@ -1,21 +1,20 @@
-// C# 式顶层入口函数：public static void Main()
-public static void Main()
+// 入口函数
+function Main()
 {
     print(Add(2, 3))
     print(Add(10, 20))
 
-    var nums = GetNumbers();
-    print(nums.Length);
-    print(nums[0] + nums[1] + nums[2]);
+    var nums = GetNumbers()
+    print(nums.Length)
+    print(nums[0] + nums[1] + nums[2])
 
-    print(Repeat("ab", 3));
+    print(Repeat("ab", 3))
 
-    // Cocoa 式无关键字顶层函数调用
-    print(Double(21));
+    print(Double(21))
 }
 
-// Cocoa 式无关键字顶层函数（类型后置 + 冒号返回类型）
-Double(x: int): int
+// 顶层函数（类型后置 + 冒号返回类型）
+function Double(x: int): int
 {
-    return x * 2;
+    return x * 2
 }

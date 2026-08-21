@@ -249,6 +249,14 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WriteKeyword(SyntaxKind.ToKeyword);
             writer.WriteSpace();
             node.UpperBound.WriteTo(writer);
+            if (node.Step != null)
+            {
+                writer.WriteSpace();
+                writer.WriteKeyword(SyntaxKind.StepKeyword);
+                writer.WriteSpace();
+                node.Step.WriteTo(writer);
+            }
+
             writer.WriteLine();
             writer.WriteNestedStaement(node.Body);
         }

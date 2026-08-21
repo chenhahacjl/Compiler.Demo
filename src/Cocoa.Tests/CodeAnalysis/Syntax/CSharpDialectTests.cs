@@ -25,7 +25,6 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         // ---- 扩展名分派：Cocoa 专属拼写在 .cs 报错、.co 不报错 ----
 
         [Theory]
-        [InlineData("Main(): void { print(1) }", "无关键字顶层函数")]
         [InlineData("function Add(a: int, b: int): int { return a + b }", "function 关键字")]
         [InlineData("let x = 5", "let")]
         [InlineData("var x: int = 5", "类型后置")]
@@ -60,6 +59,54 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.False(ParseCsDiagnostics(text).HasErrors(), $"`.cs` 合法子集不应报错: {text}");
         }
 
+        // ---- extends 继承关键字拒绝 ----
+
+        [Theory]
+        [InlineData("public class Foo extends Bar { }")]
+        [InlineData("public interface IB extends IA { }")]
+        [InlineData("public class Foo { public constructor() extends base() { } }")]
+        public void Cs_RejectsExtendsKeyword(string text)
+        {
+            var diagnostics = ParseCsDiagnostics(text);
+            Assert.True(diagnostics.Any(d => d.Message.Contains("extends")), $".cs 应拒绝 extends: {text}");
+
+            Assert.False(ParseCocoaDiagnostics(text).HasErrors(), $".co 应接受 extends: {text}");
+        }
+
+        [Fact]
+        public void Cs_AcceptsColonInheritance()
+        {
+            var text = "public class Foo : Bar { public Foo() : base() { } } public interface IB : IA { }";
+            Assert.False(ParseCsDiagnostics(text).HasErrors());
+        }
+
+        // ---- 条件括号强制（if/while/switch/foreach/do-while） ----
+
+        [Theory]
+        [InlineData("if a < 10 { print(1); }")]
+        [InlineData("while a < 10 { print(1); }")]
+        [InlineData("switch 1 { case 1: { print(1); break; } }")]
+        [InlineData("foreach var x in arr { }")]
+        [InlineData("do { print(1); } while a < 10;")]
+        public void Cs_RequiresConditionParentheses(string body)
+        {
+            var text = $"public static void Main() {{ {body} }}";
+
+            var csDiagnostics = ParseCsDiagnostics(text);
+            Assert.True(csDiagnostics.Any(d => d.Message.Contains("括号")), $".cs 应要求条件括号: {body}");
+
+            // .co 括号可选：用合法 Cocoa 入口包裹（C# 式 `public static void Main()` 在 .co 已被拒绝）
+            var coText = $"function Main() {{ {body} }}";
+            Assert.False(ParseCocoaDiagnostics(coText).HasErrors(), $".co 括号可选不应报错: {body}");
+        }
+
+        [Fact]
+        public void Cs_AcceptsParenthesizedConditions()
+        {
+            var text = "public static void Main() { if (a < 10) { print(1); } while (a < 10) { print(1); } }";
+            Assert.False(ParseCsDiagnostics(text).HasErrors());
+        }
+
         // ---- 分号必选 ----
 
         [Theory]
@@ -71,7 +118,9 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var csDiagnostics = ParseCsDiagnostics(text);
             Assert.True(csDiagnostics.Any(d => d.Message.Contains("分号")), $".cs 应要求分号: {text}");
 
-            Assert.False(ParseCocoaDiagnostics(text).HasErrors(), $".co 分号可选不应报错: {text}");
+            // .co 分号可选：用合法 Cocoa 入口包裹（C# 式 `public static void Main()` 在 .co 已被拒绝）
+            var coText = text.Replace("public static void Main()", "function Main()");
+            Assert.False(ParseCocoaDiagnostics(coText).HasErrors(), $".co 分号可选不应报错: {text}");
         }
 
         // ---- 参数/局部类型前置 ----

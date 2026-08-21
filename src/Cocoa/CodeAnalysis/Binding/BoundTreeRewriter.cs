@@ -136,13 +136,14 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var lowerBound = RewriteExpression(node.LowerBound);
             var upperBound = RewriteExpression(node.UpperBound);
+            var step = node.Step == null ? null : RewriteExpression(node.Step);
             var body = RewriteStatement(node.Body);
-            if (lowerBound == node.LowerBound && upperBound == node.UpperBound && body == node.Body)
+            if (lowerBound == node.LowerBound && upperBound == node.UpperBound && step == node.Step && body == node.Body)
             {
                 return node;
             }
 
-            return new BoundForStatement(node.Syntax, node.Variable, lowerBound, upperBound, body, node.BreakLabel, node.ContinueLabel);
+            return new BoundForStatement(node.Syntax, node.Variable, lowerBound, upperBound, step, body, node.BreakLabel, node.ContinueLabel);
         }
 
         protected virtual BoundStatement RewriteLabelStatement(BoundLabelStatement node)

@@ -234,21 +234,21 @@ namespace Cocoa.CodeAnalysis.Syntax
             // P1（6e-M11）：C# 式顶层函数 `type name(params)`（类型前置，可带 `[]` 返回类型）
             if (IsCSharpStyleTopLevelFunction())
             {
+                if (!AllowCSharpStyleTopLevelFunction())
+                {
+                    ReportError(Current.Location, "Cocoa 顶层函数须用 function 关键字（如 `function Add(a: int, b: int): int`），不支持 C# 式 `返回类型 名称(...)`。");
+                }
+
                 return ParseCSharpStyleTopLevelFunction(modifiers);
             }
 
-            // P1（6e-M11）：Cocoa 式无关键字顶层函数 `name(params) [ : type ] { ... }`
+            // Cocoa 式无关键字顶层函数 `name(params) [ : type ] { ... }`（如 `Main(): void`）
+            // 双方言均拒绝：须带 function 关键字（Cocoa）/返回类型（C#）；报错后仍解析以保留干净语法树恢复。
             // 括号扫描消歧：`)` 后紧跟 `{`/`:` 判定为函数声明，否则是全局表达式语句（如 `print("hi")`）
             if (IsNoKeywordTopLevelFunction())
             {
-                if (!AllowNoKeywordTopLevelFunction())
-                {
-                    ReportError(Current.Location, "C# 方言顶层函数须带返回类型（如 `public static void Main()`），不支持 Cocoa 无关键字写法。");
-                }
-                else
-                {
-                    return ParseNoKeywordTopLevelFunction(modifiers);
-                }
+                ReportError(Current.Location, "顶层函数须用 function 关键字（Cocoa）或带返回类型（C#），不支持无关键字写法（如 `Main(): void`）。");
+                return ParseNoKeywordTopLevelFunction(modifiers);
             }
 
             if (modifiers.Any())
@@ -263,8 +263,17 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>C# 方言是否允许 `function`/`cdecl`/`stdcall` 关键字顶层函数（Cocoa 为 true，C# 为 false）。</summary>
         protected virtual bool AllowCocoaFunctionKeywords() => true;
 
-        /// <summary>C# 方言是否允许 Cocoa 无关键字顶层函数 `name(...)`（Cocoa 为 true，C# 为 false）。</summary>
-        protected virtual bool AllowNoKeywordTopLevelFunction() => true;
+        /// <summary>方言是否允许 C# 式顶层函数 `type name(params)`（Cocoa 为 false，C# 为 true）。</summary>
+        protected virtual bool AllowCSharpStyleTopLevelFunction() => true;
+
+        /// <summary>方言是否允许类成员中的 C# 式声明 `type name ...`（字段/属性/方法/构造函数；Cocoa 为 false，C# 为 true）。</summary>
+        protected virtual bool AllowCSharpStyleMember() => true;
+
+        /// <summary>方言是否允许 C# 式局部变量 `type name [= expr]`（无 var/let/const；Cocoa 为 false，C# 为 true）。</summary>
+        protected virtual bool AllowCSharpStyleVariableDeclaration() => true;
+
+        /// <summary>方言是否允许冒号 `:` 基类型/基接口（Cocoa 为 false，须用 extends；C# 为 true）。</summary>
+        protected virtual bool AllowColonInheritance() => true;
 
         /// <summary>C# 式顶层函数判定：`type name(` 或 `type[] name(`（返回类型可带数组后缀）。</summary>
         private bool IsCSharpStyleTopLevelFunction()
@@ -565,6 +574,16 @@ namespace Cocoa.CodeAnalysis.Syntax
             if (Current.Kind == SyntaxKind.ColonToken ||
                 Current.Kind == SyntaxKind.ExtendsKeyword)
             {
+                if (Current.Kind == SyntaxKind.ExtendsKeyword && !AllowExtendsKeyword())
+                {
+                    ReportError(Current.Location, "C# 方言继承/基接口须用冒号 `:`，不支持 'extends' 关键字。");
+                }
+
+                if (Current.Kind == SyntaxKind.ColonToken && !AllowColonInheritance())
+                {
+                    ReportError(Current.Location, "Cocoa 继承/基接口须用 extends 关键字，不支持冒号 `:`。");
+                }
+
                 var prefixToken = NextToken(); // : / extends
                 baseTypes.Add(CreateBaseTypeClause(prefixToken));
 
@@ -653,6 +672,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
 
                 // C# 式成员：`type name ...`
+                if (!AllowCSharpStyleMember())
+                {
+                    ReportError(Current.Location, "Cocoa 类成员须用 function/property/constructor 关键字且类型后置，不支持 C# 式 `类型 名称(...)`。");
+                }
+
                 return ParseCSharpStyleMember(modifiers, className);
             }
 
@@ -669,6 +693,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         /// <summary>C# 方言是否允许 Cocoa 式字段 `name: Type`（Cocoa 为 true，C# 为 false）。</summary>
         protected virtual bool AllowCocoaStyleField() => true;
+
+        /// <summary>C# 方言是否允许 `extends` 继承关键字（Cocoa 为 true，C# 为 false，须用冒号 `:`）。</summary>
+        protected virtual bool AllowExtendsKeyword() => true;
 
         /// <summary>C# 式成员：`type name ...`（字段/属性/方法/构造函数）。</summary>
         private MemberSyntax ParseCSharpStyleMember(ImmutableArray<SyntaxToken> modifiers, string className)
@@ -725,6 +752,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             if (Current.Kind == SyntaxKind.ColonToken ||
                 Current.Kind == SyntaxKind.ExtendsKeyword)
             {
+                if (Current.Kind == SyntaxKind.ExtendsKeyword && !AllowExtendsKeyword())
+                {
+                    ReportError(Current.Location, "C# 方言构造链须用冒号 `:`，不支持 'extends' 关键字。");
+                }
+
                 NextToken(); // : / extends
                 if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
                 {
@@ -859,6 +891,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             if (Current.Kind == SyntaxKind.ColonToken ||
                 Current.Kind == SyntaxKind.ExtendsKeyword)
             {
+                if (Current.Kind == SyntaxKind.ExtendsKeyword && !AllowExtendsKeyword())
+                {
+                    ReportError(Current.Location, "C# 方言构造链须用冒号 `:`，不支持 'extends' 关键字。");
+                }
+
                 NextToken(); // : / extends
                 if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
                 {
@@ -888,6 +925,16 @@ namespace Cocoa.CodeAnalysis.Syntax
             if (Current.Kind == SyntaxKind.ColonToken ||
                 Current.Kind == SyntaxKind.ExtendsKeyword)
             {
+                if (Current.Kind == SyntaxKind.ExtendsKeyword && !AllowExtendsKeyword())
+                {
+                    ReportError(Current.Location, "C# 方言继承/基接口须用冒号 `:`，不支持 'extends' 关键字。");
+                }
+
+                if (Current.Kind == SyntaxKind.ColonToken && !AllowColonInheritance())
+                {
+                    ReportError(Current.Location, "Cocoa 继承/基接口须用 extends 关键字，不支持冒号 `:`。");
+                }
+
                 var prefixToken = NextToken();
                 baseTypes.Add(CreateBaseTypeClause(prefixToken));
 
@@ -952,6 +999,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                          Peek(1).Kind == SyntaxKind.IdentifierToken)
                 {
                     // C# 式接口成员：`type name (...)` 方法签名 / `type name { get; }` 属性
+                    if (!AllowCSharpStyleMember())
+                    {
+                        ReportError(Current.Location, "Cocoa 接口成员须用 function/property 关键字且类型后置，不支持 C# 式 `类型 名称`。");
+                    }
+
                     var type = ParsePrefixTypeClause();
                     var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
 
@@ -1047,7 +1099,16 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken);
+            // 自动属性初始化器：`property X: int { get set } = 42`
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? initializer = null;
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                initializer = ParseExpression();
+            }
+
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken, equalsToken, initializer);
         }
 
         private PropertyAccessorSyntax ParsePropertyAccessor()
@@ -1210,6 +1271,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                     if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
                         Peek(1).Kind == SyntaxKind.IdentifierToken)
                     {
+                        if (!AllowCSharpStyleVariableDeclaration())
+                        {
+                            ReportError(Current.Location, "Cocoa 局部变量须用 var/let/const 声明且类型后置，不支持 C# 式 `类型 名称`。");
+                        }
+
                         statement = ParseCSharpStyleVariableDeclaration();
                     }
                     else
@@ -1318,7 +1384,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new VariableDeclarationSyntax(_syntaxTree, keyword, identifier, typeClause, equals, initializer);
         }
 
-        private TypeClauseSyntax? ParseOptionalTypeClause()
+        protected TypeClauseSyntax? ParseOptionalTypeClause()
         {
             if (Current.Kind != SyntaxKind.ColonToken)
             {
@@ -1328,7 +1394,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return ParseTypeClause();
         }
 
-        private TypeClauseSyntax ParseTypeClause()
+        protected TypeClauseSyntax ParseTypeClause()
         {
             var colonToken = MatchToken(SyntaxKind.ColonToken);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
@@ -1373,7 +1439,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new TypeClauseSyntax(_syntaxTree, prefixToken, identifier);
         }
 
-        private StatementSyntax ParseIfStatement()
+        protected virtual StatementSyntax ParseIfStatement()
         {
             var keyword = MatchToken(SyntaxKind.IfKeyword);
             var condition = ParseExpression();
@@ -1383,7 +1449,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new IfStatementSyntax(_syntaxTree, keyword, condition, statement, elseClause);
         }
 
-        private ElseClauseSyntax? ParseOptionalElseClause()
+        protected ElseClauseSyntax? ParseOptionalElseClause()
         {
             if (Current.Kind != SyntaxKind.ElseKeyword)
             {
@@ -1396,7 +1462,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ElseClauseSyntax(_syntaxTree, keyword, statement);
         }
 
-        private StatementSyntax ParseWhileStatement()
+        protected virtual StatementSyntax ParseWhileStatement()
         {
             var keyword = MatchToken(SyntaxKind.WhileKeyword);
             var condition = ParseExpression();
@@ -1420,9 +1486,9 @@ namespace Cocoa.CodeAnalysis.Syntax
             var keyword = MatchToken(SyntaxKind.ForKeyword);
 
             // for (init; cond; update) —— C 风格（括号内以顶层 ; 分隔）
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCStyleForHeader())
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCSStyleForHeader())
             {
-                return ParseCStyleForStatement(keyword);
+                return ParseCSStyleForStatement(keyword);
             }
 
             return ParseRangeForStatement(keyword);
@@ -1447,7 +1513,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         // 扫描括号内的 token 消歧：含顶层 ; → C 风格；含 to → range 次数/变量循环。
-        protected bool IsCStyleForHeader()
+        protected bool IsCSStyleForHeader()
         {
             var index = _position;
             var depth = 0;
@@ -1520,6 +1586,15 @@ namespace Cocoa.CodeAnalysis.Syntax
             var toKeyword = MatchToken(SyntaxKind.ToKeyword);
             var upperBound = ParseExpression();
 
+            // 可选步长：`for i = 0 to 10 step 2`
+            SyntaxToken? stepKeyword = null;
+            ExpressionSyntax? step = null;
+            if (Current.Kind == SyntaxKind.StepKeyword)
+            {
+                stepKeyword = NextToken();
+                step = ParseExpression();
+            }
+
             SyntaxToken? closeParenToken = null;
             if (openParenToken != null)
             {
@@ -1528,10 +1603,10 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var body = ParseStatement();
 
-            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, closeParenToken, body);
+            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, stepKeyword, step, closeParenToken, body);
         }
 
-        protected StatementSyntax ParseCStyleForStatement(SyntaxToken keyword)
+        protected StatementSyntax ParseCSStyleForStatement(SyntaxToken keyword)
         {
             var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
 
@@ -1556,7 +1631,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             var body = ParseStatement();
 
-            return new CStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
+            return new CSStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
         }
 
         protected virtual StatementSyntax ParseForeachStatement()
@@ -1599,7 +1674,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ForeachStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, inKeyword, collection, closeParenToken, body);
         }
 
-        private StatementSyntax ParseSwitchStatement()
+        protected virtual StatementSyntax ParseSwitchStatement()
         {
             var keyword = MatchToken(SyntaxKind.SwitchKeyword);
 
@@ -1630,7 +1705,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new SwitchStatementSyntax(_syntaxTree, keyword, openParenToken, expression, closeParenToken, openBraceToken, sections.ToImmutable(), closeBraceToken);
         }
 
-        private SwitchSectionSyntax ParseSwitchSection()
+        protected SwitchSectionSyntax ParseSwitchSection()
         {
             if (Current.Kind == SyntaxKind.DefaultKeyword)
             {

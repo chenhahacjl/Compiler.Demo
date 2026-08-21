@@ -123,25 +123,57 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Theory]
-        [InlineData("{ var result = 0 for (var i = 0; i < 10; i++) { result = result + i } return result }", 45)]
-        [InlineData("{ var result = 0 for (var i = 0; i <= 10; i = i + 1) { result = result + i } return result }", 55)]
-        [InlineData("{ var result = 0 for (var i = 10; i > 0; i--) { result = result + i } return result }", 55)]
-        [InlineData("{ var result = 0 for (var i = 0; i < 5; i++) { if i == 2 continue result = result + i } return result }", 8)]
-        [InlineData("{ var result = 0 for (var i = 10; i > 0; i--) { if i == 5 continue result = result + i } return result }", 50)]
-        [InlineData("{ var result = 0 for (var i = 0;; i++) { result = result + 1 if result == 5 break } return result }", 5)]
-        [InlineData("{ var i = 0 for (; i < 5; i = i + 1) { } return i }", 5)]
-        [InlineData("{ var i = 0 for (; i < 5;) { i = i + 1 } return i }", 5)]
-        [InlineData("{ var result = 0 for (;;) { result = result + 1 if result == 5 break } return result }", 5)]
-        public void Evaluator_CStyleFor_Computes_CorrectValues(string text, object expectedValue)
+        [InlineData("{ var result = 0; for (var i = 0; i < 10; i++) { result = result + i; } return result; }", 45)]
+        [InlineData("{ var result = 0; for (var i = 0; i <= 10; i = i + 1) { result = result + i; } return result; }", 55)]
+        [InlineData("{ var result = 0; for (var i = 10; i > 0; i--) { result = result + i; } return result; }", 55)]
+        [InlineData("{ var result = 0; for (var i = 0; i < 5; i++) { if (i == 2) continue; result = result + i; } return result; }", 8)]
+        [InlineData("{ var result = 0; for (var i = 10; i > 0; i--) { if (i == 5) continue; result = result + i; } return result; }", 50)]
+        [InlineData("{ var result = 0; for (var i = 0;; i++) { result = result + 1; if (result == 5) break; } return result; }", 5)]
+        [InlineData("{ var i = 0; for (; i < 5; i = i + 1) { } return i; }", 5)]
+        [InlineData("{ var i = 0; for (; i < 5;) { i = i + 1; } return i; }", 5)]
+        [InlineData("{ var result = 0; for (;;) { result = result + 1; if (result == 5) break; } return result; }", 5)]
+        public void Evaluator_CSStyleFor_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValueCs(text, expectedValue);
+        }
+
+        [Theory]
+        [InlineData("{ var result = 0 for (var i = 0 to 10 step 2) { result = result + i } return result }", 30)]
+        [InlineData("{ var result = 0 for (var i = 1 to 9 step 2) { result = result + 1 } return result }", 5)]
+        [InlineData("{ var result = 0 for (var i = 0 to 10 step 3) { result = result + i } return result }", 18)]
+        public void Evaluator_ForStep_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_ForStep_NonConstant_ReportsError()
+        {
+            var text = @"
+                var s = 2
+                for (var i = 0 to 10 step [s]) { }
+            ";
+
+            var diagnostics = @"
+                for 循环的 step 必须为常量正整数。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_ForStep_Zero_ReportsError()
+        {
+            var text = "for (var i = 0 to 10 step [0]) { }";
+            var diagnostics = "for 循环的 step 必须为常量正整数。";
+            AssertDiagnostics(text, diagnostics);
         }
 
         [Theory]
         [InlineData("{ var arr = new int[] {1, 2, 3} var sum = 0 foreach (var x in arr) { sum = sum + x } return sum }", 6)]
         [InlineData("{ var arr = new int[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 continue sum = sum + x } return sum }", 7)]
         [InlineData("{ var arr = new int[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 break sum = sum + x } return sum }", 3)]
-        [InlineData("{ var arr = new int[] {1, 2, 3} var count = 0 foreach (x in arr) { count = count + 1 } return count }", 3)]
+        [InlineData("{ var arr = new int[] {1, 2, 3} var count = 0 foreach (var x in arr) { count = count + 1 } return count }", 3)]
         [InlineData("{ var s = \"abc\" var count = 0 foreach (var c in s) { count = count + 1 } return count }", 3)]
         [InlineData("{ var arr = new int[] {1, 2} var result = 0 foreach (var x in arr) { foreach (var y in arr) { result = result + x * y } } return result }", 9)]
         public void Evaluator_Foreach_Computes_CorrectValues(string text, object expectedValue)
@@ -1017,7 +1049,7 @@ function Main()
         }
 
         [Fact]
-        public void Evaluator_CStyleForStatement_Reports_CannotConvert_Condition()
+        public void Evaluator_CSStyleForStatement_Reports_CannotConvert_Condition()
         {
             var text = @"
                 for (var i = 0; [10]; i++)
@@ -1029,7 +1061,7 @@ function Main()
                 Cannot convert type 'int' to 'bool'.
             ";
 
-            AssertDiagnostics(text, diagnostics);
+            AssertDiagnosticsCs(text, diagnostics);
         }
 
         [Fact]
@@ -1493,6 +1525,17 @@ function Main()
             Assert.Equal(expectedValue, result.Value);
         }
 
+        private static void AssertValueCs(string text, object expectedValue)
+        {
+            var syntaxTree = SyntaxTree.ParseCs(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(expectedValue, result.Value);
+        }
+
         [Fact]
         public void Evaluator_StringInterpolation()
         {
@@ -1693,6 +1736,43 @@ stdcall function GetTickCount(): int";
         {
             var annotatedText = AnnotatedText.Parse(text);
             var syntaxTree = SyntaxTree.Parse(annotatedText.Text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            var expectedDiagnostics = AnnotatedText.UnindentLines(diagnosticText);
+
+            if (annotatedText.Spans.Length != expectedDiagnostics.Length)
+            {
+                throw new Exception("ERROR: Must mark as many spans as there are expected diagnostics");
+            }
+
+            var diagnostics = result.Diagnostics;
+            Assert.Equal(expectedDiagnostics.Length, diagnostics.Length);
+
+            for (var i = 0; i < expectedDiagnostics.Length; i++)
+            {
+                var expectedMessage = expectedDiagnostics[i];
+                var actualMessage = diagnostics[i].Message;
+                Assert.Equal(expectedMessage, actualMessage);
+
+                if (assertLocation)
+                {
+                    var expectedSpan = annotatedText.Spans[i];
+                    var actualSpan = diagnostics[i].Location.Span;
+                    Assert.Equal(expectedSpan, actualSpan);
+                }
+            }
+        }
+
+        private void AssertDiagnosticsCs(string text, string diagnosticText)
+        {
+            AssertDiagnosticsCs(text, diagnosticText, true);
+        }
+
+        private void AssertDiagnosticsCs(string text, string diagnosticText, bool assertLocation)
+        {
+            var annotatedText = AnnotatedText.Parse(text);
+            var syntaxTree = SyntaxTree.ParseCs(annotatedText.Text);
             var compilation = Compilation.CreateScript(null, syntaxTree);
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
 

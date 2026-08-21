@@ -219,7 +219,7 @@ namespace Cocoa.Tests.Compiler
         public void Project_EntryField_NamespaceQualifiedClassMethod_Dotnet()
         {
             BuildProject(
-                "namespace My.App { public class Program { public static void Main() { print(7) } } }",
+                "namespace My.App { public class Program { public static function Main() { print(7) } } }",
                 "dotnet",
                 "entry-qualified",
                 "My.App.Program.Main",
@@ -236,7 +236,7 @@ namespace Cocoa.Tests.Compiler
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(appDir);
             File.WriteAllText(Path.Combine(appDir, "App.co"),
-                "namespace My.App { public class Program { public static void Main() { print(7) } } }");
+                "namespace My.App { public class Program { public static function Main() { print(7) } } }");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"),
                 $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");

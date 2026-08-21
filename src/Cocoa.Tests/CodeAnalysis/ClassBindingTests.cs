@@ -185,8 +185,8 @@ function Main()
         public void Oop_CircularInheritance_ReportsError()
         {
             var code = @"
-public class A: B { }
-public class B: A { }
+public class A extends B { }
+public class B extends A { }
 
 function Main()
 {
@@ -316,7 +316,7 @@ public class Animal
     }
 }
 
-public class Dog: Animal
+public class Dog extends Animal
 {
     public constructor(age: int)
     {
@@ -347,9 +347,9 @@ public class Animal
     protected _age: int
 }
 
-public class Dog: Animal { }
+public class Dog extends Animal { }
 
-public class Puppy: Dog
+public class Puppy extends Dog
 {
     public constructor(age: int)
     {
@@ -654,11 +654,11 @@ function Main()
 public class A { }
 public class B { }
 
-public partial class Foo: A
+public partial class Foo extends A
 {
 }
 
-public partial class Foo: B
+public partial class Foo extends B
 {
 }
 
@@ -691,25 +691,25 @@ function Main()
         }
 
         [Fact]
-        public void Class_CSharpStyleMembers_BindWithoutErrors()
+        public void Class_CocoaMembers_BindWithoutErrors()
         {
             var code = @"
 public class Person
 {
-    private string _name;
+    private _name: string
     private _age: int
 
-    public Person(string name, age: int)
+    public constructor(name: string, age: int)
     {
-        _name = name;
-        _age = age;
+        _name = name
+        _age = age
     }
 
-    public string Name { get; set; }
+    public property Name: string { get set }
 
-    public int GetAge()
+    public function GetAge(): int
     {
-        return _age;
+        return _age
     }
 }
 
@@ -728,11 +728,11 @@ function Main()
             var code = @"
 public class Counter
 {
-    private int _count = 5;
+    private _count: int = 5
 
     public function Get(): int
     {
-        return _count;
+        return _count
     }
 }
 
@@ -751,11 +751,11 @@ function Main()
             var code = @"
 public class Point
 {
-    public int X { get; set; } = 10;
+    public property X: int { get set } = 10
 
     public function GetX(): int
     {
-        return X;
+        return X
     }
 }
 
@@ -774,7 +774,7 @@ function Main()
             var code = @"
 public class Config
 {
-    public static int Max = 100;
+    public static Max: int = 100
 }
 
 function Main()
@@ -795,7 +795,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    public static int Max;
+    public static Max: int
     private _x: int
 }
 
@@ -818,11 +818,11 @@ function Main()
             var code = @"
 public class Config
 {
-    public static int Max;
+    public static Max: int
 
-    static Config()
+    static constructor()
     {
-        Max = 42;
+        Max = 42
     }
 }
 
@@ -845,11 +845,11 @@ function Main()
             var code = @"
 public class Config
 {
-    public static int Max;
+    public static Max: int
 
     static constructor()
     {
-        Max = 7;
+        Max = 7
     }
 }
 
@@ -872,11 +872,11 @@ function Main()
             var code = @"
 public class Config
 {
-    public static int Max;
+    public static Max: int
 
-    static Config()
+    static constructor()
     {
-        Max = 42;
+        Max = 42
     }
 }
 
@@ -920,9 +920,9 @@ public class Base
 {
 }
 
-public class Foo: Base
+public class Foo extends Base
 {
-    static Foo(): base()
+    static constructor() extends base()
     {
     }
 }
@@ -941,7 +941,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    public static Foo()
+    public static constructor()
     {
     }
 }
@@ -962,9 +962,9 @@ public class Foo
 {
     private _x: int
 
-    static Foo()
+    static constructor()
     {
-        this._x = 1;
+        this._x = 1
     }
 }
 
@@ -984,9 +984,9 @@ public class Foo
 {
     private _x: int
 
-    static Foo()
+    static constructor()
     {
-        _x = 1;
+        _x = 1
     }
 }
 
@@ -1004,7 +1004,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    static Foo()
+    static constructor()
     {
     }
 
@@ -1027,11 +1027,11 @@ function Main()
             var code = @"
 public class Immutable
 {
-    public readonly int Id = 42;
+    public readonly Id: int = 42
 
     public function Get(): int
     {
-        return Id;
+        return Id
     }
 }
 
@@ -1045,16 +1045,16 @@ function Main()
         }
 
         [Fact]
-        public void Class_CSharpStyleLocalVariables_BindWithoutErrors()
+        public void Class_CocoaLocalVariables_BindWithoutErrors()
         {
             var code = @"
 public class Calculator
 {
-    public int Add(int a, int b)
+    public function Add(a: int, b: int): int
     {
-        int sum = a + b;
-        var product = a * b;
-        return sum + product;
+        var sum = a + b
+        var product = a * b
+        return sum + product
     }
 }
 
@@ -1073,7 +1073,7 @@ function Main()
             var code = @"
 public class Account
 {
-    public int Balance { get; private set; }
+    public property Balance: int { get private set }
 
     public function Deposit(amount: int)
     {
@@ -1103,7 +1103,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    private int X { get; private set; }
+    private property X: int { get private set }
 }
 
 function Main()
@@ -1120,7 +1120,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    private int X { get; public set; }
+    private property X: int { get public set }
 }
 
 function Main()
@@ -1138,7 +1138,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    protected int X { internal get; }
+    protected property X: int { internal get }
 }
 
 function Main()
@@ -1155,7 +1155,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    public int X { private get; private set; }
+    public property X: int { private get private set }
 }
 
 function Main()

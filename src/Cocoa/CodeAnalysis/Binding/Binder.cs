@@ -1622,7 +1622,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
                 case SyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
                 case SyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
-                case SyntaxKind.CStyleForStatement: return BindCStyleForStatement((CStyleForStatementSyntax)syntax);
+                case SyntaxKind.CSStyleForStatement: return BindCSStyleForStatement((CSStyleForStatementSyntax)syntax);
                 case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
@@ -1852,6 +1852,19 @@ namespace Cocoa.CodeAnalysis.Binding
             var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Int32);
             var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Int32);
 
+            // 可选步长：V1 仅支持常量正整数（负步长会破坏 `i <= upper` 条件语义）
+            BoundExpression? step = null;
+            if (syntax.Step != null)
+            {
+                step = BindExpression(syntax.Step, TypeSymbol.Int32);
+                if (step.ConstantValue == null ||
+                    step.ConstantValue.Value is not int stepValue ||
+                    stepValue <= 0)
+                {
+                    _diagnostics.ReportError(syntax.Step.Location, "for 循环的 step 必须为常量正整数。");
+                }
+            }
+
             _scope = new BoundScope(_scope);
 
             VariableSymbol variable;
@@ -1893,7 +1906,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             _scope = _scope.Parent!;
 
-            return new BoundForStatement(syntax, variable, lowerBound, upperBound, body, breakLabel, continueLabel);
+            return new BoundForStatement(syntax, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
         }
 
         /// <summary>foreach 绑定期脱糖为 while 索引循环（策略点：v1 数组/字符串）：</summary>
@@ -2130,7 +2143,7 @@ namespace Cocoa.CodeAnalysis.Binding
             _diagnostics.ReportError(last.Location, "switch 节体必须以 break/return/continue 结尾（不支持 fall-through）。");
         }
 
-        private BoundStatement BindCStyleForStatement(CStyleForStatementSyntax syntax)
+        private BoundStatement BindCSStyleForStatement(CSStyleForStatementSyntax syntax)
         {
             _scope = new BoundScope(_scope);
 

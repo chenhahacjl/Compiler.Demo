@@ -1,40 +1,38 @@
-// C# 式类语法（IL 后端）：类成员双语法 + 字段/自动属性初始化器
+// Cocoa 式类语法（IL 后端）：类成员 function/property/constructor 关键字 + 类型后置
 //
-// 双语法：C# 式 `Type name` 与 Cocoa 式 `name: Type` 可在同一类内混用。
+// Cocoa 语法：字段 `name: Type`、方法 `function`、属性 `property`、构造 `constructor`。
 
 public class Person
 {
-    // C# 式字段
-    private string _name;
     // Cocoa 式字段
+    private _name: string
     private _age: int
-    // C# 式静态字段 + 初始化器（合成 .cctor）
-    public static int Count = 0;
+    // Cocoa 式静态字段 + 初始化器（合成 .cctor）
+    public static Count: int = 0
 
-    // C# 式构造函数（名字 = 类名）+ C# 式参数
-    public Person(string name, int age)
+    // Cocoa 式构造函数（constructor 关键字）+ Cocoa 式参数
+    public constructor(name: string, age: int)
     {
-        _name = name;
-        _age = age;
-        Count = Count + 1;
+        _name = name
+        _age = age
+        Count = Count + 1
     }
 
-    // C# 式自动属性
-    public string Name { get; set; }
+    // Cocoa 式自动属性
+    public property Name: string { get set }
 
-    // C# 式自动属性 + 初始化器（作用于后备字段 _Age，构造链之后执行）
-    public int Age { get; set; } = 18;
+    // Cocoa 式自动属性 + 初始化器（作用于后备字段 _Age，构造链之后执行）
+    public property Age: int { get set } = 18
 
-    // C# 式方法（返回类型前置 + 分号）
-    public int NextAge()
+    // Cocoa 式方法（function 关键字 + 类型后置）
+    public function NextAge(): int
     {
-        return Age + 1;
+        return Age + 1
     }
 
-    // Cocoa 式方法（function 关键字 + 类型后置）混用
     public function Greet(): string
     {
-        return "Hello, " + _name;
+        return "Hello, " + _name
     }
 }
 

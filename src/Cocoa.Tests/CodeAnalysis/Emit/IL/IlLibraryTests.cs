@@ -297,11 +297,11 @@ public class Shape
     }
 }
 
-public class Circle: Shape
+public class Circle extends Shape
 {
     private _radius: int
 
-    public constructor(name: string, radius: int): base(name)
+    public constructor(name: string, radius: int) extends base(name)
     {
         _radius = radius
     }
@@ -346,7 +346,7 @@ public class Circle: Shape
             var code = @"
 using System
 
-public class Resource: IDisposable
+public class Resource extends IDisposable
 {
     private _name: string
 
@@ -419,8 +419,8 @@ public class MathHelpers
             var code = @"
 public class Config
 {
-    public static int Max = 100;
-    public static string Name = ""cocoa"";
+    public static Max: int = 100
+    public static Name: string = ""cocoa""
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);

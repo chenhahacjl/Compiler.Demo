@@ -110,6 +110,7 @@ ColonToken,               // :
         SetKeyword,               // set
         StaticKeyword,            // static
         StdcallKeyword,           // stdcall
+        StepKeyword,              // step
         SwitchKeyword,            // switch
         ThisKeyword,              // this
         ToKeyword,                // to
@@ -148,7 +149,7 @@ ColonToken,               // :
         DoWhileStatement,         // DO-WHILE 循环语句
         ForStatement,             // FOR 循环语句
         ForeachStatement,         // FOREACH 循环语句
-        CStyleForStatement,       // C 风格 FOR 循环语句 for (init; cond; update)
+        CSStyleForStatement,      // C# 风格 FOR 循环语句 for (init; cond; update)
         BreakStatement,           // BREAK 语句
         ContinueStatement,        // CONTINUE 语句
         ReturnStatement,          // RETURN 语句

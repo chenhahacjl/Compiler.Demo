@@ -1,9 +1,9 @@
 function Main()
 {
-    // C# 式局部变量（类型前置 + 分号）
-    int a = 10;
-    int b = 32;
-    string msg = "C# style";
+    // Cocoa 式局部变量（类型推断，无分号）
+    var a = 10
+    var b = 32
+    var msg = "C# style"
 
     // Cocoa 式局部变量（类型后置 / 推断，无分号）
     var c = 5

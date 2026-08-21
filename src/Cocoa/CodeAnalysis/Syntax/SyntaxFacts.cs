@@ -144,6 +144,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.SealedKeyword;
                 case "static":
                     return SyntaxKind.StaticKeyword;
+                case "step":
+                    return SyntaxKind.StepKeyword;
                 case "switch":
                     return SyntaxKind.SwitchKeyword;
                 case "this":
@@ -347,6 +349,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "sealed";
                 case SyntaxKind.StaticKeyword:
                     return "static";
+                case SyntaxKind.StepKeyword:
+                    return "step";
                 case SyntaxKind.SwitchKeyword:
                     return "switch";
                 case SyntaxKind.VirtualKeyword:
