@@ -44,8 +44,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
                 _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
-                _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "", _doubleBuffer = "",
-                _formatBuffer = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
+                _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
+                _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "";
 
             public Emitter(IrProgram program, TargetPlatform platform)
@@ -85,8 +85,28 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     _ = BeginFunction("DoubleToString", 4, 4);
                 }
                 EmitDoubleToString();
+                if (_isX64)
+                {
+                    _ = BeginFunction("FormatFixed", 8, 4);
+                }
+                else
+                {
+                    _ = BeginFunction("FormatFixed", 4, 4, 4);
+                }
+                EmitFormatFixed();
+                if (_isX64)
+                {
+                    _ = BeginFunction("FormatSci", 8, 4, 4);
+                }
+                else
+                {
+                    _ = BeginFunction("FormatSci", 4, 4, 4, 4);
+                }
+                EmitFormatSci();
                 _ = BeginFunction("DivChain", 8, 4);
                 EmitDivChain();
+                _ = BeginFunction("BigDiv", 8, 4, 4);
+                EmitBigDiv();
                 _ = BeginFunction("ParseInt", 8);
                 EmitParseInt();
                 _ = BeginFunction("ParseBool", 8);
@@ -173,8 +193,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 _infinityString = _program.AddData(IrDataItem.Utf16(Prefix + "InfinityString", "Infinity"));
                 _negInfinityString = _program.AddData(IrDataItem.Utf16(Prefix + "NegInfinityString", "-Infinity"));
                 _nanString = _program.AddData(IrDataItem.Utf16(Prefix + "NanString", "NaN"));
-                _doubleBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "DoubleBuffer", new byte[128]));
-                _formatBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatBuffer", new byte[256]));
+                _formatBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatBuffer", new byte[1600]));
+                _fmtBigBuf = _program.AddData(IrDataItem.ByteArray(Prefix + "FmtBigBuf", new byte[1600]));
                 _formatOne = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatOne", DoubleBits(1.0)));
                 _formatTen = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatTen", DoubleBits(10.0)));
                 _formatTrue = _program.AddData(IrDataItem.Utf16(Prefix + "FormatTrue", "True"));
@@ -886,30 +906,638 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 EndFunction(_currentFunction!, 4);
             }
 
+            // BigDiv(buf:8, divisor:4, blocks:4) → rem:4
+            // 大整数（blocks 个 16 位块，LE）除以小除数（< 2^16），链式 16 位块商写回，返回余数。
             // ------------------------------------------------------------------
-            // DoubleToString(bits) → 字符串对象
-            // x64 参数：8 字节位模式；x86：两个 32 位（low, high）。
-            // 输出 = 定点 6 位小数（四舍五入，剪尾零），符号前缀；0 → "0"（-0 → "-0"）；
-            // Infinity/NaN 与 .NET 打印一致。|v|≥2^55 时 128 位定点截断（高位丢弃）。
-            // 核心为平台无关的 32 位指令序列：4×u32 大整数（LE）表示 v×10^6。
+
+            private void EmitBigDiv()
+            {
+                var buf = _args[0];
+                var divisor = _args[1];
+                var blocks = _args[2];
+                var loop = NewLabel();
+                var done = NewLabel();
+
+                var p = NewReg(8);
+                Mov(p, buf);
+                var top = NewReg(4);
+                Mov(top, blocks);
+                Shl(top, top, 1);
+                Add(p, p, top);
+                AddI(p, p, -2);
+                var count = NewReg(4);
+                Mov(count, blocks);
+                var rem = NewReg(4);
+                Const(rem, 0);
+
+                Mark(loop);
+                var block = NewReg(4);
+                Load(block, p, 0, 2);
+                var t = NewReg(4);
+                Shl(t, rem, 16);
+                Or(t, t, block);
+                var q = NewReg(4);
+                Mov(q, t);
+                Udiv(q, divisor);
+                var back = NewReg(4);
+                Imul(back, q, divisor);
+                Sub(rem, t, back);
+                Store(p, 0, q, 2);
+                var next = NewReg(8);
+                Lea(next, p, -2);
+                Mov(p, next);
+                AddI(count, count, -1);
+                Cmp(count, 0);
+                Jcc(IrCond.NotEqual, loop);
+
+                Mark(done);
+                StoreRet(rem);
+                EndFunction(_currentFunction!, 4);
+            }
+
+            // ------------------------------------------------------------------
+            // 大整数（80×u16 = 1280 位，LE）原语 —— 全 double 范围定点格式化基础。
+            // 布局：u32 limb i（LE）位于 buf+4i，等价 16 位块 2i/2i+1（乘/除按 16 位块，移位按 32 位 limb）。
+            // ------------------------------------------------------------------
+
+            private const int BigBlocks = 80;
+            private const int BigLimbs = 40;
+
+            private void AndI(IrVirtualRegister dst, IrVirtualRegister a, int imm) => Add(IrOpCode.And, dst, IrOperand.Reg(a), IrOperand.Constant(imm));
+
+            private void ShlReg(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister count) => Add(IrOpCode.Shl, dst, IrOperand.Reg(a), IrOperand.Reg(count));
+
+            private void ShrReg(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister count) => Add(IrOpCode.Shr, dst, IrOperand.Reg(a), IrOperand.Reg(count));
+
+            private void EmitBigAddr(IrVirtualRegister buf, IrVirtualRegister idx, int scale, IrVirtualRegister addr)
+            {
+                Mov(addr, buf);
+                var off = NewReg(4);
+                Mov(off, idx);
+                if (scale == 4)
+                {
+                    Shl(off, off, 2);
+                }
+                else
+                {
+                    Shl(off, off, 1);
+                }
+                Add(addr, addr, off);
+            }
+
+            private void EmitBigSetZero(IrVirtualRegister buf)
+            {
+                var i = NewReg(4);
+                Const(i, 0);
+                var loop = NewLabel();
+                var done = NewLabel();
+                Mark(loop);
+                Cmp(i, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, done);
+                var addr = NewReg(8);
+                EmitBigAddr(buf, i, 4, addr);
+                Store(addr, 0, C(4, 0), 4);
+                AddI(i, i, 1);
+                Jmp(loop);
+                Mark(done);
+            }
+
+            private void EmitBigSetFromMantissa(IrVirtualRegister buf, IrVirtualRegister m0, IrVirtualRegister m1)
+            {
+                Store(buf, 0, m0, 4);
+                Store(buf, 4, m1, 4);
+                var i = NewReg(4);
+                Const(i, 2);
+                var loop = NewLabel();
+                var done = NewLabel();
+                Mark(loop);
+                Cmp(i, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, done);
+                var addr = NewReg(8);
+                EmitBigAddr(buf, i, 4, addr);
+                Store(addr, 0, C(4, 0), 4);
+                AddI(i, i, 1);
+                Jmp(loop);
+                Mark(done);
+            }
+
+            /// <summary>整值 ×k（k ≤ 0xFFFF 编译期常量）原地，16 位块链式进位。</summary>
+            private void EmitBigMulSmall(IrVirtualRegister buf, int k)
+            {
+                var carry = NewReg(4);
+                Const(carry, 0);
+                var i = NewReg(4);
+                Const(i, 0);
+                var loop = NewLabel();
+                var done = NewLabel();
+                Mark(loop);
+                Cmp(i, BigBlocks);
+                Jcc(IrCond.GreaterOrEqual, done);
+                var addr = NewReg(8);
+                EmitBigAddr(buf, i, 2, addr);
+                var blk = NewReg(4);
+                Load(blk, addr, 0, 2);
+                var t = NewReg(4);
+                Imul(t, blk, C(4, k));
+                Add(t, t, carry);
+                var nb = NewReg(4);
+                AndI(nb, t, 0xFFFF);
+                Store(addr, 0, nb, 2);
+                Mov(carry, t);
+                Shr(carry, carry, 16);
+                AddI(i, i, 1);
+                Jmp(loop);
+                Mark(done);
+            }
+
+            /// <summary>读 buf[idx]（idx 越界 → 0）。</summary>
+            private void EmitBigGetLimb(IrVirtualRegister buf, IrVirtualRegister idx, IrVirtualRegister val)
+            {
+                Const(val, 0);
+                var done = NewLabel();
+                Cmp(idx, 0);
+                Jcc(IrCond.Less, done);
+                Cmp(idx, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, done);
+                var addr = NewReg(8);
+                EmitBigAddr(buf, idx, 4, addr);
+                Load(val, addr, 0, 4);
+                Mark(done);
+            }
+
+            private void EmitBigSetLimb(IrVirtualRegister buf, IrVirtualRegister idx, IrVirtualRegister val)
+            {
+                var addr = NewReg(8);
+                EmitBigAddr(buf, idx, 4, addr);
+                Store(addr, 0, val, 4);
+            }
+
+            /// <summary>右移 bits（0..1074）截断（无舍入）。</summary>
+            private void EmitBigShrTrunc(IrVirtualRegister buf, IrVirtualRegister bits)
+            {
+                var full = NewReg(4);
+                Mov(full, bits);
+                Shr(full, full, 5);
+                var rem = NewReg(4);
+                Mov(rem, bits);
+                AndI(rem, rem, 31);
+                var doneAll = NewLabel();
+                var remZero = NewLabel();
+                var zeroTop = NewLabel();
+                var zeroTop2 = NewLabel();
+                var shiftDone = NewLabel();
+
+                var i = NewReg(4);
+                Const(i, 0);
+                Cmp(rem, 0);
+                Jcc(IrCond.Equal, remZero);
+
+                // rem != 0：limb[i] = (limb[i+full]>>rem) | (limb[i+full+1]<<(32-rem))
+                var maxLo = NewReg(4);
+                Mov(maxLo, full);
+                Neg(maxLo);
+                AddI(maxLo, maxLo, BigLimbs - 1);
+                var sRem = NewReg(4);
+                Mov(sRem, rem);
+                Neg(sRem);
+                AddI(sRem, sRem, 32);
+                var loop1 = NewLabel();
+                Mark(loop1);
+                Cmp(i, maxLo);
+                Jcc(IrCond.GreaterOrEqual, zeroTop);
+                var idxA = NewReg(4);
+                Add(idxA, i, full);
+                var a = NewReg(4);
+                EmitBigGetLimb(buf, idxA, a);
+                var tA = NewReg(4);
+                ShrReg(tA, a, rem);
+                var idxB = NewReg(4);
+                AddI(idxB, idxA, 1);
+                var b = NewReg(4);
+                EmitBigGetLimb(buf, idxB, b);
+                var tB = NewReg(4);
+                ShlReg(tB, b, sRem);
+                Or(tA, tA, tB);
+                EmitBigSetLimb(buf, i, tA);
+                AddI(i, i, 1);
+                Jmp(loop1);
+
+                Mark(zeroTop);
+                Cmp(i, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, shiftDone);
+                EmitBigSetLimb(buf, i, C(4, 0));
+                AddI(i, i, 1);
+                Jmp(zeroTop);
+                Mark(shiftDone);
+                Jmp(doneAll);
+
+                Mark(remZero);
+                var maxLo2 = NewReg(4);
+                Mov(maxLo2, full);
+                Neg(maxLo2);
+                AddI(maxLo2, maxLo2, BigLimbs - 1);
+                var loop2 = NewLabel();
+                Mark(loop2);
+                Cmp(i, maxLo2);
+                Jcc(IrCond.GreaterOrEqual, zeroTop2);
+                var idx2 = NewReg(4);
+                Add(idx2, i, full);
+                var v2 = NewReg(4);
+                EmitBigGetLimb(buf, idx2, v2);
+                EmitBigSetLimb(buf, i, v2);
+                AddI(i, i, 1);
+                Jmp(loop2);
+                Mark(zeroTop2);
+                Cmp(i, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, doneAll);
+                EmitBigSetLimb(buf, i, C(4, 0));
+                AddI(i, i, 1);
+                Jmp(zeroTop2);
+                Mark(doneAll);
+            }
+
+            /// <summary>左移 bits（0..1074），高位丢弃。</summary>
+            private void EmitBigShl(IrVirtualRegister buf, IrVirtualRegister bits)
+            {
+                var full = NewReg(4);
+                Mov(full, bits);
+                Shr(full, full, 5);
+                var rem = NewReg(4);
+                Mov(rem, bits);
+                AndI(rem, rem, 31);
+                var doneAll = NewLabel();
+                var remZero = NewLabel();
+                var zeroLow = NewLabel();
+                var zeroLow2 = NewLabel();
+                var shiftDone = NewLabel();
+
+                var i = NewReg(4);
+                Const(i, BigLimbs - 1);
+                Cmp(rem, 0);
+                Jcc(IrCond.Equal, remZero);
+
+                // rem != 0：limb[i] = (limb[i-full]<<rem) | (limb[i-full-1]>>(32-rem))
+                var sRem = NewReg(4);
+                Mov(sRem, rem);
+                Neg(sRem);
+                AddI(sRem, sRem, 32);
+                var loop1 = NewLabel();
+                Mark(loop1);
+                Cmp(i, full);
+                Jcc(IrCond.Less, zeroLow);
+                var idxA = NewReg(4);
+                Sub(idxA, i, full);
+                var a = NewReg(4);
+                EmitBigGetLimb(buf, idxA, a);
+                var tA = NewReg(4);
+                ShlReg(tA, a, rem);
+                var idxB = NewReg(4);
+                AddI(idxB, idxA, -1);
+                var b = NewReg(4);
+                EmitBigGetLimb(buf, idxB, b);
+                var tB = NewReg(4);
+                ShrReg(tB, b, sRem);
+                Or(tA, tA, tB);
+                EmitBigSetLimb(buf, i, tA);
+                AddI(i, i, -1);
+                Jmp(loop1);
+
+                Mark(zeroLow);
+                Cmp(i, 0);
+                Jcc(IrCond.Less, shiftDone);
+                EmitBigSetLimb(buf, i, C(4, 0));
+                AddI(i, i, -1);
+                Jmp(zeroLow);
+                Mark(shiftDone);
+                Jmp(doneAll);
+
+                Mark(remZero);
+                var loop2 = NewLabel();
+                Mark(loop2);
+                Cmp(i, full);
+                Jcc(IrCond.Less, zeroLow2);
+                var idx2 = NewReg(4);
+                Sub(idx2, i, full);
+                var v2 = NewReg(4);
+                EmitBigGetLimb(buf, idx2, v2);
+                EmitBigSetLimb(buf, i, v2);
+                AddI(i, i, -1);
+                Jmp(loop2);
+                Mark(zeroLow2);
+                Cmp(i, 0);
+                Jcc(IrCond.Less, doneAll);
+                EmitBigSetLimb(buf, i, C(4, 0));
+                AddI(i, i, -1);
+                Jmp(zeroLow2);
+                Mark(doneAll);
+            }
+
+            /// <summary>在 bitpos 位置 +2^bitpos（进位链，用于 away-from-zero 舍入）。</summary>
+            private void EmitBigAddBitAt(IrVirtualRegister buf, IrVirtualRegister bitpos)
+            {
+                var limbIdx = NewReg(4);
+                Mov(limbIdx, bitpos);
+                Shr(limbIdx, limbIdx, 5);
+                var r = NewReg(4);
+                Mov(r, bitpos);
+                AndI(r, r, 31);
+                var bit = NewReg(4);
+                Const(bit, 1);
+                var bitLoop = NewLabel();
+                var bitDone = NewLabel();
+                Mark(bitLoop);
+                Cmp(r, 0);
+                Jcc(IrCond.Equal, bitDone);
+                Shl(bit, bit, 1);
+                AddI(r, r, -1);
+                Jmp(bitLoop);
+                Mark(bitDone);
+
+                var cur = NewReg(4);
+                EmitBigGetLimb(buf, limbIdx, cur);
+                Add(cur, cur, bit);
+                var carry = NewReg(4);
+                Setcc(carry, IrCond.Below);
+                EmitBigSetLimb(buf, limbIdx, cur);
+                var j = NewReg(4);
+                Mov(j, limbIdx);
+                var prop = NewLabel();
+                var propDone = NewLabel();
+                Mark(prop);
+                Cmp(carry, 0);
+                Jcc(IrCond.Equal, propDone);
+                AddI(j, j, 1);
+                Cmp(j, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, propDone);
+                var cur2 = NewReg(4);
+                EmitBigGetLimb(buf, j, cur2);
+                Add(cur2, cur2, carry);
+                Setcc(carry, IrCond.Below);
+                EmitBigSetLimb(buf, j, cur2);
+                Jmp(prop);
+                Mark(propDone);
+            }
+
+            /// <summary>右移 bits 且 round-half-away-from-zero（先加 2^(bits-1) 再截断）。</summary>
+            private void EmitBigShrRoundAway(IrVirtualRegister buf, IrVirtualRegister bits)
+            {
+                var done = NewLabel();
+                Cmp(bits, 0);
+                Jcc(IrCond.Equal, done);
+                var bp = NewReg(4);
+                Mov(bp, bits);
+                AddI(bp, bp, -1);
+                EmitBigAddBitAt(buf, bp);
+                EmitBigShrTrunc(buf, bits);
+                Mark(done);
+            }
+
+            private void EmitBigIsZero(IrVirtualRegister buf, IrVirtualRegister z)
+            {
+                var acc = NewReg(4);
+                Const(acc, 0);
+                var i = NewReg(4);
+                Const(i, 0);
+                var loop = NewLabel();
+                var done = NewLabel();
+                Mark(loop);
+                Cmp(i, BigLimbs);
+                Jcc(IrCond.GreaterOrEqual, done);
+                var addr = NewReg(8);
+                EmitBigAddr(buf, i, 4, addr);
+                var w = NewReg(4);
+                Load(w, addr, 0, 4);
+                Or(acc, acc, w);
+                AddI(i, i, 1);
+                Jmp(loop);
+                Mark(done);
+                Mov(z, acc);
+            }
+
+            /// <summary>把 buf 的十进制数字全部提取（LSB 先出，反向写 tail），返回数字数与数字起始 tail。</summary>
+            private void EmitBigDigitsToTail(IrVirtualRegister buf, IrVirtualRegister tailEnd, IrVirtualRegister digitCount, IrVirtualRegister newTail)
+            {
+                var count = NewReg(4);
+                Const(count, 0);
+                var cur = NewReg(8);
+                Mov(cur, tailEnd);
+                var loop = NewLabel();
+                var isZero = NewReg(4);
+                var rem = NewReg(4);
+                Mark(loop);
+                CallRuntime(rem, "BigDiv", buf, C(4, 10), C(4, BigBlocks));
+                var ch = NewReg(4);
+                AddI(ch, rem, '0');
+                var prev = NewReg(8);
+                Lea(prev, cur, -2);
+                Store(prev, 0, ch, 2);
+                Mov(cur, prev);
+                AddI(count, count, 1);
+                EmitBigIsZero(buf, isZero);
+                Cmp(isZero, 0);
+                Jcc(IrCond.NotEqual, loop);
+                Mov(digitCount, count);
+                Mov(newTail, cur);
+            }
+
+            // ------------------------------------------------------------------
+            // 全 double 范围格式化核心：1280 位大整数定点 v×10^S，S=6（普通）/n（F）。
+            // ------------------------------------------------------------------
+
+            /// <summary>把 double 位模式拆为 sign/exp/m0/m1（m1 含隐式位）/e/isSpecial/isZero/isMantZero。</summary>
+            private void EmitSplitDouble(IrVirtualRegister b0, IrVirtualRegister b1, IrVirtualRegister sign, IrVirtualRegister exp,
+                IrVirtualRegister m0, IrVirtualRegister m1, IrVirtualRegister e, IrVirtualRegister isSpecial, IrVirtualRegister isZero, IrVirtualRegister isMantZero)
+            {
+                Mov(sign, b1);
+                Shr(sign, sign, 31);
+                Mov(exp, b1);
+                AndI(exp, exp, 0x7FF00000);
+                Shr(exp, exp, 20);
+                Mov(m1, b1);
+                AndI(m1, m1, 0xFFFFF);
+                Mov(m0, b0);
+
+                Cmp(exp, 0x7FF);
+                Setcc(isSpecial, IrCond.Equal);
+                var m1Zero = NewReg(4);
+                var m0Zero = NewReg(4);
+                Cmp(m1, 0);
+                Setcc(m1Zero, IrCond.Equal);
+                Cmp(m0, 0);
+                Setcc(m0Zero, IrCond.Equal);
+                And(isMantZero, m1Zero, m0Zero);
+                var expZero = NewReg(4);
+                Cmp(exp, 0);
+                Setcc(expZero, IrCond.Equal);
+                And(isZero, expZero, isMantZero);
+
+                var hasHidden = NewReg(4);
+                Cmp(exp, 0);
+                Setcc(hasHidden, IrCond.NotEqual);
+                var hidden = NewReg(4);
+                Mov(hidden, hasHidden);
+                Neg(hidden);
+                AndI(hidden, hidden, 0x100000);
+                Or(m1, m1, hidden);
+
+                var normalExpLabel = NewLabel();
+                var expReady = NewLabel();
+                Cmp(exp, 0);
+                Jcc(IrCond.NotEqual, normalExpLabel);
+                Const(e, -1074);
+                Jmp(expReady);
+                Mark(normalExpLabel);
+                Mov(e, exp);
+                AddI(e, e, -1075);
+                Mark(expReady);
+            }
+
+            private void EmitStoreCharAt(IrVirtualRegister fmt, IrVirtualRegister pos, char ch)
+            {
+                var addr = NewReg(8);
+                Mov(addr, fmt);
+                Add(addr, addr, pos);
+                Store(addr, 0, C(4, (int)ch), 2);
+                AddI(pos, pos, 2);
+            }
+
+            private void EmitWriteRepeatedCharAt(IrVirtualRegister fmt, IrVirtualRegister pos, IrVirtualRegister count, char ch)
+            {
+                var loop = NewLabel();
+                var done = NewLabel();
+                Mark(loop);
+                Cmp(count, 0);
+                Jcc(IrCond.LessOrEqual, done);
+                EmitStoreCharAt(fmt, pos, ch);
+                AddI(count, count, -1);
+                Jmp(loop);
+                Mark(done);
+            }
+
+            /// <summary>从 src 拷 charCount 个 UTF-16 字符到 fmt+pos 并推进 pos。</summary>
+            private void EmitCopyCharsAt(IrVirtualRegister fmt, IrVirtualRegister pos, IrVirtualRegister src, IrVirtualRegister charCount)
+            {
+                var dst = NewReg(8);
+                Mov(dst, fmt);
+                Add(dst, dst, pos);
+                var dwords = NewReg(4);
+                Mov(dwords, charCount);
+                AddI(dwords, dwords, 1);
+                Shr(dwords, dwords, 1);
+                CallRuntime(null, "CopyChars", dst, src, dwords);
+                var adv = NewReg(4);
+                Mov(adv, charCount);
+                Shl(adv, adv, 1);
+                Add(pos, pos, adv);
+            }
+
+            /// <summary>固定格式组装：[sign] intpart ['.' frac] → _formatBuffer → 字符串对象。
+            /// n 位小数；trim=true 剪尾零并去尾随小数点（普通打印）。digits 在 tail 中按正向排列。</summary>
+            private void EmitAssembleFixed(IrVirtualRegister objOut, IrVirtualRegister tail, IrVirtualRegister digitCount, IrVirtualRegister nReg, IrVirtualRegister sign, bool trim)
+            {
+                var fmt = NewReg(8);
+                LeaData(fmt, _formatBuffer);
+                var pos = NewReg(4);
+                Const(pos, 0);
+
+                var negLabel = NewLabel();
+                var signDone = NewLabel();
+                Cmp(sign, 0);
+                Jcc(IrCond.NotEqual, negLabel);
+                Jmp(signDone);
+                Mark(negLabel);
+                EmitStoreCharAt(fmt, pos, '-');
+                Mark(signDone);
+
+                var intLen = NewReg(4);
+                var intEnd = NewReg(4);
+                var dGTn = NewLabel();
+                var intDone = NewLabel();
+                Cmp(digitCount, nReg);
+                Jcc(IrCond.Greater, dGTn);
+                EmitStoreCharAt(fmt, pos, '0');
+                Const(intLen, 1);
+                Jmp(intDone);
+                Mark(dGTn);
+                var intChars = NewReg(4);
+                Sub(intChars, digitCount, nReg);
+                Mov(intLen, intChars);
+                EmitCopyCharsAt(fmt, pos, tail, intChars);
+                Mark(intDone);
+                Mov(intEnd, pos);
+
+                var noFrac = NewLabel();
+                var fracDone = NewLabel();
+                Cmp(nReg, 0);
+                Jcc(IrCond.Equal, noFrac);
+                EmitStoreCharAt(fmt, pos, '.');
+                var fracCopy = NewLabel();
+                var fracWrote = NewLabel();
+                Cmp(digitCount, nReg);
+                Jcc(IrCond.Greater, fracCopy);
+                var padZeros = NewReg(4);
+                Sub(padZeros, nReg, digitCount);
+                EmitWriteRepeatedCharAt(fmt, pos, padZeros, '0');
+                EmitCopyCharsAt(fmt, pos, tail, digitCount);
+                Jmp(fracWrote);
+                Mark(fracCopy);
+                var tailOff = NewReg(8);
+                Mov(tailOff, tail);
+                var offBytes = NewReg(4);
+                Mov(offBytes, intLen);
+                Shl(offBytes, offBytes, 1);
+                Add(tailOff, tailOff, offBytes);
+                EmitCopyCharsAt(fmt, pos, tailOff, nReg);
+                Mark(fracWrote);
+
+                if (trim)
+                {
+                    var trimLoop = NewLabel();
+                    var trimDone = NewLabel();
+                    var ch = NewReg(4);
+                    var addr = NewReg(8);
+                    Mark(trimLoop);
+                    var minPos = NewReg(4);
+                    Mov(minPos, intEnd);
+                    AddI(minPos, minPos, 2);
+                    Cmp(pos, minPos);
+                    Jcc(IrCond.LessOrEqual, trimDone);
+                    Mov(addr, fmt);
+                    Add(addr, addr, pos);
+                    AddI(addr, addr, -2);
+                    Load(ch, addr, 0, 2);
+                    Cmp(ch, '0');
+                    Jcc(IrCond.NotEqual, trimDone);
+                    AddI(pos, pos, -2);
+                    Jmp(trimLoop);
+                    Mark(trimDone);
+                    var onlyDot = NewReg(4);
+                    Mov(onlyDot, intEnd);
+                    AddI(onlyDot, onlyDot, 2);
+                    Cmp(pos, onlyDot);
+                    Jcc(IrCond.NotEqual, fracDone);
+                    Mov(pos, intEnd);
+                }
+                Jmp(fracDone);
+                Mark(noFrac);
+                Mark(fracDone);
+
+                var lenBytes = NewReg(4);
+                Mov(lenBytes, pos);
+                CallRuntime(objOut, "AllocStringFromBuf", fmt, lenBytes);
+            }
+
+            // ------------------------------------------------------------------
+            // DoubleToString(bits) → 字符串对象（全范围：6 位小数剪尾零，v×10^6 大整数定点）
             // ------------------------------------------------------------------
 
             private void EmitDoubleToString()
             {
-                var fixedDone = NewLabel();
                 var zeroLabel = NewLabel();
                 var specialLabel = NewLabel();
                 var nanLabel = NewLabel();
-                var normalExpLabel = NewLabel();
-                var expReady = NewLabel();
-                var negShiftLabel = NewLabel();
-                var shiftDone = NewLabel();
-                var fracOk = NewLabel();
-                var fracLenReady = NewLabel();
-                var noFraction = NewLabel();
-                var noSign = NewLabel();
+                var fixedDone = NewLabel();
 
-                // ---- 拆位（b0 = 低 32 位，b1 = 高 32 位）----
                 var b0 = NewReg(4);
                 var b1 = NewReg(4);
                 if (_isX64)
@@ -928,252 +1556,59 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 }
 
                 var sign = NewReg(4);
-                Mov(sign, b1);
-                Shr(sign, sign, 31);
-
                 var exp = NewReg(4);
-                Mov(exp, b1);
-                AndI(exp, exp, 0x7FF00000);
-                Shr(exp, exp, 20);
-
-                var m1 = NewReg(4);
-                Mov(m1, b1);
-                AndI(m1, m1, 0xFFFFF);
                 var m0 = NewReg(4);
-                Mov(m0, b0);
-
-                // ---- 特殊值 / 零 ----
+                var m1 = NewReg(4);
+                var e = NewReg(4);
                 var isSpecial = NewReg(4);
-                Cmp(exp, 0x7FF);
-                Setcc(isSpecial, IrCond.Equal);
-                var isMantZero = NewReg(4);
-                var m1Zero = NewReg(4);
-                Cmp(m1, 0);
-                Setcc(m1Zero, IrCond.Equal);
-                var m0Zero = NewReg(4);
-                Cmp(m0, 0);
-                Setcc(m0Zero, IrCond.Equal);
-                And(isMantZero, m1Zero, m0Zero);
                 var isZero = NewReg(4);
-                var expZero = NewReg(4);
-                Cmp(exp, 0);
-                Setcc(expZero, IrCond.Equal);
-                And(isZero, expZero, isMantZero);
+                var isMantZero = NewReg(4);
+                EmitSplitDouble(b0, b1, sign, exp, m0, m1, e, isSpecial, isZero, isMantZero);
 
                 Cmp(isSpecial, 0);
                 Jcc(IrCond.NotEqual, specialLabel);
                 Cmp(isZero, 0);
                 Jcc(IrCond.NotEqual, zeroLabel);
 
-                // ---- 隐式位：m1 |= exp != 0 ? 0x100000 : 0 ----
-                var hasHidden = NewReg(4);
-                Cmp(exp, 0);
-                Setcc(hasHidden, IrCond.NotEqual);
-                var hidden = NewReg(4);
-                Mov(hidden, hasHidden);
-                Neg(hidden);
-                AndI(hidden, hidden, 0x100000);
-                Or(m1, m1, hidden);
+                var buf = NewReg(8);
+                LeaData(buf, _fmtBigBuf);
+                EmitBigSetZero(buf);
+                EmitBigSetFromMantissa(buf, m0, m1);
+                EmitBigMulSmall(buf, 10);
+                EmitBigMulSmall(buf, 10);
+                EmitBigMulSmall(buf, 10);
+                EmitBigMulSmall(buf, 10);
+                EmitBigMulSmall(buf, 10);
+                EmitBigMulSmall(buf, 10);
 
-                // ---- e = exp - 1075（normal）；subnormal → e = -1074 ----
-                var e = NewReg(4);
-                Cmp(exp, 0);
-                Jcc(IrCond.NotEqual, normalExpLabel);
-                Const(e, -1074);
-                Jmp(expReady);
-                Mark(normalExpLabel);
-                Mov(e, exp);
-                AddI(e, e, -1075);
-                Mark(expReady);
-
-                // ---- R = m × 10^6（96 位 c0..c2，c3 = 0）----
-                // m = m0 + m1×2^32；10^6 = 0xF4240 = 0xF×2^16 + 0x4240。
-                // 每项分解为「×2^16 块系数」：m×10^6 = w0 + w1×2^16 + w2×2^32
-                //   w0 = m_low16×0x4240（无 32 位进位）
-                //   w1 = m_low16×0xF + m_high16×0x4240（≤ 0x424F0000，高 16 位进位到 w2）
-                //   w2 = m_high16×0xF
-                var m0l = NewReg(4);
-                var m0h = NewReg(4);
-                var m1l = NewReg(4);
-                var m1h = NewReg(4);
-                AndI(m0l, m0, 0xFFFF);
-                Mov(m0h, m0);
-                Shr(m0h, m0h, 16);
-                AndI(m1l, m1, 0xFFFF);
-                Mov(m1h, m1);
-                Shr(m1h, m1h, 16);
-
-                var a0 = NewReg(4);
-                var a1 = NewReg(4);
-                var a2 = NewReg(4);
-                Imul(a0, m0l, C(4, 0x4240));
-                Imul(a1, m0l, C(4, 0xF));
-                var a1u = NewReg(4);
-                Imul(a1u, m0h, C(4, 0x4240));
-                Add(a1, a1, a1u);
-                Imul(a2, m0h, C(4, 0xF));
-
-                var p0 = NewReg(4);
-                var p1 = NewReg(4);
-                var p2 = NewReg(4);
-                Imul(p0, m1l, C(4, 0x4240));
-                Imul(p1, m1l, C(4, 0xF));
-                var p1u = NewReg(4);
-                Imul(p1u, m1h, C(4, 0x4240));
-                Add(p1, p1, p1u);
-                Imul(p2, m1h, C(4, 0xF));
-
-                // 合成：（m0×10^6）+（m1×10^6）×2^32，按 32 位肢精确归位：
-                //   c0 = a0 + (a1 低 16 位 << 16)              （a1×2^16 的 2^16..2^31 部分）
-                //   c1 = a1hi + a2 + p0 + (p1 低 16 位 << 16)  （a1×2^32 + a2×2^32 + p0×2^32 + p1×2^48 部分）
-                //   c2 = p1hi + p2 + 进位                      （p1×2^64 + p2×2^64）
-                var a1hi = NewReg(4);
-                Mov(a1hi, a1);
-                Shr(a1hi, a1hi, 16);
-                var p1hi = NewReg(4);
-                Mov(p1hi, p1);
-                Shr(p1hi, p1hi, 16);
-                AndI(a1, a1, 0xFFFF);
-                Shl(a1, a1, 16);
-                AndI(p1, p1, 0xFFFF);
-                Shl(p1, p1, 16);
-
-                var c0 = NewReg(4);
-                Add(c0, a0, a1);
-                var carry0 = NewReg(4);
-                Setcc(carry0, IrCond.Below);
-
-                var c1 = NewReg(4);
-                Add(c1, a1hi, a2);
-                Add(c1, c1, p0);
-                Add(c1, c1, p1);
-                Add(c1, c1, carry0);
-                var carry1 = NewReg(4);
-                Setcc(carry1, IrCond.Below);
-
-                var c2 = NewReg(4);
-                Add(c2, p2, p1hi);
-                Add(c2, c2, carry1);
-                var carry2 = NewReg(4);
-                Setcc(carry2, IrCond.Below);
-                var c3 = NewReg(4);
-                Mov(c3, carry2);
-
-                // ---- ×2^e（128 位移位，高位丢弃截断）----
+                var negShift = NewLabel();
+                var shiftDone = NewLabel();
+                var negE = NewReg(4);
                 Cmp(e, 0);
-                Jcc(IrCond.Less, negShiftLabel);
-                EmitShiftLeft128(c0, c1, c2, c3, e);
+                Jcc(IrCond.Less, negShift);
+                EmitBigShl(buf, e);
                 Jmp(shiftDone);
-                Mark(negShiftLabel);
-                EmitShiftRight128(c0, c1, c2, c3, e);
+                Mark(negShift);
+                Mov(negE, e);
+                Neg(negE);
+                EmitBigShrRoundAway(buf, negE);
                 Mark(shiftDone);
 
-                // ---- 定点分解：Q = R>>6，L = R&63；Q = 15625×S + r5 ----
-                var rLow = NewReg(4);
-                AndI(rLow, c0, 63);
-                EmitShiftRightConst6(c0, c1, c2, c3);
-
-                var buf = NewReg(8);
-                LeaData(buf, _doubleBuffer);
-                EmitStore128ToBuf(buf, c0, c1, c2, c3);
-
-                var r5 = NewReg(4);
-                CallRuntime(r5, "DivChain", buf, C(4, 15625));
-                var s0 = NewReg(4);
-                var s1 = NewReg(4);
-                var s2 = NewReg(4);
-                var s3 = NewReg(4);
-                EmitLoad128FromBuf(buf, s0, s1, s2, s3);
-
-                // ---- frac = r5×64 + L；≥ 10^6 → 修正 ----
-                var frac = NewReg(4);
-                Shl(frac, r5, 6);
-                Add(frac, frac, rLow);
-                Cmp(frac, 1000000);
-                Jcc(IrCond.Below, fracOk);
-                AddI(frac, frac, -1000000);
-                EmitAddOne128(s0, s1, s2, s3);
-                Mark(fracOk);
-
-                // ---- 小数：6 位数字 + 剪尾零（先写，位于字符串高端）----
                 var tail = NewReg(8);
-                Lea(tail, buf, 112);
-                var f0 = NewReg(4);
-                var f1 = NewReg(4);
-                var f2 = NewReg(4);
-                var f3 = NewReg(4);
-                var f4 = NewReg(4);
-                var f5 = NewReg(4);
-                EmitDigits6(frac, f0, f1, f2, f3, f4, f5);
-                var fracLen = C(4, 6);
-                Cmp(f0, 0);
-                Jcc(IrCond.NotEqual, fracLenReady);
-                Cmp(f1, 0);
-                Const(fracLen, 5);
-                Jcc(IrCond.NotEqual, fracLenReady);
-                Cmp(f2, 0);
-                Const(fracLen, 4);
-                Jcc(IrCond.NotEqual, fracLenReady);
-                Cmp(f3, 0);
-                Const(fracLen, 3);
-                Jcc(IrCond.NotEqual, fracLenReady);
-                Cmp(f4, 0);
-                Const(fracLen, 2);
-                Jcc(IrCond.NotEqual, fracLenReady);
-                Const(fracLen, 1);
-                Cmp(f5, 0);
-                Jcc(IrCond.NotEqual, fracLenReady);
-                Const(fracLen, 0);
-                Mark(fracLenReady);
+                Mov(tail, buf);
+                AddI(tail, tail, 1600);
+                var d = NewReg(4);
+                var tail2 = NewReg(8);
+                EmitBigDigitsToTail(buf, tail, d, tail2);
 
-                Cmp(fracLen, 0);
-                Jcc(IrCond.Equal, noFraction);
-                EmitWriteDigits(tail, fracLen, f0, f1, f2, f3, f4, f5);
-                var dot = C(4, '.');
-                var dotTail = NewReg(8);
-                Lea(dotTail, tail, -2);
-                Store(dotTail, 0, dot, 2);
-                Mov(tail, dotTail);
-                Mark(noFraction);
-
-                // ---- 整数部分（反向写 tail，39 轮内必归零）----
-                EmitStore128ToBuf(buf, s0, s1, s2, s3);
-                var ten = C(4, 10);
-                var digitLoop = NewLabel();
-                Mark(digitLoop);
-                var digit = NewReg(4);
-                CallRuntime(digit, "DivChain", buf, ten);
-                var digitChar = NewReg(4);
-                AddI(digitChar, digit, '0');
-                var prevTail = NewReg(8);
-                Lea(prevTail, tail, -2);
-                Store(prevTail, 0, digitChar, 2);
-                Mov(tail, prevTail);
-                var allZero = NewReg(4);
-                EmitBufAllZero(buf, allZero);
-                Cmp(allZero, 0);
-                Jcc(IrCond.NotEqual, digitLoop);
-
-                // ---- 符号 ----
-                Cmp(sign, 0);
-                Jcc(IrCond.Equal, noSign);
-                var minus = C(4, '-');
-                var signTail = NewReg(8);
-                Lea(signTail, tail, -2);
-                Store(signTail, 0, minus, 2);
-                Mov(tail, signTail);
-                Mark(noSign);
-
-                // ---- 组装字符串对象 ----
-                EmitBuildStringFromTail(tail, buf);
+                var obj = NewReg(8);
+                EmitAssembleFixed(obj, tail2, d, C(4, 6), sign, trim: true);
+                StoreRet(obj);
                 Jmp(fixedDone);
 
-                // ---- 零：-0 / 0 ----
                 Mark(zeroLabel);
                 EmitReturnFixedString(sign, _zeroString, _negZeroString);
                 Jmp(fixedDone);
-
-                // ---- 特殊值：NaN / ±Infinity ----
                 Mark(specialLabel);
                 Cmp(isMantZero, 0);
                 Jcc(IrCond.Equal, nanLabel);
@@ -1187,357 +1622,598 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             }
 
             // ------------------------------------------------------------------
-            // 128 位（4×u32 小端）移位与定点辅助
+            // FormatFixed(value, n) → 字符串对象（F 格式：n 位小数零填充，away-from-zero，全范围）
             // ------------------------------------------------------------------
 
-            private void AndI(IrVirtualRegister dst, IrVirtualRegister a, int imm) => Add(IrOpCode.And, dst, IrOperand.Reg(a), IrOperand.Constant(imm));
-
-            private void ShlReg(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister count) => Add(IrOpCode.Shl, dst, IrOperand.Reg(a), IrOperand.Reg(count));
-
-            private void ShrReg(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister count) => Add(IrOpCode.Shr, dst, IrOperand.Reg(a), IrOperand.Reg(count));
-
-            /// <summary>左移 count 位（count ≥ 0，可大于 32；高位截断丢弃）。</summary>
-            private void EmitShiftLeft128(IrVirtualRegister c0, IrVirtualRegister c1, IrVirtualRegister c2, IrVirtualRegister c3, IrVirtualRegister count)
+            private void EmitFormatFixed()
             {
-                var shift32Loop = NewLabel();
-                var remShift = NewLabel();
+                var n = _isX64 ? _args[1] : _args[2];
+                var zeroLabel = NewLabel();
+                var specialLabel = NewLabel();
+                var nanLabel = NewLabel();
                 var done = NewLabel();
 
-                Mark(shift32Loop);
-                Cmp(count, 32);
-                Jcc(IrCond.Below, remShift);
-                Mov(c3, c2);
-                Mov(c2, c1);
-                Mov(c1, c0);
-                Const(c0, 0);
-                AddI(count, count, -32);
-                Jmp(shift32Loop);
+                var b0 = NewReg(4);
+                var b1 = NewReg(4);
+                if (_isX64)
+                {
+                    var t = NewReg(8);
+                    Mov(t, _args[0]);
+                    Shr(t, t, 16);
+                    Shr(t, t, 16);
+                    Mov(b1, t);
+                    Mov(b0, _args[0]);
+                }
+                else
+                {
+                    Mov(b0, _args[0]);
+                    Mov(b1, _args[1]);
+                }
 
-                Mark(remShift);
-                Cmp(count, 0);
-                Jcc(IrCond.Equal, done);
-                var hi = NewReg(4);
-                Mov(hi, count);
-                Neg(hi);
-                AddI(hi, hi, 32);
-                var t = NewReg(4);
-                var u = NewReg(4);
-                Mov(t, c3); ShlReg(t, c3, count); Mov(u, c2); ShrReg(u, c2, hi); Or(t, t, u); Mov(c3, t);
-                Mov(t, c2); ShlReg(t, c2, count); Mov(u, c1); ShrReg(u, c1, hi); Or(t, t, u); Mov(c2, t);
-                Mov(t, c1); ShlReg(t, c1, count); Mov(u, c0); ShrReg(u, c0, hi); Or(t, t, u); Mov(c1, t);
-                Mov(t, c0); ShlReg(t, c0, count); Mov(c0, t);
-                Mark(done);
-            }
+                var sign = NewReg(4);
+                var exp = NewReg(4);
+                var m0 = NewReg(4);
+                var m1 = NewReg(4);
+                var e = NewReg(4);
+                var isSpecial = NewReg(4);
+                var isZero = NewReg(4);
+                var isMantZero = NewReg(4);
+                EmitSplitDouble(b0, b1, sign, exp, m0, m1, e, isSpecial, isZero, isMantZero);
 
-            /// <summary>右移 |e| 位（e < 0，四舍五入：先加 2^(|e|-1) 再右移）。</summary>
-            private void EmitShiftRight128(IrVirtualRegister c0, IrVirtualRegister c1, IrVirtualRegister c2, IrVirtualRegister c3, IrVirtualRegister e)
-            {
-                var k = NewReg(4);
-                Mov(k, e);
-                Neg(k);
+                Cmp(isSpecial, 0);
+                Jcc(IrCond.NotEqual, specialLabel);
+                Cmp(isZero, 0);
+                Jcc(IrCond.NotEqual, zeroLabel);
 
-                // 加 2^(k-1)：w = k-1 → i = w>>5，r = w&31，bit = 1<<r
-                var w = NewReg(4);
-                Mov(w, k);
-                AddI(w, w, -1);
+                var buf = NewReg(8);
+                LeaData(buf, _fmtBigBuf);
+                EmitBigSetZero(buf);
+                EmitBigSetFromMantissa(buf, m0, m1);
                 var i = NewReg(4);
-                Mov(i, w);
-                Shr(i, i, 5);
-                var r = NewReg(4);
-                Mov(r, w);
-                AndI(r, r, 31);
-                var bit = NewReg(4);
-                Const(bit, 1);
-                var bitLoop = NewLabel();
-                var bitDone = NewLabel();
-                Mark(bitLoop);
-                Cmp(r, 0);
-                Jcc(IrCond.Equal, bitDone);
-                Shl(bit, bit, 1);
-                AddI(r, r, -1);
-                Jmp(bitLoop);
-                Mark(bitDone);
+                Const(i, 0);
+                var mulLoop = NewLabel();
+                var mulDone = NewLabel();
+                Mark(mulLoop);
+                Cmp(i, n);
+                Jcc(IrCond.GreaterOrEqual, mulDone);
+                EmitBigMulSmall(buf, 10);
+                AddI(i, i, 1);
+                Jmp(mulLoop);
+                Mark(mulDone);
 
-                var l1 = NewLabel();
-                var l2 = NewLabel();
-                var l3 = NewLabel();
-                var propDone = NewLabel();
-                var carry = NewReg(4);
-                Cmp(i, 0);
-                Jcc(IrCond.NotEqual, l1);
-                Add(c0, c0, bit);
-                Setcc(carry, IrCond.Below);
-                Add(c1, c1, carry);
-                Setcc(carry, IrCond.Below);
-                Add(c2, c2, carry);
-                Setcc(carry, IrCond.Below);
-                Add(c3, c3, carry);
-                Jmp(propDone);
-                Mark(l1);
-                Cmp(i, 1);
-                Jcc(IrCond.NotEqual, l2);
-                Add(c1, c1, bit);
-                Setcc(carry, IrCond.Below);
-                Add(c2, c2, carry);
-                Setcc(carry, IrCond.Below);
-                Add(c3, c3, carry);
-                Jmp(propDone);
-                Mark(l2);
-                Cmp(i, 2);
-                Jcc(IrCond.NotEqual, l3);
-                Add(c2, c2, bit);
-                Setcc(carry, IrCond.Below);
-                Add(c3, c3, carry);
-                Jmp(propDone);
-                Mark(l3);
-                Add(c3, c3, bit);
-                Mark(propDone);
+                var negShift = NewLabel();
+                var shiftDone = NewLabel();
+                var negE = NewReg(4);
+                Cmp(e, 0);
+                Jcc(IrCond.Less, negShift);
+                EmitBigShl(buf, e);
+                Jmp(shiftDone);
+                Mark(negShift);
+                Mov(negE, e);
+                Neg(negE);
+                EmitBigShrRoundAway(buf, negE);
+                Mark(shiftDone);
 
-                var shift32Loop = NewLabel();
-                var remShift = NewLabel();
-                var done = NewLabel();
-                Mark(shift32Loop);
-                Cmp(k, 32);
-                Jcc(IrCond.Below, remShift);
-                Mov(c0, c1);
-                Mov(c1, c2);
-                Mov(c2, c3);
-                Const(c3, 0);
-                AddI(k, k, -32);
-                Jmp(shift32Loop);
+                var tail = NewReg(8);
+                Mov(tail, buf);
+                AddI(tail, tail, 1600);
+                var d = NewReg(4);
+                var tail2 = NewReg(8);
+                EmitBigDigitsToTail(buf, tail, d, tail2);
 
-                Mark(remShift);
-                Cmp(k, 0);
-                Jcc(IrCond.Equal, done);
-                var hi = NewReg(4);
-                Mov(hi, k);
-                Neg(hi);
-                AddI(hi, hi, 32);
-                var t = NewReg(4);
-                var u = NewReg(4);
-                Mov(t, c0); ShrReg(t, c0, k); Mov(u, c1); ShlReg(u, c1, hi); Or(t, t, u); Mov(c0, t);
-                Mov(t, c1); ShrReg(t, c1, k); Mov(u, c2); ShlReg(u, c2, hi); Or(t, t, u); Mov(c1, t);
-                Mov(t, c2); ShrReg(t, c2, k); Mov(u, c3); ShlReg(u, c3, hi); Or(t, t, u); Mov(c2, t);
-                Mov(t, c3); ShrReg(t, c3, k); Mov(c3, t);
-                Mark(done);
-            }
-
-            /// <summary>常量右移 6 位（64 位 >> 6 跨 4 个字）。</summary>
-            private void EmitShiftRightConst6(IrVirtualRegister c0, IrVirtualRegister c1, IrVirtualRegister c2, IrVirtualRegister c3)
-            {
-                var t = NewReg(4);
-                var u = NewReg(4);
-                Mov(t, c0); Shr(t, t, 6); Mov(u, c1); Shl(u, u, 26); Or(t, t, u); Mov(c0, t);
-                Mov(t, c1); Shr(t, t, 6); Mov(u, c2); Shl(u, u, 26); Or(t, t, u); Mov(c1, t);
-                Mov(t, c2); Shr(t, t, 6); Mov(u, c3); Shl(u, u, 26); Or(t, t, u); Mov(c2, t);
-                Mov(t, c3); Shr(t, t, 6); Mov(c3, t);
-            }
-
-            /// <summary>128 位按 16 位块 LE 写入 buf（8 块，buf[0..15]）。</summary>
-            private void EmitStore128ToBuf(IrVirtualRegister buf, IrVirtualRegister s0, IrVirtualRegister s1, IrVirtualRegister s2, IrVirtualRegister s3)
-            {
-                var b = NewReg(4);
-                AndI(b, s0, 0xFFFF);
-                Store(buf, 0, b, 2);
-                Mov(b, s0);
-                Shr(b, b, 16);
-                Store(buf, 2, b, 2);
-                AndI(b, s1, 0xFFFF);
-                Store(buf, 4, b, 2);
-                Mov(b, s1);
-                Shr(b, b, 16);
-                Store(buf, 6, b, 2);
-                AndI(b, s2, 0xFFFF);
-                Store(buf, 8, b, 2);
-                Mov(b, s2);
-                Shr(b, b, 16);
-                Store(buf, 10, b, 2);
-                AndI(b, s3, 0xFFFF);
-                Store(buf, 12, b, 2);
-                Mov(b, s3);
-                Shr(b, b, 16);
-                Store(buf, 14, b, 2);
-            }
-
-            /// <summary>从 buf 的 16 位块合成 4×u32。</summary>
-            private void EmitLoad128FromBuf(IrVirtualRegister buf, IrVirtualRegister s0, IrVirtualRegister s1, IrVirtualRegister s2, IrVirtualRegister s3)
-            {
-                var lo = NewReg(4);
-                var hi = NewReg(4);
-                Load(lo, buf, 0, 2);
-                Load(hi, buf, 2, 2);
-                Shl(hi, hi, 16);
-                Or(s0, lo, hi);
-                Load(lo, buf, 4, 2);
-                Load(hi, buf, 6, 2);
-                Shl(hi, hi, 16);
-                Or(s1, lo, hi);
-                Load(lo, buf, 8, 2);
-                Load(hi, buf, 10, 2);
-                Shl(hi, hi, 16);
-                Or(s2, lo, hi);
-                Load(lo, buf, 12, 2);
-                Load(hi, buf, 14, 2);
-                Shl(hi, hi, 16);
-                Or(s3, lo, hi);
-            }
-
-            /// <summary>128 位 +1（低位进位链）。</summary>
-            private void EmitAddOne128(IrVirtualRegister s0, IrVirtualRegister s1, IrVirtualRegister s2, IrVirtualRegister s3)
-            {
-                var carry = NewReg(4);
-                AddI(s0, s0, 1);
-                Setcc(carry, IrCond.Below);
-                Add(s1, s1, carry);
-                Setcc(carry, IrCond.Below);
-                Add(s2, s2, carry);
-                Setcc(carry, IrCond.Below);
-                Add(s3, s3, carry);
-            }
-
-            /// <summary>buf 的 16 字节全部按位或（商全零判定）。</summary>
-            private void EmitBufAllZero(IrVirtualRegister buf, IrVirtualRegister allZero)
-            {
-                var w = NewReg(4);
-                var acc = NewReg(4);
-                Const(acc, 0);
-                Load(w, buf, 0, 4);
-                Or(acc, acc, w);
-                Load(w, buf, 4, 4);
-                Or(acc, acc, w);
-                Load(w, buf, 8, 4);
-                Or(acc, acc, w);
-                Load(w, buf, 12, 4);
-                Or(acc, acc, w);
-                Mov(allZero, acc);
-            }
-
-            /// <summary>src（0..999999）拆成 6 个十进制数字（f5 = 最高位）。</summary>
-            private void EmitDigits6(IrVirtualRegister src, IrVirtualRegister f0, IrVirtualRegister f1, IrVirtualRegister f2, IrVirtualRegister f3, IrVirtualRegister f4, IrVirtualRegister f5)
-            {
-                var ten = C(4, 10);
-                Mov(f0, src);
-                Urem(f0, ten);
-                Udiv(src, ten);
-                Mov(f1, src);
-                Urem(f1, ten);
-                Udiv(src, ten);
-                Mov(f2, src);
-                Urem(f2, ten);
-                Udiv(src, ten);
-                Mov(f3, src);
-                Urem(f3, ten);
-                Udiv(src, ten);
-                Mov(f4, src);
-                Urem(f4, ten);
-                Udiv(src, ten);
-                Mov(f5, src);
-                Urem(f5, ten);
-            }
-
-            /// <summary>按 fracLen（1..6）反向写小数数字到 tail（f5 最高位最左，tail 后退）。</summary>
-            private void EmitWriteDigits(IrVirtualRegister tail, IrVirtualRegister fracLen, IrVirtualRegister f0, IrVirtualRegister f1, IrVirtualRegister f2, IrVirtualRegister f3, IrVirtualRegister f4, IrVirtualRegister f5)
-            {
-                var skip1 = NewLabel();
-                var skip2 = NewLabel();
-                var skip3 = NewLabel();
-                var skip4 = NewLabel();
-                var skip5 = NewLabel();
-                var ch = NewReg(4);
-                var next = NewReg(8);
-
-                Cmp(fracLen, 6);
-                Jcc(IrCond.NotEqual, skip1);
-                AddI(ch, f0, '0');
-                Lea(next, tail, -2);
-                Store(next, 0, ch, 2);
-                Mov(tail, next);
-                Mark(skip1);
-
-                Cmp(fracLen, 5);
-                Jcc(IrCond.Below, skip2);
-                AddI(ch, f1, '0');
-                Lea(next, tail, -2);
-                Store(next, 0, ch, 2);
-                Mov(tail, next);
-                Mark(skip2);
-
-                Cmp(fracLen, 4);
-                Jcc(IrCond.Below, skip3);
-                AddI(ch, f2, '0');
-                Lea(next, tail, -2);
-                Store(next, 0, ch, 2);
-                Mov(tail, next);
-                Mark(skip3);
-
-                Cmp(fracLen, 3);
-                Jcc(IrCond.Below, skip4);
-                AddI(ch, f3, '0');
-                Lea(next, tail, -2);
-                Store(next, 0, ch, 2);
-                Mov(tail, next);
-                Mark(skip4);
-
-                Cmp(fracLen, 2);
-                Jcc(IrCond.Below, skip5);
-                AddI(ch, f4, '0');
-                Lea(next, tail, -2);
-                Store(next, 0, ch, 2);
-                Mov(tail, next);
-                Mark(skip5);
-
-                AddI(ch, f5, '0');
-                Lea(next, tail, -2);
-                Store(next, 0, ch, 2);
-                Mov(tail, next);
-            }
-
-            /// <summary>从 tail 复制字符区（buf+112 - tail）组装字符串对象（IntToString 模式）。</summary>
-            private void EmitBuildStringFromTail(IrVirtualRegister tail, IrVirtualRegister buf)
-            {
-                var oom = NewLabel();
-                var done = NewLabel();
-
-                var len = NewReg(4);
-                var endAddr = NewReg(8);
-                Mov(endAddr, buf);
-                AddI(endAddr, endAddr, 112);
-                Sub(endAddr, endAddr, tail);
-                Mov(len, endAddr);
-
-                var size = NewReg(4);
-                Mov(size, len);
-                AddI(size, size, 2);
-                Shr(size, size, 2);
-                Shl(size, size, 2);
-                AddI(size, size, 4);
                 var obj = NewReg(8);
-                CallRuntime(obj, "Alloc", size);
-                Cmp(obj, 0);
-                Jcc(IrCond.Equal, oom);
-
-                var chars = NewReg(4);
-                Mov(chars, len);
-                Shr(chars, chars, 1);
-                Store(obj, 0, chars, 4);
-
-                var count = NewReg(4);
-                Mov(count, len);
-                AddI(count, count, 2);
-                Shr(count, count, 2);
-                var dst = NewReg(8);
-                Lea(dst, obj, 4);
-                CallRuntime(null, "CopyChars", dst, tail, count);
-
+                EmitAssembleFixed(obj, tail2, d, n, sign, trim: false);
                 StoreRet(obj);
                 Jmp(done);
 
-                Mark(oom);
-                var zero = C(8, 0);
-                StoreRet(zero);
+                Mark(zeroLabel);
+                var zbuf = NewReg(8);
+                LeaData(zbuf, _fmtBigBuf);
+                EmitBigSetZero(zbuf);
+                EmitBigSetFromMantissa(zbuf, C(4, 0), C(4, 0));
+                var tailZ = NewReg(8);
+                Mov(tailZ, zbuf);
+                AddI(tailZ, tailZ, 1600);
+                var dZ = NewReg(4);
+                var tailZ2 = NewReg(8);
+                EmitBigDigitsToTail(zbuf, tailZ, dZ, tailZ2);
+                var objZ = NewReg(8);
+                EmitAssembleFixed(objZ, tailZ2, dZ, n, C(4, 0), trim: false);
+                StoreRet(objZ);
+                Jmp(done);
+
+                Mark(specialLabel);
+                Cmp(isMantZero, 0);
+                Jcc(IrCond.Equal, nanLabel);
+                EmitReturnFixedString(sign, _infinityString, _negInfinityString);
+                Jmp(done);
+                Mark(nanLabel);
+                EmitReturnFixedString(sign, _nanString, _nanString);
 
                 Mark(done);
+                EndFunction(_currentFunction!, 8);
             }
+
+            // ------------------------------------------------------------------
+            // E / G 格式（FormatSci(value, n, mode)）：half-to-even 舍入，3 位补零指数（E），
+            // G 剪尾零并定点/科学切换。mode 0=E（n 小数位）1=G（n 有效数字）。
+            // ------------------------------------------------------------------
+
+            private void EmitLoadDigit(IrVirtualRegister tail, IrVirtualRegister idx, IrVirtualRegister ch)
+            {
+                var addr = NewReg(8);
+                Mov(addr, tail);
+                var off = NewReg(4);
+                Mov(off, idx);
+                Shl(off, off, 1);
+                Add(addr, addr, off);
+                Load(ch, addr, 0, 2);
+            }
+
+            private void EmitStoreDigit(IrVirtualRegister tail, IrVirtualRegister idx, IrVirtualRegister ch)
+            {
+                var addr = NewReg(8);
+                Mov(addr, tail);
+                var off = NewReg(4);
+                Mov(off, idx);
+                Shl(off, off, 1);
+                Add(addr, addr, off);
+                Store(addr, 0, ch, 2);
+            }
+
+            /// <summary>把 tail 中前 D 位数字按 round-half-away-from-zero 舍入写回 tail[0..D)；进位时置 carryOut 并把 tail 写为 "1" + 零。</summary>
+            private void EmitRoundMantissa(IrVirtualRegister tail, IrVirtualRegister d, IrVirtualRegister D, IrVirtualRegister carryOut)
+            {
+                var doUp = NewLabel();
+                var doDown = NewLabel();
+                var roundDone = NewLabel();
+                var dD = NewReg(4);
+                EmitLoadDigit(tail, D, dD);
+                Cmp(dD, '5');
+                Jcc(IrCond.GreaterOrEqual, doUp);
+                Jmp(doDown);
+                Mark(doDown);
+                Const(carryOut, 0);
+                Jmp(roundDone);
+                Mark(doUp);
+                var i = NewReg(4);
+                Mov(i, D);
+                AddI(i, i, -1);
+                var incCarry = NewReg(4);
+                Const(incCarry, 1);
+                var incLoop = NewLabel();
+                var incBreak = NewLabel();
+                var noOver = NewLabel();
+                var writeD = NewLabel();
+                Mark(incLoop);
+                Cmp(incCarry, 0);
+                Jcc(IrCond.Equal, incBreak);
+                Cmp(i, 0);
+                Jcc(IrCond.Less, incBreak);
+                var dch = NewReg(4);
+                EmitLoadDigit(tail, i, dch);
+                AddI(dch, dch, 1);
+                Cmp(dch, '9');
+                Jcc(IrCond.LessOrEqual, noOver);
+                Const(dch, '0');
+                Jmp(writeD);
+                Mark(noOver);
+                Const(incCarry, 0);
+                Mark(writeD);
+                EmitStoreDigit(tail, i, dch);
+                AddI(i, i, -1);
+                Jmp(incLoop);
+                Mark(incBreak);
+                Mov(carryOut, incCarry);
+                Cmp(carryOut, 0);
+                Jcc(IrCond.Equal, roundDone);
+                EmitStoreDigit(tail, C(4, 0), C(4, '1'));
+                var z = NewReg(4);
+                Mov(z, D);
+                AddI(z, z, -1);
+                var zloop = NewLabel();
+                var zdone = NewLabel();
+                Mark(zloop);
+                Cmp(z, 1);
+                Jcc(IrCond.Less, zdone);
+                EmitStoreDigit(tail, z, C(4, '0'));
+                AddI(z, z, -1);
+                Jmp(zloop);
+                Mark(zdone);
+                Mark(roundDone);
+            }
+
+            /// <summary>剪 _formatBuffer 末尾 '0'（停在 intEnd+2 即小数点前）并去除尾随小数点。</summary>
+            private void EmitTrimTrailingZeros(IrVirtualRegister fmt, IrVirtualRegister pos, IrVirtualRegister intEnd)
+            {
+                var trimLoop = NewLabel();
+                var trimDone = NewLabel();
+                var afterTrim = NewLabel();
+                var ch = NewReg(4);
+                var addr = NewReg(8);
+                Mark(trimLoop);
+                var minPos = NewReg(4);
+                Mov(minPos, intEnd);
+                AddI(minPos, minPos, 2);
+                Cmp(pos, minPos);
+                Jcc(IrCond.LessOrEqual, trimDone);
+                Mov(addr, fmt);
+                Add(addr, addr, pos);
+                AddI(addr, addr, -2);
+                Load(ch, addr, 0, 2);
+                Cmp(ch, '0');
+                Jcc(IrCond.NotEqual, trimDone);
+                AddI(pos, pos, -2);
+                Jmp(trimLoop);
+                Mark(trimDone);
+                var onlyDot = NewReg(4);
+                Mov(onlyDot, intEnd);
+                AddI(onlyDot, onlyDot, 2);
+                Cmp(pos, onlyDot);
+                Jcc(IrCond.NotEqual, afterTrim);
+                Mov(pos, intEnd);
+                Mark(afterTrim);
+            }
+
+            /// <summary>指数后缀：'E'/'e' ± |e10|（lowerE 运行时 0=大写）。minPad 为指数最小位数（E 3 位 / G 2 位）。</summary>
+            private void EmitSciExp(IrVirtualRegister fmt, IrVirtualRegister pos, IrVirtualRegister e10, int minPad, IrVirtualRegister lowerE)
+            {
+                var useLower = NewLabel();
+                var eDone = NewLabel();
+                Cmp(lowerE, 0);
+                Jcc(IrCond.NotEqual, useLower);
+                EmitStoreCharAt(fmt, pos, 'E');
+                Jmp(eDone);
+                Mark(useLower);
+                EmitStoreCharAt(fmt, pos, 'e');
+                Mark(eDone);
+                var e10Neg = NewLabel();
+                var e10SignDone = NewLabel();
+                var e10Abs = NewReg(4);
+                Mov(e10Abs, e10);
+                Cmp(e10, 0);
+                Jcc(IrCond.Less, e10Neg);
+                EmitStoreCharAt(fmt, pos, '+');
+                Jmp(e10SignDone);
+                Mark(e10Neg);
+                EmitStoreCharAt(fmt, pos, '-');
+                Neg(e10Abs);
+                Mark(e10SignDone);
+                var eStr = NewReg(8);
+                CallRuntime(eStr, "IntToString", e10Abs);
+                var eLen = NewReg(4);
+                Load(eLen, eStr, 0, 4);
+                var pad = NewReg(4);
+                Mov(pad, eLen);
+                Neg(pad);
+                AddI(pad, pad, minPad);
+                EmitWriteRepeatedCharAt(fmt, pos, pad, '0');
+                var eData = NewReg(8);
+                Lea(eData, eStr, 4);
+                EmitCopyCharsAt(fmt, pos, eData, eLen);
+            }
+
+            /// <summary>按 D 位尾数（tail 正向）+ e10 组装。sci=true 科学（1 位整数 + E 后缀）；否则定点（小数点放 e10+1 处）。trim 剪尾零。</summary>
+            private void EmitAssembleSciG(IrVirtualRegister objOut, IrVirtualRegister tail, IrVirtualRegister D, IrVirtualRegister e10, IrVirtualRegister sign, bool sci, bool trim, int minPad, IrVirtualRegister lowerE)
+            {
+                var fmt = NewReg(8);
+                LeaData(fmt, _formatBuffer);
+                var pos = NewReg(4);
+                Const(pos, 0);
+                var intEnd = NewReg(4);
+                var negLabel = NewLabel();
+                var signDone = NewLabel();
+                Cmp(sign, 0);
+                Jcc(IrCond.NotEqual, negLabel);
+                Jmp(signDone);
+                Mark(negLabel);
+                EmitStoreCharAt(fmt, pos, '-');
+                Mark(signDone);
+
+                if (sci)
+                {
+                    EmitCopyCharsAt(fmt, pos, tail, C(4, 1));
+                    Mov(intEnd, pos);
+                    var noPoint = NewLabel();
+                    Cmp(D, 1);
+                    Jcc(IrCond.Equal, noPoint);
+                    EmitStoreCharAt(fmt, pos, '.');
+                    var tailF = NewReg(8);
+                    Mov(tailF, tail);
+                    AddI(tailF, tailF, 2);
+                    var fracLen = NewReg(4);
+                    Mov(fracLen, D);
+                    AddI(fracLen, fracLen, -1);
+                    EmitCopyCharsAt(fmt, pos, tailF, fracLen);
+                    Mark(noPoint);
+                    if (trim)
+                    {
+                        EmitTrimTrailingZeros(fmt, pos, intEnd);
+                    }
+                    EmitSciExp(fmt, pos, e10, minPad, lowerE);
+                }
+                else
+                {
+                    var intDigits = NewReg(4);
+                    Mov(intDigits, e10);
+                    AddI(intDigits, intDigits, 1);
+                    var big = NewLabel();
+                    var mid = NewLabel();
+                    var small = NewLabel();
+                    var done = NewLabel();
+                    Cmp(intDigits, D);
+                    Jcc(IrCond.GreaterOrEqual, big);
+                    Cmp(intDigits, 0);
+                    Jcc(IrCond.Greater, mid);
+                    Jmp(small);
+                    Mark(big);
+                    EmitCopyCharsAt(fmt, pos, tail, D);
+                    var extraZ = NewReg(4);
+                    Sub(extraZ, intDigits, D);
+                    EmitWriteRepeatedCharAt(fmt, pos, extraZ, '0');
+                    Mov(intEnd, pos);
+                    Jmp(done);
+                    Mark(mid);
+                    EmitCopyCharsAt(fmt, pos, tail, intDigits);
+                    Mov(intEnd, pos);
+                    EmitStoreCharAt(fmt, pos, '.');
+                    var tailM = NewReg(8);
+                    Mov(tailM, tail);
+                    var offM = NewReg(4);
+                    Mov(offM, intDigits);
+                    Shl(offM, offM, 1);
+                    Add(tailM, tailM, offM);
+                    var restM = NewReg(4);
+                    Sub(restM, D, intDigits);
+                    EmitCopyCharsAt(fmt, pos, tailM, restM);
+                    Jmp(done);
+                    Mark(small);
+                    EmitStoreCharAt(fmt, pos, '0');
+                    Mov(intEnd, pos);
+                    EmitStoreCharAt(fmt, pos, '.');
+                    var negID = NewReg(4);
+                    Mov(negID, intDigits);
+                    Neg(negID);
+                    EmitWriteRepeatedCharAt(fmt, pos, negID, '0');
+                    EmitCopyCharsAt(fmt, pos, tail, D);
+                    Mark(done);
+                    if (trim)
+                    {
+                        EmitTrimTrailingZeros(fmt, pos, intEnd);
+                    }
+                }
+
+                var lenBytes = NewReg(4);
+                Mov(lenBytes, pos);
+                CallRuntime(objOut, "AllocStringFromBuf", fmt, lenBytes);
+            }
+
+            private void EmitFormatSci()
+            {
+                var n = _isX64 ? _args[1] : _args[2];
+                var flags = _isX64 ? _args[2] : _args[3];
+                var mode = NewReg(4);
+                Mov(mode, flags);
+                AndI(mode, mode, 1);
+                var lowerE = NewReg(4);
+                Mov(lowerE, flags);
+                Shr(lowerE, lowerE, 1);
+                AndI(lowerE, lowerE, 1);
+                var zeroLabel = NewLabel();
+                var specialLabel = NewLabel();
+                var nanLabel = NewLabel();
+                var gZeroDone = NewLabel();
+                var done = NewLabel();
+
+                var b0 = NewReg(4);
+                var b1 = NewReg(4);
+                if (_isX64)
+                {
+                    var t = NewReg(8);
+                    Mov(t, _args[0]);
+                    Shr(t, t, 16);
+                    Shr(t, t, 16);
+                    Mov(b1, t);
+                    Mov(b0, _args[0]);
+                }
+                else
+                {
+                    Mov(b0, _args[0]);
+                    Mov(b1, _args[1]);
+                }
+
+                var sign = NewReg(4);
+                var exp = NewReg(4);
+                var m0 = NewReg(4);
+                var m1 = NewReg(4);
+                var e = NewReg(4);
+                var isSpecial = NewReg(4);
+                var isZero = NewReg(4);
+                var isMantZero = NewReg(4);
+                EmitSplitDouble(b0, b1, sign, exp, m0, m1, e, isSpecial, isZero, isMantZero);
+
+                // D = mode==1(G) ? n : n+1（至少 1）—— 零/特殊分支也用到，须先算
+                var D = NewReg(4);
+                var dE = NewLabel();
+                var dDone = NewLabel();
+                Cmp(mode, 1);
+                Jcc(IrCond.Equal, dE);
+                Mov(D, n);
+                AddI(D, D, 1);
+                Jmp(dDone);
+                Mark(dE);
+                Mov(D, n);
+                Mark(dDone);
+                var dAtLeast = NewLabel();
+                Cmp(D, 1);
+                Jcc(IrCond.GreaterOrEqual, dAtLeast);
+                Const(D, 1);
+                Mark(dAtLeast);
+
+                Cmp(isSpecial, 0);
+                Jcc(IrCond.NotEqual, specialLabel);
+                Cmp(isZero, 0);
+                Jcc(IrCond.NotEqual, zeroLabel);
+
+                // e10_est = trunc(e*30103/100000)（按 |e| 求，负号回代；误差 ≤1 由 S 裕量吸收）
+                var eAbs = NewReg(4);
+                Mov(eAbs, e);
+                var negE2 = NewLabel();
+                var absDone = NewLabel();
+                Cmp(e, 0);
+                Jcc(IrCond.Less, negE2);
+                Jmp(absDone);
+                Mark(negE2);
+                Neg(eAbs);
+                Mark(absDone);
+                var qEst = NewReg(4);
+                Mov(qEst, eAbs);
+                Imul(qEst, qEst, C(4, 30103));
+                var d100k = C(4, 100000);
+                Udiv(qEst, d100k);
+                var e10Ready = NewLabel();
+                Cmp(e, 0);
+                Jcc(IrCond.GreaterOrEqual, e10Ready);
+                Neg(qEst);
+                Mark(e10Ready);
+                var e10est = NewReg(4);
+                Mov(e10est, qEst);
+
+                // S = (e10est<0 ? -e10est : 0) + D + 20
+                var baseS = NewReg(4);
+                Mov(baseS, e10est);
+                Neg(baseS);
+                var useBase = NewLabel();
+                var baseDone = NewLabel();
+                Cmp(e10est, 0);
+                Jcc(IrCond.Less, useBase);
+                Const(baseS, 0);
+                Mark(useBase);
+                var S = NewReg(4);
+                Mov(S, baseS);
+                Add(S, S, D);
+                AddI(S, S, 20);
+
+                var buf = NewReg(8);
+                LeaData(buf, _fmtBigBuf);
+                EmitBigSetZero(buf);
+                EmitBigSetFromMantissa(buf, m0, m1);
+                var i = NewReg(4);
+                Const(i, 0);
+                var mulLoop = NewLabel();
+                var mulDone = NewLabel();
+                Mark(mulLoop);
+                Cmp(i, S);
+                Jcc(IrCond.GreaterOrEqual, mulDone);
+                EmitBigMulSmall(buf, 10);
+                AddI(i, i, 1);
+                Jmp(mulLoop);
+                Mark(mulDone);
+
+                var negShift = NewLabel();
+                var shiftDone = NewLabel();
+                var negE = NewReg(4);
+                Cmp(e, 0);
+                Jcc(IrCond.Less, negShift);
+                EmitBigShl(buf, e);
+                Jmp(shiftDone);
+                Mark(negShift);
+                Mov(negE, e);
+                Neg(negE);
+                EmitBigShrTrunc(buf, negE);
+                Mark(shiftDone);
+
+                var tail = NewReg(8);
+                Mov(tail, buf);
+                AddI(tail, tail, 1600);
+                var d = NewReg(4);
+                var tail2 = NewReg(8);
+                EmitBigDigitsToTail(buf, tail, d, tail2);
+
+                // e10 = d - S - 1（由位数精确定）
+                var e10 = NewReg(4);
+                Mov(e10, d);
+                Sub(e10, e10, S);
+                AddI(e10, e10, -1);
+
+                var carryOut = NewReg(4);
+                EmitRoundMantissa(tail2, d, D, carryOut);
+                var noCarry = NewLabel();
+                Cmp(carryOut, 0);
+                Jcc(IrCond.Equal, noCarry);
+                AddI(e10, e10, 1);
+                Mark(noCarry);
+
+                // G 定点/科学切换：-4 <= e10 < n → 定点
+                var gSciLabel = NewLabel();
+                Cmp(mode, 0);
+                Jcc(IrCond.Equal, gSciLabel);
+                Cmp(e10, -4);
+                Jcc(IrCond.Less, gSciLabel);
+                Cmp(e10, n);
+                Jcc(IrCond.GreaterOrEqual, gSciLabel);
+                var objG = NewReg(8);
+                EmitAssembleSciG(objG, tail2, D, e10, sign, sci: false, trim: true, minPad: 2, lowerE);
+                StoreRet(objG);
+                Jmp(done);
+                Mark(gSciLabel);
+                var gTrim = NewLabel();
+                var gNoTrim = NewLabel();
+                var gTrimDone = NewLabel();
+                var objS = NewReg(8);
+                Cmp(mode, 1);
+                Jcc(IrCond.Equal, gTrim);
+                EmitAssembleSciG(objS, tail2, D, e10, sign, sci: true, trim: false, minPad: 3, lowerE);
+                StoreRet(objS);
+                Jmp(gTrimDone);
+                Mark(gTrim);
+                EmitAssembleSciG(objS, tail2, D, e10, sign, sci: true, trim: true, minPad: 2, lowerE);
+                StoreRet(objS);
+                Mark(gTrimDone);
+                Jmp(done);
+
+                Mark(zeroLabel);
+                var gZero = NewLabel();
+                Cmp(mode, 1);
+                Jcc(IrCond.Equal, gZero);
+                // E 零："0." + n 零 + "E+000"
+                var zbuf = NewReg(8);
+                LeaData(zbuf, _fmtBigBuf);
+                var ztail = NewReg(8);
+                Mov(ztail, zbuf);
+                AddI(ztail, ztail, 1600);
+                var zcnt = NewReg(4);
+                Const(zcnt, 0);
+                var zloop = NewLabel();
+                var zdone = NewLabel();
+                Mark(zloop);
+                Cmp(zcnt, D);
+                Jcc(IrCond.GreaterOrEqual, zdone);
+                EmitStoreDigit(ztail, zcnt, C(4, '0'));
+                AddI(zcnt, zcnt, 1);
+                Jmp(zloop);
+                Mark(zdone);
+                var objZ = NewReg(8);
+                EmitAssembleSciG(objZ, ztail, D, C(4, 0), C(4, 0), sci: true, trim: false, minPad: 3, lowerE);
+                StoreRet(objZ);
+                Jmp(gZeroDone);
+                Mark(gZero);
+                EmitReturnFixedString(C(4, 0), _zeroString, _zeroString);
+                Mark(gZeroDone);
+                Jmp(done);
+
+                Mark(specialLabel);
+                Cmp(isMantZero, 0);
+                Jcc(IrCond.Equal, nanLabel);
+                EmitReturnFixedString(sign, _infinityString, _negInfinityString);
+                Jmp(done);
+                Mark(nanLabel);
+                EmitReturnFixedString(sign, _nanString, _nanString);
+
+                Mark(done);
+                EndFunction(_currentFunction!, 8);
+            }
+
 
             /// <summary>复制 InternString 数据并返回新对象（sign 选择正/负串）。</summary>
             private void EmitReturnFixedString(IrVirtualRegister sign, string positiveKey, string negativeKey)
@@ -1924,6 +2600,40 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 CallRuntime(scaled, "DoubleFixed");
             }
 
+            // x64：SetArg(0, value) SetArg(1, n) 调 FormatFixed；x86：value 拆 low/high + n。
+            private void EmitCallFormatFixed(IrVirtualRegister strObj, IrVirtualRegister value, IrVirtualRegister valueHigh, IrVirtualRegister n)
+            {
+                SetArg(0, value);
+                if (_isX64)
+                {
+                    SetArg(1, n);
+                }
+                else
+                {
+                    SetArg(1, valueHigh);
+                    SetArg(2, n);
+                }
+                CallRuntime(strObj, "FormatFixed");
+            }
+
+            // x64：SetArg(0, value) SetArg(1, n) SetArg(2, flags) 调 FormatSci（flags = lowerE<<1 | mode）；x86：value 拆 low/high + n + flags。
+            private void EmitCallFormatSci(IrVirtualRegister strObj, IrVirtualRegister value, IrVirtualRegister valueHigh, IrVirtualRegister n, IrVirtualRegister flags)
+            {
+                SetArg(0, value);
+                if (_isX64)
+                {
+                    SetArg(1, n);
+                    SetArg(2, flags);
+                }
+                else
+                {
+                    SetArg(1, valueHigh);
+                    SetArg(2, n);
+                    SetArg(3, flags);
+                }
+                CallRuntime(strObj, "FormatSci");
+            }
+
             // StringFormat(value:8, fmtPtr:8, packed:4) → 字符串对象
             //   value   ：原始值（int/byte/enum 的低 4 字节；double 的 8 字节；string/bool/char 按各自宽度）
             //   fmtPtr  ：格式串指针（UTF-16，来自 InternString；长度存于 [fmtPtr+0]）
@@ -2043,9 +2753,12 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 And(dHiAnd, dHi, dExpMask);
                 var dIsSpecial = NewLabel();
                 var dFmt = NewLabel();
+                var dSci = NewLabel();
                 var dPlain = NewLabel();
                 Cmp(dHiAnd, dExpMask); Jcc(IrCond.Equal, dIsSpecial);
                 Cmp(code, 3); Jcc(IrCond.Equal, dFmt);
+                Cmp(code, 4); Jcc(IrCond.Equal, dSci);
+                Cmp(code, 5); Jcc(IrCond.Equal, dSci);
                 Jmp(dPlain);
                 Mark(dIsSpecial);
                 EmitCallDoubleToString(strObj, value, valueHigh);
@@ -2054,15 +2767,32 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 Jmp(applyAlign);
                 Mark(dFmt);
                 var dFmtOk = NewLabel();
-                Cmp(n, 9); Jcc(IrCond.Greater, dPlain);
+                Cmp(n, 24); Jcc(IrCond.Greater, dPlain);
                 Mark(dFmtOk);
-                var scaled = NewReg(4);
-                EmitCallDoubleFixed(scaled, value, valueHigh, n);
-                SetArg(0, scaled);
-                SetArg(1, C(4, 3));
-                SetArg(2, n);
-                SetArg(3, C(4, 0));
-                CallRuntime(strObj, "ScaleAssemble");
+                EmitCallFormatFixed(strObj, value, valueHigh, n);
+                Load(strLen, strObj, 0, 4);
+                Shl(strLen, strLen, 1);
+                Jmp(applyAlign);
+                Mark(dSci);
+                var dSciOk = NewLabel();
+                Cmp(n, 24); Jcc(IrCond.Greater, dPlain);
+                Mark(dSciOk);
+                // flags = lowerCase<<1 | (code==4 ? 1 : 0)
+                var sciFlags = NewReg(4);
+                var sciIsG = NewLabel();
+                var sciModeDone = NewLabel();
+                Cmp(code, 4);
+                Jcc(IrCond.Equal, sciIsG);
+                Const(sciFlags, 0);
+                Jmp(sciModeDone);
+                Mark(sciIsG);
+                Const(sciFlags, 1);
+                Mark(sciModeDone);
+                var sciLower = NewReg(4);
+                Mov(sciLower, lowerCase);
+                Shl(sciLower, sciLower, 1);
+                Add(sciFlags, sciFlags, sciLower);
+                EmitCallFormatSci(strObj, value, valueHigh, n, sciFlags);
                 Load(strLen, strObj, 0, 4);
                 Shl(strLen, strLen, 1);
                 Jmp(applyAlign);

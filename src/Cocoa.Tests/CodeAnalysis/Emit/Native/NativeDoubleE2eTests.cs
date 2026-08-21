@@ -193,7 +193,7 @@ function Main()
                 "-1\r\n" +
                 "-3\r\n" +
                 "-4\r\n" +
-                "-2.6\r\n" +
+                "-2.5\r\n" +
                 "123457\r\n" +
                 "1234567.9\r\n" +
                 "      3.14\r\n" +
@@ -203,6 +203,128 @@ function Main()
                 "NaN\r\n" +
                 "0.0\r\n" +
                 "0.00\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Format_Codes_Double_F_FullRange(object platform)
+        {
+            // 全 double 范围定点 F：1280 位大整数定点 value×10^n，round-half-away-from-zero。
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function Main()
+{
+    print($""{123456789.0:F2}"")
+    print($""{2147483647.0:F0}"")
+    print($""{999999999.99:F2}"")
+    print($""{123456789012345678.0:F0}"")
+    print($""{123456789012345678.0:F2}"")
+    print($""{10000000000000000000000.0:F1}"")
+    print($""{1.5:F20}"")
+    print($""{1234567.89:F1}"")
+    print($""{0.0:F5}"")
+    print($""{-0.0:F2}"")
+}", "e2e-format-f-fullrange", (TargetPlatform)platform);
+
+            Assert.Equal(
+                "123456789.00\r\n" +
+                "2147483647\r\n" +
+                "999999999.99\r\n" +
+                "123456789012345680\r\n" +
+                "123456789012345680.00\r\n" +
+                "10000000000000000000000.0\r\n" +
+                "1.50000000000000000000\r\n" +
+                "1234567.9\r\n" +
+                "0.00000\r\n" +
+                "0.00\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Format_Codes_Double_E_Scientific(object platform)
+        {
+            // E 格式（.NET 语义）：尾数 round-half-away-from-zero，指数 3 位补零。
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function Main()
+{
+    print($""{12345.678:E2}"")
+    print($""{0.001:E1}"")
+    print($""{12345.678:E0}"")
+    print($""{2.5:E0}"")
+    print($""{1.5:E0}"")
+    print($""{9.99:E1}"")
+    print($""{0.0:E2}"")
+    print($""{-0.0:E2}"")
+    print($""{10000000000000000000000.0:E2}"")
+    print($""{0.00000000000000000001:E2}"")
+    print($""{999999.999:E2}"")
+    print($""{-12345.678:E2}"")
+    print($""{12345.678:e2}"")
+    print($""{12345.678:g3}"")
+    print($""{1.0/0.0:E2}"")
+    print($""{0.0/0.0:E2}"")
+}", "e2e-format-e", (TargetPlatform)platform);
+
+            Assert.Equal(
+                "1.23E+004\r\n" +
+                "1.0E-003\r\n" +
+                "1E+004\r\n" +
+                "3E+000\r\n" +
+                "2E+000\r\n" +
+                "1.0E+001\r\n" +
+                "0.00E+000\r\n" +
+                "0.00E+000\r\n" +
+                "1.00E+022\r\n" +
+                "1.00E-020\r\n" +
+                "1.00E+006\r\n" +
+                "-1.23E+004\r\n" +
+                "1.23e+004\r\n" +
+                "1.23e+04\r\n" +
+                "Infinity\r\n" +
+                "NaN\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Format_Codes_Double_G_General(object platform)
+        {
+            // G 格式（.NET 语义）：-4 <= e < p 定点否则科学；剪尾零去尾点；指数 2 位补零；round-half-away-from-zero。
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function Main()
+{
+    print($""{123456.789:G3}"")
+    print($""{0.00001234:G2}"")
+    print($""{0.001234:G2}"")
+    print($""{0.001234:G3}"")
+    print($""{123.4:G5}"")
+    print($""{100.0:G3}"")
+    print($""{100.0:G2}"")
+    print($""{2.5:G2}"")
+    print($""{0.0:G3}"")
+    print($""{0.0001:G2}"")
+    print($""{0.00001:G2}"")
+    print($""{999999.999:G3}"")
+    print($""{123456789012345678.0:G4}"")
+    print($""{0.05:G2}"")
+}", "e2e-format-g", (TargetPlatform)platform);
+
+            Assert.Equal(
+                "1.23E+05\r\n" +
+                "1.2E-05\r\n" +
+                "0.0012\r\n" +
+                "0.00123\r\n" +
+                "123.4\r\n" +
+                "100\r\n" +
+                "1E+02\r\n" +
+                "2.5\r\n" +
+                "0\r\n" +
+                "0.0001\r\n" +
+                "1E-05\r\n" +
+                "1E+06\r\n" +
+                "1.235E+17\r\n" +
+                "0.05\r\n", stdout);
             Assert.Equal(0, exitCode);
         }
     }
