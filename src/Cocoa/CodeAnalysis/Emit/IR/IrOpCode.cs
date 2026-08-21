@@ -10,6 +10,8 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         Const,       // Const <dst> <imm>            — 立即数加载
         Mov,         // Mov <dst> <src>              — 虚拟寄存器搬运
         Load,        // Load <dst> [<base> + off]    — 内存 → 寄存器
+        LoadSlotField, // LoadSlotField <dst> <base> <off> <size> — 槽内存直接读取（不解引用 base，如 double 高 dword）
+        StoreSlotField, // StoreSlotField <base> <off> <src> <size> — 槽内存直接写入（不解引用 base，如拼装 double）
         Store,       // Store [<base> + off] <src>   — 寄存器 → 内存
         LeaData,     // LeaData <dst> <data-symbol>  — 数据段符号地址（字符串字面量）
         Lea,         // Lea <dst> <base> <off>       — 指针算术：dst = base + off

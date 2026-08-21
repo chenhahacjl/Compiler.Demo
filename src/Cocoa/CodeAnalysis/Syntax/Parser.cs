@@ -1689,16 +1689,15 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
                 else
                 {
-                    var expression = ParseHoleExpression(part.Start, part.End);
-                    contents.Add(new InterpolationSyntax(_syntaxTree, expression));
+                    contents.Add(ParseHoleExpression(part.Start, part.End));
                 }
             }
 
             return new InterpolatedStringExpressionSyntax(_syntaxTree, interpolatedToken, contents.ToImmutable());
         }
 
-        /// <summary>从洞的绝对 Span 子词法并解析表达式（同一 SyntaxTree → 诊断定位正确）。</summary>
-        private ExpressionSyntax ParseHoleExpression(int start, int end)
+        /// <summary>从洞的绝对 Span 子词法并解析（表达式 + 可选对齐 <c>,N</c> + 格式 <c>:fmt</c>；同一 SyntaxTree → 诊断定位正确）。</summary>
+        private InterpolationSyntax ParseHoleExpression(int start, int end)
         {
             var lexer = new Lexer(_syntaxTree, start);
             var tokens = new List<SyntaxToken>();
@@ -1716,8 +1715,59 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var holeParser = new Parser(_syntaxTree, tokens.ToImmutableArray());
             var expression = holeParser.ParseExpression();
+
+            SyntaxToken? commaToken = null;
+            ExpressionSyntax? alignment = null;
+            SyntaxToken? colonToken = null;
+            SyntaxToken? formatToken = null;
+
+            if (holeParser.Current.Kind == SyntaxKind.CommaToken)
+            {
+                commaToken = holeParser.NextToken();
+                alignment = holeParser.ParseAlignment();
+            }
+
+            if (holeParser.Current.Kind == SyntaxKind.ColonToken)
+            {
+                colonToken = holeParser.NextToken();
+                formatToken = ParseFormatSpecifier(holeParser, end);
+            }
+
             _diagnostics.AddRange(holeParser.Diagnostics);
-            return expression;
+            return new InterpolationSyntax(_syntaxTree, expression, commaToken, alignment, colonToken, formatToken);
+        }
+
+        /// <summary>对齐宽度：<c>N</c> / <c>-N</c>（有符号整数字面量）。</summary>
+        private ExpressionSyntax ParseAlignment()
+        {
+            var negate = Current.Kind == SyntaxKind.MinusToken;
+            if (negate)
+            {
+                NextToken();
+            }
+
+            if (Current.Kind != SyntaxKind.NumberToken)
+            {
+                return new LiteralExpressionSyntax(_syntaxTree, MatchToken(SyntaxKind.NumberToken));
+            }
+
+            var numberToken = NextToken();
+            var value = (int)numberToken.Value!;
+            if (negate)
+            {
+                value = -value;
+            }
+
+            return new LiteralExpressionSyntax(_syntaxTree, numberToken, value);
+        }
+
+        /// <summary>格式说明符：<c>:</c> 之后到洞尾的原始文本（C# 式无引号，如 <c>F2</c>/<c>g</c>/<c>0.00</c>）。</summary>
+        private SyntaxToken ParseFormatSpecifier(Parser holeParser, int end)
+        {
+            var formatStart = holeParser.Current.Position;
+            var formatText = formatStart < end ? _text.ToString(formatStart, end - formatStart) : "";
+            formatText = formatText.Trim();
+            return new SyntaxToken(_syntaxTree, SyntaxKind.StringToken, formatStart, formatText, formatText, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
         }
 
         private ExpressionSyntax ParseCharLiteral()

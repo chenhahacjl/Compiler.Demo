@@ -42,5 +42,6 @@ MemberAccessExpression,
 MemberCallExpression,
 MemberAssignmentExpression,
 ConstructorChainExpression,
+FormatExpression,
     }
 }

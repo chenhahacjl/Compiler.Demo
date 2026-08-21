@@ -37,7 +37,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 sb.Append(", ").Append(instruction.B.ToString());
             }
 
-            if (instruction.OpCode != IrOpCode.Load && instruction.OpCode != IrOpCode.Store && instruction.Offset != 0)
+            if (instruction.OpCode != IrOpCode.Load && instruction.OpCode != IrOpCode.LoadSlotField && instruction.OpCode != IrOpCode.Store && instruction.OpCode != IrOpCode.StoreSlotField && instruction.Offset != 0)
             {
                 sb.Append(instruction.Offset > 0 ? " +" : " ").Append(instruction.Offset);
             }
@@ -53,7 +53,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         private static string FormatOperand(IrInstruction instruction)
         {
             var a = instruction.A;
-            if (instruction.OpCode == IrOpCode.Load || instruction.OpCode == IrOpCode.Store)
+            if (instruction.OpCode == IrOpCode.Load || instruction.OpCode == IrOpCode.LoadSlotField || instruction.OpCode == IrOpCode.Store || instruction.OpCode == IrOpCode.StoreSlotField)
             {
                 var offset = instruction.Offset == 0 ? "" : (instruction.Offset > 0 ? "+" + instruction.Offset : instruction.Offset.ToString());
                 return "[" + a.ToString() + offset + "]";

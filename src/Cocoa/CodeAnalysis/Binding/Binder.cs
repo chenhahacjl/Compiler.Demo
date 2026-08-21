@@ -1983,7 +1983,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        /// <summary>插值字符串 → 字符串 <c>+</c> 链（每洞转 string）；常量折叠天然不启用（转换节点无 ConstantValue）。</summary>
+        /// <summary>插值字符串 → 字符串 <c>+</c> 链（每洞转 string；含对齐/格式时包 BoundFormatExpression）；常量折叠天然不启用（转换/格式节点无 ConstantValue）。</summary>
         private BoundExpression BindInterpolatedStringExpression(InterpolatedStringExpressionSyntax syntax)
         {
             BoundExpression? result = null;
@@ -1998,12 +1998,45 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (content is InterpolationSyntax interpolation)
                 {
                     var bound = BindExpression(interpolation.Expression);
-                    var converted = BindConversion(interpolation.Expression.Location, bound, TypeSymbol.String, allowExplicit: true);
-                    result = AppendInterpolation(result, converted, interpolation);
+
+                    BoundExpression formatted;
+                    if (interpolation.Alignment != null || interpolation.FormatToken != null)
+                    {
+                        int? width = null;
+                        if (interpolation.Alignment != null)
+                        {
+                            var boundAlignment = BindExpression(interpolation.Alignment);
+                            if (!TryGetIntConstant(boundAlignment, out var intValue))
+                            {
+                                _diagnostics.ReportError(interpolation.Alignment.Location, "插值洞的对齐宽度必须为整数常量。");
+                                formatted = new BoundErrorExpression(interpolation.Alignment);
+                            }
+                            else
+                            {
+                                width = intValue;
+                                formatted = new BoundFormatExpression(interpolation, bound, width, FormatOf(interpolation));
+                            }
+                        }
+                        else
+                        {
+                            formatted = new BoundFormatExpression(interpolation, bound, null, FormatOf(interpolation));
+                        }
+                    }
+                    else
+                    {
+                        formatted = BindConversion(interpolation.Expression.Location, bound, TypeSymbol.String, allowExplicit: true);
+                    }
+
+                    result = AppendInterpolation(result, formatted, interpolation);
                 }
             }
 
             return result ?? new BoundLiteralExpression(syntax, "");
+        }
+
+        private static string? FormatOf(InterpolationSyntax interpolation)
+        {
+            return interpolation.FormatToken == null ? null : (string)interpolation.FormatToken.Value!;
         }
 
         private static BoundExpression AppendInterpolation(BoundExpression? left, BoundExpression right, SyntaxNode syntax)

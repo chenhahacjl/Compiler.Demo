@@ -81,9 +81,24 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         private void EmitProgram()
         {
+            if (System.Environment.GetEnvironmentVariable("COCOA_DUMP_IR") != null)
+                DumpIr();
             EmitData();
             EmitStub();
             EmitFunctions();
+        }
+
+        private void DumpIr()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var fn in _program.Functions)
+            {
+                sb.AppendLine($"=== {fn.Name} (ret={fn.ReturnSize}) ===");
+                foreach (var ins in fn.Instructions)
+                    sb.AppendLine("  " + ins.ToString());
+            }
+            var fn2 = _isX64 ? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-ir-x64.txt") : System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-ir-x86.txt");
+            try { System.IO.File.WriteAllText(fn2, sb.ToString()); } catch { }
         }
 
         // ------------------------------------------------------------------
@@ -272,6 +287,12 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     break;
                 case IrOpCode.Load:
                     EmitLoad(instruction);
+                    break;
+                case IrOpCode.LoadSlotField:
+                    EmitLoadSlotField(instruction);
+                    break;
+                case IrOpCode.StoreSlotField:
+                    EmitStoreSlotField(instruction);
                     break;
                 case IrOpCode.Store:
                     EmitStore(instruction);
@@ -479,6 +500,34 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
+        /// <summary>从 <paramref name="instruction.A"/> 的槽内存（而非其指向的地址）按偏移直接读取。用于取 double 槽的高 dword 等标量位模式，避免把值当指针解引用。</summary>
+        private void EmitLoadSlotField(IrInstruction instruction)
+        {
+            var operand = new X64MemoryOperand(X64Register.RBP, GetSlotOffset(instruction.A.Register!) + instruction.Offset);
+            if (instruction.ByteSize == 2)
+            {
+                _a.Movzx(X64Size.Word, X64Register.EAX, operand);
+            }
+            else if (instruction.ByteSize == 1)
+            {
+                _a.Movzx(X64Size.Byte, X64Register.EAX, operand);
+            }
+            else
+            {
+                _a.Mov(ToSize(instruction.ByteSize), X64Register.EAX, operand);
+            }
+
+            StoreSlot(instruction.Dst!, X64Register.EAX);
+        }
+
+        /// <summary>把 <paramref name="instruction.B"/> 的值写入 <paramref name="instruction.A"/> 的槽内存（而非其指向的地址）的偏移处。用于把 double 的低/高 dword 拼进槽。</summary>
+        private void EmitStoreSlotField(IrInstruction instruction)
+        {
+            LoadSlot(X64Register.EAX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
+            var operand = new X64MemoryOperand(X64Register.RBP, GetSlotOffset(instruction.A.Register!) + instruction.Offset);
+            _a.Mov(ToSize(instruction.ByteSize), operand, X64Register.EAX);
+        }
+
         private void EmitStore(IrInstruction instruction)
         {
             var baseSize = RegisterSize(instruction.A.Register!);
@@ -542,7 +591,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 0 => X64Register.ECX,
                 1 => X64Register.EDX,
                 2 => _isX64 ? X64Register.R8 : X64Register.ESI,
-                _ => _isX64 ? X64Register.R9 : throw new Exception($"x86 运行时函数不支持第 {(ordinal + 1)} 个寄存器参数"),
+                _ => _isX64 ? X64Register.R9 : X64Register.EDI,
             };
             _a.Mov(ToSize(size), X64Register.EAX, source);
             StoreSlot(instruction.Dst!, X64Register.EAX);
@@ -898,6 +947,10 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                     if (_isX64)
                     {
                         _a.Mov(size, X64Register.R9, X64Register.RAX);
+                    }
+                    else
+                    {
+                        _a.Mov(size, X64Register.EDI, X64Register.RAX);
                     }
                     break;
             }

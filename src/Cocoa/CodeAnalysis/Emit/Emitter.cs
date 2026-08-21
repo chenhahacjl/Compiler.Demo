@@ -49,6 +49,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private readonly IlMethodRef _randomCtorReference;
         private readonly IlMethodRef _randomNextReference;
         private readonly IlMethodRef _debuggableAttributeCtorReference;
+        private readonly IlMethodRef _stringFormatReference;
 
         private Emitter(string moduleName, string[] references)
         {
@@ -75,6 +76,7 @@ namespace Cocoa.CodeAnalysis.Emit
             _randomCtorReference = RequireMethod("System.Random", ".ctor", System.Array.Empty<string>());
             _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
             _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
+            _stringFormatReference = RequireMethod("System.String", "Format", new[] { "System.String", "System.Object" });
 
             // 顶层函数容器 TypeDef。名字用尖括号（非法标识符）杜绝与用户类同名冲突
             // （否则用户定义 `class Program` 时与默认 "Program" TypeDef 撞名 → BadImageFormatException）。
@@ -605,6 +607,9 @@ namespace Cocoa.CodeAnalysis.Emit
                 case BoundNodeKind.ConversionExpression:
                     EmitConversionExpression(il, (BoundConversionExpression)node);
                     break;
+                case BoundNodeKind.FormatExpression:
+                    EmitFormatExpression(il, (BoundFormatExpression)node);
+                    break;
                 case BoundNodeKind.ArrayCreationExpression:
                     EmitArrayCreationExpression(il, (BoundArrayCreationExpression)node);
                     break;
@@ -1124,6 +1129,46 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 throw new System.Exception($"Unexpected conversion from {node.Expression.Type} to {node.Type}");
             }
+        }
+
+        private void EmitFormatExpression(IlAssembler il, BoundFormatExpression node)
+        {
+            var format = "{" + 0;
+            if (node.Width != null)
+            {
+                format += "," + node.Width;
+            }
+
+            if (node.Format != null)
+            {
+                format += ":" + node.Format;
+            }
+
+            format += "}";
+
+            il.Emit(IlOpCodes.Get("Ldstr"), format);
+            EmitExpression(il, node.Value);
+
+            var needBoxing = node.Value.Type == TypeSymbol.Boolean || node.Value.Type == TypeSymbol.Int32 ||
+                node.Value.Type == TypeSymbol.Char || node.Value.Type == TypeSymbol.Byte ||
+                node.Value.Type == TypeSymbol.Double || node.Value.Type is EnumTypeSymbol;
+            if (needBoxing)
+            {
+                var type = node.Value.Type == TypeSymbol.Boolean
+                    ? RequireType("System.Boolean")
+                    : node.Value.Type == TypeSymbol.Int32
+                        ? RequireType("System.Int32")
+                        : node.Value.Type == TypeSymbol.Char
+                            ? RequireType("System.Char")
+                            : node.Value.Type == TypeSymbol.Byte
+                                ? RequireType("System.Byte")
+                                : node.Value.Type == TypeSymbol.Double
+                                    ? RequireType("System.Double")
+                                    : RequireType("System.Int32");
+                il.Emit(IlOpCodes.Get("Box"), type);
+            }
+
+            il.Emit(IlOpCodes.Get("Call"), _stringFormatReference);
         }
 
         private void EmitArrayCreationExpression(IlAssembler il, BoundArrayCreationExpression node)

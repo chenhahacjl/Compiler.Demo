@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
 
             var entryLabel = a.CreateLabel();
 
-            var ir = BoundTreeToIr.Generate(program);
+            var ir = BoundTreeToIr.Generate(program, platform);
             RuntimeEmitterIR.Append(ir, platform);
 
             // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
@@ -50,7 +50,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
                 : new X86Assembler();
 
             var entryLabel = a.CreateLabel();
-            var ir = BoundTreeToIr.Generate(program);
+            var ir = BoundTreeToIr.Generate(program, platform);
             RuntimeEmitterIR.Append(ir, platform);
 
             IrToAssembler.Emit(a, ir, entryLabel, platform, null);

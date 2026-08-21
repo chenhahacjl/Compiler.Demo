@@ -116,5 +116,94 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("0\r\n-1.5\r\n0.333333\r\n0.666667\r\n14.285714\r\n123456789\r\nInfinity\r\nNaN\r\nd=1.5\r\n2.75\r\n-0\r\n0.3\r\n", stdout);
         }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Format_Codes_Alignment_And_Types(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function Main()
+{
+    print($""{255:D}"")
+    print($""{255:X}"")
+    print($""{255:x}"")
+    print($""{42,5}"")
+    print($""{-42,-6}"")
+    print($""{true}"")
+    print($""{false}"")
+    print($""{'A'}"")
+    print($""{'Z',3}"")
+    print($""{3.14159:F2}"")
+    print($""{2.5:F0}"")
+}", "e2e-format-codes", (TargetPlatform)platform);
+
+            Assert.Equal("255\r\nFF\r\nff\r\n   42\r\n-42   \r\nTrue\r\nFalse\r\nA\r\n  Z\r\n3.14\r\n3\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Format_Codes_Double_F_Precision_Rounding_Alignment_And_Specials(object platform)
+        {
+            // 自定义 F 语义：round-half-away-from-zero（与旧 FormatInt 一致）；F 无显式精度默认 2 位。
+            // 注意：DoubleFixed 用 int32 承载 value×10^n，|value×10^n| > 2^31 时截断（等价于 DoubleToString 的 2^55 高位截断限制）。
+            var (exitCode, stdout) = EmitNativeAndRun(@"
+function Main()
+{
+    print($""{2.5:F}"")
+    print($""{3.14159:F}"")
+    print($""{3.14159:F0}"")
+    print($""{3.14159:F1}"")
+    print($""{3.14159:F3}"")
+    print($""{2.5:F1}"")
+    print($""{2.5:F2}"")
+    print($""{2.5:F3}"")
+    print($""{2.5:f2}"")
+    print($""{0.5:F0}"")
+    print($""{1.5:F0}"")
+    print($""{2.5:F0}"")
+    print($""{-0.5:F0}"")
+    print($""{-2.5:F0}"")
+    print($""{-3.5:F0}"")
+    print($""{-2.55:F1}"")
+    print($""{123456.789:F0}"")
+    print($""{1234567.89:F1}"")
+    print($""{3.14159,10:F2}"")
+    print($""{3.14159,-10:F2}"")
+    print($""{1.5,6:F1}"")
+    print($""{1.0/0.0:F2}"")
+    print($""{0.0/0.0:F2}"")
+    print($""{0.0:F1}"")
+    print($""{-0.0:F2}"")
+}", "e2e-format-f", (TargetPlatform)platform);
+
+            Assert.Equal(
+                "2.50\r\n" +
+                "3.14\r\n" +
+                "3\r\n" +
+                "3.1\r\n" +
+                "3.142\r\n" +
+                "2.5\r\n" +
+                "2.50\r\n" +
+                "2.500\r\n" +
+                "2.50\r\n" +
+                "1\r\n" +
+                "2\r\n" +
+                "3\r\n" +
+                "-1\r\n" +
+                "-3\r\n" +
+                "-4\r\n" +
+                "-2.6\r\n" +
+                "123457\r\n" +
+                "1234567.9\r\n" +
+                "      3.14\r\n" +
+                "3.14      \r\n" +
+                "   1.5\r\n" +
+                "Infinity\r\n" +
+                "NaN\r\n" +
+                "0.0\r\n" +
+                "0.00\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
     }
 }

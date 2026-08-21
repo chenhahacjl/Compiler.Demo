@@ -1,18 +1,21 @@
 using System;
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.CodeAnalysis.Emit.IR
 {
     /// <summary>
     /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
-    /// 平台无关（字节宽仅按类型区分），帧布局/对齐/TEB 检查收敛到 IrToAssembler。
+    /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
+    /// 帧布局/对齐/TEB 检查收敛到 IrToAssembler。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// </summary>
     internal sealed class BoundTreeToIr
     {
         private readonly BoundProgram _program;
+        private readonly bool _isX64;
         private readonly IrVirtualRegisterAllocator _allocator = new();
         private readonly IrProgram _irProgram;
 
@@ -23,15 +26,16 @@ namespace Cocoa.CodeAnalysis.Emit.IR
         private IrFunction _currentFunction = null!;
         private int _nextLabelId;
 
-        private BoundTreeToIr(BoundProgram program)
+        private BoundTreeToIr(BoundProgram program, TargetPlatform platform)
         {
             _program = program;
+            _isX64 = platform.Arch == Architecture.X64;
             _irProgram = new IrProgram(program.MainFunction!.Name);
         }
 
-        public static IrProgram Generate(BoundProgram program)
+        public static IrProgram Generate(BoundProgram program, TargetPlatform platform)
         {
-            var generator = new BoundTreeToIr(program);
+            var generator = new BoundTreeToIr(program, platform);
             generator.EmitProgram();
             return generator._irProgram;
         }
@@ -343,6 +347,9 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 case BoundNodeKind.MemberCallExpression:
                     return EmitMemberCallExpression((BoundMemberCallExpression)node);
 
+                case BoundNodeKind.FormatExpression:
+                    return EmitFormatExpression((BoundFormatExpression)node);
+
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
 
@@ -587,6 +594,54 @@ namespace Cocoa.CodeAnalysis.Emit.IR
             }
 
             throw new Exception($"Unexpected member call {node.Identifier}");
+        }
+
+        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。</summary>
+        private IrVirtualRegister EmitFormatExpression(BoundFormatExpression node)
+        {
+            var type = node.Value.Type;
+            var format = node.Format;
+            var width = node.Width ?? 0;
+
+            int typeKind;
+            if (type == TypeSymbol.String) typeKind = 2;
+            else if (type == TypeSymbol.Boolean) typeKind = 3;
+            else if (type == TypeSymbol.Char) typeKind = 4;
+            else if (type == TypeSymbol.Double) typeKind = 1;
+            else typeKind = 0; // int / byte / enum
+
+            var value = EmitExpression(node.Value);
+
+            var fmtPtr = EmitStringLiteral(format ?? "");
+
+            return EmitStringFormatCall(value, fmtPtr, width, typeKind);
+        }
+
+        private IrVirtualRegister EmitStringFormatCall(IrVirtualRegister value, IrVirtualRegister fmtPtr, int width, int typeKind)
+        {
+            var instructions = _currentFunction.Instructions;
+            var packed = ((width & 0xFFFF) << 4) | (typeKind & 0xF);
+            var result = AllocateRegister(8);
+            var isDouble = typeKind == 1;
+            if (isDouble)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 1 : 2), IrOperand.Reg(fmtPtr)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 2 : 3), IrOperand.Reg(EmitConst(packed))));
+            }
+            else
+            {
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                if (!_isX64)
+                {
+                    // x86 StringFormat 按 (low, high, fmtPtr, packed) 布局接收，非 double 用占位 high
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(value)));
+                }
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 1 : 2), IrOperand.Reg(fmtPtr)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 2 : 3), IrOperand.Reg(EmitConst(packed))));
+            }
+            Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("StringFormat"), IrOperand.Constant(0)));
+            return result;
         }
 
         private IrVirtualRegister EmitElementAddress(List<IrInstruction> instructions, IrVirtualRegister array, IrVirtualRegister index, int elementSize)

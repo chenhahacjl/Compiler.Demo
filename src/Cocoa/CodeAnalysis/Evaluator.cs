@@ -184,6 +184,8 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateMemberAccessExpression((BoundMemberAccessExpression)node);
                 case BoundNodeKind.MemberCallExpression:
                     return EvaluateMemberCallExpression((BoundMemberCallExpression)node);
+                case BoundNodeKind.FormatExpression:
+                    return EvaluateFormatExpression((BoundFormatExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -371,8 +373,7 @@ namespace Cocoa.CodeAnalysis
             if (node.Type == TypeSymbol.Any)
             {
                 return value;
-            }
-            else if (node.Type == TypeSymbol.Boolean)
+            }            else if (node.Type == TypeSymbol.Boolean)
             {
                 return Convert.ToBoolean(value);
             }
@@ -416,6 +417,18 @@ namespace Cocoa.CodeAnalysis
             {
                 throw new Exception($"Unexpected type {node.Type}");
             }
+        }
+
+        private object EvaluateFormatExpression(BoundFormatExpression node)
+        {
+            var value = EvaluateExpression(node.Value)!;
+            var text = node.Format != null ? string.Format("{0:" + node.Format + "}", value) : Convert.ToString(value);
+            if (node.Width != null)
+            {
+                text = node.Width.Value < 0 ? text.PadRight(-node.Width.Value) : text.PadLeft(node.Width.Value);
+            }
+
+            return text;
         }
 
         private object EvaluateArrayCreationExpression(BoundArrayCreationExpression node)
