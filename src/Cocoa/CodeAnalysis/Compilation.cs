@@ -255,11 +255,17 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(location, "native code generation requires a main function"));
             }
 
+            // native 后端仅放行"纯容器类"（6e-M17）：类只含 syscall/静态 extern 方法、无实例字段/构造/属性/继承。
+            // 对象模型（实例字段/方法/继承/多态）仍后置——见 docs/类库设计.md。
             if (program.Classes.Length > 0)
             {
-                var location = program.Classes[0].Declaration?.Identifier.Location
-                               ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
-                return ImmutableArray.Create(Diagnostic.Error(location, "class 暂不支持 native 后端（后置，见 docs/类库设计.md）"));
+                var offendingClass = program.Classes.FirstOrDefault(c => !IsPureContainerClass(c));
+                if (offendingClass != null)
+                {
+                    var location = offendingClass.Declaration?.Identifier.Location
+                                   ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"class '{offendingClass.Name}' 含实例成员/构造/字段/属性/基类，暂不支持 native 后端（native 仅放行纯 syscall/extern 容器类，见 docs/内部调用与互操作设计.md）"));
+                }
             }
 
             var backendDiagnostics = ValidateCodBackendRequirements(isNative: true);
@@ -293,6 +299,51 @@ namespace Cocoa.CodeAnalysis
             }
 
             return ImmutableArray<Diagnostic>.Empty;
+        }
+
+        /// <summary>
+        /// 纯容器类判定（6e-M17，native 放行判据）：类只含 syscall/静态 extern 方法，
+        /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
+        /// 不涉对象模型，native 可安全忽略类外壳直接发射其方法。
+        /// </summary>
+        private static bool IsPureContainerClass(ClassTypeSymbol classType)
+        {
+            if (classType.IsInterface || classType.BaseType != null || classType.Fields.Any(f => !f.IsStatic))
+            {
+                return false;
+            }
+
+            if (classType.Properties.Length > 0)
+            {
+                return false;
+            }
+
+            foreach (var method in classType.Methods)
+            {
+                // 隐式默认实例构造（无声明、0 参）→ 允许（容器类不必实例化，发射端忽略）；显式实例构造 → 非容器
+                if (method.IsConstructor && !method.IsStatic)
+                {
+                    if (method.Declaration != null || method.Parameters.Length != 0)
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                if (!method.IsStatic)
+                {
+                    return false;
+                }
+
+                // 静态方法须为 syscall（BuiltinKind）或 extern（DllName）内部原语
+                if (method.BuiltinKind == null && !method.IsExtern)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

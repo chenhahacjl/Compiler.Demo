@@ -143,6 +143,22 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         }
 
         [Fact]
+        public void Parser_SyscallFunction_ClassMethod_ParsesNoBody()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class Runtime
+{
+    syscall function Random(max: int): int
+}");
+            var root = syntaxTree.Root;
+            var classMember = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classMember.Members));
+
+            Assert.Contains(function.Modifiers, m => m.Kind == SyntaxKind.SyscallKeyword);
+            Assert.Null(function.Body);
+        }
+
+        [Fact]
         public void Parser_StdcallExternDeclaration_ParsesNoBody()
         {
             var syntaxTree = SyntaxTree.Parse("stdcall function GetTickCount(): int");

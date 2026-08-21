@@ -323,9 +323,9 @@ namespace Cocoa.CodeAnalysis.Binding
                     continue;
                 }
 
-                if (function.IsAbstract)
+                if (function.IsAbstract || function.BuiltinKind != null)
                 {
-                    // 抽象成员（接口/抽象类）无实现：空 body
+                    // 抽象成员（接口/抽象类）无实现：空 body；syscall 内部原语同样无实现
                     functionBodies.Add(function, new BoundBlockStatement(function.Declaration!, ImmutableArray<BoundStatement>.Empty));
                     continue;
                 }
@@ -485,6 +485,12 @@ namespace Cocoa.CodeAnalysis.Binding
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
 
             var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+            var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
+
+            if (isSyscall)
+            {
+                _diagnostics.ReportSyscallFunctionTopLevel(syntax.Identifier.Location);
+            }
 
             if (isExtern)
             {
@@ -1372,16 +1378,38 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
-            var visibility = GetVisibility(syntax.Modifiers, Visibility.Private);
+            var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
+            // syscall 方法缺省 public（System.Runtime.Runtime.Print 供 System.Console 封装层调用）
+            var visibility = GetVisibility(syntax.Modifiers, isSyscall ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var isVirtual = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.VirtualKeyword);
             var isOverride = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.OverrideKeyword);
             var isAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
             var isSealed = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword);
 
-            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, visibility: visibility)
+            BuiltinKind? builtinKind = null;
+            if (isSyscall)
             {
-                IsStatic = isStatic,
+                var builtin = BuiltinFunctions.GetByName(syntax.Identifier.Text);
+                if (builtin == null)
+                {
+                    _diagnostics.ReportSyscallFunctionUnknown(syntax.Identifier.Location, syntax.Identifier.Text);
+                }
+                else
+                {
+                    builtinKind = builtin.BuiltinKind;
+                }
+
+                if (syntax.Body != null)
+                {
+                    _diagnostics.ReportSyscallFunctionCannotHaveBody(syntax.Body.Location);
+                }
+            }
+
+            // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
+            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, visibility: visibility, builtinKind: builtinKind)
+            {
+                IsStatic = isStatic || isSyscall,
                 IsVirtual = isVirtual,
                 IsOverride = isOverride,
                 IsAbstract = isAbstract,

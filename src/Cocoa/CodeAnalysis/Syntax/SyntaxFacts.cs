@@ -164,6 +164,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ReturnKeyword;
                 case "stdcall":
                     return SyntaxKind.StdcallKeyword;
+                case "syscall":
+                    return SyntaxKind.SyscallKeyword;
                 case "to":
                     return SyntaxKind.ToKeyword;
                 case "true":
@@ -379,6 +381,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "return";
                 case SyntaxKind.StdcallKeyword:
                     return "stdcall";
+                case SyntaxKind.SyscallKeyword:
+                    return "syscall";
                 case SyntaxKind.ToKeyword:
                     return "to";
                 case SyntaxKind.TrueKeyword:

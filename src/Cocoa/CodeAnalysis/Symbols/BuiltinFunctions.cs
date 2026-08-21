@@ -69,12 +69,12 @@ namespace Cocoa.CodeAnalysis.Symbols
             };
         }
 
-        /// <summary>按名查找内置函数（`.cod` 反序列化时复用单例，保证发射器识别内置）。</summary>
+        /// <summary>按名查找内置函数（`.cod` 反序列化时复用单例，保证发射器识别内置；大小写不敏感——syscall 声明可用 PascalCase 如 `Random` 命中 `random`）。</summary>
         internal static FunctionSymbol? GetByName(string name)
         {
             foreach (var spec in _specs)
             {
-                if (spec.Name == name)
+                if (string.Equals(spec.Name, name, System.StringComparison.OrdinalIgnoreCase))
                 {
                     return GetByKind(spec.Kind);
                 }

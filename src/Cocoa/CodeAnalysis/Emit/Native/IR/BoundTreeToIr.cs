@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -588,6 +589,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private IrVirtualRegister EmitMemberCallExpression(BoundMemberCallExpression node)
         {
+            if (node.Method?.BuiltinKind != null)
+            {
+                return EmitBuiltinCall(node.Method, node.Arguments);
+            }
+
             var instructions = _currentFunction.Instructions;
             var target = EmitExpression(node.Expression);
             var start = EmitExpression(node.Arguments[0]);
@@ -604,6 +610,36 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             throw new Exception($"Unexpected member call {node.Identifier}");
+        }
+
+        private IrVirtualRegister EmitBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        {
+            var instructions = _currentFunction.Instructions;
+
+            switch (function.BuiltinKind)
+            {
+                case BuiltinKind.Print:
+                {
+                    EmitPrintArguments(arguments[0]);
+                    return VoidResult();
+                }
+                case BuiltinKind.Input:
+                {
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Input"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.Random:
+                {
+                    var argument = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(argument)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Random"), IrOperand.Constant(0)));
+                    return result;
+                }
+                default:
+                    throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
+            }
         }
 
         /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。</summary>
@@ -980,25 +1016,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private IrVirtualRegister EmitCallExpression(BoundCallExpression node)
         {
-            switch (node.Function.BuiltinKind)
+            if (node.Function.BuiltinKind != null)
             {
-                case BuiltinKind.Print:
-                    EmitPrint(node);
-                    return VoidResult();
-                case BuiltinKind.Input:
-                {
-                    var result = AllocateRegister(8);
-                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Input"), IrOperand.Constant(0)));
-                    return result;
-                }
-                case BuiltinKind.Random:
-                {
-                    var argument = EmitExpression(node.Arguments[0]);
-                    var result = AllocateRegister(4);
-                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(argument)));
-                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Random"), IrOperand.Constant(0)));
-                    return result;
-                }
+                return EmitBuiltinCall(node.Function, node.Arguments);
             }
 
             if (node.Function.IsExtern)
@@ -1048,10 +1068,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return _voidResult;
         }
 
-        private void EmitPrint(BoundCallExpression node)
+        private void EmitPrintArguments(BoundExpression argument)
         {
             var instructions = _currentFunction.Instructions;
-            var argument = node.Arguments[0];
             var type = argument.Type;
 
             if (type == TypeSymbol.Any && argument is BoundConversionExpression conversion)

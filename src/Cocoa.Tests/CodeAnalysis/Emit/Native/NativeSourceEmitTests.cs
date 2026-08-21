@@ -581,6 +581,45 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_SyscallMemberCall_Print(string target)
+        {
+            var output = CompileAndRun(@"
+class Runtime
+{
+    syscall function Print(text: string): void
+}
+
+function Main()
+{
+    Runtime.Print(""hello syscall"")
+}", "src-syscall-print", target);
+
+            Assert.Equal("hello syscall\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_SyscallMemberCall_Random(string target)
+        {
+            var output = CompileAndRun(@"
+class Runtime
+{
+    syscall function Random(max: int): int
+}
+
+function Main()
+{
+    var r = Runtime.Random(100)
+    print(r < 100)
+}", "src-syscall-random", target);
+
+            Assert.Equal("True\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_Division(string target)
         {
             var output = CompileAndRun(@"
@@ -1019,7 +1058,7 @@ function Main()
             TargetPlatform.TryParse(X64, out var platform);
             var diagnostics = compilation.EmitNative("test", GetExePath("native-interface", X64), platform);
             Assert.NotEmpty(diagnostics);
-            Assert.Contains(diagnostics, d => d.Message.Contains("class 暂不支持 native 后端"));
+            Assert.Contains(diagnostics, d => d.Message.Contains("含实例成员/构造/字段/属性/基类，暂不支持 native 后端"));
         }
 
         [Theory]

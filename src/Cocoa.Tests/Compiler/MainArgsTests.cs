@@ -241,7 +241,7 @@ namespace Cocoa.Tests.Compiler
                 $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");
             Assert.Equal(1, exitCode);
-            Assert.Contains("class 暂不支持 native 后端", stdout + stderr);
+            Assert.Contains("暂不支持 native 后端", stdout + stderr);
         }
     }
 }

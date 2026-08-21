@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -327,39 +328,47 @@ namespace Cocoa.CodeAnalysis
 
         private object? EvaluateCallExpression(BoundCallExpression node)
         {
-            switch (node.Function.BuiltinKind)
+            if (node.Function.BuiltinKind != null)
+            {
+                return EvaluateBuiltinCall(node.Function, node.Arguments);
+            }
+
+            var locals = new Dictionary<VariableSymbol, object>();
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                var parameter = node.Function.Parameters[i];
+                var value = EvaluateExpression(node.Arguments[i]);
+
+                Debug.Assert(value != null);
+
+                locals.Add(parameter, value);
+            }
+
+            _locals.Push(locals);
+
+            var statement = _functions[node.Function];
+            var result = EvaluateStatement(statement);
+
+            _locals.Pop();
+
+            return result;
+        }
+
+        private object? EvaluateBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        {
+            switch (function.BuiltinKind)
             {
                 case BuiltinKind.Input:
                     return Console.ReadLine();
                 case BuiltinKind.Print:
-                    var printValue = EvaluateExpression(node.Arguments[0]);
+                    var printValue = EvaluateExpression(arguments[0]);
                     Console.WriteLine(printValue);
                     return null;
                 case BuiltinKind.Random:
-                    var max = (int)EvaluateExpression(node.Arguments[0])!;
+                    var max = (int)EvaluateExpression(arguments[0])!;
                     return Random.Shared.Next(max);
                 default:
-                {
-                    var locals = new Dictionary<VariableSymbol, object>();
-                    for (var i = 0; i < node.Arguments.Length; i++)
-                    {
-                        var parameter = node.Function.Parameters[i];
-                        var value = EvaluateExpression(node.Arguments[i]);
-
-                        Debug.Assert(value != null);
-
-                        locals.Add(parameter, value);
-                    }
-
-                    _locals.Push(locals);
-
-                    var statement = _functions[node.Function];
-                    var result = EvaluateStatement(statement);
-
-                    _locals.Pop();
-
-                    return result;
-                }
+                    throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }
         }
 
@@ -486,6 +495,11 @@ namespace Cocoa.CodeAnalysis
 
         private object? EvaluateMemberCallExpression(BoundMemberCallExpression node)
         {
+            if (node.Method?.BuiltinKind != null)
+            {
+                return EvaluateBuiltinCall(node.Method, node.Arguments);
+            }
+
             var target = (string)EvaluateExpression(node.Expression)!;
             var start = Convert.ToInt32(EvaluateExpression(node.Arguments[0]));
             var count = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));

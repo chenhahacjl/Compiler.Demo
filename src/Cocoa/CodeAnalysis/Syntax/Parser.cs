@@ -393,6 +393,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ProtectedKeyword:
                 case SyntaxKind.CdeclKeyword:
                 case SyntaxKind.StdcallKeyword:
+                case SyntaxKind.SyscallKeyword:
                 case SyntaxKind.AbstractKeyword:
                 case SyntaxKind.SealedKeyword:
                 case SyntaxKind.StaticKeyword:
@@ -555,7 +556,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
                 var isAbstract = modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
-                if ((!isExtern && !isAbstract) || Current.Kind == SyntaxKind.OpenBraceToken)
+                var isSyscall = modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
+                if ((!isExtern && !isAbstract && !isSyscall) || Current.Kind == SyntaxKind.OpenBraceToken)
                 {
                     body = ParseBlockStatement();
                 }

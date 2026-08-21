@@ -1727,6 +1727,59 @@ stdcall function GetTickCount(): int";
             AssertDiagnostics(text, "");
         }
 
+        [Fact]
+        public void Evaluator_SyscallFunction_ClassMethod_NoDiagnostics()
+        {
+            var text = @"
+class Runtime
+{
+    syscall function Random(max: int): int
+}
+
+function Main(): int
+{
+    return Runtime.Random(100) < 100 ? 1 : 0
+}";
+
+            AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_SyscallFunction_UnknownName_ReportsError()
+        {
+            var text = @"
+class Runtime
+{
+    syscall function [NoSuchPrimitive](): int
+}";
+
+            AssertDiagnostics(text, "Syscall function 'NoSuchPrimitive' does not match any built-in primitive.");
+        }
+
+        [Fact]
+        public void Evaluator_SyscallFunction_WithBody_ReportsError()
+        {
+            var text = @"
+class Runtime
+{
+    syscall function Random(max: int): int
+    [{
+        return 1
+    }]
+}";
+
+            AssertDiagnostics(text, "A syscall function declaration cannot have a body.");
+        }
+
+        [Fact]
+        public void Evaluator_SyscallFunction_TopLevel_ReportsError()
+        {
+            var text = @"
+syscall function [Random](): int";
+
+            AssertDiagnostics(text, "A syscall function must be declared inside a class (e.g. `class Runtime { syscall function ... }`).");
+        }
+
         private void AssertDiagnostics(string text, string diagnosticText)
         {
             AssertDiagnostics(text, diagnosticText, true);

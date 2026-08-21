@@ -226,6 +226,24 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportSyscallFunctionUnknown(TextLocation location, string name)
+        {
+            var message = $"Syscall function '{name}' does not match any built-in primitive.";
+            ReportError(location, message);
+        }
+
+        public void ReportSyscallFunctionCannotHaveBody(TextLocation location)
+        {
+            var message = "A syscall function declaration cannot have a body.";
+            ReportError(location, message);
+        }
+
+        public void ReportSyscallFunctionTopLevel(TextLocation location)
+        {
+            var message = "A syscall function must be declared inside a class (e.g. `class Runtime { syscall function ... }`).";
+            ReportError(location, message);
+        }
+
         public void ReportInvalidReturnExpression(TextLocation location, string functionName)
         {
             var message = $"Since the function '{functionName}' does not return a value the 'return' keyword cannot be followed by an expression.";

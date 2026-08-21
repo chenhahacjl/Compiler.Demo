@@ -120,6 +120,7 @@ ColonToken,               // :
         VirtualKeyword,           // virtual
         WhenKeyword,              // when
         WhileKeyword,             // while
+        SyscallKeyword,           // syscall
 
         // Nodes
         CompilationUnit,          // 编译单元

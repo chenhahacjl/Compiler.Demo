@@ -129,6 +129,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             foreach (var functionWithBody in program.Functions)
             {
+                if (functionWithBody.Key.BuiltinKind != null)
+                {
+                    // syscall 内部原语：无方法体、调用点按 BuiltinKind 分发，不声明为 IL 方法
+                    continue;
+                }
+
                 EmitFunctionDeclaration(functionWithBody.Key);
             }
 
@@ -161,7 +167,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             foreach (var functionWithBody in program.Functions)
             {
-                if (functionWithBody.Key.IsExtern || functionWithBody.Key.IsAbstract)
+                if (functionWithBody.Key.IsExtern || functionWithBody.Key.IsAbstract || functionWithBody.Key.BuiltinKind != null)
                 {
                     continue;
                 }
@@ -924,16 +930,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitCallExpression(IlAssembler il, BoundCallExpression node)
         {
-            if (node.Function.BuiltinKind == BuiltinKind.Random)
+            if (node.Function.BuiltinKind != null)
             {
-                // 6d-4：Random.get_Shared 是 .NET 6+ API，mscorlib 没有；改用 new Random() 双运行时兼容。
-                il.Emit(IlOpCodeTable.Get("Newobj"), _framework.RandomCtor);
-                foreach (var argument in node.Arguments)
-                {
-                    EmitExpression(il, argument);
-                }
-
-                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.RandomNext);
+                EmitBuiltinCall(il, node.Function, node.Arguments);
                 return;
             }
 
@@ -942,7 +941,31 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 EmitExpression(il, argument);
             }
 
-            switch (node.Function.BuiltinKind)
+            var methodDefinition = _methods[node.Function];
+            il.Emit(IlOpCodeTable.Get("Call"), methodDefinition);
+        }
+
+        private void EmitBuiltinCall(IlAssembler il, FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        {
+            if (function.BuiltinKind == BuiltinKind.Random)
+            {
+                // 6d-4：Random.get_Shared 是 .NET 6+ API，mscorlib 没有；改用 new Random() 双运行时兼容。
+                il.Emit(IlOpCodeTable.Get("Newobj"), _framework.RandomCtor);
+                foreach (var argument in arguments)
+                {
+                    EmitExpression(il, argument);
+                }
+
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.RandomNext);
+                return;
+            }
+
+            foreach (var argument in arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            switch (function.BuiltinKind)
             {
                 case BuiltinKind.Print:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleWriteLine);
@@ -951,11 +974,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadLine);
                     break;
                 default:
-                {
-                    var methodDefinition = _methods[node.Function];
-                    il.Emit(IlOpCodeTable.Get("Call"), methodDefinition);
-                    break;
-                }
+                    throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }
         }
 
@@ -1278,6 +1297,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private void EmitMemberCallExpression(IlAssembler il, BoundMemberCallExpression node)
         {
             var isStatic = node.Method != null && node.Method.IsStatic;
+
+            if (node.Method?.BuiltinKind != null)
+            {
+                // syscall 静态方法调用：复用内置函数分发（如 System.Runtime.Runtime.Print → Console.WriteLine）
+                EmitBuiltinCall(il, node.Method, node.Arguments);
+                return;
+            }
+
             if (!isStatic)
             {
                 EmitExpression(il, node.Expression);

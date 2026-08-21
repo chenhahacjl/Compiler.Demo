@@ -85,6 +85,46 @@ function Main()
         }
 
         [Fact]
+        public void Run_SyscallFunction_MemberCall_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+class Runtime
+{
+    syscall function Random(max: int): int
+}
+
+function Main()
+{
+    var r = Runtime.Random(100)
+    if r >= 0 && r < 100
+    {
+        print(""ok"")
+    }
+}", "e2e-syscall-member");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Run_SyscallFunction_MemberCall_Print_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"
+class Runtime
+{
+    syscall function Print(text: string): void
+}
+
+function Main()
+{
+    Runtime.Print(""hello syscall"")
+}", "e2e-syscall-print");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("hello syscall\r\n", stdout);
+        }
+
+        [Fact]
         public void Run_DefaultInitializedVariables_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
