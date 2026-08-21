@@ -804,7 +804,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Function 'print' requires 1 arguments but was given 0.
+                Function 'Print' requires 1 arguments but was given 0.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -818,7 +818,7 @@ function Main()
             ";
 
             var diagnostics = @"
-                Function 'print' requires 1 arguments but was given 3.
+                Function 'Print' requires 1 arguments but was given 3.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1181,9 +1181,9 @@ function Main()
         [Fact]
         public void Evaluator_AssignmentExpression_Reports_NotAVariable()
         {
-            var text = @"[print] = 42";
+            var text = @"[Print] = 42";
             var diagnostics = @"
-                'print' is not a variable.
+                'Print' is not a variable.
             ";
             AssertDiagnostics(text, diagnostics);
         }

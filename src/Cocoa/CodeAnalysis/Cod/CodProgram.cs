@@ -13,6 +13,7 @@ namespace Cocoa.CodeAnalysis.Cod
             ImmutableArray<FunctionSymbol> functions,
             ImmutableArray<GlobalVariableSymbol> globals,
             ImmutableArray<EnumTypeSymbol> enums,
+            ImmutableArray<ClassTypeSymbol> classes,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement> bodies,
             CodRequirement requires,
             ImmutableArray<string> platforms,
@@ -24,6 +25,7 @@ namespace Cocoa.CodeAnalysis.Cod
             Functions = functions;
             Globals = globals;
             Enums = enums;
+            Classes = classes;
             Bodies = bodies;
             Requires = requires;
             Platforms = platforms;
@@ -41,6 +43,9 @@ namespace Cocoa.CodeAnalysis.Cod
 
         /// <summary>库的枚举类型。</summary>
         public ImmutableArray<EnumTypeSymbol> Enums { get; }
+
+        /// <summary>库的纯容器类（6e-M17：仅 syscall/extern 静态方法，无实例成员/构造/字段/属性/继承）。</summary>
+        public ImmutableArray<ClassTypeSymbol> Classes { get; }
 
         /// <summary>函数体（语义层 BoundProgram 片段，已降级）。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Bodies { get; }

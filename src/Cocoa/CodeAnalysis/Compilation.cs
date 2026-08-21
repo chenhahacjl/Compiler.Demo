@@ -31,17 +31,22 @@ namespace Cocoa.CodeAnalysis
 
         private static ImmutableArray<CodProgram> LoadCodLibraries(string[]? references)
         {
-            if (references == null)
+            var builder = ImmutableArray.CreateBuilder<CodProgram>();
+
+            // 内建系统库（System.cod）先行：用户引用可覆盖/补充同名符号
+            if (SystemLibrary.Load() is { } systemLibrary)
             {
-                return ImmutableArray<CodProgram>.Empty;
+                builder.Add(systemLibrary);
             }
 
-            var builder = ImmutableArray.CreateBuilder<CodProgram>();
-            foreach (var reference in references)
+            if (references != null)
             {
-                if (reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+                foreach (var reference in references)
                 {
-                    builder.Add(CodSerializer.Load(reference));
+                    if (reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+                    {
+                        builder.Add(CodSerializer.Load(reference));
+                    }
                 }
             }
 
@@ -372,11 +377,15 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "output = cocoa 的库不允许入口函数（Main/script）"));
             }
 
-            // 校验 2：无内部 OOP（class 序列化阶段 6b 后置，requires:dotnet）
+            // 校验 2：无内部 OOP（.cod 6e-M17 起放行纯容器类：仅 syscall/extern 静态方法；实例类仍 6b 后置）
             if (program.Classes.Length > 0)
             {
-                var location = program.Classes[0].Declaration?.Identifier.Location ?? ZeroLocation;
-                return ImmutableArray.Create(Diagnostic.Error(location, "库含 class（OOP），.cod 序列化阶段 6b 后置（requires:dotnet）"));
+                var offendingClass = program.Classes.FirstOrDefault(c => !IsPureContainerClass(c));
+                if (offendingClass != null)
+                {
+                    var location = offendingClass.Declaration?.Identifier.Location ?? ZeroLocation;
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.cod 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类已支持"));
+                }
             }
 
             // 校验 3：库体不含 OOP/.NET API 节点（类字段/方法/对象创建/this/base/静态类型等）
@@ -411,10 +420,13 @@ namespace Cocoa.CodeAnalysis
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToImmutableArray();
 
+            var containerClasses = program.Classes.Where(IsPureContainerClass).ToImmutableArray();
+
             var codProgram = new CodProgram(
                 functions,
                 globals,
                 enums,
+                containerClasses,
                 program.Functions,
                 CodRequirement.Any,
                 ImmutableArray<string>.Empty,

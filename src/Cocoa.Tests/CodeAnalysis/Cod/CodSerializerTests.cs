@@ -154,7 +154,7 @@ namespace MyLib
 
         private static Cocoa.CodeAnalysis.Binding.BoundCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)
         {
-            if (node is Cocoa.CodeAnalysis.Binding.BoundCallExpression call && call.Function.Name == "print")
+            if (node is Cocoa.CodeAnalysis.Binding.BoundCallExpression call && call.Function.Name == "Print")
             {
                 return call;
             }
@@ -248,7 +248,67 @@ namespace MyLib
 
             var diagnostics = compilation.EmitCocoa("Lib", Path.Combine(dir, "Lib.cod"));
             Assert.True(diagnostics.HasErrors());
-            Assert.Contains("class", diagnostics[0].Message);
+            Assert.Contains("实例类", diagnostics[0].Message);
+        }
+
+        [Fact]
+        public void Cod_ContainerClass_RoundTrips()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace System
+{
+    class Runtime
+    {
+        syscall function Print(text: string): void
+        syscall function Random(max: int): int
+    }
+
+    namespace Math
+    {
+        function Max(a: int, b: int): int
+        {
+            if (a > b) return a
+            return b
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var cod = CodSerializer.Read(File.ReadAllText(output));
+
+            var runtime = Assert.Single(cod.Classes, c => c.Name == "Runtime");
+            Assert.Equal("System", runtime.Namespace);
+            Assert.Equal("System.Runtime", runtime.FullName);
+
+            var print = Assert.Single(runtime.Methods, m => m.Name == "Print");
+            Assert.True(print.IsStatic);
+            Assert.Equal(BuiltinKind.Print, print.BuiltinKind);
+            Assert.Same(runtime, print.ContainingClass);
+
+            var math = Assert.Single(cod.Functions, f => f.Name == "Max");
+            Assert.Equal("System.Math", math.Namespace);
+        }
+
+        [Fact]
+        public void Cod_SystemLibrary_Loads_WhenPresent()
+        {
+            var systemCod = Path.Combine(
+                Path.GetDirectoryName(typeof(CodSerializerTests).Assembly.Location)!,
+                "System.cod");
+
+            if (!File.Exists(systemCod))
+            {
+                return; // 系统库未部署时跳过（降级语义）
+            }
+
+            SystemLibrary.Reset();
+            var cod = SystemLibrary.Load();
+            Assert.NotNull(cod);
+
+            var runtime = Assert.Single(cod!.Classes, c => c.Name == "Runtime");
+            Assert.Equal("System.Runtime", runtime.FullName);
+            Assert.Contains(runtime.Methods, m => m.Name == "Print" && m.BuiltinKind == BuiltinKind.Print);
         }
     }
 }

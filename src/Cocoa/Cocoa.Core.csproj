@@ -15,4 +15,8 @@
                       ReferenceOutputAssembly="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\stdlib\out\System.cod" Link="System.cod" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

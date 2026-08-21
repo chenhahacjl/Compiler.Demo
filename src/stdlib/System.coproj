@@ -1,0 +1,8 @@
+name = System
+output = cocoa
+
+[sources]
+System.co
+
+[options]
+outputPath = out

@@ -1,8 +1,8 @@
-// Cocoa 系统标准库（逻辑层）：namespace System 下 Math/String/Array 模块。
+// Cocoa 系统标准库（逻辑层）：namespace System 下 Runtime 容器类 + Math/String/Array 模块。
 //
 // 分层（见 docs/标准库设计.md）：
-//   - 内部调用层：namespace System.Runtime 的 class Runtime —— syscall 声明（编译器内部原语，
-//     三后端按 BuiltinKind 分发；供本库封装层与用户 syscall 声明复用）
+//   - 内部调用层：namespace System 的 class Runtime —— syscall 声明（编译器内部原语，
+//     三后端按 BuiltinKind 分发；完整名 System.Runtime，供本库封装层与用户 syscall 声明复用）
 //   - 逻辑层：本文件其余部分，纯 Cocoa 源码，只依赖语言核心（算术/字符串/数组/控制流/char↔int 转换）
 //   - 功能层：print/input/random/sleep/now/exit 等编译器内置原语（BuiltinKind 规格表，三后端按 kind 分发）
 //
@@ -11,17 +11,14 @@
 
 namespace System
 {
-    namespace Runtime
+    class Runtime
     {
-        class Runtime
-        {
-            syscall function Print(text: string): void
-            syscall function Input(): string
-            syscall function Random(max: int): int
-            syscall function Sleep(ms: int): void
-            syscall function Now(): int
-            syscall function Exit(code: int): void
-        }
+        syscall function Print(text: string): void
+        syscall function Input(): string
+        syscall function Random(max: int): int
+        syscall function Sleep(ms: int): void
+        syscall function Now(): int
+        syscall function Exit(code: int): void
     }
 
     namespace Math

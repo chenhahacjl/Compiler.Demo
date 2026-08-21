@@ -22,17 +22,20 @@ namespace Cocoa.CodeAnalysis.Symbols
 
     /// <summary>
     /// 内置函数（功能层）：规格表生成符号，三后端按 <see cref="BuiltinKind"/> 映射实现。
+    /// 规范名为 C# 风格 PascalCase（Print/Input/Random/Sleep/Now/Exit，6e-M17）——
+    /// syscall 声明 `syscall function Print(...)` 精确命中；旧小写调用 `print(...)` 由
+    /// <see cref="GetByName"/> 大小写不敏感回退兼容（Step 3 迁移后移除）。
     /// 新增功能层原语 = 1 行规格 + 三后端各 1 个 kind case + 1 个 IL 方法引用。
     /// </summary>
     internal static class BuiltinFunctions
     {
         private static readonly ImmutableArray<BuiltinSpec> _specs = ImmutableArray.Create(
-            new BuiltinSpec(BuiltinKind.Print, "print", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
-            new BuiltinSpec(BuiltinKind.Input, "input", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.Random, "random", TypeSymbol.Int32, new[] { ("max", TypeSymbol.Int32) }),
-            new BuiltinSpec(BuiltinKind.Sleep, "sleep", TypeSymbol.Void, new[] { ("ms", TypeSymbol.Int32) }),
-            new BuiltinSpec(BuiltinKind.Now, "now", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.Exit, "exit", TypeSymbol.Void, new[] { ("code", TypeSymbol.Int32) }));
+            new BuiltinSpec(BuiltinKind.Print, "Print", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.Input, "Input", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.Random, "Random", TypeSymbol.Int32, new[] { ("max", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Sleep, "Sleep", TypeSymbol.Void, new[] { ("ms", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Now, "Now", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.Exit, "Exit", TypeSymbol.Void, new[] { ("code", TypeSymbol.Int32) }));
 
         /// <summary>
         /// 输出字符串: void print(string text)

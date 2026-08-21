@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace Cocoa.CodeAnalysis.Cod
@@ -14,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cod
     internal static class CodSerializer
     {
         public const string Magic = "COCOD";
-        public const int Version = 1;
+        public const int Version = 2;
 
         // ---------------------------------------------------------------- write
 
@@ -27,6 +28,10 @@ namespace Cocoa.CodeAnalysis.Cod
             foreach (var e in program.Enums)
             {
                 registry.RegisterType(e);
+            }
+            foreach (var c in program.Classes)
+            {
+                registry.RegisterClass(c);
             }
             foreach (var f in program.Functions)
             {
@@ -65,6 +70,12 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
+                // 类常规方法（隐式构造等）不在容器序列化范围，跳过
+                if (fn.ContainingClass != null && fn.BuiltinKind == null && !fn.IsExtern)
+                {
+                    continue;
+                }
+
                 if (!program.Bodies.TryGetValue(fn, out var body))
                 {
                     continue;
@@ -332,6 +343,12 @@ namespace Cocoa.CodeAnalysis.Cod
                         {
                             CollectExpression(registry, a, labels);
                         }
+                        break;
+                    }
+                case BoundNodeKind.StaticTypeExpression:
+                    {
+                        var n = (BoundStaticTypeExpression)expression;
+                        registry.RegisterType(n.Type);
                         break;
                     }
             }
@@ -625,17 +642,25 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
                 case BoundNodeKind.MemberCallExpression:
                     {
-                        // 仅字符串成员方法（Method == null）；类方法 OOP，v1 拒绝
                         var n = (BoundMemberCallExpression)expression;
                         w.Open("membercall");
                         w.Field(registry.Get(n.Type));
                         w.Field(Str(n.Identifier));
+                        w.Field(n.Method != null ? registry.Get(n.Method) : -1);
                         w.Field(n.Arguments.Length);
                         WriteExpression(w, registry, labels, n.Expression);
                         foreach (var a in n.Arguments)
                         {
                             WriteExpression(w, registry, labels, a);
                         }
+                        w.End();
+                        break;
+                    }
+                case BoundNodeKind.StaticTypeExpression:
+                    {
+                        var n = (BoundStaticTypeExpression)expression;
+                        w.Open("statictype");
+                        w.Field(registry.Get(n.Type));
                         w.End();
                         break;
                     }
@@ -695,6 +720,23 @@ namespace Cocoa.CodeAnalysis.Cod
             }
         }
 
+        private static void EmitClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
+        {
+            w.Open("cls");
+            w.Field(registry.Get(classType));
+            w.Field(Str(classType.Namespace));
+            w.Field(Str(classType.Name));
+            w.Field((int)classType.Visibility);
+            // 仅序列化容器方法（syscall/extern）：隐式构造等常规方法不参与容器语义
+            var methods = classType.Methods.Where(m => m.BuiltinKind != null || m.IsExtern).ToArray();
+            w.Field(methods.Length);
+            foreach (var method in methods)
+            {
+                w.Field(registry.Get(method));
+            }
+            w.End();
+        }
+
         private static void EmitFunctionSymbol(Writer w, Registry registry, FunctionSymbol fn)
         {
             w.Open("fn");
@@ -704,6 +746,9 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field(fn.IsExtern ? 1 : 0);
             w.Field(fn.DllName != null ? Str(fn.DllName) : "-");
             w.Field((int)fn.CallingConvention);
+            w.Field(fn.Namespace.Length > 0 ? Str(fn.Namespace) : "-");
+            w.Field(fn.ContainingClass != null ? registry.Get(fn.ContainingClass) : -1);
+            w.Field(fn.BuiltinKind != null ? (int)fn.BuiltinKind.Value : -1);
             w.Field(fn.Parameters.Length);
             foreach (var p in fn.Parameters)
             {
@@ -924,6 +969,12 @@ namespace Cocoa.CodeAnalysis.Cod
                     return id;
                 }
 
+                // 类类型：注册为独立符号（cls）——id 先于引用它的函数
+                if (type is ClassTypeSymbol classType)
+                {
+                    return RegisterClass(classType);
+                }
+
                 // 数组元素类型先注册（元素 id < 数组 id），保证读侧按 id 序可解析
                 if (type.ElementType != null)
                 {
@@ -936,11 +987,31 @@ namespace Cocoa.CodeAnalysis.Cod
                 return id;
             }
 
+            public int RegisterClass(ClassTypeSymbol classType)
+            {
+                if (_ids.TryGetValue(classType, out var id))
+                {
+                    return id;
+                }
+
+                // 纯容器类（仅 syscall/extern 静态方法）：方法符号已在 Functions 注册，这里只发壳
+                id = _ids.Count;
+                _ids[classType] = id;
+                Emitters.Add((w, r) => EmitClassSymbol(w, r, classType));
+                return id;
+            }
+
             public int RegisterFunction(FunctionSymbol fn)
             {
                 if (_ids.TryGetValue(fn, out var id))
                 {
                     return id;
+                }
+
+                // 类方法：仅容器方法（syscall/extern）作为独立 fn 序列化；隐式构造等常规方法由类壳过滤
+                if (fn.ContainingClass != null && fn.BuiltinKind == null && !fn.IsExtern)
+                {
+                    return -1;
                 }
 
                 // 先注册返回类型/参数类型（id 序在 fn 之前），保证读侧按 id 序可解析
@@ -1080,10 +1151,20 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
             }
 
+            var classes = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
+            foreach (var symbol in symbolsById)
+            {
+                if (symbol is ClassTypeSymbol c)
+                {
+                    classes.Add(c);
+                }
+            }
+
             return new CodProgram(
                 functions.ToImmutable(),
                 globals.ToImmutable(),
                 enums.ToImmutable(),
+                classes.ToImmutable(),
                 bodies.ToImmutable(),
                 requires,
                 platforms.ToImmutable(),
@@ -1139,6 +1220,9 @@ namespace Cocoa.CodeAnalysis.Cod
                     case "fn":
                         ReadFunction(reader, symbolsById);
                         break;
+                    case "cls":
+                        ReadClass(reader, symbolsById);
+                        break;
                     case "glb":
                         ReadVariable(reader, symbolsById, isGlobal: true);
                         break;
@@ -1151,6 +1235,24 @@ namespace Cocoa.CodeAnalysis.Cod
             reader.End();
         }
 
+        private static void ReadClass(Reader reader, List<object> symbolsById)
+        {
+            var id = reader.ExpectInt();
+            var ns = reader.ExpectString();
+            var name = reader.ExpectString();
+            var visibility = (Visibility)reader.ExpectInt();
+            var methodCount = reader.ExpectInt();
+            // 方法函数符号按 id 序在 cls 之后读，这里只消费 id（方法回填由 ReadFunction 的 containingClassId 完成）
+            for (var i = 0; i < methodCount; i++)
+            {
+                reader.ExpectInt();
+            }
+
+            var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
+            SetAt(symbolsById, id, classType);
+            reader.End();
+        }
+
         private static void ReadFunction(Reader reader, List<object> symbolsById)
         {
             var id = reader.ExpectInt();
@@ -1160,6 +1262,10 @@ namespace Cocoa.CodeAnalysis.Cod
             var dllToken = reader.ExpectString();
             var dllName = dllToken == "-" ? null : dllToken;
             var cc = (CallingConvention)reader.ExpectInt();
+            var nsToken = reader.ExpectString();
+            var ns = nsToken == "-" ? "" : nsToken;
+            var containingClassId = reader.ExpectInt();
+            var builtinKindValue = reader.ExpectInt();
             var paramCount = reader.ExpectInt();
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
             for (var i = 0; i < paramCount; i++)
@@ -1176,16 +1282,45 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             var returnType = (TypeSymbol)symbolsById[returnTypeId];
+            var containingClass = containingClassId >= 0 ? (ClassTypeSymbol)symbolsById[containingClassId] : null;
+            BuiltinKind? builtinKind = builtinKindValue >= 0 ? (BuiltinKind)builtinKindValue : null;
 
-            FunctionSymbol function = BuiltinFunctions.GetByName(name) ?? new FunctionSymbol(
-                name,
-                parameters.ToImmutable(),
-                returnType,
-                isExtern: isExtern,
-                dllName: dllName,
-                callingConvention: cc);
+            // 含类归属或内置种类：不复用全局单例（内置单例无类归属），重建带上下文符号
+            FunctionSymbol function;
+            if (containingClass != null || builtinKind != null)
+            {
+                function = new FunctionSymbol(
+                    name,
+                    parameters.ToImmutable(),
+                    returnType,
+                    isExtern: isExtern,
+                    dllName: dllName,
+                    callingConvention: cc,
+                    containingClass: containingClass,
+                    builtinKind: builtinKind,
+                    @namespace: ns);
+            }
+            else
+            {
+                function = BuiltinFunctions.GetByName(name) ?? new FunctionSymbol(
+                    name,
+                    parameters.ToImmutable(),
+                    returnType,
+                    isExtern: isExtern,
+                    dllName: dllName,
+                    callingConvention: cc,
+                    @namespace: ns);
+            }
 
             SetAt(symbolsById, id, function);
+
+            // 类方法回填：含类归属的 fn 归入其类（仅容器方法——syscall/extern，含 IsStatic 语义）
+            if (containingClass != null && (builtinKind != null || isExtern))
+            {
+                function.IsStatic = true;
+                containingClass.AddMethod(function);
+            }
+
             reader.End();
         }
 
@@ -1479,6 +1614,8 @@ namespace Cocoa.CodeAnalysis.Cod
                         var typeId = reader.ExpectInt();
                         var type = (TypeSymbol)symbolsById[typeId];
                         var identifier = reader.ExpectString();
+                        var methodId = reader.ExpectInt();
+                        var method = methodId >= 0 ? (FunctionSymbol)symbolsById[methodId] : null;
                         var count = reader.ExpectInt();
                         var target = ReadExpression(reader, symbolsById, labels);
                         var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
@@ -1487,7 +1624,13 @@ namespace Cocoa.CodeAnalysis.Cod
                             arguments.Add(ReadExpression(reader, symbolsById, labels));
                         }
 
-                        return new BoundMemberCallExpression(null, target, identifier, arguments.ToImmutable(), type);
+                        return new BoundMemberCallExpression(null, target, identifier, arguments.ToImmutable(), type, method);
+                    }
+                case "statictype":
+                    {
+                        var typeId = reader.ExpectInt();
+                        var type = (ClassTypeSymbol)symbolsById[typeId];
+                        return new BoundStaticTypeExpression(null, type);
                     }
                 default:
                     throw new InvalidDataException($"Unknown expression kind '{kind}'");

@@ -269,7 +269,7 @@ namespace MyLib
 ");
             File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
-            File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    print(Triple(3))\n}\n");
+            File.WriteAllText(Path.Combine(appDir, "main.co"), "using MyLib\nfunction Main(): void\n{\n    print(Triple(3))\n}\n");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"), $@"
 name = App
 output = executable
