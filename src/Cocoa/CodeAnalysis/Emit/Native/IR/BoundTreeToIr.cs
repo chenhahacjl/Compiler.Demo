@@ -1,10 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>
     /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
@@ -970,26 +969,25 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         private IrVirtualRegister EmitCallExpression(BoundCallExpression node)
         {
-            if (node.Function == BuiltinFunctions.Print)
+            switch (node.Function.BuiltinKind)
             {
-                EmitPrint(node);
-                return VoidResult();
-            }
-
-            if (node.Function == BuiltinFunctions.Input)
-            {
-                var result = AllocateRegister(8);
-                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Input"), IrOperand.Constant(0)));
-                return result;
-            }
-
-            if (node.Function == BuiltinFunctions.Random)
-            {
-                var argument = EmitExpression(node.Arguments[0]);
-                var result = AllocateRegister(4);
-                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(argument)));
-                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Random"), IrOperand.Constant(0)));
-                return result;
+                case BuiltinKind.Print:
+                    EmitPrint(node);
+                    return VoidResult();
+                case BuiltinKind.Input:
+                {
+                    var result = AllocateRegister(8);
+                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Input"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.Random:
+                {
+                    var argument = EmitExpression(node.Arguments[0]);
+                    var result = AllocateRegister(4);
+                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(argument)));
+                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Random"), IrOperand.Constant(0)));
+                    return result;
+                }
             }
 
             if (node.Function.IsExtern)

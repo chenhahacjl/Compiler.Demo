@@ -11,10 +11,10 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Assemble_LdcI4_Encodes_Opcode_And_Int32()
         {
             var assembler = new IlAssembler();
-            assembler.Emit(IlOpCodes.Get("Ldc_I4"), 42);
+            assembler.Emit(IlOpCodeTable.Get("Ldc_I4"), 42);
             var code = assembler.Assemble(new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 42),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 42),
             });
 
             Assert.Equal(new byte[] { 0x20, 0x2A, 0x00, 0x00, 0x00 }, code);
@@ -26,7 +26,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var assembler = new IlAssembler();
             var code = assembler.Assemble(new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Ldc_I4_0"), null),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4_0"), null),
             });
 
             Assert.Equal(new byte[] { 0x16 }, code);
@@ -38,7 +38,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var assembler = new IlAssembler();
             var code = assembler.Assemble(new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Add"), null),
+                new IlInstruction(IlOpCodeTable.Get("Add"), null),
             });
 
             Assert.Equal(new byte[] { 0x58 }, code);
@@ -50,7 +50,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var assembler = new IlAssembler();
             var instructions = new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Ldstr"), "hi"),
+                new IlInstruction(IlOpCodeTable.Get("Ldstr"), "hi"),
             };
 
             var code = assembler.Assemble(instructions);
@@ -71,7 +71,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
                 new[] { IlType.Object });
             var instructions = new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Call"), methodRef),
+                new IlInstruction(IlOpCodeTable.Get("Call"), methodRef),
             };
 
             var code = assembler.Assemble(instructions);
@@ -85,8 +85,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Assemble_Br_Fixes_Up_Forward_Branch_Offset()
         {
             var assembler = new IlAssembler();
-            var nop = new IlInstruction(IlOpCodes.Get("Nop"), null);
-            var br = new IlInstruction(IlOpCodes.Get("Br"), nop);
+            var nop = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var br = new IlInstruction(IlOpCodeTable.Get("Br"), nop);
             var instructions = new List<IlInstruction> { br, nop };
 
             var code = assembler.Assemble(instructions);
@@ -98,8 +98,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Assemble_Br_Fixes_Backward_Branch_Offset()
         {
             var assembler = new IlAssembler();
-            var nop = new IlInstruction(IlOpCodes.Get("Nop"), null);
-            var br = new IlInstruction(IlOpCodes.Get("Br"), nop);
+            var nop = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var br = new IlInstruction(IlOpCodeTable.Get("Br"), nop);
             var instructions = new List<IlInstruction> { nop, br };
 
             var code = assembler.Assemble(instructions);
@@ -111,8 +111,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void Assemble_ShortBranch_Encodes_SByte_Offset()
         {
             var assembler = new IlAssembler();
-            var nop = new IlInstruction(IlOpCodes.Get("Nop"), null);
-            var br = new IlInstruction(IlOpCodes.Get("Br_S"), nop);
+            var nop = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var br = new IlInstruction(IlOpCodeTable.Get("Br_S"), nop);
             var instructions = new List<IlInstruction> { br, nop };
 
             var code = assembler.Assemble(instructions);
@@ -125,7 +125,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var assembler = new IlAssembler();
             var code = assembler.Assemble(new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Stloc"), (ushort)3),
+                new IlInstruction(IlOpCodeTable.Get("Stloc"), (ushort)3),
             });
 
             Assert.Equal(new byte[] { 0xFE, 0x0E, 0x03, 0x00 }, code);
@@ -136,12 +136,12 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         {
             // 固化此前钉错过值的 opcode：Stelem_I4 曾误置 0x9D（实为 Stelem_I1）
             var assembler = new IlAssembler();
-            assembler.Emit(IlOpCodes.Get("Stelem_I4"));
-            assembler.Emit(IlOpCodes.Get("Ldlen"));
-            assembler.Emit(IlOpCodes.Get("Ldelem_I1"));
-            assembler.Emit(IlOpCodes.Get("Ldelem_U1"));
-            assembler.Emit(IlOpCodes.Get("Ldelem_Ref"));
-            assembler.Emit(IlOpCodes.Get("Stelem_I1"));
+            assembler.Emit(IlOpCodeTable.Get("Stelem_I4"));
+            assembler.Emit(IlOpCodeTable.Get("Ldlen"));
+            assembler.Emit(IlOpCodeTable.Get("Ldelem_I1"));
+            assembler.Emit(IlOpCodeTable.Get("Ldelem_U1"));
+            assembler.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
+            assembler.Emit(IlOpCodeTable.Get("Stelem_I1"));
             var code = assembler.Assemble();
 
             Assert.Equal(new byte[] { 0x9E, 0x8E, 0x90, 0x91, 0x9A, 0x9C }, code);
@@ -241,10 +241,10 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void ComputeMaxStack_BinaryChain_Is_Two()
         {
             var maxStack = ComputeMaxStack(
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 1),
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 2),
-                new IlInstruction(IlOpCodes.Get("Add"), null),
-                new IlInstruction(IlOpCodes.Get("Stloc"), (ushort)0));
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 1),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 2),
+                new IlInstruction(IlOpCodeTable.Get("Add"), null),
+                new IlInstruction(IlOpCodeTable.Get("Stloc"), (ushort)0));
             Assert.Equal(2, maxStack);
         }
 
@@ -253,11 +253,11 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         {
             var sum = new IlMethodRef(new IlTypeRef("", "Program", null), "sum", IlType.Int32, new[] { IlType.Int32, IlType.Int32, IlType.Int32 });
             var maxStack = ComputeMaxStack(
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 1),
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 2),
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 3),
-                new IlInstruction(IlOpCodes.Get("Call"), sum),
-                new IlInstruction(IlOpCodes.Get("Stloc"), (ushort)0));
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 1),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 2),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 3),
+                new IlInstruction(IlOpCodeTable.Get("Call"), sum),
+                new IlInstruction(IlOpCodeTable.Get("Stloc"), (ushort)0));
             Assert.Equal(3, maxStack);
         }
 
@@ -267,18 +267,18 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var concat = new IlMethodRef(new IlTypeRef("System", "String", null), "Concat", IlType.String, new[] { IlType.SzArrayOf(IlType.String) });
             var instructions = new List<IlInstruction>
             {
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 5),
-                new IlInstruction(IlOpCodes.Get("Newarr"), IlType.String),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 5),
+                new IlInstruction(IlOpCodeTable.Get("Newarr"), IlType.String),
             };
             for (var i = 0; i < 5; i++)
             {
-                instructions.Add(new IlInstruction(IlOpCodes.Get("Dup"), null));
-                instructions.Add(new IlInstruction(IlOpCodes.Get("Ldc_I4"), i));
-                instructions.Add(new IlInstruction(IlOpCodes.Get("Ldstr"), "x"));
-                instructions.Add(new IlInstruction(IlOpCodes.Get("Stelem_Ref"), null));
+                instructions.Add(new IlInstruction(IlOpCodeTable.Get("Dup"), null));
+                instructions.Add(new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), i));
+                instructions.Add(new IlInstruction(IlOpCodeTable.Get("Ldstr"), "x"));
+                instructions.Add(new IlInstruction(IlOpCodeTable.Get("Stelem_Ref"), null));
             }
 
-            instructions.Add(new IlInstruction(IlOpCodes.Get("Call"), concat));
+            instructions.Add(new IlInstruction(IlOpCodeTable.Get("Call"), concat));
             Assert.Equal(4, ComputeMaxStack(instructions.ToArray()));
         }
 
@@ -289,10 +289,10 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var instructions = new List<IlInstruction>();
             for (var i = 0; i < 10; i++)
             {
-                instructions.Add(new IlInstruction(IlOpCodes.Get("Ldc_I4"), i));
+                instructions.Add(new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), i));
             }
 
-            instructions.Add(new IlInstruction(IlOpCodes.Get("Call"), f));
+            instructions.Add(new IlInstruction(IlOpCodeTable.Get("Call"), f));
             Assert.Equal(10, ComputeMaxStack(instructions.ToArray()));
         }
 
@@ -303,9 +303,9 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var shared = new IlMethodRef(randomType, "get_Shared", IlType.Class(randomType), System.Array.Empty<IlType>());
             var next = new IlMethodRef(randomType, "Next", IlType.Int32, new[] { IlType.Int32 }, isStatic: false);
             var maxStack = ComputeMaxStack(
-                new IlInstruction(IlOpCodes.Get("Call"), shared),
-                new IlInstruction(IlOpCodes.Get("Ldc_I4"), 100),
-                new IlInstruction(IlOpCodes.Get("Callvirt"), next));
+                new IlInstruction(IlOpCodeTable.Get("Call"), shared),
+                new IlInstruction(IlOpCodeTable.Get("Ldc_I4"), 100),
+                new IlInstruction(IlOpCodeTable.Get("Callvirt"), next));
             Assert.Equal(2, maxStack);
         }
 
@@ -313,8 +313,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void ComputeMaxStack_Empty_Body_Is_Zero()
         {
             var maxStack = ComputeMaxStack(
-                new IlInstruction(IlOpCodes.Get("Nop"), null),
-                new IlInstruction(IlOpCodes.Get("Ret"), null));
+                new IlInstruction(IlOpCodeTable.Get("Nop"), null),
+                new IlInstruction(IlOpCodeTable.Get("Ret"), null));
             Assert.Equal(0, maxStack);
         }
     }

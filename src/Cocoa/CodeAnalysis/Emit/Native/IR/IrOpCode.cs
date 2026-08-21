@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>
     /// IR 指令操作码（三地址码）。覆盖现有 NativeCodeEmitter 的全部发射语义，

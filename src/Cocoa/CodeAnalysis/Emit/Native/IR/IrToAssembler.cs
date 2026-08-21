@@ -1,12 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
 using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>IR → IAssembler 的发射结果：全部函数/特殊函数 label 与入口 stub label。</summary>
     internal sealed class IrEmitResult

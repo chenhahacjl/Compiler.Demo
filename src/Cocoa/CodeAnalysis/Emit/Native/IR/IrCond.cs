@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>条件码（与 IAssembler 的 X64CondCode 一一对应）。</summary>
     internal enum IrCond

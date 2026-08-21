@@ -21,9 +21,9 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 
         private static void WriteExe(X64Assembler a, RuntimeResult runtime, int entryLabel, string exePath)
         {
-            var dataRva = PefileWriter.ComputeDataRva(a.ToArray().Length);
-            a.Patch(dataRva - PefileWriter.TextRva, PefileWriter.ImageBaseOf(Architecture.X64));
-            PefileWriter.Write(exePath, a.ToArray(), a.GetData(), PefileWriter.TextRva + a.GetLabelOffset(entryLabel), runtime.Imports, Architecture.X64);
+            var dataRva = PeFileWriter.ComputeDataRva(a.ToArray().Length);
+            a.Patch(dataRva - PeFileWriter.TextRva, PeFileWriter.ImageBaseOf(Architecture.X64));
+            PeFileWriter.Write(exePath, a.ToArray(), a.GetData(), PeFileWriter.TextRva + a.GetLabelOffset(entryLabel), runtime.Imports, Architecture.X64);
         }
 
         internal static string Run(string exePath, string? input = null, int expectedExitCode = 0)
@@ -71,7 +71,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         private static RuntimeResult BuildHelloWorld(X64Assembler a)
         {
             var entry = a.CreateLabel();
-            var runtime = RuntimeEmitter.Emit(a, entry);
+            var runtime = RuntimeEmitterX64.Emit(a, entry);
 
             a.MarkLabel(entry);
 
@@ -101,7 +101,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             Assert.Equal("PE", Encoding.ASCII.GetString(bytes, peOffset, 2));
             Assert.Equal(0x8664, BitConverter.ToUInt16(bytes, peOffset + 4));
             Assert.Equal(3, BitConverter.ToUInt16(bytes, peOffset + 6));
-            Assert.Equal((uint)PefileWriter.SizeOfHeaders, BitConverter.ToUInt32(bytes, peOffset + 0x18 + 0x3C));
+            Assert.Equal((uint)PeFileWriter.SizeOfHeaders, BitConverter.ToUInt32(bytes, peOffset + 0x18 + 0x3C));
         }
 
         [Fact]
@@ -121,7 +121,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         {
             var a = new X64Assembler();
             var entry = a.CreateLabel();
-            var runtime = RuntimeEmitter.Emit(a, entry);
+            var runtime = RuntimeEmitterX64.Emit(a, entry);
 
             a.MarkLabel(entry);
 
@@ -186,7 +186,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         {
             var a = new X64Assembler();
             var entry = a.CreateLabel();
-            var runtime = RuntimeEmitter.Emit(a, entry);
+            var runtime = RuntimeEmitterX64.Emit(a, entry);
 
             a.MarkLabel(entry);
             a.Sub(X64Size.Qword, X64Register.RSP, 0x28);

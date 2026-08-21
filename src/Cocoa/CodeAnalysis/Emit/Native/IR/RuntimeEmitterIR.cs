@@ -1,9 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Cocoa.CodeAnalysis.Emit.Native;
 
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>
     /// 平台无关运行时 IR 生成：把原 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
@@ -21,11 +20,11 @@ namespace Cocoa.CodeAnalysis.Emit.IR
 
         public static void Append(IrProgram program, TargetPlatform platform)
         {
-            var emitter = new Emitter(program, platform);
+            var emitter = new RuntimeFunctionEmitter(program, platform);
             emitter.Emit();
         }
 
-        private sealed class Emitter
+        private sealed class RuntimeFunctionEmitter
         {
             private const string Prefix = "rt:";
 
@@ -48,7 +47,7 @@ namespace Cocoa.CodeAnalysis.Emit.IR
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "";
 
-            public Emitter(IrProgram program, TargetPlatform platform)
+            public RuntimeFunctionEmitter(IrProgram program, TargetPlatform platform)
             {
                 _program = program;
                 _isX64 = platform.Arch == Architecture.X64;

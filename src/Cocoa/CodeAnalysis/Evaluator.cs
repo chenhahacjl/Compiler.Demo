@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Cocoa.CodeAnalysis
 {
-    // TODO: Get rid of evaluator in favor of Emitter
+    // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
     /// 求值器
     /// </summary>
@@ -327,43 +327,39 @@ namespace Cocoa.CodeAnalysis
 
         private object? EvaluateCallExpression(BoundCallExpression node)
         {
-            if (node.Function == BuiltinFunctions.Input)
+            switch (node.Function.BuiltinKind)
             {
-                return Console.ReadLine();
-            }
-            else if (node.Function == BuiltinFunctions.Print)
-            {
-                var value = EvaluateExpression(node.Arguments[0]);
-                Console.WriteLine(value);
-                return null;
-            }
-            else if (node.Function == BuiltinFunctions.Random)
-            {
-                var max = (int)EvaluateExpression(node.Arguments[0])!;
-
-                return Random.Shared.Next(max);
-            }
-            else
-            {
-                var locals = new Dictionary<VariableSymbol, object>();
-                for (var i = 0; i < node.Arguments.Length; i++)
+                case BuiltinKind.Input:
+                    return Console.ReadLine();
+                case BuiltinKind.Print:
+                    var printValue = EvaluateExpression(node.Arguments[0]);
+                    Console.WriteLine(printValue);
+                    return null;
+                case BuiltinKind.Random:
+                    var max = (int)EvaluateExpression(node.Arguments[0])!;
+                    return Random.Shared.Next(max);
+                default:
                 {
-                    var parameter = node.Function.Parameters[i];
-                    var value = EvaluateExpression(node.Arguments[i]);
+                    var locals = new Dictionary<VariableSymbol, object>();
+                    for (var i = 0; i < node.Arguments.Length; i++)
+                    {
+                        var parameter = node.Function.Parameters[i];
+                        var value = EvaluateExpression(node.Arguments[i]);
 
-                    Debug.Assert(value != null);
+                        Debug.Assert(value != null);
 
-                    locals.Add(parameter, value);
+                        locals.Add(parameter, value);
+                    }
+
+                    _locals.Push(locals);
+
+                    var statement = _functions[node.Function];
+                    var result = EvaluateStatement(statement);
+
+                    _locals.Pop();
+
+                    return result;
                 }
-
-                _locals.Push(locals);
-
-                var statement = _functions[node.Function];
-                var result = EvaluateStatement(statement);
-
-                _locals.Pop();
-
-                return result;
             }
         }
 

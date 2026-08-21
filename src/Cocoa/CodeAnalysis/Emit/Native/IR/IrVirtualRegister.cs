@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>虚拟寄存器：无上限，由后端（IrToAssembler）分配物理寄存器或栈槽。</summary>
     internal sealed class IrVirtualRegister

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>IR 文本打印器：输出平台无关的中间表示（.cod 雏形）。</summary>
     internal static class IrPrinter

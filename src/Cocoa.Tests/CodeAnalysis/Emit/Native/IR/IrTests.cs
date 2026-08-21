@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using Cocoa.CodeAnalysis.Emit.IR;
+using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Emit.Native.IR;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.IR

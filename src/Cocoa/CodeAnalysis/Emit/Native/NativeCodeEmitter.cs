@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Emit.IR;
+using Cocoa.CodeAnalysis.Emit.Native.IR;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X86;
@@ -33,10 +33,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native
             // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
             var result = IrToAssembler.Emit(a, ir, entryLabel, platform, null);
 
-            a.Patch(dataRva - PefileWriter.TextRva, PefileWriter.ImageBaseOf(platform.Arch));
+            a.Patch(dataRva - PeFileWriter.TextRva, PeFileWriter.ImageBaseOf(platform.Arch));
             var code = a.ToArray();
-            var entryPointRva = PefileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
-            PefileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch);
+            var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
+            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch);
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
 
             IrToAssembler.Emit(a, ir, entryLabel, platform, null);
 
-            return PefileWriter.ComputeDataRva(a.ToArray().Length);
+            return PeFileWriter.ComputeDataRva(a.ToArray().Length);
         }
     }
 }

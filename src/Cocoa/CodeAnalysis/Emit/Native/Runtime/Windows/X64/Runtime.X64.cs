@@ -58,7 +58,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Runtime.Windows.X64
         public int Entry { get; }
     }
 
-    internal static class RuntimeEmitter
+    internal static class RuntimeEmitterX64
     {
         private static readonly string[] ImportNames = new[]
         {

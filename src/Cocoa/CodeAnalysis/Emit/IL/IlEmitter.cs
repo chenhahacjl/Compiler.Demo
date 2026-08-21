@@ -6,16 +6,16 @@ using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Emit
+namespace Cocoa.CodeAnalysis.Emit.IL
 {
     /// <summary>
     /// IL 路径发射器：绑定树 → 自研 IL 组件（IlAssembler/MetadataBuilder/ManagedPEWriter）。
     /// 发射语义与原 Mono.Cecil 实现一致（表达式/语句 → IL 指令序列）。
     /// </summary>
-    internal sealed class Emitter
+    internal sealed class IlEmitter
     {
         private readonly MetadataBuilder _metadata;
-        private readonly MetadataReader _reader;
+        private readonly IlFramework _framework;
         private readonly string _moduleName;
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
         private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
@@ -26,61 +26,20 @@ namespace Cocoa.CodeAnalysis.Emit
         private FunctionSymbol? _entryFunction;
         private bool _entryVoidMain;
 
-        private readonly IlTypeRef _objectType;
-        private readonly IlTypeRef _stringType;
         private readonly IlTypeDef _typeDefinition;
         private readonly Dictionary<ClassTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<ClassTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
         private bool _currentMethodIsInstance;
 
-        private readonly IlMethodRef _objectEqualsReference;
-        private readonly IlMethodRef _consoleReadLineReference;
-        private readonly IlMethodRef _consoleWriteLineReference;
-        private readonly IlMethodRef _stringConcat2Reference;
-        private readonly IlMethodRef _stringConcat3Reference;
-        private readonly IlMethodRef _stringConcat4Reference;
-        private readonly IlMethodRef _stringConcatArrayReference;
-        private readonly IlMethodRef _convertToBooleanReference;
-        private readonly IlMethodRef _convertToInt32Reference;
-        private readonly IlMethodRef _convertToStringReference;
-        private readonly IlMethodRef _stringCharsReference;
-        private readonly IlMethodRef _stringLengthReference;
-        private readonly IlMethodRef _stringSubstringReference;
-        private readonly IlMethodRef _randomCtorReference;
-        private readonly IlMethodRef _randomNextReference;
-        private readonly IlMethodRef _debuggableAttributeCtorReference;
-        private readonly IlMethodRef _stringFormatReference;
-
-        private Emitter(string moduleName, string[] references)
+        private IlEmitter(string moduleName, string[] references)
         {
             _moduleName = moduleName;
             _metadata = new MetadataBuilder(moduleName, moduleName);
-            _reader = new MetadataReader(references);
-
-            _objectType = RequireType("System.Object");
-            _stringType = RequireType("System.String");
-
-            _objectEqualsReference = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
-            _consoleReadLineReference = RequireMethod("System.Console", "ReadLine", System.Array.Empty<string>());
-            _consoleWriteLineReference = RequireMethod("System.Console", "WriteLine", new[] { "System.Object" });
-            _stringConcat2Reference = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String" });
-            _stringConcat3Reference = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String" });
-            _stringConcat4Reference = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String", "System.String" });
-            _stringConcatArrayReference = RequireMethod("System.String", "Concat", new[] { "System.String[]" });
-            _convertToBooleanReference = RequireMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
-            _convertToInt32Reference = RequireMethod("System.Convert", "ToInt32", new[] { "System.Object" });
-            _convertToStringReference = RequireMethod("System.Convert", "ToString", new[] { "System.Object" });
-            _stringCharsReference = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
-            _stringLengthReference = RequireMethod("System.String", "get_Length", System.Array.Empty<string>());
-            _stringSubstringReference = RequireMethod("System.String", "Substring", new[] { "System.Int32", "System.Int32" });
-            _randomCtorReference = RequireMethod("System.Random", ".ctor", System.Array.Empty<string>());
-            _randomNextReference = RequireMethod("System.Random", "Next", new[] { "System.Int32" });
-            _debuggableAttributeCtorReference = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
-            _stringFormatReference = RequireMethod("System.String", "Format", new[] { "System.String", "System.Object" });
+            _framework = new IlFramework(_metadata, references);
 
             // 顶层函数容器 TypeDef。名字用尖括号（非法标识符）杜绝与用户类同名冲突
             // （否则用户定义 `class Program` 时与默认 "Program" TypeDef 撞名 → BadImageFormatException）。
-            _typeDefinition = new IlTypeDef("<CocoaTopLevel>", "", _objectType);
+            _typeDefinition = new IlTypeDef("<CocoaTopLevel>", "", _framework.ObjectType);
             _metadata.AddTypeDef(_typeDefinition);
         }
 
@@ -97,7 +56,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 return program.Diagnostics;
             }
 
-            var emitter = new Emitter(moduleName, references);
+            var emitter = new IlEmitter(moduleName, references);
 
             return emitter.Emit(program, outputPath, target, emitLibrary);
         }
@@ -193,7 +152,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack));
             }
 
-            _metadata.AddCustomAttribute(new IlCustomAttribute(_debuggableAttributeCtorReference, MetadataBuilder.EncodeDebuggableAttributeBlob()));
+            _metadata.AddCustomAttribute(new IlCustomAttribute(_framework.DebuggableAttributeCtor, MetadataBuilder.EncodeDebuggableAttributeBlob()));
 
             var entryPointToken = program.MainFunction == null ? 0 : _metadata.BuildTokenMap()[_methods[program.MainFunction]];
             var pe = ManagedPEWriter.Build(_moduleName, methods, bodies, _metadata, entryPointToken, target);
@@ -259,7 +218,7 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             var baseTypeDef = classType.BaseType != null ? _classTypeDefs[classType.BaseType] : null;
             // 接口在元数据中不能有基类（Extends = 0），否则 CoreCLR 加载时报 TypeLoadException
-            var baseTypeRef = classType.IsInterface ? null : (classType.BaseType == null ? _objectType : null);
+            var baseTypeRef = classType.IsInterface ? null : (classType.BaseType == null ? _framework.ObjectType : null);
             var typeDef = new IlTypeDef(classType.Name, classType.Namespace, baseTypeRef, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: baseTypeDef)
             {
                 IsAbstract = classType.IsAbstract,
@@ -339,7 +298,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
                     break;
                 case BoundLabelStatement labelStatement:
-                    _labelTargets[labelStatement.Label] = new IlInstruction(IlOpCodes.Get("Nop"), null);
+                    _labelTargets[labelStatement.Label] = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
                     break;
                 case BoundSequencePointStatement sequencePoint:
                     CollectLabels(sequencePoint.Statement);
@@ -433,52 +392,9 @@ namespace Cocoa.CodeAnalysis.Emit
             throw new System.Exception($"Unexpected type {type}");
         }
 
-        private IlTypeRef RequireType(string fullName)
-        {
-            return _reader.FindType(fullName, _metadata) ?? throw new System.Exception($"Type '{fullName}' not found in references.");
-        }
-
         private IlTypeRef ResolveExternalTypeRef(ClassTypeSymbol classType)
         {
-            return RequireType(classType.FullName);
-        }
-
-        private IlMethodRef RequireMethod(string typeFullName, string methodName, string[] parameterTypeNames)
-        {
-            var resolved = _reader.FindMethod(typeFullName, methodName, parameterTypeNames, _metadata);
-            if (resolved == null)
-            {
-                throw new System.Exception($"Method '{typeFullName}.{methodName}' not found in references.");
-            }
-
-            return ResolveMethodRef(resolved);
-        }
-
-        private IlMethodRef ResolveMethodRef(ResolvedMethodInfo resolved)
-        {
-            var returnType = ResolveClassType(resolved.ReturnType);
-            var parameterTypes = new List<IlType>(resolved.ParameterTypes.Count);
-            foreach (var parameterType in resolved.ParameterTypes)
-            {
-                parameterTypes.Add(ResolveClassType(parameterType));
-            }
-
-            return _metadata.DefineMethodRef(resolved.DeclaringType, resolved.Name, returnType, parameterTypes, resolved.IsStatic);
-        }
-
-        /// <summary>把签名中的 Class TypeRef 解析为带 scope 的注册引用（供签名编码使用）。</summary>
-        private IlType ResolveClassType(IlType type)
-        {
-            if (type.Kind == IlTypeKind.Class)
-            {
-                var resolved = _reader.FindType(type.Reference!.FullName, _metadata);
-                if (resolved != null)
-                {
-                    return IlType.Class(resolved);
-                }
-            }
-
-            return type;
+            return _framework.RequireType(classType.FullName);
         }
 
         // ------------------------------------------------------------------
@@ -490,7 +406,7 @@ namespace Cocoa.CodeAnalysis.Emit
             switch (node.Kind)
             {
                 case BoundNodeKind.NopStatement:
-                    il.Emit(IlOpCodes.Get("Nop"));
+                    il.Emit(IlOpCodeTable.Get("Nop"));
                     break;
                 case BoundNodeKind.VariableDeclaration:
                     EmitVariableDeclaration(il, (BoundVariableDeclaration)node);
@@ -521,7 +437,7 @@ namespace Cocoa.CodeAnalysis.Emit
         private void EmitVariableDeclaration(IlAssembler il, BoundVariableDeclaration node)
         {
             EmitExpression(il, node.Initializer);
-            il.Emit(IlOpCodes.Get("Stloc"), (ushort)_locals[node.Variable]);
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
         }
 
         private void EmitLabelStatement(IlAssembler il, BoundLabelStatement node)
@@ -532,14 +448,14 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitGotoStatement(IlAssembler il, BoundGotoStatement node)
         {
-            il.Emit(IlOpCodes.Get("Br"), _labelTargets[node.Label]);
+            il.Emit(IlOpCodeTable.Get("Br"), _labelTargets[node.Label]);
         }
 
         private void EmitConditionalGotoStatement(IlAssembler il, BoundConditionalGotoStatement node)
         {
             EmitExpression(il, node.Condition);
             var opCode = node.JumpIfTrue ? "Brtrue" : "Brfalse";
-            il.Emit(IlOpCodes.Get(opCode), _labelTargets[node.Label]);
+            il.Emit(IlOpCodeTable.Get(opCode), _labelTargets[node.Label]);
         }
 
         private void EmitReturnStatement(IlAssembler il, BoundReturnStatement node)
@@ -551,10 +467,10 @@ namespace Cocoa.CodeAnalysis.Emit
             else if (_entryVoidMain)
             {
                 // void main() 的（显式 return; 或隐式函数尾）返回 = 默认退出码 0
-                il.Emit(IlOpCodes.Get("Ldc_I4_0"));
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
             }
 
-            il.Emit(IlOpCodes.Get("Ret"));
+            il.Emit(IlOpCodeTable.Get("Ret"));
         }
 
         private void EmitExpressionStatement(IlAssembler il, BoundExpressionStatement node)
@@ -563,7 +479,7 @@ namespace Cocoa.CodeAnalysis.Emit
 
             if (node.Expression.Type != TypeSymbol.Void)
             {
-                il.Emit(IlOpCodes.Get("Pop"));
+                il.Emit(IlOpCodeTable.Get("Pop"));
             }
         }
 
@@ -651,42 +567,42 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             if (node.ConstantValue!.Value == null)
             {
-                il.Emit(IlOpCodes.Get("Ldnull"));
+                il.Emit(IlOpCodeTable.Get("Ldnull"));
             }
             else if (node.Type == TypeSymbol.Boolean)
             {
                 var value = (bool)node.ConstantValue.Value;
-                il.Emit(IlOpCodes.Get(value ? "Ldc_I4_1" : "Ldc_I4_0"));
+                il.Emit(IlOpCodeTable.Get(value ? "Ldc_I4_1" : "Ldc_I4_0"));
             }
             else if (node.Type == TypeSymbol.Int32)
             {
                 var value = (int)node.ConstantValue.Value;
-                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.Char)
             {
                 var value = (int)(char)node.ConstantValue.Value;
-                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.Byte)
             {
                 var value = Convert.ToInt32(node.ConstantValue.Value);
-                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.Double)
             {
                 var value = (double)node.ConstantValue.Value;
-                il.Emit(IlOpCodes.Get("Ldc_R8"), value);
+                il.Emit(IlOpCodeTable.Get("Ldc_R8"), value);
             }
             else if (node.Type is EnumTypeSymbol)
             {
                 var value = (int)node.ConstantValue.Value;
-                il.Emit(IlOpCodes.Get("Ldc_I4"), value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
             }
             else if (node.Type == TypeSymbol.String)
             {
                 var value = (string)node.ConstantValue.Value;
-                il.Emit(IlOpCodes.Get("Ldstr"), value);
+                il.Emit(IlOpCodeTable.Get("Ldstr"), value);
             }
             else
             {
@@ -700,19 +616,19 @@ namespace Cocoa.CodeAnalysis.Emit
             {
                 // 实例方法 arg0 = this，参数从 arg1 起
                 var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
-                il.Emit(IlOpCodes.Get("Ldarg"), (ushort)argIndex);
+                il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)argIndex);
             }
             else
             {
-                il.Emit(IlOpCodes.Get("Ldloc"), (ushort)_locals[node.Variable]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_locals[node.Variable]);
             }
         }
 
         private void EmitAssignmentExpression(IlAssembler il, BoundAssignmentExpression node)
         {
             EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodes.Get("Dup"));
-            il.Emit(IlOpCodes.Get("Stloc"), (ushort)_locals[node.Variable]);
+            il.Emit(IlOpCodeTable.Get("Dup"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
         }
 
         private void EmitUnaryExpression(IlAssembler il, BoundUnaryExpression node)
@@ -725,16 +641,16 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else if (node.Op.Kind == BoundUnaryOperatorKind.LogicalNegation)
             {
-                il.Emit(IlOpCodes.Get("Ldc_I4_0"));
-                il.Emit(IlOpCodes.Get("Ceq"));
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                il.Emit(IlOpCodeTable.Get("Ceq"));
             }
             else if (node.Op.Kind == BoundUnaryOperatorKind.Negation)
             {
-                il.Emit(IlOpCodes.Get("Neg"));
+                il.Emit(IlOpCodeTable.Get("Neg"));
             }
             else if (node.Op.Kind == BoundUnaryOperatorKind.OnesComplement)
             {
-                il.Emit(IlOpCodes.Get("Not"));
+                il.Emit(IlOpCodeTable.Get("Not"));
             }
             else
             {
@@ -756,9 +672,9 @@ namespace Cocoa.CodeAnalysis.Emit
                 {
                     EmitExpression(il, node.Left);
                     EmitExpression(il, node.Right);
-                    il.Emit(IlOpCodes.Get("Box"), RequireType("System.Double"));
-                    il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
-                    il.Emit(IlOpCodes.Get("Call"), _stringConcat2Reference);
+                    il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Double"));
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.StringConcat2);
                     return;
                 }
             }
@@ -771,7 +687,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||
                     node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
-                    il.Emit(IlOpCodes.Get("Call"), _objectEqualsReference);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
                     return;
                 }
             }
@@ -781,9 +697,9 @@ namespace Cocoa.CodeAnalysis.Emit
                 if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||
                     node.Left.Type == TypeSymbol.String && node.Right.Type == TypeSymbol.String)
                 {
-                    il.Emit(IlOpCodes.Get("Call"), _objectEqualsReference);
-                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
-                    il.Emit(IlOpCodes.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
                     return;
                 }
             }
@@ -791,60 +707,60 @@ namespace Cocoa.CodeAnalysis.Emit
             switch (node.Op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    il.Emit(IlOpCodes.Get("Add"));
+                    il.Emit(IlOpCodeTable.Get("Add"));
                     break;
                 case BoundBinaryOperatorKind.Subtraction:
-                    il.Emit(IlOpCodes.Get("Sub"));
+                    il.Emit(IlOpCodeTable.Get("Sub"));
                     break;
                 case BoundBinaryOperatorKind.Multiplication:
-                    il.Emit(IlOpCodes.Get("Mul"));
+                    il.Emit(IlOpCodeTable.Get("Mul"));
                     break;
                 case BoundBinaryOperatorKind.Division:
-                    il.Emit(IlOpCodes.Get("Div"));
+                    il.Emit(IlOpCodeTable.Get("Div"));
                     break;
                 case BoundBinaryOperatorKind.Modulo:
-                    il.Emit(IlOpCodes.Get("Rem"));
+                    il.Emit(IlOpCodeTable.Get("Rem"));
                     break;
                 case BoundBinaryOperatorKind.ShiftLeft:
-                    il.Emit(IlOpCodes.Get("Shl"));
+                    il.Emit(IlOpCodeTable.Get("Shl"));
                     break;
                 case BoundBinaryOperatorKind.ShiftRight:
-                    il.Emit(IlOpCodes.Get("Shr"));
+                    il.Emit(IlOpCodeTable.Get("Shr"));
                     break;
                 case BoundBinaryOperatorKind.LogicalAnd:
                 case BoundBinaryOperatorKind.BitwiseAnd:
-                    il.Emit(IlOpCodes.Get("And"));
+                    il.Emit(IlOpCodeTable.Get("And"));
                     break;
                 case BoundBinaryOperatorKind.LogicalOr:
                 case BoundBinaryOperatorKind.BitwiseOr:
-                    il.Emit(IlOpCodes.Get("Or"));
+                    il.Emit(IlOpCodeTable.Get("Or"));
                     break;
                 case BoundBinaryOperatorKind.BitwiseXor:
-                    il.Emit(IlOpCodes.Get("Xor"));
+                    il.Emit(IlOpCodeTable.Get("Xor"));
                     break;
                 case BoundBinaryOperatorKind.Equals:
-                    il.Emit(IlOpCodes.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.NotEquals:
-                    il.Emit(IlOpCodes.Get("Ceq"));
-                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
-                    il.Emit(IlOpCodes.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.Less:
-                    il.Emit(IlOpCodes.Get("Clt"));
+                    il.Emit(IlOpCodeTable.Get("Clt"));
                     break;
                 case BoundBinaryOperatorKind.LessOrEquals:
-                    il.Emit(IlOpCodes.Get("Cgt"));
-                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
-                    il.Emit(IlOpCodes.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Cgt"));
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.Greater:
-                    il.Emit(IlOpCodes.Get("Cgt"));
+                    il.Emit(IlOpCodeTable.Get("Cgt"));
                     break;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
-                    il.Emit(IlOpCodes.Get("Clt"));
-                    il.Emit(IlOpCodes.Get("Ldc_I4_0"));
-                    il.Emit(IlOpCodes.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Clt"));
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 default:
                     throw new System.Exception($"Unexpected binary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Left.Type}, {node.Right.Type})");
@@ -853,13 +769,13 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitConditionalExpression(IlAssembler il, BoundConditionalExpression node)
         {
-            var elseLabel = new IlInstruction(IlOpCodes.Get("Nop"), null);
-            var endLabel = new IlInstruction(IlOpCodes.Get("Nop"), null);
+            var elseLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            var endLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
 
             EmitExpression(il, node.Condition);
-            il.Emit(IlOpCodes.Get("Brfalse"), elseLabel);
+            il.Emit(IlOpCodeTable.Get("Brfalse"), elseLabel);
             EmitExpression(il, node.WhenTrue);
-            il.Emit(IlOpCodes.Get("Br"), endLabel);
+            il.Emit(IlOpCodeTable.Get("Br"), endLabel);
             il.Emit(elseLabel);
             EmitExpression(il, node.WhenFalse);
             il.Emit(endLabel);
@@ -872,7 +788,7 @@ namespace Cocoa.CodeAnalysis.Emit
             switch (nodes.Count)
             {
                 case 0:
-                    il.Emit(IlOpCodes.Get("Ldstr"), string.Empty);
+                    il.Emit(IlOpCodeTable.Get("Ldstr"), string.Empty);
                     break;
                 case 1:
                     EmitExpression(il, nodes[0]);
@@ -880,33 +796,33 @@ namespace Cocoa.CodeAnalysis.Emit
                 case 2:
                     EmitExpression(il, nodes[0]);
                     EmitExpression(il, nodes[1]);
-                    il.Emit(IlOpCodes.Get("Call"), _stringConcat2Reference);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.StringConcat2);
                     break;
                 case 3:
                     EmitExpression(il, nodes[0]);
                     EmitExpression(il, nodes[1]);
                     EmitExpression(il, nodes[2]);
-                    il.Emit(IlOpCodes.Get("Call"), _stringConcat3Reference);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.StringConcat3);
                     break;
                 case 4:
                     EmitExpression(il, nodes[0]);
                     EmitExpression(il, nodes[1]);
                     EmitExpression(il, nodes[2]);
                     EmitExpression(il, nodes[3]);
-                    il.Emit(IlOpCodes.Get("Call"), _stringConcat4Reference);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.StringConcat4);
                     break;
                 default:
-                    il.Emit(IlOpCodes.Get("Ldc_I4"), nodes.Count);
-                    il.Emit(IlOpCodes.Get("Newarr"), _stringType);
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4"), nodes.Count);
+                    il.Emit(IlOpCodeTable.Get("Newarr"), _framework.StringType);
                     for (var i = 0; i < nodes.Count; i++)
                     {
-                        il.Emit(IlOpCodes.Get("Dup"));
-                        il.Emit(IlOpCodes.Get("Ldc_I4"), i);
+                        il.Emit(IlOpCodeTable.Get("Dup"));
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4"), i);
                         EmitExpression(il, nodes[i]);
-                        il.Emit(IlOpCodes.Get("Stelem_Ref"));
+                        il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
                     }
 
-                    il.Emit(IlOpCodes.Get("Call"), _stringConcatArrayReference);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.StringConcatArray);
                     break;
             }
 
@@ -975,16 +891,16 @@ namespace Cocoa.CodeAnalysis.Emit
 
         private void EmitCallExpression(IlAssembler il, BoundCallExpression node)
         {
-            if (node.Function == BuiltinFunctions.Random)
+            if (node.Function.BuiltinKind == BuiltinKind.Random)
             {
                 // 6d-4：Random.get_Shared 是 .NET 6+ API，mscorlib 没有；改用 new Random() 双运行时兼容。
-                il.Emit(IlOpCodes.Get("Newobj"), _randomCtorReference);
+                il.Emit(IlOpCodeTable.Get("Newobj"), _framework.RandomCtor);
                 foreach (var argument in node.Arguments)
                 {
                     EmitExpression(il, argument);
                 }
 
-                il.Emit(IlOpCodes.Get("Callvirt"), _randomNextReference);
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.RandomNext);
                 return;
             }
 
@@ -993,18 +909,20 @@ namespace Cocoa.CodeAnalysis.Emit
                 EmitExpression(il, argument);
             }
 
-            if (node.Function == BuiltinFunctions.Print)
+            switch (node.Function.BuiltinKind)
             {
-                il.Emit(IlOpCodes.Get("Call"), _consoleWriteLineReference);
-            }
-            else if (node.Function == BuiltinFunctions.Input)
-            {
-                il.Emit(IlOpCodes.Get("Call"), _consoleReadLineReference);
-            }
-            else
-            {
-                var methodDefinition = _methods[node.Function];
-                il.Emit(IlOpCodes.Get("Call"), methodDefinition);
+                case BuiltinKind.Print:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleWriteLine);
+                    break;
+                case BuiltinKind.Input:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadLine);
+                    break;
+                default:
+                {
+                    var methodDefinition = _methods[node.Function];
+                    il.Emit(IlOpCodeTable.Get("Call"), methodDefinition);
+                    break;
+                }
             }
         }
 
@@ -1014,9 +932,9 @@ namespace Cocoa.CodeAnalysis.Emit
 
             if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.String)
             {
-                var type = RequireType("System.Char");
-                il.Emit(IlOpCodes.Get("Box"), type);
-                il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
+                var type = _framework.RequireType("System.Char");
+                il.Emit(IlOpCodeTable.Get("Box"), type);
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
                 return;
             }
 
@@ -1029,33 +947,33 @@ namespace Cocoa.CodeAnalysis.Emit
             if (node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Byte)
             {
                 // 无符号字节截断，与 C# (byte)300 == 44 语义一致
-                il.Emit(IlOpCodes.Get("Conv_U1"));
+                il.Emit(IlOpCodeTable.Get("Conv_U1"));
                 return;
             }
 
             if (node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Double ||
                 node.Expression.Type == TypeSymbol.Byte && node.Type == TypeSymbol.Double)
             {
-                il.Emit(IlOpCodes.Get("Conv_R8"));
+                il.Emit(IlOpCodeTable.Get("Conv_R8"));
                 return;
             }
 
             if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.Int32)
             {
-                il.Emit(IlOpCodes.Get("Conv_I4"));
+                il.Emit(IlOpCodeTable.Get("Conv_I4"));
                 return;
             }
 
             if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.Byte)
             {
-                il.Emit(IlOpCodes.Get("Conv_U1"));
+                il.Emit(IlOpCodeTable.Get("Conv_U1"));
                 return;
             }
 
             if (node.Expression.Type == TypeSymbol.Double && node.Type == TypeSymbol.String)
             {
-                il.Emit(IlOpCodes.Get("Box"), RequireType("System.Double"));
-                il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Double"));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
                 return;
             }
 
@@ -1081,7 +999,7 @@ namespace Cocoa.CodeAnalysis.Emit
                     (toClass.IsBaseOf(fromClass) || toClass.GetAllInterfaces().Contains(fromClass)))
                 {
                     // 接口 → 类：显式向下引用转换（castclass）
-                    il.Emit(IlOpCodes.Get("Castclass"), ToIlType(toClass));
+                    il.Emit(IlOpCodeTable.Get("Castclass"), ToIlType(toClass));
                     return;
                 }
 
@@ -1092,22 +1010,7 @@ namespace Cocoa.CodeAnalysis.Emit
                 }
             }
 
-            var needBoxing = node.Expression.Type == TypeSymbol.Boolean || node.Expression.Type == TypeSymbol.Int32 || node.Expression.Type == TypeSymbol.Char || node.Expression.Type == TypeSymbol.Byte || node.Expression.Type == TypeSymbol.Double || node.Expression.Type is EnumTypeSymbol;
-            if (needBoxing)
-            {
-                var type = node.Expression.Type == TypeSymbol.Boolean
-                    ? RequireType("System.Boolean")
-                    : node.Expression.Type == TypeSymbol.Int32
-                        ? RequireType("System.Int32")
-                        : node.Expression.Type == TypeSymbol.Char
-                            ? RequireType("System.Char")
-                            : node.Expression.Type == TypeSymbol.Byte
-                                ? RequireType("System.Byte")
-                                : node.Expression.Type == TypeSymbol.Double
-                                    ? RequireType("System.Double")
-                                    : RequireType("System.Int32");
-                il.Emit(IlOpCodes.Get("Box"), type);
-            }
+            EmitBoxIfValueType(il, node.Expression.Type);
 
             if (node.Type == TypeSymbol.Any)
             {
@@ -1115,20 +1018,38 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else if (node.Type == TypeSymbol.Boolean)
             {
-                il.Emit(IlOpCodes.Get("Call"), _convertToBooleanReference);
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToBoolean);
             }
             else if (node.Type == TypeSymbol.Int32)
             {
-                il.Emit(IlOpCodes.Get("Call"), _convertToInt32Reference);
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt32);
             }
             else if (node.Type == TypeSymbol.String)
             {
-                il.Emit(IlOpCodes.Get("Call"), _convertToStringReference);
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
             }
             else
             {
                 throw new System.Exception($"Unexpected conversion from {node.Expression.Type} to {node.Type}");
             }
+        }
+
+        /// <summary>值类型（bool/int/char/byte/double/枚举）→ 装箱为 System.Object 参数。</summary>
+        private void EmitBoxIfValueType(IlAssembler il, TypeSymbol type)
+        {
+            if (type != TypeSymbol.Boolean && type != TypeSymbol.Int32 && type != TypeSymbol.Char &&
+                type != TypeSymbol.Byte && type != TypeSymbol.Double && type is not EnumTypeSymbol)
+            {
+                return;
+            }
+
+            var boxed = type == TypeSymbol.Boolean ? "System.Boolean"
+                : type == TypeSymbol.Int32 ? "System.Int32"
+                : type == TypeSymbol.Char ? "System.Char"
+                : type == TypeSymbol.Byte ? "System.Byte"
+                : type == TypeSymbol.Double ? "System.Double"
+                : "System.Int32"; // 枚举底层 int
+            il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxed));
         }
 
         private void EmitFormatExpression(IlAssembler il, BoundFormatExpression node)
@@ -1146,40 +1067,21 @@ namespace Cocoa.CodeAnalysis.Emit
 
             format += "}";
 
-            il.Emit(IlOpCodes.Get("Ldstr"), format);
+            il.Emit(IlOpCodeTable.Get("Ldstr"), format);
             EmitExpression(il, node.Value);
-
-            var needBoxing = node.Value.Type == TypeSymbol.Boolean || node.Value.Type == TypeSymbol.Int32 ||
-                node.Value.Type == TypeSymbol.Char || node.Value.Type == TypeSymbol.Byte ||
-                node.Value.Type == TypeSymbol.Double || node.Value.Type is EnumTypeSymbol;
-            if (needBoxing)
-            {
-                var type = node.Value.Type == TypeSymbol.Boolean
-                    ? RequireType("System.Boolean")
-                    : node.Value.Type == TypeSymbol.Int32
-                        ? RequireType("System.Int32")
-                        : node.Value.Type == TypeSymbol.Char
-                            ? RequireType("System.Char")
-                            : node.Value.Type == TypeSymbol.Byte
-                                ? RequireType("System.Byte")
-                                : node.Value.Type == TypeSymbol.Double
-                                    ? RequireType("System.Double")
-                                    : RequireType("System.Int32");
-                il.Emit(IlOpCodes.Get("Box"), type);
-            }
-
-            il.Emit(IlOpCodes.Get("Call"), _stringFormatReference);
+            EmitBoxIfValueType(il, node.Value.Type);
+            il.Emit(IlOpCodeTable.Get("Call"), _framework.StringFormat);
         }
 
         private void EmitArrayCreationExpression(IlAssembler il, BoundArrayCreationExpression node)
         {
             EmitExpression(il, node.Length);
-            il.Emit(IlOpCodes.Get("Newarr"), RequireType(RequireArrayElementTypeName(node.Type)));
+            il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(RequireArrayElementTypeName(node.Type)));
 
             for (var i = 0; i < node.Initializers.Length; i++)
             {
-                il.Emit(IlOpCodes.Get("Dup"));
-                il.Emit(IlOpCodes.Get("Ldc_I4"), i);
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), i);
                 EmitExpression(il, node.Initializers[i]);
                 EmitElementStore(il, node.Type.ElementType!);
             }
@@ -1232,25 +1134,25 @@ namespace Cocoa.CodeAnalysis.Emit
 
             if (node.Target.Type == TypeSymbol.String)
             {
-                il.Emit(IlOpCodes.Get("Callvirt"), _stringCharsReference);
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringChars);
                 return;
             }
 
             if (node.Type == TypeSymbol.Char)
             {
-                il.Emit(IlOpCodes.Get("Ldelem_U2"));
+                il.Emit(IlOpCodeTable.Get("Ldelem_U2"));
             }
             else if (node.Type == TypeSymbol.Double)
             {
-                il.Emit(IlOpCodes.Get("Ldelem_R8"));
+                il.Emit(IlOpCodeTable.Get("Ldelem_R8"));
             }
             else if (node.Type == TypeSymbol.Boolean || node.Type == TypeSymbol.Byte)
             {
-                il.Emit(IlOpCodes.Get("Ldelem_U1"));
+                il.Emit(IlOpCodeTable.Get("Ldelem_U1"));
             }
             else if (node.Type == TypeSymbol.String)
             {
-                il.Emit(IlOpCodes.Get("Ldelem_Ref"));
+                il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
             }
             else if (node.Type.ElementType != null)
             {
@@ -1258,7 +1160,7 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else
             {
-                il.Emit(IlOpCodes.Get("Ldelem_I4"));
+                il.Emit(IlOpCodeTable.Get("Ldelem_I4"));
             }
         }
 
@@ -1269,10 +1171,10 @@ namespace Cocoa.CodeAnalysis.Emit
             EmitExpression(il, node.Target.Target);
             EmitExpression(il, node.Target.Index);
             EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodes.Get("Dup"));
-            il.Emit(IlOpCodes.Get("Stloc"), (ushort)temporaryLocal);
+            il.Emit(IlOpCodeTable.Get("Dup"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
             EmitElementStore(il, node.Type);
-            il.Emit(IlOpCodes.Get("Ldloc"), (ushort)temporaryLocal);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
         }
 
         private int AllocateTemporaryLocal(BoundExpression node)
@@ -1291,19 +1193,19 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.Byte)
             {
-                il.Emit(IlOpCodes.Get("Stelem_I1"));
+                il.Emit(IlOpCodeTable.Get("Stelem_I1"));
             }
             else if (elementType == TypeSymbol.Char)
             {
-                il.Emit(IlOpCodes.Get("Stelem_I2"));
+                il.Emit(IlOpCodeTable.Get("Stelem_I2"));
             }
             else if (elementType == TypeSymbol.Double)
             {
-                il.Emit(IlOpCodes.Get("Stelem_R8"));
+                il.Emit(IlOpCodeTable.Get("Stelem_R8"));
             }
             else if (elementType == TypeSymbol.String)
             {
-                il.Emit(IlOpCodes.Get("Stelem_Ref"));
+                il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
             }
             else if (elementType.ElementType != null)
             {
@@ -1311,7 +1213,7 @@ namespace Cocoa.CodeAnalysis.Emit
             }
             else
             {
-                il.Emit(IlOpCodes.Get("Stelem_I4"));
+                il.Emit(IlOpCodeTable.Get("Stelem_I4"));
             }
         }
 
@@ -1319,7 +1221,7 @@ namespace Cocoa.CodeAnalysis.Emit
         {
             if (node.Field != null && node.Field.IsStatic)
             {
-                il.Emit(IlOpCodes.Get("Ldsfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldsfld"), _fieldDefs[node.Field]);
                 return;
             }
 
@@ -1327,17 +1229,17 @@ namespace Cocoa.CodeAnalysis.Emit
 
             if (node.Field != null)
             {
-                il.Emit(IlOpCodes.Get("Ldfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldfld"), _fieldDefs[node.Field]);
                 return;
             }
 
             if (node.Target.Type == TypeSymbol.String)
             {
-                il.Emit(IlOpCodes.Get("Callvirt"), _stringLengthReference);
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringLength);
                 return;
             }
 
-            il.Emit(IlOpCodes.Get("Ldlen"));
+            il.Emit(IlOpCodeTable.Get("Ldlen"));
         }
 
         private void EmitMemberCallExpression(IlAssembler il, BoundMemberCallExpression node)
@@ -1363,25 +1265,25 @@ namespace Cocoa.CodeAnalysis.Emit
                         parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
                     }
 
-                    var methodRef = _reader.FindMethod(node.Method.ContainingClass.FullName, node.Identifier, parameterNames, _metadata);
+                    var methodRef = _framework.FindMethod(node.Method.ContainingClass.FullName, node.Identifier, parameterNames);
                     if (methodRef == null)
                     {
                         throw new System.Exception($"外部方法 {node.Method.ContainingClass.FullName}.{node.Identifier} 未找到。");
                     }
 
-                    il.Emit(IlOpCodes.Get("Callvirt"), ResolveMethodRef(methodRef));
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), methodRef);
                     return;
                 }
 
                 // 静态方法：call；base.Method()：非虚 call；实例方法：callvirt 虚分派
                 var op = isStatic || node.IsBase ? "Call" : "Callvirt";
-                il.Emit(IlOpCodes.Get(op), _methods[node.Method]);
+                il.Emit(IlOpCodeTable.Get(op), _methods[node.Method]);
                 return;
             }
 
             if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
             {
-                il.Emit(IlOpCodes.Get("Callvirt"), _stringSubstringReference);
+                il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringSubstring);
                 return;
             }
 
@@ -1395,19 +1297,19 @@ namespace Cocoa.CodeAnalysis.Emit
             if (node.Field.IsStatic)
             {
                 EmitExpression(il, node.Expression);
-                il.Emit(IlOpCodes.Get("Dup"));
-                il.Emit(IlOpCodes.Get("Stloc"), (ushort)temporaryLocal);
-                il.Emit(IlOpCodes.Get("Stsfld"), _fieldDefs[node.Field]);
-                il.Emit(IlOpCodes.Get("Ldloc"), (ushort)temporaryLocal);
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+                il.Emit(IlOpCodeTable.Get("Stsfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
                 return;
             }
 
             EmitExpression(il, node.Target);
             EmitExpression(il, node.Expression);
-            il.Emit(IlOpCodes.Get("Dup"));
-            il.Emit(IlOpCodes.Get("Stloc"), (ushort)temporaryLocal);
-            il.Emit(IlOpCodes.Get("Stfld"), _fieldDefs[node.Field]);
-            il.Emit(IlOpCodes.Get("Ldloc"), (ushort)temporaryLocal);
+            il.Emit(IlOpCodeTable.Get("Dup"));
+            il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+            il.Emit(IlOpCodeTable.Get("Stfld"), _fieldDefs[node.Field]);
+            il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
         }
 
         private void EmitObjectCreationExpression(IlAssembler il, BoundObjectCreationExpression node)
@@ -1427,13 +1329,13 @@ namespace Cocoa.CodeAnalysis.Emit
                     parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
                 }
 
-                var ctorRef = _reader.FindMethod(classType.FullName, ".ctor", parameterNames, _metadata);
+                var ctorRef = _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
                 if (ctorRef == null)
                 {
                     throw new System.Exception($"外部类型 {classType.FullName} 的构造函数未找到。");
                 }
 
-                il.Emit(IlOpCodes.Get("Newobj"), ResolveMethodRef(ctorRef));
+                il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
                 return;
             }
 
@@ -1443,18 +1345,18 @@ namespace Cocoa.CodeAnalysis.Emit
                 throw new System.Exception($"Class {classType.Name} has no constructor.");
             }
 
-            il.Emit(IlOpCodes.Get("Newobj"), _methods[ctor]);
+            il.Emit(IlOpCodeTable.Get("Newobj"), _methods[ctor]);
         }
 
         private void EmitThisExpression(IlAssembler il, BoundThisExpression node)
         {
-            il.Emit(IlOpCodes.Get("Ldarg"), (ushort)0);
+            il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
         }
 
         private void EmitConstructorChainExpression(IlAssembler il, BoundConstructorChainExpression node)
         {
             // this(arg0) + args → call 基类/本类 .ctor
-            il.Emit(IlOpCodes.Get("Ldarg"), (ushort)0);
+            il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
             foreach (var argument in node.Arguments)
             {
                 EmitExpression(il, argument);
@@ -1469,17 +1371,17 @@ namespace Cocoa.CodeAnalysis.Emit
                     parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
                 }
 
-                var methodRef = _reader.FindMethod(target.ContainingClass.FullName, ".ctor", parameterNames, _metadata);
+                var methodRef = _framework.FindMethod(target.ContainingClass.FullName, ".ctor", parameterNames);
                 if (methodRef == null)
                 {
                     throw new System.Exception($"外部构造函数 {target.ContainingClass.FullName} 未找到。");
                 }
 
-                il.Emit(IlOpCodes.Get("Call"), ResolveMethodRef(methodRef));
+                il.Emit(IlOpCodeTable.Get("Call"), methodRef);
                 return;
             }
 
-            il.Emit(IlOpCodes.Get("Call"), _methods[target]);
+            il.Emit(IlOpCodeTable.Get("Call"), _methods[target]);
         }
     }
 }

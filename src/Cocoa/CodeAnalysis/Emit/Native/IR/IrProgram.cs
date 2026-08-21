@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>数据段项语义：Int32 / 指针（平台宽 4/8）/ UTF-16 字符串 / 原始字节。</summary>
     internal enum IrDataKind

@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit.IR;
+using Cocoa.CodeAnalysis.Emit.Native.IR;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 using Xunit.Abstractions;

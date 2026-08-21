@@ -23,9 +23,9 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 
         private static void WriteExe(X86Assembler a, RuntimeResult runtime, int entryLabel, string exePath)
         {
-            var dataRva = PefileWriter.ComputeDataRva(a.ToArray().Length);
-            a.Patch(dataRva - PefileWriter.TextRva, PefileWriter.ImageBaseOf(Architecture.X86));
-            PefileWriter.Write(exePath, a.ToArray(), a.GetData(), PefileWriter.TextRva + a.GetLabelOffset(entryLabel), runtime.Imports, Architecture.X86);
+            var dataRva = PeFileWriter.ComputeDataRva(a.ToArray().Length);
+            a.Patch(dataRva - PeFileWriter.TextRva, PeFileWriter.ImageBaseOf(Architecture.X86));
+            PeFileWriter.Write(exePath, a.ToArray(), a.GetData(), PeFileWriter.TextRva + a.GetLabelOffset(entryLabel), runtime.Imports, Architecture.X86);
         }
 
         private static string Run(string exePath, string? input = null, int expectedExitCode = 0)
@@ -234,7 +234,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         [Fact]
         public void X86_ExitCodeFromMain()
         {
-            // main 返回码测试：直接调用 ExitProcess(3) 验证 stdcall 无栈错位
+            // main 杩斿洖鐮佹祴璇曪細鐩存帴璋冪敤 ExitProcess(3) 楠岃瘉 stdcall 鏃犳爤閿欎綅
             var a = new X86Assembler();
             var entry = a.CreateLabel();
             var runtime = RuntimeEmitterX86.Emit(a, entry);

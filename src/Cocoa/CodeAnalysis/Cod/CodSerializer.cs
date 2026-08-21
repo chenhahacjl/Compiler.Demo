@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Cod
 {
     /// <summary>
     /// `.cod` 语义层序列化器：符号表 + 降级 BoundProgram（函数体）文本 round-trip。
-    /// 双后端共用（native → BoundTreeToIr，IL → Emitter）；语法节点（Syntax）不序列化（置 null）。
+    /// 双后端共用（native → BoundTreeToIr，IL → IlEmitter）；语法节点（Syntax）不序列化（置 null）。
     /// </summary>
     internal static class CodSerializer
     {

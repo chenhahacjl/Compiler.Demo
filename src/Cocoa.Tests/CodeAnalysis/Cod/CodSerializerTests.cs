@@ -149,7 +149,7 @@ namespace MyLib
             var body = cod.Bodies[Assert.Single(cod.Functions, f => f.Name == "SayHi")];
             var call = FindCallToPrint(body);
             Assert.NotNull(call);
-            Assert.Same(BuiltinFunctions.Print, call.Function);
+            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.Print, call.Function.BuiltinKind);
         }
 
         private static Cocoa.CodeAnalysis.Binding.BoundCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)

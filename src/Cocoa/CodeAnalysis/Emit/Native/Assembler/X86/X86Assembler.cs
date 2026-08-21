@@ -7,10 +7,10 @@ using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
 {
     /// <summary>
-    /// 32 �?x86 汇编器。与 X64Assembler 共用寄存�?尺寸枚举�?
-    ///  - 仅低 8 个寄存器可用（RAX..RDI），�?8 个抛异常
-    ///  - X64Size.Qword 静默降级�?32 位（指针宽度 4 字节�?
-    ///  - 数据引用（MovRip/LeaRip/CallRip）使用绝对地址 [disp32] 而非 RIP 相对
+    /// 32 锟?x86 姹囩紪鍣ㄣ€備笌 X64Assembler 鍏辩敤瀵勫瓨锟?灏哄鏋氫妇锟?
+    ///  - 浠呬綆 8 涓瘎瀛樺櫒鍙敤锛圧AX..RDI锛夛紝锟?8 涓姏寮傚父
+    ///  - X64Size.Qword 闈欓粯闄嶇骇锟?32 浣嶏紙鎸囬拡瀹藉害 4 瀛楄妭锟?
+    ///  - 鏁版嵁寮曠敤锛圡ovRip/LeaRip/CallRip锛変娇鐢ㄧ粷瀵瑰湴鍧€ [disp32] 鑰岄潪 RIP 鐩稿
     /// </summary>
     internal sealed class X86Assembler : IAssembler
     {
@@ -128,7 +128,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
                     throw new InvalidOperationException($"Data symbol {fixup.Symbol} was never marked.");
                 }
 
-                WriteInt32At(fixup.Offset, (int)checked(imageBase + PefileWriter.TextRva + dataTextDelta + dataOffset));
+                WriteInt32At(fixup.Offset, (int)checked(imageBase + PeFileWriter.TextRva + dataTextDelta + dataOffset));
             }
         }
 
@@ -450,7 +450,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
         }
 
         // ------------------------------------------------------------------
-        // SSE（double，IEEE-754 binary64�?
+        // SSE锛坉ouble锛孖EEE-754 binary64锟?
         // ------------------------------------------------------------------
 
         public void Movsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x10, 0xF2, xmmDst, xmmSrc);

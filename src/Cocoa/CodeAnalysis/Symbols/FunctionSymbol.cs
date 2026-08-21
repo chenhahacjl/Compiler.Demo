@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class FunctionSymbol : Symbol
     {
-        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public)
+        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null)
             : base(name)
         {
             Parameters = parameters;
@@ -17,6 +17,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             ContainingClass = containingClass;
             Syntax = syntax;
             Visibility = visibility;
+            BuiltinKind = builtinKind;
         }
 
         public override SymbolKind Kind => SymbolKind.Function;
@@ -36,6 +37,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>可见性（仅类方法/构造有意义）。</summary>
         public Visibility Visibility { get; }
+
+        /// <summary>内置函数种类（功能层原语，三后端按此分发）；非内置为 null。</summary>
+        public BuiltinKind? BuiltinKind { get; }
 
         public bool IsVirtual { get; internal set; }
 

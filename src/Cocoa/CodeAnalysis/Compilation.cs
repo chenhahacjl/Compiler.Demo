@@ -223,7 +223,7 @@ namespace Cocoa.CodeAnalysis
                 .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
-            return Emitter.Emit(program, moduleName, ilReferences, outputPath, target, emitLibrary);
+            return IlEmitter.Emit(program, moduleName, ilReferences, outputPath, target, emitLibrary);
         }
 
         /// <summary>

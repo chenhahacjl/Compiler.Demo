@@ -55,9 +55,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     }
 
     /// <summary>
-    /// ECMA-335 III.2 操作码表（条目按需添加，覆盖当前 Emitter 全部指令 + 阶段 6 常用扩展）。
+    /// ECMA-335 III.2 操作码表（条目按需添加，覆盖当前 IlEmitter 全部指令 + 阶段 6 常用扩展）。
     /// </summary>
-    internal static class IlOpCodes
+    internal static class IlOpCodeTable
     {
         private static readonly Dictionary<string, IlOpCode> s_table = new Dictionary<string, IlOpCode>();
 
@@ -71,7 +71,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public static IlOpCode Get(string name) => s_table[name];
 
-        static IlOpCodes()
+        static IlOpCodeTable()
         {
             // 单字节：基本
             Define("Nop", 0x00, IlOperandType.InlineNone);

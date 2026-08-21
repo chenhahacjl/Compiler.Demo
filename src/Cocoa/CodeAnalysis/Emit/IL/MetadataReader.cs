@@ -5,7 +5,7 @@ using System.Text;
 
 namespace Cocoa.CodeAnalysis.Emit.IL
 {
-    /// <summary>从引用程序集解析出的方法信息（供 Emitter 构造 MemberRef）。</summary>
+    /// <summary>从引用程序集解析出的方法信息（供 IlEmitter 构造 MemberRef）。</summary>
     internal sealed class ResolvedMethodInfo
     {
         public ResolvedMethodInfo(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)

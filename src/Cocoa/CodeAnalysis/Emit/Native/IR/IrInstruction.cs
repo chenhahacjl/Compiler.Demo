@@ -1,4 +1,4 @@
-﻿namespace Cocoa.CodeAnalysis.Emit.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
     /// <summary>IR 操作数：立即数 / 虚拟寄存器 / 标签 / 数据符号 / 函数 / 运行时函数名。</summary>
     internal readonly struct IrOperand
