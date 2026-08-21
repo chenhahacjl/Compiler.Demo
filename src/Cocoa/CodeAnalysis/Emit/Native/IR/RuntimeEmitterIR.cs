@@ -2433,29 +2433,28 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Cmp(lenA, lenB);
                 Jcc(IrCond.NotEqual, isFalse);
 
+                // 逐 2 字节字符比较（非 dword：奇数长度末 dword 含堆/数据区填充垃圾，误判不等）
                 var ap = NewReg(8);
                 Lea(ap, a, 4);
                 var bp = NewReg(8);
                 Lea(bp, b, 4);
                 var count = NewReg(4);
                 Mov(count, lenA);
-                AddI(count, count, 1);
-                Shr(count, count, 1);
 
                 Mark(loop);
                 Cmp(count, 0);
                 Jcc(IrCond.Equal, isTrue);
-                var wordA = NewReg(4);
-                Load(wordA, ap, 0, 4);
-                var wordB = NewReg(4);
-                Load(wordB, bp, 0, 4);
-                Cmp(wordA, wordB);
+                var charA = NewReg(4);
+                Load(charA, ap, 0, 2);
+                var charB = NewReg(4);
+                Load(charB, bp, 0, 2);
+                Cmp(charA, charB);
                 Jcc(IrCond.NotEqual, isFalse);
                 var nextAp = NewReg(8);
-                Lea(nextAp, ap, 4);
+                Lea(nextAp, ap, 2);
                 Mov(ap, nextAp);
                 var nextBp = NewReg(8);
-                Lea(nextBp, bp, 4);
+                Lea(nextBp, bp, 2);
                 Mov(bp, nextBp);
                 AddI(count, count, -1);
                 Jmp(loop);

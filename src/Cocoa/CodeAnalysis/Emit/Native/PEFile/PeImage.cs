@@ -39,7 +39,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 
         public uint SectionAlignment { get; init; } = 0x1000;
         public uint FileAlignment { get; init; } = 0x200;
-        public uint SizeOfHeaders { get; init; } = 0x400;
+        public uint SizeOfHeaders { get; init; } = 0x1000;
         public ushort MajorOperatingSystemVersion { get; init; } = 6;
         public ushort MinorOperatingSystemVersion { get; init; } = 0;
         public ushort MajorSubsystemVersion { get; init; } = 6;

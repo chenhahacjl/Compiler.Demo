@@ -385,7 +385,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case IlOperandType.InlineNone:
                     return 0;
                 case IlOperandType.InlineI:
-                case IlOperandType.InlineR:
                 case IlOperandType.InlineMethod:
                 case IlOperandType.InlineType:
                 case IlOperandType.InlineField:
@@ -394,12 +393,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case IlOperandType.InlineString:
                 case IlOperandType.InlineBrTarget:
                     return 4;
+                case IlOperandType.InlineR:
+                    return 8;
                 case IlOperandType.InlineI8:
                     return 8;
                 case IlOperandType.InlineVar:
                     return 2;
-                case IlOperandType.ShortInlineI:
                 case IlOperandType.ShortInlineR:
+                    return 4;
+                case IlOperandType.ShortInlineI:
                 case IlOperandType.ShortInlineVar:
                 case IlOperandType.ShortInlineBrTarget:
                     return 1;

@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
         public const int TextRva = 0x1000;
         public const int DataRva = 0x2000;
         public const int IdataRva = 0x5000;
-        public const int SizeOfHeaders = 0x400;
+        public const int SizeOfHeaders = 0x1000;
 
         private const int SectionAlignment = 0x1000;
 
@@ -116,7 +116,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 (ushort)PeSubsystem.WindowsCui,
                 pe32 ? (ushort)(PeDllCharacteristics.NxChipCompat | PeDllCharacteristics.NoSeh | PeDllCharacteristics.TerminalServerAware)
                      : (ushort)(PeDllCharacteristics.CurrentImage | PeDllCharacteristics.TerminalServerAware),
-                (uint)entryPointRva);
+                (uint)entryPointRva)
+            {
+                SizeOfHeaders = (uint)SizeOfHeaders,
+            };
 
             var image = PeImageBuilder.Build(config, sections, directories, pe32 ? PeFileCharacteristics.RelocsStripped : (ushort)0);
             File.WriteAllBytes(outputPath, image);

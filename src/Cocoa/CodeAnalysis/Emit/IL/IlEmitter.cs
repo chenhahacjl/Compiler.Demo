@@ -220,7 +220,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (function.ContainingClass == null && !function.IsConstructor &&
                 _overloadedGroups!.Contains((function.Namespace, function.Name)))
             {
-                name += "$" + string.Join("$", function.Parameters.Select(p => p.Type.Name));
+                name += "$" + string.Join("$", function.Parameters.Select(p => EncodeTypeNameForMethodName(p.Type)));
             }
 
             var implementsInterfaceMember = isInstance &&
@@ -417,6 +417,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             throw new System.Exception($"Unexpected type {type}");
+        }
+
+        /// <summary>类型名编码进方法名后缀（`int[]` 的 `[]` 非法，转下划线）。</summary>
+        private static string EncodeTypeNameForMethodName(TypeSymbol type)
+        {
+            return type.Name.Replace("[", "_").Replace("]", "_");
         }
 
         private IlTypeRef ResolveExternalTypeRef(ClassTypeSymbol classType)
