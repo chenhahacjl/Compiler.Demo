@@ -576,7 +576,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         }
 
         // ------------------------------------------------------------------
-        // SSE（double，IEEE-754 binary64�?
+        // SSE（double，IEEE-754 binary64）
         // ------------------------------------------------------------------
 
         public void Movsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x10, 0xF2, xmmDst, xmmSrc);

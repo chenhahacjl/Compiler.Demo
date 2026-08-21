@@ -1,2 +1,10 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# 文本文件一律 LF 入库、CRLF 检出（Windows 工作区换行统一为 CRLF）
+* text=auto eol=crlf
+
+# 二进制文件不进行换行归一化
+*.dll binary
+*.exe binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdb binary

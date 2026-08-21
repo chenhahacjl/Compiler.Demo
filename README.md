@@ -33,7 +33,7 @@ cocoa hello.co
 # 交互式 REPL
 cocoa -i
 
-# C# 方言（.cs 严格子集）：扩展名即语言，.co 宽松 / .cs 严格（详见 docs/语法手册.md §46）
+# C# 方言（.cs 严格子集）：扩展名即语言，.co 严格纯 Cocoa / .cs 严格 C#（详见 docs/语法手册.md §46）
 cocoa new csharp MyApp
 cocoa hello.cs
 cocoa hello.cs -b native
