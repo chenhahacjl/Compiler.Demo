@@ -184,6 +184,18 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportNoMatchingOverload(TextLocation location, string name)
+        {
+            var message = $"Function '{name}' has no overload that matches the argument types.";
+            ReportError(location, message);
+        }
+
+        public void ReportAmbiguousInvocation(TextLocation location, string name)
+        {
+            var message = $"The call to '{name}' is ambiguous between multiple overloads.";
+            ReportError(location, message);
+        }
+
         public void ReportExpressionMustHaveValue(TextLocation location)
         {
             var message = "Expression must have a value.";

@@ -29,6 +29,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly IlTypeDef _typeDefinition;
         private readonly Dictionary<ClassTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<ClassTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
+        private HashSet<(string Namespace, string Name)>? _overloadedGroups;
         private bool _currentMethodIsInstance;
 
         private IlEmitter(string moduleName, string[] references)
@@ -106,6 +107,26 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             // 2. 方法声明（顺序 = 顶层 + 各 class 方法，与 typeDefs 分组一致）
+            // 先计算重载组（同 (ns, name) 顶层函数 >1）：IL 方法名追加参数类型后缀保证元数据唯一
+            _overloadedGroups = new HashSet<(string, string)>();
+            var topLevelNameCounts = new Dictionary<(string, string), int>();
+            foreach (var f in program.Functions.Keys)
+            {
+                if (f.ContainingClass == null && !f.IsConstructor)
+                {
+                    var key = (f.Namespace, f.Name);
+                    topLevelNameCounts[key] = topLevelNameCounts.GetValueOrDefault(key) + 1;
+                }
+            }
+
+            foreach (var kv in topLevelNameCounts)
+            {
+                if (kv.Value > 1)
+                {
+                    _overloadedGroups.Add(kv.Key);
+                }
+            }
+
             foreach (var functionWithBody in program.Functions)
             {
                 EmitFunctionDeclaration(functionWithBody.Key);
@@ -194,7 +215,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             };
 
             var isInstance = function.ContainingClass != null && !function.IsStatic;
-            var name = function.IsConstructor ? (function.IsStatic ? ".cctor" : ".ctor") : function.Name;
+            // 顶层函数：命名空间限定名（EmitName）；重载组内追加参数类型后缀保证同一 TypeDef 内元数据方法名唯一
+            var name = function.IsConstructor ? (function.IsStatic ? ".cctor" : ".ctor") : function.EmitName;
+            if (function.ContainingClass == null && !function.IsConstructor &&
+                _overloadedGroups!.Contains((function.Namespace, function.Name)))
+            {
+                name += "$" + string.Join("$", function.Parameters.Select(p => p.Type.Name));
+            }
 
             var implementsInterfaceMember = isInstance &&
                 function.ContainingClass!.GetAllInterfaces().Any(i =>

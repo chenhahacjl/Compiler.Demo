@@ -299,19 +299,19 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.NotEquals:
                     return !Equals(left, right);
                 case BoundBinaryOperatorKind.Less:
-                    if (binary.Type == TypeSymbol.Double)
+                    if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left < (double)right;
                     return (int)left < (int)right;
                 case BoundBinaryOperatorKind.LessOrEquals:
-                    if (binary.Type == TypeSymbol.Double)
+                    if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left <= (double)right;
                     return (int)left <= (int)right;
                 case BoundBinaryOperatorKind.Greater:
-                    if (binary.Type == TypeSymbol.Double)
+                    if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left > (double)right;
                     return (int)left > (int)right;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
-                    if (binary.Type == TypeSymbol.Double)
+                    if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left >= (double)right;
                     return (int)left >= (int)right;
                 default:

@@ -169,9 +169,9 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
 // 阶段 4.5：绑定全局函数签名（类型可引用接口/类）
-            foreach (var (function, _, dll) in pendingFunctions)
+            foreach (var (function, ns, dll) in pendingFunctions)
             {
-                binder.BindFunctionDeclaration(function, dll);
+                binder.BindFunctionDeclaration(function, ns, dll);
             }
 
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
@@ -453,7 +453,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), globalScope.Classes);
         }
 
-        private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? importedDll = null)
+        private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? namespaceName = null, string? importedDll = null)
         {
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
 
@@ -500,10 +500,16 @@ namespace Cocoa.CodeAnalysis.Binding
                 _ => CallingConvention.Winapi,
             };
 
-            var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax, isExtern, importedDll, callingConvention);
+            var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax, isExtern, importedDll, callingConvention, @namespace: namespaceName ?? "");
             if (syntax.Identifier.Text != null && !_scope.TryDeclareFunction(function))
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);
+            }
+
+            // 命名空间函数同时注册进命名空间表（`Foo.Add(...)` 限定访问）；同名同签名由 TryDeclareFunction 已拦
+            if (function.Namespace.Length > 0)
+            {
+                _scope.TryDeclareNamespaceFunction(function.Namespace, function);
             }
         }
 
@@ -1263,15 +1269,16 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private void CollectNamespaceFunctions(NamespaceDeclarationSyntax syntax, string parentNamespace, string? importedDll, List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)> functions)
         {
+            var ns = parentNamespace.Length == 0 ? syntax.Name : parentNamespace + "." + syntax.Name;
+
             foreach (var member in syntax.Members)
             {
                 if (member is FunctionDeclarationSyntax functionDeclaration)
                 {
-                    functions.Add((functionDeclaration, parentNamespace, importedDll));
+                    functions.Add((functionDeclaration, ns, importedDll));
                 }
                 else if (member is NamespaceDeclarationSyntax nested)
                 {
-                    var ns = parentNamespace.Length == 0 ? nested.Name : parentNamespace + "." + nested.Name;
                     CollectNamespaceFunctions(nested, ns, importedDll, functions);
                 }
             }
@@ -1409,6 +1416,12 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     scope.TryDeclareFunction(f);
+
+                    // 命名空间函数同步进命名空间表（`Foo.Add(...)` 限定访问）
+                    if (f.Namespace.Length > 0)
+                    {
+                        scope.TryDeclareNamespaceFunction(f.Namespace, f);
+                    }
                 }
 
                 foreach (var e in previous.Enums)
@@ -1444,7 +1457,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return result;
         }
 
-        /// <summary>把 `.cod` 库的公共符号注入作用域（顶层函数 + 枚举），供消费方绑定解析。</summary>
+        /// <summary>把 `.cod` 库的公共符号注入作用域（v1 无命名空间 → 裸注册；非空命名空间留扩展位，.cod v2 时启用）。</summary>
         private static void InjectCodSymbols(BoundScope scope, ImmutableArray<CodProgram> codLibraries)
         {
             if (codLibraries.IsDefaultOrEmpty)
@@ -1458,7 +1471,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     if (function.ContainingClass == null)
                     {
-                        scope.TryDeclareFunction(function);
+                        if (function.Namespace.Length == 0)
+                        {
+                            scope.TryDeclareFunction(function);
+                        }
+                        else
+                        {
+                            scope.TryDeclareNamespaceFunction(function.Namespace, function);
+                        }
                     }
                 }
 
@@ -2743,6 +2763,13 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var identifier = syntax.IdentifierToken.Text;
 
+            // 命名空间限定函数调用：System.Math.Max(...) / using System; + Math.Max(...)
+            // 先于类静态方法路径（避免 System.Math.Max 被 .NET 真实类型劫持）
+            if (TryBindNamespaceFunctionCall(syntax, identifier, out var namespaceCall))
+            {
+                return namespaceCall;
+            }
+
             // 静态方法调用：MathHelpers.Square(2) / My.App.Utils.Square(2)（target 是类型名，可为点号全名）
             if (ResolveDottedTypeName(syntax.Expression) is string staticTypeName &&
                 LookupType(staticTypeName) is ClassTypeSymbol staticType &&
@@ -2840,6 +2867,58 @@ namespace Cocoa.CodeAnalysis.Binding
 
             _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
             return new BoundErrorExpression(syntax);
+        }
+
+        /// <summary>命名空间限定函数调用解析：`System.Math.Max(...)`（精确前缀）或 `using System;` + `Math.Max(...)`（using 前缀）。</summary>
+        private bool TryBindNamespaceFunctionCall(MemberCallExpressionSyntax syntax, string identifier, out BoundExpression result)
+        {
+            result = null!;
+
+            if (!(ResolveDottedTypeName(syntax.Expression) is string prefix) || prefix.Length == 0)
+            {
+                return false;
+            }
+
+            ImmutableArray<FunctionSymbol>? candidates = _scope.TryLookupNamespaceFunctions(prefix, identifier);
+            if (candidates == null)
+            {
+                foreach (var ns in _usingNamespaces)
+                {
+                    var full = ns.Length == 0 ? prefix : ns + "." + prefix;
+                    var usingCandidates = _scope.TryLookupNamespaceFunctions(full, identifier);
+                    if (usingCandidates != null)
+                    {
+                        candidates = usingCandidates;
+                        break;
+                    }
+                }
+            }
+
+            if (candidates == null)
+            {
+                return false;
+            }
+
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var argument in syntax.Arguments)
+            {
+                boundArguments.Add(BindExpression(argument));
+            }
+
+            var function = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, candidates.Value, boundArguments.ToImmutable());
+            if (function == null)
+            {
+                result = new BoundErrorExpression(syntax);
+                return true;
+            }
+
+            for (var i = 0; i < syntax.Arguments.Count; i++)
+            {
+                boundArguments[i] = BindConversion(syntax.Arguments[i].Location, boundArguments[i], function.Parameters[i].Type);
+            }
+
+            result = new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
+            return true;
         }
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
@@ -2961,10 +3040,30 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(boundArgument);
             }
 
-            var symbol = _scope.TryLookupSymbol(syntax.Identifier.Text);
+            // 候选：裸函数（含重载）→ using 命名空间函数 → 类内方法
+            var candidates = _scope.TryLookupFunctions(syntax.Identifier.Text);
+            if (candidates is { Length: 0 })
+            {
+                // 被同名非函数符号遮蔽（变量/类型）：报 not-a-function
+                _diagnostics.ReportNotAFunction(syntax.Identifier.Location, syntax.Identifier.Text);
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (candidates == null)
+            {
+                foreach (var ns in _usingNamespaces)
+                {
+                    var usingCandidates = _scope.TryLookupNamespaceFunctions(ns, syntax.Identifier.Text);
+                    if (usingCandidates != null)
+                    {
+                        candidates = usingCandidates;
+                        break;
+                    }
+                }
+            }
 
             // 类方法内：裸方法调用解析为本类方法（this.Method()）
-            if (symbol == null && _currentClass != null)
+            if (candidates == null && _currentClass != null)
             {
                 var method = _currentClass.GetMethod(syntax.Identifier.Text);
                 if (method != null)
@@ -2973,44 +3072,15 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if (symbol == null)
+            if (candidates == null)
             {
                 _diagnostics.ReportUndefinedFunction(syntax.Identifier.Location, syntax.Identifier.Text);
                 return new BoundErrorExpression(syntax);
             }
 
-            var function = symbol as FunctionSymbol;
+            var function = ResolveOverload(syntax, candidates.Value, boundArguments.ToImmutable());
             if (function == null)
             {
-                _diagnostics.ReportNotAFunction(syntax.Identifier.Location, syntax.Identifier.Text);
-                return new BoundErrorExpression(syntax);
-            }
-
-            if (syntax.Arguments.Count != function.Parameters.Length)
-            {
-                TextSpan span;
-                if (syntax.Arguments.Count > function.Parameters.Length)
-                {
-                    SyntaxNode firstExceedingNode;
-                    if (function.Parameters.Length > 0)
-                    {
-                        firstExceedingNode = syntax.Arguments.GetSeparator(function.Parameters.Length - 1);
-                    }
-                    else
-                    {
-                        firstExceedingNode = syntax.Arguments[0];
-                    }
-
-                    var lastExceedingArgument = syntax.Arguments[syntax.Arguments.Count - 1];
-                    span = TextSpan.FromBounds(firstExceedingNode.Span.Start, lastExceedingArgument.Span.End);
-                }
-                else
-                {
-                    span = syntax.CloseParenthesisToken.Span;
-                }
-
-                var location = new TextLocation(syntax.SyntaxTree.Text, span);
-                _diagnostics.ReportWrongArgumentCount(location, function.Name, function.Parameters.Length, syntax.Arguments.Count);
                 return new BoundErrorExpression(syntax);
             }
 
@@ -3024,6 +3094,121 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
+        }
+
+        /// <summary>
+        /// 重载解析：参数量过滤 → 隐式转换可行性（Any 通吃，显式不参与）→ 计分（identity&lt;implicit）选最佳；
+        /// 无可行报无匹配重载；并列最低报歧义。
+        /// </summary>
+        private FunctionSymbol? ResolveOverload(CallExpressionSyntax syntax, ImmutableArray<FunctionSymbol> candidates, ImmutableArray<BoundExpression> arguments)
+        {
+            if (candidates.Length == 1)
+            {
+                var only = candidates[0];
+                if (arguments.Length != only.Parameters.Length)
+                {
+                    ReportArgumentCountMismatch(syntax, only);
+                    return null;
+                }
+
+                return only;
+            }
+
+            return ResolveOverloadByScore(syntax.Identifier.Location, syntax.Identifier.Text, candidates, arguments);
+        }
+
+        private FunctionSymbol? ResolveMemberOverload(TextLocation location, string name, ImmutableArray<FunctionSymbol> candidates, ImmutableArray<BoundExpression> arguments)
+        {
+            if (candidates.Length == 1)
+            {
+                var only = candidates[0];
+                if (arguments.Length != only.Parameters.Length)
+                {
+                    _diagnostics.ReportWrongArgumentCount(location, name, only.Parameters.Length, arguments.Length);
+                    return null;
+                }
+
+                return only;
+            }
+
+            return ResolveOverloadByScore(location, name, candidates, arguments);
+        }
+
+        private FunctionSymbol? ResolveOverloadByScore(TextLocation location, string name, ImmutableArray<FunctionSymbol> candidates, ImmutableArray<BoundExpression> arguments)
+        {
+            var viable = new List<(FunctionSymbol Function, int Score)>();
+            foreach (var candidate in candidates)
+            {
+                if (candidate.Parameters.Length != arguments.Length)
+                {
+                    continue;
+                }
+
+                var score = 0;
+                var ok = true;
+                for (var i = 0; i < arguments.Length; i++)
+                {
+                    var conversion = Conversion.Classify(arguments[i].Type, candidate.Parameters[i].Type);
+                    if (!conversion.Exists || !conversion.IsImplicit)
+                    {
+                        ok = false;
+                        break;
+                    }
+
+                    if (!conversion.IsIdentity)
+                    {
+                        score++;
+                    }
+                }
+
+                if (ok)
+                {
+                    viable.Add((candidate, score));
+                }
+            }
+
+            if (viable.Count == 0)
+            {
+                _diagnostics.ReportNoMatchingOverload(location, name);
+                return null;
+            }
+
+            var minScore = viable.Min(v => v.Score);
+            var best = viable.Where(v => v.Score == minScore).ToList();
+            if (best.Count == 1)
+            {
+                return best[0].Function;
+            }
+
+            _diagnostics.ReportAmbiguousInvocation(location, name);
+            return null;
+        }
+
+        private void ReportArgumentCountMismatch(CallExpressionSyntax syntax, FunctionSymbol function)
+        {
+            TextSpan span;
+            if (syntax.Arguments.Count > function.Parameters.Length)
+            {
+                SyntaxNode firstExceedingNode;
+                if (function.Parameters.Length > 0)
+                {
+                    firstExceedingNode = syntax.Arguments.GetSeparator(function.Parameters.Length - 1);
+                }
+                else
+                {
+                    firstExceedingNode = syntax.Arguments[0];
+                }
+
+                var lastExceedingArgument = syntax.Arguments[syntax.Arguments.Count - 1];
+                span = TextSpan.FromBounds(firstExceedingNode.Span.Start, lastExceedingArgument.Span.End);
+            }
+            else
+            {
+                span = syntax.CloseParenthesisToken.Span;
+            }
+
+            var location = new TextLocation(syntax.SyntaxTree.Text, span);
+            _diagnostics.ReportWrongArgumentCount(location, function.Name, function.Parameters.Length, syntax.Arguments.Count);
         }
 
         private BoundExpression BindMemberCall(CallExpressionSyntax syntax, BoundExpression target, FunctionSymbol method)

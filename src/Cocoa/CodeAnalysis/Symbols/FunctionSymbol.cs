@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class FunctionSymbol : Symbol
     {
-        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null)
+        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "")
             : base(name)
         {
             Parameters = parameters;
@@ -18,6 +18,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             Syntax = syntax;
             Visibility = visibility;
             BuiltinKind = builtinKind;
+            Namespace = @namespace ?? "";
         }
 
         public override SymbolKind Kind => SymbolKind.Function;
@@ -40,6 +41,12 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>内置函数种类（功能层原语，三后端按此分发）；非内置为 null。</summary>
         public BuiltinKind? BuiltinKind { get; }
+
+        /// <summary>所属命名空间（顶层函数；类方法由 <see cref="ContainingClass"/> 承载）。</summary>
+        public string Namespace { get; }
+
+        /// <summary>发射名：命名空间限定（`ns.name`），IL 元数据方法名用此保证唯一。</summary>
+        public string EmitName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
 
         public bool IsVirtual { get; internal set; }
 
