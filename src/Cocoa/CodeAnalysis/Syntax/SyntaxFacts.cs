@@ -98,6 +98,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.FalseKeyword;
                 case "for":
                     return SyntaxKind.ForKeyword;
+                case "foreach":
+                    return SyntaxKind.ForeachKeyword;
                 case "get":
                     return SyntaxKind.GetKeyword;
                 case "set":
@@ -116,6 +118,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.IfKeyword;
                 case "import":
                     return SyntaxKind.ImportKeyword;
+                case "in":
+                    return SyntaxKind.InKeyword;
                 case "interface":
                     return SyntaxKind.InterfaceKeyword;
                 case "internal":
@@ -303,8 +307,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "false";
                 case SyntaxKind.ForKeyword:
                     return "for";
+                case SyntaxKind.ForeachKeyword:
+                    return "foreach";
                 case SyntaxKind.GetKeyword:
                     return "get";
+                case SyntaxKind.InKeyword:
+                    return "in";
                 case SyntaxKind.SetKeyword:
                     return "set";
                 case SyntaxKind.PropertyKeyword:

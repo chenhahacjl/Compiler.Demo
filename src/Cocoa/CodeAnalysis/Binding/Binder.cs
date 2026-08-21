@@ -1516,6 +1516,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
                 case SyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
                 case SyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case SyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
                 case SyntaxKind.CStyleForStatement: return BindCStyleForStatement((CStyleForStatementSyntax)syntax);
                 case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
@@ -1788,6 +1789,83 @@ namespace Cocoa.CodeAnalysis.Binding
             _scope = _scope.Parent!;
 
             return new BoundForStatement(syntax, variable, lowerBound, upperBound, body, breakLabel, continueLabel);
+        }
+
+        /// <summary>foreach 绑定期脱糖为 while 索引循环（策略点：v1 数组/字符串）：</summary>
+        /// <remarks>
+        /// {
+        ///     var __i = 0
+        ///     while (__i &lt; collection.Length)
+        ///     {
+        ///         var x = collection[__i]     // 内层作用域，每迭代新只读变量
+        ///         body
+        ///         continue:
+        ///         __i++
+        ///     }
+        /// }
+        /// </remarks>
+        private BoundStatement BindForeachStatement(ForeachStatementSyntax syntax)
+        {
+            var collection = BindExpression(syntax.Collection);
+
+            TypeSymbol elementType;
+            if (collection.Type.ElementType != null)
+            {
+                elementType = collection.Type.ElementType;
+            }
+            else if (collection.Type == TypeSymbol.String)
+            {
+                elementType = TypeSymbol.Char;
+            }
+            else
+            {
+                elementType = TypeSymbol.Error;
+                _diagnostics.ReportError(syntax.Collection.Location, $"foreach 只能遍历数组或字符串，不能遍历 '{collection.Type}'。");
+            }
+
+            _scope = new BoundScope(_scope);
+
+            // 隐藏计数器 __i（唯一名，用户不可见）
+            _labelCounter++;
+            var counterName = $"__foreach_i{_labelCounter}";
+            var counterToken = new SyntaxToken(syntax.SyntaxTree, SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, counterName, counterName, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var counter = BindVariableDeclaration(counterToken, isReadOnly: false, TypeSymbol.Int32);
+
+            var breakLabel = new BoundLabel($"break{_labelCounter}");
+            var continueLabel = new BoundLabel($"continue{_labelCounter}");
+            var whileContinueLabel = new BoundLabel($"whilecontinue{_labelCounter}");
+
+            var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
+            _scope = new BoundScope(_scope);
+            var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
+            var elementAccess = new BoundElementAccessExpression(syntax, elementType, collection, BoundNodeFactory.Variable(syntax, counter));
+            loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, elementAccess));
+
+            _loopStack.Push((breakLabel, continueLabel));
+            loopBody.Add(BindStatement(syntax.Body));
+            _loopStack.Pop();
+
+            _scope = _scope.Parent!;
+
+            loopBody.Add(BoundNodeFactory.Label(syntax, continueLabel));
+            loopBody.Add(BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, counter)));
+
+            var lengthAccess = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, collection, "Length");
+            var condition = BoundNodeFactory.Binary(syntax,
+                BoundNodeFactory.Variable(syntax, counter),
+                SyntaxKind.LessToken,
+                lengthAccess);
+
+            var whileStatement = BoundNodeFactory.While(syntax, condition,
+                new BoundBlockStatement(syntax, loopBody.ToImmutable()), breakLabel, whileContinueLabel);
+
+            var counterInit = BoundNodeFactory.VariableDeclaration(syntax, counter, BoundNodeFactory.Literal(syntax, 0));
+
+            _scope = _scope.Parent!;
+
+            return BoundNodeFactory.Block(syntax, counterInit, whileStatement);
         }
 
         private BoundStatement BindCStyleForStatement(CStyleForStatementSyntax syntax)

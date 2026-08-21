@@ -677,6 +677,75 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_Foreach_OverArrays(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var arr = new int[] {1, 2, 3}
+    foreach (var x in arr)
+    {
+        print(x)
+    }
+    var sum = 0
+    foreach (x in arr)
+    {
+        sum = sum + x
+    }
+    print(sum)
+    var doubles: double[] = new double[] {1.5, 2.5}
+    foreach (var d in doubles)
+    {
+        print(d)
+    }
+    var names = new string[] {""a"", ""b""}
+    foreach (var n in names)
+    {
+        print(n)
+    }
+}", "src-foreach-array", target);
+
+            Assert.Equal("1\r\n2\r\n3\r\n6\r\n1.5\r\n2.5\r\na\r\nb\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
+        public void NativeSource_Foreach_OverString_And_BreakContinue(string target)
+        {
+            var output = CompileAndRun(@"
+function Main()
+{
+    var s = ""abc""
+    foreach (var c in s)
+    {
+        print(c)
+    }
+    var arr = new int[] {1, 2, 3, 4}
+    foreach (var x in arr)
+    {
+        if x == 3 continue
+        if x == 4 break
+        print(x)
+    }
+    var result = 0
+    foreach (var i in arr)
+    {
+        foreach (var j in arr)
+        {
+            if j == 2 continue
+            result = result + i * j
+        }
+    }
+    print(result)
+}", "src-foreach-string", target);
+
+            Assert.Equal("a\r\nb\r\nc\r\n1\r\n2\r\n80\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_Array_OutOfBounds(string target)
         {
             var output = CompileAndRun(@"

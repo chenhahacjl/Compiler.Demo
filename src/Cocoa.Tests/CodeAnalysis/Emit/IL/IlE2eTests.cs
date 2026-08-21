@@ -2058,6 +2058,78 @@ function Main()
         }
 
         [Fact]
+        public void Foreach_OverArrays_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var arr = new int[] {1, 2, 3}\n" +
+"    foreach (var x in arr)\n" +
+"    {\n" +
+"        print(x)\n" +
+"    }\n" +
+"    var sum = 0\n" +
+"    foreach (x in arr)\n" +
+"    {\n" +
+"        sum = sum + x\n" +
+"    }\n" +
+"    print(sum)\n" +
+"    var bytes: byte[] = new byte[] {10, 20, 30}\n" +
+"    foreach (var b in bytes)\n" +
+"    {\n" +
+"        print(b)\n" +
+"    }\n" +
+"    var doubles: double[] = new double[] {1.5, 2.5}\n" +
+"    foreach (var d in doubles)\n" +
+"    {\n" +
+"        print(d)\n" +
+"    }\n" +
+"    var names = new string[] {\"a\", \"b\"}\n" +
+"    foreach (var n in names)\n" +
+"    {\n" +
+"        print(n)\n" +
+"    }\n" +
+"}", "e2e-foreach-array");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1\r\n2\r\n3\r\n6\r\n10\r\n20\r\n30\r\n1.5\r\n2.5\r\na\r\nb\r\n", stdout);
+        }
+
+        [Fact]
+        public void Foreach_OverString_Chars_And_BreakContinue_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(
+"function Main()\n" +
+"{\n" +
+"    var s = \"abc\"\n" +
+"    foreach (var c in s)\n" +
+"    {\n" +
+"        print(c)\n" +
+"    }\n" +
+"    var arr = new int[] {1, 2, 3, 4}\n" +
+"    foreach (var x in arr)\n" +
+"    {\n" +
+"        if x == 3 continue\n" +
+"        if x == 4 break\n" +
+"        print(x)\n" +
+"    }\n" +
+"    var result = 0\n" +
+"    foreach (var i in arr)\n" +
+"    {\n" +
+"        foreach (var j in arr)\n" +
+"        {\n" +
+"            if j == 2 continue\n" +
+"            result = result + i * j\n" +
+"        }\n" +
+"    }\n" +
+"    print(result)\n" +
+"}", "e2e-foreach-string");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("a\r\nb\r\nc\r\n1\r\n2\r\n80\r\n", stdout);
+        }
+
+        [Fact]
         public void Class_MultipleInterfaces_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"

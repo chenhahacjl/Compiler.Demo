@@ -1074,6 +1074,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return ParseDoWhileStatement();
                 case SyntaxKind.ForKeyword:
                     return ParseForStatement();
+                case SyntaxKind.ForeachKeyword:
+                    return ParseForeachStatement();
                 case SyntaxKind.BreakKeyword:
                     return ParseBreakStatement();
                 case SyntaxKind.ContinueKeyword:
@@ -1411,6 +1413,46 @@ namespace Cocoa.CodeAnalysis.Syntax
             var body = ParseStatement();
 
             return new CStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
+        }
+
+        private StatementSyntax ParseForeachStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.ForeachKeyword);
+
+            SyntaxToken? openParenToken = null;
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenToken = NextToken();
+            }
+
+            // 循环变量声明关键字：仅 var 合法；let/const 报错后按 var 恢复继续解析
+            SyntaxToken? varKeyword = null;
+            if (Current.Kind == SyntaxKind.VarKeyword ||
+                Current.Kind == SyntaxKind.LetKeyword ||
+                Current.Kind == SyntaxKind.ConstKeyword)
+            {
+                var keywordToken = NextToken();
+                if (keywordToken.Kind != SyntaxKind.VarKeyword)
+                {
+                    _diagnostics.ReportError(keywordToken.Location, $"foreach 循环变量只能用 var 声明（不能用 {keywordToken.Text}）。");
+                }
+
+                varKeyword = keywordToken;
+            }
+
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var inKeyword = MatchToken(SyntaxKind.InKeyword);
+            var collection = ParseExpression();
+
+            SyntaxToken? closeParenToken = null;
+            if (openParenToken != null)
+            {
+                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+
+            var body = ParseStatement();
+
+            return new ForeachStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, inKeyword, collection, closeParenToken, body);
         }
 
         private StatementSyntax ParseBreakStatement()

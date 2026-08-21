@@ -138,6 +138,54 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Theory]
+        [InlineData("{ var arr = new int[] {1, 2, 3} var sum = 0 foreach (var x in arr) { sum = sum + x } return sum }", 6)]
+        [InlineData("{ var arr = new int[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 continue sum = sum + x } return sum }", 7)]
+        [InlineData("{ var arr = new int[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 break sum = sum + x } return sum }", 3)]
+        [InlineData("{ var arr = new int[] {1, 2, 3} var count = 0 foreach (x in arr) { count = count + 1 } return count }", 3)]
+        [InlineData("{ var s = \"abc\" var count = 0 foreach (var c in s) { count = count + 1 } return count }", 3)]
+        [InlineData("{ var arr = new int[] {1, 2} var result = 0 foreach (var x in arr) { foreach (var y in arr) { result = result + x * y } } return result }", 9)]
+        public void Evaluator_Foreach_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_LoopVariable_IsReadOnly()
+        {
+            var text = @"
+                var arr = new int[[]] {1, 2, 3}
+                foreach (var x in arr)
+                {
+                    x [=] 5
+                }
+            ";
+
+            var diagnostics = @"
+                Variable 'x' is read-only and cannot be assigned to.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_CollectionNotArrayOrString_ReportsCannotIterate()
+        {
+            var text = @"
+                var n = 10
+                foreach (var x in [n])
+                {
+                    print(x)
+                }
+            ";
+
+            var diagnostics = @"
+                foreach 只能遍历数组或字符串，不能遍历 'int'。
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Theory]
         [InlineData("{ var i = 1 i++ return i }", 2)]
         [InlineData("{ var i = 5 i-- return i }", 4)]
         [InlineData("{ var i = 1 i++ i++ return i }", 3)]

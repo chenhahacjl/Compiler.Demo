@@ -501,6 +501,51 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
+        public void Parser_Foreach_CocoaStyle_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse("foreach (x in arr) { print(x) }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForeachStatementSyntax>(globalStatement.Statement);
+
+            Assert.Null(statement.VarKeyword);
+            Assert.Equal("x", statement.Identifier.Text);
+            Assert.Equal(SyntaxKind.InKeyword, statement.InKeyword.Kind);
+            Assert.Equal(SyntaxKind.NameExpression, statement.Collection.Kind);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_Foreach_CSharpVarStyle_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse("foreach (var x in arr) { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForeachStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
+            Assert.Equal("x", statement.Identifier.Text);
+            Assert.Equal(SyntaxKind.NameExpression, statement.Collection.Kind);
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
+        [Fact]
+        public void Parser_Foreach_LetKeyword_ReportsError()
+        {
+            var syntaxTree = SyntaxTree.Parse("foreach let x in arr { }");
+            var root = syntaxTree.Root;
+            var member = Assert.Single(root.Members);
+            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<ForeachStatementSyntax>(globalStatement.Statement);
+
+            Assert.Equal(SyntaxKind.LetKeyword, statement.VarKeyword!.Kind);
+            var diagnostic = Assert.Single(syntaxTree.Diagnostics);
+            Assert.Contains("只能用 var", diagnostic.Message);
+        }
+
+        [Fact]
         public void Parser_Constructor_ExtendsBaseKeyword()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { constructor(x: int) extends base(x) { } }");
