@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Symbols;
@@ -51,7 +52,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
-            if (binder.Diagnostics.Any())
+            if (binder.Diagnostics.HasErrors())
             {
                 return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
             }
@@ -66,6 +67,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var allInterfaces = new List<(InterfaceDeclarationSyntax Syntax, string Namespace)>();
             var allEnums = new List<(EnumDeclarationSyntax Syntax, string Namespace)>();
             var pendingFunctions = new List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)>();
+            var usingDirectives = new List<UsingDirectiveSyntax>();
 
             // 阶段 1：处理 import/function/enum/using + 收集所有类/接口/枚举声明（递归 namespace）
             foreach (var member in syntaxTrees.SelectMany(st => st.Root.Members))
@@ -98,12 +100,17 @@ namespace Cocoa.CodeAnalysis.Binding
                     binder.CollectInterfaces(namespaceDeclaration, "", allInterfaces);
                     binder.CollectEnums(namespaceDeclaration, "", allEnums);
                     binder.CollectNamespaceFunctions(namespaceDeclaration, "", importedDll, pendingFunctions);
+                    binder.CollectNamespaceUsings(namespaceDeclaration, binder._usingNamespaces, usingDirectives);
                 }
                 else if (member is UsingDirectiveSyntax usingDirective)
                 {
                     binder._usingNamespaces.Add(usingDirective.Name);
+                    usingDirectives.Add(usingDirective);
                 }
             }
+
+            // 阶段 1.4：using 命名空间解析警告（6e-M15）——在程序/引用/.cod 库中都找不到时发警告
+            binder.ReportUnresolvedUsings(usingDirectives, allClasses, allInterfaces, allEnums, pendingFunctions, codLibraries);
 
             // 阶段 1.5：绑定枚举（顶层 + 命名空间内）
             foreach (var (syntax, ns) in allEnums)
@@ -300,7 +307,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var parentScope = CreateParentScope(globalScope);
             InjectCodSymbols(parentScope, codLibraries);
 
-            if (globalScope.Diagnostics.Any())
+            if (globalScope.Diagnostics.HasErrors())
             {
                 return new BoundProgram(previous, globalScope.Diagnostics, null, null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty, globalScope.Classes);
             }
@@ -1281,6 +1288,83 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     CollectNamespaceFunctions(nested, ns, importedDll, functions);
                 }
+            }
+        }
+
+        /// <summary>递归收集命名空间内（含文件作用域 `namespace Foo;`）的 using 指令，供名称解析与 6e-M15 警告。</summary>
+        private void CollectNamespaceUsings(NamespaceDeclarationSyntax syntax, List<string> usingNamespaces, List<UsingDirectiveSyntax> usingDirectives)
+        {
+            foreach (var member in syntax.Members)
+            {
+                if (member is UsingDirectiveSyntax usingDirective)
+                {
+                    usingNamespaces.Add(usingDirective.Name);
+                    usingDirectives.Add(usingDirective);
+                }
+                else if (member is NamespaceDeclarationSyntax nested)
+                {
+                    CollectNamespaceUsings(nested, usingNamespaces, usingDirectives);
+                }
+            }
+        }
+
+        /// <summary>using 未解析警告（6e-M15）：命名空间在程序声明 / 引用程序集 / .cod 库中都找不到时发警告（提示不绑定 .NET BCL）。</summary>
+        private void ReportUnresolvedUsings(
+            List<UsingDirectiveSyntax> usingDirectives,
+            List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses,
+            List<(InterfaceDeclarationSyntax Syntax, string Namespace)> allInterfaces,
+            List<(EnumDeclarationSyntax Syntax, string Namespace)> allEnums,
+            List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)> pendingFunctions,
+            ImmutableArray<CodProgram> codLibraries)
+        {
+            if (usingDirectives.Count == 0)
+            {
+                return;
+            }
+
+            var knownNamespaces = new HashSet<string>(StringComparer.Ordinal);
+            void AddNamespacePrefixes(string ns)
+            {
+                while (ns.Length > 0)
+                {
+                    knownNamespaces.Add(ns);
+                    var dot = ns.LastIndexOf('.');
+                    if (dot < 0)
+                    {
+                        break;
+                    }
+
+                    ns = ns.Substring(0, dot);
+                }
+            }
+
+            foreach (var (_, ns) in allClasses) AddNamespacePrefixes(ns);
+            foreach (var (_, ns) in allInterfaces) AddNamespacePrefixes(ns);
+            foreach (var (_, ns) in allEnums) AddNamespacePrefixes(ns);
+            foreach (var (_, ns, _) in pendingFunctions) AddNamespacePrefixes(ns);
+            foreach (var library in codLibraries)
+            {
+                foreach (var ns in library.Namespaces)
+                {
+                    AddNamespacePrefixes(ns);
+                }
+            }
+
+            var metadataReader = _references.Length == 0 ? null : new MetadataReader(_references.ToArray());
+            foreach (var directive in usingDirectives)
+            {
+                var name = directive.Name;
+                if (knownNamespaces.Contains(name))
+                {
+                    continue;
+                }
+
+                if (metadataReader != null && metadataReader.NamespaceExists(name))
+                {
+                    continue;
+                }
+
+                _diagnostics.ReportUnresolvedUsing(directive.Location, name);
             }
         }
 

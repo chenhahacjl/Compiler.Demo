@@ -14,6 +14,7 @@ namespace Cocoa.Compiler
         public const string ConsoleTemplate = "console";
         public const string LibraryTemplate = "library";
         public const string CocoaTemplate = "cocoa";
+        public const string CSharpTemplate = "csharp";
         public const string SolutionTemplate = "solution";
 
         private static readonly string[] KnownTemplates =
@@ -21,6 +22,7 @@ namespace Cocoa.Compiler
             ConsoleTemplate,
             LibraryTemplate,
             CocoaTemplate,
+            CSharpTemplate,
             SolutionTemplate,
         };
 
@@ -281,6 +283,38 @@ outputPath = out
 }}
 ");
 
+                case CSharpTemplate:
+                    return (
+                        $@"name = {name}
+output = executable
+platform = x64
+entry = Main
+dotnetRuntime = {tfm}
+
+[sources]
+*.cs
+
+[options]
+incremental = true
+debug = false
+outputPath = out
+",
+                        name + ".cs",
+                        $@"// C# 方言（.cs 严格子集，6e-M15）：类型前置、分号必选；不绑定 .NET BCL（用 print/input/random 内置函数）
+namespace {name};
+
+public static void Main()
+{{
+    print(""Hello from {name}!"");
+    print(Add(2, 3));
+}}
+
+public int Add(int a, int b)
+{{
+    return a + b;
+}}
+");
+
                 case SolutionTemplate:
                     return (
                         $@"name = {name}
@@ -338,6 +372,7 @@ outputPath = out
             Console.WriteLine("  console (default)  A console application (executable)");
             Console.WriteLine("  library            A .NET library (dll)");
             Console.WriteLine("  cocoa              A .cod Cocoa assembly (cocoa library)");
+            Console.WriteLine("  csharp             A C# dialect console application (.cs files, 6e-M15)");
             Console.WriteLine("  solution           A solution (.cosln) with a console sub-project");
             Console.WriteLine();
             Console.WriteLine("options:");

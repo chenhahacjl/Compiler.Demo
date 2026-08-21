@@ -227,8 +227,6 @@ namespace Cocoa.Compiler
                 return 1;
             }
 
-            var compilation = Compilation.Create(syntaxTrees.ToArray());
-
             var effectiveTarget = target ?? IlTarget.Default;
 
             if (referencePaths.Count == 0)
@@ -245,6 +243,9 @@ namespace Cocoa.Compiler
                 }
             }
 
+            // 绑定期带引用（供 using 命名空间解析/外部类型解析；6e-M15）
+            var compilation = Compilation.Create(referencePaths.ToArray(), syntaxTrees.ToArray());
+
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
@@ -257,7 +258,7 @@ namespace Cocoa.Compiler
                     // netcore 可执行：托管程序集产出 `<name>.dll`，另生成原生 apphost `<name>.exe`（SDK 标准布局）
                     var managedDllPath = Path.ChangeExtension(outputPath, ".dll");
                     diagnostics = compilation.Emit(moduleName, referencePaths.ToArray(), managedDllPath, effectiveTarget);
-                    if (!diagnostics.Any())
+                    if (!diagnostics.HasErrors())
                     {
                         var template = AppHostPatcher.FindDefaultTemplate();
                         var outputDir = Path.GetDirectoryName(outputPath);
@@ -280,11 +281,16 @@ namespace Cocoa.Compiler
                 return 1;
             }
 
-            if (diagnostics.Any())
+            if (diagnostics.HasErrors())
             {
                 Console.Error.WriteDiagnostics(diagnostics);
 
                 return 1;
+            }
+
+            if (diagnostics.Any())
+            {
+                Console.Error.WriteDiagnostics(diagnostics);
             }
 
             Console.WriteLine(outputPath);

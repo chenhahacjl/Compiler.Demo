@@ -117,6 +117,7 @@ namespace Cocoa.Tests.Compiler
             AssertBlockOutput(run, runDir, "Interop", new[] { "True", "True" }, Array.Empty<string>());
             AssertBlockOutput(run, runDir, "CsStyle", new[] { "42", "25", "10", "Hi, Cocoa (3)", "C# style", "1" }, Array.Empty<string>());
             AssertBlockOutput(run, runDir, "TopLevelFunctions", new[] { "5", "30", "3", "24", "ababab", "42" }, Array.Empty<string>());
+            AssertBlockOutput(run, runDir, "CSharpDialect", new[] { "4", "100", "i = 0", "i = 1", "i = 2", "5", "40", "one", "few", "few" }, Array.Empty<string>());
         }
 
         private static void AssertFunctionsEntry(Func<string, string[], string> run, string runDir)

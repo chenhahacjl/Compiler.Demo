@@ -4,19 +4,26 @@ using System.Collections.Immutable;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 语法分析器 (Parser)
+    /// 语法分析器核心（6e-M15 双前端拆分）
     /// <br/>
-    /// Token => 语法树
+    /// Token =&gt; 语法树
+    /// <br/>
+    /// 共享：token 管道 / 诊断 / trivia / 表达式引擎 / 公共语句。
+    /// 方言差异经 virtual 钩子由子类覆写：<see cref="CocoaParser"/>（宽松，`.co`）与 <see cref="CSharpParser"/>（严格，`.cs`）。
+    /// 规约：基类不得出现方言分支；新语法落点 = 覆写各自钩子，逐字相同的进基类一次。
     /// </summary>
-    internal sealed class Parser
+    internal abstract class ParserCore
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
-        private readonly SyntaxTree _syntaxTree;
-        private readonly SourceText _text;
+        protected readonly SyntaxTree _syntaxTree;
+        protected readonly SourceText _text;
         private readonly ImmutableArray<SyntaxToken> _tokens;
         private int _position;
 
-        public Parser(SyntaxTree syntaxTree)
+        /// <summary>当前解析方言（子类覆写；用于插值洞子解析与方言钩子默认行为）。</summary>
+        protected abstract LanguageDialect Dialect { get; }
+
+        protected ParserCore(SyntaxTree syntaxTree)
         {
             var tokens = new List<SyntaxToken>();
             var badTokens = new List<SyntaxToken>();
@@ -73,16 +80,34 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>用预词法 token 构造 Parser（插值洞的子解析；token 属同一 SyntaxTree，Span 绝对定位）。</summary>
-        public Parser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
+        protected ParserCore(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
         {
             _syntaxTree = syntaxTree;
             _text = syntaxTree.Text;
             _tokens = tokens;
         }
 
+        /// <summary>按方言创建解析器（入口工厂，SyntaxTree.Parse 使用）。</summary>
+        public static ParserCore Create(SyntaxTree syntaxTree, LanguageDialect dialect)
+        {
+            return dialect switch
+            {
+                LanguageDialect.CSharp => new CSharpParser(syntaxTree),
+                _ => new CocoaParser(syntaxTree),
+            };
+        }
+
+        /// <summary>用预词法 token 按当前方言创建子解析器（插值洞；洞内语法与宿主方言一致）。</summary>
+        protected ParserCore CreateSubParser(ImmutableArray<SyntaxToken> tokens)
+        {
+            return Dialect == LanguageDialect.CSharp
+                ? new CSharpParser(_syntaxTree, tokens)
+                : new CocoaParser(_syntaxTree, tokens);
+        }
+
         public DiagnosticBag Diagnostics => _diagnostics;
 
-        private SyntaxToken Peek(int offset)
+        protected SyntaxToken Peek(int offset)
         {
             var index = _position + offset;
             if (index >= _tokens.Length)
@@ -93,9 +118,9 @@ namespace Cocoa.CodeAnalysis.Syntax
             return _tokens[index];
         }
 
-        private SyntaxToken Current => Peek(0);
+        protected SyntaxToken Current => Peek(0);
 
-        private SyntaxToken NextToken()
+        protected SyntaxToken NextToken()
         {
             var current = Current;
             _position++;
@@ -103,7 +128,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return current;
         }
 
-        private SyntaxToken MatchToken(SyntaxKind kind)
+        protected SyntaxToken MatchToken(SyntaxKind kind)
         {
             if (Current.Kind == kind)
             {
@@ -113,6 +138,9 @@ namespace Cocoa.CodeAnalysis.Syntax
             _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, kind);
             return new SyntaxToken(_syntaxTree, kind, Current.Position, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
         }
+
+        /// <summary>报告诊断（供子类方言收紧使用）。</summary>
+        protected void ReportError(TextLocation location, string message) => _diagnostics.ReportError(location, message);
 
         public CompilationUnitSyntax ParseCompilationUnit()
         {
@@ -180,6 +208,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 Current.Kind == SyntaxKind.StdcallKeyword ||
                 Current.Kind == SyntaxKind.FunctionKeyword)
             {
+                if (!AllowCocoaFunctionKeywords())
+                {
+                    ReportError(Current.Location, "C# 方言函数声明须为 `[修饰符] 返回类型 名称(...)`，不能使用 'function'/'cdecl'/'stdcall' 关键字。");
+                }
+
                 return ParseFunctionDeclaration(modifiers);
             }
 
@@ -208,7 +241,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             // 括号扫描消歧：`)` 后紧跟 `{`/`:` 判定为函数声明，否则是全局表达式语句（如 `print("hi")`）
             if (IsNoKeywordTopLevelFunction())
             {
-                return ParseNoKeywordTopLevelFunction(modifiers);
+                if (!AllowNoKeywordTopLevelFunction())
+                {
+                    ReportError(Current.Location, "C# 方言顶层函数须带返回类型（如 `public static void Main()`），不支持 Cocoa 无关键字写法。");
+                }
+                else
+                {
+                    return ParseNoKeywordTopLevelFunction(modifiers);
+                }
             }
 
             if (modifiers.Any())
@@ -219,6 +259,12 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             return ParseGlobalStatement();
         }
+
+        /// <summary>C# 方言是否允许 `function`/`cdecl`/`stdcall` 关键字顶层函数（Cocoa 为 true，C# 为 false）。</summary>
+        protected virtual bool AllowCocoaFunctionKeywords() => true;
+
+        /// <summary>C# 方言是否允许 Cocoa 无关键字顶层函数 `name(...)`（Cocoa 为 true，C# 为 false）。</summary>
+        protected virtual bool AllowNoKeywordTopLevelFunction() => true;
 
         /// <summary>C# 式顶层函数判定：`type name(` 或 `type[] name(`（返回类型可带数组后缀）。</summary>
         private bool IsCSharpStyleTopLevelFunction()
@@ -419,7 +465,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ImportClauseSyntax(_syntaxTree, importKeyword, nameTokens.ToImmutable());
         }
 
-        private MemberSyntax ParseUsingDirective()
+        protected virtual MemberSyntax ParseUsingDirective()
         {
             var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
             var nameTokens = ParseQualifiedName();
@@ -431,21 +477,33 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var namespaceKeyword = MatchToken(SyntaxKind.NamespaceKeyword);
             var nameTokens = ParseQualifiedName();
+
+            // 文件作用域命名空间：`namespace Foo;` —— 剩余整个文件归入 Foo（C# 10 语义，两方言共享）
+            if (Current.Kind == SyntaxKind.SemicolonToken)
+            {
+                NextToken();
+                var members = ParseMembers();
+                var openBrace = new SyntaxToken(_syntaxTree, SyntaxKind.OpenBraceToken, namespaceKeyword.Position, "{", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                var closeBrace = new SyntaxToken(_syntaxTree, SyntaxKind.CloseBraceToken, Current.Position, "}", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+
+                return new NamespaceDeclarationSyntax(_syntaxTree, namespaceKeyword, nameTokens, openBrace, members, closeBrace);
+            }
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
-            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+            var namespaceMembers = ImmutableArray.CreateBuilder<MemberSyntax>();
 
             while (Current.Kind != SyntaxKind.CloseBraceToken &&
                    Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                members.Add(ParseMember());
+                namespaceMembers.Add(ParseMember());
             }
 
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new NamespaceDeclarationSyntax(_syntaxTree, namespaceKeyword, nameTokens, openBraceToken, members.ToImmutable(), closeBraceToken);
+            return new NamespaceDeclarationSyntax(_syntaxTree, namespaceKeyword, nameTokens, openBraceToken, namespaceMembers.ToImmutable(), closeBraceToken);
         }
 
-        private ImmutableArray<SyntaxToken> ParseQualifiedName()
+        protected ImmutableArray<SyntaxToken> ParseQualifiedName()
         {
             var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
 
@@ -551,6 +609,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (Current.Kind == SyntaxKind.ConstructorKeyword)
             {
+                if (!AllowCocoaClassMemberKeywords())
+                {
+                    ReportError(Current.Location, "C# 方言构造函数应写成 `ClassName(...)`（名字 = 类名），不能使用 'constructor' 关键字。");
+                }
+
                 return ParseConstructorDeclaration(modifiers);
             }
 
@@ -558,11 +621,21 @@ namespace Cocoa.CodeAnalysis.Syntax
                 Current.Kind == SyntaxKind.StdcallKeyword ||
                 Current.Kind == SyntaxKind.FunctionKeyword)
             {
+                if (!AllowCocoaClassMemberKeywords())
+                {
+                    ReportError(Current.Location, "C# 方言方法须为 `返回类型 名称(...)`，不能使用 'function'/'cdecl'/'stdcall' 关键字。");
+                }
+
                 return ParseFunctionDeclaration(modifiers);
             }
 
             if (Current.Kind == SyntaxKind.PropertyKeyword)
             {
+                if (!AllowCocoaClassMemberKeywords())
+                {
+                    ReportError(Current.Location, "C# 方言属性须为 `类型 名称 { get; set; }`，不能使用 'property' 关键字。");
+                }
+
                 return ParsePropertyDeclaration(modifiers);
             }
 
@@ -571,6 +644,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 // Cocoa 式字段：`name : type`
                 if (Peek(1).Kind == SyntaxKind.ColonToken)
                 {
+                    if (!AllowCocoaStyleField())
+                    {
+                        ReportError(Current.Location, "C# 方言字段须为 `类型 名称`，不能 `名称: 类型`。");
+                    }
+
                     return ParseClassFieldDeclaration(modifiers);
                 }
 
@@ -585,6 +663,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             NextToken();
             return badMember;
         }
+
+        /// <summary>C# 方言是否允许 `constructor`/`function`/`property` 类成员关键字（Cocoa 为 true，C# 为 false）。</summary>
+        protected virtual bool AllowCocoaClassMemberKeywords() => true;
+
+        /// <summary>C# 方言是否允许 Cocoa 式字段 `name: Type`（Cocoa 为 true，C# 为 false）。</summary>
+        protected virtual bool AllowCocoaStyleField() => true;
 
         /// <summary>C# 式成员：`type name ...`（字段/属性/方法/构造函数）。</summary>
         private MemberSyntax ParseCSharpStyleMember(ImmutableArray<SyntaxToken> modifiers, string className)
@@ -746,7 +830,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>前缀类型：`int` / `int[]`（无冒号，C# 式类型前置）。</summary>
-        private TypeClauseSyntax ParsePrefixTypeClause()
+        protected TypeClauseSyntax ParsePrefixTypeClause()
         {
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             TypeClauseSyntax type = new TypeClauseSyntax(_syntaxTree, colonToken: null, identifier);
@@ -841,6 +925,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                     Current.Kind == SyntaxKind.StdcallKeyword ||
                     Current.Kind == SyntaxKind.FunctionKeyword)
                 {
+                    if (!AllowCocoaInterfaceKeywords())
+                    {
+                        ReportError(Current.Location, "C# 方言接口成员须为 `返回类型 名称(...)`，不能使用 'function'/'cdecl'/'stdcall' 关键字。");
+                    }
+
                     // 接口成员：函数签名（无方法体）
                     var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
                     var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
@@ -852,6 +941,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
                 else if (Current.Kind == SyntaxKind.PropertyKeyword)
                 {
+                    if (!AllowCocoaInterfaceKeywords())
+                    {
+                        ReportError(Current.Location, "C# 方言接口属性须为 `类型 名称 { get; }`，不能使用 'property' 关键字。");
+                    }
+
                     members.Add(ParsePropertyDeclaration(modifiers));
                 }
                 else if (Current.Kind == SyntaxKind.IdentifierToken &&
@@ -887,6 +981,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             return members.ToImmutable();
         }
+
+        /// <summary>C# 方言是否允许接口中的 `function`/`property` 关键字成员（Cocoa 为 true，C# 为 false）。</summary>
+        protected virtual bool AllowCocoaInterfaceKeywords() => true;
 
         private MemberSyntax ParseClassFieldDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
@@ -1031,7 +1128,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new SeparatedSyntaxList<ParameterSyntax>(nodesAndSeparators.ToImmutable());
         }
 
-        private ParameterSyntax ParseParameter()
+        protected virtual ParameterSyntax ParseParameter()
         {
             // 双语法参数：Cocoa `name: Type` | C# `Type name`
             if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
@@ -1056,48 +1153,87 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new GlobalStatementSyntax(_syntaxTree, statement);
         }
 
-        private StatementSyntax ParseStatement()
+        protected StatementSyntax ParseStatement()
         {
+            StatementSyntax statement;
             switch (Current.Kind)
             {
                 case SyntaxKind.OpenBraceToken:
-                    return ParseBlockStatement();
-                case SyntaxKind.LetKeyword:
+                    statement = ParseBlockStatement();
+                    break;
                 case SyntaxKind.VarKeyword:
                 case SyntaxKind.ConstKeyword:
-                    return ParseVariableDeclaration();
+                    statement = ParseVariableDeclaration();
+                    break;
+                case SyntaxKind.LetKeyword:
+                    if (AllowLetKeyword())
+                    {
+                        statement = ParseVariableDeclaration();
+                    }
+                    else
+                    {
+                        ReportError(Current.Location, "'let' 是 Cocoa 语法；C# 方言请用 'var'。");
+                        NextToken();
+                        statement = ParseExpressionStatement();
+                    }
+
+                    break;
                 case SyntaxKind.IfKeyword:
-                    return ParseIfStatement();
+                    statement = ParseIfStatement();
+                    break;
                 case SyntaxKind.WhileKeyword:
-                    return ParseWhileStatement();
+                    statement = ParseWhileStatement();
+                    break;
                 case SyntaxKind.DoKeyword:
-                    return ParseDoWhileStatement();
+                    statement = ParseDoWhileStatement();
+                    break;
                 case SyntaxKind.ForKeyword:
-                    return ParseForStatement();
+                    statement = ParseForStatement();
+                    break;
                 case SyntaxKind.ForeachKeyword:
-                    return ParseForeachStatement();
+                    statement = ParseForeachStatement();
+                    break;
                 case SyntaxKind.SwitchKeyword:
-                    return ParseSwitchStatement();
+                    statement = ParseSwitchStatement();
+                    break;
                 case SyntaxKind.BreakKeyword:
-                    return ParseBreakStatement();
+                    statement = ParseBreakStatement();
+                    break;
                 case SyntaxKind.ContinueKeyword:
-                    return ParseContinueStatement();
+                    statement = ParseContinueStatement();
+                    break;
                 case SyntaxKind.ReturnKeyword:
-                    return ParseReturnStatement();
+                    statement = ParseReturnStatement();
+                    break;
                 default:
                     // C# 式局部变量：`type name [= expr]`
                     if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
                         Peek(1).Kind == SyntaxKind.IdentifierToken)
                     {
-                        return ParseCSharpStyleVariableDeclaration();
+                        statement = ParseCSharpStyleVariableDeclaration();
+                    }
+                    else
+                    {
+                        statement = ParseExpressionStatement();
                     }
 
-                    return ParseExpressionStatement();
+                    break;
             }
+
+            ConsumeStatementTerminator(statement);
+            return statement;
+        }
+
+        /// <summary>C# 方言是否允许 `let` 关键字（Cocoa 为 true，C# 为 false）。</summary>
+        protected virtual bool AllowLetKeyword() => true;
+
+        /// <summary>语句终止符钩子：Cocoa 分号可选（默认无操作，孤立 `;` 由块循环跳过）；C# 方言对需终止语句强制 `;`。</summary>
+        protected virtual void ConsumeStatementTerminator(StatementSyntax statement)
+        {
         }
 
         /// <summary>C# 式局部变量：`int x` / `int x = 10;`（无 var/let 关键字）。</summary>
-        private StatementSyntax ParseCSharpStyleVariableDeclaration()
+        protected StatementSyntax ParseCSharpStyleVariableDeclaration()
         {
             var type = ParsePrefixTypeClause();
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
@@ -1151,14 +1287,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new BlockStatementSyntax(_syntaxTree, openBraceToken, statements.ToImmutable(), closeBraceToken);
         }
 
-        private StatementSyntax ParseVariableDeclaration()
+        protected virtual StatementSyntax ParseVariableDeclaration()
         {
             var expected = Current.Kind == SyntaxKind.LetKeyword ? SyntaxKind.LetKeyword
                          : Current.Kind == SyntaxKind.ConstKeyword ? SyntaxKind.ConstKeyword
                          : SyntaxKind.VarKeyword;
-            var keyword = MatchToken(expected);
-
-            // C# 式：`const int x = 10;`（类型前置；const 才有此形式，let/var 无 C# 对应写法）
+            var keyword = MatchToken(expected);            // C# 式：`const int x = 10;`（类型前置；const 才有此形式，let/var 无 C# 对应写法）
             if (keyword.Kind == SyntaxKind.ConstKeyword &&
                 Current.Kind == SyntaxKind.IdentifierToken &&
                 Peek(1).Kind == SyntaxKind.IdentifierToken)
@@ -1271,7 +1405,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new WhileStatementSyntax(_syntaxTree, keyword, condition, body);
         }
 
-        private StatementSyntax ParseDoWhileStatement()
+        protected virtual StatementSyntax ParseDoWhileStatement()
         {
             var doKeyword = MatchToken(SyntaxKind.DoKeyword);
             var body = ParseStatement();
@@ -1281,7 +1415,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new DoWhileStatementSyntax(_syntaxTree, doKeyword, body, whileKeyword, condition);
         }
 
-        private StatementSyntax ParseForStatement()
+        protected virtual StatementSyntax ParseForStatement()
         {
             var keyword = MatchToken(SyntaxKind.ForKeyword);
 
@@ -1294,8 +1428,26 @@ namespace Cocoa.CodeAnalysis.Syntax
             return ParseRangeForStatement(keyword);
         }
 
+        /// <summary>for 头初始化钩子：Cocoa 支持 `var/let/const` 声明与表达式；C# 方言追加类型前置声明并拒绝 `let`。</summary>
+        protected virtual StatementSyntax? ParseForInitializer()
+        {
+            if (Current.Kind == SyntaxKind.LetKeyword ||
+                Current.Kind == SyntaxKind.VarKeyword ||
+                Current.Kind == SyntaxKind.ConstKeyword)
+            {
+                return ParseVariableDeclaration();
+            }
+
+            if (Current.Kind != SyntaxKind.SemicolonToken)
+            {
+                return new ExpressionStatementSyntax(_syntaxTree, ParseExpression());
+            }
+
+            return null;
+        }
+
         // 扫描括号内的 token 消歧：含顶层 ; → C 风格；含 to → range 次数/变量循环。
-        private bool IsCStyleForHeader()
+        protected bool IsCStyleForHeader()
         {
             var index = _position;
             var depth = 0;
@@ -1331,7 +1483,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return false;
         }
 
-        private StatementSyntax ParseRangeForStatement(SyntaxToken keyword)
+        protected StatementSyntax ParseRangeForStatement(SyntaxToken keyword)
         {
             SyntaxToken? openParenToken = null;
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
@@ -1379,21 +1531,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, closeParenToken, body);
         }
 
-        private StatementSyntax ParseCStyleForStatement(SyntaxToken keyword)
+        protected StatementSyntax ParseCStyleForStatement(SyntaxToken keyword)
         {
             var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
 
-            StatementSyntax? init = null;
-            if (Current.Kind == SyntaxKind.LetKeyword ||
-                Current.Kind == SyntaxKind.VarKeyword ||
-                Current.Kind == SyntaxKind.ConstKeyword)
-            {
-                init = ParseVariableDeclaration();
-            }
-            else if (Current.Kind != SyntaxKind.SemicolonToken)
-            {
-                init = new ExpressionStatementSyntax(_syntaxTree, ParseExpression());
-            }
+            var init = ParseForInitializer();
 
             var semicolonToken1 = MatchToken(SyntaxKind.SemicolonToken);
 
@@ -1417,7 +1559,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new CStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
         }
 
-        private StatementSyntax ParseForeachStatement()
+        protected virtual StatementSyntax ParseForeachStatement()
         {
             var keyword = MatchToken(SyntaxKind.ForeachKeyword);
 
@@ -1583,7 +1725,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ExpressionStatementSyntax(_syntaxTree, expression);
         }
 
-        private ExpressionSyntax ParseExpression()
+        protected ExpressionSyntax ParseExpression()
         {
             return ParseAssignmentExpression();
         }
@@ -1850,7 +1992,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 tokens.Add(new SyntaxToken(_syntaxTree, SyntaxKind.EndOfFileToken, end, "\0", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
             }
 
-            var holeParser = new Parser(_syntaxTree, tokens.ToImmutableArray());
+            var holeParser = CreateSubParser(tokens.ToImmutableArray());
             var expression = holeParser.ParseExpression();
 
             SyntaxToken? commaToken = null;
@@ -1899,7 +2041,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>格式说明符：<c>:</c> 之后到洞尾（不含闭合 <c>}</c>）的原始文本（C# 式无引号，如 <c>F2</c>/<c>g</c>/<c>0.00</c>）。</summary>
-        private SyntaxToken ParseFormatSpecifier(Parser holeParser, int end)
+        private SyntaxToken ParseFormatSpecifier(ParserCore holeParser, int end)
         {
             var formatStart = holeParser.Current.Position;
             var length = end - formatStart;

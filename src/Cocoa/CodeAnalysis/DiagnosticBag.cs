@@ -320,6 +320,13 @@ namespace Cocoa.CodeAnalysis
             ReportWarning(location, message);
         }
 
+        /// <summary>using 命名空间在程序/引用/.cod 库中都未解析时发警告（6e-M15；提示 Cocoa 不绑定 .NET BCL）。</summary>
+        internal void ReportUnresolvedUsing(TextLocation location, string name)
+        {
+            var message = $"Using namespace '{name}' could not be resolved in the program, references, or .cod libraries. (Cocoa 不绑定 .NET BCL：System.* 等需自带 System.co / 显式引用)";
+            ReportWarning(location, message);
+        }
+
         public void ReportUnreachableCode(SyntaxNode node)
         {
             switch (node.Kind)

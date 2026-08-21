@@ -32,13 +32,16 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var text = File.ReadAllText(fileName);
             var sourceText = SourceText.From(text, fileName);
+            var dialect = Path.GetExtension(fileName).Equals(".cs", StringComparison.OrdinalIgnoreCase)
+                ? LanguageDialect.CSharp
+                : LanguageDialect.Cocoa;
 
-            return Parse(sourceText);
+            return Parse(sourceText, dialect);
         }
 
-        private static void Parse(SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics)
+        private static void Parse(SyntaxTree syntaxTree, LanguageDialect dialect, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics)
         {
-            var parser = new Parser(syntaxTree);
+            var parser = ParserCore.Create(syntaxTree, dialect);
             root = parser.ParseCompilationUnit();
             diagnostics = parser.Diagnostics.ToImmutableArray();
         }
@@ -46,12 +49,29 @@ namespace Cocoa.CodeAnalysis.Syntax
         public static SyntaxTree Parse(string text)
         {
             var sourceText = SourceText.From(text);
-            return Parse(sourceText);
+            return Parse(sourceText, LanguageDialect.Cocoa);
+        }
+
+        public static SyntaxTree Parse(string text, LanguageDialect dialect)
+        {
+            var sourceText = SourceText.From(text);
+            return Parse(sourceText, dialect);
+        }
+
+        /// <summary>以严格 C# 方言解析文本（测试辅助，等价 <c>Parse(text, LanguageDialect.CSharp)</c>）。</summary>
+        public static SyntaxTree ParseCs(string text)
+        {
+            return Parse(text, LanguageDialect.CSharp);
         }
 
         public static SyntaxTree Parse(SourceText text)
         {
-            return new SyntaxTree(text, Parse);
+            return Parse(text, LanguageDialect.Cocoa);
+        }
+
+        public static SyntaxTree Parse(SourceText text, LanguageDialect dialect)
+        {
+            return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, dialect, out root, out diagnostics));
         }
 
         public static ImmutableArray<SyntaxToken> ParseTokens(string text, bool includeEndOfFile = false)

@@ -1,0 +1,13 @@
+name = CSharpDialect
+output = executable
+platform = x64
+entry = Main
+dotnetRuntime = net48
+
+[sources]
+*.cs
+
+[options]
+incremental = true
+debug = false
+outputPath = out

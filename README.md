@@ -3,7 +3,7 @@
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
 > 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs/开发计划.md`](docs/开发计划.md)）
-> 最新：6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）
+> 最新：6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；**6e-M15（2026-08-21）：双前端拆分 ✅ — `.co` 宽松主方言 / `.cs` 严格 C# 方言（`cocoa new csharp`、`cocoa app.cs`），按扩展名分派，特性全部共享（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）**
 
 ## 路线图（摘要）
 
@@ -33,6 +33,11 @@ cocoa hello.co
 # 交互式 REPL
 cocoa -i
 
+# C# 方言（.cs 严格子集）：扩展名即语言，.co 宽松 / .cs 严格（详见 docs/语法手册.md §46）
+cocoa new csharp MyApp
+cocoa hello.cs
+cocoa hello.cs -b native
+
 # 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net48，直接运行）
 cocoa build -p samples/Tutorial/Tutorial.cosln
 cocoa build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
@@ -49,6 +54,11 @@ cocoa build -p samples/Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
 # C# 式类语法 + 字段/自动属性初始化器（samples/CSharpClass，仅 IL 后端）
 cocoa build -p samples/CSharpClass/CSharpClass.coproj
 ./samples/CSharpClass/out/CSharpClass.exe
+
+# 纯 .cs 严格 C# 方言（Tutorial/CSharpDialect：类型前置/分号必选/namespace Foo;，native + dotnet 双后端，6e-M15）
+cocoa build -p samples/Tutorial/CSharpDialect/CSharpDialect.coproj -b native
+cocoa build -p samples/Tutorial/CSharpDialect/CSharpDialect.coproj -b dotnet
+./samples/Tutorial/CSharpDialect/out/CSharpDialect.exe
 
 # .cod 语义层程序集闭环（samples/CodLibrary：cocoa 库 → [references] 消费，native + dotnet 双后端）
 # mylib output=cocoa → .cod；app [references] 引用 → 编译期 IR 合并 → 独立 exe（CopyLocal 自动复制 .cod）

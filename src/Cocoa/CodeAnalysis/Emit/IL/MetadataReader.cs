@@ -112,6 +112,20 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return null;
         }
 
+        /// <summary>任一引用程序集中是否存在命名空间（类型命名空间 == ns 或在其下；6e-M15 using 解析警告用）。</summary>
+        public bool NamespaceExists(string namespaceName)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                if (assembly.ContainsNamespace(namespaceName))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>按「类型 FullName + 方法名 + 参数类型 FullName 列表」查找方法。</summary>
         public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, MetadataBuilder builder)
         {
@@ -603,6 +617,30 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             return null;
+        }
+
+        /// <summary>是否含命名空间（类型命名空间 == ns 或在其下；6e-M15 using 解析警告用）。</summary>
+        internal bool ContainsNamespace(string namespaceName)
+        {
+            if (_tableData == null)
+            {
+                return false;
+            }
+
+            var typeDefCount = RowCount(0x02);
+            for (var i = 0; i < typeDefCount; i++)
+            {
+                var row = _tableOffsets[0x02] + i * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                var nsIndex = ReadRef(_tableData, row + 4 + (_stringIsBig ? 4 : 2), _stringIsBig);
+                var ns = ReadString(nsIndex);
+
+                if (ns == namespaceName || ns.StartsWith(namespaceName + "."))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>在 TypeDef 的方法中按名 + 参数类型名匹配方法，解析签名。</summary>

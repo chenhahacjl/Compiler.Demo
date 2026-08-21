@@ -131,7 +131,7 @@ namespace Cocoa.CodeAnalysis
         /// </summary>
         public EvaluationResult Evaluate(Dictionary<VariableSymbol, object> variables)
         {
-            if (GlobalScope.Diagnostics.Any())
+            if (GlobalScope.Diagnostics.HasErrors())
             {
                 return new EvaluationResult(GlobalScope.Diagnostics, null);
             }
@@ -152,7 +152,7 @@ namespace Cocoa.CodeAnalysis
 
         public EvaluationResult Evaluate(string[] args, Dictionary<VariableSymbol, object> variables)
         {
-            if (GlobalScope.Diagnostics.Any())
+            if (GlobalScope.Diagnostics.HasErrors())
             {
                 return new EvaluationResult(GlobalScope.Diagnostics, null);
             }
@@ -223,7 +223,10 @@ namespace Cocoa.CodeAnalysis
                 .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
-            return IlEmitter.Emit(program, moduleName, ilReferences, outputPath, target, emitLibrary);
+            var backendDiagnostics = IlEmitter.Emit(program, moduleName, ilReferences, outputPath, target, emitLibrary);
+
+            // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印
+            return diagnostics.Concat(backendDiagnostics).ToImmutableArray();
         }
 
         /// <summary>
@@ -269,7 +272,7 @@ namespace Cocoa.CodeAnalysis
 
             NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);
 
-            return importWarnings;
+            return diagnostics.Concat(importWarnings).ToImmutableArray();
         }
 
         /// <summary>校验 `.cod` 库的 `requires` 与消费方后端匹配。</summary>
