@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class FunctionSymbol : Symbol
     {
-        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "")
+        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "", string? entryPoint = null, CharSet? charSet = null)
             : base(name)
         {
             Parameters = parameters;
@@ -19,6 +19,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             Visibility = visibility;
             BuiltinKind = builtinKind;
             Namespace = @namespace ?? "";
+            EntryPoint = entryPoint;
+            CharSet = charSet;
         }
 
         public override SymbolKind Kind => SymbolKind.Function;
@@ -29,6 +31,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsExtern { get; }
         public string? DllName { get; }
         public CallingConvention CallingConvention { get; }
+
+        /// <summary>DLL 导出名（≠ Cocoa 名时的别名映射，`extern(entry=…)`）；null = 用函数名。6e-M17 Step 5。</summary>
+        public string? EntryPoint { get; }
+
+        /// <summary>extern 编码格式（`extern(charset=…)` 函数级 / import 块级配置）；null = unicode。6e-M17 Step 5。</summary>
+        public CharSet? CharSet { get; }
 
         /// <summary>所属类（null = 顶层函数）。</summary>
         public ClassTypeSymbol? ContainingClass { get; }

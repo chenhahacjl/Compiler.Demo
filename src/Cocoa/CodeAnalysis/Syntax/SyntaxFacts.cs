@@ -178,6 +178,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.EnumKeyword;
                 case "extends":
                     return SyntaxKind.ExtendsKeyword;
+                case "extern":
+                    return SyntaxKind.ExternKeyword;
                 case "public":
                     return SyntaxKind.PublicKeyword;
                 case "private":
@@ -403,6 +405,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "enum";
                 case SyntaxKind.ExtendsKeyword:
                     return "extends";
+                case SyntaxKind.ExternKeyword:
+                    return "extern";
                 case SyntaxKind.PublicKeyword:
                     return "public";
                 case SyntaxKind.PrivateKeyword:

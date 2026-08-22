@@ -243,7 +243,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     i.GetDeclaredMethod(function.Name) != null ||
                     i.Properties.Any(p => p.Getter?.Name == function.Name || p.Setter?.Name == function.Name));
 
-            var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, null, callingConvention, isStatic: !isInstance)
+            var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, function.EntryPoint, callingConvention, isStatic: !isInstance, charSet: function.CharSet ?? CharSet.Unicode)
             {
                 Visibility = function.Visibility,
                 IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember,

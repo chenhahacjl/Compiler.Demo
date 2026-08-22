@@ -333,5 +333,59 @@ function Main()
             var diagnostic = Assert.Single(diagnostics);
             Assert.Contains("not found in export table of 'kernel32.dll'", diagnostic.Message);
         }
+
+        [Fact]
+        public void Native_ExternEntryAlias_ResolvesToRealExport()
+        {
+            // entry 别名：Cocoa 名 GetTickCountAlias 映射到 DLL 导出名 GetTickCount
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCountAlias(): int
+            extern(entry = GetTickCount)
+    }
+}
+
+function Main()
+{
+    var t = Kernel32.GetTickCountAlias()
+    if t > 0
+    {
+        Console.WriteLine(""ok"")
+    }
+}", "native-import-entry-alias", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Native_ExternCharsetAnsi_ReportsNotImplementedError()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+            extern(charset = ansi)
+    }
+}
+
+function Main()
+{
+    var v = Kernel32.GetTickCount()
+}
+");
+            var compilation = Compilation.Create(syntaxTree);
+            var exePath = GetExePath("native-import-ansi", X64);
+            var diagnostics = compilation.EmitNative("native-import-ansi", exePath, X64);
+
+            var diagnostic = Assert.Single(diagnostics);
+            Assert.Contains("charset = ansi，native 后端未实现", diagnostic.Message);
+        }
     }
 }

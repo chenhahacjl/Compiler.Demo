@@ -757,6 +757,8 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field(fn.Namespace.Length > 0 ? Str(fn.Namespace) : "-");
             w.Field(fn.ContainingClass != null ? registry.Get(fn.ContainingClass) : -1);
             w.Field(fn.BuiltinKind != null ? (int)fn.BuiltinKind.Value : -1);
+            w.Field(fn.EntryPoint != null ? Str(fn.EntryPoint) : "-");
+            w.Field(fn.CharSet != null ? (int)fn.CharSet.Value : -1);
             w.Field(fn.Parameters.Length);
             foreach (var p in fn.Parameters)
             {
@@ -1274,6 +1276,10 @@ namespace Cocoa.CodeAnalysis.Cod
             var ns = nsToken == "-" ? "" : nsToken;
             var containingClassId = reader.ExpectInt();
             var builtinKindValue = reader.ExpectInt();
+            var entryPointToken = reader.ExpectString();
+            var entryPoint = entryPointToken == "-" ? null : entryPointToken;
+            var charSetValue = reader.ExpectInt();
+            var charSet = charSetValue >= 0 ? (CharSet)charSetValue : (CharSet?)null;
             var paramCount = reader.ExpectInt();
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
             for (var i = 0; i < paramCount; i++)
@@ -1306,7 +1312,9 @@ namespace Cocoa.CodeAnalysis.Cod
                     callingConvention: cc,
                     containingClass: containingClass,
                     builtinKind: builtinKind,
-                    @namespace: ns);
+                    @namespace: ns,
+                    entryPoint: entryPoint,
+                    charSet: charSet);
             }
             else
             {
@@ -1317,7 +1325,9 @@ namespace Cocoa.CodeAnalysis.Cod
                     isExtern: isExtern,
                     dllName: dllName,
                     callingConvention: cc,
-                    @namespace: ns);
+                    @namespace: ns,
+                    entryPoint: entryPoint,
+                    charSet: charSet);
             }
 
             SetAt(symbolsById, id, function);

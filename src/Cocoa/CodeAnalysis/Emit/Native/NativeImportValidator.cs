@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using CharSet = Cocoa.CodeAnalysis.Symbols.CharSet;
 
 namespace Cocoa.CodeAnalysis.Emit.Native
 {
@@ -23,23 +24,31 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         {
             var builder = ImmutableArray.CreateBuilder<Diagnostic>();
 
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return builder.ToImmutable();
-            }
-
             foreach (var function in program.Functions.Keys)
             {
+                // 6e-M17 Step 5：native 路径遇 charset = ansi → 编译期诊断"未实现"（不静默错编）
+                if (function.IsExtern && function.CharSet == CharSet.Ansi)
+                {
+                    builder.Add(Diagnostic.Error(function.Declaration?.Identifier.Location ?? default,
+                        $"extern function '{function.Name}' 声明 charset = ansi，native 后端未实现（仅支持 unicode，见 docs/内部调用与互操作设计.md §5.3）。"));
+                    continue;
+                }
+
                 if (!function.IsExtern || function.DllName == null)
                 {
                     continue;
                 }
 
-                if (!TryResolveExport(function.DllName, function.Name, architecture))
+                if (!TryResolveExport(function.DllName, function.EntryPoint ?? function.Name, architecture))
                 {
-                    builder.Add(Diagnostic.Warning(function.Declaration!.Identifier.Location,
-                        $"import symbol '{function.Name}' not found in export table of '{function.DllName}'"));
+                    builder.Add(Diagnostic.Warning(function.Declaration?.Identifier.Location ?? default,
+                        $"import symbol '{function.EntryPoint ?? function.Name}' not found in export table of '{function.DllName}'"));
                 }
+            }
+
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return builder.ToImmutable();
             }
 
             return builder.ToImmutable();
@@ -95,10 +104,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native
             return File.Exists(Path.Combine(system32, fileName)) ? Path.Combine(system32, fileName) : null;
         }
 
-        [DllImport("kernel32.dll", EntryPoint = "LoadLibraryExW", CharSet = CharSet.Unicode, ExactSpelling = true)]
+        [DllImport("kernel32.dll", EntryPoint = "LoadLibraryExW", CharSet = System.Runtime.InteropServices.CharSet.Unicode, ExactSpelling = true)]
         private static extern IntPtr LoadLibraryExW(string lpFileName, IntPtr hFile, uint dwFlags);
 
-        [DllImport("kernel32.dll", EntryPoint = "GetProcAddress", CharSet = CharSet.Ansi, ExactSpelling = false)]
+        [DllImport("kernel32.dll", EntryPoint = "GetProcAddress", CharSet = System.Runtime.InteropServices.CharSet.Ansi, ExactSpelling = false)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
         [DllImport("kernel32.dll")]

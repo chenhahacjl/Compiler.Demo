@@ -191,6 +191,75 @@ class Kernel32
         }
 
         [Fact]
+        public void Parser_ExternMetadata_ParsesEntryAndCharset()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function MessageBoxW(hWnd: int, text: int, caption: int, type: int): int
+            extern(entry = MessageBoxA, charset = ansi)
+    }
+}");
+            var root = syntaxTree.Root;
+            var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var block = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(block.Members));
+
+            Assert.NotNull(function.ExternMetadata);
+            Assert.Equal(2, function.ExternMetadata!.Arguments.Length);
+            Assert.Equal("entry", function.ExternMetadata.Arguments[0].Key.Text);
+            Assert.Equal("MessageBoxA", function.ExternMetadata.Arguments[0].Value.Text);
+            Assert.Equal("charset", function.ExternMetadata.Arguments[1].Key.Text);
+            Assert.Equal("ansi", function.ExternMetadata.Arguments[1].Value.Text);
+            Assert.NotNull(function.ExternMetadata.OpenParenthesisToken);
+        }
+
+        [Fact]
+        public void Parser_ExternMetadata_NoParens_AlternativeForm()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+            extern entry = GetTickCount, charset = unicode
+    }
+}");
+            var root = syntaxTree.Root;
+            var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var block = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(block.Members));
+
+            Assert.NotNull(function.ExternMetadata);
+            Assert.Null(function.ExternMetadata!.OpenParenthesisToken);
+            Assert.Equal("entry", function.ExternMetadata.Arguments[0].Key.Text);
+            Assert.Equal("charset", function.ExternMetadata.Arguments[1].Key.Text);
+        }
+
+        [Fact]
+        public void Parser_ImportBlock_BlockLevelCharsetKey()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class User32
+{
+    import user32.dll charset = unicode
+    {
+        static stdcall function MessageBeep(uType: int): int
+    }
+}");
+            var root = syntaxTree.Root;
+            var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var block = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
+
+            Assert.Equal("charset", block.CharsetKey!.Text);
+            Assert.Equal("unicode", block.CharsetValue!.Text);
+            Assert.Equal("user32.dll", block.DllName);
+        }
+
+        [Fact]
         public void Parser_SyscallFunction_ClassMethod_ParsesNoBody()
         {
             var syntaxTree = SyntaxTree.Parse(@"

@@ -484,11 +484,37 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>顶层位置式 `import <dll>` 是否允许（6e-M17 Step 4 起废弃，双方言一律拒绝 → false）。</summary>
         protected virtual bool AllowTopLevelImport() => false;
 
-        /// <summary>解析 import 块：`import <dll> { static extern ... }`（6e-M17 Step 4，仅作类成员）。</summary>
+        /// <summary>解析 import 块：`import <dll> { static extern ... }`（6e-M17 Step 4，仅作类成员）；可选块级键 `charset = unicode`（Step 5）。</summary>
         private MemberSyntax ParseImportBlock()
         {
             var importKeyword = MatchToken(SyntaxKind.ImportKeyword);
             var nameTokens = ParseQualifiedName();
+
+            // 块级 charset 键（可选，括号宽松）：`import user32.dll charset = unicode` / `import (user32.dll charset = unicode)`
+            SyntaxToken? blockCharsetKey = null;
+            SyntaxToken? blockCharsetValue = null;
+            SyntaxToken? blockOpenParen = null;
+            SyntaxToken? blockCloseParen = null;
+
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                blockOpenParen = NextToken();
+            }
+
+            if (Current.Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.EqualsToken &&
+                Current.Text == "charset")
+            {
+                blockCharsetKey = NextToken();
+                MatchToken(SyntaxKind.EqualsToken);
+                blockCharsetValue = MatchToken(SyntaxKind.IdentifierToken);
+            }
+
+            if (blockOpenParen != null)
+            {
+                blockCloseParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
 
             var members = ImmutableArray.CreateBuilder<MemberSyntax>();
@@ -507,7 +533,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new ImportBlockSyntax(_syntaxTree, importKeyword, nameTokens, openBraceToken, members.ToImmutable(), closeBraceToken);
+            return new ImportBlockSyntax(_syntaxTree, importKeyword, nameTokens, blockOpenParen, blockCharsetKey, blockCharsetValue, blockCloseParen, openBraceToken, members.ToImmutable(), closeBraceToken);
         }
 
         protected virtual MemberSyntax ParseUsingDirective()
@@ -596,6 +622,10 @@ namespace Cocoa.CodeAnalysis.Syntax
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             var type = ParseOptionalTypeClause();
+
+            // extern 元数据子句（6e-M17 Step 5）：`extern(entry=…, charset=…)` / `extern entry=…, charset=…`
+            var externMetadata = ParseOptionalExternMetadata();
+
             BlockStatementSyntax? body = null;
 
             // 表达式体函数：`function Foo(): int => expr`（合成 `{ return expr; }`）
@@ -613,7 +643,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             // extern（stdcall/cdecl）与 abstract 方法无方法体
             else
             {
-                var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+                var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword) || externMetadata != null;
                 var isAbstract = modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
                 var isSyscall = modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
                 if ((!isExtern && !isAbstract && !isSyscall) || Current.Kind == SyntaxKind.OpenBraceToken)
@@ -622,7 +652,52 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body, externMetadata);
+        }
+
+        /// <summary>解析可选的 extern 元数据子句：`extern(entry=…, charset=…)` 或 `extern entry=…, charset=…`（括号可选，命名键值，逗号分隔）。</summary>
+        private ExternMetadataSyntax? ParseOptionalExternMetadata()
+        {
+            if (Current.Kind != SyntaxKind.ExternKeyword)
+            {
+                return null;
+            }
+
+            var externKeyword = NextToken();
+            SyntaxToken? openParen = null;
+            SyntaxToken? closeParen = null;
+
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParen = NextToken();
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<ExternMetadataArgumentSyntax>();
+            while (Current.Kind != SyntaxKind.CloseParenthesisToken &&
+                   Current.Kind != SyntaxKind.EndOfFileToken &&
+                   (openParen != null || Current.Kind != SyntaxKind.OpenBraceToken))
+            {
+                var key = MatchToken(SyntaxKind.IdentifierToken);
+                var equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                var value = MatchToken(SyntaxKind.IdentifierToken);
+                arguments.Add(new ExternMetadataArgumentSyntax(_syntaxTree, key, equalsToken, value));
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (openParen != null)
+            {
+                closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+
+            return new ExternMetadataSyntax(_syntaxTree, externKeyword, openParen, arguments.ToImmutable(), closeParen);
         }
 
         private MemberSyntax ParseClassDeclaration(ImmutableArray<SyntaxToken> modifiers)

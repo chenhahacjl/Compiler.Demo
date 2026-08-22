@@ -1442,12 +1442,13 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null)
+        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
         {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
             var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
-            var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+            var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword) ||
+                           syntax.ExternMetadata != null;
             // syscall/extern 方法缺省 public（System.Runtime.Runtime.Print 供 System.Console 封装层调用；extern 供类外限定调用）
             var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
@@ -1495,8 +1496,30 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 6e-M17 Step 5：extern 元数据（entry 别名 + charset 编码）——函数级覆盖块级/缺省
+            string? entryPoint = null;
+            CharSet? charSet = blockCharSet;
+            if (syntax.ExternMetadata != null)
+            {
+                foreach (var argument in syntax.ExternMetadata.Arguments)
+                {
+                    switch (argument.Key.Text)
+                    {
+                        case "entry":
+                            entryPoint = argument.Value.Text;
+                            break;
+                        case "charset":
+                            charSet = ParseCharSetValue(argument.Value);
+                            break;
+                        default:
+                            _diagnostics.ReportError(argument.Key.Location, $"未知 extern 元数据键 '{argument.Key.Text}'（支持 entry / charset，未来 setlasterror/exactspelling 预留）。");
+                            break;
+                    }
+                }
+            }
+
             // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
-            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: isExtern, dllName: dllName, callingConvention: GetCallingConvention(syntax), containingClass: classType, visibility: visibility, builtinKind: builtinKind)
+            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: isExtern, dllName: dllName, callingConvention: GetCallingConvention(syntax), containingClass: classType, visibility: visibility, builtinKind: builtinKind, entryPoint: entryPoint, charSet: charSet)
             {
                 IsStatic = isStatic || isSyscall,
                 IsVirtual = isVirtual,
@@ -1550,18 +1573,24 @@ namespace Cocoa.CodeAnalysis.Binding
         /// </summary>
         private void BindImportBlock(ImportBlockSyntax importBlock, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
+            // 块级 charset 键（6e-M17 Step 5）：块内函数缺省编码；缺省 unicode
+            var blockCharSet = importBlock.CharsetKey != null
+                ? ParseCharSetValue(importBlock.CharsetValue)
+                : CharSet.Unicode;
+
             foreach (var blockMember in importBlock.Members)
             {
                 if (blockMember is FunctionDeclarationSyntax functionDeclaration)
                 {
-                    // 块内只允许 extern 函数声明（stdcall/cdecl）；普通带体函数 → 诊断
-                    var isExternDecl = functionDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+                    // 块内只允许 extern 函数声明（stdcall/cdecl 或带 extern 元数据）；普通带体函数 → 诊断
+                    var isExternDecl = functionDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword) ||
+                                       functionDeclaration.ExternMetadata != null;
                     if (!isExternDecl)
                     {
                         _diagnostics.ReportImportBlockOnlyExternFunctions(functionDeclaration.Identifier.Location);
                     }
 
-                    var method = BindClassMethodDeclaration(functionDeclaration, classType, dllName: importBlock.DllName);
+                    var method = BindClassMethodDeclaration(functionDeclaration, classType, dllName: importBlock.DllName, blockCharSet: blockCharSet);
 
                     if (!classType.HasDeclaredMethodSignature(functionDeclaration.Identifier.Text, method))
                     {
@@ -1577,6 +1606,28 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     _diagnostics.ReportImportBlockOnlyExternFunctions(blockMember.Location);
                 }
+            }
+        }
+
+        /// <summary>解析 charset 值文本（`ansi` / `unicode` / `auto`）；未知值 → unicode + 诊断。</summary>
+        private CharSet ParseCharSetValue(SyntaxToken? valueToken)
+        {
+            if (valueToken == null)
+            {
+                return CharSet.Unicode;
+            }
+
+            switch (valueToken.Text)
+            {
+                case "ansi":
+                    return CharSet.Ansi;
+                case "auto":
+                    return CharSet.Auto;
+                case "unicode":
+                    return CharSet.Unicode;
+                default:
+                    _diagnostics.ReportError(valueToken.Location, $"未知 charset 值 '{valueToken.Text}'（支持 ansi / unicode / auto）。");
+                    return CharSet.Unicode;
             }
         }
 

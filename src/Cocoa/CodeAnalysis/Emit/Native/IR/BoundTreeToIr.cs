@@ -1175,7 +1175,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(i), IrOperand.Reg(value)));
             }
 
-            var import = new IrImport(function.DllName!, function.Name, function.CallingConvention == CallingConvention.Cdecl);
+            var import = new IrImport(function.DllName!, function.EntryPoint ?? function.Name, function.CallingConvention == CallingConvention.Cdecl);
             if (!_irProgram.Imports.Contains(import))
             {
                 _irProgram.Imports.Add(import);

@@ -334,6 +334,61 @@ namespace System
         }
 
         [Fact]
+        public void Cod_ExternEntryPointCharSet_RoundTrips()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace System
+{
+    class Kernel32
+    {
+        import kernel32.dll
+        {
+            static stdcall function GetTickCountAlias(): int
+                extern(entry = GetTickCount, charset = ansi)
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var cod = CodSerializer.Read(File.ReadAllText(output));
+
+            var kernel32 = Assert.Single(cod.Classes, c => c.Name == "Kernel32");
+            var method = Assert.Single(kernel32.Methods, m => m.Name == "GetTickCountAlias");
+
+            Assert.True(method.IsExtern);
+            Assert.Equal("kernel32.dll", method.DllName);
+            Assert.Equal("GetTickCount", method.EntryPoint);
+            Assert.Equal(CharSet.Ansi, method.CharSet);
+        }
+
+        [Fact]
+        public void Cod_ExternDefaultCharsetUnicode_WhenNoMetadata()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace System
+{
+    class Kernel32
+    {
+        import kernel32.dll
+        {
+            static stdcall function GetTickCount(): int
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var cod = CodSerializer.Read(File.ReadAllText(output));
+
+            var kernel32 = Assert.Single(cod.Classes, c => c.Name == "Kernel32");
+            var method = Assert.Single(kernel32.Methods, m => m.Name == "GetTickCount");
+
+            Assert.Null(method.EntryPoint);
+            Assert.Equal(CharSet.Unicode, method.CharSet);
+        }
+
+        [Fact]
         public void Cod_ContainerClass_StaticMethod_EndToEnd()
         {
             var dir = NewDir();

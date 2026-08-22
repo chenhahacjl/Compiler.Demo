@@ -116,12 +116,88 @@ function Main()
             var methodDefRow = FindMethodRow(tables, strings, "GetCurrentProcessId");
 
             Assert.Equal(methodDefRow, impl.MemberForwarded >> 1);
-            Assert.Equal(0x0302, impl.MappingFlags);
+            Assert.Equal(0x0304, impl.MappingFlags); // StdCall | CharSetUnicode（6e-M17 Step 5 缺省 unicode）
             Assert.Equal("GetCurrentProcessId", impl.ImportName);
             Assert.Equal(1, impl.ImportScope);
 
             var moduleRefOffset = TableOffset(tables, (int)TableId.ModuleRef);
             Assert.Equal("kernel32.dll", ReadModuleRefName(tables, strings, moduleRefOffset));
+        }
+
+        [Fact]
+        public void EmitPipeline_ExternEntryAlias_WritesAliasAsImportName()
+        {
+            var source = @"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCountAlias(): int
+            extern(entry = GetTickCount, charset = unicode)
+    }
+}
+
+function Main()
+{
+    var t = Kernel32.GetTickCountAlias()
+    Console.WriteLine(t)
+}";
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", "pinvoke-alias-" + Guid.NewGuid().ToString("N") + ".exe");
+            var diagnostics = compilation.Emit("test", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
+
+            Assert.Empty(diagnostics);
+
+            var root = GetMetadataRoot(File.ReadAllBytes(exePath));
+            var tables = ReadTableStream(root);
+            var strings = ReadStringsStream(root);
+
+            Assert.Equal(1, RowCount(tables, (int)TableId.ImplMap));
+
+            var implMapOffset = TableOffset(tables, (int)TableId.ImplMap);
+            var impl = ReadImplMap(tables, strings, implMapOffset);
+
+            // entry 别名 → ImplMap.ImportName 用别名；方法名仍为 Cocoa 名
+            Assert.Equal("GetTickCount", impl.ImportName);
+            Assert.Equal(0x0304, impl.MappingFlags); // StdCall | CharSetUnicode
+        }
+
+        [Fact]
+        public void EmitPipeline_ExternCharsetAnsi_WritesAnsiBit()
+        {
+            var source = @"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+            extern(charset = ansi)
+    }
+}
+
+function Main()
+{
+    var t = Kernel32.GetTickCount()
+    Console.WriteLine(t)
+}";
+            var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", "pinvoke-ansi-" + Guid.NewGuid().ToString("N") + ".exe");
+            var diagnostics = compilation.Emit("test", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, exePath);
+
+            Assert.Empty(diagnostics);
+
+            var root = GetMetadataRoot(File.ReadAllBytes(exePath));
+            var tables = ReadTableStream(root);
+            var strings = ReadStringsStream(root);
+
+            var implMapOffset = TableOffset(tables, (int)TableId.ImplMap);
+            var impl = ReadImplMap(tables, strings, implMapOffset);
+
+            Assert.Equal(0x0302, impl.MappingFlags); // StdCall | CharSetAnsi
         }
 
         private static MethodDefinitionHandle FindMethodHandle(System.Reflection.Metadata.MetadataReader md, string name) =>
@@ -212,19 +288,19 @@ function Main()
 
             var aImpl = ReadImplMap(tables, strings, implMapOffset);
             Assert.Equal(2, aImpl.MemberForwarded >> 1); // method row 2 = A
-            Assert.Equal(0x0302, aImpl.MappingFlags);    // StdCall | CharSetAnsi
+            Assert.Equal(0x0304, aImpl.MappingFlags);    // StdCall | CharSetUnicode（缺省）
             Assert.Equal("A", aImpl.ImportName);
             Assert.Equal(1, aImpl.ImportScope);          // first ModuleRef = kernel32.dll
 
             var bImpl = ReadImplMap(tables, strings, implMapOffset + 8);
             Assert.Equal(3, bImpl.MemberForwarded >> 1); // B
-            Assert.Equal(0x0202, bImpl.MappingFlags);    // Cdecl | CharSetAnsi
+            Assert.Equal(0x0204, bImpl.MappingFlags);    // Cdecl | CharSetUnicode（缺省）
             Assert.Equal("B", bImpl.ImportName);
             Assert.Equal(1, bImpl.ImportScope);
 
             var cImpl = ReadImplMap(tables, strings, implMapOffset + 16);
             Assert.Equal(4, cImpl.MemberForwarded >> 1); // C
-            Assert.Equal(0x0102, cImpl.MappingFlags);    // Winapi | CharSetAnsi
+            Assert.Equal(0x0104, cImpl.MappingFlags);    // Winapi | CharSetUnicode（缺省）
             Assert.Equal("C", cImpl.ImportName);
             Assert.Equal(2, cImpl.ImportScope);          // user32.dll
         }

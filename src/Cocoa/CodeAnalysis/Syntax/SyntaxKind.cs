@@ -85,6 +85,7 @@ ColonToken,               // :
         ElseKeyword,              // else
         EnumKeyword,              // enum
         ExtendsKeyword,           // extends
+        ExternKeyword,            // extern（extern 元数据子句，6e-M17 Step 5）
         FalseKeyword,             // false
         ForKeyword,               // for
         ForeachKeyword,           // foreach
@@ -135,6 +136,8 @@ ColonToken,               // :
         UsingDirective,           // using 导入
         ImportClause,             // import 声明（顶层位置式，6e-M17 Step 4 废弃）
         ImportBlock,              // import 块（`import <dll> { static extern ... }`，类成员）
+        ExternMetadata,           // extern 元数据子句（`extern(entry=…, charset=…)`，6e-M17 Step 5）
+        ExternMetadataArgument,   // extern 元数据键值对（`key = value`）
         GlobalStatement,          // 全局声明
         Parameter,                // 参数
         TypeClause,               // 类型 语句

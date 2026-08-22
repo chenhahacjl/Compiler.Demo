@@ -14,7 +14,7 @@
 
     (arr 5)
 
-    (fn 7 Sum 5 0 - 0 - 0 -1 1
+    (fn 7 Sum 5 0 - 0 - 0 -1 - -1 1
       (par 8 a 6 0)
 )
 
@@ -22,73 +22,73 @@
 
     (arr 9)
 
-    (fn 11 Sum 9 0 - 0 - 0 -1 1
+    (fn 11 Sum 9 0 - 0 - 0 -1 - -1 1
       (par 12 a 10 0)
 )
 
-    (fn 13 Min 5 0 - 0 - 0 -1 1
+    (fn 13 Min 5 0 - 0 - 0 -1 - -1 1
       (par 14 a 6 0)
 )
 
-    (fn 15 Min 9 0 - 0 - 0 -1 1
+    (fn 15 Min 9 0 - 0 - 0 -1 - -1 1
       (par 16 a 10 0)
 )
 
-    (fn 17 Max 5 0 - 0 - 0 -1 1
+    (fn 17 Max 5 0 - 0 - 0 -1 - -1 1
       (par 18 a 6 0)
 )
 
-    (fn 19 Max 9 0 - 0 - 0 -1 1
+    (fn 19 Max 9 0 - 0 - 0 -1 - -1 1
       (par 20 a 10 0)
 )
 
-    (fn 21 AverageD 9 0 - 0 - 0 -1 1
+    (fn 21 AverageD 9 0 - 0 - 0 -1 - -1 1
       (par 22 a 6 0)
 )
 
-    (fn 23 AverageD 9 0 - 0 - 0 -1 1
+    (fn 23 AverageD 9 0 - 0 - 0 -1 - -1 1
       (par 24 a 10 0)
 )
 
     (type bool)
 
-    (fn 26 Contains 25 0 - 0 - 0 -1 2
+    (fn 26 Contains 25 0 - 0 - 0 -1 - -1 2
       (par 27 a 6 0)
 
       (par 28 v 5 1)
 )
 
-    (fn 29 Contains 25 0 - 0 - 0 -1 2
+    (fn 29 Contains 25 0 - 0 - 0 -1 - -1 2
       (par 30 a 10 0)
 
       (par 31 v 9 1)
 )
 
-    (fn 32 IndexOf 5 0 - 0 - 0 -1 2
+    (fn 32 IndexOf 5 0 - 0 - 0 -1 - -1 2
       (par 33 a 6 0)
 
       (par 34 v 5 1)
 )
 
-    (fn 35 IndexOf 5 0 - 0 - 0 -1 2
+    (fn 35 IndexOf 5 0 - 0 - 0 -1 - -1 2
       (par 36 a 10 0)
 
       (par 37 v 9 1)
 )
 
-    (fn 38 Reverse 6 0 - 0 - 0 -1 1
+    (fn 38 Reverse 6 0 - 0 - 0 -1 - -1 1
       (par 39 a 6 0)
 )
 
-    (fn 40 Reverse 10 0 - 0 - 0 -1 1
+    (fn 40 Reverse 10 0 - 0 - 0 -1 - -1 1
       (par 41 a 10 0)
 )
 
-    (fn 42 Sort 6 0 - 0 - 0 -1 1
+    (fn 42 Sort 6 0 - 0 - 0 -1 - -1 1
       (par 43 a 6 0)
 )
 
-    (fn 44 Sort 10 0 - 0 - 0 -1 1
+    (fn 44 Sort 10 0 - 0 - 0 -1 - -1 1
       (par 45 a 10 0)
 )
 
@@ -96,69 +96,69 @@
 
     (type string)
 
-    (fn 48 WriteLine 46 0 - 0 - 1 -1 1
+    (fn 48 WriteLine 46 0 - 0 - 1 -1 - -1 1
       (par 49 text 47 0)
 )
 
-    (fn 50 WriteLine 46 0 - 0 - 1 -1 1
+    (fn 50 WriteLine 46 0 - 0 - 1 -1 - -1 1
       (par 51 text 5 0)
 )
 
-    (fn 52 WriteLine 46 0 - 0 - 1 -1 1
+    (fn 52 WriteLine 46 0 - 0 - 1 -1 - -1 1
       (par 53 text 9 0)
 )
 
-    (fn 54 WriteLine 46 0 - 0 - 1 -1 1
+    (fn 54 WriteLine 46 0 - 0 - 1 -1 - -1 1
       (par 55 text 25 0)
 )
 
     (type char)
 
-    (fn 57 WriteLine 46 0 - 0 - 1 -1 1
+    (fn 57 WriteLine 46 0 - 0 - 1 -1 - -1 1
       (par 58 text 56 0)
 )
 
     (type byte)
 
-    (fn 60 WriteLine 46 0 - 0 - 1 -1 1
+    (fn 60 WriteLine 46 0 - 0 - 1 -1 - -1 1
       (par 61 text 59 0)
 )
 
-    (fn 62 ReadLine 47 0 - 0 - 1 -1 0)
+    (fn 62 ReadLine 47 0 - 0 - 1 -1 - -1 0)
 
-    (fn 63 Max 5 0 - 0 - 2 -1 2
+    (fn 63 Max 5 0 - 0 - 2 -1 - -1 2
       (par 64 a 5 0)
 
       (par 65 b 5 1)
 )
 
-    (fn 66 Max 9 0 - 0 - 2 -1 2
+    (fn 66 Max 9 0 - 0 - 2 -1 - -1 2
       (par 67 a 9 0)
 
       (par 68 b 9 1)
 )
 
-    (fn 69 Min 5 0 - 0 - 2 -1 2
+    (fn 69 Min 5 0 - 0 - 2 -1 - -1 2
       (par 70 a 5 0)
 
       (par 71 b 5 1)
 )
 
-    (fn 72 Min 9 0 - 0 - 2 -1 2
+    (fn 72 Min 9 0 - 0 - 2 -1 - -1 2
       (par 73 a 9 0)
 
       (par 74 b 9 1)
 )
 
-    (fn 75 Abs 5 0 - 0 - 2 -1 1
+    (fn 75 Abs 5 0 - 0 - 2 -1 - -1 1
       (par 76 x 5 0)
 )
 
-    (fn 77 Abs 9 0 - 0 - 2 -1 1
+    (fn 77 Abs 9 0 - 0 - 2 -1 - -1 1
       (par 78 x 9 0)
 )
 
-    (fn 79 Clamp 5 0 - 0 - 2 -1 3
+    (fn 79 Clamp 5 0 - 0 - 2 -1 - -1 3
       (par 80 v 5 0)
 
       (par 81 lo 5 1)
@@ -166,7 +166,7 @@
       (par 82 hi 5 2)
 )
 
-    (fn 83 Clamp 9 0 - 0 - 2 -1 3
+    (fn 83 Clamp 9 0 - 0 - 2 -1 - -1 3
       (par 84 v 9 0)
 
       (par 85 lo 9 1)
@@ -174,39 +174,39 @@
       (par 86 hi 9 2)
 )
 
-    (fn 87 Sign 5 0 - 0 - 2 -1 1
+    (fn 87 Sign 5 0 - 0 - 2 -1 - -1 1
       (par 88 x 5 0)
 )
 
-    (fn 89 Sign 5 0 - 0 - 2 -1 1
+    (fn 89 Sign 5 0 - 0 - 2 -1 - -1 1
       (par 90 x 9 0)
 )
 
-    (fn 91 IsEven 25 0 - 0 - 2 -1 1
+    (fn 91 IsEven 25 0 - 0 - 2 -1 - -1 1
       (par 92 n 5 0)
 )
 
-    (fn 93 IsOdd 25 0 - 0 - 2 -1 1
+    (fn 93 IsOdd 25 0 - 0 - 2 -1 - -1 1
       (par 94 n 5 0)
 )
 
-    (fn 95 Pow 5 0 - 0 - 2 -1 2
+    (fn 95 Pow 5 0 - 0 - 2 -1 - -1 2
       (par 96 x 5 0)
 
       (par 97 exp 5 1)
 )
 
-    (fn 98 Factorial 5 0 - 0 - 2 -1 1
+    (fn 98 Factorial 5 0 - 0 - 2 -1 - -1 1
       (par 99 n 5 0)
 )
 
-    (fn 100 Gcd 5 0 - 0 - 2 -1 2
+    (fn 100 Gcd 5 0 - 0 - 2 -1 - -1 2
       (par 101 a 5 0)
 
       (par 102 b 5 1)
 )
 
-    (fn 103 Lcm 5 0 - 0 - 2 -1 2
+    (fn 103 Lcm 5 0 - 0 - 2 -1 - -1 2
       (par 104 a 5 0)
 
       (par 105 b 5 1)
@@ -214,79 +214,79 @@
 
     (type any)
 
-    (fn 107 Print 46 0 - 0 - 3 0 1
+    (fn 107 Print 46 0 - 0 - 3 0 - -1 1
       (par 108 text 106 0)
 )
 
-    (fn 109 Input 47 0 - 0 - 3 1 0)
+    (fn 109 Input 47 0 - 0 - 3 1 - -1 0)
 
-    (fn 110 Random 5 0 - 0 - 3 2 1
+    (fn 110 Random 5 0 - 0 - 3 2 - -1 1
       (par 111 max 5 0)
 )
 
-    (fn 112 Sleep 46 0 - 0 - 3 3 1
+    (fn 112 Sleep 46 0 - 0 - 3 3 - -1 1
       (par 113 ms 5 0)
 )
 
-    (fn 114 Now 5 0 - 0 - 3 4 0)
+    (fn 114 Now 5 0 - 0 - 3 4 - -1 0)
 
-    (fn 115 Exit 46 0 - 0 - 3 5 1
+    (fn 115 Exit 46 0 - 0 - 3 5 - -1 1
       (par 116 code 5 0)
 )
 
-    (fn 117 ToUpper 47 0 - 0 - 4 -1 1
+    (fn 117 ToUpper 47 0 - 0 - 4 -1 - -1 1
       (par 118 s 47 0)
 )
 
-    (fn 119 ToLower 47 0 - 0 - 4 -1 1
+    (fn 119 ToLower 47 0 - 0 - 4 -1 - -1 1
       (par 120 s 47 0)
 )
 
-    (fn 121 StartsWith 25 0 - 0 - 4 -1 2
+    (fn 121 StartsWith 25 0 - 0 - 4 -1 - -1 2
       (par 122 s 47 0)
 
       (par 123 prefix 47 1)
 )
 
-    (fn 124 EndsWith 25 0 - 0 - 4 -1 2
+    (fn 124 EndsWith 25 0 - 0 - 4 -1 - -1 2
       (par 125 s 47 0)
 
       (par 126 suffix 47 1)
 )
 
-    (fn 127 Contains 25 0 - 0 - 4 -1 2
+    (fn 127 Contains 25 0 - 0 - 4 -1 - -1 2
       (par 128 s 47 0)
 
       (par 129 sub 47 1)
 )
 
-    (fn 130 IndexOf 5 0 - 0 - 4 -1 2
+    (fn 130 IndexOf 5 0 - 0 - 4 -1 - -1 2
       (par 131 s 47 0)
 
       (par 132 sub 47 1)
 )
 
-    (fn 133 Reverse 47 0 - 0 - 4 -1 1
+    (fn 133 Reverse 47 0 - 0 - 4 -1 - -1 1
       (par 134 s 47 0)
 )
 
-    (fn 135 Replicate 47 0 - 0 - 4 -1 2
+    (fn 135 Replicate 47 0 - 0 - 4 -1 - -1 2
       (par 136 s 47 0)
 
       (par 137 n 5 1)
 )
 
-    (fn 138 CountChar 5 0 - 0 - 4 -1 2
+    (fn 138 CountChar 5 0 - 0 - 4 -1 - -1 2
       (par 139 s 47 0)
 
       (par 140 c 56 1)
 )
 
-    (fn 141 IsPalindrome 25 0 - 0 - 4 -1 1
+    (fn 141 IsPalindrome 25 0 - 0 - 4 -1 - -1 1
       (par 142 s 47 0)
 )
 
-    (fn 143 Trim 47 0 - 0 - 4 -1 1
+    (fn 143 Trim 47 0 - 0 - 4 -1 - -1 1
       (par 144 s 47 0)
 )
 

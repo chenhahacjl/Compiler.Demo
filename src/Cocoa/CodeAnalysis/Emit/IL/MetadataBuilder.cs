@@ -88,7 +88,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>我们自己的方法定义（MethodDef 表行 + 方法体）。</summary>
     internal sealed class IlMethodDef
     {
-        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body, string? dllName = null, string? importName = null, IlCallingConvention callingConvention = IlCallingConvention.Winapi, bool isStatic = true)
+        public IlMethodDef(string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, IlMethodBody? body, string? dllName = null, string? importName = null, IlCallingConvention callingConvention = IlCallingConvention.Winapi, bool isStatic = true, CharSet charSet = CharSet.Unicode)
         {
             Name = name;
             ReturnType = returnType;
@@ -98,6 +98,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ImportName = importName;
             CallingConvention = callingConvention;
             IsStatic = isStatic;
+            CharSet = charSet;
         }
 
         public string Name { get; }
@@ -112,6 +113,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlCallingConvention CallingConvention { get; }
         /// <summary>实例方法（含 this，签名 HAS_THIS）。</summary>
         public bool IsStatic { get; }
+
+        /// <summary>P/Invoke 编码格式（ImplMap CharSet 位）。6e-M17 Step 5。</summary>
+        public CharSet CharSet { get; }
 
         public Visibility Visibility { get; set; } = Visibility.Public;
 
@@ -929,7 +933,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                         IlCallingConvention.StdCall => 0x0300,
                         _ => 0x0100, // Winapi
                     };
-                    var mappingFlags = (ushort)(callConvMask | 0x0002 /* CharSetAnsi */);
+                    // CharSet 位（ECMA-335 II.22.14 / II.15.3）：Ansi=0x0002 Unicode=0x0004 Auto=0x0006（6e-M17 Step 5 起可配置）
+                    var charSetMask = method.CharSet switch
+                    {
+                        CharSet.Ansi => 0x0002,
+                        CharSet.Auto => 0x0006,
+                        _ => 0x0004, // Unicode
+                    };
+                    var mappingFlags = (ushort)(callConvMask | charSetMask);
                     writer.Write(mappingFlags);
                     WriteCoded((methodRow << 1) | 1, memberForwardedIsBig); // MemberForwarded: MethodDef, tag=1
                     WriteStringRef(method.ImportName ?? method.Name, stringIsBig);

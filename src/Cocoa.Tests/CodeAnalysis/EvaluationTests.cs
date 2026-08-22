@@ -1826,6 +1826,74 @@ function Main(): int
         }
 
         [Fact]
+        public void Evaluator_ExternMetadata_EntryAndCharset_NoDiagnostics()
+        {
+            var text = @"
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function MessageBoxW(hWnd: int, text: int, caption: int, type: int): int
+            extern(entry = MessageBoxA, charset = unicode)
+    }
+}
+
+function Main(): int
+{
+    return User32.MessageBoxW(0, 0, 0, 0)
+}";
+
+            AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_ImportBlock_BlockLevelCharset_NoDiagnostics()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll charset = unicode
+    {
+        static stdcall function GetTickCount(): int
+    }
+}";
+
+            AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_ExternMetadata_UnknownCharsetValue_ReportsError()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+            extern(charset = [utf16])
+    }
+}";
+
+            AssertDiagnostics(text, "未知 charset 值 'utf16'（支持 ansi / unicode / auto）。");
+        }
+
+        [Fact]
+        public void Evaluator_ExternMetadata_UnknownKey_ReportsError()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+            extern([exactspelling] = trueValue)
+    }
+}";
+
+            AssertDiagnostics(text, "未知 extern 元数据键 'exactspelling'（支持 entry / charset，未来 setlasterror/exactspelling 预留）。");
+        }
+
+        [Fact]
         public void Evaluator_SyscallFunction_ClassMethod_NoDiagnostics()
         {
             var text = @"using System

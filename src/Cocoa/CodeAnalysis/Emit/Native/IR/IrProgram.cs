@@ -69,7 +69,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         public int RegisterSize(IrVirtualRegister register) => RegisterSizes[register];
     }
 
-    /// <summary>导入规格：DLL 名 + 函数名 + x86 调用约定（cdecl 调用方清理）。x64 约定统一，Cdecl 忽略。</summary>
+    /// <summary>导入规格：DLL 名 + 函数名（DLL 导出名，已含 entry 别名）+ x86 调用约定（cdecl 调用方清理）。x64 约定统一，Cdecl 忽略。</summary>
     internal readonly record struct IrImport(string DllName, string Name, bool Cdecl)
     {
         public override string ToString() => DllName + "!" + Name;
