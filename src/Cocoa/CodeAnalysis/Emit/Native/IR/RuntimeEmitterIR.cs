@@ -98,6 +98,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     EmitIdiv64();
                     _ = BeginFunction("Irem64", 4, 4, 4, 4);
                     EmitIrem64();
+                    // 6e-M21 Phase 5：无符号 64 位除/余（x64 内联 xor edx + div）
+                    _ = BeginFunction("Udiv64", 4, 4, 4, 4);
+                    EmitUdiv64();
+                    _ = BeginFunction("Urem64", 4, 4, 4, 4);
+                    EmitUrem64();
                 }
                 if (_isX64)
                 {
@@ -4366,6 +4371,131 @@ Store(obj, 0, lenChars, 4);
                 Jcc(IrCond.Equal, rPos);
                 Neg64Pair(rLo, rHi);
                 Mark(rPos);
+
+                var r = NewReg(8);
+                var rbuf = NewReg(8);
+                var rscratch = NewReg(8);
+                LeaSlot(rbuf, rscratch);
+                Store(rbuf, 0, rLo, 4);
+                Store(rbuf, 4, rHi, 4);
+                Load(r, rbuf, 0, 8);
+                StoreRet(r);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
+            // Udiv64(aLo,aHi,bLo,bHi) → 商 EDX:EAX（6e-M21 Phase 5，无符号恢复余数法）
+            // 与 Idiv64 共用除法核心结构，无符号修正步骤。
+            // ------------------------------------------------------------------
+
+            private void EmitUdiv64()
+            {
+                var aLo = _args[0];
+                var aHi = _args[1];
+                var bLo = _args[2];
+                var bHi = _args[3];
+
+                var qLo = NewReg(4);
+                var qHi = NewReg(4);
+                var rLo = NewReg(4);
+                var rHi = NewReg(4);
+                Const(qLo, 0);
+                Const(qHi, 0);
+                Const(rLo, 0);
+                Const(rHi, 0);
+
+                var bz = NewReg(4);
+                Or(bz, bLo, bHi);
+                Cmp(bz, 0);
+                var notZero = NewLabel();
+                Jcc(IrCond.NotEqual, notZero);
+                CallRuntime(null, "DivByZero");
+                Mark(notZero);
+
+                var bit = C(4, 63);
+                var bitLoop = NewLabel();
+                var bitDone = NewLabel();
+                Mark(bitLoop);
+                Cmp(bit, 0);
+                Jcc(IrCond.Less, bitDone);
+
+                ShiftLeft64(rLo, rHi);
+                var aBitReg = NewReg(4);
+                LoadABit(aBitReg, aLo, aHi, bit);
+                Or(rLo, rLo, aBitReg);
+
+                var cmpRes = NewReg(4);
+                Uge64(cmpRes, rLo, rHi, bLo, bHi);
+                var skipSub = NewLabel();
+                Cmp(cmpRes, 0);
+                Jcc(IrCond.Equal, skipSub);
+                Sub64(rLo, rHi, bLo, bHi);
+                SetBit64(qLo, qHi, bit);
+                Mark(skipSub);
+
+                SubI(bit, bit, 1);
+                Jmp(bitLoop);
+                Mark(bitDone);
+
+                var q = NewReg(8);
+                var qbuf = NewReg(8);
+                var qscratch = NewReg(8);
+                LeaSlot(qbuf, qscratch);
+                Store(qbuf, 0, qLo, 4);
+                Store(qbuf, 4, qHi, 4);
+                Load(q, qbuf, 0, 8);
+                StoreRet(q);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            private void EmitUrem64()
+            {
+                var aLo = _args[0];
+                var aHi = _args[1];
+                var bLo = _args[2];
+                var bHi = _args[3];
+
+                var qLo = NewReg(4);
+                var qHi = NewReg(4);
+                var rLo = NewReg(4);
+                var rHi = NewReg(4);
+                Const(qLo, 0);
+                Const(qHi, 0);
+                Const(rLo, 0);
+                Const(rHi, 0);
+
+                var bz = NewReg(4);
+                Or(bz, bLo, bHi);
+                Cmp(bz, 0);
+                var notZero = NewLabel();
+                Jcc(IrCond.NotEqual, notZero);
+                CallRuntime(null, "DivByZero");
+                Mark(notZero);
+
+                var bit = C(4, 63);
+                var bitLoop = NewLabel();
+                var bitDone = NewLabel();
+                Mark(bitLoop);
+                Cmp(bit, 0);
+                Jcc(IrCond.Less, bitDone);
+
+                ShiftLeft64(rLo, rHi);
+                var aBitReg = NewReg(4);
+                LoadABit(aBitReg, aLo, aHi, bit);
+                Or(rLo, rLo, aBitReg);
+
+                var cmpRes = NewReg(4);
+                Uge64(cmpRes, rLo, rHi, bLo, bHi);
+                var skipSub = NewLabel();
+                Cmp(cmpRes, 0);
+                Jcc(IrCond.Equal, skipSub);
+                Sub64(rLo, rHi, bLo, bHi);
+                SetBit64(qLo, qHi, bit);
+                Mark(skipSub);
+
+                SubI(bit, bit, 1);
+                Jmp(bitLoop);
+                Mark(bitDone);
 
                 var r = NewReg(8);
                 var rbuf = NewReg(8);

@@ -171,7 +171,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
-            type == TypeSymbol.Double || type == TypeSymbol.Int64 || type.ElementType != null;
+            type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
+            type.ElementType != null;
 
         // ------------------------------------------------------------------
         // 函数
@@ -482,9 +483,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitConst(intValue);
             }
 
+            // 6e-M21 Phase 5：8/16/32 位整数常量统一按 32 位槽发射
+            if (value is sbyte or short or byte or ushort or uint)
+            {
+                return EmitConst((int)System.Convert.ToInt64(value));
+            }
+
             if (value is long longConstValue)
             {
                 return EmitLongConst(longConstValue);
+            }
+
+            if (value is ulong ulongConstValue)
+            {
+                return EmitLongConst(unchecked((long)ulongConstValue));
             }
 
             if (value is bool boolValue)
@@ -526,9 +538,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitConst(intValue);
             }
 
+            // 6e-M21 Phase 5：8/16/32 位整数常量统一按 32 位槽发射
+            if (value is sbyte or short or byte or ushort or uint)
+            {
+                return EmitConst((int)System.Convert.ToInt64(value));
+            }
+
             if (value is long longValue)
             {
                 return EmitLongConst(longValue);
+            }
+
+            if (value is ulong ulongLiteral)
+            {
+                return EmitLongConst(unchecked((long)ulongLiteral));
             }
 
             if (value is bool boolValue)
@@ -583,17 +606,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private static int ElementSize(TypeSymbol type)
         {
-            if (type == TypeSymbol.Boolean)
+            if (type == TypeSymbol.Boolean || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8)
             {
                 return 1;
             }
 
-            if (type == TypeSymbol.UInt8)
-            {
-                return 1;
-            }
-
-            if (type == TypeSymbol.Char)
+            if (type == TypeSymbol.Char || type == TypeSymbol.UInt16 || type == TypeSymbol.Int16)
             {
                 return 2;
             }
@@ -603,12 +621,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return 4;
             }
 
-            if (type == TypeSymbol.Int64)
+            if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 || type == TypeSymbol.Double)
             {
                 return 8;
             }
 
-            return type == TypeSymbol.Int32 ? 4 : 8;
+            if (type == TypeSymbol.Float)
+            {
+                return 4;
+            }
+
+            return type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 ? 4 : 8;
         }
 
         // ------------------------------------------------------------------
@@ -1019,12 +1042,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitRuntimeBinary(node, "ObjectEquals", 4, invert: op == BoundBinaryOperatorKind.NotEquals);
             }
 
-            if (node.Left.Type == TypeSymbol.Double)
+            if (node.Left.Type.IsFloat)
             {
                 return EmitFloatBinary(node);
             }
 
-            if (node.Left.Type == TypeSymbol.Int64)
+            if (node.Left.Type == TypeSymbol.Int64 || node.Left.Type == TypeSymbol.UInt64)
             {
                 return EmitLongBinary(node);
             }
@@ -1032,6 +1055,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
             var result = AllocateRegister(4);
+
+            // 6e-M21 Phase 5：8/16/32 位整数统一在 32 位槽运算，无符号类型选择无符号语义指令
+            var isUnsigned = node.Left.Type.IsInteger && !node.Left.Type.IsSigned;
 
             switch (op)
             {
@@ -1055,12 +1081,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundBinaryOperatorKind.Division:
                     Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(IrOpCode.Idiv, result, IrOperand.Reg(right)));
+                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Udiv : IrOpCode.Idiv, result, IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Modulo:
                     Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(IrOpCode.Irem, result, IrOperand.Reg(right)));
+                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Urem : IrOpCode.Irem, result, IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftLeft:
@@ -1068,7 +1094,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
-                    Add(instructions, new IrInstruction(IrOpCode.Sar, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    // 无符号类型为逻辑右移（Shr），有符号为算术右移（Sar）
+                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Shr : IrOpCode.Sar, result, IrOperand.Reg(left), IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseOr:
@@ -1092,22 +1119,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundBinaryOperatorKind.Less:
                     Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.Less)));
+                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.Below : IrCond.Less))));
                     break;
 
                 case BoundBinaryOperatorKind.LessOrEquals:
                     Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.LessOrEqual)));
+                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.BelowOrEqual : IrCond.LessOrEqual))));
                     break;
 
                 case BoundBinaryOperatorKind.Greater:
                     Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.Greater)));
+                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.Above : IrCond.Greater))));
                     break;
 
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.GreaterOrEqual)));
+                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.AboveOrEqual : IrCond.GreaterOrEqual))));
                     break;
 
                 default:
@@ -1117,7 +1144,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return result;
         }
 
-        /// <summary>long 二元运算（6e-M19 M1）：算术/位/移位/比较走 64 位 IR 指令。</summary>
+        /// <summary>long/u64 二元运算（6e-M19 M1）：算术/位/移位/比较走 64 位 IR 指令；u64 无符号语义（Phase 5）。</summary>
         private IrVirtualRegister EmitLongBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
@@ -1125,6 +1152,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
             var result = AllocateRegister(8);
+
+            // 6e-M21 Phase 5：u64 走无符号语义（Udiv64/Urem64、Shr64 逻辑右移、无符号比较）
+            var isUnsigned = node.Left.Type == TypeSymbol.UInt64;
 
             switch (op)
             {
@@ -1142,12 +1172,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundBinaryOperatorKind.Division:
                     Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(IrOpCode.Idiv64, result, IrOperand.Reg(right)));
+                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Udiv64 : IrOpCode.Idiv64, result, IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Modulo:
                     Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(IrOpCode.Irem64, result, IrOperand.Reg(right)));
+                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Urem64 : IrOpCode.Irem64, result, IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseAnd:
@@ -1169,8 +1199,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
-                    // C# long >> 为算术右移（符号扩展），与 int >> 一致
-                    Add(instructions, new IrInstruction(IrOpCode.Sar64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64）
+                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Shr64 : IrOpCode.Sar64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Equals:
@@ -1187,10 +1217,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         {
                             BoundBinaryOperatorKind.Equals => IrCond.Equal,
                             BoundBinaryOperatorKind.NotEquals => IrCond.NotEqual,
-                            BoundBinaryOperatorKind.Less => IrCond.Less,
-                            BoundBinaryOperatorKind.LessOrEquals => IrCond.LessOrEqual,
-                            BoundBinaryOperatorKind.Greater => IrCond.Greater,
-                            _ => IrCond.GreaterOrEqual,
+                            BoundBinaryOperatorKind.Less => isUnsigned ? IrCond.Below : IrCond.Less,
+                            BoundBinaryOperatorKind.LessOrEquals => isUnsigned ? IrCond.BelowOrEqual : IrCond.LessOrEqual,
+                            BoundBinaryOperatorKind.Greater => isUnsigned ? IrCond.Above : IrCond.Greater,
+                            _ => isUnsigned ? IrCond.AboveOrEqual : IrCond.GreaterOrEqual,
                         };
                         Add(instructions, new IrInstruction(IrOpCode.Setcc, boolResult, IrOperand.Constant((int)cond)));
                         return boolResult;
@@ -1401,7 +1431,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.UInt8)
+            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.UInt8 ||
+                     type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
+                     type == TypeSymbol.UInt32)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(intFn), IrOperand.Constant(0)));
@@ -1428,9 +1460,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int64)
+            else if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64)
             {
-                // long 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
+                // long/ulong 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
                 Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
                 var text = AllocateRegister(8);
                 Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));
@@ -1492,6 +1524,128 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return result ?? VoidResult();
         }
 
+        /// <summary>
+        /// 6e-M21 Phase 5：系统化整数转换发射。
+        /// 槽内规范表示：无符号窄整型=掩码零扩展值；有符号窄整型=符号扩展后的 32 位值（shl+sar）；
+        /// ≤32 位来源转 i32/u32 位模式不变；64 位来源先 Trunc64；
+        /// →64 位按源符号性选 Movsx64/Movzx64（char 零扩展、enum 符号扩展，与既有路径一致）。
+        /// </summary>
+        private bool TryEmitIntegerConversion(BoundConversionExpression node, IrVirtualRegister value, out IrVirtualRegister result)
+        {
+            result = value;
+            var from = node.Expression.Type;
+            var to = node.Type;
+
+            if (from.IsPlaceholder128 || to.IsPlaceholder128)
+            {
+                return false;
+            }
+
+            if (!to.IsInteger || to == TypeSymbol.Boolean)
+            {
+                return false;
+            }
+
+            var fromIsIntLike = (from.IsInteger && from != TypeSymbol.Boolean) ||
+                                from == TypeSymbol.Char ||
+                                from is EnumTypeSymbol;
+            if (!fromIsIntLike || from == TypeSymbol.String)
+            {
+                return false;
+            }
+
+            var instructions = _currentFunction.Instructions;
+            var v = value;
+            var fromIs64 = from == TypeSymbol.Int64 || from == TypeSymbol.UInt64;
+
+            if (to == TypeSymbol.Int8 || to == TypeSymbol.UInt8 ||
+                to == TypeSymbol.Int16 || to == TypeSymbol.UInt16)
+            {
+                var source = v;
+                if (fromIs64)
+                {
+                    var truncated = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, truncated, IrOperand.Reg(v)));
+                    source = truncated;
+                }
+
+                switch (to.Name)
+                {
+                    case "byte":
+                    {
+                        var r = AllocateRegister(4);
+                        Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(source), IrOperand.Constant(0xFF)));
+                        result = r;
+                        break;
+                    }
+                    case "ushort":
+                    {
+                        var r = AllocateRegister(4);
+                        Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(source), IrOperand.Constant(0xFFFF)));
+                        result = r;
+                        break;
+                    }
+                    case "sbyte":
+                    {
+                        var shifted = AllocateRegister(4);
+                        var r = AllocateRegister(4);
+                        var count24 = AllocateRegister(4);
+                        Add(instructions, new IrInstruction(IrOpCode.Const, count24, IrOperand.Constant(24)));
+                        Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(source), IrOperand.Reg(count24)));
+                        Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(count24)));
+                        result = r;
+                        break;
+                    }
+                    default: // short
+                    {
+                        var shifted = AllocateRegister(4);
+                        var r = AllocateRegister(4);
+                        var count16 = AllocateRegister(4);
+                        Add(instructions, new IrInstruction(IrOpCode.Const, count16, IrOperand.Constant(16)));
+                        Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(source), IrOperand.Reg(count16)));
+                        Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(count16)));
+                        result = r;
+                        break;
+                    }
+                }
+
+                return true;
+            }
+
+            if (to == TypeSymbol.Int32 || to == TypeSymbol.UInt32)
+            {
+                if (fromIs64)
+                {
+                    var r = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, r, IrOperand.Reg(v)));
+                    result = r;
+                }
+
+                // ≤32 位来源：位模式即结果
+                return true;
+            }
+
+            if (to == TypeSymbol.Int64 || to == TypeSymbol.UInt64)
+            {
+                // 64 位 ↔ 64 位：位模式即结果，免指令
+                if (fromIs64)
+                {
+                    return true;
+                }
+
+                // char 无符号零扩展；enum 底层 int 符号扩展（与既有路径一致）
+                var zeroExtend = (from.IsInteger && !from.IsSigned) || from == TypeSymbol.Char;
+                var r = AllocateRegister(8);
+                Add(instructions, new IrInstruction(
+                    zeroExtend ? IrOpCode.Movzx64 : IrOpCode.Movsx64,
+                    r, IrOperand.Reg(v)));
+                result = r;
+                return true;
+            }
+
+            return false;
+        }
+
         private IrVirtualRegister EmitConversionExpression(BoundConversionExpression node)
         {
             var instructions = _currentFunction.Instructions;
@@ -1502,6 +1656,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (from == TypeSymbol.Any || to == TypeSymbol.Any)
             {
                 return value;
+            }
+
+            // 6e-M21 Phase 5：数值↔数值系统化整数转换（命中即返回）
+            if (TryEmitIntegerConversion(node, value, out var integerResult))
+            {
+                return integerResult;
             }
 
             if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||

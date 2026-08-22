@@ -350,6 +350,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case IrOpCode.Irem64:
                     EmitIrem64(instruction);
                     break;
+                case IrOpCode.Udiv64:
+                    EmitUdiv64(instruction);
+                    break;
+                case IrOpCode.Urem64:
+                    EmitUrem64(instruction);
+                    break;
                 case IrOpCode.Neg64:
                 case IrOpCode.Not64:
                     EmitUnary64(instruction);
@@ -1022,6 +1028,49 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // x86：运行时 Irem64(aLo=ECX, aHi=EDX, bLo=ESI, bHi=EDI) → 余数 EDX:EAX
             LoadIdivArgs(instruction);
             CallRuntimeHelper("Irem64");
+            StoreCallResult(instruction.Dst!);
+        }
+
+        /// <summary>6e-M21 Phase 5：无符号 64 位除法——x64 用 xor edx + div；x86 走运行时 Udiv64 helper。</summary>
+        private void EmitUdiv64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.Dst!, 8);
+                LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
+
+                _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
+                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+
+                _a.Xor(X64Size.Dword, X64Register.EDX, X64Register.EDX);
+                _a.Div(X64Size.Qword, X64Register.RCX);
+                StoreSlot(instruction.Dst!, X64Register.RAX);
+                return;
+            }
+
+            LoadIdivArgs(instruction);
+            CallRuntimeHelper("Udiv64");
+            StoreCallResult(instruction.Dst!);
+        }
+
+        private void EmitUrem64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.Dst!, 8);
+                LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
+
+                _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
+                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+
+                _a.Xor(X64Size.Dword, X64Register.EDX, X64Register.EDX);
+                _a.Div(X64Size.Qword, X64Register.RCX);
+                StoreSlot(instruction.Dst!, X64Register.RDX);
+                return;
+            }
+
+            LoadIdivArgs(instruction);
+            CallRuntimeHelper("Urem64");
             StoreCallResult(instruction.Dst!);
         }
 

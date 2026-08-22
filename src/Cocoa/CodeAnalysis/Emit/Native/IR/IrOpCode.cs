@@ -49,6 +49,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         Xor64,       // Xor64 <dst> <srcA> <srcB>
         Idiv64,      // Idiv64 <dst> <src>           — 有符号除法：dst / src → dst（除零走 DivByZero）
         Irem64,      // Irem64 <dst> <src>           — 有符号取余：dst % src → dst
+        Udiv64,      // Udiv64 <dst> <src>           — 无符号 64 位除法（6e-M21 Phase 5，x86 走运行时 helper）
+        Urem64,      // Urem64 <dst> <src>           — 无符号 64 位取余
         Neg64,       // Neg64 <dst>
         Not64,       // Not64 <dst>
         Shl64,       // Shl64 <dst> <src> <count>
