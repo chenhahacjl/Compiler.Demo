@@ -17,7 +17,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly TypeSymbol UInt64 = new TypeSymbol("ulong");
         public static readonly TypeSymbol UInt8 = new TypeSymbol("byte");
         public static readonly TypeSymbol Double = new TypeSymbol("double");
-        public static readonly TypeSymbol Float32 = new TypeSymbol("float");
+        public static readonly TypeSymbol Float = new TypeSymbol("float");
         public static readonly TypeSymbol Char = new TypeSymbol("char");
         public static readonly TypeSymbol String = new TypeSymbol("string");
         public static readonly TypeSymbol Void = new TypeSymbol("void");
@@ -60,7 +60,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             this == Int8 || this == Int16 || this == Int32 || this == Int64 || this == Int128;
 
         /// <summary>是否为浮点类型（32/64/128 位）。</summary>
-        public bool IsFloat => this == Float32 || this == Double || this == Float128;
+        public bool IsFloat => this == Float || this == Double || this == Float128;
 
         /// <summary>是否为数值类型（整数或浮点）。</summary>
         public bool IsNumeric => IsInteger || IsFloat;
@@ -69,7 +69,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public int BitWidth =>
             this == Int8 || this == UInt8 ? 8 :
             this == Int16 || this == UInt16 ? 16 :
-            this == Int32 || this == UInt32 || this == Float32 ? 32 :
+            this == Int32 || this == UInt32 || this == Float ? 32 :
             this == Int64 || this == UInt64 || this == Double ? 64 :
             this == Int128 || this == UInt128 || this == Float128 ? 128 : 0;
 

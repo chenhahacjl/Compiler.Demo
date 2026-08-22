@@ -3707,11 +3707,20 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!allowExplicit && conversion.IsExplicit)
             {
-                if (type == TypeSymbol.UInt8 && TryGetIntConstant(expression, out var intValue))
+                // 6e-M21 Phase 4：范围内整数常量允许隐式窄化（C# 同构：ushort x = 60000）。
+                // 覆盖 i8/i16/u8/u16/u32；byte 沿用既有专属消息，其余走通用消息。
+                if (IsNarrowIntegerTarget(type) && TryGetIntegerConstant(expression, out var constValue))
                 {
-                    if (intValue < 0 || intValue > 255)
+                    if (!FitsInIntegerType(constValue, type))
                     {
-                        _diagnostics.ReportByteConstantOutOfRange(diagnosticLocation, intValue);
+                        if (type == TypeSymbol.UInt8)
+                        {
+                            _diagnostics.ReportByteConstantOutOfRange(diagnosticLocation, (int)constValue);
+                        }
+                        else
+                        {
+                            _diagnostics.ReportConstantOutOfRange(diagnosticLocation, constValue, type.Name);
+                        }
                     }
                 }
                 else
@@ -3852,7 +3861,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     case "ulong": return TypeSymbol.UInt64;
                     case "sbyte": return TypeSymbol.Int8;
                     case "byte": return TypeSymbol.UInt8;
-                    case "float": return TypeSymbol.Float32;
+                    case "float": return TypeSymbol.Float;
                     case "double": return TypeSymbol.Double;
                 }
             }
@@ -3868,7 +3877,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     case "u32": return TypeSymbol.UInt32;
                     case "i64": return TypeSymbol.Int64;
                     case "u64": return TypeSymbol.UInt64;
-                    case "f32": return TypeSymbol.Float32;
+                    case "f32": return TypeSymbol.Float;
                     case "f64": return TypeSymbol.Double;
                     case "i128": return TypeSymbol.Int128;
                     case "u128": return TypeSymbol.UInt128;
@@ -3996,6 +4005,58 @@ namespace Cocoa.CodeAnalysis.Binding
         private static bool IsNumeric(TypeSymbol type)
         {
             return type.IsNumeric && !type.IsPlaceholder128;
+        }
+
+        /// <summary>6e-M21 Phase 4：可接受范围内常量隐式窄化的目标窄整型。</summary>
+        private static bool IsNarrowIntegerTarget(TypeSymbol type)
+        {
+            return type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
+                   type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16 ||
+                   type == TypeSymbol.UInt32;
+        }
+
+        private static bool FitsInIntegerType(long value, TypeSymbol type)
+        {
+            if (type.IsSigned)
+            {
+                return type.BitWidth switch
+                {
+                    8 => value >= sbyte.MinValue && value <= sbyte.MaxValue,
+                    16 => value >= short.MinValue && value <= short.MaxValue,
+                    32 => value >= int.MinValue && value <= int.MaxValue,
+                    _ => true,
+                };
+            }
+
+            return type.BitWidth switch
+            {
+                8 => value >= 0 && value <= byte.MaxValue,
+                16 => value >= 0 && value <= ushort.MaxValue,
+                32 => value >= 0 && value <= uint.MaxValue,
+                _ => value >= 0,
+            };
+        }
+
+        /// <summary>取整数常量（含一元负号），任意整数装箱表示均可。</summary>
+        private static bool TryGetIntegerConstant(BoundExpression expression, out long value)
+        {
+            var constant = expression.ConstantValue?.Value;
+            if (constant is int or long or sbyte or short or byte or ushort or uint or char)
+            {
+                value = NumericBox.ToSigned64(constant);
+                return true;
+            }
+
+            if (expression is BoundUnaryExpression unary &&
+                unary.Op.Kind == BoundUnaryOperatorKind.Negation &&
+                unary.Operand.ConstantValue != null)
+            {
+                value = unchecked(-NumericBox.ToSigned64(unary.Operand.ConstantValue.Value));
+                return true;
+            }
+
+            value = 0;
+            return false;
         }
 
         private void BindEnumDeclaration(EnumDeclarationSyntax syntax, string @namespace = "")

@@ -130,6 +130,12 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportConstantOutOfRange(TextLocation location, long value, string typeName)
+        {
+            var message = $"Constant value '{value}' is out of range for '{typeName}'. Use an explicit cast.";
+            ReportError(location, message);
+        }
+
         public void ReportSymbolAlreadyDeclared(TextLocation location, string name)
         {
             var message = $"'{name}' is already declared.";

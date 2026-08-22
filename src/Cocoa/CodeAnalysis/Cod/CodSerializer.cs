@@ -1710,7 +1710,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 "uint" => TypeSymbol.UInt32,
                 "long" => TypeSymbol.Int64,
                 "ulong" => TypeSymbol.UInt64,
-                "float" => TypeSymbol.Float32,
+                "float" => TypeSymbol.Float,
                 "double" => TypeSymbol.Double,
                 "char" => TypeSymbol.Char,
                 "string" => TypeSymbol.String,

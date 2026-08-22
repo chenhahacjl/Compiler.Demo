@@ -119,12 +119,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Sub", 0x59, IlOperandType.InlineNone);
             Define("Mul", 0x5A, IlOperandType.InlineNone);
             Define("Div", 0x5B, IlOperandType.InlineNone);
+            Define("Div_Un", 0x5C, IlOperandType.InlineNone);
             Define("Rem", 0x5D, IlOperandType.InlineNone);
+            Define("Rem_Un", 0x5E, IlOperandType.InlineNone);
             Define("And", 0x5F, IlOperandType.InlineNone);
             Define("Or", 0x60, IlOperandType.InlineNone);
             Define("Xor", 0x61, IlOperandType.InlineNone);
             Define("Shl", 0x62, IlOperandType.InlineNone);
             Define("Shr", 0x63, IlOperandType.InlineNone);
+            Define("Shr_Un", 0x64, IlOperandType.InlineNone);
             Define("Neg", 0x65, IlOperandType.InlineNone);
             Define("Not", 0x66, IlOperandType.InlineNone);
 
@@ -143,7 +146,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 比较
             Define("Ceq", 0xFE01, IlOperandType.InlineNone);
             Define("Cgt", 0xFE02, IlOperandType.InlineNone);
+            Define("Cgt_Un", 0xFE03, IlOperandType.InlineNone);
             Define("Clt", 0xFE04, IlOperandType.InlineNone);
+            Define("Clt_Un", 0xFE05, IlOperandType.InlineNone);
 
             // 分支
             Define("Br_S", 0x2B, IlOperandType.ShortInlineBrTarget);

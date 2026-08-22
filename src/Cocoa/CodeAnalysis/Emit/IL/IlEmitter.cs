@@ -401,6 +401,36 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return IlType.Byte;
             }
 
+            if (type == TypeSymbol.Int8)
+            {
+                return IlType.SByte;
+            }
+
+            if (type == TypeSymbol.Int16)
+            {
+                return IlType.Int16;
+            }
+
+            if (type == TypeSymbol.UInt16)
+            {
+                return IlType.UInt16;
+            }
+
+            if (type == TypeSymbol.UInt32)
+            {
+                return IlType.UInt32;
+            }
+
+            if (type == TypeSymbol.UInt64)
+            {
+                return IlType.UInt64;
+            }
+
+            if (type == TypeSymbol.Float)
+            {
+                return IlType.Float;
+            }
+
             if (type == TypeSymbol.Double)
             {
                 return IlType.Double;
@@ -616,6 +646,138 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
         }
 
+        /// <summary>
+        /// 6e-M21 Phase 4：数值↔数值转换的系统化 CIL 发射。
+        /// 栈表示：≤32 位整数均为 int32 栈；i64/u64 为 int64 栈；f32/f64 为 F 栈。
+        /// 无符号宽整型转浮点先归位（Conv_U4/Conv_U8）再转，保证大值正确。
+        /// </summary>
+        private bool TryEmitNumericConversion(IlAssembler il, TypeSymbol from, TypeSymbol to)
+        {
+            if (to.IsPlaceholder128 || from.IsPlaceholder128)
+            {
+                return false;
+            }
+
+            var fromIsNumericLike = from.IsNumeric || from == TypeSymbol.Char || from is EnumTypeSymbol;
+            if (!to.IsNumeric || !fromIsNumericLike)
+            {
+                return false;
+            }
+
+            if (from == TypeSymbol.String || to == TypeSymbol.String)
+            {
+                return false; // 字符串互转走原有专用路径
+            }
+
+            switch (to.Name)
+            {
+                case "sbyte":
+                    il.Emit(IlOpCodeTable.Get("Conv_I1"));
+                    return true;
+                case "byte":
+                    il.Emit(IlOpCodeTable.Get("Conv_U1"));
+                    return true;
+                case "short":
+                    il.Emit(IlOpCodeTable.Get("Conv_I2"));
+                    return true;
+                case "ushort":
+                    il.Emit(IlOpCodeTable.Get("Conv_U2"));
+                    return true;
+                case "int":
+                    if (from == TypeSymbol.Int64)
+                        il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    else if (from == TypeSymbol.UInt64)
+                        il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    else if (from.IsFloat)
+                        il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    // ≤32 位整数/char/enum → int：栈同宽，无需指令
+                    return true;
+                case "uint":
+                    if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64 || from.IsFloat)
+                        il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    return true;
+                case "long":
+                    if (from != TypeSymbol.Int64 && from != TypeSymbol.UInt64)
+                    {
+                        if (from == TypeSymbol.UInt32 || from == TypeSymbol.UInt16 || from == TypeSymbol.UInt8)
+                        {
+                            // 零扩展到 int64 栈
+                            il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                        }
+                        else
+                        {
+                            il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                        }
+                    }
+
+                    return true;
+                case "ulong":
+                    if (from != TypeSymbol.Int64 && from != TypeSymbol.UInt64)
+                    {
+                        if (from == TypeSymbol.Int8 || from == TypeSymbol.Int16 ||
+                            from == TypeSymbol.Int32 || from == TypeSymbol.Char ||
+                            from is EnumTypeSymbol)
+                        {
+                            // 符号扩展位模式进入 int64 栈
+                            il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                        }
+                        else if (from.IsFloat)
+                        {
+                            // 浮点→u64：C# 语义为截断取整后按 ulong 解释
+                            il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                        }
+                        else
+                        {
+                            il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                        }
+                    }
+
+                    return true;
+                case "float":
+                    if (from == TypeSymbol.Double)
+                    {
+                        il.Emit(IlOpCodeTable.Get("Conv_R4"));
+                    }
+                    else if (!from.IsFloat)
+                    {
+                        if (from == TypeSymbol.UInt64)
+                        {
+                            il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                        }
+                        else if (from == TypeSymbol.UInt32)
+                        {
+                            il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                        }
+
+                        il.Emit(IlOpCodeTable.Get("Conv_R4"));
+                    }
+
+                    return true;
+                case "double":
+                    if (from == TypeSymbol.Float)
+                    {
+                        il.Emit(IlOpCodeTable.Get("Conv_R8"));
+                    }
+                    else if (!from.IsFloat)
+                    {
+                        if (from == TypeSymbol.UInt64)
+                        {
+                            il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                        }
+                        else if (from == TypeSymbol.UInt32)
+                        {
+                            il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                        }
+
+                        il.Emit(IlOpCodeTable.Get("Conv_R8"));
+                    }
+
+                    return true;
+            }
+
+            return false;
+        }
+
         private void EmitConstantExpression(IlAssembler il, BoundExpression node)
         {
             if (node.ConstantValue!.Value == null)
@@ -646,6 +808,27 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 var value = Convert.ToInt32(node.ConstantValue.Value);
                 il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
+            }
+            else if (node.Type == TypeSymbol.Int8 ||
+                     node.Type == TypeSymbol.Int16 ||
+                     node.Type == TypeSymbol.UInt16 ||
+                     node.Type == TypeSymbol.UInt32)
+            {
+                // 8/16/32 位整数在 CIL 栈上均为 int32
+                var value = node.Type == TypeSymbol.UInt32
+                    ? unchecked((int)(uint)node.ConstantValue.Value)
+                    : System.Convert.ToInt32(node.ConstantValue.Value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
+            }
+            else if (node.Type == TypeSymbol.UInt64)
+            {
+                var value = unchecked((long)(ulong)node.ConstantValue.Value);
+                il.Emit(IlOpCodeTable.Get("Ldc_I8"), value);
+            }
+            else if (node.Type == TypeSymbol.Float)
+            {
+                var value = (float)node.ConstantValue.Value;
+                il.Emit(IlOpCodeTable.Get("Ldc_R4"), value);
             }
             else if (node.Type == TypeSymbol.Double)
             {
@@ -762,6 +945,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
             }
 
+            // 6e-M21 Phase 4：无符号整数走 _un 变体（浮点保持有符号比较指令）
+            var isUnsigned = node.Type.IsInteger && !node.Type.IsSigned && !node.Type.IsPlaceholder128;
+
             switch (node.Op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:
@@ -774,16 +960,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Mul"));
                     break;
                 case BoundBinaryOperatorKind.Division:
-                    il.Emit(IlOpCodeTable.Get("Div"));
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Div_Un" : "Div"));
                     break;
                 case BoundBinaryOperatorKind.Modulo:
-                    il.Emit(IlOpCodeTable.Get("Rem"));
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Rem_Un" : "Rem"));
                     break;
                 case BoundBinaryOperatorKind.ShiftLeft:
                     il.Emit(IlOpCodeTable.Get("Shl"));
                     break;
                 case BoundBinaryOperatorKind.ShiftRight:
-                    il.Emit(IlOpCodeTable.Get("Shr"));
+                    // Shr=算术右移；Shr_Un=逻辑右移（无符号类型）
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Shr_Un" : "Shr"));
                     break;
                 case BoundBinaryOperatorKind.LogicalAnd:
                 case BoundBinaryOperatorKind.BitwiseAnd:
@@ -805,18 +992,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.Less:
-                    il.Emit(IlOpCodeTable.Get("Clt"));
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Clt_Un" : "Clt"));
                     break;
                 case BoundBinaryOperatorKind.LessOrEquals:
-                    il.Emit(IlOpCodeTable.Get("Cgt"));
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Cgt_Un" : "Cgt"));
                     il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
                     il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 case BoundBinaryOperatorKind.Greater:
-                    il.Emit(IlOpCodeTable.Get("Cgt"));
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Cgt_Un" : "Cgt"));
                     break;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
-                    il.Emit(IlOpCodeTable.Get("Clt"));
+                    il.Emit(IlOpCodeTable.Get(isUnsigned ? "Clt_Un" : "Clt"));
                     il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
                     il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
@@ -1037,6 +1224,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             EmitExpression(il, node.Expression);
 
+            // 6e-M21 Phase 4：数值↔数值系统化转换（含 char/enum 源），命中即返回
+            if (TryEmitNumericConversion(il, node.Expression.Type, node.Type))
+            {
+                return;
+            }
+
             if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.String)
             {
                 var type = _framework.RequireType("System.Char");
@@ -1200,11 +1393,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
         }
 
-        /// <summary>值类型（bool/int/long/char/byte/double/枚举）→ 装箱为 System.Object 参数。</summary>
+        /// <summary>值类型（bool/int/long/char/byte/double/短整型/浮点/枚举）→ 装箱为 System.Object 参数。</summary>
         private void EmitBoxIfValueType(IlAssembler il, TypeSymbol type)
         {
             if (type != TypeSymbol.Boolean && type != TypeSymbol.Int32 && type != TypeSymbol.Int64 && type != TypeSymbol.Char &&
-                type != TypeSymbol.UInt8 && type != TypeSymbol.Double && type is not EnumTypeSymbol)
+                type != TypeSymbol.UInt8 && type != TypeSymbol.Double && type is not EnumTypeSymbol &&
+                type != TypeSymbol.Int8 && type != TypeSymbol.Int16 && type != TypeSymbol.UInt16 &&
+                type != TypeSymbol.UInt32 && type != TypeSymbol.UInt64 && type != TypeSymbol.Float)
             {
                 return;
             }
@@ -1214,6 +1409,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 : type == TypeSymbol.Int64 ? "System.Int64"
                 : type == TypeSymbol.Char ? "System.Char"
                 : type == TypeSymbol.UInt8 ? "System.Byte"
+                : type == TypeSymbol.Int8 ? "System.SByte"
+                : type == TypeSymbol.Int16 ? "System.Int16"
+                : type == TypeSymbol.UInt16 ? "System.UInt16"
+                : type == TypeSymbol.UInt32 ? "System.UInt32"
+                : type == TypeSymbol.UInt64 ? "System.UInt64"
+                : type == TypeSymbol.Float ? "System.Single"
                 : type == TypeSymbol.Double ? "System.Double"
                 : "System.Int32"; // 枚举底层 int
             il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxed));

@@ -247,7 +247,7 @@ namespace Cocoa.CodeAnalysis
                             : Binding.NumericBox.Box(operandType, unchecked(0UL - Binding.NumericBox.ToUnsigned64(operand)));
                     }
 
-                    if (operandType == TypeSymbol.Float32)
+                    if (operandType == TypeSymbol.Float)
                         return -(float)operand;
                     if (operandType == TypeSymbol.Double)
                         return -(double)operand;
@@ -286,7 +286,7 @@ namespace Cocoa.CodeAnalysis
                 return EvaluateIntegerBinary(binary.Op.Kind, left!, right!, resultType);
             }
 
-            if (resultType == TypeSymbol.Float32)
+            if (resultType == TypeSymbol.Float)
             {
                 return EvaluateFloat32Binary(binary.Op.Kind, left!, right!);
             }
@@ -565,7 +565,7 @@ namespace Cocoa.CodeAnalysis
                     return unchecked((ulong)(long)ulongDouble);
                 return Binding.NumericBox.ToUnsigned64(value);
             }
-            else if (node.Type == TypeSymbol.Float32)
+            else if (node.Type == TypeSymbol.Float)
             {
                 return Convert.ToSingle(value);
             }

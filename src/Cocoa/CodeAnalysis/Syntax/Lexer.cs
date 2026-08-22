@@ -1333,36 +1333,43 @@ namespace Cocoa.CodeAnalysis.Syntax
             // 类型后缀（6e-M21）：`42L`/`0xFFL`、`1u`/`1U`、`1ul`/`1UL`/`1lu`/`1LU`、`1.0f`/`1e5f`。
             // 仅当后缀后非标识符字符时生效，避免吞掉 let / long / ulong / using 等关键字/标识符
             // （如 `9696let` 应拆为 9696 + let，`1234long` 应拆为 1234 + long，`1ul` 不应拆成 `1`+`ul`）。
-            bool canTakeSuffix = !char.IsLetterOrDigit(Peek(1));
+            // 双字母组合（ul/UL/lu/LU）按 Peek(2) 判定边界。
             bool uSuffix = false, lSuffix = false, fSuffix = false;
-            if (canTakeSuffix)
             {
                 var s = Current;
                 if (s == 'u' || s == 'U')
                 {
-                    uSuffix = true;
-                    _position++;
-                    length++;
-                    if (Current == 'l' || Current == 'L')
+                    if ((Peek(1) == 'l' || Peek(1) == 'L') && !char.IsLetterOrDigit(Peek(2)))
                     {
+                        uSuffix = true;
                         lSuffix = true;
-                        _position++;
-                        length++;
+                        _position += 2;
+                        length += 2;
                     }
-                }
-                else if (s == 'l' || s == 'L')
-                {
-                    lSuffix = true;
-                    _position++;
-                    length++;
-                    if (Current == 'u' || Current == 'U')
+                    else if (!char.IsLetterOrDigit(Peek(1)))
                     {
                         uSuffix = true;
                         _position++;
                         length++;
                     }
                 }
-                else if (s == 'f' || s == 'F')
+                else if (s == 'l' || s == 'L')
+                {
+                    if ((Peek(1) == 'u' || Peek(1) == 'U') && !char.IsLetterOrDigit(Peek(2)))
+                    {
+                        lSuffix = true;
+                        uSuffix = true;
+                        _position += 2;
+                        length += 2;
+                    }
+                    else if (!char.IsLetterOrDigit(Peek(1)))
+                    {
+                        lSuffix = true;
+                        _position++;
+                        length++;
+                    }
+                }
+                else if ((s == 'f' || s == 'F') && !char.IsLetterOrDigit(Peek(1)))
                 {
                     fSuffix = true;
                     _position++;
@@ -1385,7 +1392,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 var span = new TextSpan(_start, length);
                 var location = new TextLocation(_text, span);
-                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Float32);
+                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Float);
                 _value = 0.0f;
                 _kind = SyntaxKind.DoubleToken;
                 return;

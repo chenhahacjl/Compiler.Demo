@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (value is char)
                 return TypeSymbol.Char;
             if (value is float)
-                return TypeSymbol.Float32;
+                return TypeSymbol.Float;
             if (value is double)
                 return TypeSymbol.Double;
             if (value is string)

@@ -31,7 +31,7 @@ namespace Cocoa.CodeAnalysis.Binding
                             : new BoundConstant(NumericBox.Box(type, unchecked(0UL - NumericBox.ToUnsigned64(value))));
                     }
 
-                    if (type == TypeSymbol.Float32)
+                    if (type == TypeSymbol.Float)
                         return new BoundConstant(-(float)value);
                     if (type == TypeSymbol.Double)
                         return new BoundConstant(-(double)value);
@@ -93,7 +93,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return FoldInteger(op, leftConstant.Value, rightConstant.Value, type);
             }
 
-            if (type == TypeSymbol.Float32)
+            if (type == TypeSymbol.Float)
             {
                 return FoldFloat32(op, leftConstant.Value, rightConstant.Value);
             }

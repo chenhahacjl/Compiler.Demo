@@ -469,6 +469,24 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case IlTypeKind.U1:
                     stream.WriteByte(0x05); // ELEMENT_TYPE_U1
                     break;
+                case IlTypeKind.I1:
+                    stream.WriteByte(0x04); // ELEMENT_TYPE_I1
+                    break;
+                case IlTypeKind.I2:
+                    stream.WriteByte(0x06); // ELEMENT_TYPE_I2
+                    break;
+                case IlTypeKind.U2:
+                    stream.WriteByte(0x07); // ELEMENT_TYPE_U2
+                    break;
+                case IlTypeKind.U4:
+                    stream.WriteByte(0x09); // ELEMENT_TYPE_U4
+                    break;
+                case IlTypeKind.U8:
+                    stream.WriteByte(0x0B); // ELEMENT_TYPE_U8
+                    break;
+                case IlTypeKind.R4:
+                    stream.WriteByte(0x0C); // ELEMENT_TYPE_R4
+                    break;
                 case IlTypeKind.Double:
                     stream.WriteByte(0x0D);
                     break;

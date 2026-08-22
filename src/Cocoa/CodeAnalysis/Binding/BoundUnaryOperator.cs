@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 TypeSymbol.Int8, TypeSymbol.Int16, TypeSymbol.Int32, TypeSymbol.Int64,
                 TypeSymbol.UInt8, TypeSymbol.UInt16, TypeSymbol.UInt32, TypeSymbol.UInt64,
-                TypeSymbol.Float32, TypeSymbol.Double,
+                TypeSymbol.Float, TypeSymbol.Double,
             };
 
             foreach (var t in numericTypes)
