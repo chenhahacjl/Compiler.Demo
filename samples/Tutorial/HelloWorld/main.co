@@ -1,5 +1,5 @@
 function Main()
 {
-    print(Greeting("Cocoa"))
-    print(Sum(20, 22))
+    System.Console.WriteLine(Greeting("Cocoa"))
+    System.Console.WriteLine(Sum(20, 22))
 }

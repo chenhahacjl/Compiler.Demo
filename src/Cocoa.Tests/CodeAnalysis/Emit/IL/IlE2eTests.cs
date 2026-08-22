@@ -69,14 +69,14 @@ function Main()
         sum = sum + i
         i = i + 1
     }
-    print(sum)
-    var name = input()
-    print(""hello "" + name)
-    print(sum > 10)
-    var r = random(100)
+    System.Console.WriteLine(sum)
+    var name = System.Console.ReadLine()
+    System.Console.WriteLine(""hello "" + name)
+    System.Console.WriteLine(sum > 10)
+    var r = System.Runtime.Random(100)
     if r >= 0 && r < 100
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
 }", "e2e-builtins", "World");
 
@@ -98,7 +98,7 @@ function Main()
     var r = Runtime.Random(100)
     if r >= 0 && r < 100
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
 }", "e2e-syscall-member");
 
@@ -130,12 +130,12 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 function Main()
 {
-    var t0 = now()
-    sleep(1)
-    var t1 = now()
+    var t0 = System.Runtime.Now()
+    System.Runtime.Sleep(1)
+    var t1 = System.Runtime.Now()
     if t1 >= t0
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
 }", "e2e-sleep-now");
 
@@ -149,8 +149,8 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 function Main()
 {
-    exit(7)
-    print(""unreachable"")
+    System.Runtime.Exit(7)
+    System.Console.WriteLine(""unreachable"")
 }", "e2e-exit");
 
             Assert.Equal(7, exitCode);
@@ -169,19 +169,19 @@ function Main()
     var c: char
     var by: byte
     var s: string
-    print(a)
-    print(b)
-    print(d)
-    print(int(c))
-    print(int(by))
-    print(s == s)
+    System.Console.WriteLine(a)
+    System.Console.WriteLine(b)
+    System.Console.WriteLine(d)
+    System.Console.WriteLine(int(c))
+    System.Console.WriteLine(int(by))
+    System.Console.WriteLine(s == s)
     const x: int = 42
-    print(x)
+    System.Console.WriteLine(x)
     const y = 7
-    print(y + 1)
+    System.Console.WriteLine(y + 1)
     var t = x
     t = t + 1
-    print(t)
+    System.Console.WriteLine(t)
 }", "e2e-default-init");
 
             Assert.Equal(0, exitCode);
@@ -223,13 +223,13 @@ function isPositive(n: int): bool
 
 function Main()
 {
-    print(add(2, 3))
-    print(square(add(1, 2)))
-    print(greet(""Cocoa""))
-    print(fib(10))
-    print(isPositive(7))
-    print(isPositive(0 - 3))
-    print(add(fib(6), fib(7)))
+    System.Console.WriteLine(add(2, 3))
+    System.Console.WriteLine(square(add(1, 2)))
+    System.Console.WriteLine(greet(""Cocoa""))
+    System.Console.WriteLine(fib(10))
+    System.Console.WriteLine(isPositive(7))
+    System.Console.WriteLine(isPositive(0 - 3))
+    System.Console.WriteLine(add(fib(6), fib(7)))
 }", "e2e-user-functions");
 
             Assert.Equal(0, exitCode);
@@ -249,7 +249,7 @@ function Main()
     var t = GetTickCount()
     if t > 0
     {
-        print(""up"")
+        System.Console.WriteLine(""up"")
     }
 }", "e2e-pinvoke");
 
@@ -306,7 +306,7 @@ function Main()
     var h = GetModuleHandleW(0)
     if h != 0
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
 }", "e2e-pinvoke-pointer-param");
 
@@ -330,14 +330,14 @@ function Main()
         }
         total = total + i
     }
-    print(total)
+    System.Console.WriteLine(total)
 
     var j = 0
     do
     {
         j = j + 1
     } while j < 3
-    print(j)
+    System.Console.WriteLine(j)
 
     var m = 0
     for var k = 1 to 10
@@ -348,7 +348,7 @@ function Main()
         }
         m = m + k
     }
-    print(m)
+    System.Console.WriteLine(m)
 
     var nested = 0
     var p = 2
@@ -362,7 +362,7 @@ function Main()
         }
         p = p - 1
     }
-    print(nested)
+    System.Console.WriteLine(nested)
 }", "e2e-control-flow");
 
             Assert.Equal(0, exitCode);
@@ -383,9 +383,9 @@ function Main()
     let name = ""Cocoa""
     var x = ""1""
     var y = ""2""
-    print(""a"" + x + ""b"" + y + ""c"" + name)
-    print(sum10(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
-    print(name + ""!"")
+    System.Console.WriteLine(""a"" + x + ""b"" + y + ""c"" + name)
+    System.Console.WriteLine(sum10(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
+    System.Console.WriteLine(name + ""!"")
 }", "e2e-wide-call-long-concat");
 
             Assert.Equal(0, exitCode);
@@ -413,7 +413,7 @@ function Main(): int
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
 function Main(): int
 {
-    print(""hi"")
+    System.Console.WriteLine(""hi"")
 }
 ");
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);
@@ -476,10 +476,10 @@ function Main()
 {
     var a = new int[3] {10, 20, 30}
     a[1] = 99
-    print(a[0])
-    print(a[1])
-    print(a[2])
-    print(a.Length)
+    System.Console.WriteLine(a[0])
+    System.Console.WriteLine(a[1])
+    System.Console.WriteLine(a[2])
+    System.Console.WriteLine(a.Length)
 }", "e2e-array");
 
             Assert.Equal(0, exitCode);
@@ -495,8 +495,8 @@ function Main()
     var b = new bool[2]
     b[0] = true
     b[1] = false
-    print(b[0])
-    print(b[1])
+    System.Console.WriteLine(b[0])
+    System.Console.WriteLine(b[1])
 }", "e2e-array-bool");
 
             Assert.Equal(0, exitCode);
@@ -512,7 +512,7 @@ function Main()
     var a = new int[2]
     a[0] = 1
     a[1] = 2
-    print(a[5])
+    System.Console.WriteLine(a[5])
 }", "e2e-array-oob");
 
             Assert.NotEqual(0, exitCode);
@@ -538,7 +538,7 @@ function Main()
         sum = sum + a[i]
         i = i + 1
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "e2e-array-loop");
 
             Assert.Equal(0, exitCode);
@@ -552,14 +552,14 @@ function Main()
 function Main()
 {
     var s = ""hello""
-    print(s.Length)
-    print(s[0])
-    print(int(s[1]))
+    System.Console.WriteLine(s.Length)
+    System.Console.WriteLine(s[0])
+    System.Console.WriteLine(int(s[1]))
     var c = s[2]
-    print(c)
-    print(char(97))
-    print(s.substring(1, 3))
-    print(s.substring(1, 3) + ""!"")
+    System.Console.WriteLine(c)
+    System.Console.WriteLine(char(97))
+    System.Console.WriteLine(s.substring(1, 3))
+    System.Console.WriteLine(s.substring(1, 3) + ""!"")
 }", "e2e-string-index");
 
             Assert.Equal(0, exitCode);
@@ -574,8 +574,8 @@ function Main()
 {
     var a = new char[2] {'x', 'y'}
     a[0] = 'z'
-    print(a[0])
-    print(a[1])
+    System.Console.WriteLine(a[0])
+    System.Console.WriteLine(a[1])
 }", "e2e-char-array");
 
             Assert.Equal(0, exitCode);
@@ -589,7 +589,7 @@ function Main()
 function Main()
 {
     var s = ""abc""
-    print(s[9])
+    System.Console.WriteLine(s[9])
 }", "e2e-string-oob");
 
             Assert.NotEqual(0, exitCode);
@@ -605,12 +605,12 @@ function f(c: Color): int { return int(c) }
 function Main()
 {
     var c = Color.Green
-    print(int(c))
-    print(int(HttpStatus.NotFound))
-    print(c == Color.Green)
-    print(c == Color.Red)
-    print(int(f(Color.Blue)))
-    print(int(Color(99)) == 99)
+    System.Console.WriteLine(int(c))
+    System.Console.WriteLine(int(HttpStatus.NotFound))
+    System.Console.WriteLine(c == Color.Green)
+    System.Console.WriteLine(c == Color.Red)
+    System.Console.WriteLine(int(f(Color.Blue)))
+    System.Console.WriteLine(int(Color(99)) == 99)
 }", "e2e-enum");
 
             Assert.Equal(0, exitCode);
@@ -625,10 +625,10 @@ public enum Color { Red, Green, Blue }
 function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
-    print(int(a[0]))
-    print(int(a[1]))
+    System.Console.WriteLine(int(a[0]))
+    System.Console.WriteLine(int(a[1]))
     a[1] = Color.Blue
-    print(int(a[1]))
+    System.Console.WriteLine(int(a[1]))
 }", "e2e-enum-array");
 
             Assert.Equal(0, exitCode);
@@ -642,16 +642,16 @@ function Main()
 function Main()
 {
     var b1: byte = 65
-    print(b1)
+    System.Console.WriteLine(b1)
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
-    print(buf[0])
-    print(buf[1])
-    print((byte)300)
-    print((int)buf[0])
-    print((byte)200 == (byte)200)
-    print(0xFF)
+    System.Console.WriteLine(buf[0])
+    System.Console.WriteLine(buf[1])
+    System.Console.WriteLine((byte)300)
+    System.Console.WriteLine((int)buf[0])
+    System.Console.WriteLine((byte)200 == (byte)200)
+    System.Console.WriteLine(0xFF)
 }", "e2e-byte");
 
             Assert.Equal(0, exitCode);
@@ -665,23 +665,23 @@ function Main()
 function Main()
 {
     var d: double = 3.14
-    print(d)
-    print(1.5 + 2.25)
-    print(10.0 / 4)
-    print(2.5 * 2)
-    print(7 - 1.5)
-    print(1.5 < 2.5)
-    print(1.5 == 1.5)
-    print((int)3.9)
-    print((byte)3.9)
-    print((double)3)
+    System.Console.WriteLine(d)
+    System.Console.WriteLine(1.5 + 2.25)
+    System.Console.WriteLine(10.0 / 4)
+    System.Console.WriteLine(2.5 * 2)
+    System.Console.WriteLine(7 - 1.5)
+    System.Console.WriteLine(1.5 < 2.5)
+    System.Console.WriteLine(1.5 == 1.5)
+    System.Console.WriteLine((int)3.9)
+    System.Console.WriteLine((byte)3.9)
+    System.Console.WriteLine((double)3)
     var arr: double[] = new double[2] {1.5, 2.5}
     arr[0] = 3.5
-    print(arr[0])
-    print(arr[1])
+    System.Console.WriteLine(arr[0])
+    System.Console.WriteLine(arr[1])
     var sum: double = 0.0
     sum = sum + arr[0]
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "e2e-double");
 
             Assert.Equal(0, exitCode);
@@ -694,9 +694,9 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 function Main()
 {
-    print(""d="" + 1.5)
-    print(""x="" + (double)3)
-    print((string)2.75)
+    System.Console.WriteLine(""d="" + 1.5)
+    System.Console.WriteLine(""x="" + (double)3)
+    System.Console.WriteLine((string)2.75)
 }", "e2e-string-double");
 
             Assert.Equal(0, exitCode);
@@ -743,11 +743,11 @@ public class Point
 function Main()
 {
     var p = new Point(3, 4)
-    print(p.Area())
+    System.Console.WriteLine(p.Area())
     p.Scale(2)
-    print(p.Area())
-    print(p.X())
-    print(p.Y())
+    System.Console.WriteLine(p.Area())
+    System.Console.WriteLine(p.X())
+    System.Console.WriteLine(p.Y())
 }", "e2e-class-object");
 
             Assert.Equal(0, exitCode);
@@ -787,8 +787,8 @@ function Main()
 {
     var c = new Counter(10)
     c.Increment()
-    print(c.Value())
-    print(c.Double())
+    System.Console.WriteLine(c.Value())
+    System.Console.WriteLine(c.Double())
 }", "e2e-class-selfcall");
 
             Assert.Equal(0, exitCode);
@@ -818,8 +818,8 @@ function Main()
 {
     var a = new Box(1)
     var b = new Box(2)
-    print(a.Get())
-    print(b.Get())
+    System.Console.WriteLine(a.Get())
+    System.Console.WriteLine(b.Get())
 }", "e2e-class-two-instances");
 
             Assert.Equal(0, exitCode);
@@ -841,10 +841,10 @@ public class Calc
 function Main()
 {
     var c = new Calc()
-    print(c.Add(3, 4))
-    print(c.Square(5))
-    print(c.Subtract(10, 4))
-    print(c.Triple(3))
+    System.Console.WriteLine(c.Add(3, 4))
+    System.Console.WriteLine(c.Square(5))
+    System.Console.WriteLine(c.Subtract(10, 4))
+    System.Console.WriteLine(c.Triple(3))
 }", "e2e-expression-bodied-methods");
 
             Assert.Equal(0, exitCode);
@@ -868,9 +868,9 @@ public class Rect
 function Main()
 {
     var r = new Rect()
-    print(r.Area)
-    print(r.Width)
-    print(r.DoubleW)
+    System.Console.WriteLine(r.Area)
+    System.Console.WriteLine(r.Width)
+    System.Console.WriteLine(r.DoubleW)
 }", "e2e-expression-bodied-properties");
 
             Assert.Equal(0, exitCode);
@@ -896,7 +896,7 @@ function Main()
     var a = new Account()
     a.Deposit(100)
     a.Deposit(50)
-    print(a.Balance)
+    System.Console.WriteLine(a.Balance)
 }", "e2e-private-setter");
 
             Assert.Equal(0, exitCode);
@@ -972,9 +972,9 @@ public static class MathHelpers
 function Main()
 {
     var c = new Circle(""big"", 4)
-    print(c.Describe())
-    print(c.Area)
-    print(MathHelpers.Square(7))
+    System.Console.WriteLine(c.Describe())
+    System.Console.WriteLine(c.Area)
+    System.Console.WriteLine(MathHelpers.Square(7))
 }", "e2e-oop");
 
             Assert.Equal(0, exitCode);
@@ -1014,10 +1014,10 @@ public class Circle extends IShape
 function Main()
 {
     var s: IShape = new Circle(3)
-    print(s.Area())
-    print(s.Name)
+    System.Console.WriteLine(s.Area())
+    System.Console.WriteLine(s.Name)
     var c = new Circle(4)
-    print(c.Area())
+    System.Console.WriteLine(c.Area())
 }", "e2e-interface");
 
             Assert.Equal(0, exitCode);
@@ -1061,10 +1061,10 @@ public class ColoredSquare extends IColoredShape
 function Main()
 {
     var s: IColoredShape = new ColoredSquare(5)
-    print(s.Area())
-    print(s.Color())
+    System.Console.WriteLine(s.Area())
+    System.Console.WriteLine(s.Color())
     var b: IShape = new ColoredSquare(6)
-    print(b.Area())
+    System.Console.WriteLine(b.Area())
 }", "e2e-interface-inheritance");
 
             Assert.Equal(0, exitCode);
@@ -1122,17 +1122,17 @@ public function MakeAnimal(): IAnimal
 function Main()
 {
     var s: IAnimal = new Puppy(1)
-    print(s.Speak())
-    print(s.Age)
+    System.Console.WriteLine(s.Speak())
+    System.Console.WriteLine(s.Age)
     var d = (Dog)s
-    print(d.Speak())
+    System.Console.WriteLine(d.Speak())
     d.Age = 7
-    print(d.Age)
-    print(CallSpeak(s))
+    System.Console.WriteLine(d.Age)
+    System.Console.WriteLine(CallSpeak(s))
     var r = MakeAnimal()
-    print(r.Speak())
+    System.Console.WriteLine(r.Speak())
     var r2: IAnimal = r
-    print(r2.Age)
+    System.Console.WriteLine(r2.Age)
 }", "e2e-interface-basechain");
 
             Assert.Equal(0, exitCode);
@@ -1178,10 +1178,10 @@ public class Archer extends BaseUnit
 function Main()
 {
     var k: IFighter = new Knight()
-    print(k.Power())
-    print(k.Name())
+    System.Console.WriteLine(k.Power())
+    System.Console.WriteLine(k.Name())
     var a: IFighter = new Archer()
-    print(a.Power())
+    System.Console.WriteLine(a.Power())
 }", "e2e-interface-abstract");
 
             Assert.Equal(0, exitCode);
@@ -1205,7 +1205,7 @@ public class Resource extends IDisposable
 
     public function Dispose()
     {
-        print(""disposing "" + _name)
+        System.Console.WriteLine(""disposing "" + _name)
     }
 }
 
@@ -1232,12 +1232,12 @@ public static void Main()
     {
         sum = sum + i;
     }
-    print(sum);
+    System.Console.WriteLine(sum);
     var j = 10;
     j--;
-    print(j);
+    System.Console.WriteLine(j);
     j++;
-    print(j);
+    System.Console.WriteLine(j);
     var total = 0;
     for (;;)
     {
@@ -1247,7 +1247,7 @@ public static void Main()
             break;
         }
     }
-    print(total);
+    System.Console.WriteLine(total);
     var k = 0;
     for (; k < 4; k = k + 1)
     {
@@ -1255,7 +1255,7 @@ public static void Main()
         {
             continue;
         }
-        print(k);
+        System.Console.WriteLine(k);
     }
 }", "e2e-cstyle-for");
 
@@ -1269,21 +1269,21 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(@"
 function Main()
 {
-    print(7 % 3)
-    print(-7 % 3)
-    print(10 % 2)
-    print(1 << 4)
-    print(8 >> 1)
-    print(-8 >> 1)
+    System.Console.WriteLine(7 % 3)
+    System.Console.WriteLine(-7 % 3)
+    System.Console.WriteLine(10 % 2)
+    System.Console.WriteLine(1 << 4)
+    System.Console.WriteLine(8 >> 1)
+    System.Console.WriteLine(-8 >> 1)
     var x = 10
     x %= 3
-    print(x)
+    System.Console.WriteLine(x)
     x = 1
     x <<= 4
-    print(x)
+    System.Console.WriteLine(x)
     x = -16
     x >>= 2
-    print(x)
+    System.Console.WriteLine(x)
     var sum = 0
     for var i = 1 to 5
     {
@@ -1293,7 +1293,7 @@ function Main()
         }
         sum = sum + i
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "e2e-modulo-shift");
 
             Assert.Equal(0, exitCode);
@@ -1308,24 +1308,24 @@ function Main()
 {
     var a = 5
     var b = 10
-    print(a > b ? a : b)
-    print(1 < 2 ? 3 + 4 : 5 + 6)
+    System.Console.WriteLine(a > b ? a : b)
+    System.Console.WriteLine(1 < 2 ? 3 + 4 : 5 + 6)
     var i = 1
     i = ++i
-    print(i)
+    System.Console.WriteLine(i)
     i = --i
-    print(i)
+    System.Console.WriteLine(i)
     var d: double = 1.5
     d = ++d
-    print(d)
+    System.Console.WriteLine(d)
     var n = 7
-    print(n % 2 == 0 ? ""even"" : ""odd"")
+    System.Console.WriteLine(n % 2 == 0 ? ""even"" : ""odd"")
     var sum = 0
     for var j = 1 to 5
     {
         sum = sum + (j % 2 == 0 ? 10 : j)
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "e2e-ternary-prefix");
 
             Assert.Equal(0, exitCode);
@@ -1366,8 +1366,8 @@ public class Dog extends Animal
 function Main()
 {
     var d = new Dog(""Rex"")
-    print(d.Name())
-    print(d.Bark())
+    System.Console.WriteLine(d.Name())
+    System.Console.WriteLine(d.Bark())
 }", "e2e-extends-keyword");
 
             Assert.Equal(0, exitCode);
@@ -1425,11 +1425,11 @@ public class BigPuppy extends Puppy
 function Main()
 {
     var p = new Puppy(""Rex"")
-    print(p.Name())
-    print(p.Tricks())
+    System.Console.WriteLine(p.Name())
+    System.Console.WriteLine(p.Tricks())
     var b = new BigPuppy(""Buddy"")
-    print(b.Name())
-    print(b.Tricks())
+    System.Console.WriteLine(b.Name())
+    System.Console.WriteLine(b.Tricks())
 }", "e2e-extends-constructor-chain");
 
             Assert.Equal(0, exitCode);
@@ -1466,8 +1466,8 @@ public class Dog extends IDog
 function Main()
 {
     var d: IDog = new Dog()
-    print(d.Speak())
-    print(d.Bark())
+    System.Console.WriteLine(d.Speak())
+    System.Console.WriteLine(d.Bark())
 }", "e2e-interface-extends");
 
             Assert.Equal(0, exitCode);
@@ -1503,9 +1503,9 @@ public static void Main()
 {
     var p = new Person(""Alice"", 30);
     p.Name = ""Bob"";
-    print(p.Name);
-    print(p.GetAge());
-    print(Person.Count);
+    System.Console.WriteLine(p.Name);
+    System.Console.WriteLine(p.GetAge());
+    System.Console.WriteLine(Person.Count);
 }", "e2e-cs-style-members");
 
             Assert.Equal(0, exitCode);
@@ -1529,7 +1529,7 @@ public class Counter
 function Main()
 {
     var c = new Counter()
-    print(c.Get())
+    System.Console.WriteLine(c.Get())
 }", "e2e-field-init-instance");
 
             Assert.Equal(0, exitCode);
@@ -1548,7 +1548,7 @@ public class Config
 
 function Main()
 {
-    print(Config.Max + Config.Base)
+    System.Console.WriteLine(Config.Max + Config.Base)
 }", "e2e-field-init-static");
 
             Assert.Equal(0, exitCode);
@@ -1568,9 +1568,9 @@ public class Point
 function Main()
 {
     var p = new Point()
-    print(p.X + p.Y)
+    System.Console.WriteLine(p.X + p.Y)
     p.X = 99
-    print(p.X)
+    System.Console.WriteLine(p.X)
 }", "e2e-field-init-autoprop");
 
             Assert.Equal(0, exitCode);
@@ -1610,7 +1610,7 @@ public class Derived extends Base
 function Main()
 {
     var d = new Derived()
-    print(Base.Text)
+    System.Console.WriteLine(Base.Text)
 }", "e2e-field-init-ordering");
 
             Assert.Equal(0, exitCode);
@@ -1629,7 +1629,7 @@ public class Counter
 
 function Main()
 {
-    print(Counter.End)
+    System.Console.WriteLine(Counter.End)
 }", "e2e-field-init-static-ordering");
 
             Assert.Equal(0, exitCode);
@@ -1653,7 +1653,7 @@ public class Calc
 public static void Main()
 {
     var c = new Calc();
-    print(c.Sum(2, 3));
+    System.Console.WriteLine(c.Sum(2, 3));
 }", "e2e-cs-locals");
 
             Assert.Equal(0, exitCode);
@@ -1666,9 +1666,9 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRunCs(@"
 public static void Main()
 {
-    print(Add(2, 3));
-    print(Square(4));
-    print(Double(""hi""));
+    System.Console.WriteLine(Add(2, 3));
+    System.Console.WriteLine(Square(4));
+    System.Console.WriteLine(Double(""hi""));
 }
 
 public int Add(int x, int y)
@@ -1696,7 +1696,7 @@ public string Double(string s)
             var (exitCode, stdout) = EmitAndRun(@"
 function Main()
 {
-    print(Add(2, 3))
+    System.Console.WriteLine(Add(2, 3))
 }
 
 function Add(a: int, b: int): int
@@ -1719,7 +1719,7 @@ function Main()
 
 function Greet()
 {
-    print(""hello"")
+    System.Console.WriteLine(""hello"")
 }", "e2e-no-keyword-top-level-noret");
 
             Assert.Equal(0, exitCode);
@@ -1733,8 +1733,8 @@ function Greet()
 public static void Main()
 {
     var nums = GetNums();
-    print(nums.Length);
-    print(nums[0] + nums[1]);
+    System.Console.WriteLine(nums.Length);
+    System.Console.WriteLine(nums[0] + nums[1]);
 }
 
 public int[] GetNums()
@@ -1754,7 +1754,7 @@ public class Program
 {
     public static function Main()
     {
-        print(""hello from class"")
+        System.Console.WriteLine(""hello from class"")
     }
 }", "e2e-entry-class", "Program.Main");
 
@@ -1772,7 +1772,7 @@ namespace My.App
     {
         public static function Main()
         {
-            print(""hello from namespace"")
+            System.Console.WriteLine(""hello from namespace"")
         }
     }
 }", "e2e-entry-namespace", "My.App.Program.Main");
@@ -1789,8 +1789,8 @@ public class Program
 {
     public static function Main(args: string[])
     {
-        print(args.Length)
-        print(args[0])
+        System.Console.WriteLine(args.Length)
+        System.Console.WriteLine(args[0])
     }
 }", "e2e-entry-class-args", "Program.Main", processArgs: new[] { "abc" });
 
@@ -1806,7 +1806,7 @@ public class App
 {
     public static function Main()
     {
-        print(""class main only"")
+        System.Console.WriteLine(""class main only"")
     }
 }", "e2e-entry-class-simple");
 
@@ -1838,9 +1838,9 @@ namespace My.App
 
 function Main()
 {
-    print(My.App.Utils.Square(4))
-    print(My.App.Config.Version)
-    print(int(My.App.Color.Green))
+    System.Console.WriteLine(My.App.Utils.Square(4))
+    System.Console.WriteLine(My.App.Config.Version)
+    System.Console.WriteLine(int(My.App.Color.Green))
 }", "e2e-dotted-access");
 
             Assert.Equal(0, exitCode);
@@ -1867,7 +1867,7 @@ using Foo.Bar
 function Main()
 {
     var p = new Point()
-    print(p.X())
+    System.Console.WriteLine(p.X())
 }", "e2e-using-internal");
 
             Assert.Equal(0, exitCode);
@@ -1881,7 +1881,7 @@ function Main()
             var (exitCode, stdout) = EmitAndRun(@"
 function Main()
 {
-    print(Program.X())
+    System.Console.WriteLine(Program.X())
 }
 
 public class Program
@@ -1940,8 +1940,8 @@ public class Program
         {
             // 回归：原 SingleOrDefault 崩溃 → 歧义诊断
             var messages = GetEmitDiagnostics(@"
-function Main() { print(1) }
-public class Foo { public static function Main() { print(2) } }", "Main");
+function Main() { System.Console.WriteLine(1) }
+public class Foo { public static function Main() { System.Console.WriteLine(2) } }", "Main");
             Assert.Contains(messages, m => m.Contains("入口函数 'Main' 存在多个匹配"));
         }
 
@@ -1959,11 +1959,11 @@ public class Foo { public static function Main() { print(2) } }", "Main");
 public static void Main()
 {
     const int x = 10;
-    print(x);
+    System.Console.WriteLine(x);
     const string s = ""hi"";
-    print(s);
+    System.Console.WriteLine(s);
     const double d = 3.5;
-    print(d);
+    System.Console.WriteLine(d);
 }", "e2e-cs-const");
 
             Assert.Equal(0, exitCode);
@@ -1988,9 +1988,9 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(
 "function Main()\n" +
 "{\n" +
-"    print(\"a\\nb\\tc\\\\d\\\"e\\0f\")\n" +
-"    print(\"\\u0041\\u03A9\")\n" +
-"    print(\"\\U0001F600\".Length)\n" +
+"    System.Console.WriteLine(\"a\\nb\\tc\\\\d\\\"e\\0f\")\n" +
+"    System.Console.WriteLine(\"\\u0041\\u03A9\")\n" +
+"    System.Console.WriteLine(\"\\U0001F600\".Length)\n" +
 "}", "e2e-string-escapes");
 
             Assert.Equal(0, exitCode);
@@ -2003,8 +2003,8 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(
 "function Main()\n" +
 "{\n" +
-"    print(@\"a\\b\"\"c\")\n" +
-"    print(@\"line1\n" +
+"    System.Console.WriteLine(@\"a\\b\"\"c\")\n" +
+"    System.Console.WriteLine(@\"line1\n" +
 "line2\")\n" +
 "}", "e2e-verbatim-string");
 
@@ -2018,8 +2018,8 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(
 "function Main()\n" +
 "{\n" +
-"    print(\"\"\"hi\"\"\")\n" +
-"    print(\"\"\"a\"b\"\"\")\n" +
+"    System.Console.WriteLine(\"\"\"hi\"\"\")\n" +
+"    System.Console.WriteLine(\"\"\"a\"b\"\"\")\n" +
 "}", "e2e-raw-string");
 
             Assert.Equal(0, exitCode);
@@ -2033,9 +2033,9 @@ public static void Main()
 "function Main()\n" +
 "{\n" +
 "    var name = \"Cocoa\"\n" +
-"    print($\"Hello {name}\")\n" +
-"    print($\"{name}!\")\n" +
-"    print($\"prefix\")\n" +
+"    System.Console.WriteLine($\"Hello {name}\")\n" +
+"    System.Console.WriteLine($\"{name}!\")\n" +
+"    System.Console.WriteLine($\"prefix\")\n" +
 "}", "e2e-interp-basic");
 
             Assert.Equal(0, exitCode);
@@ -2050,9 +2050,9 @@ public static void Main()
 "{\n" +
 "    var a = 10\n" +
 "    var b = 20\n" +
-"    print($\"{a} + {b} = {a + b}\")\n" +
-"    print($\"{a * b}\")\n" +
-"    print($\"{b > a}\")\n" +
+"    System.Console.WriteLine($\"{a} + {b} = {a + b}\")\n" +
+"    System.Console.WriteLine($\"{a * b}\")\n" +
+"    System.Console.WriteLine($\"{b > a}\")\n" +
 "}", "e2e-interp-expr");
 
             Assert.Equal(0, exitCode);
@@ -2065,11 +2065,11 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(
 "function Main()\n" +
 "{\n" +
-"    print($\"{3.5}\")\n" +
-"    print($\"{true}\")\n" +
-"    print($\"{'A'}\")\n" +
+"    System.Console.WriteLine($\"{3.5}\")\n" +
+"    System.Console.WriteLine($\"{true}\")\n" +
+"    System.Console.WriteLine($\"{'A'}\")\n" +
 "    var b = 200\n" +
-"    print($\"{b}\")\n" +
+"    System.Console.WriteLine($\"{b}\")\n" +
 "}", "e2e-interp-conversions");
 
             Assert.Equal(0, exitCode);
@@ -2083,7 +2083,7 @@ public static void Main()
 "function Main()\n" +
 "{\n" +
 "    var x = 5\n" +
-"    print($\"{{escaped}} {x} {{}}\")\n" +
+"    System.Console.WriteLine($\"{{escaped}} {x} {{}}\")\n" +
 "}", "e2e-interp-braces");
 
             Assert.Equal(0, exitCode);
@@ -2097,9 +2097,9 @@ public static void Main()
 "function Main()\n" +
 "{\n" +
 "    var x = 7\n" +
-"    print($@\"line1\n" +
+"    System.Console.WriteLine($@\"line1\n" +
 "line2 {x}\")\n" +
-"    print(@$\"pre {x}\")\n" +
+"    System.Console.WriteLine(@$\"pre {x}\")\n" +
 "}", "e2e-interp-verbatim");
 
             Assert.Equal(0, exitCode);
@@ -2113,18 +2113,18 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(
 "function Main()\n" +
 "{\n" +
-"    print($\"{1e22:E2}\")\n" +
-"    print($\"{1.5e-3:E2}\")\n" +
-"    print($\"{5e-324:E2}\")\n" +
-"    print($\"{1e308:E2}\")\n" +
-"    print($\"{1.7976931348623157E+308:E}\")\n" +
-"    print($\"{1.7976931348623157E+308:G15}\")\n" +
-"    print($\"{1.0:E}\")\n" +
-"    print($\"{12345.678:E}\")\n" +
-"    print($\"{1.0:G}\")\n" +
-"    print($\"{123456789.0:G}\")\n" +
-"    print($\"{1e22:G}\")\n" +
-"    print($\"{1E-308:G}\")\n" +
+"    System.Console.WriteLine($\"{1e22:E2}\")\n" +
+"    System.Console.WriteLine($\"{1.5e-3:E2}\")\n" +
+"    System.Console.WriteLine($\"{5e-324:E2}\")\n" +
+"    System.Console.WriteLine($\"{1e308:E2}\")\n" +
+"    System.Console.WriteLine($\"{1.7976931348623157E+308:E}\")\n" +
+"    System.Console.WriteLine($\"{1.7976931348623157E+308:G15}\")\n" +
+"    System.Console.WriteLine($\"{1.0:E}\")\n" +
+"    System.Console.WriteLine($\"{12345.678:E}\")\n" +
+"    System.Console.WriteLine($\"{1.0:G}\")\n" +
+"    System.Console.WriteLine($\"{123456789.0:G}\")\n" +
+"    System.Console.WriteLine($\"{1e22:G}\")\n" +
+"    System.Console.WriteLine($\"{1E-308:G}\")\n" +
 "}", "e2e-interp-double-enotation");
 
             Assert.Equal(0, exitCode);
@@ -2151,28 +2151,28 @@ public static void Main()
 "    var arr = new int[] {1, 2, 3}\n" +
 "    foreach (var x in arr)\n" +
 "    {\n" +
-"        print(x)\n" +
+"        System.Console.WriteLine(x)\n" +
 "    }\n" +
 "    var sum = 0\n" +
 "    foreach (var x in arr)\n" +
 "    {\n" +
 "        sum = sum + x\n" +
 "    }\n" +
-"    print(sum)\n" +
+"    System.Console.WriteLine(sum)\n" +
 "    var bytes: byte[] = new byte[] {10, 20, 30}\n" +
 "    foreach (var b in bytes)\n" +
 "    {\n" +
-"        print(b)\n" +
+"        System.Console.WriteLine(b)\n" +
 "    }\n" +
 "    var doubles: double[] = new double[] {1.5, 2.5}\n" +
 "    foreach (var d in doubles)\n" +
 "    {\n" +
-"        print(d)\n" +
+"        System.Console.WriteLine(d)\n" +
 "    }\n" +
 "    var names = new string[] {\"a\", \"b\"}\n" +
 "    foreach (var n in names)\n" +
 "    {\n" +
-"        print(n)\n" +
+"        System.Console.WriteLine(n)\n" +
 "    }\n" +
 "}", "e2e-foreach-array");
 
@@ -2189,14 +2189,14 @@ public static void Main()
 "    var s = \"abc\"\n" +
 "    foreach (var c in s)\n" +
 "    {\n" +
-"        print(c)\n" +
+"        System.Console.WriteLine(c)\n" +
 "    }\n" +
 "    var arr = new int[] {1, 2, 3, 4}\n" +
 "    foreach (var x in arr)\n" +
 "    {\n" +
 "        if x == 3 continue\n" +
 "        if x == 4 break\n" +
-"        print(x)\n" +
+"        System.Console.WriteLine(x)\n" +
 "    }\n" +
 "    var result = 0\n" +
 "    foreach (var i in arr)\n" +
@@ -2207,7 +2207,7 @@ public static void Main()
 "            result = result + i * j\n" +
 "        }\n" +
 "    }\n" +
-"    print(result)\n" +
+"    System.Console.WriteLine(result)\n" +
 "}", "e2e-foreach-string");
 
             Assert.Equal(0, exitCode);
@@ -2225,17 +2225,17 @@ public static void Main()
 "    {\n" +
 "        case 1:\n" +
 "        {\n" +
-"            print(\"one\")\n" +
+"            System.Console.WriteLine(\"one\")\n" +
 "            break\n" +
 "        }\n" +
 "        case 2:\n" +
 "        {\n" +
-"            print(\"two\")\n" +
+"            System.Console.WriteLine(\"two\")\n" +
 "            break\n" +
 "        }\n" +
 "        default:\n" +
 "        {\n" +
-"            print(\"other\")\n" +
+"            System.Console.WriteLine(\"other\")\n" +
 "            break\n" +
 "        }\n" +
 "    }\n" +
@@ -2244,12 +2244,12 @@ public static void Main()
 "        case 1:\n" +
 "        case 2:\n" +
 "        {\n" +
-"            print(\"low\")\n" +
+"            System.Console.WriteLine(\"low\")\n" +
 "            break\n" +
 "        }\n" +
 "        default:\n" +
 "        {\n" +
-"            print(\"high\")\n" +
+"            System.Console.WriteLine(\"high\")\n" +
 "            break\n" +
 "        }\n" +
 "    }\n" +
@@ -2257,17 +2257,17 @@ public static void Main()
 "    {\n" +
 "        case 1:\n" +
 "        {\n" +
-"            print(\"one\")\n" +
+"            System.Console.WriteLine(\"one\")\n" +
 "            break\n" +
 "        }\n" +
 "        case 2 when false:\n" +
 "        {\n" +
-"            print(\"two-when\")\n" +
+"            System.Console.WriteLine(\"two-when\")\n" +
 "            break\n" +
 "        }\n" +
 "        default:\n" +
 "        {\n" +
-"            print(\"default\")\n" +
+"            System.Console.WriteLine(\"default\")\n" +
 "            break\n" +
 "        }\n" +
 "    }\n" +
@@ -2276,17 +2276,17 @@ public static void Main()
 "    {\n" +
 "        case \"a\":\n" +
 "        {\n" +
-"            print(\"A\")\n" +
+"            System.Console.WriteLine(\"A\")\n" +
 "            break\n" +
 "        }\n" +
 "        case \"b\":\n" +
 "        {\n" +
-"            print(\"B\")\n" +
+"            System.Console.WriteLine(\"B\")\n" +
 "            break\n" +
 "        }\n" +
 "        default:\n" +
 "        {\n" +
-"            print(\"Z\")\n" +
+"            System.Console.WriteLine(\"Z\")\n" +
 "            break\n" +
 "        }\n" +
 "    }\n" +
@@ -2309,7 +2309,7 @@ public static void Main()
 "        sum = sum + i\n" +
 "        i = i + 1\n" +
 "    }\n" +
-"    print(sum)\n" +
+"    System.Console.WriteLine(sum)\n" +
 "}", "e2e-switch");
 
             Assert.Equal(0, exitCode);
@@ -2357,8 +2357,8 @@ function Main()
     var r = new Rectangle(3, 4)
     var s: IShape = r
     var c: ICloneable = r
-    print(s.Area())
-    print(c.Clone())
+    System.Console.WriteLine(s.Area())
+    System.Console.WriteLine(c.Clone())
 }", "e2e-multi-interface");
 
             Assert.Equal(0, exitCode);
@@ -2393,9 +2393,9 @@ public class Derived extends Base, IExtra
 function Main()
 {
     var d = new Derived()
-    print(d.B())
+    System.Console.WriteLine(d.B())
     var e: IExtra = d
-    print(e.X())
+    System.Console.WriteLine(e.X())
 }", "e2e-base-plus-interface");
 
             Assert.Equal(0, exitCode);
@@ -2433,7 +2433,7 @@ public class Config
 
 function Main()
 {
-    print(Config.GetMax())
+    System.Console.WriteLine(Config.GetMax())
 } ", "e2e-static-ctor-csharp-style");
 
             Assert.Equal(0, exitCode);
@@ -2461,7 +2461,7 @@ public class Config
 
 function Main()
 {
-    print(Config.GetMax())
+    System.Console.WriteLine(Config.GetMax())
 } ", "e2e-static-ctor-cocoa-style");
 
             Assert.Equal(0, exitCode);
@@ -2490,7 +2490,7 @@ public class Config
 
 function Main()
 {
-    print(Config.GetOrder())
+    System.Console.WriteLine(Config.GetOrder())
 } ", "e2e-static-ctor-ordering");
 
             Assert.Equal(0, exitCode);
@@ -2527,8 +2527,8 @@ public class Account
 function Main()
 {
     var a = new Account()
-    print(a.GetBase())
-    print(Account.Seq)
+    System.Console.WriteLine(a.GetBase())
+    System.Console.WriteLine(Account.Seq)
 } ", "e2e-static-ctor-before-instance");
 
             Assert.Equal(0, exitCode);

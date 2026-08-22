@@ -40,12 +40,12 @@ function Main()
 {
     var p = new Person("Alice", 30)
     p.Name = "Bob"
-    print(p.Name)
-    print(p.Age)
-    print(p.NextAge())
-    print(p.Greet())
-    print(Person.Count)
+    System.Console.WriteLine(p.Name)
+    System.Console.WriteLine(p.Age)
+    System.Console.WriteLine(p.NextAge())
+    System.Console.WriteLine(p.Greet())
+    System.Console.WriteLine(Person.Count)
 
     var q = new Person("Carol", 40)
-    print(Person.Count)
+    System.Console.WriteLine(Person.Count)
 }

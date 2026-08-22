@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Emit.Native.IR;
 using Xunit;
 

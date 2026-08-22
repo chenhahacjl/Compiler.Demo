@@ -1,18 +1,18 @@
 function Main()
 {
     var s = "hello"
-    print(s.Length)
-    print(s[0])
-    print(int(s[1]))
-    print(Middle(s))
-    print(Middle(s) + "!")
-    print(FirstChar(s))
+    System.Console.WriteLine(s.Length)
+    System.Console.WriteLine(s[0])
+    System.Console.WriteLine(int(s[1]))
+    System.Console.WriteLine(Middle(s))
+    System.Console.WriteLine(Middle(s) + "!")
+    System.Console.WriteLine(FirstChar(s))
 
     var c = 'a'
-    print(c)
-    print(c == 'a')
-    print(char(98))
+    System.Console.WriteLine(c)
+    System.Console.WriteLine(c == 'a')
+    System.Console.WriteLine(char(98))
 
-    print(s == "hello")
-    print(s == "world")
+    System.Console.WriteLine(s == "hello")
+    System.Console.WriteLine(s == "world")
 }

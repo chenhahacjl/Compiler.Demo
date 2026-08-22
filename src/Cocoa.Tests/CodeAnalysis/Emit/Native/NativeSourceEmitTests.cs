@@ -83,7 +83,7 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(42)
+    System.Console.WriteLine(42)
 }", "dbg-int", target);
 
             Assert.Equal("42\r\n", output);
@@ -103,14 +103,14 @@ function Main()
     var c: char
     var by: byte
     var s: string
-    print(a)
-    print(b)
-    print(d)
-    print(int(c))
-    print(int(by))
-    print(s == s)
+    System.Console.WriteLine(a)
+    System.Console.WriteLine(b)
+    System.Console.WriteLine(d)
+    System.Console.WriteLine(int(c))
+    System.Console.WriteLine(int(by))
+    System.Console.WriteLine(s == s)
     const k: int = 7
-    print(k)
+    System.Console.WriteLine(k)
 }", "dbg-default", target);
 
             Assert.Equal("0\r\nFalse\r\n0\r\n0\r\n0\r\nTrue\r\n7\r\n", output);
@@ -124,7 +124,7 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(""hi"")
+    System.Console.WriteLine(""hi"")
 }", "dbg-str", target);
 
             Assert.Equal("hi\r\n", output);
@@ -138,13 +138,13 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(""Hello, World!"")
-    print(42)
-    print(7 * 6)
-    print(1 + 2 * 3)
-    print((1 + 2) * 3)
-    print(true)
-    print(false)
+    System.Console.WriteLine(""Hello, World!"")
+    System.Console.WriteLine(42)
+    System.Console.WriteLine(7 * 6)
+    System.Console.WriteLine(1 + 2 * 3)
+    System.Console.WriteLine((1 + 2) * 3)
+    System.Console.WriteLine(true)
+    System.Console.WriteLine(false)
 }", "src-print-expressions", target);
 
             Assert.Equal("Hello, World!\r\n42\r\n42\r\n7\r\n9\r\nTrue\r\nFalse\r\n", output);
@@ -160,13 +160,13 @@ function Main()
 {
     var x = 10
     x = x + 5
-    print(x)
+    System.Console.WriteLine(x)
     var y = 3
     y = x * y
-    print(y)
+    System.Console.WriteLine(y)
     var s = ""foo""
     s = s + ""bar""
-    print(s)
+    System.Console.WriteLine(s)
 }", "src-variables", target);
 
             Assert.Equal("15\r\n45\r\nfoobar\r\n", output);
@@ -183,15 +183,15 @@ function Main()
     var x = 10
     if x > 5
     {
-        print(""big"")
+        System.Console.WriteLine(""big"")
     }
     if x > 20
     {
-        print(""huge"")
+        System.Console.WriteLine(""huge"")
     }
     else
     {
-        print(""small"")
+        System.Console.WriteLine(""small"")
     }
 }", "src-if", target);
 
@@ -216,11 +216,11 @@ function square(x: int): int
 
 function Main()
 {
-    print(add(3, 4))
-    print(square(5))
-    print(square(add(2, 3)))
+    System.Console.WriteLine(add(3, 4))
+    System.Console.WriteLine(square(5))
+    System.Console.WriteLine(square(add(2, 3)))
     var nested = add(square(2), square(3))
-    print(nested)
+    System.Console.WriteLine(nested)
 }", "src-user-functions", target);
 
             Assert.Equal("7\r\n25\r\n25\r\n13\r\n", output);
@@ -252,9 +252,9 @@ function fibonacci(n: int): int
 
 function Main()
 {
-    print(factorial(5))
-    print(factorial(10))
-    print(fibonacci(10))
+    System.Console.WriteLine(factorial(5))
+    System.Console.WriteLine(factorial(10))
+    System.Console.WriteLine(fibonacci(10))
 }", "src-recursion", target);
 
             Assert.Equal("120\r\n3628800\r\n55\r\n", output);
@@ -280,9 +280,9 @@ function Main()
         {
             continue
         }
-        print(i)
+        System.Console.WriteLine(i)
     }
-    print(""done"")
+    System.Console.WriteLine(""done"")
 }", "src-while", target);
 
             Assert.Equal("2\r\ndone\r\n", output);
@@ -303,14 +303,14 @@ function Main()
         {
             continue
         }
-        print(j)
+        System.Console.WriteLine(j)
     }
-    print(""x"")
+    System.Console.WriteLine(""x"")
     var k = 0
     do
     {
         k += 1
-        print(k)
+        System.Console.WriteLine(k)
     }
     while k < 3
 }", "src-for-do", target);
@@ -331,12 +331,12 @@ public static void Main()
     {
         sum = sum + i;
     }
-    print(sum);
+    System.Console.WriteLine(sum);
     var j = 10;
     j--;
-    print(j);
+    System.Console.WriteLine(j);
     j++;
-    print(j);
+    System.Console.WriteLine(j);
     var total = 0;
     for (;;)
     {
@@ -346,7 +346,7 @@ public static void Main()
             break;
         }
     }
-    print(total);
+    System.Console.WriteLine(total);
     var k = 0;
     for (; k < 4; k = k + 1)
     {
@@ -354,7 +354,7 @@ public static void Main()
         {
             continue;
         }
-        print(k);
+        System.Console.WriteLine(k);
     }
 }", "src-cstyle-for", target, useCs: true);
 
@@ -369,21 +369,21 @@ public static void Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(7 % 3)
-    print(-7 % 3)
-    print(10 % 2)
-    print(1 << 4)
-    print(8 >> 1)
-    print(-8 >> 1)
+    System.Console.WriteLine(7 % 3)
+    System.Console.WriteLine(-7 % 3)
+    System.Console.WriteLine(10 % 2)
+    System.Console.WriteLine(1 << 4)
+    System.Console.WriteLine(8 >> 1)
+    System.Console.WriteLine(-8 >> 1)
     var x = 10
     x %= 3
-    print(x)
+    System.Console.WriteLine(x)
     x = 1
     x <<= 4
-    print(x)
+    System.Console.WriteLine(x)
     x = -16
     x >>= 2
-    print(x)
+    System.Console.WriteLine(x)
     var sum = 0
     for var i = 1 to 5
     {
@@ -393,7 +393,7 @@ function Main()
         }
         sum = sum + i
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "src-modulo-shift", target);
 
             Assert.Equal("1\r\n-1\r\n0\r\n16\r\n4\r\n-4\r\n1\r\n16\r\n-4\r\n9\r\n", output);
@@ -409,21 +409,21 @@ function Main()
 {
     var a = 5
     var b = 10
-    print(a > b ? a : b)
-    print(1 < 2 ? 3 + 4 : 5 + 6)
+    System.Console.WriteLine(a > b ? a : b)
+    System.Console.WriteLine(1 < 2 ? 3 + 4 : 5 + 6)
     var i = 1
     i = ++i
-    print(i)
+    System.Console.WriteLine(i)
     i = --i
-    print(i)
+    System.Console.WriteLine(i)
     var n = 7
-    print(n % 2 == 0 ? ""even"" : ""odd"")
+    System.Console.WriteLine(n % 2 == 0 ? ""even"" : ""odd"")
     var sum = 0
     for var j = 1 to 5
     {
         sum = sum + (j % 2 == 0 ? 10 : j)
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "src-ternary-prefix", target);
 
             Assert.Equal("10\r\n7\r\n2\r\n1\r\nodd\r\n29\r\n", output);
@@ -437,7 +437,7 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(1 % 0)
+    System.Console.WriteLine(1 % 0)
 }", "src-modulo-zero", target, expectedExitCode: 1);
 
             Assert.Equal("error: division by zero\r\n", output);
@@ -453,13 +453,13 @@ function Main()
 {
     var x = 0
     x += 5
-    print(x)
+    System.Console.WriteLine(x)
     x *= 3
-    print(x)
+    System.Console.WriteLine(x)
     x -= 7
-    print(x)
+    System.Console.WriteLine(x)
     x /= 4
-    print(x)
+    System.Console.WriteLine(x)
 }", "src-compound-assignment", target);
 
             Assert.Equal("5\r\n15\r\n8\r\n2\r\n", output);
@@ -475,11 +475,11 @@ function Main()
 {
     var s = ""foo""
     var t = ""bar""
-    print(s + t)
-    print(s + ""!"" + t)
-    print(s == s)
-    print(s == t)
-    print(s != t)
+    System.Console.WriteLine(s + t)
+    System.Console.WriteLine(s + ""!"" + t)
+    System.Console.WriteLine(s == s)
+    System.Console.WriteLine(s == t)
+    System.Console.WriteLine(s != t)
 }", "src-strings", target);
 
             Assert.Equal("foobar\r\nfoo!bar\r\nTrue\r\nFalse\r\nTrue\r\n", output);
@@ -499,8 +499,8 @@ function greet(name: string): string
 function Main()
 {
     var who = ""Cocoa""
-    print(greet(who))
-    print(greet(""World""))
+    System.Console.WriteLine(greet(who))
+    System.Console.WriteLine(greet(""World""))
 }", "src-string-parameter", target);
 
             Assert.Equal("Hello, Cocoa\r\nHello, World\r\n", output);
@@ -514,14 +514,14 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(-5)
-    print(0 - 7)
+    System.Console.WriteLine(-5)
+    System.Console.WriteLine(0 - 7)
     var n = -3
-    print(0 - n)
+    System.Console.WriteLine(0 - n)
     var m = -2 * 3
-    print(m)
-    print(!true)
-    print(!false)
+    System.Console.WriteLine(m)
+    System.Console.WriteLine(!true)
+    System.Console.WriteLine(!false)
 }", "src-negative", target);
 
             Assert.Equal("-5\r\n-7\r\n3\r\n-6\r\nFalse\r\nTrue\r\n", output);
@@ -536,11 +536,11 @@ function Main()
 function Main()
 {
     var a = true && false
-    print(a)
+    System.Console.WriteLine(a)
     var b = true || false
-    print(b)
+    System.Console.WriteLine(b)
     var c = (1 < 2) && (3 > 2)
-    print(c)
+    System.Console.WriteLine(c)
 }", "src-logical", target);
 
             Assert.Equal("False\r\nTrue\r\nTrue\r\n", output);
@@ -554,8 +554,8 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    var s = input()
-    print(s)
+    var s = System.Console.ReadLine()
+    System.Console.WriteLine(s)
 }", "src-input", target, input: "Hello\n");
 
             Assert.Equal("Hello\r\n", output);
@@ -571,7 +571,7 @@ function Main()
                 var output = CompileAndRun(@"
 function Main()
 {
-    print(random(100) < 100)
+    System.Console.WriteLine(System.Runtime.Random(100) < 100)
 }", "src-random", target);
 
                 Assert.Equal("True\r\n", output);
@@ -611,7 +611,7 @@ class Runtime
 function Main()
 {
     var r = Runtime.Random(100)
-    print(r < 100)
+    System.Console.WriteLine(r < 100)
 }", "src-syscall-random", target);
 
             Assert.Equal("True\r\n", output);
@@ -625,10 +625,10 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    var t0 = now()
-    sleep(1)
-    var t1 = now()
-    print(t1 >= t0)
+    var t0 = System.Runtime.Now()
+    System.Runtime.Sleep(1)
+    var t1 = System.Runtime.Now()
+    System.Console.WriteLine(t1 >= t0)
 }", "src-sleep-now", target);
 
             Assert.Equal("True\r\n", output);
@@ -642,10 +642,10 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(42 / 7)
-    print(-42 / 7)
-    print(42 / -7)
-    print(-42 / -7)
+    System.Console.WriteLine(42 / 7)
+    System.Console.WriteLine(-42 / 7)
+    System.Console.WriteLine(42 / -7)
+    System.Console.WriteLine(-42 / -7)
 }", "src-division", target);
 
             Assert.Equal("6\r\n-6\r\n-6\r\n6\r\n", output);
@@ -659,7 +659,7 @@ function Main()
             var output = CompileAndRun(@"
 function Main()
 {
-    print(1 / 0)
+    System.Console.WriteLine(1 / 0)
 }", "src-division-by-zero", target, expectedExitCode: 1);
 
             Assert.Equal("error: division by zero\r\n", output);
@@ -675,10 +675,10 @@ function Main()
 {
     var a = new int[3] {10, 20, 30}
     a[1] = 99
-    print(a[0])
-    print(a[1])
-    print(a[2])
-    print(a.Length)
+    System.Console.WriteLine(a[0])
+    System.Console.WriteLine(a[1])
+    System.Console.WriteLine(a[2])
+    System.Console.WriteLine(a.Length)
 }", "src-array", target);
 
             Assert.Equal("10\r\n99\r\n30\r\n3\r\n", output);
@@ -695,8 +695,8 @@ function Main()
     var b = new bool[2]
     b[0] = true
     b[1] = false
-    print(b[0])
-    print(b[1])
+    System.Console.WriteLine(b[0])
+    System.Console.WriteLine(b[1])
 }", "src-array-bool", target);
 
             Assert.Equal("True\r\nFalse\r\n", output);
@@ -724,7 +724,7 @@ function Main()
         sum = sum + a[i]
         i = i + 1
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "src-array-loop", target);
 
             Assert.Equal("100\r\n", output);
@@ -741,23 +741,23 @@ function Main()
     var arr = new int[] {1, 2, 3}
     foreach (var x in arr)
     {
-        print(x)
+        System.Console.WriteLine(x)
     }
     var sum = 0
     foreach (var x in arr)
     {
         sum = sum + x
     }
-    print(sum)
+    System.Console.WriteLine(sum)
     var doubles: double[] = new double[] {1.5, 2.5}
     foreach (var d in doubles)
     {
-        print(d)
+        System.Console.WriteLine(d)
     }
     var names = new string[] {""a"", ""b""}
     foreach (var n in names)
     {
-        print(n)
+        System.Console.WriteLine(n)
     }
 }", "src-foreach-array", target);
 
@@ -775,14 +775,14 @@ function Main()
     var s = ""abc""
     foreach (var c in s)
     {
-        print(c)
+        System.Console.WriteLine(c)
     }
     var arr = new int[] {1, 2, 3, 4}
     foreach (var x in arr)
     {
         if x == 3 continue
         if x == 4 break
-        print(x)
+        System.Console.WriteLine(x)
     }
     var result = 0
     foreach (var i in arr)
@@ -793,7 +793,7 @@ function Main()
             result = result + i * j
         }
     }
-    print(result)
+    System.Console.WriteLine(result)
 }", "src-foreach-string", target);
 
             Assert.Equal("a\r\nb\r\nc\r\n1\r\n2\r\n80\r\n", output);
@@ -812,17 +812,17 @@ function Main()
     {
         case 1:
         {
-            print(""one"")
+            System.Console.WriteLine(""one"")
             break
         }
         case 2:
         {
-            print(""two"")
+            System.Console.WriteLine(""two"")
             break
         }
         default:
         {
-            print(""other"")
+            System.Console.WriteLine(""other"")
             break
         }
     }
@@ -831,12 +831,12 @@ function Main()
         case 1:
         case 2:
         {
-            print(""low"")
+            System.Console.WriteLine(""low"")
             break
         }
         default:
         {
-            print(""high"")
+            System.Console.WriteLine(""high"")
             break
         }
     }
@@ -844,17 +844,17 @@ function Main()
     {
         case 1:
         {
-            print(""one"")
+            System.Console.WriteLine(""one"")
             break
         }
         case 2 when false:
         {
-            print(""two-when"")
+            System.Console.WriteLine(""two-when"")
             break
         }
         default:
         {
-            print(""default"")
+            System.Console.WriteLine(""default"")
             break
         }
     }
@@ -863,17 +863,17 @@ function Main()
     {
         case ""a"":
         {
-            print(""A"")
+            System.Console.WriteLine(""A"")
             break
         }
         case ""b"":
         {
-            print(""B"")
+            System.Console.WriteLine(""B"")
             break
         }
         default:
         {
-            print(""Z"")
+            System.Console.WriteLine(""Z"")
             break
         }
     }
@@ -896,7 +896,7 @@ function Main()
         sum = sum + i
         i = i + 1
     }
-    print(sum)
+    System.Console.WriteLine(sum)
 }", "src-switch", target);
 
             Assert.Equal("two\r\nlow\r\ndefault\r\nB\r\n9\r\n", output);
@@ -913,7 +913,7 @@ function Main()
     var a = new int[2]
     a[0] = 1
     a[1] = 2
-    print(a[5])
+    System.Console.WriteLine(a[5])
 }", "src-array-oob", target, expectedExitCode: 1);
 
             Assert.Equal("error: array index out of range\r\n", output);
@@ -947,14 +947,14 @@ function Main()
 function Main()
 {
     var s = ""hello""
-    print(s.Length)
-    print(s[0])
-    print(int(s[1]))
+    System.Console.WriteLine(s.Length)
+    System.Console.WriteLine(s[0])
+    System.Console.WriteLine(int(s[1]))
     var c = s[2]
-    print(c)
-    print(char(97))
-    print(s.substring(1, 3))
-    print(s.substring(1, 3) + ""!"")
+    System.Console.WriteLine(c)
+    System.Console.WriteLine(char(97))
+    System.Console.WriteLine(s.substring(1, 3))
+    System.Console.WriteLine(s.substring(1, 3) + ""!"")
 }", "src-string-index", target);
 
             Assert.Equal("5\r\nh\r\n101\r\nl\r\na\r\nell\r\nell!\r\n", output);
@@ -970,8 +970,8 @@ function Main()
 {
     var a = new char[2] {'x', 'y'}
     a[0] = 'z'
-    print(a[0])
-    print(a[1])
+    System.Console.WriteLine(a[0])
+    System.Console.WriteLine(a[1])
 }", "src-char-array", target);
 
             Assert.Equal("z\r\ny\r\n", output);
@@ -986,7 +986,7 @@ function Main()
 function Main()
 {
     var s = ""abc""
-    print(s[9])
+    System.Console.WriteLine(s[9])
 }", "src-string-oob", target, expectedExitCode: 1);
 
             Assert.Equal("error: array index out of range\r\n", output);
@@ -1001,7 +1001,7 @@ function Main()
 function Main()
 {
     var s = ""abc""
-    print(s.substring(1, 99))
+    System.Console.WriteLine(s.substring(1, 99))
 }", "src-substring-invalid", target, expectedExitCode: 1);
 
             Assert.Equal("error: invalid substring arguments\r\n", output);
@@ -1019,12 +1019,12 @@ function f(c: Color): int { return int(c) }
 function Main()
 {
     var c = Color.Green
-    print(int(c))
-    print(int(HttpStatus.NotFound))
-    print(c == Color.Green)
-    print(c == Color.Red)
-    print(int(f(Color.Blue)))
-    print(int(Color(99)) == 99)
+    System.Console.WriteLine(int(c))
+    System.Console.WriteLine(int(HttpStatus.NotFound))
+    System.Console.WriteLine(c == Color.Green)
+    System.Console.WriteLine(c == Color.Red)
+    System.Console.WriteLine(int(f(Color.Blue)))
+    System.Console.WriteLine(int(Color(99)) == 99)
 }", "src-enum", target);
 
             Assert.Equal("1\r\n404\r\nTrue\r\nFalse\r\n2\r\nTrue\r\n", output);
@@ -1040,10 +1040,10 @@ public enum Color { Red, Green, Blue }
 function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
-    print(int(a[0]))
-    print(int(a[1]))
+    System.Console.WriteLine(int(a[0]))
+    System.Console.WriteLine(int(a[1]))
     a[1] = Color.Blue
-    print(int(a[1]))
+    System.Console.WriteLine(int(a[1]))
 }", "src-enum-array", target);
 
             Assert.Equal("0\r\n1\r\n2\r\n", output);
@@ -1069,7 +1069,7 @@ public class Circle extends IShape
 function Main()
 {
     var s: IShape = new Circle()
-    print(s.Area())
+    System.Console.WriteLine(s.Area())
 }");
             var compilation = Compilation.Create(syntaxTree);
             TargetPlatform.TryParse(X64, out var platform);
@@ -1086,8 +1086,8 @@ function Main()
             var output = CompileAndRun(@"
 public static void Main()
 {
-    print(Add(2, 3));
-    print(Square(4));
+    System.Console.WriteLine(Add(2, 3));
+    System.Console.WriteLine(Square(4));
 }
 
 public int Add(int x, int y)
@@ -1111,7 +1111,7 @@ public int Square(int n)
             var output = CompileAndRun(@"
 function Main()
 {
-    print(Add(2, 3))
+    System.Console.WriteLine(Add(2, 3))
 }
 
 function Add(a: int, b: int): int
@@ -1131,9 +1131,9 @@ function Add(a: int, b: int): int
 public static void Main()
 {
     const int x = 10;
-    print(x);
+    System.Console.WriteLine(x);
     const string s = ""hi"";
-    print(s);
+    System.Console.WriteLine(s);
 }", "src-cs-const", target, useCs: true);
 
             Assert.Equal("10\r\nhi\r\n", output);
@@ -1150,8 +1150,8 @@ function Triple(x: int): int => x * 3
 
 function Main()
 {
-    print(Add(2, 3))
-    print(Triple(4))
+    System.Console.WriteLine(Add(2, 3))
+    System.Console.WriteLine(Triple(4))
 }", "src-expression-body-top-level", target);
 
             Assert.Equal("5\r\n12\r\n", output);
@@ -1168,12 +1168,12 @@ function Main()
     var name = ""Cocoa""
     var a = 10
     var b = 20
-    print($""Hello {name}"")
-    print($""{a} + {b} = {a + b}"")
-    print($""{3.5}"")
-    print($""{true}"")
-    print($""{'A'}"")
-    print($""{{escaped}} {a}"")
+    System.Console.WriteLine($""Hello {name}"")
+    System.Console.WriteLine($""{a} + {b} = {a + b}"")
+    System.Console.WriteLine($""{3.5}"")
+    System.Console.WriteLine($""{true}"")
+    System.Console.WriteLine($""{'A'}"")
+    System.Console.WriteLine($""{{escaped}} {a}"")
 }", "src-interp", target);
 
             Assert.Equal("Hello Cocoa\r\n10 + 20 = 30\r\n3.5\r\nTrue\r\nA\r\n{escaped} 10\r\n", output);

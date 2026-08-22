@@ -13,12 +13,50 @@ namespace System
 {
     class Runtime
     {
-        syscall function Print(text: string): void
+        syscall function Print(text: any): void
         syscall function Input(): string
         syscall function Random(max: int): int
         syscall function Sleep(ms: int): void
         syscall function Now(): int
         syscall function Exit(code: int): void
+    }
+
+    namespace Console
+    {
+        function WriteLine(text: string): void
+        {
+            Runtime.Print(text)
+        }
+
+        function WriteLine(text: int): void
+        {
+            Runtime.Print(text)
+        }
+
+        function WriteLine(text: double): void
+        {
+            Runtime.Print(text)
+        }
+
+        function WriteLine(text: bool): void
+        {
+            Runtime.Print(text)
+        }
+
+        function WriteLine(text: char): void
+        {
+            Runtime.Print(text)
+        }
+
+        function WriteLine(text: byte): void
+        {
+            Runtime.Print(text)
+        }
+
+        function ReadLine(): string
+        {
+            return Runtime.Input()
+        }
     }
 
     namespace Math

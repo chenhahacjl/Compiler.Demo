@@ -423,6 +423,11 @@ namespace Cocoa.CodeAnalysis
                     ReportUnreachableCode(((CallExpressionSyntax)node).Identifier.Location);
                     return;
                 }
+                case SyntaxKind.MemberCallExpression:
+                {
+                    ReportUnreachableCode(((MemberCallExpressionSyntax)node).IdentifierToken.Location);
+                    return;
+                }
                 default:
                 {
                     throw new Exception($"Unexpected syntax {node.Kind}");

@@ -5,9 +5,9 @@
 
 function Main()
 {
-    print(Add(2, 3))                        // 5
-    print(Mul(3, 4))                        // 12
-    print(Factorial(5))                     // 120
-    if IsWeekend(Day.Sat) { print("weekend") } else { print("weekday") }
-    print(Greet("Cocoa"))                   // Hello, Cocoa
+    System.Console.WriteLine(Add(2, 3))                        // 5
+    System.Console.WriteLine(Mul(3, 4))                        // 12
+    System.Console.WriteLine(Factorial(5))                     // 120
+    if IsWeekend(Day.Sat) { System.Console.WriteLine("weekend") } else { System.Console.WriteLine("weekday") }
+    System.Console.WriteLine(Greet("Cocoa"))                   // Hello, Cocoa
 }

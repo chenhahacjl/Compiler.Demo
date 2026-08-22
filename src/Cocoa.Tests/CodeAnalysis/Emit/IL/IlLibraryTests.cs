@@ -140,8 +140,8 @@ using MyLib
 function Main()
 {
     var p = new Point(5)
-    print(p.Get())
-    print(p.Add(3))
+    System.Console.WriteLine(p.Get())
+    System.Console.WriteLine(p.Add(3))
 }";
             var appTree = SyntaxTree.Parse(appCode);
             var appCompilation = Compilation.Create("Main", new[] { libPath }, appTree);
@@ -262,7 +262,7 @@ using MyLib
 function Main()
 {
     var h = new Hidden()
-    print(h.Noop())
+    System.Console.WriteLine(h.Noop())
 }";
             var appTree = SyntaxTree.Parse(appCode);
             var appCompilation = Compilation.Create("Main", new[] { libPath }, appTree);
@@ -357,7 +357,7 @@ public class Resource extends IDisposable
 
     public function Dispose()
     {
-        print(""disposing "" + _name)
+        System.Console.WriteLine(""disposing "" + _name)
     }
 }";
             var syntaxTree = SyntaxTree.Parse(code);

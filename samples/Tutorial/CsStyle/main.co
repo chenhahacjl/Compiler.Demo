@@ -9,10 +9,10 @@ function Main()
     var c = 5
     let d: int = 1
 
-    print(Add(a, b))
-    print(Square(c))
-    print(SumArray(new int[] {1, 2, 3, 4}))
-    print(Describe("Cocoa", 3))
-    print(msg)
-    print(d)
+    System.Console.WriteLine(Add(a, b))
+    System.Console.WriteLine(Square(c))
+    System.Console.WriteLine(SumArray(new int[] {1, 2, 3, 4}))
+    System.Console.WriteLine(Describe("Cocoa", 3))
+    System.Console.WriteLine(msg)
+    System.Console.WriteLine(d)
 }

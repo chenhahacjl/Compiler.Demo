@@ -137,9 +137,14 @@ namespace MyLib
             var source = @"
 namespace MyLib
 {
+    class Native
+    {
+        syscall function Print(text: string): void
+    }
+
     function SayHi(): void
     {
-        print(""hi"")
+        Native.Print(""hi"")
     }
 }
 ";
@@ -149,12 +154,13 @@ namespace MyLib
             var body = cod.Bodies[Assert.Single(cod.Functions, f => f.Name == "SayHi")];
             var call = FindCallToPrint(body);
             Assert.NotNull(call);
-            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.Print, call.Function.BuiltinKind);
+            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.Print, call.Method!.BuiltinKind);
         }
 
-        private static Cocoa.CodeAnalysis.Binding.BoundCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)
+        private static Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)
         {
-            if (node is Cocoa.CodeAnalysis.Binding.BoundCallExpression call && call.Function.Name == "Print")
+            if (node is Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression call &&
+                call.Method?.BuiltinKind == Cocoa.CodeAnalysis.Symbols.BuiltinKind.Print)
             {
                 return call;
             }
@@ -184,6 +190,13 @@ namespace MyLib
                 case Cocoa.CodeAnalysis.Binding.BoundNodeKind.ExpressionStatement:
                     yield return ((Cocoa.CodeAnalysis.Binding.BoundExpressionStatement)node).Expression;
                     break;
+                case Cocoa.CodeAnalysis.Binding.BoundNodeKind.MemberCallExpression:
+                    yield return ((Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression)node).Expression;
+                    foreach (var a in ((Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression)node).Arguments)
+                    {
+                        yield return a;
+                    }
+                    break;
             }
         }
 
@@ -196,7 +209,7 @@ namespace MyLib
 {
     function Main(): void
     {
-        print(""hi"")
+        System.Console.WriteLine(""hi"")
     }
 }
 ";

@@ -43,7 +43,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private void EmitProgram()
         {
-            foreach (var (function, body) in _program.Functions)
+            // 可达性过滤（6e-M17）：仅发射从入口可达的函数（SystemLibrary 注入的未引用库函数
+            // 不发射，避免 any 装箱等 native 不支持路径在未引用库体上触发）
+            var reachable = ComputeReachableFunctions(_program.MainFunction!);
+            var functionsToEmit = _program.Functions.Where(kv => reachable.Contains(kv.Key)).ToArray();
+
+            foreach (var (function, body) in functionsToEmit)
             {
                 var irFunction = new IrFunction(function.Name, CreateParameters(function));
                 irFunction.ReturnSize = ReturnSize(function.ReturnType);
@@ -51,9 +56,63 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _irProgram.Functions.Add(irFunction);
             }
 
-            foreach (var (function, body) in _program.Functions)
+            foreach (var (function, body) in functionsToEmit)
             {
                 EmitFunction(_functionMap[function], function, body);
+            }
+        }
+
+        /// <summary>从入口沿绑定调用图收集可达函数（BoundCallExpression/MemberCallExpression 的 Method）。</summary>
+        private HashSet<FunctionSymbol> ComputeReachableFunctions(FunctionSymbol entry)
+        {
+            var reachable = new HashSet<FunctionSymbol>();
+            var pending = new Stack<FunctionSymbol>();
+            pending.Push(entry);
+
+            while (pending.Count > 0)
+            {
+                var function = pending.Pop();
+                if (!reachable.Add(function))
+                {
+                    continue;
+                }
+
+                if (_program.Functions.TryGetValue(function, out var body))
+                {
+                    foreach (var called in CollectCalledFunctions(body))
+                    {
+                        if (!reachable.Contains(called))
+                        {
+                            pending.Push(called);
+                        }
+                    }
+                }
+            }
+
+            return reachable;
+        }
+
+        private static IEnumerable<FunctionSymbol> CollectCalledFunctions(BoundNode node)
+        {
+            switch (node)
+            {
+                case BoundCallExpression call:
+                    yield return call.Function;
+                    break;
+                case BoundMemberCallExpression memberCall:
+                    if (memberCall.Method != null)
+                    {
+                        yield return memberCall.Method;
+                    }
+                    break;
+            }
+
+            foreach (var child in Compilation.BoundChildren(node))
+            {
+                foreach (var called in CollectCalledFunctions(child))
+                {
+                    yield return called;
+                }
             }
         }
 
@@ -66,6 +125,39 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             return parameters;
+        }
+
+        /// <summary>x86 用户函数实参/形参的字节偏移：double 占 8 字节，其余 4 字节（x64 统一每参 8 字节槽）。</summary>
+        private int ParamByteOffset(FunctionSymbol function, int index, int count)
+        {
+            if (_isX64)
+            {
+                return 8 * index;
+            }
+
+            var offset = 0;
+            for (var i = 0; i < index && i < count; i++)
+            {
+                offset += ReturnSize(function.Parameters[i].Type);
+            }
+
+            return offset;
+        }
+
+        private int ParamsTotalBytes(FunctionSymbol function, int count)
+        {
+            if (_isX64)
+            {
+                return 8 * count;
+            }
+
+            var total = 0;
+            for (var i = 0; i < count; i++)
+            {
+                total += ReturnSize(function.Parameters[i].Type);
+            }
+
+            return total;
         }
 
         private static int ReturnSize(TypeSymbol type)
@@ -105,7 +197,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 }
                 else
                 {
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(parameter.Ordinal)));
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(ParamByteOffset(function, parameter.Ordinal, function.Parameters.Length))));
                 }
             }
 
@@ -1164,19 +1256,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var arguments = node.Arguments;
             var count = arguments.Length;
 
-            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(count)));
+            var totalBytes = ParamsTotalBytes(node.Function, count);
+
+            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
 
             for (var i = count - 1; i >= 0; i--)
             {
                 var value = EmitExpression(arguments[i]);
-                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(i), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(node.Function, i, count)), IrOperand.Reg(value)));
             }
 
             var irFunction = _functionMap[node.Function];
             var result = node.Function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(node.Function.ReturnType));
             Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Func(irFunction), IrOperand.Constant(0)));
 
-            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(count)));
+            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));
             return result ?? VoidResult();
         }
 

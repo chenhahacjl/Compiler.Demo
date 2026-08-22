@@ -88,7 +88,7 @@ stdcall function GetCurrentProcessId(): int
 function Main()
 {
     var t = GetCurrentProcessId()
-    print(t)
+    System.Console.WriteLine(t)
 }";
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);

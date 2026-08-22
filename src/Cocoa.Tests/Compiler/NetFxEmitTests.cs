@@ -84,8 +84,8 @@ namespace Cocoa.Tests.Compiler
             var exe = EmitNetFx(@"
 function Main()
 {
-    print(""hello netfx"")
-    print(40 + 2)
+    System.Console.WriteLine(""hello netfx"")
+    System.Console.WriteLine(40 + 2)
 }", "netfx-direct");
 
             var stdout = RunDirect(exe);
@@ -117,10 +117,10 @@ function Main()
             var exe = EmitNetFx(@"
 function Main(args: string[])
 {
-    print(args.Length)
+    System.Console.WriteLine(args.Length)
     if args.Length > 0
     {
-        print(args[0])
+        System.Console.WriteLine(args[0])
     }
 }", "netfx-args");
 

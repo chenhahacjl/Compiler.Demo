@@ -31,10 +31,10 @@ function Main()
 {
     var x = 10
     x = x + 5
-    print(x)
+    System.Console.WriteLine(x)
     var y = 3
     y = x * y
-    print(y)
+    System.Console.WriteLine(y)
 }";
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create(syntaxTree);

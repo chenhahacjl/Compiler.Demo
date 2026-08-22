@@ -206,7 +206,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 var n = 10
                 foreach (var x in [n])
                 {
-                    print(x)
+                    System.Runtime.Print(x)
                 }
             ";
 
@@ -242,7 +242,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 {
                     case [y]:
                     {
-                        print(""one"")
+                        System.Console.WriteLine(""one"")
                         break
                     }
                 }
@@ -264,7 +264,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 {
                     case 1:
                     {
-                        [print(""one"")]
+                        [System.Console.WriteLine(""one"")]
                     }
                 }
             ";
@@ -800,11 +800,11 @@ function Main()
         public void Evaluator_InvokeFunctionArguments_Missing()
         {
             var text = @"
-                print([)]
+                System.Console.[WriteLine]()
             ";
 
             var diagnostics = @"
-                Function 'Print' requires 1 arguments but was given 0.
+                Function 'WriteLine' has no overload that matches the argument types.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -814,11 +814,11 @@ function Main()
         public void Evaluator_InvokeFunctionArguments_Exceeding()
         {
             var text = @"
-                print(""Hello""[, "" "", "" world!""])
+                System.Console.[WriteLine](""Hello"", "" "", "" world!"")
             ";
 
             var diagnostics = @"
-                Function 'Print' requires 1 arguments but was given 3.
+                Function 'WriteLine' has no overload that matches the argument types.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -829,7 +829,7 @@ function Main()
         {
             // 赋值运算符出现在实参位置的坏输入：不得无限循环，诊断保持有限数量
             var text = @"
-                print(""Hi""=)
+                System.Console.WriteLine(""Hi""=)
             ";
 
             var syntaxTree = SyntaxTree.Parse(text);
@@ -847,7 +847,7 @@ function Main()
             var text = @"
                 function hi(name: string=)
                 {
-                    print(""Hi "" + name + ""!"" )
+                    System.Console.WriteLine(""Hi "" + name + ""!"" )
                 }
             ";
 
@@ -1183,7 +1183,7 @@ function Main()
         {
             var text = @"[Print] = 42";
             var diagnostics = @"
-                'Print' is not a variable.
+                Variable 'Print' doesn't exist.
             ";
             AssertDiagnostics(text, diagnostics);
         }
@@ -1364,11 +1364,11 @@ function Main()
                     let x = 4 * 3
                     if x > 12
                     {
-                        [print](""x"")
+                        System.Console.[WriteLine](""x"")
                     }
                     else
                     {
-                        print(""x"")
+                        System.Console.WriteLine(""x"")
                     }
                 }
             ";
@@ -1786,9 +1786,9 @@ syscall function [Random](): int";
             var text = @"
 function Main(): int
 {
-    var t0 = now()
-    sleep(1)
-    var t1 = now()
+    var t0 = System.Runtime.Now()
+    System.Runtime.Sleep(1)
+    var t1 = System.Runtime.Now()
     if t1 < t0
     {
         return 1

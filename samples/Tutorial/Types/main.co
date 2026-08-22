@@ -3,15 +3,15 @@ function Main()
     let x = 42
     var y = 10
     y = y + 1
-    print(x)
-    print(y)
-    print(x + y)
+    System.Console.WriteLine(x)
+    System.Console.WriteLine(y)
+    System.Console.WriteLine(x + y)
     let name: string = "Alice"
     let pi: double = 3.14
     let flag: bool = true
-    print(name)
-    print(pi)
-    print(flag)
-    print(Plus(x, y))
-    print(ConcatName("Cocoa", "Lang"))
+    System.Console.WriteLine(name)
+    System.Console.WriteLine(pi)
+    System.Console.WriteLine(flag)
+    System.Console.WriteLine(Plus(x, y))
+    System.Console.WriteLine(ConcatName("Cocoa", "Lang"))
 }

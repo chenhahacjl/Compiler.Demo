@@ -74,7 +74,7 @@ platform = x64
             var projectPath = CreateProject(
                 "native-run",
                 "App",
-                "function add(a: int, b: int): int { return a + b }\n\nfunction Main()\n{\n    print(add(20, 22))\n}\n");
+                "function add(a: int, b: int): int { return a + b }\n\nfunction Main()\n{\n    System.Console.WriteLine(add(20, 22))\n}\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native");
             Assert.True(exitCode == 0, $"build failed: {stderr}");
@@ -88,7 +88,7 @@ platform = x64
         [Fact]
         public void Build_Project_SecondRun_IsUpToDate()
         {
-            var projectPath = CreateProject("incremental", "App", "function Main() { print(1) }");
+            var projectPath = CreateProject("incremental", "App", "function Main() { System.Console.WriteLine(1) }");
 
             var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
@@ -102,13 +102,13 @@ platform = x64
         [Fact]
         public void Build_Project_SourceChange_Invalidates()
         {
-            var projectPath = CreateProject("invalidate", "App", "function Main() { print(1) }");
+            var projectPath = CreateProject("invalidate", "App", "function Main() { System.Console.WriteLine(1) }");
 
             var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
 
             var sourcePath = Path.Combine(Path.GetDirectoryName(projectPath)!, "App.co");
-            File.WriteAllText(sourcePath, "function Main() { print(2) }");
+            File.WriteAllText(sourcePath, "function Main() { System.Console.WriteLine(2) }");
 
             var second = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, second.ExitCode);
@@ -121,7 +121,7 @@ platform = x64
         [Fact]
         public void Build_Project_NoIncremental_ForcesRebuild()
         {
-            var projectPath = CreateProject("no-incremental", "App", "function Main() { print(1) }");
+            var projectPath = CreateProject("no-incremental", "App", "function Main() { System.Console.WriteLine(1) }");
 
             var first = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, first.ExitCode);
@@ -153,7 +153,7 @@ platform = x64
             {
                 var projectDir = Path.Combine(dir, name);
                 Directory.CreateDirectory(projectDir);
-                File.WriteAllText(Path.Combine(projectDir, name + ".co") + "", $"function Main() {{ print(\"{name}\") }}");
+                File.WriteAllText(Path.Combine(projectDir, name + ".co") + "", $"function Main() {{ System.Console.WriteLine(\"{name}\") }}");
                 File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"
 name = {name}
 [sources]
@@ -269,7 +269,7 @@ namespace MyLib
 ");
             File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
-            File.WriteAllText(Path.Combine(appDir, "main.co"), "using MyLib\nfunction Main(): void\n{\n    print(Triple(3))\n}\n");
+            File.WriteAllText(Path.Combine(appDir, "main.co"), "using MyLib\nfunction Main(): void\n{\n    System.Console.WriteLine(Triple(3))\n}\n");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"), $@"
 name = App
 output = executable
@@ -355,7 +355,7 @@ entry = Main
             File.WriteAllText(Path.Combine(libDir, "lib.co"), "namespace MyLib\n{\n    public class Util\n    {\n        public function Double(x: int): int\n        {\n            return x * 2\n        }\n    }\n}\n");
             File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = library\n\n[sources]\n*.co\n");
 
-            File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    print(\"hi\")\n}\n");
+            File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    System.Console.WriteLine(\"hi\")\n}\n");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.dll\n");
 
             var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b dotnet");

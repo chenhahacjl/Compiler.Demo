@@ -2,16 +2,16 @@ function Main()
 {
     var nums = new int[3] {10, 20, 30}
     nums[1] = 99
-    print(nums[0])
-    print(nums[1])
-    print(nums[2])
-    print(nums.Length)
-    print(Sum(nums))
-    print(Contains(nums, 99))
-    print(Contains(nums, 7))
+    System.Console.WriteLine(nums[0])
+    System.Console.WriteLine(nums[1])
+    System.Console.WriteLine(nums[2])
+    System.Console.WriteLine(nums.Length)
+    System.Console.WriteLine(Sum(nums))
+    System.Console.WriteLine(Contains(nums, 99))
+    System.Console.WriteLine(Contains(nums, 7))
 
     var flags = new bool[2]
     flags[0] = true
-    print(flags[0])
-    print(flags[1])
+    System.Console.WriteLine(flags[0])
+    System.Console.WriteLine(flags[1])
 }

@@ -574,11 +574,27 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private void EmitInitParam(IrInstruction instruction)
         {
-            var ordinal = (int)instruction.A.Imm;
+            var offset = (int)instruction.A.Imm;
             var size = RegisterSize(instruction.Dst!);
-            var operand = new X64MemoryOperand(X64Register.RBP, _paramOffset + _slotSize * ordinal);
+            if (!_isX64 && size == 8)
+            {
+                InitParam8X86(instruction.Dst!, offset);
+                return;
+            }
+
+            var operand = new X64MemoryOperand(X64Register.RBP, _paramOffset + offset);
             _a.Mov(ToSize(size), X64Register.EAX, operand);
             StoreSlot(instruction.Dst!, X64Register.EAX);
+        }
+
+        /// <summary>x86：把参数区（字节偏移 offset）的 8 字节 double 搬到双 dword 槽（低 dword 在 [slot]，高 dword 在 [slot-4]）。</summary>
+        private void InitParam8X86(IrVirtualRegister dst, int offset)
+        {
+            var slot = GetSlotOffset(dst);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, _paramOffset + offset));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, _paramOffset + offset + 4));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.EAX);
         }
 
         private void EmitInitRegArg(IrInstruction instruction)
@@ -795,7 +811,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (instruction.Dst != null)
             {
-                StoreSlot(instruction.Dst, X64Register.EAX);
+                StoreCallResult(instruction.Dst);
             }
         }
 
@@ -816,8 +832,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (instruction.Dst != null)
             {
-                StoreSlot(instruction.Dst, X64Register.EAX);
+                StoreCallResult(instruction.Dst);
             }
+        }
+
+        /// <summary>调用后把返回值存入虚拟寄存器：x86 8 字节返回为 EDX:EAX，拆分存入双 dword 槽。</summary>
+        private void StoreCallResult(IrVirtualRegister dst)
+        {
+            if (!_isX64 && RegisterSize(dst) == 8)
+            {
+                var slot = GetSlotOffset(dst);
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.EDX);
+                return;
+            }
+
+            StoreSlot(dst, X64Register.EAX);
         }
 
         /// <summary>x64 对齐补丁（sub rsp, 8）—— 仅用于运行时调用（无参数区，补丁自包自恢复）。</summary>
@@ -838,12 +868,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return false;
         }
 
-        /// <summary>x64 参数区预留：对齐补丁（sub rsp, 8）在预留前发射（与参数区同属一个调用单元），
-        /// 恢复由配对的 FreeArgs 完成（对齐判定与现有 EmitUserCall 一致：求值前深度 + 参数个数）。</summary>
+        /// <summary>参数区预留（字节数）：x64 每参 8 字节，x86 按类型 4/8 字节累计。
+        /// 对齐补丁（sub rsp, 8）在预留前发射（与参数区同属一个调用单元），恢复由配对的 FreeArgs 完成。</summary>
         private void EmitReserveArgs(IrInstruction instruction)
         {
-            var count = (int)instruction.A.Imm;
-            var patch = _isX64 && (_stackDepth + count) % 2 != 0;
+            var bytes = (int)instruction.A.Imm;
+            var slots = bytes / _slotSize;
+            var patch = _isX64 && (_stackDepth + slots) % 2 != 0;
             if (patch)
             {
                 _a.Sub(X64Size.Qword, X64Register.RSP, 8);
@@ -852,15 +883,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             _alignStack.Push(patch);
 
-            _a.Sub(SlotSize, X64Register.RSP, _slotSize * count);
-            _stackDepth += count;
+            _a.Sub(SlotSize, X64Register.RSP, bytes);
+            _stackDepth += slots;
         }
 
         private void EmitFreeArgs(IrInstruction instruction)
         {
-            var count = (int)instruction.A.Imm;
-            _a.Add(SlotSize, X64Register.RSP, _slotSize * count);
-            _stackDepth -= count;
+            var bytes = (int)instruction.A.Imm;
+            var slots = bytes / _slotSize;
+            _a.Add(SlotSize, X64Register.RSP, bytes);
+            _stackDepth -= slots;
 
             if (_alignStack.Pop())
             {
@@ -876,8 +908,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var returnSize = _currentFunction!.ReturnSize;
             if (returnSize > 0)
             {
-                var operand = new X64MemoryOperand(X64Register.RBP, -_slotSize);
-                _a.Mov(ToSize(returnSize), X64Register.EAX, operand);
+                if (!_isX64 && returnSize == 8)
+                {
+                    // x86 8 字节返回值：EDX:EAX（低 dword 在 EAX）→ 槽低 dword 在 [rbp-8]，高 dword 在 [rbp-4]。
+                    _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, -8));
+                    _a.Mov(X64Size.Dword, X64Register.EDX, new X64MemoryOperand(X64Register.RBP, -4));
+                }
+                else
+                {
+                    var operand = new X64MemoryOperand(X64Register.RBP, -_slotSize);
+                    _a.Mov(ToSize(returnSize), X64Register.EAX, operand);
+                }
             }
 
             if (_currentFunction.Name == _program.EntryFunctionName)
@@ -911,17 +952,46 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private void EmitStoreRet(IrInstruction instruction)
         {
-            LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
+            var size = RegisterSize(instruction.A.Register!);
+            if (!_isX64 && size == 8)
+            {
+                // x86 8 字节返回值：槽低 dword 在 [rbp-8]，高 dword 在 [rbp-4]（与 EmitRet 的 EDX:EAX 约定对应）。
+                var slot = GetSlotOffset(instruction.A.Register!);
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, -8), X64Register.EAX);
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot - 4));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, -4), X64Register.EAX);
+                return;
+            }
+
+            LoadSlot(X64Register.EAX, instruction.A.Register!, size);
             var operand = new X64MemoryOperand(X64Register.RBP, -_slotSize);
-            _a.Mov(ToSize(RegisterSize(instruction.A.Register!)), operand, X64Register.EAX);
+            _a.Mov(ToSize(size), operand, X64Register.EAX);
         }
 
         private void EmitStoreArg(IrInstruction instruction)
         {
-            LoadSlot(X64Register.EAX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
-            var ordinal = (int)instruction.A.Imm;
-            var operand = new X64MemoryOperand(X64Register.RSP, _slotSize * ordinal);
-            _a.Mov(ToSize(RegisterSize(instruction.B.Register!)), operand, X64Register.EAX);
+            var size = RegisterSize(instruction.B.Register!);
+            var offset = (int)instruction.A.Imm;
+            if (!_isX64 && size == 8)
+            {
+                StoreArg8X86(instruction.B.Register!, offset);
+                return;
+            }
+
+            LoadSlot(X64Register.EAX, instruction.B.Register!, size);
+            var operand = new X64MemoryOperand(X64Register.RSP, offset);
+            _a.Mov(ToSize(size), operand, X64Register.EAX);
+        }
+
+        /// <summary>x86：把双 dword 槽的 8 字节 double 搬到参数区（字节偏移 offset，低 dword 在前）。</summary>
+        private void StoreArg8X86(IrVirtualRegister src, int offset)
+        {
+            var slot = GetSlotOffset(src);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RSP, offset), X64Register.EAX);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot - 4));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RSP, offset + 4), X64Register.EAX);
         }
 
         private void EmitSetArg(IrInstruction instruction)

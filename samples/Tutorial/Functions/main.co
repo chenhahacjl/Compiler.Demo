@@ -1,21 +1,21 @@
 function Run(args: string[])
 {
-    print(Add(20, 22))
-    print(Square(Add(1, 2)))
-    print(Factorial(5))
-    print(Greet("Cocoa"))
-    print(args.Length)
+    System.Console.WriteLine(Add(20, 22))
+    System.Console.WriteLine(Square(Add(1, 2)))
+    System.Console.WriteLine(Factorial(5))
+    System.Console.WriteLine(Greet("Cocoa"))
+    System.Console.WriteLine(args.Length)
     if args.Length > 0
     {
-        print(args[0])
+        System.Console.WriteLine(args[0])
     }
     if args.Length > 1
     {
-        print(args[1])
+        System.Console.WriteLine(args[1])
     }
 }
 
 function Main()
 {
-    print("not used when entry = run")
+    System.Console.WriteLine("not used when entry = run")
 }

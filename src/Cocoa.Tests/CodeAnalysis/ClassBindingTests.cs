@@ -31,7 +31,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    print(p.Get())
+    System.Console.WriteLine(p.Get())
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -63,7 +63,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    print(p.Double())
+    System.Console.WriteLine(p.Double())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -80,7 +80,7 @@ public class Point
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -132,7 +132,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    print(p._x)
+    System.Runtime.Print(p._x)
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);
@@ -156,7 +156,7 @@ public class Point
 function Main()
 {
     var p = new Point()
-    print(p.Secret())
+    System.Runtime.Print(p.Secret())
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);
@@ -190,7 +190,7 @@ public class B extends A { }
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("循环继承"));
@@ -212,7 +212,7 @@ public class Foo
 
 function Main()
 {
-    print(Foo.Bar())
+    System.Console.WriteLine(Foo.Bar())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("this"));
@@ -239,7 +239,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("only variable") || d.Message.Contains("_x"));
@@ -291,7 +291,7 @@ function Main()
 {
     var f = new Foo()
     f._x = 1
-    print(f.Bar() + f._x)
+    System.Console.WriteLine(f.Bar() + f._x)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -332,7 +332,7 @@ public class Dog extends Animal
 function Main()
 {
     var d = new Dog(3)
-    print(d.GetAge())
+    System.Console.WriteLine(d.GetAge())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -365,7 +365,7 @@ public class Puppy extends Dog
 function Main()
 {
     var p = new Puppy(5)
-    print(p.GetAge())
+    System.Console.WriteLine(p.GetAge())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -390,7 +390,7 @@ public class Keeper
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("protected"));
@@ -411,7 +411,7 @@ public class Animal
 function Main()
 {
     var a = new Animal()
-    print(a.Eat())
+    System.Console.WriteLine(a.Eat())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("protected"));
@@ -460,7 +460,7 @@ protected class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("可见性"));
@@ -477,7 +477,7 @@ internal class Foo
 function Main()
 {
     var f = new Foo()
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -508,7 +508,7 @@ public partial class Point
 function Main()
 {
     var p = new Point(3)
-    print(p.Get())
+    System.Console.WriteLine(p.Get())
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -531,7 +531,7 @@ public partial class Point
 function Main()
 {
     var p = new Point(3)
-    print(p.Get())
+    System.Console.WriteLine(p.Get())
 }");
             var tree2 = SyntaxTree.Parse(@"
 public partial class Point
@@ -578,7 +578,7 @@ public partial class A
 function Main()
 {
     var a = new A()
-    print(a.Get())
+    System.Console.WriteLine(a.Get())
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -601,7 +601,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("'Foo' is already declared."));
@@ -621,7 +621,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("'Foo' is already declared."));
@@ -641,7 +641,7 @@ internal partial class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("可见性不一致"));
@@ -664,7 +664,7 @@ public partial class Foo extends B
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("基类不一致"));
@@ -684,7 +684,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("partial 只能用于类声明"));
@@ -716,7 +716,7 @@ public class Person
 function Main()
 {
     var p = new Person(""A"", 1)
-    print(p.Name)
+    System.Console.WriteLine(p.Name)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -739,7 +739,7 @@ public class Counter
 function Main()
 {
     var c = new Counter()
-    print(c.Get())
+    System.Console.WriteLine(c.Get())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -762,7 +762,7 @@ public class Point
 function Main()
 {
     var p = new Point()
-    print(p.GetX())
+    System.Console.WriteLine(p.GetX())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -779,7 +779,7 @@ public class Config
 
 function Main()
 {
-    print(Config.Max)
+    System.Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -802,7 +802,7 @@ public class Foo
 function Main()
 {
     var f = new Foo()
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -828,7 +828,7 @@ public class Config
 
 function Main()
 {
-    print(Config.Max)
+    System.Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -855,7 +855,7 @@ public class Config
 
 function Main()
 {
-    print(Config.Max)
+    System.Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -882,7 +882,7 @@ public class Config
 
 function Main()
 {
-    print(Config.Max)
+    System.Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -906,7 +906,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("参数"));
@@ -929,7 +929,7 @@ public class Foo extends Base
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("构造链"));
@@ -948,7 +948,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("可见性修饰符"));
@@ -970,7 +970,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("this"));
@@ -992,7 +992,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("实例字段"));
@@ -1015,7 +1015,7 @@ public class Foo
 
 function Main()
 {
-    print(1)
+    System.Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("already declared") || d.Message.Contains("已声明"));
@@ -1038,7 +1038,7 @@ public class Immutable
 function Main()
 {
     var i = new Immutable()
-    print(i.Get())
+    System.Console.WriteLine(i.Get())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -1061,7 +1061,7 @@ public class Calculator
 function Main()
 {
     var c = new Calculator()
-    print(c.Add(1, 2))
+    System.Console.WriteLine(c.Add(1, 2))
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -1090,7 +1090,7 @@ function Main()
 {
     var a = new Account()
     a.Deposit(100)
-    print(a.Get())
+    System.Console.WriteLine(a.Get())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);

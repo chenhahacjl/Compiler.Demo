@@ -8,25 +8,25 @@ namespace CSharpDialect;
 public static void Main()
 {
     var numbers = BuildNumbers();
-    print(numbers.Length);
+    System.Console.WriteLine(numbers.Length);
 
     var total = 0;
     foreach (var n in numbers)
     {
         total += n;
     }
-    print(total);
+    System.Console.WriteLine(total);
 
     for (int i = 0; i < 3; i++)
     {
-        print($"i = {i}");
+        System.Console.WriteLine($"i = {i}");
     }
 
-    print(Add(2, 3));
-    print(Multiply(4, 5));
-    print(Describe(1));
-    print(Describe(2));
-    print(Describe(3));
+    System.Console.WriteLine(Add(2, 3));
+    System.Console.WriteLine(Multiply(4, 5));
+    System.Console.WriteLine(Describe(1));
+    System.Console.WriteLine(Describe(2));
+    System.Console.WriteLine(Describe(3));
 }
 
 public int[] BuildNumbers()

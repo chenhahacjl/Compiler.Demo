@@ -278,9 +278,9 @@ using System.Math
 
 function Main()
 {
-    print(Max(3, 5))
-    print(Max(1.5, 0.5))
-    print(System.Math.Max(10, 2))
+    System.Console.WriteLine(Max(3, 5))
+    System.Console.WriteLine(Max(1.5, 0.5))
+    System.Console.WriteLine(System.Math.Max(10, 2))
 }
 ";
             var (exitCode, stdout) = IlEmitAndRun(source, "ns-overload");

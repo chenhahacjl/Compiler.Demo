@@ -300,13 +300,13 @@ debug = false
 outputPath = out
 ",
                         name + ".cs",
-                        $@"// C# 方言（.cs 严格子集，6e-M15）：类型前置、分号必选；不绑定 .NET BCL（用 print/input/random 内置函数）
+                        $@"// C# 方言（.cs 严格子集，6e-M15）：类型前置、分号必选；不绑定 .NET BCL（用 System.Console.WriteLine/System.Runtime.* 核心库）
 namespace {name};
 
 public static void Main()
 {{
-    print(""Hello from {name}!"");
-    print(Add(2, 3));
+    System.Console.WriteLine(""Hello from {name}!"");
+    System.Console.WriteLine(Add(2, 3));
 }}
 
 public int Add(int a, int b)
@@ -334,7 +334,7 @@ outputPath = out
                         "main.co",
                         $@"function Main()
 {{
-    print(""Hello from {name}!"")
+    System.Console.WriteLine(""Hello from {name}!"")
 }}
 ");
 
@@ -357,7 +357,7 @@ outputPath = out
                         "main.co",
                         $@"function Main()
 {{
-    print(""Hello from {name}!"")
+    System.Console.WriteLine(""Hello from {name}!"")
 }}
 ");
             }

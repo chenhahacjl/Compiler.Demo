@@ -109,7 +109,7 @@ function Main()
     var b = MessageBeep(0)
     if t > 0 && b != 0
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
 }", "native-import-crossdll", X64);
 
@@ -131,11 +131,11 @@ function Main()
     var h = GetStdHandle(0 - 10)
     if h != 0
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
     else
     {
-        print(""none"")
+        System.Console.WriteLine(""none"")
     }
 }", "native-import-getstdhandle", X64);
 
@@ -151,15 +151,15 @@ function Main()
 function Main()
 {
     var b1: byte = 65
-    print(b1)
+    System.Console.WriteLine(b1)
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
-    print(buf[0])
-    print(buf[1])
-    print((byte)300)
-    print((int)buf[0])
-    print(0xFF)
+    System.Console.WriteLine(buf[0])
+    System.Console.WriteLine(buf[1])
+    System.Console.WriteLine((byte)300)
+    System.Console.WriteLine((int)buf[0])
+    System.Console.WriteLine(0xFF)
 }", "native-byte-e2e", X64);
 
             Assert.Equal(0, exitCode);
@@ -173,15 +173,15 @@ function Main()
 function Main()
 {
     var b1: byte = 65
-    print(b1)
+    System.Console.WriteLine(b1)
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
-    print(buf[0])
-    print(buf[1])
-    print((byte)300)
-    print((int)buf[0])
-    print(0xFF)
+    System.Console.WriteLine(buf[0])
+    System.Console.WriteLine(buf[1])
+    System.Console.WriteLine((byte)300)
+    System.Console.WriteLine((int)buf[0])
+    System.Console.WriteLine(0xFF)
 }", "native-byte-e2e-x86", X86);
 
             Assert.Equal(0, exitCode);
@@ -236,7 +236,7 @@ function Main()
     var b = MessageBeep(0)
     if b != 0
     {
-        print(""ok"")
+        System.Console.WriteLine(""ok"")
     }
 }", "native-import-x86-crossdll", X86);
 

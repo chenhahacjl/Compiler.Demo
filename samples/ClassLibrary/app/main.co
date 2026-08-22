@@ -3,7 +3,7 @@ using MyLib
 function Main()
 {
     var p = new Point(3, 4)
-    print(p.X())
-    print(p.Y())
-    print(p.Area())
+    System.Console.WriteLine(p.X())
+    System.Console.WriteLine(p.Y())
+    System.Console.WriteLine(p.Area())
 }

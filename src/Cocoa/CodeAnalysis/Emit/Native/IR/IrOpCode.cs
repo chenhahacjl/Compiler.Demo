@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         LeaData,     // LeaData <dst> <data-symbol>  — 数据段符号地址（字符串字面量）
         Lea,         // Lea <dst> <base> <off>       — 指针算术：dst = base + off
         LeaSlot,     // LeaSlot <dst> <src>          — dst = 地址 of <src> 槽（&局部变量）
-        InitParam,   // InitParam <dst> <ordinal>    — 函数入口把参数槽拷入虚拟寄存器
+        InitParam,   // InitParam <dst> <byteOffset>  — 函数入口把参数区（[rbp+paramOffset+offset]）拷入虚拟寄存器
         InitRegArg,  // InitRegArg <dst> <ordinal>   — 运行时函数入口从调用约定寄存器 (0→ecx,1→edx) 取参
 
         // 算术
@@ -53,9 +53,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         Ret,         // Ret <end-label>              — 函数收尾（返回值装载 + epilog）
 
         // 调用序列（x64 需调用者负责 rsp 16 字节对齐，深度由后端静态跟踪）
-        ReserveArgs, // ReserveArgs <count>          — sub rsp, slot*count
-        StoreArg,    // StoreArg <ordinal> <src>     — store [rsp + slot*ordinal]
-        FreeArgs,    // FreeArgs <count>             — add rsp, slot*count
+        ReserveArgs, // ReserveArgs <totalBytes>      — sub rsp, totalBytes（x64 每参 8B；x86 按类型累计 4/8B）
+        StoreArg,    // StoreArg <byteOffset> <src>   — store [rsp + byteOffset]
+        FreeArgs,    // FreeArgs <totalBytes>         — add rsp, totalBytes
         SetArg,      // SetArg <ordinal> <src>       — 运行时调用参数寄存器（0→ecx, 1→edx, 2→r8d, 3→r9d）
         StoreRet,    // StoreRet <src>               — store [rbp - slot]
         StackCheck,  // StackCheck                   — TEB 栈限检查（prolog）

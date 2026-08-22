@@ -1,17 +1,17 @@
 function Main()
 {
     var d: double = 3.14
-    print(d)
-    print(Add(1.5, 2.25))
-    print(Divide(10.0, 4))
-    print(2.5 * 2)
-    print(7 - 1.5)
-    print(IsBigger(1.5, 2.5))
-    print(Truncated(3.9))
-    print((double)3)
+    System.Console.WriteLine(d)
+    System.Console.WriteLine(Add(1.5, 2.25))
+    System.Console.WriteLine(Divide(10.0, 4))
+    System.Console.WriteLine(2.5 * 2)
+    System.Console.WriteLine(7 - 1.5)
+    System.Console.WriteLine(IsBigger(1.5, 2.5))
+    System.Console.WriteLine(Truncated(3.9))
+    System.Console.WriteLine((double)3)
 
     var arr: double[] = new double[2] {1.5, 2.5}
-    print(arr[0])
-    print(arr[1])
-    print(Add(arr[0], arr[1]))
+    System.Console.WriteLine(arr[0])
+    System.Console.WriteLine(arr[1])
+    System.Console.WriteLine(Add(arr[0], arr[1]))
 }

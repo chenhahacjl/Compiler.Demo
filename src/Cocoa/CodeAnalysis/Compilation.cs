@@ -488,17 +488,20 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.ObjectCreationExpression:
                 case BoundNodeKind.ThisExpression:
                 case BoundNodeKind.BaseExpression:
-                case BoundNodeKind.StaticTypeExpression:
                 case BoundNodeKind.ConstructorChainExpression:
                 case BoundNodeKind.MemberAssignmentExpression:
                 case BoundNodeKind.ErrorExpression:
                     return true;
+                case BoundNodeKind.StaticTypeExpression:
+                    // 容器类静态类型表达式（System.Runtime.Print 的目标）不是 OOP
+                    return false;
                 case BoundNodeKind.MemberAccessExpression:
                     return ((BoundMemberAccessExpression)node).Field != null;
                 case BoundNodeKind.MemberCallExpression:
                     {
                         var call = (BoundMemberCallExpression)node;
-                        return call.Method != null || call.IsBase;
+                        // syscall/extern 容器方法调用不是 OOP（类字段/实例方法/继承仍是）
+                        return call.IsBase || (call.Method != null && call.Method.BuiltinKind == null && !call.Method.IsExtern);
                     }
                 default:
                     foreach (var child in BoundChildren(node))
@@ -513,7 +516,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private static IEnumerable<BoundNode> BoundChildren(BoundNode node)
+        internal static IEnumerable<BoundNode> BoundChildren(BoundNode node)
         {
             switch (node.Kind)
             {
@@ -608,6 +611,10 @@ namespace Cocoa.CodeAnalysis
                         var n = (BoundMemberCallExpression)node;
                         return new BoundNode[] { n.Expression }.Concat(n.Arguments);
                     }
+                case BoundNodeKind.FormatExpression:
+                    return new[] { ((BoundFormatExpression)node).Value };
+                case BoundNodeKind.StaticTypeExpression:
+                    return Array.Empty<BoundNode>();
                 default:
                     return Array.Empty<BoundNode>();
             }

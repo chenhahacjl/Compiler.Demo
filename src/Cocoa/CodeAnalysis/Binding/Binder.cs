@@ -1561,10 +1561,9 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var result = new BoundScope(null);
 
-            foreach (var function in BuiltinFunctions.GetAll())
-            {
-                result.TryDeclareFunction(function);
-            }
+            // 6e-M17 Step 3：移除内置函数隐式注入（C# 式强隔离）——print/input/random 等
+            // 不再全局裸可用；用户须 `using System.Console` 后 WriteLine/ReadLine，或
+            // 经 System.Runtime（syscall 容器类，SystemLibrary 内建嵌入）显式调用。
 
             return result;
         }
@@ -3171,7 +3170,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(boundArgument);
             }
 
-            // 候选：裸函数（含重载）→ using 命名空间函数 → 内置函数（大小写不敏感回退）→ 类内方法
+            // 候选：裸函数（含重载）→ using 命名空间函数 → 类内方法
             var candidates = _scope.TryLookupFunctions(syntax.Identifier.Text);
             if (candidates is { Length: 0 })
             {
@@ -3191,13 +3190,6 @@ namespace Cocoa.CodeAnalysis.Binding
                         break;
                     }
                 }
-            }
-
-            // 内置原语大小写不敏感回退：规范名 PascalCase（Print）但旧调用 `print(...)` 仍命中
-            // （6e-M17；Step 3 移除隐式注入后旧小写调用随全库迁移消失）
-            if (candidates == null && BuiltinFunctions.GetByName(syntax.Identifier.Text) is { } builtin)
-            {
-                candidates = ImmutableArray.Create(builtin);
             }
 
             // 类方法内：裸方法调用解析为本类方法（this.Method()）

@@ -11,7 +11,7 @@ namespace Cocoa.Tests.Compiler
             File.WriteAllText(Path.Combine(dir, "App.coproj"),
                 "name = App\noutput = executable\nplatform = x64\nentry = Main\ndotnetRuntime = net48\n\n[sources]\n*.co\n\n[options]\nincremental = true\ndebug = false\noutputPath = out\n");
             File.WriteAllText(Path.Combine(dir, "main.co"),
-                "function Main()\n{\n    print(\"hi\")\n}\n");
+                "function Main()\n{\n    System.Console.WriteLine(\"hi\")\n}\n");
             return Path.Combine(dir, "App.coproj");
         }
 

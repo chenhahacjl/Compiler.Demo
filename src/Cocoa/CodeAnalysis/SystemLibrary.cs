@@ -11,35 +11,35 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     internal static class SystemLibrary
     {
+        private static readonly object _sync = new();
         private static CodProgram? _cache;
         private static bool _loaded;
 
-        /// <summary>加载系统库（幂等，缓存）；找不到返回 null（降级，不抛）。</summary>
+        /// <summary>加载系统库（幂等，缓存，线程安全）；找不到返回 null（降级，不抛）。</summary>
         public static CodProgram? Load()
         {
-            if (_loaded)
+            lock (_sync)
             {
+                if (!_loaded)
+                {
+                    _loaded = true;
+                    var path = ResolvePath();
+                    if (path != null && File.Exists(path))
+                    {
+                        try
+                        {
+                            _cache = CodSerializer.Load(path);
+                        }
+                        catch (Exception)
+                        {
+                            // 系统库损坏 → 降级为不可用，不影响用户程序编译
+                            _cache = null;
+                        }
+                    }
+                }
+
                 return _cache;
             }
-
-            _loaded = true;
-            var path = ResolvePath();
-            if (path == null || !File.Exists(path))
-            {
-                return null;
-            }
-
-            try
-            {
-                _cache = CodSerializer.Load(path);
-            }
-            catch (Exception)
-            {
-                // 系统库损坏 → 降级为不可用，不影响用户程序编译
-                _cache = null;
-            }
-
-            return _cache;
         }
 
         private static string? ResolvePath()
@@ -57,8 +57,11 @@ namespace Cocoa.CodeAnalysis
         /// <summary>测试用：清缓存（便于指向不同 System.cod）。</summary>
         internal static void Reset()
         {
-            _cache = null;
-            _loaded = false;
+            lock (_sync)
+            {
+                _cache = null;
+                _loaded = false;
+            }
         }
     }
 }

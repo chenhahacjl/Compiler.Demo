@@ -1,7 +1,7 @@
 function Main()
 {
-    print(IsRunning())
+    System.Console.WriteLine(IsRunning())
 
-    var r = random(100)
-    print(InRange(r, 100))
+    var r = System.Runtime.Random(100)
+    System.Console.WriteLine(InRange(r, 100))
 }

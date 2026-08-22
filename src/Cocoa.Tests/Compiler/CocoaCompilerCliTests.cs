@@ -57,9 +57,9 @@ function twice(x: int): int
 
 function Main()
 {
-    var name = input()
-    print(twice(21))
-    print(""hello "" + name)
+    var name = System.Console.ReadLine()
+    System.Console.WriteLine(twice(21))
+    System.Console.WriteLine(""hello "" + name)
 }");
 
             var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b dotnet -o \"{outputPath}\"");
