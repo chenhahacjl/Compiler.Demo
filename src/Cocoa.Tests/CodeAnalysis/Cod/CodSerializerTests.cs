@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Cod
@@ -306,22 +307,88 @@ namespace System
         [Fact]
         public void Cod_SystemLibrary_Loads_WhenPresent()
         {
-            var systemCod = Path.Combine(
-                Path.GetDirectoryName(typeof(CodSerializerTests).Assembly.Location)!,
-                "System.cod");
+            var baseDirectory = Path.GetDirectoryName(typeof(CodSerializerTests).Assembly.Location)!;
+            var systemCore = Path.Combine(baseDirectory, "System.Core.cod");
 
-            if (!File.Exists(systemCod))
+            if (!File.Exists(systemCore))
             {
                 return; // 系统库未部署时跳过（降级语义）
             }
 
             SystemLibrary.Reset();
-            var cod = SystemLibrary.Load();
-            Assert.NotNull(cod);
+            var libraries = SystemLibrary.Load();
+            Assert.NotEmpty(libraries);
 
-            var runtime = Assert.Single(cod!.Classes, c => c.Name == "Runtime");
+            var core = Assert.Single(libraries, lib => lib.Classes.Any(c => c.Name == "Runtime"));
+            var runtime = Assert.Single(core.Classes, c => c.Name == "Runtime");
             Assert.Equal("System.Runtime", runtime.FullName);
             Assert.Contains(runtime.Methods, m => m.Name == "Print" && m.BuiltinKind == BuiltinKind.Print);
+            Assert.Contains(core.Functions, f => f.Name == "Max" && f.Namespace == "System.Math");
+        }
+
+        [Fact]
+        public void Cod_SystemLibrary_Discovers_Additional_Modules()
+        {
+            // 多程序集发现（6e-M17）：目录内 System*.cod 自动加载，核心 System.Core.cod 强制首位；
+            // 未来大功能模块（System.Net.cod 等）放入目录即生效。本测试用临时 System.Demo.cod 模拟。
+            var baseDirectory = Path.GetDirectoryName(typeof(CodSerializerTests).Assembly.Location)!;
+            if (!File.Exists(Path.Combine(baseDirectory, "System.Core.cod")))
+            {
+                return; // 核心库未部署时跳过（降级语义）
+            }
+
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-cod-discovery", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                // 部署场景：把核心库也放入该目录（模拟编译器部署目录含 System.Core.cod + 未来模块）
+                File.Copy(Path.Combine(baseDirectory, "System.Core.cod"), Path.Combine(dir, "System.Core.cod"));
+
+                var demoTree = SyntaxTree.Parse(@"
+namespace System.Demo
+{
+    function Ping(): int
+    {
+        return 42
+    }
+}");
+                var diagnostics = Compilation.Create(demoTree).EmitCocoa("System.Demo", Path.Combine(dir, "System.Demo.cod"));
+                Assert.Empty(diagnostics);
+                Assert.True(File.Exists(Path.Combine(dir, "System.Demo.cod")));
+
+                var previous = Environment.GetEnvironmentVariable("COCOA_STDLIB");
+                try
+                {
+                    Environment.SetEnvironmentVariable("COCOA_STDLIB", dir);
+                    SystemLibrary.Reset();
+                    var libraries = SystemLibrary.Load();
+
+                    Assert.Equal(2, libraries.Length);
+                    Assert.Contains(libraries, lib => lib.Namespaces.Contains("System.Demo"));
+                    Assert.Contains(libraries, lib => lib.Classes.Any(c => c.Name == "Runtime"));
+                    Assert.Equal("System.Runtime", libraries[0].Classes.First(c => c.Name == "Runtime").FullName);
+
+                    // 端到端：用户程序同时命中核心库与额外模块（同 scope 注入）
+                    var compilation = Compilation.Create(SyntaxTree.Parse(@"
+function Main(): int
+{
+    System.Console.WriteLine(System.Demo.Ping())
+    return System.Demo.Ping()
+}"));
+                    var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+                    Assert.Empty(result.Diagnostics);
+                    Assert.Equal(42, result.Value);
+                }
+                finally
+                {
+                    Environment.SetEnvironmentVariable("COCOA_STDLIB", previous);
+                    SystemLibrary.Reset();
+                }
+            }
+            finally
+            {
+                Directory.Delete(dir, true);
+            }
         }
     }
 }

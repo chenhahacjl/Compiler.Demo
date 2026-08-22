@@ -6,7 +6,8 @@
 //   - 逻辑层：本文件其余部分，纯 Cocoa 源码，只依赖语言核心（算术/字符串/数组/控制流/char↔int 转换）
 //   - 功能层：print/input/random/sleep/now/exit 等编译器内置原语（BuiltinKind 规格表，三后端按 kind 分发）
 //
-// 交付：`tools/build-stdlib.cmd` 用已构建的 cocoa 编本文件 → System.cod（外部引用，仿 .NET 框架程序集），
+// 交付：`tools/build-stdlib.cmd` 用已构建的 cocoa 编本文件 → System.Core.cod（核心程序集，仿 .NET
+// System.Private.CoreLib；目录内 `System*.cod` 自动发现加载，未来大模块 System.Net.cod 等各配 .coproj 追加），
 // 编译期隐式注入每次编译，函数命名空间限定访问（System.Math.Max / using System.Math; + Max）。
 
 namespace System

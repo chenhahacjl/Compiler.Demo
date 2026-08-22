@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\stdlib\out\System.cod" Link="System.cod" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\stdlib\out\System.Core.cod" Link="System.Core.cod" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

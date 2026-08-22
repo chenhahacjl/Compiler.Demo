@@ -33,11 +33,8 @@ namespace Cocoa.CodeAnalysis
         {
             var builder = ImmutableArray.CreateBuilder<CodProgram>();
 
-            // 内建系统库（System.cod）先行：用户引用可覆盖/补充同名符号
-            if (SystemLibrary.Load() is { } systemLibrary)
-            {
-                builder.Add(systemLibrary);
-            }
+            // 内建系统库（System.Core.cod 等，目录发现 `System*.cod`）先行：用户引用可覆盖/补充同名符号
+            builder.AddRange(SystemLibrary.Load());
 
             if (references != null)
             {
