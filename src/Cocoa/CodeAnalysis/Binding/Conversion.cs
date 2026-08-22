@@ -118,6 +118,38 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 6e-M21 Phase 1：数值类型系统化转换（按位宽/有无符号/是否浮点判定）
+            // 隐式（拓宽）：同符号位宽不降；unsigned(n)→signed(>n)；任意数值→浮点（含 f32→f64）。
+            // 显式（窄化）：其余数值↔数值组合（含 signed→unsigned、浮点→整数、f64→f32）。
+            if (from.IsNumeric && to.IsNumeric && !from.IsPlaceholder128 && !to.IsPlaceholder128)
+            {
+                if (to.IsFloat)
+                {
+                    // → 浮点：位宽不降则隐式（int→f32/f64、long→f64、f32→f64），降宽（f64→f32）显式
+                    return from.BitWidth <= to.BitWidth ? Conversion.Implicit : Conversion.Explicit;
+                }
+
+                if (from.IsFloat)
+                {
+                    // 浮点→整数：一律显式
+                    return Conversion.Explicit;
+                }
+
+                if (from.IsSigned == to.IsSigned)
+                {
+                    return from.BitWidth <= to.BitWidth ? Conversion.Implicit : Conversion.Explicit;
+                }
+
+                if (!from.IsSigned && to.IsSigned)
+                {
+                    // unsigned(n) → signed(>n)：无损失，隐式
+                    return to.BitWidth > from.BitWidth ? Conversion.Implicit : Conversion.Explicit;
+                }
+
+                // signed → unsigned：可能丢负号，一律显式
+                return Conversion.Explicit;
+            }
+
             if (from == TypeSymbol.String)
             {
                 if (to == TypeSymbol.Boolean || to == TypeSymbol.Int32 || to == TypeSymbol.Int64)

@@ -3310,20 +3310,21 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var boundLeft = BindExpression(syntax.Left);
             var boundRight = BindExpression(syntax.Right);
-            var boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
+            var operatorKind = syntax.OperatorToken.Kind;
+            var boundOperator = BoundBinaryOperator.Bind(operatorKind, boundLeft.Type, boundRight.Type);
 
             if (boundOperator == null && boundLeft.Type != TypeSymbol.Error && boundRight.Type != TypeSymbol.Error &&
                 IsNumeric(boundLeft.Type) && IsNumeric(boundRight.Type))
             {
-                if (Conversion.Classify(boundLeft.Type, boundRight.Type).IsImplicit)
+                // 6e-M21 Phase 1：二元数值提升——先求公共计算类型，两侧隐式归一后再查表
+                var commonType = GetBinaryNumericResultType(boundLeft.Type, boundRight.Type, operatorKind);
+                if (commonType != null)
                 {
-                    boundLeft = BindConversion(boundLeft.Syntax.Location, boundLeft, boundRight.Type, allowExplicit: false);
-                    boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
-                }
-                else if (Conversion.Classify(boundRight.Type, boundLeft.Type).IsImplicit)
-                {
-                    boundRight = BindConversion(boundRight.Syntax.Location, boundRight, boundLeft.Type, allowExplicit: false);
-                    boundOperator = BoundBinaryOperator.Bind(syntax.OperatorToken.Kind, boundLeft.Type, boundRight.Type);
+                    // 两侧统一归一到公共计算类型（移位计数同样提升，与各后端既有移位语义一致）
+                    boundLeft = BindConversion(boundLeft.Syntax.Location, boundLeft, commonType, allowExplicit: false);
+                    boundRight = BindConversion(boundRight.Syntax.Location, boundRight, commonType, allowExplicit: false);
+
+                    boundOperator = BoundBinaryOperator.Bind(operatorKind, boundLeft.Type, boundRight.Type);
                 }
             }
 
@@ -3340,6 +3341,77 @@ namespace Cocoa.CodeAnalysis.Binding
 
             return new BoundBinaryExpression(syntax, boundLeft, boundOperator, boundRight);
         }
+
+        /// <summary>
+        /// 6e-M21 Phase 1：二元数值公共计算类型（无损提升优先）。
+        /// 浮点参与 → 更宽浮点方；纯整数 → 同符号取更宽；异号同宽 → 双倍宽有符号；
+        /// 异号异宽 → 值域能覆盖者（signed 更宽取 signed，unsigned 更宽取 unsigned）。
+        /// i64+u64 无 128 位支撑 → null（报运算符未定义）。移位结果 = 左操作数提升类型（小整数→i32），
+        /// 计数随后归一到同一公共类型。
+        /// </summary>
+        private static TypeSymbol? GetBinaryNumericResultType(TypeSymbol left, TypeSymbol right, SyntaxKind operatorKind)
+        {
+            if (operatorKind == SyntaxKind.ShiftLeftToken || operatorKind == SyntaxKind.ShiftRightToken)
+            {
+                return left.IsInteger && left.BitWidth < 32 ? TypeSymbol.Int32 : left;
+            }
+
+            if (left.IsFloat || right.IsFloat)
+            {
+                if (left.IsFloat && right.IsFloat)
+                {
+                    return left.BitWidth >= right.BitWidth ? left : right;
+                }
+
+                return left.IsFloat ? left : right;
+            }
+
+            if (left == right)
+            {
+                return left;
+            }
+
+            if (left.IsSigned == right.IsSigned)
+            {
+                return left.BitWidth >= right.BitWidth ? left : right;
+            }
+
+            var signed = left.IsSigned ? left : right;
+            var unsigned = left.IsSigned ? right : left;
+
+            if (signed.BitWidth > unsigned.BitWidth)
+            {
+                // 有符号更宽：值域完整覆盖无符号方
+                return signed;
+            }
+
+            if (signed.BitWidth == unsigned.BitWidth)
+            {
+                // 同宽异号：升双倍宽有符号（i8+u8→i16 / i16+u16→i32 / i32+u32→i64）；64 位对无 128 支撑 → null
+                return SignedTypeOfWidth(signed.BitWidth * 2);
+            }
+
+            // 无符号更宽：值域覆盖有符号方的非负域，取无符号（与 C# ulong 行为一致）
+            return unsigned;
+        }
+
+        private static TypeSymbol? SignedTypeOfWidth(int bits) => bits switch
+        {
+            8 => TypeSymbol.Int8,
+            16 => TypeSymbol.Int16,
+            32 => TypeSymbol.Int32,
+            64 => TypeSymbol.Int64,
+            _ => null,
+        };
+
+        private static TypeSymbol? UnsignedTypeOfWidth(int bits) => bits switch
+        {
+            8 => TypeSymbol.UInt8,
+            16 => TypeSymbol.UInt16,
+            32 => TypeSymbol.UInt32,
+            64 => TypeSymbol.UInt64,
+            _ => null,
+        };
 
         private BoundExpression BindConditionalExpression(ConditionalExpressionSyntax syntax)
         {
@@ -3923,7 +3995,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static bool IsNumeric(TypeSymbol type)
         {
-            return type == TypeSymbol.Int32 || type == TypeSymbol.Int64 || type == TypeSymbol.UInt8 || type == TypeSymbol.Double;
+            return type.IsNumeric && !type.IsPlaceholder128;
         }
 
         private void BindEnumDeclaration(EnumDeclarationSyntax syntax, string @namespace = "")
