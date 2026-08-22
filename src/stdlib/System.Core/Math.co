@@ -1,0 +1,129 @@
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
+// class Math —— 纯 Cocoa 源码静态类，只依赖语言核心（算术/控制流）
+// 详细分层设计见 docs/标准库设计.md
+
+namespace System
+{
+    class Math
+    {
+        static function Max(a: int, b: int): int
+        {
+            if (a > b) return a
+            return b
+        }
+
+        static function Max(a: double, b: double): double
+        {
+            if (a > b) return a
+            return b
+        }
+
+        static function Min(a: int, b: int): int
+        {
+            if (a < b) return a
+            return b
+        }
+
+        static function Min(a: double, b: double): double
+        {
+            if (a < b) return a
+            return b
+        }
+
+        static function Abs(x: int): int
+        {
+            if (x < 0) return -x
+            return x
+        }
+
+        static function Abs(x: double): double
+        {
+            if (x < 0) return -x
+            return x
+        }
+
+        static function Clamp(v: int, lo: int, hi: int): int
+        {
+            if (v < lo) return lo
+            if (v > hi) return hi
+            return v
+        }
+
+        static function Clamp(v: double, lo: double, hi: double): double
+        {
+            if (v < lo) return lo
+            if (v > hi) return hi
+            return v
+        }
+
+        static function Sign(x: int): int
+        {
+            if (x < 0) return -1
+            if (x > 0) return 1
+            return 0
+        }
+
+        static function Sign(x: double): int
+        {
+            if (x < 0) return -1
+            if (x > 0) return 1
+            return 0
+        }
+
+        static function IsEven(n: int): bool
+        {
+            return n % 2 == 0
+        }
+
+        static function IsOdd(n: int): bool
+        {
+            return n % 2 == 1
+        }
+
+        static function Pow(x: int, exp: int): int
+        {
+            var result = 1
+            var i = 0
+            while i < exp
+            {
+                result = result * x
+                i = i + 1
+            }
+            return result
+        }
+
+        static function Factorial(n: int): int
+        {
+            var result = 1
+            var i = 1
+            while i <= n
+            {
+                result = result * i
+                i = i + 1
+            }
+            return result
+        }
+
+        static function Gcd(a: int, b: int): int
+        {
+            var x = Abs(a)
+            var y = Abs(b)
+            while y > 0
+            {
+                var t = x % y
+                x = y
+                y = t
+            }
+            return x
+        }
+
+        static function Lcm(a: int, b: int): int
+        {
+            if a == 0 || b == 0
+            {
+                return 0
+            }
+            return Abs(a * b) / Gcd(a, b)
+        }
+    }
+}

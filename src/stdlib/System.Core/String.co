@@ -1,0 +1,195 @@
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
+// class String —— 纯 Cocoa 源码静态类，只依赖语言核心（字符串/char↔int 转换）
+// 详细分层设计见 docs/标准库设计.md
+
+namespace System
+{
+    class String
+    {
+        static function ToUpper(s: string): string
+        {
+            var result = ""
+            var i = 0
+            while i < s.Length
+            {
+                var v = int(s[i])
+                if v >= 97 && v <= 122
+                {
+                    result = result + string(char(v - 32))
+                }
+                else
+                {
+                    result = result + string(s[i])
+                }
+                i = i + 1
+            }
+            return result
+        }
+
+        static function ToLower(s: string): string
+        {
+            var result = ""
+            var i = 0
+            while i < s.Length
+            {
+                var v = int(s[i])
+                if v >= 65 && v <= 90
+                {
+                    result = result + string(char(v + 32))
+                }
+                else
+                {
+                    result = result + string(s[i])
+                }
+                i = i + 1
+            }
+            return result
+        }
+
+        static function StartsWith(s: string, prefix: string): bool
+        {
+            if prefix.Length > s.Length
+            {
+                return false
+            }
+            return s.substring(0, prefix.Length) == prefix
+        }
+
+        static function EndsWith(s: string, suffix: string): bool
+        {
+            if suffix.Length > s.Length
+            {
+                return false
+            }
+            return s.substring(s.Length - suffix.Length, suffix.Length) == suffix
+        }
+
+        static function Contains(s: string, sub: string): bool
+        {
+            if sub.Length == 0
+            {
+                return true
+            }
+            var i = 0
+            while i <= s.Length - sub.Length
+            {
+                if s.substring(i, sub.Length) == sub
+                {
+                    return true
+                }
+                i = i + 1
+            }
+            return false
+        }
+
+        static function IndexOf(s: string, sub: string): int
+        {
+            if sub.Length == 0
+            {
+                return 0
+            }
+            var i = 0
+            while i <= s.Length - sub.Length
+            {
+                if s.substring(i, sub.Length) == sub
+                {
+                    return i
+                }
+                i = i + 1
+            }
+            return -1
+        }
+
+        static function Reverse(s: string): string
+        {
+            var result = ""
+            var i = s.Length - 1
+            while i >= 0
+            {
+                result = result + string(s[i])
+                i = i - 1
+            }
+            return result
+        }
+
+        static function Replicate(s: string, n: int): string
+        {
+            var result = ""
+            var i = 0
+            while i < n
+            {
+                result = result + s
+                i = i + 1
+            }
+            return result
+        }
+
+        static function CountChar(s: string, c: char): int
+        {
+            var count = 0
+            var i = 0
+            while i < s.Length
+            {
+                if s[i] == c
+                {
+                    count = count + 1
+                }
+                i = i + 1
+            }
+            return count
+        }
+
+        static function IsPalindrome(s: string): bool
+        {
+            var lo = 0
+            var hi = s.Length - 1
+            while lo < hi
+            {
+                if s[lo] != s[hi]
+                {
+                    return false
+                }
+                lo = lo + 1
+                hi = hi - 1
+            }
+            return true
+        }
+
+        static function Trim(s: string): string
+        {
+            var start = 0
+            var end = s.Length
+            var first = char(0)
+            var last = char(0)
+            while start < end
+            {
+                first = s[start]
+                if first == ' '
+                {
+                    start = start + 1
+                }
+                else
+                {
+                    break
+                }
+            }
+            while end > start
+            {
+                last = s[end - 1]
+                if last == ' '
+                {
+                    end = end - 1
+                }
+                else
+                {
+                    break
+                }
+            }
+            if start >= end
+            {
+                return ""
+            }
+            return s.substring(start, end - start)
+        }
+    }
+}

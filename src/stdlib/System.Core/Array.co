@@ -1,0 +1,267 @@
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
+// class Array —— 纯 Cocoa 源码静态类，只依赖语言核心（数组/控制流）
+// 详细分层设计见 docs/标准库设计.md
+
+namespace System
+{
+    class Array
+    {
+        static function Sum(a: int[]): int
+        {
+            var sum = 0
+            var i = 0
+            while i < a.Length
+            {
+                sum = sum + a[i]
+                i = i + 1
+            }
+            return sum
+        }
+
+        static function Sum(a: double[]): double
+        {
+            var sum = 0.0
+            var i = 0
+            while i < a.Length
+            {
+                sum = sum + a[i]
+                i = i + 1
+            }
+            return sum
+        }
+
+        static function Min(a: int[]): int
+        {
+            if a.Length == 0
+            {
+                return 0
+            }
+            var m = a[0]
+            var i = 1
+            while i < a.Length
+            {
+                if a[i] < m
+                {
+                    m = a[i]
+                }
+                i = i + 1
+            }
+            return m
+        }
+
+        static function Min(a: double[]): double
+        {
+            if a.Length == 0
+            {
+                return 0.0
+            }
+            var m = a[0]
+            var i = 1
+            while i < a.Length
+            {
+                if a[i] < m
+                {
+                    m = a[i]
+                }
+                i = i + 1
+            }
+            return m
+        }
+
+        static function Max(a: int[]): int
+        {
+            if a.Length == 0
+            {
+                return 0
+            }
+            var m = a[0]
+            var i = 1
+            while i < a.Length
+            {
+                if a[i] > m
+                {
+                    m = a[i]
+                }
+                i = i + 1
+            }
+            return m
+        }
+
+        static function Max(a: double[]): double
+        {
+            if a.Length == 0
+            {
+                return 0.0
+            }
+            var m = a[0]
+            var i = 1
+            while i < a.Length
+            {
+                if a[i] > m
+                {
+                    m = a[i]
+                }
+                i = i + 1
+            }
+            return m
+        }
+
+        static function AverageD(a: int[]): double
+        {
+            if a.Length == 0
+            {
+                return 0.0
+            }
+            return Sum(a) / a.Length
+        }
+
+        static function AverageD(a: double[]): double
+        {
+            if a.Length == 0
+            {
+                return 0.0
+            }
+            return Sum(a) / a.Length
+        }
+
+        static function Contains(a: int[], v: int): bool
+        {
+            var i = 0
+            while i < a.Length
+            {
+                if a[i] == v
+                {
+                    return true
+                }
+                i = i + 1
+            }
+            return false
+        }
+
+        static function Contains(a: double[], v: double): bool
+        {
+            var i = 0
+            while i < a.Length
+            {
+                if a[i] == v
+                {
+                    return true
+                }
+                i = i + 1
+            }
+            return false
+        }
+
+        static function IndexOf(a: int[], v: int): int
+        {
+            var i = 0
+            while i < a.Length
+            {
+                if a[i] == v
+                {
+                    return i
+                }
+                i = i + 1
+            }
+            return -1
+        }
+
+        static function IndexOf(a: double[], v: double): int
+        {
+            var i = 0
+            while i < a.Length
+            {
+                if a[i] == v
+                {
+                    return i
+                }
+                i = i + 1
+            }
+            return -1
+        }
+
+        static function Reverse(a: int[]): int[]
+        {
+            var n = a.Length
+            var result = new int[n]
+            var i = 0
+            while i < n
+            {
+                result[i] = a[n - 1 - i]
+                i = i + 1
+            }
+            return result
+        }
+
+        static function Reverse(a: double[]): double[]
+        {
+            var n = a.Length
+            var result = new double[n]
+            var i = 0
+            while i < n
+            {
+                result[i] = a[n - 1 - i]
+                i = i + 1
+            }
+            return result
+        }
+
+        static function Sort(a: int[]): int[]
+        {
+            var n = a.Length
+            var result = new int[n]
+            var i = 0
+            while i < n
+            {
+                result[i] = a[i]
+                i = i + 1
+            }
+            var j = 0
+            while j < n - 1
+            {
+                var k = 0
+                while k < n - 1 - j
+                {
+                    if result[k] > result[k + 1]
+                    {
+                        var t = result[k]
+                        result[k] = result[k + 1]
+                        result[k + 1] = t
+                    }
+                    k = k + 1
+                }
+                j = j + 1
+            }
+            return result
+        }
+
+        static function Sort(a: double[]): double[]
+        {
+            var n = a.Length
+            var result = new double[n]
+            var i = 0
+            while i < n
+            {
+                result[i] = a[i]
+                i = i + 1
+            }
+            var j = 0
+            while j < n - 1
+            {
+                var k = 0
+                while k < n - 1 - j
+                {
+                    if result[k] > result[k + 1]
+                    {
+                        var t = result[k]
+                        result[k] = result[k + 1]
+                        result[k + 1] = t
+                    }
+                    k = k + 1
+                }
+                j = j + 1
+            }
+            return result
+        }
+    }
+}

@@ -1,0 +1,8 @@
+name = System.Core
+output = cocoa
+
+[sources]
+*.co
+
+[options]
+outputPath = out

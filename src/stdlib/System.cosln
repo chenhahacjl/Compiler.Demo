@@ -1,0 +1,4 @@
+name = System
+
+[projects]
+System.Core/System.Core.coproj

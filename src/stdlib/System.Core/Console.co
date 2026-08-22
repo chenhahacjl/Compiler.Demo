@@ -1,0 +1,44 @@
+// Cocoa 系统标准库 · System.Core 封装层（namespace System）
+// class Console —— WriteLine/ReadLine（调 Runtime.Print/Input），C# 同构静态类
+// 详细分层设计见 docs/标准库设计.md
+
+namespace System
+{
+    class Console
+    {
+        static function WriteLine(text: string): void
+        {
+            Runtime.Print(text)
+        }
+
+        static function WriteLine(text: int): void
+        {
+            Runtime.Print(text)
+        }
+
+        static function WriteLine(text: double): void
+        {
+            Runtime.Print(text)
+        }
+
+        static function WriteLine(text: bool): void
+        {
+            Runtime.Print(text)
+        }
+
+        static function WriteLine(text: char): void
+        {
+            Runtime.Print(text)
+        }
+
+        static function WriteLine(text: byte): void
+        {
+            Runtime.Print(text)
+        }
+
+        static function ReadLine(): string
+        {
+            return Runtime.Input()
+        }
+    }
+}
