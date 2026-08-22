@@ -476,7 +476,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     stream.WriteByte(0x1C);
                     break;
                 case IlTypeKind.Class:
-                    stream.WriteByte(0x12); // CLASS
+                    stream.WriteByte(type.IsValueType ? (byte)0x11 : (byte)0x12); // VALUETYPE / CLASS
                     WriteCompressedInteger(stream, type.TypeDef != null
                         ? CodedIndexTypeDefOrRef(type.TypeDef, _typeDefs)
                         : CodedIndexTypeDefOrRef(type.Reference!, _typeRefIndex));

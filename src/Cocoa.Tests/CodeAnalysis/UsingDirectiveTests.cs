@@ -159,14 +159,14 @@ function Main()
         }
 
         [Fact]
-        public void UsingAliasToRuntime_Print_Resolves()
+        public void UsingAliasToRuntime_WriteLine_Resolves()
         {
             var result = Evaluate(@"
 using R = System.Runtime
 
 function Main()
 {
-    R.Print(99)
+    R.WriteLine(99)
 }
 ");
             Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics));

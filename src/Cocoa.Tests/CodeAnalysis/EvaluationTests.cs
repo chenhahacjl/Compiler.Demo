@@ -207,7 +207,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 var n = 10
                 foreach (var x in [n])
                 {
-                    Runtime.Print(x)
+                    Runtime.WriteLine(x)
                 }
             ";
 
@@ -804,11 +804,11 @@ function Main()
         {
             var text = @"using System
 
-                Console.[WriteLine]()
+                Console.[ReadKey]()
             ";
 
             var diagnostics = @"
-                Function 'WriteLine' has no overload that matches the argument types.
+                Function 'ReadKey' requires 1 arguments but was given 0.
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -1954,13 +1954,62 @@ syscall function [Random](): int";
 
 function Main(): int
 {
-    var t0 = Runtime.Now()
+    var t0 = Runtime.TickCount()
     Runtime.Sleep(1)
-    var t1 = Runtime.Now()
+    var t1 = Runtime.TickCount()
     if t1 < t0
     {
         return 1
     }
+    return 0
+}";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Builtin_Beep()
+        {
+            var text = @"using System
+
+function Main(): int
+{
+    Runtime.Beep(800, 50)
+    return 0
+}";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Builtin_MathPrimitives()
+        {
+            var text = @"using System
+
+function Main(): int
+{
+    if Runtime.Sqrt(4.0) != 2.0 return 1
+    if Runtime.Floor(2.7) != 2.0 return 2
+    if Runtime.Floor(-2.7) != -3.0 return 3
+    if Runtime.Ceiling(2.1) != 3.0 return 4
+    if Runtime.Ceiling(-2.1) != -2.0 return 5
+    if Runtime.Truncate(2.7) != 2.0 return 6
+    if Runtime.Truncate(-2.7) != -2.0 return 7
+    if Runtime.Round(2.5) != 2.0 return 8
+    if Runtime.Round(3.5) != 4.0 return 9
+    if Runtime.Round(-2.5) != -2.0 return 10
     return 0
 }";
 

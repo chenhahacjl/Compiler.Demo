@@ -358,12 +358,19 @@ namespace Cocoa.CodeAnalysis
         {
             switch (function.BuiltinKind)
             {
-                case BuiltinKind.Input:
+                case BuiltinKind.ReadLine:
                     return Console.ReadLine();
-                case BuiltinKind.Print:
-                    var printValue = EvaluateExpression(arguments[0]);
-                    Console.WriteLine(printValue);
+                case BuiltinKind.WriteLine:
+                    var writeLineValue = EvaluateExpression(arguments[0]);
+                    Console.WriteLine(writeLineValue);
                     return null;
+                case BuiltinKind.Write:
+                    var writeValue = EvaluateExpression(arguments[0]);
+                    Console.Write(writeValue);
+                    return null;
+                case BuiltinKind.ReadKey:
+                    var intercept = (bool)EvaluateExpression(arguments[0])!;
+                    return Console.ReadKey(intercept).KeyChar;
                 case BuiltinKind.Random:
                     var max = (int)EvaluateExpression(arguments[0])!;
                     return Random.Shared.Next(max);
@@ -371,11 +378,26 @@ namespace Cocoa.CodeAnalysis
                     var ms = (int)EvaluateExpression(arguments[0])!;
                     System.Threading.Thread.Sleep(ms);
                     return null;
-                case BuiltinKind.Now:
+                case BuiltinKind.TickCount:
                     return Environment.TickCount;
                 case BuiltinKind.Exit:
                     var code = (int)EvaluateExpression(arguments[0])!;
                     Environment.Exit(code);
+                    return null;
+                case BuiltinKind.Sqrt:
+                    return System.Math.Sqrt((double)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.Floor:
+                    return System.Math.Floor((double)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.Ceiling:
+                    return System.Math.Ceiling((double)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.Truncate:
+                    return System.Math.Truncate((double)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.Round:
+                    return System.Math.Round((double)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.Beep:
+                    var frequency = (int)EvaluateExpression(arguments[0])!;
+                    var duration = (int)EvaluateExpression(arguments[1])!;
+                    Console.Beep(frequency, duration);
                     return null;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");

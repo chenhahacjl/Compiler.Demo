@@ -125,5 +125,30 @@ namespace System
             }
             return Abs(a * b) / Gcd(a, b)
         }
+
+        static function Sqrt(x: double): double
+        {
+            return Runtime.Sqrt(x)
+        }
+
+        static function Floor(x: double): double
+        {
+            return Runtime.Floor(x)
+        }
+
+        static function Ceiling(x: double): double
+        {
+            return Runtime.Ceiling(x)
+        }
+
+        static function Truncate(x: double): double
+        {
+            return Runtime.Truncate(x)
+        }
+
+        static function Round(x: double): double
+        {
+            return Runtime.Round(x)
+        }
     }
 }

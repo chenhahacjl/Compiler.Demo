@@ -391,5 +391,96 @@ function Main()
                 "0.00000\r\n", stdout);
             Assert.Equal(0, exitCode);
         }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Math_Primitives_EndToEnd(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+function Main()
+{
+    Console.WriteLine(Math.Sqrt(2.0))
+    Console.WriteLine(Math.Floor(2.7))
+    Console.WriteLine(Math.Floor(-2.7))
+    Console.WriteLine(Math.Ceiling(2.1))
+    Console.WriteLine(Math.Ceiling(-2.1))
+    Console.WriteLine(Math.Truncate(2.7))
+    Console.WriteLine(Math.Truncate(-2.7))
+    Console.WriteLine(Math.Round(2.5))
+    Console.WriteLine(Math.Round(3.5))
+    Console.WriteLine(Math.Round(-2.5))
+    Console.WriteLine(Math.Sqrt(0.0))
+}", "e2e-math-primitives", (TargetPlatform)platform);
+
+            // round 为 banker's rounding（最近偶数）：2.5→2、3.5→4、-2.5→-2
+            Assert.Equal(
+                "1.414214\r\n" +
+                "2\r\n" +
+                "-3\r\n" +
+                "3\r\n" +
+                "-2\r\n" +
+                "2\r\n" +
+                "-2\r\n" +
+                "2\r\n" +
+                "4\r\n" +
+                "-2\r\n" +
+                "0\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Beep_EndToEnd(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+function Main()
+{
+    Runtime.Beep(800, 50)
+    Console.WriteLine(""beeped"")
+}", "e2e-beep", (TargetPlatform)platform);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("beeped\r\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Stdlib_StringExtensions_EndToEnd(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+function Main()
+{
+    Console.WriteLine(String.Replace(""hello world"", ""world"", ""there""))
+    Console.WriteLine(String.Replace(""aaa"", ""aa"", ""b""))
+    Console.WriteLine(String.PadLeft(""7"", 3, '0'))
+    Console.WriteLine(String.PadRight(""7"", 3, '0'))
+    Console.WriteLine(String.CountSubstring(""aaaa"", ""aa""))
+    var parts = String.Split(""a,b,c"", ',')
+    Console.WriteLine(parts.Length)
+    Console.WriteLine(parts[0])
+    Console.WriteLine(parts[1])
+    Console.WriteLine(parts[2])
+    var arr = new int[] {3, 1, 2}
+    Console.WriteLine(Array.Average(arr))
+    var darr = new double[] {1.5, 2.5}
+    Console.WriteLine(Array.Average(darr))
+}", "e2e-stdlib-extensions", (TargetPlatform)platform);
+
+            Assert.Equal(
+                "hello there\r\n" +
+                "ba\r\n" +
+                "007\r\n" +
+                "700\r\n" +
+                "2\r\n" +
+                "3\r\n" +
+                "a\r\n" +
+                "b\r\n" +
+                "c\r\n" +
+                "2\r\n" +
+                "2\r\n", stdout);
+            Assert.Equal(0, exitCode);
+        }
     }
 }

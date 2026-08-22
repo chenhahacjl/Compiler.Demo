@@ -698,6 +698,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitFunctionCall(node.Method, node.Arguments);
             }
 
+            // 同容器类内未限定的静态方法调用（`Sum(a)`）绑定为 ThisExpression + 静态方法：
+            // 与 `Array.Sum(a)` 同路径，仅跳过实例表达式求值。
+            if (node.Expression is BoundThisExpression && node.Method != null && node.Method.IsStatic)
+            {
+                return EmitFunctionCall(node.Method, node.Arguments);
+            }
+
             var instructions = _currentFunction.Instructions;
             var target = EmitExpression(node.Expression);
             var start = EmitExpression(node.Arguments[0]);
@@ -722,15 +729,28 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             switch (function.BuiltinKind)
             {
-                case BuiltinKind.Print:
+                case BuiltinKind.WriteLine:
                 {
                     EmitPrintArguments(arguments[0]);
                     return VoidResult();
                 }
-                case BuiltinKind.Input:
+                case BuiltinKind.Write:
+                {
+                    EmitWriteArguments(arguments[0], newline: false);
+                    return VoidResult();
+                }
+                case BuiltinKind.ReadLine:
                 {
                     var result = AllocateRegister(8);
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Input"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.ReadKey:
+                {
+                    var intercept = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(intercept)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ReadKey"), IrOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.Random:
@@ -748,10 +768,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Sleep"), IrOperand.Constant(0)));
                     return VoidResult();
                 }
-                case BuiltinKind.Now:
+                case BuiltinKind.Beep:
+                {
+                    var frequency = EmitExpression(arguments[0]);
+                    var duration = EmitExpression(arguments[1]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(frequency)));
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(duration)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Beep"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
+                case BuiltinKind.TickCount:
                 {
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Now"), IrOperand.Constant(0)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("TickCount"), IrOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.Exit:
@@ -760,6 +789,25 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(code)));
                     Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("ExitProcess"), IrOperand.Constant(0)));
                     return VoidResult();
+                }
+                case BuiltinKind.Sqrt:
+                case BuiltinKind.Floor:
+                case BuiltinKind.Ceiling:
+                case BuiltinKind.Truncate:
+                case BuiltinKind.Round:
+                {
+                    var x = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    var op = function.BuiltinKind switch
+                    {
+                        BuiltinKind.Sqrt => IrOpCode.FSqrt,
+                        BuiltinKind.Floor => IrOpCode.FFloor,
+                        BuiltinKind.Ceiling => IrOpCode.FCeiling,
+                        BuiltinKind.Truncate => IrOpCode.FTruncate,
+                        _ => IrOpCode.FRound,
+                    };
+                    Add(instructions, new IrInstruction(op, result, IrOperand.Reg(x)));
+                    return result;
                 }
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
@@ -943,9 +991,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             switch (op)
             {
                 case BoundBinaryOperatorKind.Addition:
+                    Add(instructions, new IrInstruction(IrOpCode.Add, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    break;
+
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.LogicalAnd:
-                    Add(instructions, new IrInstruction(IrOpCode.Add, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    // 逻辑与用位与（0/1 布尔语义 = && 结果；三后端一致：Evaluator/IL 均为急切求值）
+                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(left), IrOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Subtraction:
@@ -1196,7 +1248,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return _voidResult;
         }
 
-        private void EmitPrintArguments(BoundExpression argument)
+        private void EmitPrintArguments(BoundExpression argument) => EmitWriteArguments(argument, newline: true);
+
+        /// <summary>输出参数（newline=false 走 Write* 运行时函数不换行，true 走 Print* 带换行）。</summary>
+        private void EmitWriteArguments(BoundExpression argument, bool newline)
         {
             var instructions = _currentFunction.Instructions;
             var type = argument.Type;
@@ -1207,22 +1262,24 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             var value = EmitExpression(argument);
+            var stringFn = newline ? "PrintString" : "WriteString";
+            var intFn = newline ? "PrintInt" : "WriteInt";
 
             if (type == TypeSymbol.String)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.Byte)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintInt"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(intFn), IrOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Boolean)
             {
                 var text = EmitSelectString("True", "False", value);
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Char)
             {
@@ -1230,7 +1287,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Double)
             {
@@ -1238,7 +1295,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var text = AllocateRegister(8);
                 Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("PrintString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
             else
             {

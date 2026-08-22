@@ -394,6 +394,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case IrOpCode.FNeg:
                     EmitFNeg(instruction);
                     break;
+                case IrOpCode.FSqrt:
+                case IrOpCode.FFloor:
+                case IrOpCode.FCeiling:
+                case IrOpCode.FTruncate:
+                case IrOpCode.FRound:
+                    EmitFUnary(instruction);
+                    break;
                 case IrOpCode.FCmp:
                     EmitFCmp(instruction);
                     break;
@@ -1093,6 +1100,33 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
             LoadSlotXmm(X64Register.XMM1, instruction.B.Register!);
             _a.Ucomisd(X64Register.XMM0, X64Register.XMM1);
+        }
+
+        /// <summary>浮点单参数学（SSE）：值已在槽中，载入 XMM0 计算后写回槽。</summary>
+        private void EmitFUnary(IrInstruction instruction)
+        {
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
+
+            switch (instruction.OpCode)
+            {
+                case IrOpCode.FSqrt:
+                    _a.Sqrtsd(X64Register.XMM0, X64Register.XMM0);
+                    break;
+                case IrOpCode.FFloor:
+                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x01);
+                    break;
+                case IrOpCode.FCeiling:
+                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x02);
+                    break;
+                case IrOpCode.FTruncate:
+                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x03);
+                    break;
+                case IrOpCode.FRound:
+                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x00);
+                    break;
+            }
+
+            StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
         }
 
         private void EmitFCvtSI(IrInstruction instruction)

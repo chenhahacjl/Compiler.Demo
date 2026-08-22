@@ -1,20 +1,20 @@
-(cod COCOD 2
+(cod COCOD 3
   (symbols
     (cls 0 System Array 1 16 7 11 13 15 17 19 21 23 26 29 32 35 38 40 42 44)
 
-    (cls 1 System Console 1 7 48 50 52 54 57 60 62)
+    (cls 1 System Console 1 16 47 49 51 53 55 58 61 63 65 67 69 71 73 75 76 78)
 
-    (cls 2 System Math 1 16 63 66 69 72 75 77 79 83 87 89 91 93 95 98 100 103)
+    (cls 2 System Math 1 21 81 84 87 90 93 95 97 101 105 107 109 111 113 116 118 121 124 126 128 130 132)
 
-    (cls 3 System Runtime 1 6 107 109 110 112 114 115)
+    (cls 3 System Runtime 1 14 135 137 139 140 142 144 146 147 149 151 153 155 157 159)
 
-    (cls 4 System String 1 11 117 119 121 124 127 130 133 135 138 141 143)
+    (cls 4 System String 1 16 162 164 166 169 172 175 178 180 183 186 188 190 194 197 201 206)
 
     (type int)
 
     (arr 5)
 
-    (fn 7 Sum 5 0 - 0 - 0 -1 - -1 1
+    (fn 7 Sum 5 0 - 0 - 0 - - -1 1
       (par 8 a 6 0)
 )
 
@@ -22,405 +22,555 @@
 
     (arr 9)
 
-    (fn 11 Sum 9 0 - 0 - 0 -1 - -1 1
+    (fn 11 Sum 9 0 - 0 - 0 - - -1 1
       (par 12 a 10 0)
 )
 
-    (fn 13 Min 5 0 - 0 - 0 -1 - -1 1
+    (fn 13 Min 5 0 - 0 - 0 - - -1 1
       (par 14 a 6 0)
 )
 
-    (fn 15 Min 9 0 - 0 - 0 -1 - -1 1
+    (fn 15 Min 9 0 - 0 - 0 - - -1 1
       (par 16 a 10 0)
 )
 
-    (fn 17 Max 5 0 - 0 - 0 -1 - -1 1
+    (fn 17 Max 5 0 - 0 - 0 - - -1 1
       (par 18 a 6 0)
 )
 
-    (fn 19 Max 9 0 - 0 - 0 -1 - -1 1
+    (fn 19 Max 9 0 - 0 - 0 - - -1 1
       (par 20 a 10 0)
 )
 
-    (fn 21 AverageD 9 0 - 0 - 0 -1 - -1 1
+    (fn 21 Average 9 0 - 0 - 0 - - -1 1
       (par 22 a 6 0)
 )
 
-    (fn 23 AverageD 9 0 - 0 - 0 -1 - -1 1
+    (fn 23 Average 9 0 - 0 - 0 - - -1 1
       (par 24 a 10 0)
 )
 
     (type bool)
 
-    (fn 26 Contains 25 0 - 0 - 0 -1 - -1 2
+    (fn 26 Contains 25 0 - 0 - 0 - - -1 2
       (par 27 a 6 0)
 
       (par 28 v 5 1)
 )
 
-    (fn 29 Contains 25 0 - 0 - 0 -1 - -1 2
+    (fn 29 Contains 25 0 - 0 - 0 - - -1 2
       (par 30 a 10 0)
 
       (par 31 v 9 1)
 )
 
-    (fn 32 IndexOf 5 0 - 0 - 0 -1 - -1 2
+    (fn 32 IndexOf 5 0 - 0 - 0 - - -1 2
       (par 33 a 6 0)
 
       (par 34 v 5 1)
 )
 
-    (fn 35 IndexOf 5 0 - 0 - 0 -1 - -1 2
+    (fn 35 IndexOf 5 0 - 0 - 0 - - -1 2
       (par 36 a 10 0)
 
       (par 37 v 9 1)
 )
 
-    (fn 38 Reverse 6 0 - 0 - 0 -1 - -1 1
+    (fn 38 Reverse 6 0 - 0 - 0 - - -1 1
       (par 39 a 6 0)
 )
 
-    (fn 40 Reverse 10 0 - 0 - 0 -1 - -1 1
+    (fn 40 Reverse 10 0 - 0 - 0 - - -1 1
       (par 41 a 10 0)
 )
 
-    (fn 42 Sort 6 0 - 0 - 0 -1 - -1 1
+    (fn 42 Sort 6 0 - 0 - 0 - - -1 1
       (par 43 a 6 0)
 )
 
-    (fn 44 Sort 10 0 - 0 - 0 -1 - -1 1
+    (fn 44 Sort 10 0 - 0 - 0 - - -1 1
       (par 45 a 10 0)
 )
 
     (type void)
 
+    (fn 47 WriteLine 46 0 - 0 - 1 - - -1 0)
+
     (type string)
 
-    (fn 48 WriteLine 46 0 - 0 - 1 -1 - -1 1
-      (par 49 text 47 0)
+    (fn 49 WriteLine 46 0 - 0 - 1 - - -1 1
+      (par 50 text 48 0)
 )
 
-    (fn 50 WriteLine 46 0 - 0 - 1 -1 - -1 1
-      (par 51 text 5 0)
+    (fn 51 WriteLine 46 0 - 0 - 1 - - -1 1
+      (par 52 text 5 0)
 )
 
-    (fn 52 WriteLine 46 0 - 0 - 1 -1 - -1 1
-      (par 53 text 9 0)
+    (fn 53 WriteLine 46 0 - 0 - 1 - - -1 1
+      (par 54 text 9 0)
 )
 
-    (fn 54 WriteLine 46 0 - 0 - 1 -1 - -1 1
-      (par 55 text 25 0)
+    (fn 55 WriteLine 46 0 - 0 - 1 - - -1 1
+      (par 56 text 25 0)
 )
 
     (type char)
 
-    (fn 57 WriteLine 46 0 - 0 - 1 -1 - -1 1
-      (par 58 text 56 0)
+    (fn 58 WriteLine 46 0 - 0 - 1 - - -1 1
+      (par 59 text 57 0)
 )
 
     (type byte)
 
-    (fn 60 WriteLine 46 0 - 0 - 1 -1 - -1 1
-      (par 61 text 59 0)
+    (fn 61 WriteLine 46 0 - 0 - 1 - - -1 1
+      (par 62 text 60 0)
 )
 
-    (fn 62 ReadLine 47 0 - 0 - 1 -1 - -1 0)
-
-    (fn 63 Max 5 0 - 0 - 2 -1 - -1 2
-      (par 64 a 5 0)
-
-      (par 65 b 5 1)
+    (fn 63 Write 46 0 - 0 - 1 - - -1 1
+      (par 64 text 48 0)
 )
 
-    (fn 66 Max 9 0 - 0 - 2 -1 - -1 2
-      (par 67 a 9 0)
-
-      (par 68 b 9 1)
+    (fn 65 Write 46 0 - 0 - 1 - - -1 1
+      (par 66 text 5 0)
 )
 
-    (fn 69 Min 5 0 - 0 - 2 -1 - -1 2
-      (par 70 a 5 0)
-
-      (par 71 b 5 1)
+    (fn 67 Write 46 0 - 0 - 1 - - -1 1
+      (par 68 text 9 0)
 )
 
-    (fn 72 Min 9 0 - 0 - 2 -1 - -1 2
-      (par 73 a 9 0)
-
-      (par 74 b 9 1)
+    (fn 69 Write 46 0 - 0 - 1 - - -1 1
+      (par 70 text 25 0)
 )
 
-    (fn 75 Abs 5 0 - 0 - 2 -1 - -1 1
-      (par 76 x 5 0)
+    (fn 71 Write 46 0 - 0 - 1 - - -1 1
+      (par 72 text 57 0)
 )
 
-    (fn 77 Abs 9 0 - 0 - 2 -1 - -1 1
-      (par 78 x 9 0)
+    (fn 73 Write 46 0 - 0 - 1 - - -1 1
+      (par 74 text 60 0)
 )
 
-    (fn 79 Clamp 5 0 - 0 - 2 -1 - -1 3
-      (par 80 v 5 0)
+    (fn 75 ReadLine 48 0 - 0 - 1 - - -1 0)
 
-      (par 81 lo 5 1)
-
-      (par 82 hi 5 2)
+    (fn 76 ReadKey 57 0 - 0 - 1 - - -1 1
+      (par 77 intercept 25 0)
 )
 
-    (fn 83 Clamp 9 0 - 0 - 2 -1 - -1 3
-      (par 84 v 9 0)
+    (fn 78 Beep 46 0 - 0 - 1 - - -1 2
+      (par 79 frequency 5 0)
 
-      (par 85 lo 9 1)
-
-      (par 86 hi 9 2)
+      (par 80 duration 5 1)
 )
 
-    (fn 87 Sign 5 0 - 0 - 2 -1 - -1 1
-      (par 88 x 5 0)
+    (fn 81 Max 5 0 - 0 - 2 - - -1 2
+      (par 82 a 5 0)
+
+      (par 83 b 5 1)
 )
 
-    (fn 89 Sign 5 0 - 0 - 2 -1 - -1 1
-      (par 90 x 9 0)
+    (fn 84 Max 9 0 - 0 - 2 - - -1 2
+      (par 85 a 9 0)
+
+      (par 86 b 9 1)
 )
 
-    (fn 91 IsEven 25 0 - 0 - 2 -1 - -1 1
-      (par 92 n 5 0)
+    (fn 87 Min 5 0 - 0 - 2 - - -1 2
+      (par 88 a 5 0)
+
+      (par 89 b 5 1)
 )
 
-    (fn 93 IsOdd 25 0 - 0 - 2 -1 - -1 1
-      (par 94 n 5 0)
+    (fn 90 Min 9 0 - 0 - 2 - - -1 2
+      (par 91 a 9 0)
+
+      (par 92 b 9 1)
 )
 
-    (fn 95 Pow 5 0 - 0 - 2 -1 - -1 2
-      (par 96 x 5 0)
-
-      (par 97 exp 5 1)
+    (fn 93 Abs 5 0 - 0 - 2 - - -1 1
+      (par 94 x 5 0)
 )
 
-    (fn 98 Factorial 5 0 - 0 - 2 -1 - -1 1
-      (par 99 n 5 0)
+    (fn 95 Abs 9 0 - 0 - 2 - - -1 1
+      (par 96 x 9 0)
 )
 
-    (fn 100 Gcd 5 0 - 0 - 2 -1 - -1 2
-      (par 101 a 5 0)
+    (fn 97 Clamp 5 0 - 0 - 2 - - -1 3
+      (par 98 v 5 0)
 
-      (par 102 b 5 1)
+      (par 99 lo 5 1)
+
+      (par 100 hi 5 2)
 )
 
-    (fn 103 Lcm 5 0 - 0 - 2 -1 - -1 2
-      (par 104 a 5 0)
+    (fn 101 Clamp 9 0 - 0 - 2 - - -1 3
+      (par 102 v 9 0)
 
-      (par 105 b 5 1)
+      (par 103 lo 9 1)
+
+      (par 104 hi 9 2)
+)
+
+    (fn 105 Sign 5 0 - 0 - 2 - - -1 1
+      (par 106 x 5 0)
+)
+
+    (fn 107 Sign 5 0 - 0 - 2 - - -1 1
+      (par 108 x 9 0)
+)
+
+    (fn 109 IsEven 25 0 - 0 - 2 - - -1 1
+      (par 110 n 5 0)
+)
+
+    (fn 111 IsOdd 25 0 - 0 - 2 - - -1 1
+      (par 112 n 5 0)
+)
+
+    (fn 113 Pow 5 0 - 0 - 2 - - -1 2
+      (par 114 x 5 0)
+
+      (par 115 exp 5 1)
+)
+
+    (fn 116 Factorial 5 0 - 0 - 2 - - -1 1
+      (par 117 n 5 0)
+)
+
+    (fn 118 Gcd 5 0 - 0 - 2 - - -1 2
+      (par 119 a 5 0)
+
+      (par 120 b 5 1)
+)
+
+    (fn 121 Lcm 5 0 - 0 - 2 - - -1 2
+      (par 122 a 5 0)
+
+      (par 123 b 5 1)
+)
+
+    (fn 124 Sqrt 9 0 - 0 - 2 - - -1 1
+      (par 125 x 9 0)
+)
+
+    (fn 126 Floor 9 0 - 0 - 2 - - -1 1
+      (par 127 x 9 0)
+)
+
+    (fn 128 Ceiling 9 0 - 0 - 2 - - -1 1
+      (par 129 x 9 0)
+)
+
+    (fn 130 Truncate 9 0 - 0 - 2 - - -1 1
+      (par 131 x 9 0)
+)
+
+    (fn 132 Round 9 0 - 0 - 2 - - -1 1
+      (par 133 x 9 0)
 )
 
     (type any)
 
-    (fn 107 Print 46 0 - 0 - 3 0 - -1 1
-      (par 108 text 106 0)
+    (fn 135 WriteLine 46 0 - 0 - 3 WriteLine - -1 1
+      (par 136 text 134 0)
 )
 
-    (fn 109 Input 47 0 - 0 - 3 1 - -1 0)
-
-    (fn 110 Random 5 0 - 0 - 3 2 - -1 1
-      (par 111 max 5 0)
+    (fn 137 Write 46 0 - 0 - 3 Write - -1 1
+      (par 138 text 134 0)
 )
 
-    (fn 112 Sleep 46 0 - 0 - 3 3 - -1 1
-      (par 113 ms 5 0)
+    (fn 139 ReadLine 48 0 - 0 - 3 ReadLine - -1 0)
+
+    (fn 140 ReadKey 57 0 - 0 - 3 ReadKey - -1 1
+      (par 141 intercept 25 0)
 )
 
-    (fn 114 Now 5 0 - 0 - 3 4 - -1 0)
-
-    (fn 115 Exit 46 0 - 0 - 3 5 - -1 1
-      (par 116 code 5 0)
+    (fn 142 Random 5 0 - 0 - 3 Random - -1 1
+      (par 143 max 5 0)
 )
 
-    (fn 117 ToUpper 47 0 - 0 - 4 -1 - -1 1
-      (par 118 s 47 0)
+    (fn 144 Sleep 46 0 - 0 - 3 Sleep - -1 1
+      (par 145 ms 5 0)
 )
 
-    (fn 119 ToLower 47 0 - 0 - 4 -1 - -1 1
-      (par 120 s 47 0)
+    (fn 146 TickCount 5 0 - 0 - 3 TickCount - -1 0)
+
+    (fn 147 Exit 46 0 - 0 - 3 Exit - -1 1
+      (par 148 code 5 0)
 )
 
-    (fn 121 StartsWith 25 0 - 0 - 4 -1 - -1 2
-      (par 122 s 47 0)
-
-      (par 123 prefix 47 1)
+    (fn 149 Sqrt 9 0 - 0 - 3 Sqrt - -1 1
+      (par 150 x 9 0)
 )
 
-    (fn 124 EndsWith 25 0 - 0 - 4 -1 - -1 2
-      (par 125 s 47 0)
-
-      (par 126 suffix 47 1)
+    (fn 151 Floor 9 0 - 0 - 3 Floor - -1 1
+      (par 152 x 9 0)
 )
 
-    (fn 127 Contains 25 0 - 0 - 4 -1 - -1 2
-      (par 128 s 47 0)
-
-      (par 129 sub 47 1)
+    (fn 153 Ceiling 9 0 - 0 - 3 Ceiling - -1 1
+      (par 154 x 9 0)
 )
 
-    (fn 130 IndexOf 5 0 - 0 - 4 -1 - -1 2
-      (par 131 s 47 0)
-
-      (par 132 sub 47 1)
+    (fn 155 Truncate 9 0 - 0 - 3 Truncate - -1 1
+      (par 156 x 9 0)
 )
 
-    (fn 133 Reverse 47 0 - 0 - 4 -1 - -1 1
-      (par 134 s 47 0)
+    (fn 157 Round 9 0 - 0 - 3 Round - -1 1
+      (par 158 x 9 0)
 )
 
-    (fn 135 Replicate 47 0 - 0 - 4 -1 - -1 2
-      (par 136 s 47 0)
+    (fn 159 Beep 46 0 - 0 - 3 Beep - -1 2
+      (par 160 frequency 5 0)
 
-      (par 137 n 5 1)
+      (par 161 duration 5 1)
 )
 
-    (fn 138 CountChar 5 0 - 0 - 4 -1 - -1 2
-      (par 139 s 47 0)
-
-      (par 140 c 56 1)
+    (fn 162 ToUpper 48 0 - 0 - 4 - - -1 1
+      (par 163 s 48 0)
 )
 
-    (fn 141 IsPalindrome 25 0 - 0 - 4 -1 - -1 1
-      (par 142 s 47 0)
+    (fn 164 ToLower 48 0 - 0 - 4 - - -1 1
+      (par 165 s 48 0)
 )
 
-    (fn 143 Trim 47 0 - 0 - 4 -1 - -1 1
-      (par 144 s 47 0)
+    (fn 166 StartsWith 25 0 - 0 - 4 - - -1 2
+      (par 167 s 48 0)
+
+      (par 168 prefix 48 1)
 )
 
-    (loc 145 sum 0 5 -)
+    (fn 169 EndsWith 25 0 - 0 - 4 - - -1 2
+      (par 170 s 48 0)
 
-    (loc 146 i 0 5 -)
+      (par 171 suffix 48 1)
+)
 
-    (loc 147 sum 0 9 -)
+    (fn 172 Contains 25 0 - 0 - 4 - - -1 2
+      (par 173 s 48 0)
 
-    (loc 148 i 0 5 -)
+      (par 174 sub 48 1)
+)
 
-    (loc 149 m 0 5 -)
+    (fn 175 IndexOf 5 0 - 0 - 4 - - -1 2
+      (par 176 s 48 0)
 
-    (loc 150 i 0 5 -)
+      (par 177 sub 48 1)
+)
 
-    (loc 151 m 0 9 -)
+    (fn 178 Reverse 48 0 - 0 - 4 - - -1 1
+      (par 179 s 48 0)
+)
 
-    (loc 152 i 0 5 -)
+    (fn 180 Replicate 48 0 - 0 - 4 - - -1 2
+      (par 181 s 48 0)
 
-    (loc 153 m 0 5 -)
+      (par 182 n 5 1)
+)
 
-    (loc 154 i 0 5 -)
+    (fn 183 CountChar 5 0 - 0 - 4 - - -1 2
+      (par 184 s 48 0)
 
-    (loc 155 m 0 9 -)
+      (par 185 c 57 1)
+)
 
-    (loc 156 i 0 5 -)
+    (fn 186 IsPalindrome 25 0 - 0 - 4 - - -1 1
+      (par 187 s 48 0)
+)
 
-    (loc 157 i 0 5 -)
+    (fn 188 Trim 48 0 - 0 - 4 - - -1 1
+      (par 189 s 48 0)
+)
 
-    (loc 158 i 0 5 -)
+    (fn 190 Replace 48 0 - 0 - 4 - - -1 3
+      (par 191 s 48 0)
 
-    (loc 159 i 0 5 -)
+      (par 192 old 48 1)
 
-    (loc 160 i 0 5 -)
+      (par 193 replacement 48 2)
+)
 
-    (loc 161 n 0 5 -)
+    (fn 194 CountSubstring 5 0 - 0 - 4 - - -1 2
+      (par 195 s 48 0)
 
-    (loc 162 result 0 6 -)
+      (par 196 sub 48 1)
+)
 
-    (loc 163 i 0 5 -)
+    (fn 197 PadLeft 48 0 - 0 - 4 - - -1 3
+      (par 198 s 48 0)
 
-    (loc 164 n 0 5 -)
+      (par 199 totalWidth 5 1)
 
-    (loc 165 result 0 10 -)
+      (par 200 padChar 57 2)
+)
 
-    (loc 166 i 0 5 -)
+    (fn 201 PadRight 48 0 - 0 - 4 - - -1 3
+      (par 202 s 48 0)
 
-    (loc 167 n 0 5 -)
+      (par 203 totalWidth 5 1)
 
-    (loc 168 result 0 6 -)
+      (par 204 padChar 57 2)
+)
 
-    (loc 169 i 0 5 -)
+    (arr 48)
 
-    (loc 170 j 0 5 -)
+    (fn 206 Split 205 0 - 0 - 4 - - -1 2
+      (par 207 s 48 0)
 
-    (loc 171 k 0 5 -)
+      (par 208 sep 57 1)
+)
 
-    (loc 172 t 0 5 -)
+    (loc 209 sum 0 5 -)
 
-    (loc 173 n 0 5 -)
+    (loc 210 i 0 5 -)
 
-    (loc 174 result 0 10 -)
+    (loc 211 sum 0 9 -)
 
-    (loc 175 i 0 5 -)
+    (loc 212 i 0 5 -)
 
-    (loc 176 j 0 5 -)
+    (loc 213 m 0 5 -)
 
-    (loc 177 k 0 5 -)
+    (loc 214 i 0 5 -)
 
-    (loc 178 t 0 9 -)
+    (loc 215 m 0 9 -)
 
-    (loc 179 result 0 5 -)
+    (loc 216 i 0 5 -)
 
-    (loc 180 i 0 5 -)
+    (loc 217 m 0 5 -)
 
-    (loc 181 result 0 5 -)
+    (loc 218 i 0 5 -)
 
-    (loc 182 i 0 5 -)
+    (loc 219 m 0 9 -)
 
-    (loc 183 x 0 5 -)
+    (loc 220 i 0 5 -)
 
-    (loc 184 y 0 5 -)
+    (loc 221 i 0 5 -)
 
-    (loc 185 t 0 5 -)
+    (loc 222 i 0 5 -)
 
-    (loc 186 result 0 47 -)
+    (loc 223 i 0 5 -)
 
-    (loc 187 i 0 5 -)
+    (loc 224 i 0 5 -)
 
-    (loc 188 v 0 5 -)
+    (loc 225 n 0 5 -)
 
-    (loc 189 result 0 47 -)
+    (loc 226 result 0 6 -)
 
-    (loc 190 i 0 5 -)
+    (loc 227 i 0 5 -)
 
-    (loc 191 v 0 5 -)
+    (loc 228 n 0 5 -)
 
-    (loc 192 i 0 5 -)
+    (loc 229 result 0 10 -)
 
-    (loc 193 i 0 5 -)
+    (loc 230 i 0 5 -)
 
-    (loc 194 result 0 47 -)
+    (loc 231 n 0 5 -)
 
-    (loc 195 i 0 5 -)
+    (loc 232 result 0 6 -)
 
-    (loc 196 result 0 47 -)
+    (loc 233 i 0 5 -)
 
-    (loc 197 i 0 5 -)
+    (loc 234 j 0 5 -)
 
-    (loc 198 count 0 5 -)
+    (loc 235 k 0 5 -)
 
-    (loc 199 i 0 5 -)
+    (loc 236 t 0 5 -)
 
-    (loc 200 lo 0 5 -)
+    (loc 237 n 0 5 -)
 
-    (loc 201 hi 0 5 -)
+    (loc 238 result 0 10 -)
 
-    (loc 202 start 0 5 -)
+    (loc 239 i 0 5 -)
 
-    (loc 203 end 0 5 -)
+    (loc 240 j 0 5 -)
 
-    (loc 204 first 0 56 -)
+    (loc 241 k 0 5 -)
 
-    (loc 205 last 0 56 -)
+    (loc 242 t 0 9 -)
+
+    (loc 243 result 0 5 -)
+
+    (loc 244 i 0 5 -)
+
+    (loc 245 result 0 5 -)
+
+    (loc 246 i 0 5 -)
+
+    (loc 247 x 0 5 -)
+
+    (loc 248 y 0 5 -)
+
+    (loc 249 t 0 5 -)
+
+    (loc 250 result 0 48 -)
+
+    (loc 251 i 0 5 -)
+
+    (loc 252 v 0 5 -)
+
+    (loc 253 result 0 48 -)
+
+    (loc 254 i 0 5 -)
+
+    (loc 255 v 0 5 -)
+
+    (loc 256 i 0 5 -)
+
+    (loc 257 i 0 5 -)
+
+    (loc 258 result 0 48 -)
+
+    (loc 259 i 0 5 -)
+
+    (loc 260 result 0 48 -)
+
+    (loc 261 i 0 5 -)
+
+    (loc 262 count 0 5 -)
+
+    (loc 263 i 0 5 -)
+
+    (loc 264 lo 0 5 -)
+
+    (loc 265 hi 0 5 -)
+
+    (loc 266 start 0 5 -)
+
+    (loc 267 end 0 5 -)
+
+    (loc 268 first 0 57 -)
+
+    (loc 269 last 0 57 -)
+
+    (loc 270 result 0 48 -)
+
+    (loc 271 i 0 5 -)
+
+    (loc 272 count 0 5 -)
+
+    (loc 273 i 0 5 -)
+
+    (loc 274 result 0 48 -)
+
+    (loc 275 result 0 48 -)
+
+    (loc 276 count 0 5 -)
+
+    (loc 277 result 0 205 -)
+
+    (loc 278 start 0 5 -)
+
+    (loc 279 index 0 5 -)
+
+    (loc 280 i 0 5 -)
 )
 
   (bodies
     (body 7
       (block 10
-        (vardecl 145
+        (vardecl 209
           (lit 5 i:0)
 )
 
-        (vardecl 146
+        (vardecl 210
           (lit 5 i:0)
 )
 
@@ -429,27 +579,27 @@
         (label Label1)
 
         (exprstmt
-          (assign 145
+          (assign 209
             (binary
               (bop 14 5 5)
 
-              (var 145)
+              (var 209)
 
               (elem 5
                 (var 8)
 
-                (var 146)
+                (var 210)
 )
 )
 )
 )
 
         (exprstmt
-          (assign 146
+          (assign 210
             (binary
               (bop 14 5 5)
 
-              (var 146)
+              (var 210)
 
               (lit 5 i:1)
 )
@@ -462,7 +612,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 146)
+            (var 210)
 
             (memberacc 5 Length
               (var 8)
@@ -473,18 +623,18 @@
         (label break1)
 
         (return
-          (var 145)
+          (var 209)
 )
 )
 )
 
     (body 11
       (block 10
-        (vardecl 147
+        (vardecl 211
           (lit 9 d:0)
 )
 
-        (vardecl 148
+        (vardecl 212
           (lit 5 i:0)
 )
 
@@ -493,27 +643,27 @@
         (label Label1)
 
         (exprstmt
-          (assign 147
+          (assign 211
             (binary
               (bop 14 9 9)
 
-              (var 147)
+              (var 211)
 
               (elem 9
                 (var 12)
 
-                (var 148)
+                (var 212)
 )
 )
 )
 )
 
         (exprstmt
-          (assign 148
+          (assign 212
             (binary
               (bop 14 5 5)
 
-              (var 148)
+              (var 212)
 
               (lit 5 i:1)
 )
@@ -526,7 +676,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 148)
+            (var 212)
 
             (memberacc 5 Length
               (var 12)
@@ -537,7 +687,7 @@
         (label break1)
 
         (return
-          (var 147)
+          (var 211)
 )
 )
 )
@@ -562,7 +712,7 @@
 
         (label Label1)
 
-        (vardecl 149
+        (vardecl 213
           (elem 5
             (var 14)
 
@@ -570,7 +720,7 @@
 )
 )
 
-        (vardecl 150
+        (vardecl 214
           (lit 5 i:1)
 )
 
@@ -585,19 +735,19 @@
             (elem 5
               (var 14)
 
-              (var 150)
+              (var 214)
 )
 
-            (var 149)
+            (var 213)
 )
  0)
 
         (exprstmt
-          (assign 149
+          (assign 213
             (elem 5
               (var 14)
 
-              (var 150)
+              (var 214)
 )
 )
 )
@@ -605,11 +755,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 150
+          (assign 214
             (binary
               (bop 14 5 5)
 
-              (var 150)
+              (var 214)
 
               (lit 5 i:1)
 )
@@ -622,7 +772,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 150)
+            (var 214)
 
             (memberacc 5 Length
               (var 14)
@@ -633,7 +783,7 @@
         (label break1)
 
         (return
-          (var 149)
+          (var 213)
 )
 )
 )
@@ -658,7 +808,7 @@
 
         (label Label1)
 
-        (vardecl 151
+        (vardecl 215
           (elem 9
             (var 16)
 
@@ -666,7 +816,7 @@
 )
 )
 
-        (vardecl 152
+        (vardecl 216
           (lit 5 i:1)
 )
 
@@ -681,19 +831,19 @@
             (elem 9
               (var 16)
 
-              (var 152)
+              (var 216)
 )
 
-            (var 151)
+            (var 215)
 )
  0)
 
         (exprstmt
-          (assign 151
+          (assign 215
             (elem 9
               (var 16)
 
-              (var 152)
+              (var 216)
 )
 )
 )
@@ -701,11 +851,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 152
+          (assign 216
             (binary
               (bop 14 5 5)
 
-              (var 152)
+              (var 216)
 
               (lit 5 i:1)
 )
@@ -718,7 +868,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 152)
+            (var 216)
 
             (memberacc 5 Length
               (var 16)
@@ -729,7 +879,7 @@
         (label break1)
 
         (return
-          (var 151)
+          (var 215)
 )
 )
 )
@@ -754,7 +904,7 @@
 
         (label Label1)
 
-        (vardecl 153
+        (vardecl 217
           (elem 5
             (var 18)
 
@@ -762,7 +912,7 @@
 )
 )
 
-        (vardecl 154
+        (vardecl 218
           (lit 5 i:1)
 )
 
@@ -777,19 +927,19 @@
             (elem 5
               (var 18)
 
-              (var 154)
+              (var 218)
 )
 
-            (var 153)
+            (var 217)
 )
  0)
 
         (exprstmt
-          (assign 153
+          (assign 217
             (elem 5
               (var 18)
 
-              (var 154)
+              (var 218)
 )
 )
 )
@@ -797,11 +947,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 154
+          (assign 218
             (binary
               (bop 14 5 5)
 
-              (var 154)
+              (var 218)
 
               (lit 5 i:1)
 )
@@ -814,7 +964,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 154)
+            (var 218)
 
             (memberacc 5 Length
               (var 18)
@@ -825,7 +975,7 @@
         (label break1)
 
         (return
-          (var 153)
+          (var 217)
 )
 )
 )
@@ -850,7 +1000,7 @@
 
         (label Label1)
 
-        (vardecl 155
+        (vardecl 219
           (elem 9
             (var 20)
 
@@ -858,7 +1008,7 @@
 )
 )
 
-        (vardecl 156
+        (vardecl 220
           (lit 5 i:1)
 )
 
@@ -873,19 +1023,19 @@
             (elem 9
               (var 20)
 
-              (var 156)
+              (var 220)
 )
 
-            (var 155)
+            (var 219)
 )
  0)
 
         (exprstmt
-          (assign 155
+          (assign 219
             (elem 9
               (var 20)
 
-              (var 156)
+              (var 220)
 )
 )
 )
@@ -893,11 +1043,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 156
+          (assign 220
             (binary
               (bop 14 5 5)
 
-              (var 156)
+              (var 220)
 
               (lit 5 i:1)
 )
@@ -910,7 +1060,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 156)
+            (var 220)
 
             (memberacc 5 Length
               (var 20)
@@ -921,7 +1071,7 @@
         (label break1)
 
         (return
-          (var 155)
+          (var 219)
 )
 )
 )
@@ -1008,7 +1158,7 @@
 
     (body 26
       (block 11
-        (vardecl 157
+        (vardecl 221
           (lit 5 i:0)
 )
 
@@ -1023,7 +1173,7 @@
             (elem 5
               (var 27)
 
-              (var 157)
+              (var 221)
 )
 
             (var 28)
@@ -1037,11 +1187,11 @@
         (label Label2)
 
         (exprstmt
-          (assign 157
+          (assign 221
             (binary
               (bop 14 5 5)
 
-              (var 157)
+              (var 221)
 
               (lit 5 i:1)
 )
@@ -1054,7 +1204,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 157)
+            (var 221)
 
             (memberacc 5 Length
               (var 27)
@@ -1072,7 +1222,7 @@
 
     (body 29
       (block 11
-        (vardecl 158
+        (vardecl 222
           (lit 5 i:0)
 )
 
@@ -1087,7 +1237,7 @@
             (elem 9
               (var 30)
 
-              (var 158)
+              (var 222)
 )
 
             (var 31)
@@ -1101,11 +1251,11 @@
         (label Label2)
 
         (exprstmt
-          (assign 158
+          (assign 222
             (binary
               (bop 14 5 5)
 
-              (var 158)
+              (var 222)
 
               (lit 5 i:1)
 )
@@ -1118,7 +1268,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 158)
+            (var 222)
 
             (memberacc 5 Length
               (var 30)
@@ -1136,7 +1286,7 @@
 
     (body 32
       (block 11
-        (vardecl 159
+        (vardecl 223
           (lit 5 i:0)
 )
 
@@ -1151,7 +1301,7 @@
             (elem 5
               (var 33)
 
-              (var 159)
+              (var 223)
 )
 
             (var 34)
@@ -1159,17 +1309,17 @@
  0)
 
         (return
-          (var 159)
+          (var 223)
 )
 
         (label Label2)
 
         (exprstmt
-          (assign 159
+          (assign 223
             (binary
               (bop 14 5 5)
 
-              (var 159)
+              (var 223)
 
               (lit 5 i:1)
 )
@@ -1182,7 +1332,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 159)
+            (var 223)
 
             (memberacc 5 Length
               (var 33)
@@ -1204,7 +1354,7 @@
 
     (body 35
       (block 11
-        (vardecl 160
+        (vardecl 224
           (lit 5 i:0)
 )
 
@@ -1219,7 +1369,7 @@
             (elem 9
               (var 36)
 
-              (var 160)
+              (var 224)
 )
 
             (var 37)
@@ -1227,17 +1377,17 @@
  0)
 
         (return
-          (var 160)
+          (var 224)
 )
 
         (label Label2)
 
         (exprstmt
-          (assign 160
+          (assign 224
             (binary
               (bop 14 5 5)
 
-              (var 160)
+              (var 224)
 
               (lit 5 i:1)
 )
@@ -1250,7 +1400,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 160)
+            (var 224)
 
             (memberacc 5 Length
               (var 36)
@@ -1272,19 +1422,19 @@
 
     (body 38
       (block 11
-        (vardecl 161
+        (vardecl 225
           (memberacc 5 Length
             (var 39)
 )
 )
 
-        (vardecl 162
+        (vardecl 226
           (arrnew 6
-            (var 161)
+            (var 225)
  0)
 )
 
-        (vardecl 163
+        (vardecl 227
           (lit 5 i:0)
 )
 
@@ -1295,9 +1445,9 @@
         (exprstmt
           (elemassign 5
             (elem 5
-              (var 162)
+              (var 226)
 
-              (var 163)
+              (var 227)
 )
 
             (elem 5
@@ -1309,23 +1459,23 @@
                 (binary
                   (bop 16 5 5)
 
-                  (var 161)
+                  (var 225)
 
                   (lit 5 i:1)
 )
 
-                (var 163)
+                (var 227)
 )
 )
 )
 )
 
         (exprstmt
-          (assign 163
+          (assign 227
             (binary
               (bop 14 5 5)
 
-              (var 163)
+              (var 227)
 
               (lit 5 i:1)
 )
@@ -1338,35 +1488,35 @@
           (binary
             (bop 41 5 5)
 
-            (var 163)
+            (var 227)
 
-            (var 161)
+            (var 225)
 )
  1)
 
         (label break1)
 
         (return
-          (var 162)
+          (var 226)
 )
 )
 )
 
     (body 40
       (block 11
-        (vardecl 164
+        (vardecl 228
           (memberacc 5 Length
             (var 41)
 )
 )
 
-        (vardecl 165
+        (vardecl 229
           (arrnew 10
-            (var 164)
+            (var 228)
  0)
 )
 
-        (vardecl 166
+        (vardecl 230
           (lit 5 i:0)
 )
 
@@ -1377,9 +1527,9 @@
         (exprstmt
           (elemassign 9
             (elem 9
-              (var 165)
+              (var 229)
 
-              (var 166)
+              (var 230)
 )
 
             (elem 9
@@ -1391,23 +1541,23 @@
                 (binary
                   (bop 16 5 5)
 
-                  (var 164)
+                  (var 228)
 
                   (lit 5 i:1)
 )
 
-                (var 166)
+                (var 230)
 )
 )
 )
 )
 
         (exprstmt
-          (assign 166
+          (assign 230
             (binary
               (bop 14 5 5)
 
-              (var 166)
+              (var 230)
 
               (lit 5 i:1)
 )
@@ -1420,35 +1570,35 @@
           (binary
             (bop 41 5 5)
 
-            (var 166)
+            (var 230)
 
-            (var 164)
+            (var 228)
 )
  1)
 
         (label break1)
 
         (return
-          (var 165)
+          (var 229)
 )
 )
 )
 
     (body 42
       (block 30
-        (vardecl 167
+        (vardecl 231
           (memberacc 5 Length
             (var 43)
 )
 )
 
-        (vardecl 168
+        (vardecl 232
           (arrnew 6
-            (var 167)
+            (var 231)
  0)
 )
 
-        (vardecl 169
+        (vardecl 233
           (lit 5 i:0)
 )
 
@@ -1459,25 +1609,25 @@
         (exprstmt
           (elemassign 5
             (elem 5
-              (var 168)
+              (var 232)
 
-              (var 169)
+              (var 233)
 )
 
             (elem 5
               (var 43)
 
-              (var 169)
+              (var 233)
 )
 )
 )
 
         (exprstmt
-          (assign 169
+          (assign 233
             (binary
               (bop 14 5 5)
 
-              (var 169)
+              (var 233)
 
               (lit 5 i:1)
 )
@@ -1490,15 +1640,15 @@
           (binary
             (bop 41 5 5)
 
-            (var 169)
+            (var 233)
 
-            (var 167)
+            (var 231)
 )
  1)
 
         (label break1)
 
-        (vardecl 170
+        (vardecl 234
           (lit 5 i:0)
 )
 
@@ -1506,7 +1656,7 @@
 
         (label Label2)
 
-        (vardecl 171
+        (vardecl 235
           (lit 5 i:0)
 )
 
@@ -1519,18 +1669,18 @@
             (bop 43 5 5)
 
             (elem 5
-              (var 168)
+              (var 232)
 
-              (var 171)
+              (var 235)
 )
 
             (elem 5
-              (var 168)
+              (var 232)
 
               (binary
                 (bop 14 5 5)
 
-                (var 171)
+                (var 235)
 
                 (lit 5 i:1)
 )
@@ -1538,29 +1688,29 @@
 )
  0)
 
-        (vardecl 172
+        (vardecl 236
           (elem 5
-            (var 168)
+            (var 232)
 
-            (var 171)
+            (var 235)
 )
 )
 
         (exprstmt
           (elemassign 5
             (elem 5
-              (var 168)
+              (var 232)
 
-              (var 171)
+              (var 235)
 )
 
             (elem 5
-              (var 168)
+              (var 232)
 
               (binary
                 (bop 14 5 5)
 
-                (var 171)
+                (var 235)
 
                 (lit 5 i:1)
 )
@@ -1571,29 +1721,29 @@
         (exprstmt
           (elemassign 5
             (elem 5
-              (var 168)
+              (var 232)
 
               (binary
                 (bop 14 5 5)
 
-                (var 171)
+                (var 235)
 
                 (lit 5 i:1)
 )
 )
 
-            (var 172)
+            (var 236)
 )
 )
 
         (label Label4)
 
         (exprstmt
-          (assign 171
+          (assign 235
             (binary
               (bop 14 5 5)
 
-              (var 171)
+              (var 235)
 
               (lit 5 i:1)
 )
@@ -1606,7 +1756,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 171)
+            (var 235)
 
             (binary
               (bop 16 5 5)
@@ -1614,12 +1764,12 @@
               (binary
                 (bop 16 5 5)
 
-                (var 167)
+                (var 231)
 
                 (lit 5 i:1)
 )
 
-              (var 170)
+              (var 234)
 )
 )
  1)
@@ -1627,11 +1777,11 @@
         (label break3)
 
         (exprstmt
-          (assign 170
+          (assign 234
             (binary
               (bop 14 5 5)
 
-              (var 170)
+              (var 234)
 
               (lit 5 i:1)
 )
@@ -1644,12 +1794,12 @@
           (binary
             (bop 41 5 5)
 
-            (var 170)
+            (var 234)
 
             (binary
               (bop 16 5 5)
 
-              (var 167)
+              (var 231)
 
               (lit 5 i:1)
 )
@@ -1659,26 +1809,26 @@
         (label break2)
 
         (return
-          (var 168)
+          (var 232)
 )
 )
 )
 
     (body 44
       (block 30
-        (vardecl 173
+        (vardecl 237
           (memberacc 5 Length
             (var 45)
 )
 )
 
-        (vardecl 174
+        (vardecl 238
           (arrnew 10
-            (var 173)
+            (var 237)
  0)
 )
 
-        (vardecl 175
+        (vardecl 239
           (lit 5 i:0)
 )
 
@@ -1689,25 +1839,25 @@
         (exprstmt
           (elemassign 9
             (elem 9
-              (var 174)
+              (var 238)
 
-              (var 175)
+              (var 239)
 )
 
             (elem 9
               (var 45)
 
-              (var 175)
+              (var 239)
 )
 )
 )
 
         (exprstmt
-          (assign 175
+          (assign 239
             (binary
               (bop 14 5 5)
 
-              (var 175)
+              (var 239)
 
               (lit 5 i:1)
 )
@@ -1720,15 +1870,15 @@
           (binary
             (bop 41 5 5)
 
-            (var 175)
+            (var 239)
 
-            (var 173)
+            (var 237)
 )
  1)
 
         (label break1)
 
-        (vardecl 176
+        (vardecl 240
           (lit 5 i:0)
 )
 
@@ -1736,7 +1886,7 @@
 
         (label Label2)
 
-        (vardecl 177
+        (vardecl 241
           (lit 5 i:0)
 )
 
@@ -1749,18 +1899,18 @@
             (bop 43 9 9)
 
             (elem 9
-              (var 174)
+              (var 238)
 
-              (var 177)
+              (var 241)
 )
 
             (elem 9
-              (var 174)
+              (var 238)
 
               (binary
                 (bop 14 5 5)
 
-                (var 177)
+                (var 241)
 
                 (lit 5 i:1)
 )
@@ -1768,29 +1918,29 @@
 )
  0)
 
-        (vardecl 178
+        (vardecl 242
           (elem 9
-            (var 174)
+            (var 238)
 
-            (var 177)
+            (var 241)
 )
 )
 
         (exprstmt
           (elemassign 9
             (elem 9
-              (var 174)
+              (var 238)
 
-              (var 177)
+              (var 241)
 )
 
             (elem 9
-              (var 174)
+              (var 238)
 
               (binary
                 (bop 14 5 5)
 
-                (var 177)
+                (var 241)
 
                 (lit 5 i:1)
 )
@@ -1801,29 +1951,29 @@
         (exprstmt
           (elemassign 9
             (elem 9
-              (var 174)
+              (var 238)
 
               (binary
                 (bop 14 5 5)
 
-                (var 177)
+                (var 241)
 
                 (lit 5 i:1)
 )
 )
 
-            (var 178)
+            (var 242)
 )
 )
 
         (label Label4)
 
         (exprstmt
-          (assign 177
+          (assign 241
             (binary
               (bop 14 5 5)
 
-              (var 177)
+              (var 241)
 
               (lit 5 i:1)
 )
@@ -1836,7 +1986,7 @@
           (binary
             (bop 41 5 5)
 
-            (var 177)
+            (var 241)
 
             (binary
               (bop 16 5 5)
@@ -1844,12 +1994,12 @@
               (binary
                 (bop 16 5 5)
 
-                (var 173)
+                (var 237)
 
                 (lit 5 i:1)
 )
 
-              (var 176)
+              (var 240)
 )
 )
  1)
@@ -1857,11 +2007,11 @@
         (label break3)
 
         (exprstmt
-          (assign 176
+          (assign 240
             (binary
               (bop 14 5 5)
 
-              (var 176)
+              (var 240)
 
               (lit 5 i:1)
 )
@@ -1874,12 +2024,12 @@
           (binary
             (bop 41 5 5)
 
-            (var 176)
+            (var 240)
 
             (binary
               (bop 16 5 5)
 
-              (var 173)
+              (var 237)
 
               (lit 5 i:1)
 )
@@ -1889,19 +2039,19 @@
         (label break2)
 
         (return
-          (var 174)
+          (var 238)
 )
 )
 )
 
-    (body 48
+    (body 47
       (block 2
         (exprstmt
-          (membercall 46 Print 107 1
+          (membercall 46 WriteLine 135 1
             (statictype 3)
 
-            (conv 106
-              (var 49)
+            (conv 134
+              (lit 48 s:)
 )
 )
 )
@@ -1910,14 +2060,14 @@
 )
 )
 
-    (body 50
+    (body 49
       (block 2
         (exprstmt
-          (membercall 46 Print 107 1
+          (membercall 46 WriteLine 135 1
             (statictype 3)
 
-            (conv 106
-              (var 51)
+            (conv 134
+              (var 50)
 )
 )
 )
@@ -1926,14 +2076,14 @@
 )
 )
 
-    (body 52
+    (body 51
       (block 2
         (exprstmt
-          (membercall 46 Print 107 1
+          (membercall 46 WriteLine 135 1
             (statictype 3)
 
-            (conv 106
-              (var 53)
+            (conv 134
+              (var 52)
 )
 )
 )
@@ -1942,14 +2092,14 @@
 )
 )
 
-    (body 54
+    (body 53
       (block 2
         (exprstmt
-          (membercall 46 Print 107 1
+          (membercall 46 WriteLine 135 1
             (statictype 3)
 
-            (conv 106
-              (var 55)
+            (conv 134
+              (var 54)
 )
 )
 )
@@ -1958,14 +2108,14 @@
 )
 )
 
-    (body 57
+    (body 55
       (block 2
         (exprstmt
-          (membercall 46 Print 107 1
+          (membercall 46 WriteLine 135 1
             (statictype 3)
 
-            (conv 106
-              (var 58)
+            (conv 134
+              (var 56)
 )
 )
 )
@@ -1974,14 +2124,14 @@
 )
 )
 
-    (body 60
+    (body 58
       (block 2
         (exprstmt
-          (membercall 46 Print 107 1
+          (membercall 46 WriteLine 135 1
             (statictype 3)
 
-            (conv 106
-              (var 61)
+            (conv 134
+              (var 59)
 )
 )
 )
@@ -1990,119 +2140,259 @@
 )
 )
 
-    (body 62
-      (block 1
-        (return
-          (membercall 47 Input 109 0
+    (body 61
+      (block 2
+        (exprstmt
+          (membercall 46 WriteLine 135 1
             (statictype 3)
+
+            (conv 134
+              (var 62)
 )
 )
+)
+
+        (return -)
 )
 )
 
     (body 63
+      (block 2
+        (exprstmt
+          (membercall 46 Write 137 1
+            (statictype 3)
+
+            (conv 134
+              (var 64)
+)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 65
+      (block 2
+        (exprstmt
+          (membercall 46 Write 137 1
+            (statictype 3)
+
+            (conv 134
+              (var 66)
+)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 67
+      (block 2
+        (exprstmt
+          (membercall 46 Write 137 1
+            (statictype 3)
+
+            (conv 134
+              (var 68)
+)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 69
+      (block 2
+        (exprstmt
+          (membercall 46 Write 137 1
+            (statictype 3)
+
+            (conv 134
+              (var 70)
+)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 71
+      (block 2
+        (exprstmt
+          (membercall 46 Write 137 1
+            (statictype 3)
+
+            (conv 134
+              (var 72)
+)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 73
+      (block 2
+        (exprstmt
+          (membercall 46 Write 137 1
+            (statictype 3)
+
+            (conv 134
+              (var 74)
+)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 75
+      (block 1
+        (return
+          (membercall 48 ReadLine 139 0
+            (statictype 3)
+)
+)
+)
+)
+
+    (body 76
+      (block 1
+        (return
+          (membercall 57 ReadKey 140 1
+            (statictype 3)
+
+            (var 77)
+)
+)
+)
+)
+
+    (body 78
+      (block 2
+        (exprstmt
+          (membercall 46 Beep 159 2
+            (statictype 3)
+
+            (var 79)
+
+            (var 80)
+)
+)
+
+        (return -)
+)
+)
+
+    (body 81
       (block 4
         (cgoto Label1
           (binary
             (bop 43 5 5)
 
-            (var 64)
+            (var 82)
 
-            (var 65)
+            (var 83)
 )
  0)
 
         (return
-          (var 64)
+          (var 82)
 )
 
         (label Label1)
 
         (return
-          (var 65)
+          (var 83)
 )
 )
 )
 
-    (body 66
+    (body 84
       (block 4
         (cgoto Label1
           (binary
             (bop 43 9 9)
 
-            (var 67)
+            (var 85)
 
-            (var 68)
+            (var 86)
 )
  0)
 
         (return
-          (var 67)
+          (var 85)
 )
 
         (label Label1)
 
         (return
-          (var 68)
+          (var 86)
 )
 )
 )
 
-    (body 69
+    (body 87
       (block 4
         (cgoto Label1
           (binary
             (bop 41 5 5)
 
-            (var 70)
+            (var 88)
 
-            (var 71)
+            (var 89)
 )
  0)
 
         (return
-          (var 70)
+          (var 88)
 )
 
         (label Label1)
 
         (return
-          (var 71)
+          (var 89)
 )
 )
 )
 
-    (body 72
+    (body 90
       (block 4
         (cgoto Label1
           (binary
             (bop 41 9 9)
 
-            (var 73)
+            (var 91)
 
-            (var 74)
+            (var 92)
 )
  0)
 
         (return
-          (var 73)
+          (var 91)
 )
 
         (label Label1)
 
         (return
-          (var 74)
+          (var 92)
 )
 )
 )
 
-    (body 75
+    (body 93
       (block 4
         (cgoto Label1
           (binary
             (bop 41 5 5)
 
-            (var 76)
+            (var 94)
 
             (lit 5 i:0)
 )
@@ -2112,25 +2402,25 @@
           (unary
             (uop 16 5)
 
-            (var 76)
+            (var 94)
 )
 )
 
         (label Label1)
 
         (return
-          (var 76)
+          (var 94)
 )
 )
 )
 
-    (body 77
+    (body 95
       (block 4
         (cgoto Label1
           (binary
             (bop 41 9 9)
 
-            (var 78)
+            (var 96)
 
             (conv 9
               (lit 5 i:0)
@@ -2142,32 +2432,32 @@
           (unary
             (uop 16 9)
 
-            (var 78)
+            (var 96)
 )
 )
 
         (label Label1)
 
         (return
-          (var 78)
+          (var 96)
 )
 )
 )
 
-    (body 79
+    (body 97
       (block 7
         (cgoto Label1
           (binary
             (bop 41 5 5)
 
-            (var 80)
+            (var 98)
 
-            (var 81)
+            (var 99)
 )
  0)
 
         (return
-          (var 81)
+          (var 99)
 )
 
         (label Label1)
@@ -2176,38 +2466,38 @@
           (binary
             (bop 43 5 5)
 
-            (var 80)
+            (var 98)
 
-            (var 82)
+            (var 100)
 )
  0)
 
         (return
-          (var 82)
+          (var 100)
 )
 
         (label Label2)
 
         (return
-          (var 80)
+          (var 98)
 )
 )
 )
 
-    (body 83
+    (body 101
       (block 7
         (cgoto Label1
           (binary
             (bop 41 9 9)
 
-            (var 84)
+            (var 102)
 
-            (var 85)
+            (var 103)
 )
  0)
 
         (return
-          (var 85)
+          (var 103)
 )
 
         (label Label1)
@@ -2216,31 +2506,31 @@
           (binary
             (bop 43 9 9)
 
-            (var 84)
+            (var 102)
 
-            (var 86)
+            (var 104)
 )
  0)
 
         (return
-          (var 86)
+          (var 104)
 )
 
         (label Label2)
 
         (return
-          (var 84)
+          (var 102)
 )
 )
 )
 
-    (body 87
+    (body 105
       (block 7
         (cgoto Label1
           (binary
             (bop 41 5 5)
 
-            (var 88)
+            (var 106)
 
             (lit 5 i:0)
 )
@@ -2260,7 +2550,7 @@
           (binary
             (bop 43 5 5)
 
-            (var 88)
+            (var 106)
 
             (lit 5 i:0)
 )
@@ -2278,13 +2568,13 @@
 )
 )
 
-    (body 89
+    (body 107
       (block 7
         (cgoto Label1
           (binary
             (bop 41 9 9)
 
-            (var 90)
+            (var 108)
 
             (conv 9
               (lit 5 i:0)
@@ -2306,7 +2596,7 @@
           (binary
             (bop 43 9 9)
 
-            (var 90)
+            (var 108)
 
             (conv 9
               (lit 5 i:0)
@@ -2326,7 +2616,7 @@
 )
 )
 
-    (body 91
+    (body 109
       (block 1
         (return
           (binary
@@ -2335,7 +2625,7 @@
             (binary
               (bop 22 5 5)
 
-              (var 92)
+              (var 110)
 
               (lit 5 i:2)
 )
@@ -2346,7 +2636,7 @@
 )
 )
 
-    (body 93
+    (body 111
       (block 1
         (return
           (binary
@@ -2355,7 +2645,7 @@
             (binary
               (bop 22 5 5)
 
-              (var 94)
+              (var 112)
 
               (lit 5 i:2)
 )
@@ -2366,13 +2656,13 @@
 )
 )
 
-    (body 95
+    (body 113
       (block 10
-        (vardecl 179
+        (vardecl 243
           (lit 5 i:1)
 )
 
-        (vardecl 180
+        (vardecl 244
           (lit 5 i:0)
 )
 
@@ -2381,23 +2671,23 @@
         (label Label1)
 
         (exprstmt
-          (assign 179
+          (assign 243
             (binary
               (bop 18 5 5)
 
-              (var 179)
+              (var 243)
 
-              (var 96)
+              (var 114)
 )
 )
 )
 
         (exprstmt
-          (assign 180
+          (assign 244
             (binary
               (bop 14 5 5)
 
-              (var 180)
+              (var 244)
 
               (lit 5 i:1)
 )
@@ -2410,27 +2700,27 @@
           (binary
             (bop 41 5 5)
 
-            (var 180)
+            (var 244)
 
-            (var 97)
+            (var 115)
 )
  1)
 
         (label break1)
 
         (return
-          (var 179)
+          (var 243)
 )
 )
 )
 
-    (body 98
+    (body 116
       (block 10
-        (vardecl 181
+        (vardecl 245
           (lit 5 i:1)
 )
 
-        (vardecl 182
+        (vardecl 246
           (lit 5 i:1)
 )
 
@@ -2439,23 +2729,23 @@
         (label Label1)
 
         (exprstmt
-          (assign 181
+          (assign 245
             (binary
               (bop 18 5 5)
 
-              (var 181)
+              (var 245)
 
-              (var 182)
+              (var 246)
 )
 )
 )
 
         (exprstmt
-          (assign 182
+          (assign 246
             (binary
               (bop 14 5 5)
 
-              (var 182)
+              (var 246)
 
               (lit 5 i:1)
 )
@@ -2468,35 +2758,35 @@
           (binary
             (bop 42 5 5)
 
-            (var 182)
+            (var 246)
 
-            (var 99)
+            (var 117)
 )
  1)
 
         (label break1)
 
         (return
-          (var 181)
+          (var 245)
 )
 )
 )
 
-    (body 100
+    (body 118
       (block 11
-        (vardecl 183
-          (membercall 5 Abs 75 1
+        (vardecl 247
+          (membercall 5 Abs 93 1
             (this 2)
 
-            (var 101)
+            (var 119)
 )
 )
 
-        (vardecl 184
-          (membercall 5 Abs 75 1
+        (vardecl 248
+          (membercall 5 Abs 93 1
             (this 2)
 
-            (var 102)
+            (var 120)
 )
 )
 
@@ -2504,25 +2794,25 @@
 
         (label Label1)
 
-        (vardecl 185
+        (vardecl 249
           (binary
             (bop 22 5 5)
 
-            (var 183)
+            (var 247)
 
-            (var 184)
-)
-)
-
-        (exprstmt
-          (assign 183
-            (var 184)
+            (var 248)
 )
 )
 
         (exprstmt
-          (assign 184
-            (var 185)
+          (assign 247
+            (var 248)
+)
+)
+
+        (exprstmt
+          (assign 248
+            (var 249)
 )
 )
 
@@ -2532,7 +2822,7 @@
           (binary
             (bop 43 5 5)
 
-            (var 184)
+            (var 248)
 
             (lit 5 i:0)
 )
@@ -2541,12 +2831,12 @@
         (label break1)
 
         (return
-          (var 183)
+          (var 247)
 )
 )
 )
 
-    (body 103
+    (body 121
       (block 4
         (cgoto Label1
           (binary
@@ -2555,7 +2845,7 @@
             (binary
               (bop 39 5 5)
 
-              (var 104)
+              (var 122)
 
               (lit 5 i:0)
 )
@@ -2563,7 +2853,7 @@
             (binary
               (bop 39 5 5)
 
-              (var 105)
+              (var 123)
 
               (lit 5 i:0)
 )
@@ -2580,61 +2870,153 @@
           (binary
             (bop 20 5 5)
 
-            (membercall 5 Abs 75 1
+            (membercall 5 Abs 93 1
               (this 2)
 
               (binary
                 (bop 18 5 5)
 
-                (var 104)
+                (var 122)
 
-                (var 105)
+                (var 123)
 )
 )
 
-            (membercall 5 Gcd 100 2
+            (membercall 5 Gcd 118 2
               (this 2)
 
-              (var 104)
+              (var 122)
 
-              (var 105)
+              (var 123)
 )
 )
 )
 )
 )
 
-    (body 107
+    (body 124
+      (block 1
+        (return
+          (membercall 9 Sqrt 149 1
+            (statictype 3)
+
+            (var 125)
+)
+)
+)
+)
+
+    (body 126
+      (block 1
+        (return
+          (membercall 9 Floor 151 1
+            (statictype 3)
+
+            (var 127)
+)
+)
+)
+)
+
+    (body 128
+      (block 1
+        (return
+          (membercall 9 Ceiling 153 1
+            (statictype 3)
+
+            (var 129)
+)
+)
+)
+)
+
+    (body 130
+      (block 1
+        (return
+          (membercall 9 Truncate 155 1
+            (statictype 3)
+
+            (var 131)
+)
+)
+)
+)
+
+    (body 132
+      (block 1
+        (return
+          (membercall 9 Round 157 1
+            (statictype 3)
+
+            (var 133)
+)
+)
+)
+)
+
+    (body 135
       (block 0)
 )
 
-    (body 109
+    (body 137
       (block 0)
 )
 
-    (body 110
+    (body 139
       (block 0)
 )
 
-    (body 112
+    (body 140
       (block 0)
 )
 
-    (body 114
+    (body 142
       (block 0)
 )
 
-    (body 115
+    (body 144
       (block 0)
 )
 
-    (body 117
+    (body 146
+      (block 0)
+)
+
+    (body 147
+      (block 0)
+)
+
+    (body 149
+      (block 0)
+)
+
+    (body 151
+      (block 0)
+)
+
+    (body 153
+      (block 0)
+)
+
+    (body 155
+      (block 0)
+)
+
+    (body 157
+      (block 0)
+)
+
+    (body 159
+      (block 0)
+)
+
+    (body 162
       (block 16
-        (vardecl 186
-          (lit 47 s:)
+        (vardecl 250
+          (lit 48 s:)
 )
 
-        (vardecl 187
+        (vardecl 251
           (lit 5 i:0)
 )
 
@@ -2642,12 +3024,12 @@
 
         (label Label1)
 
-        (vardecl 188
+        (vardecl 252
           (conv 5
-            (elem 56
-              (var 118)
+            (elem 57
+              (var 163)
 
-              (var 187)
+              (var 251)
 )
 )
 )
@@ -2659,7 +3041,7 @@
             (binary
               (bop 44 5 5)
 
-              (var 188)
+              (var 252)
 
               (lit 5 i:97)
 )
@@ -2667,7 +3049,7 @@
             (binary
               (bop 42 5 5)
 
-              (var 188)
+              (var 252)
 
               (lit 5 i:122)
 )
@@ -2675,18 +3057,18 @@
  0)
 
         (exprstmt
-          (assign 186
+          (assign 250
             (binary
-              (bop 14 47 47)
+              (bop 14 48 48)
 
-              (var 186)
+              (var 250)
 
-              (conv 47
-                (conv 56
+              (conv 48
+                (conv 57
                   (binary
                     (bop 16 5 5)
 
-                    (var 188)
+                    (var 252)
 
                     (lit 5 i:32)
 )
@@ -2701,17 +3083,17 @@
         (label Label2)
 
         (exprstmt
-          (assign 186
+          (assign 250
             (binary
-              (bop 14 47 47)
+              (bop 14 48 48)
 
-              (var 186)
+              (var 250)
 
-              (conv 47
-                (elem 56
-                  (var 118)
+              (conv 48
+                (elem 57
+                  (var 163)
 
-                  (var 187)
+                  (var 251)
 )
 )
 )
@@ -2721,11 +3103,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 187
+          (assign 251
             (binary
               (bop 14 5 5)
 
-              (var 187)
+              (var 251)
 
               (lit 5 i:1)
 )
@@ -2738,10 +3120,10 @@
           (binary
             (bop 41 5 5)
 
-            (var 187)
+            (var 251)
 
             (memberacc 5 Length
-              (var 118)
+              (var 163)
 )
 )
  1)
@@ -2749,18 +3131,18 @@
         (label break1)
 
         (return
-          (var 186)
+          (var 250)
 )
 )
 )
 
-    (body 119
+    (body 164
       (block 16
-        (vardecl 189
-          (lit 47 s:)
+        (vardecl 253
+          (lit 48 s:)
 )
 
-        (vardecl 190
+        (vardecl 254
           (lit 5 i:0)
 )
 
@@ -2768,12 +3150,12 @@
 
         (label Label1)
 
-        (vardecl 191
+        (vardecl 255
           (conv 5
-            (elem 56
-              (var 120)
+            (elem 57
+              (var 165)
 
-              (var 190)
+              (var 254)
 )
 )
 )
@@ -2785,7 +3167,7 @@
             (binary
               (bop 44 5 5)
 
-              (var 191)
+              (var 255)
 
               (lit 5 i:65)
 )
@@ -2793,7 +3175,7 @@
             (binary
               (bop 42 5 5)
 
-              (var 191)
+              (var 255)
 
               (lit 5 i:90)
 )
@@ -2801,18 +3183,18 @@
  0)
 
         (exprstmt
-          (assign 189
+          (assign 253
             (binary
-              (bop 14 47 47)
+              (bop 14 48 48)
 
-              (var 189)
+              (var 253)
 
-              (conv 47
-                (conv 56
+              (conv 48
+                (conv 57
                   (binary
                     (bop 14 5 5)
 
-                    (var 191)
+                    (var 255)
 
                     (lit 5 i:32)
 )
@@ -2827,17 +3209,17 @@
         (label Label2)
 
         (exprstmt
-          (assign 189
+          (assign 253
             (binary
-              (bop 14 47 47)
+              (bop 14 48 48)
 
-              (var 189)
+              (var 253)
 
-              (conv 47
-                (elem 56
-                  (var 120)
+              (conv 48
+                (elem 57
+                  (var 165)
 
-                  (var 190)
+                  (var 254)
 )
 )
 )
@@ -2847,11 +3229,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 190
+          (assign 254
             (binary
               (bop 14 5 5)
 
-              (var 190)
+              (var 254)
 
               (lit 5 i:1)
 )
@@ -2864,10 +3246,10 @@
           (binary
             (bop 41 5 5)
 
-            (var 190)
+            (var 254)
 
             (memberacc 5 Length
-              (var 120)
+              (var 165)
 )
 )
  1)
@@ -2875,23 +3257,23 @@
         (label break1)
 
         (return
-          (var 189)
+          (var 253)
 )
 )
 )
 
-    (body 121
+    (body 166
       (block 4
         (cgoto Label1
           (binary
             (bop 43 5 5)
 
             (memberacc 5 Length
-              (var 123)
+              (var 168)
 )
 
             (memberacc 5 Length
-              (var 122)
+              (var 167)
 )
 )
  0)
@@ -2904,36 +3286,36 @@
 
         (return
           (binary
-            (bop 39 47 47)
+            (bop 39 48 48)
 
-            (membercall 47 substring -1 2
-              (var 122)
+            (membercall 48 substring -1 2
+              (var 167)
 
               (lit 5 i:0)
 
               (memberacc 5 Length
-                (var 123)
+                (var 168)
 )
 )
 
-            (var 123)
+            (var 168)
 )
 )
 )
 )
 
-    (body 124
+    (body 169
       (block 4
         (cgoto Label1
           (binary
             (bop 43 5 5)
 
             (memberacc 5 Length
-              (var 126)
+              (var 171)
 )
 
             (memberacc 5 Length
-              (var 125)
+              (var 170)
 )
 )
  0)
@@ -2946,42 +3328,42 @@
 
         (return
           (binary
-            (bop 39 47 47)
+            (bop 39 48 48)
 
-            (membercall 47 substring -1 2
-              (var 125)
+            (membercall 48 substring -1 2
+              (var 170)
 
               (binary
                 (bop 16 5 5)
 
                 (memberacc 5 Length
-                  (var 125)
+                  (var 170)
 )
 
                 (memberacc 5 Length
-                  (var 126)
+                  (var 171)
 )
 )
 
               (memberacc 5 Length
-                (var 126)
+                (var 171)
 )
 )
 
-            (var 126)
+            (var 171)
 )
 )
 )
 )
 
-    (body 127
+    (body 172
       (block 14
         (cgoto Label1
           (binary
             (bop 39 5 5)
 
             (memberacc 5 Length
-              (var 129)
+              (var 174)
 )
 
             (lit 5 i:0)
@@ -2994,7 +3376,7 @@
 
         (label Label1)
 
-        (vardecl 192
+        (vardecl 256
           (lit 5 i:0)
 )
 
@@ -3004,19 +3386,19 @@
 
         (cgoto Label3
           (binary
-            (bop 39 47 47)
+            (bop 39 48 48)
 
-            (membercall 47 substring -1 2
-              (var 128)
+            (membercall 48 substring -1 2
+              (var 173)
 
-              (var 192)
+              (var 256)
 
               (memberacc 5 Length
-                (var 129)
+                (var 174)
 )
 )
 
-            (var 129)
+            (var 174)
 )
  0)
 
@@ -3027,11 +3409,11 @@
         (label Label3)
 
         (exprstmt
-          (assign 192
+          (assign 256
             (binary
               (bop 14 5 5)
 
-              (var 192)
+              (var 256)
 
               (lit 5 i:1)
 )
@@ -3044,17 +3426,17 @@
           (binary
             (bop 42 5 5)
 
-            (var 192)
+            (var 256)
 
             (binary
               (bop 16 5 5)
 
               (memberacc 5 Length
-                (var 128)
+                (var 173)
 )
 
               (memberacc 5 Length
-                (var 129)
+                (var 174)
 )
 )
 )
@@ -3068,14 +3450,14 @@
 )
 )
 
-    (body 130
+    (body 175
       (block 14
         (cgoto Label1
           (binary
             (bop 39 5 5)
 
             (memberacc 5 Length
-              (var 132)
+              (var 177)
 )
 
             (lit 5 i:0)
@@ -3088,7 +3470,7 @@
 
         (label Label1)
 
-        (vardecl 193
+        (vardecl 257
           (lit 5 i:0)
 )
 
@@ -3098,34 +3480,34 @@
 
         (cgoto Label3
           (binary
-            (bop 39 47 47)
+            (bop 39 48 48)
 
-            (membercall 47 substring -1 2
-              (var 131)
+            (membercall 48 substring -1 2
+              (var 176)
 
-              (var 193)
+              (var 257)
 
               (memberacc 5 Length
-                (var 132)
+                (var 177)
 )
 )
 
-            (var 132)
+            (var 177)
 )
  0)
 
         (return
-          (var 193)
+          (var 257)
 )
 
         (label Label3)
 
         (exprstmt
-          (assign 193
+          (assign 257
             (binary
               (bop 14 5 5)
 
-              (var 193)
+              (var 257)
 
               (lit 5 i:1)
 )
@@ -3138,17 +3520,17 @@
           (binary
             (bop 42 5 5)
 
-            (var 193)
+            (var 257)
 
             (binary
               (bop 16 5 5)
 
               (memberacc 5 Length
-                (var 131)
+                (var 176)
 )
 
               (memberacc 5 Length
-                (var 132)
+                (var 177)
 )
 )
 )
@@ -3166,18 +3548,18 @@
 )
 )
 
-    (body 133
+    (body 178
       (block 10
-        (vardecl 194
-          (lit 47 s:)
+        (vardecl 258
+          (lit 48 s:)
 )
 
-        (vardecl 195
+        (vardecl 259
           (binary
             (bop 16 5 5)
 
             (memberacc 5 Length
-              (var 134)
+              (var 179)
 )
 
             (lit 5 i:1)
@@ -3189,17 +3571,17 @@
         (label Label1)
 
         (exprstmt
-          (assign 194
+          (assign 258
             (binary
-              (bop 14 47 47)
+              (bop 14 48 48)
 
-              (var 194)
+              (var 258)
 
-              (conv 47
-                (elem 56
-                  (var 134)
+              (conv 48
+                (elem 57
+                  (var 179)
 
-                  (var 195)
+                  (var 259)
 )
 )
 )
@@ -3207,11 +3589,11 @@
 )
 
         (exprstmt
-          (assign 195
+          (assign 259
             (binary
               (bop 16 5 5)
 
-              (var 195)
+              (var 259)
 
               (lit 5 i:1)
 )
@@ -3224,7 +3606,7 @@
           (binary
             (bop 44 5 5)
 
-            (var 195)
+            (var 259)
 
             (lit 5 i:0)
 )
@@ -3233,18 +3615,18 @@
         (label break1)
 
         (return
-          (var 194)
+          (var 258)
 )
 )
 )
 
-    (body 135
+    (body 180
       (block 10
-        (vardecl 196
-          (lit 47 s:)
+        (vardecl 260
+          (lit 48 s:)
 )
 
-        (vardecl 197
+        (vardecl 261
           (lit 5 i:0)
 )
 
@@ -3253,23 +3635,23 @@
         (label Label1)
 
         (exprstmt
-          (assign 196
+          (assign 260
             (binary
-              (bop 14 47 47)
+              (bop 14 48 48)
 
-              (var 196)
+              (var 260)
 
-              (var 136)
+              (var 181)
 )
 )
 )
 
         (exprstmt
-          (assign 197
+          (assign 261
             (binary
               (bop 14 5 5)
 
-              (var 197)
+              (var 261)
 
               (lit 5 i:1)
 )
@@ -3282,27 +3664,27 @@
           (binary
             (bop 41 5 5)
 
-            (var 197)
+            (var 261)
 
-            (var 137)
+            (var 182)
 )
  1)
 
         (label break1)
 
         (return
-          (var 196)
+          (var 260)
 )
 )
 )
 
-    (body 138
+    (body 183
       (block 12
-        (vardecl 198
+        (vardecl 262
           (lit 5 i:0)
 )
 
-        (vardecl 199
+        (vardecl 263
           (lit 5 i:0)
 )
 
@@ -3312,24 +3694,24 @@
 
         (cgoto Label2
           (binary
-            (bop 39 56 56)
+            (bop 39 57 57)
 
-            (elem 56
-              (var 139)
+            (elem 57
+              (var 184)
 
-              (var 199)
+              (var 263)
 )
 
-            (var 140)
+            (var 185)
 )
  0)
 
         (exprstmt
-          (assign 198
+          (assign 262
             (binary
               (bop 14 5 5)
 
-              (var 198)
+              (var 262)
 
               (lit 5 i:1)
 )
@@ -3339,11 +3721,11 @@
         (label Label2)
 
         (exprstmt
-          (assign 199
+          (assign 263
             (binary
               (bop 14 5 5)
 
-              (var 199)
+              (var 263)
 
               (lit 5 i:1)
 )
@@ -3356,10 +3738,10 @@
           (binary
             (bop 41 5 5)
 
-            (var 199)
+            (var 263)
 
             (memberacc 5 Length
-              (var 139)
+              (var 184)
 )
 )
  1)
@@ -3367,23 +3749,23 @@
         (label break1)
 
         (return
-          (var 198)
+          (var 262)
 )
 )
 )
 
-    (body 141
+    (body 186
       (block 13
-        (vardecl 200
+        (vardecl 264
           (lit 5 i:0)
 )
 
-        (vardecl 201
+        (vardecl 265
           (binary
             (bop 16 5 5)
 
             (memberacc 5 Length
-              (var 142)
+              (var 187)
 )
 
             (lit 5 i:1)
@@ -3396,18 +3778,18 @@
 
         (cgoto Label2
           (binary
-            (bop 40 56 56)
+            (bop 40 57 57)
 
-            (elem 56
-              (var 142)
+            (elem 57
+              (var 187)
 
-              (var 200)
+              (var 264)
 )
 
-            (elem 56
-              (var 142)
+            (elem 57
+              (var 187)
 
-              (var 201)
+              (var 265)
 )
 )
  0)
@@ -3419,11 +3801,11 @@
         (label Label2)
 
         (exprstmt
-          (assign 200
+          (assign 264
             (binary
               (bop 14 5 5)
 
-              (var 200)
+              (var 264)
 
               (lit 5 i:1)
 )
@@ -3431,11 +3813,11 @@
 )
 
         (exprstmt
-          (assign 201
+          (assign 265
             (binary
               (bop 16 5 5)
 
-              (var 201)
+              (var 265)
 
               (lit 5 i:1)
 )
@@ -3448,9 +3830,9 @@
           (binary
             (bop 41 5 5)
 
-            (var 200)
+            (var 264)
 
-            (var 201)
+            (var 265)
 )
  1)
 
@@ -3462,26 +3844,26 @@
 )
 )
 
-    (body 143
+    (body 188
       (block 32
-        (vardecl 202
+        (vardecl 266
           (lit 5 i:0)
 )
 
-        (vardecl 203
+        (vardecl 267
           (memberacc 5 Length
-            (var 144)
+            (var 189)
 )
 )
 
-        (vardecl 204
-          (conv 56
+        (vardecl 268
+          (conv 57
             (lit 5 i:0)
 )
 )
 
-        (vardecl 205
-          (conv 56
+        (vardecl 269
+          (conv 57
             (lit 5 i:0)
 )
 )
@@ -3491,31 +3873,31 @@
         (label Label1)
 
         (exprstmt
-          (assign 204
-            (elem 56
-              (var 144)
+          (assign 268
+            (elem 57
+              (var 189)
 
-              (var 202)
+              (var 266)
 )
 )
 )
 
         (cgoto Label2
           (binary
-            (bop 39 56 56)
+            (bop 39 57 57)
 
-            (var 204)
+            (var 268)
 
-            (lit 56 c:32)
+            (lit 57 c:32)
 )
  0)
 
         (exprstmt
-          (assign 202
+          (assign 266
             (binary
               (bop 14 5 5)
 
-              (var 202)
+              (var 266)
 
               (lit 5 i:1)
 )
@@ -3536,9 +3918,9 @@
           (binary
             (bop 41 5 5)
 
-            (var 202)
+            (var 266)
 
-            (var 203)
+            (var 267)
 )
  1)
 
@@ -3549,14 +3931,14 @@
         (label Label4)
 
         (exprstmt
-          (assign 205
-            (elem 56
-              (var 144)
+          (assign 269
+            (elem 57
+              (var 189)
 
               (binary
                 (bop 16 5 5)
 
-                (var 203)
+                (var 267)
 
                 (lit 5 i:1)
 )
@@ -3566,20 +3948,20 @@
 
         (cgoto Label5
           (binary
-            (bop 39 56 56)
+            (bop 39 57 57)
 
-            (var 205)
+            (var 269)
 
-            (lit 56 c:32)
+            (lit 57 c:32)
 )
  0)
 
         (exprstmt
-          (assign 203
+          (assign 267
             (binary
               (bop 16 5 5)
 
-              (var 203)
+              (var 267)
 
               (lit 5 i:1)
 )
@@ -3600,9 +3982,9 @@
           (binary
             (bop 43 5 5)
 
-            (var 203)
+            (var 267)
 
-            (var 202)
+            (var 266)
 )
  1)
 
@@ -3612,32 +3994,602 @@
           (binary
             (bop 44 5 5)
 
-            (var 202)
+            (var 266)
 
-            (var 203)
+            (var 267)
 )
  0)
 
         (return
-          (lit 47 s:)
+          (lit 48 s:)
 )
 
         (label Label7)
 
         (return
-          (membercall 47 substring -1 2
-            (var 144)
+          (membercall 48 substring -1 2
+            (var 189)
 
-            (var 202)
+            (var 266)
 
             (binary
               (bop 16 5 5)
 
-              (var 203)
+              (var 267)
 
-              (var 202)
+              (var 266)
 )
 )
+)
+)
+)
+
+    (body 190
+      (block 25
+        (cgoto Label1
+          (binary
+            (bop 39 5 5)
+
+            (memberacc 5 Length
+              (var 192)
+)
+
+            (lit 5 i:0)
+)
+ 0)
+
+        (return
+          (var 191)
+)
+
+        (label Label1)
+
+        (vardecl 270
+          (lit 48 s:)
+)
+
+        (vardecl 271
+          (lit 5 i:0)
+)
+
+        (goto continue1)
+
+        (label Label2)
+
+        (cgoto Label3
+          (binary
+            (bop 43 5 5)
+
+            (var 271)
+
+            (binary
+              (bop 16 5 5)
+
+              (memberacc 5 Length
+                (var 191)
+)
+
+              (memberacc 5 Length
+                (var 192)
+)
+)
+)
+ 0)
+
+        (exprstmt
+          (assign 270
+            (binary
+              (bop 14 48 48)
+
+              (var 270)
+
+              (conv 48
+                (elem 57
+                  (var 191)
+
+                  (var 271)
+)
+)
+)
+)
+)
+
+        (exprstmt
+          (assign 271
+            (binary
+              (bop 14 5 5)
+
+              (var 271)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (goto Label4)
+
+        (label Label3)
+
+        (cgoto Label5
+          (binary
+            (bop 39 48 48)
+
+            (membercall 48 substring -1 2
+              (var 191)
+
+              (var 271)
+
+              (memberacc 5 Length
+                (var 192)
+)
+)
+
+            (var 192)
+)
+ 0)
+
+        (exprstmt
+          (assign 270
+            (binary
+              (bop 14 48 48)
+
+              (var 270)
+
+              (var 193)
+)
+)
+)
+
+        (exprstmt
+          (assign 271
+            (binary
+              (bop 14 5 5)
+
+              (var 271)
+
+              (memberacc 5 Length
+                (var 192)
+)
+)
+)
+)
+
+        (goto Label6)
+
+        (label Label5)
+
+        (exprstmt
+          (assign 270
+            (binary
+              (bop 14 48 48)
+
+              (var 270)
+
+              (conv 48
+                (elem 57
+                  (var 191)
+
+                  (var 271)
+)
+)
+)
+)
+)
+
+        (exprstmt
+          (assign 271
+            (binary
+              (bop 14 5 5)
+
+              (var 271)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (label Label6)
+
+        (label Label4)
+
+        (label continue1)
+
+        (cgoto Label2
+          (binary
+            (bop 41 5 5)
+
+            (var 271)
+
+            (memberacc 5 Length
+              (var 191)
+)
+)
+ 1)
+
+        (label break1)
+
+        (return
+          (var 270)
+)
+)
+)
+
+    (body 194
+      (block 18
+        (cgoto Label1
+          (binary
+            (bop 39 5 5)
+
+            (memberacc 5 Length
+              (var 196)
+)
+
+            (lit 5 i:0)
+)
+ 0)
+
+        (return
+          (lit 5 i:0)
+)
+
+        (label Label1)
+
+        (vardecl 272
+          (lit 5 i:0)
+)
+
+        (vardecl 273
+          (lit 5 i:0)
+)
+
+        (goto continue1)
+
+        (label Label2)
+
+        (cgoto Label3
+          (binary
+            (bop 39 48 48)
+
+            (membercall 48 substring -1 2
+              (var 195)
+
+              (var 273)
+
+              (memberacc 5 Length
+                (var 196)
+)
+)
+
+            (var 196)
+)
+ 0)
+
+        (exprstmt
+          (assign 272
+            (binary
+              (bop 14 5 5)
+
+              (var 272)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (exprstmt
+          (assign 273
+            (binary
+              (bop 14 5 5)
+
+              (var 273)
+
+              (memberacc 5 Length
+                (var 196)
+)
+)
+)
+)
+
+        (goto Label4)
+
+        (label Label3)
+
+        (exprstmt
+          (assign 273
+            (binary
+              (bop 14 5 5)
+
+              (var 273)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (label Label4)
+
+        (label continue1)
+
+        (cgoto Label2
+          (binary
+            (bop 42 5 5)
+
+            (var 273)
+
+            (binary
+              (bop 16 5 5)
+
+              (memberacc 5 Length
+                (var 195)
+)
+
+              (memberacc 5 Length
+                (var 196)
+)
+)
+)
+ 1)
+
+        (label break1)
+
+        (return
+          (var 272)
+)
+)
+)
+
+    (body 197
+      (block 8
+        (vardecl 274
+          (var 198)
+)
+
+        (goto continue1)
+
+        (label Label1)
+
+        (exprstmt
+          (assign 274
+            (binary
+              (bop 14 48 48)
+
+              (conv 48
+                (var 200)
+)
+
+              (var 274)
+)
+)
+)
+
+        (label continue1)
+
+        (cgoto Label1
+          (binary
+            (bop 41 5 5)
+
+            (memberacc 5 Length
+              (var 274)
+)
+
+            (var 199)
+)
+ 1)
+
+        (label break1)
+
+        (return
+          (var 274)
+)
+)
+)
+
+    (body 201
+      (block 8
+        (vardecl 275
+          (var 202)
+)
+
+        (goto continue1)
+
+        (label Label1)
+
+        (exprstmt
+          (assign 275
+            (binary
+              (bop 14 48 48)
+
+              (var 275)
+
+              (conv 48
+                (var 204)
+)
+)
+)
+)
+
+        (label continue1)
+
+        (cgoto Label1
+          (binary
+            (bop 41 5 5)
+
+            (memberacc 5 Length
+              (var 275)
+)
+
+            (var 203)
+)
+ 1)
+
+        (label break1)
+
+        (return
+          (var 275)
+)
+)
+)
+
+    (body 206
+      (block 18
+        (vardecl 276
+          (binary
+            (bop 14 5 5)
+
+            (membercall 5 CountChar 183 2
+              (this 4)
+
+              (var 207)
+
+              (var 208)
+)
+
+            (lit 5 i:1)
+)
+)
+
+        (vardecl 277
+          (arrnew 205
+            (var 276)
+ 0)
+)
+
+        (vardecl 278
+          (lit 5 i:0)
+)
+
+        (vardecl 279
+          (lit 5 i:0)
+)
+
+        (vardecl 280
+          (lit 5 i:0)
+)
+
+        (goto continue1)
+
+        (label Label1)
+
+        (cgoto Label2
+          (binary
+            (bop 39 57 57)
+
+            (elem 57
+              (var 207)
+
+              (var 280)
+)
+
+            (var 208)
+)
+ 0)
+
+        (exprstmt
+          (elemassign 48
+            (elem 48
+              (var 277)
+
+              (var 279)
+)
+
+            (membercall 48 substring -1 2
+              (var 207)
+
+              (var 278)
+
+              (binary
+                (bop 16 5 5)
+
+                (var 280)
+
+                (var 278)
+)
+)
+)
+)
+
+        (exprstmt
+          (assign 279
+            (binary
+              (bop 14 5 5)
+
+              (var 279)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (exprstmt
+          (assign 278
+            (binary
+              (bop 14 5 5)
+
+              (var 280)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (label Label2)
+
+        (exprstmt
+          (assign 280
+            (binary
+              (bop 14 5 5)
+
+              (var 280)
+
+              (lit 5 i:1)
+)
+)
+)
+
+        (label continue1)
+
+        (cgoto Label1
+          (binary
+            (bop 41 5 5)
+
+            (var 280)
+
+            (memberacc 5 Length
+              (var 207)
+)
+)
+ 1)
+
+        (label break1)
+
+        (exprstmt
+          (elemassign 48
+            (elem 48
+              (var 277)
+
+              (var 279)
+)
+
+            (membercall 48 substring -1 2
+              (var 207)
+
+              (var 278)
+
+              (binary
+                (bop 16 5 5)
+
+                (memberacc 5 Length
+                  (var 207)
+)
+
+                (var 278)
+)
+)
+)
+)
+
+        (return
+          (var 277)
 )
 )
 )

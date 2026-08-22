@@ -976,20 +976,47 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             switch (function.BuiltinKind)
             {
-                case BuiltinKind.Print:
+                case BuiltinKind.WriteLine:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleWriteLine);
                     break;
-                case BuiltinKind.Input:
+                case BuiltinKind.Write:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleWrite);
+                    break;
+                case BuiltinKind.ReadLine:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadLine);
+                    break;
+                case BuiltinKind.ReadKey:
+                    // Console.ReadKey(intercept) → ConsoleKeyInfo（struct 栈值）→ box 后 callvirt get_KeyChar → char
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleReadKey);
+                    il.Emit(IlOpCodeTable.Get("Box"), _framework.ConsoleKeyInfoType);
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.ConsoleKeyInfoKeyChar);
                     break;
                 case BuiltinKind.Sleep:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ThreadSleep);
                     break;
-                case BuiltinKind.Now:
+                case BuiltinKind.TickCount:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.EnvironmentTickCount);
                     break;
                 case BuiltinKind.Exit:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.EnvironmentExit);
+                    break;
+                case BuiltinKind.Sqrt:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathSqrt);
+                    break;
+                case BuiltinKind.Floor:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathFloor);
+                    break;
+                case BuiltinKind.Ceiling:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathCeiling);
+                    break;
+                case BuiltinKind.Truncate:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathTruncate);
+                    break;
+                case BuiltinKind.Round:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathRound);
+                    break;
+                case BuiltinKind.Beep:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleBeep);
                     break;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");

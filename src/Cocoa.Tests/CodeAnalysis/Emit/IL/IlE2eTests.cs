@@ -115,12 +115,12 @@ function Main()
 
 class Runtime
 {
-    syscall function Print(text: string): void
+    syscall function WriteLine(text: string): void
 }
 
 function Main()
 {
-    Runtime.Print(""hello syscall"")
+    Runtime.WriteLine(""hello syscall"")
 }", "e2e-syscall-print");
 
             Assert.Equal(0, exitCode);
@@ -128,15 +128,15 @@ function Main()
         }
 
         [Fact]
-        public void Run_Builtin_SleepNowExit_OnDotnetHost()
+        public void Run_Builtin_SleepTickCountExit_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
 
 function Main()
 {
-    var t0 = Runtime.Now()
+    var t0 = Runtime.TickCount()
     Runtime.Sleep(1)
-    var t1 = Runtime.Now()
+    var t1 = Runtime.TickCount()
     if t1 >= t0
     {
         Console.WriteLine(""ok"")
@@ -145,6 +145,39 @@ function Main()
 
             Assert.Equal(0, exitCode);
             Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Run_LogicalOperators_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    var t = true
+    var f = false
+    Console.WriteLine(t && f)
+    Console.WriteLine(t && true)
+    Console.WriteLine(t || f)
+    Console.WriteLine(f || f)
+}", "e2e-logical-operators");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("False\r\nTrue\r\nTrue\r\nFalse\r\n", stdout);
+        }
+
+        [Fact]
+        public void Run_Builtin_Beep_OnDotnetHost()        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    Runtime.Beep(800, 50)
+    Console.WriteLine(""beeped"")
+}", "e2e-beep");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("beeped\r\n", stdout);
         }
 
         [Fact]
@@ -160,6 +193,42 @@ function Main()
 
             Assert.Equal(7, exitCode);
             Assert.Equal("", stdout);
+        }
+
+        [Fact]
+        public void Run_Builtin_MathPrimitives_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    Console.WriteLine(Runtime.Sqrt(2.0))
+    Console.WriteLine(Runtime.Floor(2.7))
+    Console.WriteLine(Runtime.Floor(-2.7))
+    Console.WriteLine(Runtime.Ceiling(2.1))
+    Console.WriteLine(Runtime.Ceiling(-2.1))
+    Console.WriteLine(Runtime.Truncate(2.7))
+    Console.WriteLine(Runtime.Truncate(-2.7))
+    Console.WriteLine(Runtime.Round(2.5))
+    Console.WriteLine(Runtime.Round(3.5))
+    Console.WriteLine(Runtime.Round(-2.5))
+    Console.WriteLine(Runtime.Sqrt(0.0))
+}", "e2e-math-primitives");
+
+            // round 为 banker's rounding（最近偶数）：2.5→2、3.5→4、-2.5→-2
+            Assert.Equal(
+                "1.4142135623730951\r\n" +
+                "2\r\n" +
+                "-3\r\n" +
+                "3\r\n" +
+                "-2\r\n" +
+                "2\r\n" +
+                "-2\r\n" +
+                "2\r\n" +
+                "4\r\n" +
+                "-2\r\n" +
+                "0\r\n", stdout);
+            Assert.Equal(0, exitCode);
         }
 
         [Fact]

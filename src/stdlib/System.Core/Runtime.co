@@ -6,11 +6,19 @@ namespace System
 {
     class Runtime
     {
-        syscall function Print(text: any): void
-        syscall function Input(): string
+        syscall function WriteLine(text: any): void
+        syscall function Write(text: any): void
+        syscall function ReadLine(): string
+        syscall function ReadKey(intercept: bool): char
         syscall function Random(max: int): int
         syscall function Sleep(ms: int): void
-        syscall function Now(): int
+        syscall function TickCount(): int
         syscall function Exit(code: int): void
+        syscall function Sqrt(x: double): double
+        syscall function Floor(x: double): double
+        syscall function Ceiling(x: double): double
+        syscall function Truncate(x: double): double
+        syscall function Round(x: double): double
+        syscall function Beep(frequency: int, duration: int): void
     }
 }

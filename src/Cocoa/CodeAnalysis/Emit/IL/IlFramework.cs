@@ -20,10 +20,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             ObjectType = RequireType("System.Object");
             StringType = RequireType("System.String");
+            ConsoleKeyInfoType = RequireType("System.ConsoleKeyInfo");
 
             ObjectEquals = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
             ConsoleReadLine = RequireMethod("System.Console", "ReadLine", Array.Empty<string>());
             ConsoleWriteLine = RequireMethod("System.Console", "WriteLine", new[] { "System.Object" });
+            ConsoleWrite = RequireMethod("System.Console", "Write", new[] { "System.Object" });
+            ConsoleReadKey = RequireMethod("System.Console", "ReadKey", new[] { "System.Boolean" });
+            ConsoleKeyInfoKeyChar = RequireMethod("System.ConsoleKeyInfo", "get_KeyChar", Array.Empty<string>());
             StringConcat2 = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String" });
             StringConcat3 = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String" });
             StringConcat4 = RequireMethod("System.String", "Concat", new[] { "System.String", "System.String", "System.String", "System.String" });
@@ -41,13 +45,23 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             EnvironmentExit = RequireMethod("System.Environment", "Exit", new[] { "System.Int32" });
             DebuggableAttributeCtor = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
             StringFormat = RequireMethod("System.String", "Format", new[] { "System.String", "System.Object" });
+            MathSqrt = RequireMethod("System.Math", "Sqrt", new[] { "System.Double" });
+            MathFloor = RequireMethod("System.Math", "Floor", new[] { "System.Double" });
+            MathCeiling = RequireMethod("System.Math", "Ceiling", new[] { "System.Double" });
+            MathTruncate = RequireMethod("System.Math", "Truncate", new[] { "System.Double" });
+            MathRound = RequireMethod("System.Math", "Round", new[] { "System.Double" });
+            ConsoleBeep = RequireMethod("System.Console", "Beep", new[] { "System.Int32", "System.Int32" });
         }
 
         public IlTypeRef ObjectType { get; }
         public IlTypeRef StringType { get; }
+        public IlTypeRef ConsoleKeyInfoType { get; }
         public IlMethodRef ObjectEquals { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }
+        public IlMethodRef ConsoleWrite { get; }
+        public IlMethodRef ConsoleReadKey { get; }
+        public IlMethodRef ConsoleKeyInfoKeyChar { get; }
         public IlMethodRef StringConcat2 { get; }
         public IlMethodRef StringConcat3 { get; }
         public IlMethodRef StringConcat4 { get; }
@@ -65,6 +79,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef EnvironmentExit { get; }
         public IlMethodRef DebuggableAttributeCtor { get; }
         public IlMethodRef StringFormat { get; }
+        public IlMethodRef MathSqrt { get; }
+        public IlMethodRef MathFloor { get; }
+        public IlMethodRef MathCeiling { get; }
+        public IlMethodRef MathTruncate { get; }
+        public IlMethodRef MathRound { get; }
+        public IlMethodRef ConsoleBeep { get; }
 
         /// <summary>类型引用解析 + 缓存（消发射路径上重复解析，如 Box 类型）。</summary>
         public IlTypeRef RequireType(string fullName)
@@ -114,7 +134,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 var resolved = _reader.FindType(type.Reference!.FullName, _metadata);
                 if (resolved != null)
                 {
-                    return IlType.Class(resolved);
+                    return IlType.Class(resolved, type.IsValueType);
                 }
             }
 

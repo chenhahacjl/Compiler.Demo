@@ -146,7 +146,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                         if (parameterType.Kind == IlTypeKind.Class)
                         {
                             var resolved = FindType(parameterType.Reference!.FullName, builder);
-                            parameterTypes.Add(resolved == null ? parameterType : IlType.Class(resolved));
+                            parameterTypes.Add(resolved == null ? parameterType : IlType.Class(resolved, parameterType.IsValueType));
                         }
                         else if (parameterType.Kind == IlTypeKind.SzArray)
                         {
@@ -891,7 +891,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                         var (codedIndex, csize) = ReadCompressedInteger(blob, pos);
                         pos += csize;
                         var fullName = ResolveTypeDefOrRef(codedIndex);
-                        return IlType.Class(new IlTypeRef(NamespaceOf(fullName), NameOf(fullName), null));
+                        return IlType.Class(new IlTypeRef(NamespaceOf(fullName), NameOf(fullName), null), isValueType: element == 0x11);
                     }
                 case 0x10: // BYREF
                     return ParseType(blob, ref pos);

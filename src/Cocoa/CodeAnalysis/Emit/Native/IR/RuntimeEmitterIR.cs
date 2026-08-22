@@ -16,6 +16,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         {
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
+            "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
         };
 
         public static void Append(IrProgram program, TargetPlatform platform)
@@ -73,6 +74,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 EmitPrintString();
                 _ = BeginFunction("PrintInt", 4);
                 EmitPrintInt();
+                _ = BeginFunction("WriteString", 8);
+                EmitWriteString();
+                _ = BeginFunction("WriteInt", 4);
+                EmitWriteInt();
                 _ = BeginFunction("IntToString", 4);
                 EmitIntToString();
                 if (_isX64)
@@ -150,6 +155,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 EmitApplyAlignment();
                 _ = BeginFunction("Input");
                 EmitInput();
+                _ = BeginFunction("ReadKey", 4);
+                EmitReadKey();
                 _ = BeginFunction("Random", 4);
                 EmitRandom();
                 _ = BeginFunction("ObjectEquals", 8, 8);
@@ -163,10 +170,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _ = BeginFunction("ExitProcess", 4);
                 var exitProcess = _currentFunction!;
                 EmitExitProcess();
-                _ = BeginFunction("Now");
+                _ = BeginFunction("TickCount");
                 EmitNow();
                 _ = BeginFunction("Sleep", 4);
                 EmitSleep();
+                _ = BeginFunction("Beep", 4, 4);
+                EmitBeep();
 
                 var divByZero = BeginFunction("DivByZero");
                 EmitError(_divZeroMessage);
@@ -798,6 +807,18 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 EndFunction(_currentFunction!, 0);
             }
 
+            /// <summary>语言层 write 语义：文本不换行（Console.Write 对齐，6e-M18+ 原语 Write）。</summary>
+            private void EmitWriteString()
+            {
+                var s = _args[0];
+                var len = NewReg(4);
+                Load(len, s, 0, 4);
+                var chars = NewReg(8);
+                Lea(chars, s, 4);
+                CallRuntime(null, "WriteStr", chars, len);
+                EndFunction(_currentFunction!, 0);
+            }
+
             /// <summary>语言层 print 语义：文本 + CRLF（与解释器/IL 后端 Console.WriteLine 一致）。</summary>
             private void EmitWriteNewLine()
             {
@@ -825,6 +846,25 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Shr(chars, chars, 1);
                 CallRuntime(null, "WriteStr", buf, chars);
                 EmitWriteNewLine();
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // ------------------------------------------------------------------
+            // WriteInt(value:4)：BuildInt + WriteStr（不换行）
+            // ------------------------------------------------------------------
+
+            private void EmitWriteInt()
+            {
+                var value = _args[0];
+                var buf = NewReg(8);
+                var scratch = NewReg(8);
+                LeaSlot(buf, scratch);
+                var len = NewReg(4);
+                CallRuntime(len, "BuildInt", value, buf);
+                var chars = NewReg(4);
+                Mov(chars, len);
+                Shr(chars, chars, 1);
+                CallRuntime(null, "WriteStr", buf, chars);
                 EndFunction(_currentFunction!, 0);
             }
 
@@ -3467,6 +3507,67 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // ------------------------------------------------------------------
+            // ReadKey(intercept:4) → char
+            // 读取单键。intercept=0 时回显（WriteConsoleW）；=1 时不回显。
+            // 用 ReadConsoleInputW 读 INPUT_RECORD，取 KEY_EVENT 且 bKeyDown 的 UnicodeChar。
+            // ------------------------------------------------------------------
+
+            private void EmitReadKey()
+            {
+                var intercept = _args[0];
+                var inHandle = NewReg(8);
+                SysCall(inHandle, "GetStdHandle", 1, C(4, -10));
+
+                var buf = NewReg(8);
+                LeaData(buf, _inputBuffer);
+                var written = NewReg(4);
+                var writtenAddr = NewReg(8);
+                LeaSlot(writtenAddr, written);
+
+                var loop = NewLabel();
+                var gotKey = NewLabel();
+                var done = NewLabel();
+
+                Mark(loop);
+                var ok = NewReg(4);
+                SysCall(ok, "ReadConsoleInputW", 4, inHandle, buf, C(4, 1), writtenAddr);
+                Cmp(ok, 0);
+                Jcc(IrCond.Equal, loop);
+                var count = NewReg(4);
+                Load(count, writtenAddr, 0, 4);
+                Cmp(count, 0);
+                Jcc(IrCond.Equal, loop);
+
+                var eventType = NewReg(4);
+                Load(eventType, buf, 0, 2);
+                Cmp(eventType, 1);
+                Jcc(IrCond.NotEqual, loop);
+
+                var keyDown = NewReg(4);
+                Load(keyDown, buf, 4, 4);
+                Cmp(keyDown, 0);
+                Jcc(IrCond.Equal, loop);
+
+                // 若 intercept=0，回显该字符（WriteConsoleW 到输出句柄）
+                Cmp(intercept, 0);
+                Jcc(IrCond.NotEqual, gotKey);
+                var outHandle = NewReg(8);
+                SysCall(outHandle, "GetStdHandle", 1, C(4, -11));
+                var charAddr = NewReg(8);
+                Lea(charAddr, buf, 14);
+                var echoOk = NewReg(4);
+                SysCall(echoOk, "WriteConsoleW", 5, outHandle, charAddr, C(4, 1), writtenAddr);
+
+                Mark(gotKey);
+                var ch = NewReg(4);
+                Load(ch, buf, 14, 2);
+                StoreRet(ch);
+
+                Mark(done);
+                EndFunction(_currentFunction!, 4);
+            }
+
+            // ------------------------------------------------------------------
             // Random(max:4) → 0..max-1（xorshift32）
             // ------------------------------------------------------------------
 
@@ -3564,6 +3665,18 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             {
                 var ms = _args[0];
                 SysCall(null, "Sleep", 1, ms);
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // ------------------------------------------------------------------
+            // Beep(frequency:4, duration:4) → void（kernel32 Beep：扬声器蜂鸣）
+            // ------------------------------------------------------------------
+
+            private void EmitBeep()
+            {
+                var frequency = _args[0];
+                var duration = _args[1];
+                SysCall(null, "Beep", 2, frequency, duration);
                 EndFunction(_currentFunction!, 0);
             }
 

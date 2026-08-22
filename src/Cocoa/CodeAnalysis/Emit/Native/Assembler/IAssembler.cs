@@ -114,6 +114,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         void Subsd(X64Register xmmDst, X64Register xmmSrc);
         void Mulsd(X64Register xmmDst, X64Register xmmSrc);
         void Divsd(X64Register xmmDst, X64Register xmmSrc);
+        void Sqrtsd(X64Register xmmDst, X64Register xmmSrc);
+        void Roundsd(X64Register xmmDst, X64Register xmmSrc, byte imm);
         void Cvtsi2sd(X64Register xmmDst, X64Register r32Src);
         void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc);
         void Ucomisd(X64Register xmmA, X64Register xmmB);

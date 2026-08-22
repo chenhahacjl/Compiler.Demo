@@ -140,12 +140,12 @@ namespace MyLib
 {
     class Native
     {
-        syscall function Print(text: string): void
+        syscall function WriteLine(text: string): void
     }
 
     function SayHi(): void
     {
-        Native.Print(""hi"")
+        Native.WriteLine(""hi"")
     }
 }
 ";
@@ -155,13 +155,13 @@ namespace MyLib
             var body = cod.Bodies[Assert.Single(cod.Functions, f => f.Name == "SayHi")];
             var call = FindCallToPrint(body);
             Assert.NotNull(call);
-            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.Print, call.Method!.BuiltinKind);
+            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine, call.Method!.BuiltinKind);
         }
 
         private static Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)
         {
             if (node is Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression call &&
-                call.Method?.BuiltinKind == Cocoa.CodeAnalysis.Symbols.BuiltinKind.Print)
+                call.Method?.BuiltinKind == Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine)
             {
                 return call;
             }
@@ -275,7 +275,7 @@ namespace System
 {
     class Runtime
     {
-        syscall function Print(text: string): void
+        syscall function WriteLine(text: string): void
         syscall function Random(max: int): int
     }
 
@@ -310,9 +310,9 @@ namespace System
             Assert.Equal("System", runtime.Namespace);
             Assert.Equal("System.Runtime", runtime.FullName);
 
-            var print = Assert.Single(runtime.Methods, m => m.Name == "Print");
+            var print = Assert.Single(runtime.Methods, m => m.Name == "WriteLine");
             Assert.True(print.IsStatic);
-            Assert.Equal(BuiltinKind.Print, print.BuiltinKind);
+            Assert.Equal(BuiltinKind.WriteLine, print.BuiltinKind);
             Assert.Same(runtime, print.ContainingClass);
 
             // 6e-M18：静态方法容器类（方法带函数体）符号往返
@@ -455,7 +455,7 @@ function Main(): int
             var core = Assert.Single(libraries, lib => lib.Classes.Any(c => c.Name == "Runtime"));
             var runtime = Assert.Single(core.Classes, c => c.Name == "Runtime");
             Assert.Equal("System.Runtime", runtime.FullName);
-            Assert.Contains(runtime.Methods, m => m.Name == "Print" && m.BuiltinKind == BuiltinKind.Print);
+            Assert.Contains(runtime.Methods, m => m.Name == "WriteLine" && m.BuiltinKind == BuiltinKind.WriteLine);
 
             // 6e-M18：Math 为静态容器类（方法含类归属）
             var math = Assert.Single(core.Classes, c => c.Name == "Math");

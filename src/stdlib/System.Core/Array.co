@@ -106,7 +106,7 @@ namespace System
             return m
         }
 
-        static function AverageD(a: int[]): double
+        static function Average(a: int[]): double
         {
             if a.Length == 0
             {
@@ -115,7 +115,7 @@ namespace System
             return Sum(a) / a.Length
         }
 
-        static function AverageD(a: double[]): double
+        static function Average(a: double[]): double
         {
             if a.Length == 0
             {

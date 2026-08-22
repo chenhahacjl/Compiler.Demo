@@ -79,6 +79,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         FCvtSD,      // FCvtSD <dst> <src>            — double → int（截断）
         SetArg64,    // SetArg64 <ordinal> <src>      — double 参数（x86 拆 low/high 两寄存器）
 
+        // 浮点单参数学（SSE）：值在槽中 64 位位模式存放（x86 拆两个 4 字节槽）
+        FSqrt,       // FSqrt <dst> <src>              — sqrtsd
+        FFloor,      // FFloor <dst> <src>             — roundsd imm=1（向 -∞）
+        FCeiling,    // FCeiling <dst> <src>           — roundsd imm=2（向 +∞）
+        FTruncate,   // FTruncate <dst> <src>          — roundsd imm=3（向 0）
+        FRound,      // FRound <dst> <src>             — roundsd imm=0（最近偶数，.NET Math.Round 语义）
+
         // 调试/信息
         Nop,         // Nop
         SeqPoint,    // SeqPoint <file> <line>

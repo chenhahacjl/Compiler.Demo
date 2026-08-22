@@ -136,7 +136,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    Runtime.Print(p._x)
+    Runtime.WriteLine(p._x)
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);
@@ -161,7 +161,7 @@ public class Point
 function Main()
 {
     var p = new Point()
-    Runtime.Print(p.Secret())
+    Runtime.WriteLine(p.Secret())
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);

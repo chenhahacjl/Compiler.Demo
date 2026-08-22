@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cod
     internal static class CodSerializer
     {
         public const string Magic = "COCOD";
-        public const int Version = 2;
+        public const int Version = 3;
 
         // ---------------------------------------------------------------- write
 
@@ -756,7 +756,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field((int)fn.CallingConvention);
             w.Field(fn.Namespace.Length > 0 ? Str(fn.Namespace) : "-");
             w.Field(fn.ContainingClass != null ? registry.Get(fn.ContainingClass) : -1);
-            w.Field(fn.BuiltinKind != null ? (int)fn.BuiltinKind.Value : -1);
+            w.Field(fn.BuiltinKind != null ? Str(fn.BuiltinKind.Value.ToString()) : "-");
             w.Field(fn.EntryPoint != null ? Str(fn.EntryPoint) : "-");
             w.Field(fn.CharSet != null ? (int)fn.CharSet.Value : -1);
             w.Field(fn.Parameters.Length);
@@ -1275,7 +1275,8 @@ namespace Cocoa.CodeAnalysis.Cod
             var nsToken = reader.ExpectString();
             var ns = nsToken == "-" ? "" : nsToken;
             var containingClassId = reader.ExpectInt();
-            var builtinKindValue = reader.ExpectInt();
+            var builtinKindToken = reader.ExpectString();
+            var builtinKind = builtinKindToken == "-" ? (BuiltinKind?)null : BuiltinFunctions.GetByKindName(builtinKindToken);
             var entryPointToken = reader.ExpectString();
             var entryPoint = entryPointToken == "-" ? null : entryPointToken;
             var charSetValue = reader.ExpectInt();
@@ -1297,7 +1298,6 @@ namespace Cocoa.CodeAnalysis.Cod
 
             var returnType = (TypeSymbol)symbolsById[returnTypeId];
             var containingClass = containingClassId >= 0 ? (ClassTypeSymbol)symbolsById[containingClassId] : null;
-            BuiltinKind? builtinKind = builtinKindValue >= 0 ? (BuiltinKind)builtinKindValue : null;
 
             // 含类归属或内置种类：不复用全局单例（内置单例无类归属），重建带上下文符号
             FunctionSymbol function;

@@ -560,9 +560,15 @@ function Main()
     Console.WriteLine(b)
     var c = (1 < 2) && (3 > 2)
     Console.WriteLine(c)
+    var t = true
+    var f = false
+    Console.WriteLine(t && f)
+    Console.WriteLine(t && true)
+    Console.WriteLine(t || f)
+    Console.WriteLine(f || f)
 }", "src-logical", target);
 
-            Assert.Equal("False\r\nTrue\r\nTrue\r\n", output);
+            Assert.Equal("False\r\nTrue\r\nTrue\r\nFalse\r\nTrue\r\nTrue\r\nFalse\r\n", output);
         }
 
         [Theory]
@@ -608,12 +614,12 @@ function Main()
 
 class Runtime
 {
-    syscall function Print(text: string): void
+    syscall function WriteLine(text: string): void
 }
 
 function Main()
 {
-    Runtime.Print(""hello syscall"")
+    Runtime.WriteLine(""hello syscall"")
 }", "src-syscall-print", target);
 
             Assert.Equal("hello syscall\r\n", output);
@@ -643,15 +649,15 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
-        public void NativeSource_Builtin_SleepNow(string target)
+        public void NativeSource_Builtin_SleepTickCount(string target)
         {
             var output = CompileAndRun(@"using System
 
 function Main()
 {
-    var t0 = Runtime.Now()
+    var t0 = Runtime.TickCount()
     Runtime.Sleep(1)
-    var t1 = Runtime.Now()
+    var t1 = Runtime.TickCount()
     Console.WriteLine(t1 >= t0)
 }", "src-sleep-now", target);
 

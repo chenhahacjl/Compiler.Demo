@@ -28,18 +28,22 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>自研元数据引用：签名与 token 分配的最小描述。</summary>
     internal sealed class IlType
     {
-        public IlType(IlTypeKind kind, IlTypeRef? reference = null, IlType? elementType = null, IlTypeDef? typeDef = null)
+        public IlType(IlTypeKind kind, IlTypeRef? reference = null, IlType? elementType = null, IlTypeDef? typeDef = null, bool isValueType = false)
         {
             Kind = kind;
             Reference = reference;
             ElementType = elementType;
             TypeDef = typeDef;
+            IsValueType = isValueType;
         }
 
         public IlTypeKind Kind { get; }
         public IlTypeRef? Reference { get; }
         public IlType? ElementType { get; }
         public IlTypeDef? TypeDef { get; }
+
+        /// <summary>是否为值类型（struct，签名编码用 VALUETYPE 0x11 而非 CLASS 0x12）。</summary>
+        public bool IsValueType { get; }
 
         public static readonly IlType Void = new IlType(IlTypeKind.Void);
         public static readonly IlType Boolean = new IlType(IlTypeKind.Boolean);
@@ -50,8 +54,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public static readonly IlType String = new IlType(IlTypeKind.String);
         public static readonly IlType Object = new IlType(IlTypeKind.Object);
 
-        public static IlType Class(IlTypeRef reference) => new IlType(IlTypeKind.Class, reference);
-        public static IlType Class(IlTypeDef typeDef) => new IlType(IlTypeKind.Class, typeDef: typeDef);
+        public static IlType Class(IlTypeRef reference, bool isValueType = false) => new IlType(IlTypeKind.Class, reference, isValueType: isValueType);
+        public static IlType Class(IlTypeDef typeDef, bool isValueType = false) => new IlType(IlTypeKind.Class, typeDef: typeDef, isValueType: isValueType);
         public static IlType SzArrayOf(IlType elementType) => new IlType(IlTypeKind.SzArray, elementType: elementType);
 
         /// <summary>CLR 元数据全名（参数类型匹配用）。</summary>

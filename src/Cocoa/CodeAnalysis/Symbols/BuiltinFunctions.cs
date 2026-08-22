@@ -9,12 +9,20 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public enum BuiltinKind
     {
-        Print,
-        Input,
+        WriteLine,
+        Write,
+        ReadLine,
+        ReadKey,
         Random,
         Sleep,
-        Now,
+        TickCount,
         Exit,
+        Sqrt,
+        Floor,
+        Ceiling,
+        Truncate,
+        Round,
+        Beep,
     }
 
     /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>
@@ -30,42 +38,90 @@ namespace Cocoa.CodeAnalysis.Symbols
     internal static class BuiltinFunctions
     {
         private static readonly ImmutableArray<BuiltinSpec> _specs = ImmutableArray.Create(
-            new BuiltinSpec(BuiltinKind.Print, "Print", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
-            new BuiltinSpec(BuiltinKind.Input, "Input", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.WriteLine, "WriteLine", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.Write, "Write", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
+            new BuiltinSpec(BuiltinKind.ReadLine, "ReadLine", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.ReadKey, "ReadKey", TypeSymbol.Char, new[] { ("intercept", TypeSymbol.Boolean) }),
             new BuiltinSpec(BuiltinKind.Random, "Random", TypeSymbol.Int32, new[] { ("max", TypeSymbol.Int32) }),
             new BuiltinSpec(BuiltinKind.Sleep, "Sleep", TypeSymbol.Void, new[] { ("ms", TypeSymbol.Int32) }),
-            new BuiltinSpec(BuiltinKind.Now, "Now", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
-            new BuiltinSpec(BuiltinKind.Exit, "Exit", TypeSymbol.Void, new[] { ("code", TypeSymbol.Int32) }));
+            new BuiltinSpec(BuiltinKind.TickCount, "TickCount", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.Exit, "Exit", TypeSymbol.Void, new[] { ("code", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Sqrt, "Sqrt", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
+            new BuiltinSpec(BuiltinKind.Floor, "Floor", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
+            new BuiltinSpec(BuiltinKind.Ceiling, "Ceiling", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
+            new BuiltinSpec(BuiltinKind.Truncate, "Truncate", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
+            new BuiltinSpec(BuiltinKind.Round, "Round", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
+            new BuiltinSpec(BuiltinKind.Beep, "Beep", TypeSymbol.Void, new[] { ("frequency", TypeSymbol.Int32), ("duration", TypeSymbol.Int32) }));
 
         /// <summary>
-        /// 输出字符串: void print(string text)
+        /// 输出字符串并换行: void WriteLine(any text)（= Console.WriteLine）
         /// </summary>
-        public static readonly FunctionSymbol Print = Create(BuiltinKind.Print);
+        public static readonly FunctionSymbol WriteLine = Create(BuiltinKind.WriteLine);
 
         /// <summary>
-        /// 输入字符串: string input()
+        /// 输出字符串不换行: void Write(any text)（= Console.Write）
         /// </summary>
-        public static readonly FunctionSymbol Input = Create(BuiltinKind.Input);
+        public static readonly FunctionSymbol Write = Create(BuiltinKind.Write);
 
         /// <summary>
-        /// 随机数: int random(int max)
+        /// 输入字符串: string ReadLine()（= Console.ReadLine）
+        /// </summary>
+        public static readonly FunctionSymbol ReadLine = Create(BuiltinKind.ReadLine);
+
+        /// <summary>
+        /// 读取按键: char ReadKey(bool intercept)（= Console.ReadKey(...).KeyChar）
+        /// </summary>
+        public static readonly FunctionSymbol ReadKey = Create(BuiltinKind.ReadKey);
+
+        /// <summary>
+        /// 随机数: int Random(int max)
         /// </summary>
         public static readonly FunctionSymbol Random = Create(BuiltinKind.Random);
 
         /// <summary>
-        /// 休眠: void sleep(int ms)
+        /// 休眠: void Sleep(int ms)
         /// </summary>
         public static readonly FunctionSymbol Sleep = Create(BuiltinKind.Sleep);
 
         /// <summary>
-        /// 运行时长: int now()（毫秒，Environment.TickCount）
+        /// 系统启动后毫秒数: int TickCount()（Environment.TickCount，对齐底层 GetTickCount）
         /// </summary>
-        public static readonly FunctionSymbol Now = Create(BuiltinKind.Now);
+        public static readonly FunctionSymbol TickCount = Create(BuiltinKind.TickCount);
 
         /// <summary>
-        /// 退出进程: void exit(int code)
+        /// 退出进程: void Exit(int code)
         /// </summary>
         public static readonly FunctionSymbol Exit = Create(BuiltinKind.Exit);
+
+        /// <summary>
+        /// 平方根: double Sqrt(double x)（= Math.Sqrt）
+        /// </summary>
+        public static readonly FunctionSymbol Sqrt = Create(BuiltinKind.Sqrt);
+
+        /// <summary>
+        /// 向下取整: double Floor(double x)（= Math.Floor）
+        /// </summary>
+        public static readonly FunctionSymbol Floor = Create(BuiltinKind.Floor);
+
+        /// <summary>
+        /// 向上取整: double Ceiling(double x)（= Math.Ceiling）
+        /// </summary>
+        public static readonly FunctionSymbol Ceiling = Create(BuiltinKind.Ceiling);
+
+        /// <summary>
+        /// 向零截断: double Truncate(double x)（= Math.Truncate）
+        /// </summary>
+        public static readonly FunctionSymbol Truncate = Create(BuiltinKind.Truncate);
+
+        /// <summary>
+        /// 四舍五入（最近偶数）: double Round(double x)（= Math.Round，banker's rounding）
+        /// </summary>
+        public static readonly FunctionSymbol Round = Create(BuiltinKind.Round);
+
+        /// <summary>
+        /// 扬声器蜂鸣: void Beep(int frequency, int duration)（= Console.Beep）
+        /// </summary>
+        public static readonly FunctionSymbol Beep = Create(BuiltinKind.Beep);
 
         private static FunctionSymbol Create(BuiltinKind kind)
         {
@@ -86,12 +142,20 @@ namespace Cocoa.CodeAnalysis.Symbols
         {
             return kind switch
             {
-                BuiltinKind.Print => Print,
-                BuiltinKind.Input => Input,
+                BuiltinKind.WriteLine => WriteLine,
+                BuiltinKind.Write => Write,
+                BuiltinKind.ReadLine => ReadLine,
+                BuiltinKind.ReadKey => ReadKey,
                 BuiltinKind.Random => Random,
                 BuiltinKind.Sleep => Sleep,
-                BuiltinKind.Now => Now,
+                BuiltinKind.TickCount => TickCount,
                 BuiltinKind.Exit => Exit,
+                BuiltinKind.Sqrt => Sqrt,
+                BuiltinKind.Floor => Floor,
+                BuiltinKind.Ceiling => Ceiling,
+                BuiltinKind.Truncate => Truncate,
+                BuiltinKind.Round => Round,
+                BuiltinKind.Beep => Beep,
                 _ => null,
             };
         }
@@ -104,6 +168,20 @@ namespace Cocoa.CodeAnalysis.Symbols
                 if (string.Equals(spec.Name, name, System.StringComparison.OrdinalIgnoreCase))
                 {
                     return GetByKind(spec.Kind);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>按 BuiltinKind 枚举名解析（`.cod` v3 序列化用名称字符串，替代 int——改名不再依赖枚举顺序）。</summary>
+        internal static BuiltinKind? GetByKindName(string name)
+        {
+            foreach (var spec in _specs)
+            {
+                if (string.Equals(spec.Kind.ToString(), name, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    return spec.Kind;
                 }
             }
 
