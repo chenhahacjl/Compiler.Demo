@@ -1,9 +1,10 @@
+using System
 using MyLib
 
 function Main()
 {
     var p = new Point(3, 4)
-    System.Console.WriteLine(p.X())
-    System.Console.WriteLine(p.Y())
-    System.Console.WriteLine(p.Area())
+    Console.WriteLine(p.X())
+    Console.WriteLine(p.Y())
+    Console.WriteLine(p.Area())
 }

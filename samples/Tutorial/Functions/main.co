@@ -1,21 +1,22 @@
+using System
 function Run(args: string[])
 {
-    System.Console.WriteLine(Add(20, 22))
-    System.Console.WriteLine(Square(Add(1, 2)))
-    System.Console.WriteLine(Factorial(5))
-    System.Console.WriteLine(Greet("Cocoa"))
-    System.Console.WriteLine(args.Length)
+    Console.WriteLine(Add(20, 22))
+    Console.WriteLine(Square(Add(1, 2)))
+    Console.WriteLine(Factorial(5))
+    Console.WriteLine(Greet("Cocoa"))
+    Console.WriteLine(args.Length)
     if args.Length > 0
     {
-        System.Console.WriteLine(args[0])
+        Console.WriteLine(args[0])
     }
     if args.Length > 1
     {
-        System.Console.WriteLine(args[1])
+        Console.WriteLine(args[1])
     }
 }
 
 function Main()
 {
-    System.Console.WriteLine("not used when entry = run")
+    Console.WriteLine("not used when entry = run")
 }

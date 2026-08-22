@@ -477,10 +477,34 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected virtual MemberSyntax ParseUsingDirective()
         {
+            return ParseUsingDirectiveCore();
+        }
+
+        /// <summary>解析 `using [static] [Alias =] <name>` 结构（.co 分号可选；.cs 由 CSharpParser 强制分号）。</summary>
+        protected MemberSyntax ParseUsingDirectiveCore()
+        {
             var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
+            SyntaxToken? staticKeyword = null;
+            SyntaxToken? aliasToken = null;
+
+            // `using static <name>`：导入类的静态成员（C# 同构）
+            if (Current.Kind == SyntaxKind.StaticKeyword)
+            {
+                staticKeyword = MatchToken(SyntaxKind.StaticKeyword);
+            }
+
+            // `using <Alias> = <name>`：别名导入
+            if (staticKeyword == null &&
+                Current.Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.EqualsToken)
+            {
+                aliasToken = MatchToken(SyntaxKind.IdentifierToken);
+                MatchToken(SyntaxKind.EqualsToken);
+            }
+
             var nameTokens = ParseQualifiedName();
 
-            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, nameTokens);
+            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, staticKeyword, aliasToken, nameTokens);
         }
 
         private MemberSyntax ParseNamespaceDeclaration()

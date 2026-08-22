@@ -80,7 +80,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         [Fact]
         public void EmitPipeline_Produces_Valid_ImplMap_Rows()
         {
-            var source = @"
+            var source = @"using System
+
 import kernel32.dll
 
 stdcall function GetCurrentProcessId(): int
@@ -88,7 +89,7 @@ stdcall function GetCurrentProcessId(): int
 function Main()
 {
     var t = GetCurrentProcessId()
-    System.Console.WriteLine(t)
+    Console.WriteLine(t)
 }";
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(syntaxTree);

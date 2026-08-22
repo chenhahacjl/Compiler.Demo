@@ -345,6 +345,13 @@ namespace Cocoa.CodeAnalysis
             ReportWarning(location, message);
         }
 
+        /// <summary>`using static` 目标必须是类（6e-M18，C# 同构：导入类静态成员）。</summary>
+        internal void ReportUsingStaticTargetNotClass(TextLocation location, string name)
+        {
+            var message = $"using static 的目标 '{name}' 必须是类（导入其静态成员；命名空间用 `using {name};` + 限定访问）。";
+            ReportWarning(location, message);
+        }
+
         public void ReportUnreachableCode(SyntaxNode node)
         {
             switch (node.Kind)

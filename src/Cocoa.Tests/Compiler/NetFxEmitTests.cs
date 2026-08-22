@@ -81,11 +81,12 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void NetFx_Exe_Runs_Directly_WithoutDotnetHost()
         {
-            var exe = EmitNetFx(@"
+            var exe = EmitNetFx(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(""hello netfx"")
-    System.Console.WriteLine(40 + 2)
+    Console.WriteLine(""hello netfx"")
+    Console.WriteLine(40 + 2)
 }", "netfx-direct");
 
             var stdout = RunDirect(exe);
@@ -114,13 +115,14 @@ function Main()
         [Fact]
         public void NetFx_MainArgs_Receives_CommandLine()
         {
-            var exe = EmitNetFx(@"
+            var exe = EmitNetFx(@"using System
+
 function Main(args: string[])
 {
-    System.Console.WriteLine(args.Length)
+    Console.WriteLine(args.Length)
     if args.Length > 0
     {
-        System.Console.WriteLine(args[0])
+        Console.WriteLine(args[0])
     }
 }", "netfx-args");
 

@@ -231,6 +231,91 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
+        /// <summary>全部同名方法（含重载，沿继承链向上）：静态容器类方法调用按参数类型解析重载（6e-M18）。</summary>
+        public ImmutableArray<FunctionSymbol> GetMethods(string name)
+        {
+            var builder = ImmutableArray.CreateBuilder<FunctionSymbol>();
+            for (var type = this; type != null; type = type.BaseType)
+            {
+                foreach (var method in type.GetDeclaredMethods(name))
+                {
+                    builder.Add(method);
+                }
+
+                foreach (var iface in type._interfaces)
+                {
+                    builder.AddRange(iface.GetInterfaceInheritedMethods(name));
+                }
+
+                if (type.IsInterface)
+                {
+                    builder.AddRange(type.GetInterfaceInheritedMethods(name));
+                }
+            }
+
+            return builder.ToImmutable();
+        }
+
+        private ImmutableArray<FunctionSymbol> GetDeclaredMethods(string name)
+        {
+            var builder = ImmutableArray.CreateBuilder<FunctionSymbol>();
+            foreach (var method in _methods)
+            {
+                if (method.Name == name)
+                {
+                    builder.Add(method);
+                }
+            }
+
+            return builder.ToImmutable();
+        }
+
+        /// <summary>是否已声明同名同签名方法（重载按参数类型逐一比较，6e-M18 容器类重载支持）。</summary>
+        internal bool HasDeclaredMethodSignature(string name, FunctionSymbol candidate)
+        {
+            foreach (var method in GetDeclaredMethods(name))
+            {
+                if (method.Parameters.Length != candidate.Parameters.Length)
+                {
+                    continue;
+                }
+
+                var same = true;
+                for (var i = 0; i < method.Parameters.Length; i++)
+                {
+                    if (method.Parameters[i].Type != candidate.Parameters[i].Type)
+                    {
+                        same = false;
+                        break;
+                    }
+                }
+
+                if (same)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private ImmutableArray<FunctionSymbol> GetInterfaceInheritedMethods(string name)
+        {
+            var declared = GetDeclaredMethods(name);
+            if (!declared.IsEmpty)
+            {
+                return declared;
+            }
+
+            var builder = ImmutableArray.CreateBuilder<FunctionSymbol>();
+            foreach (var baseIface in _baseInterfaces)
+            {
+                builder.AddRange(baseIface.GetInterfaceInheritedMethods(name));
+            }
+
+            return builder.ToImmutable();
+        }
+
         /// <summary>接口成员查找：本接口声明 + 基接口链（接口继承）。</summary>
         private FunctionSymbol? GetInterfaceInheritedMethod(string name)
         {

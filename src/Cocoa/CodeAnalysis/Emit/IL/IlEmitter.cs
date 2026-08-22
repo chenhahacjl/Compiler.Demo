@@ -73,7 +73,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _entryFunction = emitLibrary ? null : program.MainFunction;
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
+            // 6e-M18：补入函数引用的注入容器类（System.Core.cod 的 Console/Math 等，不在 program.Classes 的源码声明集内）
             var classes = program.Classes.ToList();
+            foreach (var f in program.Functions.Keys)
+            {
+                if (f.ContainingClass != null && !classes.Contains(f.ContainingClass))
+                {
+                    classes.Add(f.ContainingClass);
+                }
+            }
+
             var emitted = new HashSet<ClassTypeSymbol>();
             while (classes.Count > 0)
             {

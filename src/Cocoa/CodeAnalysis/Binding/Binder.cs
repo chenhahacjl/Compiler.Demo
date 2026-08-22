@@ -22,12 +22,14 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly string[] _references;
 
         private readonly List<string> _usingNamespaces = new List<string>();
+        private readonly List<string> _usingStatics = new List<string>();
+        private readonly Dictionary<string, string> _usingAliases = new Dictionary<string, string>();
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
 
-        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces)
+        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
@@ -35,6 +37,17 @@ namespace Cocoa.CodeAnalysis.Binding
             _currentClass = function?.ContainingClass;
             _references = references.ToArray();
             _usingNamespaces.AddRange(usingNamespaces);
+            if (!usingStatics.IsDefaultOrEmpty)
+            {
+                _usingStatics.AddRange(usingStatics);
+            }
+            if (usingAliases != null)
+            {
+                foreach (var (alias, target) in usingAliases)
+                {
+                    _usingAliases[alias] = target;
+                }
+            }
 
             if (function != null)
             {
@@ -54,7 +67,7 @@ namespace Cocoa.CodeAnalysis.Binding
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
             {
-                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
+                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, ImmutableDictionary<string, string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
             }
 
             var globalStatements = syntaxTrees.SelectMany(st => st.Root.Members)
@@ -104,7 +117,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is UsingDirectiveSyntax usingDirective)
                 {
-                    binder._usingNamespaces.Add(usingDirective.Name);
+                    binder.CollectUsingDirective(usingDirective);
                     usingDirectives.Add(usingDirective);
                 }
             }
@@ -293,13 +306,15 @@ namespace Cocoa.CodeAnalysis.Binding
             var enums = binder._scope.GetDeclaredEnums();
             var classes = binder._scope.GetDeclaredClasses();
             var usingNamespaces = binder._usingNamespaces.ToImmutableArray();
+            var usingStatics = binder._usingStatics.ToImmutableArray();
+            var usingAliases = binder._usingAliases.ToImmutableDictionary();
 
             if (previous != null)
             {
                 diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
             }
 
-            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, (references ?? Array.Empty<string>()).ToImmutableArray());
+            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, usingStatics, usingAliases, (references ?? Array.Empty<string>()).ToImmutableArray());
         }
 
         public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default)
@@ -339,7 +354,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
                 }
 
-                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces);
+                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, globalScope.UsingStatics, globalScope.UsingAliases);
                 BoundBlockStatement body;
 
                 if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
@@ -839,7 +854,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     var method = BindClassMethodDeclaration(methodDeclaration, classType);
 
-                    if (classType.GetDeclaredMethod(methodDeclaration.Identifier.Text) == null)
+                    if (!classType.HasDeclaredMethodSignature(methodDeclaration.Identifier.Text, method))
                     {
                         classType.AddMethod(method);
                         classFunctions.Add(method);
@@ -1304,13 +1319,30 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 if (member is UsingDirectiveSyntax usingDirective)
                 {
-                    usingNamespaces.Add(usingDirective.Name);
+                    CollectUsingDirective(usingDirective);
                     usingDirectives.Add(usingDirective);
                 }
                 else if (member is NamespaceDeclarationSyntax nested)
                 {
                     CollectNamespaceUsings(nested, usingNamespaces, usingDirectives);
                 }
+            }
+        }
+
+        /// <summary>按形态收集 using：`using static <类>` → _usingStatics；`using <别名> = <名>` → _usingAliases；否则 → _usingNamespaces。</summary>
+        private void CollectUsingDirective(UsingDirectiveSyntax directive)
+        {
+            if (directive.StaticKeyword != null)
+            {
+                _usingStatics.Add(directive.Name);
+            }
+            else if (directive.Alias.Length > 0)
+            {
+                _usingAliases[directive.Alias] = directive.Name;
+            }
+            else
+            {
+                _usingNamespaces.Add(directive.Name);
             }
         }
 
@@ -1344,6 +1376,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            var knownClasses = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var (syntax, ns) in allClasses)
+            {
+                knownClasses.Add(ns.Length == 0 ? syntax.Identifier.Text : ns + "." + syntax.Identifier.Text);
+            }
+
             foreach (var (_, ns) in allClasses) AddNamespacePrefixes(ns);
             foreach (var (_, ns) in allInterfaces) AddNamespacePrefixes(ns);
             foreach (var (_, ns) in allEnums) AddNamespacePrefixes(ns);
@@ -1354,12 +1392,40 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     AddNamespacePrefixes(ns);
                 }
+
+                foreach (var cls in library.Classes)
+                {
+                    knownClasses.Add(cls.FullName);
+                }
             }
 
             var metadataReader = _references.Length == 0 ? null : new MetadataReader(_references.ToArray());
             foreach (var directive in usingDirectives)
             {
                 var name = directive.Name;
+
+                // `using static <类>`：目标必须是类（6e-M18）
+                if (directive.StaticKeyword != null)
+                {
+                    if (!knownClasses.Contains(name))
+                    {
+                        _diagnostics.ReportUsingStaticTargetNotClass(directive.Location, name);
+                    }
+
+                    continue;
+                }
+
+                // `using <别名> = <名>`：目标须为命名空间或类（无论解析成功与否都终止于本分支）
+                if (directive.Alias.Length > 0)
+                {
+                    if (!knownNamespaces.Contains(name) && !knownClasses.Contains(name))
+                    {
+                        _diagnostics.ReportUnresolvedUsing(directive.Location, name);
+                    }
+
+                    continue;
+                }
+
                 if (knownNamespaces.Contains(name))
                 {
                     continue;
@@ -2900,37 +2966,37 @@ namespace Cocoa.CodeAnalysis.Binding
                 return namespaceCall;
             }
 
-            // 静态方法调用：MathHelpers.Square(2) / My.App.Utils.Square(2)（target 是类型名，可为点号全名）
+            // 静态方法调用：MathHelpers.Square(2) / My.App.Utils.Square(2) / System.Math.Max(3,5)（target 是类型名，可为点号全名/别名）
+            // 6e-M18：按参数类型解析重载（GetMethods 取全部同名静态方法）。
             if (ResolveDottedTypeName(syntax.Expression) is string staticTypeName &&
-                LookupType(staticTypeName) is ClassTypeSymbol staticType &&
-                staticType.GetMethod(identifier) is FunctionSymbol staticMethod &&
-                staticMethod.IsStatic)
+                LookupType(staticTypeName) is ClassTypeSymbol staticType)
             {
-                if (!IsAccessibleMember(staticMethod.Visibility, staticMethod.ContainingClass!))
-                {
-                    _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, staticMethod.Visibility);
-                    return new BoundErrorExpression(syntax);
-                }
+                var staticCandidates = staticType.GetMethods(identifier)
+                    .Where(m => m.IsStatic && IsAccessibleMember(m.Visibility, staticType))
+                    .ToImmutableArray();
 
-                var staticArguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                foreach (var argument in syntax.Arguments)
+                if (!staticCandidates.IsEmpty)
                 {
-                    staticArguments.Add(BindExpression(argument));
-                }
+                    var staticArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                    foreach (var argument in syntax.Arguments)
+                    {
+                        staticArguments.Add(BindExpression(argument));
+                    }
 
-                if (staticMethod.Parameters.Length != syntax.Arguments.Count)
-                {
-                    _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, staticMethod.Parameters.Length, syntax.Arguments.Count);
-                    return new BoundErrorExpression(syntax);
-                }
+                    var staticMethod = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, staticCandidates, staticArguments.ToImmutable());
+                    if (staticMethod == null)
+                    {
+                        return new BoundErrorExpression(syntax);
+                    }
 
-                var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                for (var i = 0; i < staticArguments.Count; i++)
-                {
-                    arguments.Add(BindConversion(syntax.Arguments[i].Location, staticArguments[i], staticMethod.Parameters[i].Type));
-                }
+                    var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                    for (var i = 0; i < staticArguments.Count; i++)
+                    {
+                        arguments.Add(BindConversion(syntax.Arguments[i].Location, staticArguments[i], staticMethod.Parameters[i].Type));
+                    }
 
-                return new BoundMemberCallExpression(syntax, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, arguments.ToImmutable(), staticMethod.ReturnType, staticMethod);
+                    return new BoundMemberCallExpression(syntax, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, arguments.ToImmutable(), staticMethod.ReturnType, staticMethod);
+                }
             }
 
             var boundExpression = BindExpression(syntax.Expression);
@@ -3009,7 +3075,19 @@ namespace Cocoa.CodeAnalysis.Binding
                 return false;
             }
 
-            ImmutableArray<FunctionSymbol>? candidates = _scope.TryLookupNamespaceFunctions(prefix, identifier);
+            ImmutableArray<FunctionSymbol>? candidates;
+
+            // 别名前缀（6e-M18）：`using Con = System.Console;` + `Con.WriteLine(...)` → 类静态方法 / 命名空间函数
+            if (_usingAliases.TryGetValue(prefix, out var aliasTarget))
+            {
+                candidates = LookupUsingStaticMethods(aliasTarget, identifier)
+                             ?? _scope.TryLookupNamespaceFunctions(aliasTarget, identifier);
+            }
+            else
+            {
+                candidates = _scope.TryLookupNamespaceFunctions(prefix, identifier);
+            }
+
             if (candidates == null)
             {
                 foreach (var ns in _usingNamespaces)
@@ -3049,6 +3127,21 @@ namespace Cocoa.CodeAnalysis.Binding
 
             result = new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
             return true;
+        }
+
+        /// <summary>`using static <类>`：取目标类的静态方法候选（含访问性；目标非类返回 null）。</summary>
+        private ImmutableArray<FunctionSymbol>? LookupUsingStaticMethods(string target, string identifier)
+        {
+            if (LookupType(target) is not ClassTypeSymbol cls)
+            {
+                return null;
+            }
+
+            var methods = cls.Methods
+                .Where(m => m.Name == identifier && m.IsStatic && IsAccessibleMember(m.Visibility, cls))
+                .ToImmutableArray();
+
+            return methods.Length == 0 ? null : methods;
         }
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
@@ -3170,7 +3263,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(boundArgument);
             }
 
-            // 候选：裸函数（含重载）→ using 命名空间函数 → 类内方法
+            // 候选：裸函数（含重载）→ using 命名空间函数 → using static 类静态方法 → 类内方法
             var candidates = _scope.TryLookupFunctions(syntax.Identifier.Text);
             if (candidates is { Length: 0 })
             {
@@ -3192,13 +3285,33 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 类方法内：裸方法调用解析为本类方法（this.Method()）
+            // `using static <类>`：导入类静态方法为裸名（6e-M18，仅类，C# 同构）
+            if (candidates == null)
+            {
+                foreach (var target in _usingStatics)
+                {
+                    var usingStatic = LookupUsingStaticMethods(target, syntax.Identifier.Text);
+                    if (usingStatic != null)
+                    {
+                        candidates = usingStatic;
+                        break;
+                    }
+                }
+            }
+
+            // 类方法内：裸方法调用解析为本类方法（this.Method()；6e-M18 按参数类型解析重载）
             if (candidates == null && _currentClass != null)
             {
-                var method = _currentClass.GetMethod(syntax.Identifier.Text);
-                if (method != null)
+                var classMethods = _currentClass.GetMethods(syntax.Identifier.Text)
+                    .Where(m => IsAccessibleMember(m.Visibility, _currentClass))
+                    .ToImmutableArray();
+                if (!classMethods.IsEmpty)
                 {
-                    return BindMemberCall(syntax, new BoundThisExpression(syntax, _currentClass), method);
+                    var classMethod = ResolveMemberOverload(syntax.Identifier.Location, syntax.Identifier.Text, classMethods, boundArguments.ToImmutable());
+                    if (classMethod != null)
+                    {
+                        return BindMemberCall(syntax, new BoundThisExpression(syntax, _currentClass), classMethod);
+                    }
                 }
             }
 
@@ -3454,6 +3567,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "void": return TypeSymbol.Void;
                 default:
                 {
+                    // using 别名（6e-M18）：`using Rt = System.Runtime;` + 类型位置 / Rt.StaticMethod()
+                    if (_usingAliases.TryGetValue(name, out var aliasTarget))
+                    {
+                        return LookupType(aliasTarget);
+                    }
+
                     var lookup = _scope.TryLookupSymbol(name);
                     if (lookup is TypeSymbol declaredType)
                     {

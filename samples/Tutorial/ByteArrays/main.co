@@ -1,18 +1,19 @@
+using System
 function Main()
 {
     var b1: byte = 65
-    System.Console.WriteLine(b1)
-    System.Console.WriteLine(AsInt(b1))
+    Console.WriteLine(b1)
+    Console.WriteLine(AsInt(b1))
 
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
-    System.Console.WriteLine(buf[0])
-    System.Console.WriteLine(buf[1])
-    System.Console.WriteLine(FirstElement(buf))
-    System.Console.WriteLine(LastElement(buf))
+    Console.WriteLine(buf[0])
+    Console.WriteLine(buf[1])
+    Console.WriteLine(FirstElement(buf))
+    Console.WriteLine(LastElement(buf))
 
-    System.Console.WriteLine(Wrap(300))
-    System.Console.WriteLine(Wrap(200) == Wrap(200))
-    System.Console.WriteLine(0xFF)
+    Console.WriteLine(Wrap(300))
+    Console.WriteLine(Wrap(200) == Wrap(200))
+    Console.WriteLine(0xFF)
 }

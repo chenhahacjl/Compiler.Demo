@@ -337,12 +337,6 @@ namespace Cocoa.CodeAnalysis
                 {
                     return false;
                 }
-
-                // 静态方法须为 syscall（BuiltinKind）或 extern（DllName）内部原语
-                if (method.BuiltinKind == null && !method.IsExtern)
-                {
-                    return false;
-                }
             }
 
             return true;
@@ -497,8 +491,8 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.MemberCallExpression:
                     {
                         var call = (BoundMemberCallExpression)node;
-                        // syscall/extern 容器方法调用不是 OOP（类字段/实例方法/继承仍是）
-                        return call.IsBase || (call.Method != null && call.Method.BuiltinKind == null && !call.Method.IsExtern);
+                        // 静态容器类方法调用（syscall/extern/带体静态方法，6e-M18）不是 OOP；实例方法/继承仍是
+                        return call.IsBase || (call.Method != null && !call.Method.IsStatic);
                     }
                 default:
                     foreach (var child in BoundChildren(node))

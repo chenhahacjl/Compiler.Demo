@@ -94,7 +94,8 @@ function Main()
         [Fact]
         public void Native_CrossDll_GetTickCountAndUser32MessageBeep()
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 import kernel32.dll
 
 stdcall function GetTickCount(): int
@@ -109,7 +110,7 @@ function Main()
     var b = MessageBeep(0)
     if t > 0 && b != 0
     {
-        System.Console.WriteLine(""ok"")
+        Console.WriteLine(""ok"")
     }
 }", "native-import-crossdll", X64);
 
@@ -121,7 +122,8 @@ function Main()
         [Fact]
         public void Native_GetStdHandle_InputHandle()
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 import kernel32.dll
 
 stdcall function GetStdHandle(nStdHandle: int): int
@@ -131,11 +133,11 @@ function Main()
     var h = GetStdHandle(0 - 10)
     if h != 0
     {
-        System.Console.WriteLine(""ok"")
+        Console.WriteLine(""ok"")
     }
     else
     {
-        System.Console.WriteLine(""none"")
+        Console.WriteLine(""none"")
     }
 }", "native-import-getstdhandle", X64);
 
@@ -147,19 +149,20 @@ function Main()
         [Fact]
         public void Native_Byte_EndToEnd()
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
     var b1: byte = 65
-    System.Console.WriteLine(b1)
+    Console.WriteLine(b1)
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
-    System.Console.WriteLine(buf[0])
-    System.Console.WriteLine(buf[1])
-    System.Console.WriteLine((byte)300)
-    System.Console.WriteLine((int)buf[0])
-    System.Console.WriteLine(0xFF)
+    Console.WriteLine(buf[0])
+    Console.WriteLine(buf[1])
+    Console.WriteLine((byte)300)
+    Console.WriteLine((int)buf[0])
+    Console.WriteLine(0xFF)
 }", "native-byte-e2e", X64);
 
             Assert.Equal(0, exitCode);
@@ -169,19 +172,20 @@ function Main()
         [Fact]
         public void Native_X86_Byte_EndToEnd()
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
     var b1: byte = 65
-    System.Console.WriteLine(b1)
+    Console.WriteLine(b1)
     var buf: byte[] = new byte[3]
     buf[0] = 200
     buf[1] = 0xFF
-    System.Console.WriteLine(buf[0])
-    System.Console.WriteLine(buf[1])
-    System.Console.WriteLine((byte)300)
-    System.Console.WriteLine((int)buf[0])
-    System.Console.WriteLine(0xFF)
+    Console.WriteLine(buf[0])
+    Console.WriteLine(buf[1])
+    Console.WriteLine((byte)300)
+    Console.WriteLine((int)buf[0])
+    Console.WriteLine(0xFF)
 }", "native-byte-e2e-x86", X86);
 
             Assert.Equal(0, exitCode);
@@ -226,7 +230,8 @@ function Main()
         [Fact]
         public void Native_X86_CrossDll_MessageBeep()
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 import user32.dll
 
 stdcall function MessageBeep(uType: int): int
@@ -236,7 +241,7 @@ function Main()
     var b = MessageBeep(0)
     if b != 0
     {
-        System.Console.WriteLine(""ok"")
+        Console.WriteLine(""ok"")
     }
 }", "native-import-x86-crossdll", X86);
 

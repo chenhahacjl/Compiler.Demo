@@ -686,6 +686,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitBuiltinCall(node.Method, node.Arguments);
             }
 
+            // 静态容器类方法调用（6e-M18：Console.WriteLine / Math.Max / String.ToUpper ...）：按用户函数调用发射
+            if (node.Expression is BoundStaticTypeExpression && node.Method != null && node.Method.IsStatic)
+            {
+                return EmitFunctionCall(node.Method, node.Arguments);
+            }
+
             var instructions = _currentFunction.Instructions;
             var target = EmitExpression(node.Expression);
             var start = EmitExpression(node.Arguments[0]);
@@ -1252,22 +1258,27 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private IrVirtualRegister EmitUserCall(BoundCallExpression node)
         {
+            return EmitFunctionCall(node.Function, node.Arguments);
+        }
+
+        /// <summary>用户函数调用（栈 ABI）：ReserveArgs/StoreArg/Call/FreeArgs（6e-M18 起亦服务静态容器类方法调用）。</summary>
+        private IrVirtualRegister EmitFunctionCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        {
             var instructions = _currentFunction.Instructions;
-            var arguments = node.Arguments;
             var count = arguments.Length;
 
-            var totalBytes = ParamsTotalBytes(node.Function, count);
+            var totalBytes = ParamsTotalBytes(function, count);
 
             Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
 
             for (var i = count - 1; i >= 0; i--)
             {
                 var value = EmitExpression(arguments[i]);
-                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(node.Function, i, count)), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(function, i, count)), IrOperand.Reg(value)));
             }
 
-            var irFunction = _functionMap[node.Function];
-            var result = node.Function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(node.Function.ReturnType));
+            var irFunction = _functionMap[function];
+            var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
             Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Func(irFunction), IrOperand.Constant(0)));
 
             Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));

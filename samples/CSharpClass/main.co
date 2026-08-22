@@ -1,3 +1,4 @@
+using System
 // Cocoa 式类语法（IL 后端）：类成员 function/property/constructor 关键字 + 类型后置
 //
 // Cocoa 语法：字段 `name: Type`、方法 `function`、属性 `property`、构造 `constructor`。
@@ -40,12 +41,12 @@ function Main()
 {
     var p = new Person("Alice", 30)
     p.Name = "Bob"
-    System.Console.WriteLine(p.Name)
-    System.Console.WriteLine(p.Age)
-    System.Console.WriteLine(p.NextAge())
-    System.Console.WriteLine(p.Greet())
-    System.Console.WriteLine(Person.Count)
+    Console.WriteLine(p.Name)
+    Console.WriteLine(p.Age)
+    Console.WriteLine(p.NextAge())
+    Console.WriteLine(p.Greet())
+    Console.WriteLine(Person.Count)
 
     var q = new Person("Carol", 40)
-    System.Console.WriteLine(Person.Count)
+    Console.WriteLine(Person.Count)
 }

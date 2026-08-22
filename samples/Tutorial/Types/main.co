@@ -1,17 +1,18 @@
+using System
 function Main()
 {
     let x = 42
     var y = 10
     y = y + 1
-    System.Console.WriteLine(x)
-    System.Console.WriteLine(y)
-    System.Console.WriteLine(x + y)
+    Console.WriteLine(x)
+    Console.WriteLine(y)
+    Console.WriteLine(x + y)
     let name: string = "Alice"
     let pi: double = 3.14
     let flag: bool = true
-    System.Console.WriteLine(name)
-    System.Console.WriteLine(pi)
-    System.Console.WriteLine(flag)
-    System.Console.WriteLine(Plus(x, y))
-    System.Console.WriteLine(ConcatName("Cocoa", "Lang"))
+    Console.WriteLine(name)
+    Console.WriteLine(pi)
+    Console.WriteLine(flag)
+    Console.WriteLine(Plus(x, y))
+    Console.WriteLine(ConcatName("Cocoa", "Lang"))
 }

@@ -1,17 +1,18 @@
+using System
 function Main()
 {
     var d: double = 3.14
-    System.Console.WriteLine(d)
-    System.Console.WriteLine(Add(1.5, 2.25))
-    System.Console.WriteLine(Divide(10.0, 4))
-    System.Console.WriteLine(2.5 * 2)
-    System.Console.WriteLine(7 - 1.5)
-    System.Console.WriteLine(IsBigger(1.5, 2.5))
-    System.Console.WriteLine(Truncated(3.9))
-    System.Console.WriteLine((double)3)
+    Console.WriteLine(d)
+    Console.WriteLine(Add(1.5, 2.25))
+    Console.WriteLine(Divide(10.0, 4))
+    Console.WriteLine(2.5 * 2)
+    Console.WriteLine(7 - 1.5)
+    Console.WriteLine(IsBigger(1.5, 2.5))
+    Console.WriteLine(Truncated(3.9))
+    Console.WriteLine((double)3)
 
     var arr: double[] = new double[2] {1.5, 2.5}
-    System.Console.WriteLine(arr[0])
-    System.Console.WriteLine(arr[1])
-    System.Console.WriteLine(Add(arr[0], arr[1]))
+    Console.WriteLine(arr[0])
+    Console.WriteLine(arr[1])
+    Console.WriteLine(Add(arr[0], arr[1]))
 }

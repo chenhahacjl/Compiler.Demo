@@ -134,14 +134,15 @@ namespace MyLib
             var libDiagnostics = libCompilation.Emit("consume_lib", References, libPath, IlTarget.Parse("net9.0"), emitLibrary: true);
             Assert.Empty(libDiagnostics);
 
-            var appCode = @"
+            var appCode = @"using System
+
 using MyLib
 
 function Main()
 {
     var p = new Point(5)
-    System.Console.WriteLine(p.Get())
-    System.Console.WriteLine(p.Add(3))
+    Console.WriteLine(p.Get())
+    Console.WriteLine(p.Add(3))
 }";
             var appTree = SyntaxTree.Parse(appCode);
             var appCompilation = Compilation.Create("Main", new[] { libPath }, appTree);
@@ -256,13 +257,14 @@ namespace MyLib
             var libDiagnostics = libCompilation.Emit("hidden_lib", References, libPath, IlTarget.Parse("net9.0"), emitLibrary: true);
             Assert.Empty(libDiagnostics);
 
-            var appCode = @"
+            var appCode = @"using System
+
 using MyLib
 
 function Main()
 {
     var h = new Hidden()
-    System.Console.WriteLine(h.Noop())
+    Console.WriteLine(h.Noop())
 }";
             var appTree = SyntaxTree.Parse(appCode);
             var appCompilation = Compilation.Create("Main", new[] { libPath }, appTree);
@@ -357,7 +359,7 @@ public class Resource extends IDisposable
 
     public function Dispose()
     {
-        System.Console.WriteLine(""disposing "" + _name)
+        Console.WriteLine(""disposing "" + _name)
     }
 }";
             var syntaxTree = SyntaxTree.Parse(code);

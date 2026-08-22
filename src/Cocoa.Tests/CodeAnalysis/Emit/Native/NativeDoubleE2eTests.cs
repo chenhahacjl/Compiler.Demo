@@ -65,27 +65,28 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         [MemberData(nameof(GetPlatforms))]
         public void Double_EndToEnd(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
     var d: double = 3.14
-    System.Console.WriteLine(d)
-    System.Console.WriteLine(1.5 + 2.25)
-    System.Console.WriteLine(10.0 / 4)
-    System.Console.WriteLine(2.5 * 2)
-    System.Console.WriteLine(7 - 1.5)
-    System.Console.WriteLine(1.5 < 2.5)
-    System.Console.WriteLine(1.5 == 1.5)
-    System.Console.WriteLine((int)3.9)
-    System.Console.WriteLine((byte)3.9)
-    System.Console.WriteLine((double)3)
+    Console.WriteLine(d)
+    Console.WriteLine(1.5 + 2.25)
+    Console.WriteLine(10.0 / 4)
+    Console.WriteLine(2.5 * 2)
+    Console.WriteLine(7 - 1.5)
+    Console.WriteLine(1.5 < 2.5)
+    Console.WriteLine(1.5 == 1.5)
+    Console.WriteLine((int)3.9)
+    Console.WriteLine((byte)3.9)
+    Console.WriteLine((double)3)
     var arr: double[] = new double[2] {1.5, 2.5}
     arr[0] = 3.5
-    System.Console.WriteLine(arr[0])
-    System.Console.WriteLine(arr[1])
+    Console.WriteLine(arr[0])
+    Console.WriteLine(arr[1])
     var sum: double = 0.0
     sum = sum + arr[0]
-    System.Console.WriteLine(sum)
+    Console.WriteLine(sum)
 }", "e2e-double", (TargetPlatform)platform);
 
             Assert.Equal(0, exitCode);
@@ -96,22 +97,23 @@ function Main()
         [MemberData(nameof(GetPlatforms))]
         public void Double_FixedPointFormatting_AndSpecialValues(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(0.0)
-    System.Console.WriteLine(-1.5)
-    System.Console.WriteLine(1.0 / 3.0)
-    System.Console.WriteLine(2.0 / 3.0)
-    System.Console.WriteLine(100.0 / 7)
-    System.Console.WriteLine(123456789.0)
-    System.Console.WriteLine(1.0 / 0.0)
-    System.Console.WriteLine(0.0 / 0.0)
-    System.Console.WriteLine(""d="" + 1.5)
-    System.Console.WriteLine((string)2.75)
+    Console.WriteLine(0.0)
+    Console.WriteLine(-1.5)
+    Console.WriteLine(1.0 / 3.0)
+    Console.WriteLine(2.0 / 3.0)
+    Console.WriteLine(100.0 / 7)
+    Console.WriteLine(123456789.0)
+    Console.WriteLine(1.0 / 0.0)
+    Console.WriteLine(0.0 / 0.0)
+    Console.WriteLine(""d="" + 1.5)
+    Console.WriteLine((string)2.75)
     var x: double = -0.0
-    System.Console.WriteLine(x)
-    System.Console.WriteLine(0.1 + 0.2)
+    Console.WriteLine(x)
+    Console.WriteLine(0.1 + 0.2)
 }", "e2e-double-fmt", (TargetPlatform)platform);
 
             Assert.Equal(0, exitCode);
@@ -122,20 +124,21 @@ function Main()
         [MemberData(nameof(GetPlatforms))]
         public void Format_Codes_Alignment_And_Types(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine($""{255:D}"")
-    System.Console.WriteLine($""{255:X}"")
-    System.Console.WriteLine($""{255:x}"")
-    System.Console.WriteLine($""{42,5}"")
-    System.Console.WriteLine($""{-42,-6}"")
-    System.Console.WriteLine($""{true}"")
-    System.Console.WriteLine($""{false}"")
-    System.Console.WriteLine($""{'A'}"")
-    System.Console.WriteLine($""{'Z',3}"")
-    System.Console.WriteLine($""{3.14159:F2}"")
-    System.Console.WriteLine($""{2.5:F0}"")
+    Console.WriteLine($""{255:D}"")
+    Console.WriteLine($""{255:X}"")
+    Console.WriteLine($""{255:x}"")
+    Console.WriteLine($""{42,5}"")
+    Console.WriteLine($""{-42,-6}"")
+    Console.WriteLine($""{true}"")
+    Console.WriteLine($""{false}"")
+    Console.WriteLine($""{'A'}"")
+    Console.WriteLine($""{'Z',3}"")
+    Console.WriteLine($""{3.14159:F2}"")
+    Console.WriteLine($""{2.5:F0}"")
 }", "e2e-format-codes", (TargetPlatform)platform);
 
             Assert.Equal("255\r\nFF\r\nff\r\n   42\r\n-42   \r\nTrue\r\nFalse\r\nA\r\n  Z\r\n3.14\r\n3\r\n", stdout);
@@ -148,34 +151,35 @@ function Main()
         {
             // 自定义 F 语义：round-half-away-from-zero（与旧 FormatInt 一致）；F 无显式精度默认 2 位。
             // 注意：DoubleFixed 用 int32 承载 value×10^n，|value×10^n| > 2^31 时截断（等价于 DoubleToString 的 2^55 高位截断限制）。
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine($""{2.5:F}"")
-    System.Console.WriteLine($""{3.14159:F}"")
-    System.Console.WriteLine($""{3.14159:F0}"")
-    System.Console.WriteLine($""{3.14159:F1}"")
-    System.Console.WriteLine($""{3.14159:F3}"")
-    System.Console.WriteLine($""{2.5:F1}"")
-    System.Console.WriteLine($""{2.5:F2}"")
-    System.Console.WriteLine($""{2.5:F3}"")
-    System.Console.WriteLine($""{2.5:f2}"")
-    System.Console.WriteLine($""{0.5:F0}"")
-    System.Console.WriteLine($""{1.5:F0}"")
-    System.Console.WriteLine($""{2.5:F0}"")
-    System.Console.WriteLine($""{-0.5:F0}"")
-    System.Console.WriteLine($""{-2.5:F0}"")
-    System.Console.WriteLine($""{-3.5:F0}"")
-    System.Console.WriteLine($""{-2.55:F1}"")
-    System.Console.WriteLine($""{123456.789:F0}"")
-    System.Console.WriteLine($""{1234567.89:F1}"")
-    System.Console.WriteLine($""{3.14159,10:F2}"")
-    System.Console.WriteLine($""{3.14159,-10:F2}"")
-    System.Console.WriteLine($""{1.5,6:F1}"")
-    System.Console.WriteLine($""{1.0/0.0:F2}"")
-    System.Console.WriteLine($""{0.0/0.0:F2}"")
-    System.Console.WriteLine($""{0.0:F1}"")
-    System.Console.WriteLine($""{-0.0:F2}"")
+    Console.WriteLine($""{2.5:F}"")
+    Console.WriteLine($""{3.14159:F}"")
+    Console.WriteLine($""{3.14159:F0}"")
+    Console.WriteLine($""{3.14159:F1}"")
+    Console.WriteLine($""{3.14159:F3}"")
+    Console.WriteLine($""{2.5:F1}"")
+    Console.WriteLine($""{2.5:F2}"")
+    Console.WriteLine($""{2.5:F3}"")
+    Console.WriteLine($""{2.5:f2}"")
+    Console.WriteLine($""{0.5:F0}"")
+    Console.WriteLine($""{1.5:F0}"")
+    Console.WriteLine($""{2.5:F0}"")
+    Console.WriteLine($""{-0.5:F0}"")
+    Console.WriteLine($""{-2.5:F0}"")
+    Console.WriteLine($""{-3.5:F0}"")
+    Console.WriteLine($""{-2.55:F1}"")
+    Console.WriteLine($""{123456.789:F0}"")
+    Console.WriteLine($""{1234567.89:F1}"")
+    Console.WriteLine($""{3.14159,10:F2}"")
+    Console.WriteLine($""{3.14159,-10:F2}"")
+    Console.WriteLine($""{1.5,6:F1}"")
+    Console.WriteLine($""{1.0/0.0:F2}"")
+    Console.WriteLine($""{0.0/0.0:F2}"")
+    Console.WriteLine($""{0.0:F1}"")
+    Console.WriteLine($""{-0.0:F2}"")
 }", "e2e-format-f", (TargetPlatform)platform);
 
             Assert.Equal(
@@ -212,19 +216,20 @@ function Main()
         public void Format_Codes_Double_F_FullRange(object platform)
         {
             // 全 double 范围定点 F：1280 位大整数定点 value×10^n，round-half-away-from-zero。
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine($""{123456789.0:F2}"")
-    System.Console.WriteLine($""{2147483647.0:F0}"")
-    System.Console.WriteLine($""{999999999.99:F2}"")
-    System.Console.WriteLine($""{123456789012345678.0:F0}"")
-    System.Console.WriteLine($""{123456789012345678.0:F2}"")
-    System.Console.WriteLine($""{1e22:F1}"")
-    System.Console.WriteLine($""{1.5:F20}"")
-    System.Console.WriteLine($""{1234567.89:F1}"")
-    System.Console.WriteLine($""{0.0:F5}"")
-    System.Console.WriteLine($""{-0.0:F2}"")
+    Console.WriteLine($""{123456789.0:F2}"")
+    Console.WriteLine($""{2147483647.0:F0}"")
+    Console.WriteLine($""{999999999.99:F2}"")
+    Console.WriteLine($""{123456789012345678.0:F0}"")
+    Console.WriteLine($""{123456789012345678.0:F2}"")
+    Console.WriteLine($""{1e22:F1}"")
+    Console.WriteLine($""{1.5:F20}"")
+    Console.WriteLine($""{1234567.89:F1}"")
+    Console.WriteLine($""{0.0:F5}"")
+    Console.WriteLine($""{-0.0:F2}"")
 }", "e2e-format-f-fullrange", (TargetPlatform)platform);
 
             Assert.Equal(
@@ -246,30 +251,31 @@ function Main()
         public void Format_Codes_Double_E_Scientific(object platform)
         {
             // E 格式（.NET 语义）：尾数 round-half-away-from-zero，指数 3 位补零。
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine($""{12345.678:E2}"")
-    System.Console.WriteLine($""{0.001:E1}"")
-    System.Console.WriteLine($""{12345.678:E0}"")
-    System.Console.WriteLine($""{2.5:E0}"")
-    System.Console.WriteLine($""{1.5:E0}"")
-    System.Console.WriteLine($""{9.99:E1}"")
-    System.Console.WriteLine($""{0.0:E2}"")
-    System.Console.WriteLine($""{-0.0:E2}"")
-    System.Console.WriteLine($""{1e22:E2}"")
-    System.Console.WriteLine($""{0.00000000000000000001:E2}"")
-    System.Console.WriteLine($""{999999.999:E2}"")
-    System.Console.WriteLine($""{-12345.678:E2}"")
-    System.Console.WriteLine($""{12345.678:e2}"")
-    System.Console.WriteLine($""{12345.678:g3}"")
-    System.Console.WriteLine($""{1.5e-3:E2}"")
-    System.Console.WriteLine($""{0.5:E2}"")
-    System.Console.WriteLine($""{1.0:E}"")
-    System.Console.WriteLine($""{12345.678:E}"")
-    System.Console.WriteLine($""{999.9:E}"")
-    System.Console.WriteLine($""{1.0/0.0:E2}"")
-    System.Console.WriteLine($""{0.0/0.0:E2}"")
+    Console.WriteLine($""{12345.678:E2}"")
+    Console.WriteLine($""{0.001:E1}"")
+    Console.WriteLine($""{12345.678:E0}"")
+    Console.WriteLine($""{2.5:E0}"")
+    Console.WriteLine($""{1.5:E0}"")
+    Console.WriteLine($""{9.99:E1}"")
+    Console.WriteLine($""{0.0:E2}"")
+    Console.WriteLine($""{-0.0:E2}"")
+    Console.WriteLine($""{1e22:E2}"")
+    Console.WriteLine($""{0.00000000000000000001:E2}"")
+    Console.WriteLine($""{999999.999:E2}"")
+    Console.WriteLine($""{-12345.678:E2}"")
+    Console.WriteLine($""{12345.678:e2}"")
+    Console.WriteLine($""{12345.678:g3}"")
+    Console.WriteLine($""{1.5e-3:E2}"")
+    Console.WriteLine($""{0.5:E2}"")
+    Console.WriteLine($""{1.0:E}"")
+    Console.WriteLine($""{12345.678:E}"")
+    Console.WriteLine($""{999.9:E}"")
+    Console.WriteLine($""{1.0/0.0:E2}"")
+    Console.WriteLine($""{0.0/0.0:E2}"")
 }", "e2e-format-e", (TargetPlatform)platform);
 
             Assert.Equal(
@@ -302,29 +308,30 @@ function Main()
         public void Format_Codes_Double_G_General(object platform)
         {
             // G 格式（.NET 语义）：-4 <= e < p 定点否则科学；剪尾零去尾点；指数 2 位补零；round-half-away-from-zero。
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine($""{123456.789:G3}"")
-    System.Console.WriteLine($""{0.00001234:G2}"")
-    System.Console.WriteLine($""{0.001234:G2}"")
-    System.Console.WriteLine($""{0.001234:G3}"")
-    System.Console.WriteLine($""{123.4:G5}"")
-    System.Console.WriteLine($""{100.0:G3}"")
-    System.Console.WriteLine($""{100.0:G2}"")
-    System.Console.WriteLine($""{2.5:G2}"")
-    System.Console.WriteLine($""{0.0:G3}"")
-    System.Console.WriteLine($""{0.0001:G2}"")
-    System.Console.WriteLine($""{0.00001:G2}"")
-    System.Console.WriteLine($""{999999.999:G3}"")
-    System.Console.WriteLine($""{123456789012345678.0:G4}"")
-    System.Console.WriteLine($""{0.05:G2}"")
-    System.Console.WriteLine($""{1.0:G}"")
-    System.Console.WriteLine($""{123456789.0:G}"")
-    System.Console.WriteLine($""{1e22:G}"")
-    System.Console.WriteLine($""{1e15:G}"")
-    System.Console.WriteLine($""{1e5:G}"")
-    System.Console.WriteLine($""{0.0001:G}"")
+    Console.WriteLine($""{123456.789:G3}"")
+    Console.WriteLine($""{0.00001234:G2}"")
+    Console.WriteLine($""{0.001234:G2}"")
+    Console.WriteLine($""{0.001234:G3}"")
+    Console.WriteLine($""{123.4:G5}"")
+    Console.WriteLine($""{100.0:G3}"")
+    Console.WriteLine($""{100.0:G2}"")
+    Console.WriteLine($""{2.5:G2}"")
+    Console.WriteLine($""{0.0:G3}"")
+    Console.WriteLine($""{0.0001:G2}"")
+    Console.WriteLine($""{0.00001:G2}"")
+    Console.WriteLine($""{999999.999:G3}"")
+    Console.WriteLine($""{123456789012345678.0:G4}"")
+    Console.WriteLine($""{0.05:G2}"")
+    Console.WriteLine($""{1.0:G}"")
+    Console.WriteLine($""{123456789.0:G}"")
+    Console.WriteLine($""{1e22:G}"")
+    Console.WriteLine($""{1e15:G}"")
+    Console.WriteLine($""{1e5:G}"")
+    Console.WriteLine($""{0.0001:G}"")
 }", "e2e-format-g", (TargetPlatform)platform);
 
             Assert.Equal(
@@ -357,18 +364,19 @@ function Main()
         {
             // 全 double 范围边界：max double / 最小亚正规 / 最小正规，e-notation 字面量。
             // 注：MaxValue:F2 为精确大整数定点（309 位整数）——native 优于 .NET F2（内部走 Decimal 截断到 ~29 位有效数字）。
-            var (exitCode, stdout) = EmitNativeAndRun(@"
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine($""{1.7976931348623157E+308:E2}"")
-    System.Console.WriteLine($""{1.7976931348623157E+308:G}"")
-    System.Console.WriteLine($""{1.7976931348623157E+308:F2}"")
-    System.Console.WriteLine($""{5E-324:E2}"")
-    System.Console.WriteLine($""{5E-324:G}"")
-    System.Console.WriteLine($""{5E-324:F2}"")
-    System.Console.WriteLine($""{1E-308:G}"")
-    System.Console.WriteLine($""{1E-308:E2}"")
-    System.Console.WriteLine($""{1E-308:F5}"")
+    Console.WriteLine($""{1.7976931348623157E+308:E2}"")
+    Console.WriteLine($""{1.7976931348623157E+308:G}"")
+    Console.WriteLine($""{1.7976931348623157E+308:F2}"")
+    Console.WriteLine($""{5E-324:E2}"")
+    Console.WriteLine($""{5E-324:G}"")
+    Console.WriteLine($""{5E-324:F2}"")
+    Console.WriteLine($""{1E-308:G}"")
+    Console.WriteLine($""{1E-308:E2}"")
+    Console.WriteLine($""{1E-308:F5}"")
 }", "e2e-format-boundaries", (TargetPlatform)platform);
 
             Assert.Equal(

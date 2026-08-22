@@ -1,16 +1,17 @@
+using System
 // 入口函数
 function Main()
 {
-    System.Console.WriteLine(Add(2, 3))
-    System.Console.WriteLine(Add(10, 20))
+    Console.WriteLine(Add(2, 3))
+    Console.WriteLine(Add(10, 20))
 
     var nums = GetNumbers()
-    System.Console.WriteLine(nums.Length)
-    System.Console.WriteLine(nums[0] + nums[1] + nums[2])
+    Console.WriteLine(nums.Length)
+    Console.WriteLine(nums[0] + nums[1] + nums[2])
 
-    System.Console.WriteLine(Repeat("ab", 3))
+    Console.WriteLine(Repeat("ab", 3))
 
-    System.Console.WriteLine(Double(21))
+    Console.WriteLine(Double(21))
 }
 
 // 顶层函数（类型后置 + 冒号返回类型）

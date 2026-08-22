@@ -12,7 +12,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Class_NewObject_Binds()
         {
-            var code = @"
+            var code = @"using System
+
 public class Point
 {
     private _x: int
@@ -31,7 +32,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    System.Console.WriteLine(p.Get())
+    Console.WriteLine(p.Get())
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -44,7 +45,8 @@ function Main()
         [Fact]
         public void Class_MethodCall_Binds()
         {
-            var code = @"
+            var code = @"using System
+
 public class Point
 {
     private _x: int
@@ -63,7 +65,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    System.Console.WriteLine(p.Double())
+    Console.WriteLine(p.Double())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -72,7 +74,8 @@ function Main()
         [Fact]
         public void Class_IsDeclared_InGlobalScope()
         {
-            var code = @"
+            var code = @"using System
+
 public class Point
 {
     private _x: int
@@ -80,7 +83,7 @@ public class Point
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -118,7 +121,8 @@ function Main()
         [Fact]
         public void Class_PrivateField_AccessOutside_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Point
 {
     private _x: int
@@ -132,7 +136,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    System.Runtime.Print(p._x)
+    Runtime.Print(p._x)
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);
@@ -142,7 +146,8 @@ function Main()
         [Fact]
         public void Class_PrivateMethod_AccessOutside_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Point
 {
     private _x: int
@@ -156,7 +161,7 @@ public class Point
 function Main()
 {
     var p = new Point()
-    System.Runtime.Print(p.Secret())
+    Runtime.Print(p.Secret())
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);
@@ -184,13 +189,14 @@ function Main()
         [Fact]
         public void Oop_CircularInheritance_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class A extends B { }
 public class B extends A { }
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("循环继承"));
@@ -199,7 +205,8 @@ function Main()
         [Fact]
         public void Oop_StaticContext_This_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     public static function Bar(): int
@@ -212,7 +219,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(Foo.Bar())
+    Console.WriteLine(Foo.Bar())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("this"));
@@ -221,7 +228,8 @@ function Main()
         [Fact]
         public void Oop_ReadonlyField_OutsideConstructor_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     private readonly _x: int
@@ -239,7 +247,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("only variable") || d.Message.Contains("_x"));
@@ -276,7 +284,8 @@ function Main()
         [Fact]
         public void Class_InternalMember_AccessibleInSameCompilation()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     internal _x: int
@@ -291,7 +300,7 @@ function Main()
 {
     var f = new Foo()
     f._x = 1
-    System.Console.WriteLine(f.Bar() + f._x)
+    Console.WriteLine(f.Bar() + f._x)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -300,7 +309,8 @@ function Main()
         [Fact]
         public void Class_ProtectedMember_DerivedClass_Accessible()
         {
-            var code = @"
+            var code = @"using System
+
 public class Animal
 {
     protected _age: int
@@ -332,7 +342,7 @@ public class Dog extends Animal
 function Main()
 {
     var d = new Dog(3)
-    System.Console.WriteLine(d.GetAge())
+    Console.WriteLine(d.GetAge())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -341,7 +351,8 @@ function Main()
         [Fact]
         public void Class_ProtectedMember_GrandChild_Accessible()
         {
-            var code = @"
+            var code = @"using System
+
 public class Animal
 {
     protected _age: int
@@ -365,7 +376,7 @@ public class Puppy extends Dog
 function Main()
 {
     var p = new Puppy(5)
-    System.Console.WriteLine(p.GetAge())
+    Console.WriteLine(p.GetAge())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -374,7 +385,8 @@ function Main()
         [Fact]
         public void Class_ProtectedField_UnrelatedClass_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Animal
 {
     protected _age: int
@@ -390,7 +402,7 @@ public class Keeper
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("protected"));
@@ -399,7 +411,8 @@ function Main()
         [Fact]
         public void Class_ProtectedMethod_OutsideClassHierarchy_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Animal
 {
     protected function Eat(): int
@@ -411,7 +424,7 @@ public class Animal
 function Main()
 {
     var a = new Animal()
-    System.Console.WriteLine(a.Eat())
+    Console.WriteLine(a.Eat())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("protected"));
@@ -453,14 +466,15 @@ function Main()
         [Fact]
         public void Class_ProtectedOnClass_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 protected class Foo
 {
 }
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("可见性"));
@@ -469,7 +483,8 @@ function Main()
         [Fact]
         public void Class_InternalClass_DeclaresOk()
         {
-            var code = @"
+            var code = @"using System
+
 internal class Foo
 {
 }
@@ -477,7 +492,7 @@ internal class Foo
 function Main()
 {
     var f = new Foo()
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -486,7 +501,8 @@ function Main()
         [Fact]
         public void Class_Partial_TwoParts_MergeIntoOneSymbol()
         {
-            var code = @"
+            var code = @"using System
+
 public partial class Point
 {
     private _x: int
@@ -508,7 +524,7 @@ public partial class Point
 function Main()
 {
     var p = new Point(3)
-    System.Console.WriteLine(p.Get())
+    Console.WriteLine(p.Get())
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -522,7 +538,8 @@ function Main()
         [Fact]
         public void Class_Partial_AcrossMultipleTrees_AllMembersBound()
         {
-            var tree1 = SyntaxTree.Parse(@"
+            var tree1 = SyntaxTree.Parse(@"using System
+
 public partial class Point
 {
     private _x: int
@@ -531,7 +548,7 @@ public partial class Point
 function Main()
 {
     var p = new Point(3)
-    System.Console.WriteLine(p.Get())
+    Console.WriteLine(p.Get())
 }");
             var tree2 = SyntaxTree.Parse(@"
 public partial class Point
@@ -561,7 +578,8 @@ public partial class Point
         [Fact]
         public void Class_Partial_ImplicitConstructor_GeneratedOnce()
         {
-            var code = @"
+            var code = @"using System
+
 public partial class A
 {
     private _x: int
@@ -578,7 +596,7 @@ public partial class A
 function Main()
 {
     var a = new A()
-    System.Console.WriteLine(a.Get())
+    Console.WriteLine(a.Get())
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -590,7 +608,8 @@ function Main()
         [Fact]
         public void Class_Partial_DuplicateWithoutPartial_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
 }
@@ -601,7 +620,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("'Foo' is already declared."));
@@ -610,7 +629,8 @@ function Main()
         [Fact]
         public void Class_Partial_MissingPartialOnSecondPart_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public partial class Foo
 {
 }
@@ -621,7 +641,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("'Foo' is already declared."));
@@ -630,7 +650,8 @@ function Main()
         [Fact]
         public void Class_Partial_VisibilityConflict_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public partial class Foo
 {
 }
@@ -641,7 +662,7 @@ internal partial class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("可见性不一致"));
@@ -650,7 +671,8 @@ function Main()
         [Fact]
         public void Class_Partial_BaseClassMismatch_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class A { }
 public class B { }
 
@@ -664,7 +686,7 @@ public partial class Foo extends B
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("基类不一致"));
@@ -673,7 +695,8 @@ function Main()
         [Fact]
         public void Class_Partial_OnMethod_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     public partial function Bar(): int
@@ -684,7 +707,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("partial 只能用于类声明"));
@@ -693,7 +716,8 @@ function Main()
         [Fact]
         public void Class_CocoaMembers_BindWithoutErrors()
         {
-            var code = @"
+            var code = @"using System
+
 public class Person
 {
     private _name: string
@@ -716,7 +740,7 @@ public class Person
 function Main()
 {
     var p = new Person(""A"", 1)
-    System.Console.WriteLine(p.Name)
+    Console.WriteLine(p.Name)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -725,7 +749,8 @@ function Main()
         [Fact]
         public void Class_InstanceFieldInitializer_BindsWithoutErrors()
         {
-            var code = @"
+            var code = @"using System
+
 public class Counter
 {
     private _count: int = 5
@@ -739,7 +764,7 @@ public class Counter
 function Main()
 {
     var c = new Counter()
-    System.Console.WriteLine(c.Get())
+    Console.WriteLine(c.Get())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -748,7 +773,8 @@ function Main()
         [Fact]
         public void Class_AutoPropertyInitializer_BindsWithoutErrors()
         {
-            var code = @"
+            var code = @"using System
+
 public class Point
 {
     public property X: int { get set } = 10
@@ -762,7 +788,7 @@ public class Point
 function Main()
 {
     var p = new Point()
-    System.Console.WriteLine(p.GetX())
+    Console.WriteLine(p.GetX())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -771,7 +797,8 @@ function Main()
         [Fact]
         public void Class_StaticFieldInitializer_CreatesCctorSymbol()
         {
-            var code = @"
+            var code = @"using System
+
 public class Config
 {
     public static Max: int = 100
@@ -779,7 +806,7 @@ public class Config
 
 function Main()
 {
-    System.Console.WriteLine(Config.Max)
+    Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -792,7 +819,8 @@ function Main()
         [Fact]
         public void Class_NoStaticInitializer_NoCctor()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     public static Max: int
@@ -802,7 +830,7 @@ public class Foo
 function Main()
 {
     var f = new Foo()
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -815,7 +843,8 @@ function Main()
         [Fact]
         public void Class_UserStaticConstructor_CreatesCctorSymbol()
         {
-            var code = @"
+            var code = @"using System
+
 public class Config
 {
     public static Max: int
@@ -828,7 +857,7 @@ public class Config
 
 function Main()
 {
-    System.Console.WriteLine(Config.Max)
+    Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -842,7 +871,8 @@ function Main()
         [Fact]
         public void Class_UserStaticConstructor_CocoaStyle_CreatesCctorSymbol()
         {
-            var code = @"
+            var code = @"using System
+
 public class Config
 {
     public static Max: int
@@ -855,7 +885,7 @@ public class Config
 
 function Main()
 {
-    System.Console.WriteLine(Config.Max)
+    Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -869,7 +899,8 @@ function Main()
         [Fact]
         public void Class_UserStaticConstructor_NoImplicitCctorDuplicate()
         {
-            var code = @"
+            var code = @"using System
+
 public class Config
 {
     public static Max: int
@@ -882,7 +913,7 @@ public class Config
 
 function Main()
 {
-    System.Console.WriteLine(Config.Max)
+    Console.WriteLine(Config.Max)
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);
@@ -896,7 +927,8 @@ function Main()
         [Fact]
         public void Class_StaticConstructor_WithParameters_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     static Foo(int x)
@@ -906,7 +938,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("参数"));
@@ -915,7 +947,8 @@ function Main()
         [Fact]
         public void Class_StaticConstructor_WithChain_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Base
 {
 }
@@ -929,7 +962,7 @@ public class Foo extends Base
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("构造链"));
@@ -938,7 +971,8 @@ function Main()
         [Fact]
         public void Class_StaticConstructor_WithVisibilityModifier_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     public static constructor()
@@ -948,7 +982,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("可见性修饰符"));
@@ -957,7 +991,8 @@ function Main()
         [Fact]
         public void Class_StaticConstructor_ThisAccess_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     private _x: int
@@ -970,7 +1005,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("this"));
@@ -979,7 +1014,8 @@ function Main()
         [Fact]
         public void Class_StaticConstructor_InstanceFieldAccess_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     private _x: int
@@ -992,7 +1028,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("实例字段"));
@@ -1001,7 +1037,8 @@ function Main()
         [Fact]
         public void Class_StaticConstructor_Duplicate_ReportsError()
         {
-            var code = @"
+            var code = @"using System
+
 public class Foo
 {
     static constructor()
@@ -1015,7 +1052,7 @@ public class Foo
 
 function Main()
 {
-    System.Console.WriteLine(1)
+    Console.WriteLine(1)
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Contains(diagnostics, d => d.Message.Contains("already declared") || d.Message.Contains("已声明"));
@@ -1024,7 +1061,8 @@ function Main()
         [Fact]
         public void Class_ReadonlyFieldWithInitializer_BindsWithoutErrors()
         {
-            var code = @"
+            var code = @"using System
+
 public class Immutable
 {
     public readonly Id: int = 42
@@ -1038,7 +1076,7 @@ public class Immutable
 function Main()
 {
     var i = new Immutable()
-    System.Console.WriteLine(i.Get())
+    Console.WriteLine(i.Get())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -1047,7 +1085,8 @@ function Main()
         [Fact]
         public void Class_CocoaLocalVariables_BindWithoutErrors()
         {
-            var code = @"
+            var code = @"using System
+
 public class Calculator
 {
     public function Add(a: int, b: int): int
@@ -1061,7 +1100,7 @@ public class Calculator
 function Main()
 {
     var c = new Calculator()
-    System.Console.WriteLine(c.Add(1, 2))
+    Console.WriteLine(c.Add(1, 2))
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);
@@ -1070,7 +1109,8 @@ function Main()
         [Fact]
         public void Class_AccessorModifierMoreRestrictiveThanProperty_BindsWithoutErrors()
         {
-            var code = @"
+            var code = @"using System
+
 public class Account
 {
     public property Balance: int { get private set }
@@ -1090,7 +1130,7 @@ function Main()
 {
     var a = new Account()
     a.Deposit(100)
-    System.Console.WriteLine(a.Get())
+    Console.WriteLine(a.Get())
 }";
             var diagnostics = GetDiagnostics(code);
             Assert.Empty(diagnostics);

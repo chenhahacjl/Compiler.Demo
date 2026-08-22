@@ -1,3 +1,4 @@
+using System;
 // C# 方言样例（6e-M15）：.cs 走严格 C# 方言解析器，与 .co（宽松主方言）共用表达式引擎/Binder/三后端。
 // 特性：类型前置参数/局部、分号必选、文件作用域命名空间 namespace X;、foreach (var x in ...)、C 式 for、
 // switch + when、字符串插值、const、`for (int i = 0; ...)` 类型前置声明。不绑定 .NET BCL（用内置 print 等）。
@@ -8,25 +9,25 @@ namespace CSharpDialect;
 public static void Main()
 {
     var numbers = BuildNumbers();
-    System.Console.WriteLine(numbers.Length);
+    Console.WriteLine(numbers.Length);
 
     var total = 0;
     foreach (var n in numbers)
     {
         total += n;
     }
-    System.Console.WriteLine(total);
+    Console.WriteLine(total);
 
     for (int i = 0; i < 3; i++)
     {
-        System.Console.WriteLine($"i = {i}");
+        Console.WriteLine($"i = {i}");
     }
 
-    System.Console.WriteLine(Add(2, 3));
-    System.Console.WriteLine(Multiply(4, 5));
-    System.Console.WriteLine(Describe(1));
-    System.Console.WriteLine(Describe(2));
-    System.Console.WriteLine(Describe(3));
+    Console.WriteLine(Add(2, 3));
+    Console.WriteLine(Multiply(4, 5));
+    Console.WriteLine(Describe(1));
+    Console.WriteLine(Describe(2));
+    Console.WriteLine(Describe(3));
 }
 
 public int[] BuildNumbers()

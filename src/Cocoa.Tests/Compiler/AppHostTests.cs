@@ -130,7 +130,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Build_NetCore_ProducesApphostLayout()
         {
-            var projectDir = CreateProject("netcore-layout", "Hello", "function Main() { System.Console.WriteLine(\"hello apphost\") }");
+            var projectDir = CreateProject("netcore-layout", "Hello", "function Main() { Console.WriteLine(\"hello apphost\") }");
             var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b dotnet --dotnet-runtime net9.0");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
 
@@ -160,7 +160,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Build_NetCore_ArgsPassthrough()
         {
-            var projectDir = CreateProject("netcore-args", "ArgsApp", "function Main(args: string[]) { System.Console.WriteLine(args.Length) System.Console.WriteLine(args[0]) System.Console.WriteLine(args[1]) }");
+            var projectDir = CreateProject("netcore-args", "ArgsApp", "function Main(args: string[]) { Console.WriteLine(args.Length) Console.WriteLine(args[0]) Console.WriteLine(args[1]) }");
             var (exitCode, stdout, stderr) = RunCli($"build \"{projectDir}\" -b dotnet --dotnet-runtime net9.0");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
 

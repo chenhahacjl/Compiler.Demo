@@ -205,12 +205,13 @@ namespace MyLib
         public void Cod_Reject_Entry()
         {
             var dir = NewDir();
-            var source = @"
+            var source = @"using System
+
 namespace MyLib
 {
     function Main(): void
     {
-        System.Console.WriteLine(""hi"")
+        Console.WriteLine(""hi"")
     }
 }
 ";
@@ -323,7 +324,12 @@ namespace System
             var runtime = Assert.Single(core.Classes, c => c.Name == "Runtime");
             Assert.Equal("System.Runtime", runtime.FullName);
             Assert.Contains(runtime.Methods, m => m.Name == "Print" && m.BuiltinKind == BuiltinKind.Print);
-            Assert.Contains(core.Functions, f => f.Name == "Max" && f.Namespace == "System.Math");
+
+            // 6e-M18：Math 为静态容器类（方法含类归属）
+            var math = Assert.Single(core.Classes, c => c.Name == "Math");
+            Assert.Equal("System.Math", math.FullName);
+            Assert.Contains(math.Methods, m => m.Name == "Max" && m.IsStatic);
+            Assert.Contains(core.Functions, f => f.Name == "Max" && f.ContainingClass == math);
         }
 
         [Fact]
@@ -369,10 +375,11 @@ namespace System.Demo
                     Assert.Equal("System.Runtime", libraries[0].Classes.First(c => c.Name == "Runtime").FullName);
 
                     // 端到端：用户程序同时命中核心库与额外模块（同 scope 注入）
-                    var compilation = Compilation.Create(SyntaxTree.Parse(@"
+                    var compilation = Compilation.Create(SyntaxTree.Parse(@"using System
+
 function Main(): int
 {
-    System.Console.WriteLine(System.Demo.Ping())
+    Console.WriteLine(System.Demo.Ping())
     return System.Demo.Ping()
 }"));
                     var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());

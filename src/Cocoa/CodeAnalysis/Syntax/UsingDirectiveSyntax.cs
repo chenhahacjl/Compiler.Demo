@@ -3,22 +3,27 @@ using System.Collections.Immutable;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// using 导入：`using MyLib`
+    /// using 导入（6e-M18）：`using MyLib` / `using static MyClass` / `using Alias = MyLib`
     /// </summary>
     public sealed partial class UsingDirectiveSyntax : MemberSyntax
     {
-        internal UsingDirectiveSyntax(SyntaxTree syntaxTree, SyntaxToken usingKeyword, ImmutableArray<SyntaxToken> nameTokens)
+        internal UsingDirectiveSyntax(SyntaxTree syntaxTree, SyntaxToken usingKeyword, SyntaxToken? staticKeyword, SyntaxToken? aliasToken, ImmutableArray<SyntaxToken> nameTokens)
             : base(syntaxTree, ImmutableArray<SyntaxToken>.Empty)
         {
             UsingKeyword = usingKeyword;
+            StaticKeyword = staticKeyword;
+            AliasToken = aliasToken;
             NameTokens = nameTokens;
         }
 
         public override SyntaxKind Kind => SyntaxKind.UsingDirective;
 
         public SyntaxToken UsingKeyword { get; }
+        public SyntaxToken? StaticKeyword { get; }
+        public SyntaxToken? AliasToken { get; }
         public ImmutableArray<SyntaxToken> NameTokens { get; }
 
         public string Name => string.Concat(NameTokens.Select(t => t.Text));
+        public string Alias => AliasToken?.Text ?? "";
     }
 }

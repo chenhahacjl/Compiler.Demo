@@ -144,7 +144,8 @@ function Main(): int
         [Fact]
         public void Evaluator_Overload_IntAndDoubleOverloadsInNamespace()
         {
-            AssertValue(@"
+            AssertValue(@"using System
+
 namespace System
 {
     namespace Math
@@ -165,8 +166,8 @@ namespace System
 
 function Main(): int
 {
-    var i = System.Math.Max(3, 5)
-    var d = System.Math.Max(1.5, 0.5)
+    var i = Math.Max(3, 5)
+    var d = Math.Max(1.5, 0.5)
     return i
 }
 ", 5);
@@ -278,9 +279,9 @@ using System.Math
 
 function Main()
 {
-    System.Console.WriteLine(Max(3, 5))
-    System.Console.WriteLine(Max(1.5, 0.5))
-    System.Console.WriteLine(System.Math.Max(10, 2))
+    Console.WriteLine(Max(3, 5))
+    Console.WriteLine(Max(1.5, 0.5))
+    Console.WriteLine(Math.Max(10, 2))
 }
 ";
             var (exitCode, stdout) = IlEmitAndRun(source, "ns-overload");

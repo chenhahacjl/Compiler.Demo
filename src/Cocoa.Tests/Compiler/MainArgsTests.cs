@@ -116,7 +116,7 @@ namespace Cocoa.Tests.Compiler
         public void Native_MainArgs_PrintsCountAndValues()
         {
             var exe = BuildCli(
-                "function Main(args: string[]) {\nSystem.Console.WriteLine(args.Length)\nSystem.Console.WriteLine(args[0])\nSystem.Console.WriteLine(args[1])\n}",
+                "function Main(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\nConsole.WriteLine(args[1])\n}",
                 "native",
                 "mainargs-native.exe",
                 out _);
@@ -130,7 +130,7 @@ namespace Cocoa.Tests.Compiler
         public void Dotnet_MainArgs_PrintsCountAndValues()
         {
             var exe = BuildCli(
-                "function Main(args: string[]) {\nSystem.Console.WriteLine(args.Length)\nSystem.Console.WriteLine(args[0])\nSystem.Console.WriteLine(args[1])\n}",
+                "function Main(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\nConsole.WriteLine(args[1])\n}",
                 "dotnet",
                 "mainargs-dotnet.exe",
                 out _);
@@ -145,7 +145,7 @@ namespace Cocoa.Tests.Compiler
         public void Native_MainArgs_QuotedArgument_IsSingleArg()
         {
             var exe = BuildCli(
-                "function Main(args: string[]) {\nSystem.Console.WriteLine(args.Length)\nSystem.Console.WriteLine(args[0])\n}",
+                "function Main(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\n}",
                 "native",
                 "mainargs-quoted-native.exe",
                 out _);
@@ -158,7 +158,7 @@ namespace Cocoa.Tests.Compiler
         public void Dotnet_MainArgs_QuotedArgument_IsSingleArg()
         {
             var exe = BuildCli(
-                "function Main(args: string[]) {\nSystem.Console.WriteLine(args.Length)\nSystem.Console.WriteLine(args[0])\n}",
+                "function Main(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\n}",
                 "dotnet",
                 "mainargs-quoted-dotnet.exe",
                 out _);
@@ -188,7 +188,7 @@ namespace Cocoa.Tests.Compiler
         public void Project_EntryField_Native_SelectsEntryFunction()
         {
             BuildProject(
-                "function run(args: string[]) {\nSystem.Console.WriteLine(args.Length)\nSystem.Console.WriteLine(args[0])\n}\nfunction Main() {\nSystem.Console.WriteLine(99)\n}",
+                "function run(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\n}\nfunction Main() {\nConsole.WriteLine(99)\n}",
                 "native",
                 "entry-native",
                 "run",
@@ -203,7 +203,7 @@ namespace Cocoa.Tests.Compiler
         public void Project_EntryField_Dotnet_SelectsEntryFunction()
         {
             BuildProject(
-                "function run(args: string[]) {\nSystem.Console.WriteLine(args.Length)\nSystem.Console.WriteLine(args[0])\n}\nfunction Main() {\nSystem.Console.WriteLine(99)\n}",
+                "function run(args: string[]) {\nConsole.WriteLine(args.Length)\nConsole.WriteLine(args[0])\n}\nfunction Main() {\nConsole.WriteLine(99)\n}",
                 "dotnet",
                 "entry-dotnet",
                 "run",
@@ -219,7 +219,7 @@ namespace Cocoa.Tests.Compiler
         public void Project_EntryField_NamespaceQualifiedClassMethod_Dotnet()
         {
             BuildProject(
-                "namespace My.App { public class Program { public static function Main() { System.Console.WriteLine(7) } } }",
+                "namespace My.App { public class Program { public static function Main() { Console.WriteLine(7) } } }",
                 "dotnet",
                 "entry-qualified",
                 "My.App.Program.Main",
@@ -231,12 +231,12 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Project_EntryField_QualifiedClassMethod_Native_RejectsClass()
         {
-            // native 后端不支持 class：限定入口指向类 → 既有 class 拒绝诊断
+            // native 后端不支持实例成员类（6e-M18 起静态容器类放行）：含实例字段的类仍拒绝
             var root = NewRoot("entry-qualified-native");
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(appDir);
             File.WriteAllText(Path.Combine(appDir, "App.co"),
-                "namespace My.App { public class Program { public static function Main() { System.Console.WriteLine(7) } } }");
+                "namespace My.App { public class Program { public x: int = 0\npublic static function Main() { Console.WriteLine(7) } } }");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"),
                 $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");

@@ -49,7 +49,8 @@ namespace Cocoa.Tests.Compiler
             var dir = GetTempDir();
             var sourcePath = Path.Combine(dir, "cli-smoke.co");
             var outputPath = Path.Combine(dir, "cli-smoke.exe");
-            File.WriteAllText(sourcePath, @"
+            File.WriteAllText(sourcePath, @"using System
+
 function twice(x: int): int
 {
     return x * 2
@@ -57,9 +58,9 @@ function twice(x: int): int
 
 function Main()
 {
-    var name = System.Console.ReadLine()
-    System.Console.WriteLine(twice(21))
-    System.Console.WriteLine(""hello "" + name)
+    var name = Console.ReadLine()
+    Console.WriteLine(twice(21))
+    Console.WriteLine(""hello "" + name)
 }");
 
             var (exitCode, stdout, stderr) = Run($"\"{sourcePath}\" -b dotnet -o \"{outputPath}\"");

@@ -1,12 +1,13 @@
+using System
 function Main()
 {
     var c = Color.Green
-    System.Console.WriteLine(AsInt(Color.Red))
-    System.Console.WriteLine(AsInt(Color.Green))
-    System.Console.WriteLine(AsInt(Color.Blue))
-    System.Console.WriteLine(IsGreen(c))
-    System.Console.WriteLine(c == Color.Red)
-    System.Console.WriteLine(int(HttpStatus.NotFound))
-    System.Console.WriteLine(int(Color(99)))
-    System.Console.WriteLine(AsInt(Color.Green) == int(c))
+    Console.WriteLine(AsInt(Color.Red))
+    Console.WriteLine(AsInt(Color.Green))
+    Console.WriteLine(AsInt(Color.Blue))
+    Console.WriteLine(IsGreen(c))
+    Console.WriteLine(c == Color.Red)
+    Console.WriteLine(int(HttpStatus.NotFound))
+    Console.WriteLine(int(Color(99)))
+    Console.WriteLine(AsInt(Color.Green) == int(c))
 }

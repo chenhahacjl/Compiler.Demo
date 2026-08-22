@@ -280,8 +280,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override MemberSyntax ParseUsingDirective()
         {
-            var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
-            var nameTokens = ParseQualifiedName();
+            var result = ParseUsingDirectiveCore();
 
             if (Current.Kind != SyntaxKind.SemicolonToken)
             {
@@ -292,7 +291,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 NextToken();
             }
 
-            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, nameTokens);
+            return result;
         }
     }
 }

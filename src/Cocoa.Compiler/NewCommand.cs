@@ -301,12 +301,14 @@ outputPath = out
 ",
                         name + ".cs",
                         $@"// C# 方言（.cs 严格子集，6e-M15）：类型前置、分号必选；不绑定 .NET BCL（用 System.Console.WriteLine/System.Runtime.* 核心库）
+using System;
+
 namespace {name};
 
 public static void Main()
 {{
-    System.Console.WriteLine(""Hello from {name}!"");
-    System.Console.WriteLine(Add(2, 3));
+    Console.WriteLine(""Hello from {name}!"");
+    Console.WriteLine(Add(2, 3));
 }}
 
 public int Add(int a, int b)
@@ -332,9 +334,11 @@ debug = false
 outputPath = out
 ",
                         "main.co",
-                        $@"function Main()
+                        $@"using System
+
+function Main()
 {{
-    System.Console.WriteLine(""Hello from {name}!"")
+    Console.WriteLine(""Hello from {name}!"")
 }}
 ");
 
@@ -355,9 +359,11 @@ debug = false
 outputPath = out
 ",
                         "main.co",
-                        $@"function Main()
+                        $@"using System
+
+function Main()
 {{
-    System.Console.WriteLine(""Hello from {name}!"")
+    Console.WriteLine(""Hello from {name}!"")
 }}
 ");
             }

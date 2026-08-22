@@ -300,7 +300,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         public void ComputeMaxStack_Instance_Call_Counts_This()
         {
             var randomType = new IlTypeRef("System", "Random", null);
-            var shared = new IlMethodRef(randomType, "get_Shared", IlType.Class(randomType), System.Array.Empty<IlType>());
+            var shared = new IlMethodRef(randomType, "get_Shared", IlType.Class(randomType), Array.Empty<IlType>());
             var next = new IlMethodRef(randomType, "Next", IlType.Int32, new[] { IlType.Int32 }, isStatic: false);
             var maxStack = ComputeMaxStack(
                 new IlInstruction(IlOpCodeTable.Get("Call"), shared),

@@ -1,14 +1,17 @@
-// Cocoa 系统标准库（逻辑层）：namespace System 下 Runtime 容器类 + Math/String/Array 模块。
+// Cocoa 系统标准库（核心程序集）：namespace System 下 Runtime 容器类 + Console/Math/String/Array 静态类。
 //
 // 分层（见 docs/标准库设计.md）：
-//   - 内部调用层：namespace System 的 class Runtime —— syscall 声明（编译器内部原语，
-//     三后端按 BuiltinKind 分发；完整名 System.Runtime，供本库封装层与用户 syscall 声明复用）
-//   - 逻辑层：本文件其余部分，纯 Cocoa 源码，只依赖语言核心（算术/字符串/数组/控制流/char↔int 转换）
+//   - 内部调用层：class Runtime —— syscall 声明（编译器内部原语，三后端按 BuiltinKind 分发；
+//     完整名 System.Runtime，供本库封装层与用户 syscall 声明复用）
+//   - 封装层：class Console —— WriteLine/ReadLine（调 Runtime.Print/Input），C# 同构静态类
+//   - 逻辑层：class Math/String/Array —— 纯 Cocoa 源码静态类，只依赖语言核心（算术/字符串/数组/控制流/char↔int 转换）
 //   - 功能层：print/input/random/sleep/now/exit 等编译器内置原语（BuiltinKind 规格表，三后端按 kind 分发）
+//
+// 6e-M18：Console/Math/String/Array 由命名空间改为静态容器类（C# 同构）；配合 `using static <类>` / `using 别名`。
 //
 // 交付：`tools/build-stdlib.cmd` 用已构建的 cocoa 编本文件 → System.Core.cod（核心程序集，仿 .NET
 // System.Private.CoreLib；目录内 `System*.cod` 自动发现加载，未来大模块 System.Net.cod 等各配 .coproj 追加），
-// 编译期隐式注入每次编译，函数命名空间限定访问（System.Math.Max / using System.Math; + Max）。
+// 编译期隐式注入每次编译，函数命名空间限定访问（using System; + Math.Max / using static System.Math; + Max）。
 
 namespace System
 {
@@ -22,121 +25,121 @@ namespace System
         syscall function Exit(code: int): void
     }
 
-    namespace Console
+    class Console
     {
-        function WriteLine(text: string): void
+        static function WriteLine(text: string): void
         {
             Runtime.Print(text)
         }
 
-        function WriteLine(text: int): void
+        static function WriteLine(text: int): void
         {
             Runtime.Print(text)
         }
 
-        function WriteLine(text: double): void
+        static function WriteLine(text: double): void
         {
             Runtime.Print(text)
         }
 
-        function WriteLine(text: bool): void
+        static function WriteLine(text: bool): void
         {
             Runtime.Print(text)
         }
 
-        function WriteLine(text: char): void
+        static function WriteLine(text: char): void
         {
             Runtime.Print(text)
         }
 
-        function WriteLine(text: byte): void
+        static function WriteLine(text: byte): void
         {
             Runtime.Print(text)
         }
 
-        function ReadLine(): string
+        static function ReadLine(): string
         {
             return Runtime.Input()
         }
     }
 
-    namespace Math
+    class Math
     {
-        function Max(a: int, b: int): int
+        static function Max(a: int, b: int): int
         {
             if (a > b) return a
             return b
         }
 
-        function Max(a: double, b: double): double
+        static function Max(a: double, b: double): double
         {
             if (a > b) return a
             return b
         }
 
-        function Min(a: int, b: int): int
+        static function Min(a: int, b: int): int
         {
             if (a < b) return a
             return b
         }
 
-        function Min(a: double, b: double): double
+        static function Min(a: double, b: double): double
         {
             if (a < b) return a
             return b
         }
 
-        function Abs(x: int): int
+        static function Abs(x: int): int
         {
             if (x < 0) return -x
             return x
         }
 
-        function Abs(x: double): double
+        static function Abs(x: double): double
         {
             if (x < 0) return -x
             return x
         }
 
-        function Clamp(v: int, lo: int, hi: int): int
+        static function Clamp(v: int, lo: int, hi: int): int
         {
             if (v < lo) return lo
             if (v > hi) return hi
             return v
         }
 
-        function Clamp(v: double, lo: double, hi: double): double
+        static function Clamp(v: double, lo: double, hi: double): double
         {
             if (v < lo) return lo
             if (v > hi) return hi
             return v
         }
 
-        function Sign(x: int): int
+        static function Sign(x: int): int
         {
             if (x < 0) return -1
             if (x > 0) return 1
             return 0
         }
 
-        function Sign(x: double): int
+        static function Sign(x: double): int
         {
             if (x < 0) return -1
             if (x > 0) return 1
             return 0
         }
 
-        function IsEven(n: int): bool
+        static function IsEven(n: int): bool
         {
             return n % 2 == 0
         }
 
-        function IsOdd(n: int): bool
+        static function IsOdd(n: int): bool
         {
             return n % 2 == 1
         }
 
-        function Pow(x: int, exp: int): int
+        static function Pow(x: int, exp: int): int
         {
             var result = 1
             var i = 0
@@ -148,7 +151,7 @@ namespace System
             return result
         }
 
-        function Factorial(n: int): int
+        static function Factorial(n: int): int
         {
             var result = 1
             var i = 1
@@ -160,7 +163,7 @@ namespace System
             return result
         }
 
-        function Gcd(a: int, b: int): int
+        static function Gcd(a: int, b: int): int
         {
             var x = Abs(a)
             var y = Abs(b)
@@ -173,7 +176,7 @@ namespace System
             return x
         }
 
-        function Lcm(a: int, b: int): int
+        static function Lcm(a: int, b: int): int
         {
             if a == 0 || b == 0
             {
@@ -183,9 +186,9 @@ namespace System
         }
     }
 
-    namespace String
+    class String
     {
-        function ToUpper(s: string): string
+        static function ToUpper(s: string): string
         {
             var result = ""
             var i = 0
@@ -205,7 +208,7 @@ namespace System
             return result
         }
 
-        function ToLower(s: string): string
+        static function ToLower(s: string): string
         {
             var result = ""
             var i = 0
@@ -225,7 +228,7 @@ namespace System
             return result
         }
 
-        function StartsWith(s: string, prefix: string): bool
+        static function StartsWith(s: string, prefix: string): bool
         {
             if prefix.Length > s.Length
             {
@@ -234,7 +237,7 @@ namespace System
             return s.substring(0, prefix.Length) == prefix
         }
 
-        function EndsWith(s: string, suffix: string): bool
+        static function EndsWith(s: string, suffix: string): bool
         {
             if suffix.Length > s.Length
             {
@@ -243,7 +246,7 @@ namespace System
             return s.substring(s.Length - suffix.Length, suffix.Length) == suffix
         }
 
-        function Contains(s: string, sub: string): bool
+        static function Contains(s: string, sub: string): bool
         {
             if sub.Length == 0
             {
@@ -261,7 +264,7 @@ namespace System
             return false
         }
 
-        function IndexOf(s: string, sub: string): int
+        static function IndexOf(s: string, sub: string): int
         {
             if sub.Length == 0
             {
@@ -279,7 +282,7 @@ namespace System
             return -1
         }
 
-        function Reverse(s: string): string
+        static function Reverse(s: string): string
         {
             var result = ""
             var i = s.Length - 1
@@ -291,7 +294,7 @@ namespace System
             return result
         }
 
-        function Replicate(s: string, n: int): string
+        static function Replicate(s: string, n: int): string
         {
             var result = ""
             var i = 0
@@ -303,7 +306,7 @@ namespace System
             return result
         }
 
-        function CountChar(s: string, c: char): int
+        static function CountChar(s: string, c: char): int
         {
             var count = 0
             var i = 0
@@ -318,7 +321,7 @@ namespace System
             return count
         }
 
-        function IsPalindrome(s: string): bool
+        static function IsPalindrome(s: string): bool
         {
             var lo = 0
             var hi = s.Length - 1
@@ -334,7 +337,7 @@ namespace System
             return true
         }
 
-        function Trim(s: string): string
+        static function Trim(s: string): string
         {
             var start = 0
             var end = s.Length
@@ -372,9 +375,9 @@ namespace System
         }
     }
 
-    namespace Array
+    class Array
     {
-        function Sum(a: int[]): int
+        static function Sum(a: int[]): int
         {
             var sum = 0
             var i = 0
@@ -386,7 +389,7 @@ namespace System
             return sum
         }
 
-        function Sum(a: double[]): double
+        static function Sum(a: double[]): double
         {
             var sum = 0.0
             var i = 0
@@ -398,7 +401,7 @@ namespace System
             return sum
         }
 
-        function Min(a: int[]): int
+        static function Min(a: int[]): int
         {
             if a.Length == 0
             {
@@ -417,7 +420,7 @@ namespace System
             return m
         }
 
-        function Min(a: double[]): double
+        static function Min(a: double[]): double
         {
             if a.Length == 0
             {
@@ -436,7 +439,7 @@ namespace System
             return m
         }
 
-        function Max(a: int[]): int
+        static function Max(a: int[]): int
         {
             if a.Length == 0
             {
@@ -455,7 +458,7 @@ namespace System
             return m
         }
 
-        function Max(a: double[]): double
+        static function Max(a: double[]): double
         {
             if a.Length == 0
             {
@@ -474,7 +477,7 @@ namespace System
             return m
         }
 
-        function AverageD(a: int[]): double
+        static function AverageD(a: int[]): double
         {
             if a.Length == 0
             {
@@ -483,7 +486,7 @@ namespace System
             return Sum(a) / a.Length
         }
 
-        function AverageD(a: double[]): double
+        static function AverageD(a: double[]): double
         {
             if a.Length == 0
             {
@@ -492,7 +495,7 @@ namespace System
             return Sum(a) / a.Length
         }
 
-        function Contains(a: int[], v: int): bool
+        static function Contains(a: int[], v: int): bool
         {
             var i = 0
             while i < a.Length
@@ -506,7 +509,7 @@ namespace System
             return false
         }
 
-        function Contains(a: double[], v: double): bool
+        static function Contains(a: double[], v: double): bool
         {
             var i = 0
             while i < a.Length
@@ -520,7 +523,7 @@ namespace System
             return false
         }
 
-        function IndexOf(a: int[], v: int): int
+        static function IndexOf(a: int[], v: int): int
         {
             var i = 0
             while i < a.Length
@@ -534,7 +537,7 @@ namespace System
             return -1
         }
 
-        function IndexOf(a: double[], v: double): int
+        static function IndexOf(a: double[], v: double): int
         {
             var i = 0
             while i < a.Length
@@ -548,7 +551,7 @@ namespace System
             return -1
         }
 
-        function Reverse(a: int[]): int[]
+        static function Reverse(a: int[]): int[]
         {
             var n = a.Length
             var result = new int[n]
@@ -561,7 +564,7 @@ namespace System
             return result
         }
 
-        function Reverse(a: double[]): double[]
+        static function Reverse(a: double[]): double[]
         {
             var n = a.Length
             var result = new double[n]
@@ -574,7 +577,7 @@ namespace System
             return result
         }
 
-        function Sort(a: int[]): int[]
+        static function Sort(a: int[]): int[]
         {
             var n = a.Length
             var result = new int[n]
@@ -603,7 +606,7 @@ namespace System
             return result
         }
 
-        function Sort(a: double[]): double[]
+        static function Sort(a: double[]): double[]
         {
             var n = a.Length
             var result = new double[n]

@@ -1,3 +1,4 @@
+using System
 function Main()
 {
     // Cocoa 式局部变量（类型推断，无分号）
@@ -9,10 +10,10 @@ function Main()
     var c = 5
     let d: int = 1
 
-    System.Console.WriteLine(Add(a, b))
-    System.Console.WriteLine(Square(c))
-    System.Console.WriteLine(SumArray(new int[] {1, 2, 3, 4}))
-    System.Console.WriteLine(Describe("Cocoa", 3))
-    System.Console.WriteLine(msg)
-    System.Console.WriteLine(d)
+    Console.WriteLine(Add(a, b))
+    Console.WriteLine(Square(c))
+    Console.WriteLine(SumArray(new int[] {1, 2, 3, 4}))
+    Console.WriteLine(Describe("Cocoa", 3))
+    Console.WriteLine(msg)
+    Console.WriteLine(d)
 }

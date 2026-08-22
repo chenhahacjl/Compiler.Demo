@@ -1,11 +1,12 @@
+using System
 function Main()
 {
-    System.Console.WriteLine(Classify(5))
-    System.Console.WriteLine(Classify(0))
-    System.Console.WriteLine(Classify(-3))
-    System.Console.WriteLine(SumUpTo(5))
-    System.Console.WriteLine(Countdown(3))
-    System.Console.WriteLine(DoOnce())
+    Console.WriteLine(Classify(5))
+    Console.WriteLine(Classify(0))
+    Console.WriteLine(Classify(-3))
+    Console.WriteLine(SumUpTo(5))
+    Console.WriteLine(Countdown(3))
+    Console.WriteLine(DoOnce())
 
     var total = 0
     for var i = 1 to 5
@@ -16,12 +17,12 @@ function Main()
         }
         total = total + i
     }
-    System.Console.WriteLine(total)
+    Console.WriteLine(total)
 
     var j = 0
     while j < 3
     {
-        System.Console.WriteLine(j)
+        Console.WriteLine(j)
         j = j + 1
     }
 }

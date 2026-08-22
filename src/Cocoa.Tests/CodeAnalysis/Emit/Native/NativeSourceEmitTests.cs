@@ -80,10 +80,11 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_PrintInt(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(42)
+    Console.WriteLine(42)
 }", "dbg-int", target);
 
             Assert.Equal("42\r\n", output);
@@ -94,7 +95,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_DefaultInitializedVariables(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a: int
@@ -103,14 +105,14 @@ function Main()
     var c: char
     var by: byte
     var s: string
-    System.Console.WriteLine(a)
-    System.Console.WriteLine(b)
-    System.Console.WriteLine(d)
-    System.Console.WriteLine(int(c))
-    System.Console.WriteLine(int(by))
-    System.Console.WriteLine(s == s)
+    Console.WriteLine(a)
+    Console.WriteLine(b)
+    Console.WriteLine(d)
+    Console.WriteLine(int(c))
+    Console.WriteLine(int(by))
+    Console.WriteLine(s == s)
     const k: int = 7
-    System.Console.WriteLine(k)
+    Console.WriteLine(k)
 }", "dbg-default", target);
 
             Assert.Equal("0\r\nFalse\r\n0\r\n0\r\n0\r\nTrue\r\n7\r\n", output);
@@ -121,10 +123,11 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_PrintString(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(""hi"")
+    Console.WriteLine(""hi"")
 }", "dbg-str", target);
 
             Assert.Equal("hi\r\n", output);
@@ -135,16 +138,17 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_PrintsExpressions(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(""Hello, World!"")
-    System.Console.WriteLine(42)
-    System.Console.WriteLine(7 * 6)
-    System.Console.WriteLine(1 + 2 * 3)
-    System.Console.WriteLine((1 + 2) * 3)
-    System.Console.WriteLine(true)
-    System.Console.WriteLine(false)
+    Console.WriteLine(""Hello, World!"")
+    Console.WriteLine(42)
+    Console.WriteLine(7 * 6)
+    Console.WriteLine(1 + 2 * 3)
+    Console.WriteLine((1 + 2) * 3)
+    Console.WriteLine(true)
+    Console.WriteLine(false)
 }", "src-print-expressions", target);
 
             Assert.Equal("Hello, World!\r\n42\r\n42\r\n7\r\n9\r\nTrue\r\nFalse\r\n", output);
@@ -155,18 +159,19 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_VariablesAndAssignment(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var x = 10
     x = x + 5
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     var y = 3
     y = x * y
-    System.Console.WriteLine(y)
+    Console.WriteLine(y)
     var s = ""foo""
     s = s + ""bar""
-    System.Console.WriteLine(s)
+    Console.WriteLine(s)
 }", "src-variables", target);
 
             Assert.Equal("15\r\n45\r\nfoobar\r\n", output);
@@ -177,21 +182,22 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_IfStatement(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var x = 10
     if x > 5
     {
-        System.Console.WriteLine(""big"")
+        Console.WriteLine(""big"")
     }
     if x > 20
     {
-        System.Console.WriteLine(""huge"")
+        Console.WriteLine(""huge"")
     }
     else
     {
-        System.Console.WriteLine(""small"")
+        Console.WriteLine(""small"")
     }
 }", "src-if", target);
 
@@ -203,7 +209,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_UserFunctions(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function add(a: int, b: int): int
 {
     return a + b
@@ -216,11 +223,11 @@ function square(x: int): int
 
 function Main()
 {
-    System.Console.WriteLine(add(3, 4))
-    System.Console.WriteLine(square(5))
-    System.Console.WriteLine(square(add(2, 3)))
+    Console.WriteLine(add(3, 4))
+    Console.WriteLine(square(5))
+    Console.WriteLine(square(add(2, 3)))
     var nested = add(square(2), square(3))
-    System.Console.WriteLine(nested)
+    Console.WriteLine(nested)
 }", "src-user-functions", target);
 
             Assert.Equal("7\r\n25\r\n25\r\n13\r\n", output);
@@ -231,7 +238,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Recursion(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function factorial(n: int): int
 {
     if n <= 1
@@ -252,9 +260,9 @@ function fibonacci(n: int): int
 
 function Main()
 {
-    System.Console.WriteLine(factorial(5))
-    System.Console.WriteLine(factorial(10))
-    System.Console.WriteLine(fibonacci(10))
+    Console.WriteLine(factorial(5))
+    Console.WriteLine(factorial(10))
+    Console.WriteLine(fibonacci(10))
 }", "src-recursion", target);
 
             Assert.Equal("120\r\n3628800\r\n55\r\n", output);
@@ -265,7 +273,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_WhileAndBreakContinue(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var i = 0
@@ -280,9 +289,9 @@ function Main()
         {
             continue
         }
-        System.Console.WriteLine(i)
+        Console.WriteLine(i)
     }
-    System.Console.WriteLine(""done"")
+    Console.WriteLine(""done"")
 }", "src-while", target);
 
             Assert.Equal("2\r\ndone\r\n", output);
@@ -293,7 +302,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_ForAndDoWhile(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     for var j = 0 to 4
@@ -303,14 +313,14 @@ function Main()
         {
             continue
         }
-        System.Console.WriteLine(j)
+        Console.WriteLine(j)
     }
-    System.Console.WriteLine(""x"")
+    Console.WriteLine(""x"")
     var k = 0
     do
     {
         k += 1
-        System.Console.WriteLine(k)
+        Console.WriteLine(k)
     }
     while k < 3
 }", "src-for-do", target);
@@ -323,7 +333,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_CSStyleFor_PostfixIncrement(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System;
+
 public static void Main()
 {
     var sum = 0;
@@ -331,12 +342,12 @@ public static void Main()
     {
         sum = sum + i;
     }
-    System.Console.WriteLine(sum);
+    Console.WriteLine(sum);
     var j = 10;
     j--;
-    System.Console.WriteLine(j);
+    Console.WriteLine(j);
     j++;
-    System.Console.WriteLine(j);
+    Console.WriteLine(j);
     var total = 0;
     for (;;)
     {
@@ -346,7 +357,7 @@ public static void Main()
             break;
         }
     }
-    System.Console.WriteLine(total);
+    Console.WriteLine(total);
     var k = 0;
     for (; k < 4; k = k + 1)
     {
@@ -354,7 +365,7 @@ public static void Main()
         {
             continue;
         }
-        System.Console.WriteLine(k);
+        Console.WriteLine(k);
     }
 }", "src-cstyle-for", target, useCs: true);
 
@@ -366,24 +377,25 @@ public static void Main()
         [InlineData(X86)]
         public void NativeSource_ModuloAndShift(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(7 % 3)
-    System.Console.WriteLine(-7 % 3)
-    System.Console.WriteLine(10 % 2)
-    System.Console.WriteLine(1 << 4)
-    System.Console.WriteLine(8 >> 1)
-    System.Console.WriteLine(-8 >> 1)
+    Console.WriteLine(7 % 3)
+    Console.WriteLine(-7 % 3)
+    Console.WriteLine(10 % 2)
+    Console.WriteLine(1 << 4)
+    Console.WriteLine(8 >> 1)
+    Console.WriteLine(-8 >> 1)
     var x = 10
     x %= 3
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     x = 1
     x <<= 4
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     x = -16
     x >>= 2
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     var sum = 0
     for var i = 1 to 5
     {
@@ -393,7 +405,7 @@ function Main()
         }
         sum = sum + i
     }
-    System.Console.WriteLine(sum)
+    Console.WriteLine(sum)
 }", "src-modulo-shift", target);
 
             Assert.Equal("1\r\n-1\r\n0\r\n16\r\n4\r\n-4\r\n1\r\n16\r\n-4\r\n9\r\n", output);
@@ -404,26 +416,27 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_ConditionalAndPrefix(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a = 5
     var b = 10
-    System.Console.WriteLine(a > b ? a : b)
-    System.Console.WriteLine(1 < 2 ? 3 + 4 : 5 + 6)
+    Console.WriteLine(a > b ? a : b)
+    Console.WriteLine(1 < 2 ? 3 + 4 : 5 + 6)
     var i = 1
     i = ++i
-    System.Console.WriteLine(i)
+    Console.WriteLine(i)
     i = --i
-    System.Console.WriteLine(i)
+    Console.WriteLine(i)
     var n = 7
-    System.Console.WriteLine(n % 2 == 0 ? ""even"" : ""odd"")
+    Console.WriteLine(n % 2 == 0 ? ""even"" : ""odd"")
     var sum = 0
     for var j = 1 to 5
     {
         sum = sum + (j % 2 == 0 ? 10 : j)
     }
-    System.Console.WriteLine(sum)
+    Console.WriteLine(sum)
 }", "src-ternary-prefix", target);
 
             Assert.Equal("10\r\n7\r\n2\r\n1\r\nodd\r\n29\r\n", output);
@@ -434,10 +447,11 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_ModuloByZero(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(1 % 0)
+    Console.WriteLine(1 % 0)
 }", "src-modulo-zero", target, expectedExitCode: 1);
 
             Assert.Equal("error: division by zero\r\n", output);
@@ -448,18 +462,19 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_CompoundAssignment(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var x = 0
     x += 5
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     x *= 3
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     x -= 7
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     x /= 4
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
 }", "src-compound-assignment", target);
 
             Assert.Equal("5\r\n15\r\n8\r\n2\r\n", output);
@@ -470,16 +485,17 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_StringConcatAndCompare(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var s = ""foo""
     var t = ""bar""
-    System.Console.WriteLine(s + t)
-    System.Console.WriteLine(s + ""!"" + t)
-    System.Console.WriteLine(s == s)
-    System.Console.WriteLine(s == t)
-    System.Console.WriteLine(s != t)
+    Console.WriteLine(s + t)
+    Console.WriteLine(s + ""!"" + t)
+    Console.WriteLine(s == s)
+    Console.WriteLine(s == t)
+    Console.WriteLine(s != t)
 }", "src-strings", target);
 
             Assert.Equal("foobar\r\nfoo!bar\r\nTrue\r\nFalse\r\nTrue\r\n", output);
@@ -490,7 +506,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_StringParameter(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function greet(name: string): string
 {
     return ""Hello, "" + name
@@ -499,8 +516,8 @@ function greet(name: string): string
 function Main()
 {
     var who = ""Cocoa""
-    System.Console.WriteLine(greet(who))
-    System.Console.WriteLine(greet(""World""))
+    Console.WriteLine(greet(who))
+    Console.WriteLine(greet(""World""))
 }", "src-string-parameter", target);
 
             Assert.Equal("Hello, Cocoa\r\nHello, World\r\n", output);
@@ -511,17 +528,18 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_NegativeNumbers(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(-5)
-    System.Console.WriteLine(0 - 7)
+    Console.WriteLine(-5)
+    Console.WriteLine(0 - 7)
     var n = -3
-    System.Console.WriteLine(0 - n)
+    Console.WriteLine(0 - n)
     var m = -2 * 3
-    System.Console.WriteLine(m)
-    System.Console.WriteLine(!true)
-    System.Console.WriteLine(!false)
+    Console.WriteLine(m)
+    Console.WriteLine(!true)
+    Console.WriteLine(!false)
 }", "src-negative", target);
 
             Assert.Equal("-5\r\n-7\r\n3\r\n-6\r\nFalse\r\nTrue\r\n", output);
@@ -532,15 +550,16 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_LogicalOperators(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a = true && false
-    System.Console.WriteLine(a)
+    Console.WriteLine(a)
     var b = true || false
-    System.Console.WriteLine(b)
+    Console.WriteLine(b)
     var c = (1 < 2) && (3 > 2)
-    System.Console.WriteLine(c)
+    Console.WriteLine(c)
 }", "src-logical", target);
 
             Assert.Equal("False\r\nTrue\r\nTrue\r\n", output);
@@ -551,11 +570,12 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Input(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    var s = System.Console.ReadLine()
-    System.Console.WriteLine(s)
+    var s = Console.ReadLine()
+    Console.WriteLine(s)
 }", "src-input", target, input: "Hello\n");
 
             Assert.Equal("Hello\r\n", output);
@@ -568,10 +588,11 @@ function Main()
         {
             for (var i = 0; i < 5; i++)
             {
-                var output = CompileAndRun(@"
+                var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(System.Runtime.Random(100) < 100)
+    Console.WriteLine(Runtime.Random(100) < 100)
 }", "src-random", target);
 
                 Assert.Equal("True\r\n", output);
@@ -583,7 +604,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_SyscallMemberCall_Print(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 class Runtime
 {
     syscall function Print(text: string): void
@@ -602,7 +624,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_SyscallMemberCall_Random(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 class Runtime
 {
     syscall function Random(max: int): int
@@ -611,7 +634,7 @@ class Runtime
 function Main()
 {
     var r = Runtime.Random(100)
-    System.Console.WriteLine(r < 100)
+    Console.WriteLine(r < 100)
 }", "src-syscall-random", target);
 
             Assert.Equal("True\r\n", output);
@@ -622,13 +645,14 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Builtin_SleepNow(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    var t0 = System.Runtime.Now()
-    System.Runtime.Sleep(1)
-    var t1 = System.Runtime.Now()
-    System.Console.WriteLine(t1 >= t0)
+    var t0 = Runtime.Now()
+    Runtime.Sleep(1)
+    var t1 = Runtime.Now()
+    Console.WriteLine(t1 >= t0)
 }", "src-sleep-now", target);
 
             Assert.Equal("True\r\n", output);
@@ -639,13 +663,14 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Division(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(42 / 7)
-    System.Console.WriteLine(-42 / 7)
-    System.Console.WriteLine(42 / -7)
-    System.Console.WriteLine(-42 / -7)
+    Console.WriteLine(42 / 7)
+    Console.WriteLine(-42 / 7)
+    Console.WriteLine(42 / -7)
+    Console.WriteLine(-42 / -7)
 }", "src-division", target);
 
             Assert.Equal("6\r\n-6\r\n-6\r\n6\r\n", output);
@@ -656,10 +681,11 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_DivisionByZero(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(1 / 0)
+    Console.WriteLine(1 / 0)
 }", "src-division-by-zero", target, expectedExitCode: 1);
 
             Assert.Equal("error: division by zero\r\n", output);
@@ -670,15 +696,16 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Array_ReadWriteAndLength(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a = new int[3] {10, 20, 30}
     a[1] = 99
-    System.Console.WriteLine(a[0])
-    System.Console.WriteLine(a[1])
-    System.Console.WriteLine(a[2])
-    System.Console.WriteLine(a.Length)
+    Console.WriteLine(a[0])
+    Console.WriteLine(a[1])
+    Console.WriteLine(a[2])
+    Console.WriteLine(a.Length)
 }", "src-array", target);
 
             Assert.Equal("10\r\n99\r\n30\r\n3\r\n", output);
@@ -689,14 +716,15 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Array_BoolElements(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var b = new bool[2]
     b[0] = true
     b[1] = false
-    System.Console.WriteLine(b[0])
-    System.Console.WriteLine(b[1])
+    Console.WriteLine(b[0])
+    Console.WriteLine(b[1])
 }", "src-array-bool", target);
 
             Assert.Equal("True\r\nFalse\r\n", output);
@@ -707,7 +735,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Array_IndexInLoop(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a = new int[5]
@@ -724,7 +753,7 @@ function Main()
         sum = sum + a[i]
         i = i + 1
     }
-    System.Console.WriteLine(sum)
+    Console.WriteLine(sum)
 }", "src-array-loop", target);
 
             Assert.Equal("100\r\n", output);
@@ -735,29 +764,30 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Foreach_OverArrays(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var arr = new int[] {1, 2, 3}
     foreach (var x in arr)
     {
-        System.Console.WriteLine(x)
+        Console.WriteLine(x)
     }
     var sum = 0
     foreach (var x in arr)
     {
         sum = sum + x
     }
-    System.Console.WriteLine(sum)
+    Console.WriteLine(sum)
     var doubles: double[] = new double[] {1.5, 2.5}
     foreach (var d in doubles)
     {
-        System.Console.WriteLine(d)
+        Console.WriteLine(d)
     }
     var names = new string[] {""a"", ""b""}
     foreach (var n in names)
     {
-        System.Console.WriteLine(n)
+        Console.WriteLine(n)
     }
 }", "src-foreach-array", target);
 
@@ -769,20 +799,21 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Foreach_OverString_And_BreakContinue(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var s = ""abc""
     foreach (var c in s)
     {
-        System.Console.WriteLine(c)
+        Console.WriteLine(c)
     }
     var arr = new int[] {1, 2, 3, 4}
     foreach (var x in arr)
     {
         if x == 3 continue
         if x == 4 break
-        System.Console.WriteLine(x)
+        Console.WriteLine(x)
     }
     var result = 0
     foreach (var i in arr)
@@ -793,7 +824,7 @@ function Main()
             result = result + i * j
         }
     }
-    System.Console.WriteLine(result)
+    Console.WriteLine(result)
 }", "src-foreach-string", target);
 
             Assert.Equal("a\r\nb\r\nc\r\n1\r\n2\r\n80\r\n", output);
@@ -804,7 +835,8 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Switch(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var x = 2
@@ -812,17 +844,17 @@ function Main()
     {
         case 1:
         {
-            System.Console.WriteLine(""one"")
+            Console.WriteLine(""one"")
             break
         }
         case 2:
         {
-            System.Console.WriteLine(""two"")
+            Console.WriteLine(""two"")
             break
         }
         default:
         {
-            System.Console.WriteLine(""other"")
+            Console.WriteLine(""other"")
             break
         }
     }
@@ -831,12 +863,12 @@ function Main()
         case 1:
         case 2:
         {
-            System.Console.WriteLine(""low"")
+            Console.WriteLine(""low"")
             break
         }
         default:
         {
-            System.Console.WriteLine(""high"")
+            Console.WriteLine(""high"")
             break
         }
     }
@@ -844,17 +876,17 @@ function Main()
     {
         case 1:
         {
-            System.Console.WriteLine(""one"")
+            Console.WriteLine(""one"")
             break
         }
         case 2 when false:
         {
-            System.Console.WriteLine(""two-when"")
+            Console.WriteLine(""two-when"")
             break
         }
         default:
         {
-            System.Console.WriteLine(""default"")
+            Console.WriteLine(""default"")
             break
         }
     }
@@ -863,17 +895,17 @@ function Main()
     {
         case ""a"":
         {
-            System.Console.WriteLine(""A"")
+            Console.WriteLine(""A"")
             break
         }
         case ""b"":
         {
-            System.Console.WriteLine(""B"")
+            Console.WriteLine(""B"")
             break
         }
         default:
         {
-            System.Console.WriteLine(""Z"")
+            Console.WriteLine(""Z"")
             break
         }
     }
@@ -896,7 +928,7 @@ function Main()
         sum = sum + i
         i = i + 1
     }
-    System.Console.WriteLine(sum)
+    Console.WriteLine(sum)
 }", "src-switch", target);
 
             Assert.Equal("two\r\nlow\r\ndefault\r\nB\r\n9\r\n", output);
@@ -907,13 +939,14 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Array_OutOfBounds(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a = new int[2]
     a[0] = 1
     a[1] = 2
-    System.Console.WriteLine(a[5])
+    Console.WriteLine(a[5])
 }", "src-array-oob", target, expectedExitCode: 1);
 
             Assert.Equal("error: array index out of range\r\n", output);
@@ -943,18 +976,19 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_String_IndexLengthAndSubstring(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var s = ""hello""
-    System.Console.WriteLine(s.Length)
-    System.Console.WriteLine(s[0])
-    System.Console.WriteLine(int(s[1]))
+    Console.WriteLine(s.Length)
+    Console.WriteLine(s[0])
+    Console.WriteLine(int(s[1]))
     var c = s[2]
-    System.Console.WriteLine(c)
-    System.Console.WriteLine(char(97))
-    System.Console.WriteLine(s.substring(1, 3))
-    System.Console.WriteLine(s.substring(1, 3) + ""!"")
+    Console.WriteLine(c)
+    Console.WriteLine(char(97))
+    Console.WriteLine(s.substring(1, 3))
+    Console.WriteLine(s.substring(1, 3) + ""!"")
 }", "src-string-index", target);
 
             Assert.Equal("5\r\nh\r\n101\r\nl\r\na\r\nell\r\nell!\r\n", output);
@@ -965,13 +999,14 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_CharArray(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var a = new char[2] {'x', 'y'}
     a[0] = 'z'
-    System.Console.WriteLine(a[0])
-    System.Console.WriteLine(a[1])
+    Console.WriteLine(a[0])
+    Console.WriteLine(a[1])
 }", "src-char-array", target);
 
             Assert.Equal("z\r\ny\r\n", output);
@@ -982,11 +1017,12 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_String_IndexOutOfBounds(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var s = ""abc""
-    System.Console.WriteLine(s[9])
+    Console.WriteLine(s[9])
 }", "src-string-oob", target, expectedExitCode: 1);
 
             Assert.Equal("error: array index out of range\r\n", output);
@@ -997,11 +1033,12 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Substring_InvalidArguments(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var s = ""abc""
-    System.Console.WriteLine(s.substring(1, 99))
+    Console.WriteLine(s.substring(1, 99))
 }", "src-substring-invalid", target, expectedExitCode: 1);
 
             Assert.Equal("error: invalid substring arguments\r\n", output);
@@ -1012,19 +1049,20 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_Enum_EndToEnd(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 public enum Color { Red, Green, Blue }
 public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
 function f(c: Color): int { return int(c) }
 function Main()
 {
     var c = Color.Green
-    System.Console.WriteLine(int(c))
-    System.Console.WriteLine(int(HttpStatus.NotFound))
-    System.Console.WriteLine(c == Color.Green)
-    System.Console.WriteLine(c == Color.Red)
-    System.Console.WriteLine(int(f(Color.Blue)))
-    System.Console.WriteLine(int(Color(99)) == 99)
+    Console.WriteLine(int(c))
+    Console.WriteLine(int(HttpStatus.NotFound))
+    Console.WriteLine(c == Color.Green)
+    Console.WriteLine(c == Color.Red)
+    Console.WriteLine(int(f(Color.Blue)))
+    Console.WriteLine(int(Color(99)) == 99)
 }", "src-enum", target);
 
             Assert.Equal("1\r\n404\r\nTrue\r\nFalse\r\n2\r\nTrue\r\n", output);
@@ -1035,15 +1073,16 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_EnumArray(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 public enum Color { Red, Green, Blue }
 function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
-    System.Console.WriteLine(int(a[0]))
-    System.Console.WriteLine(int(a[1]))
+    Console.WriteLine(int(a[0]))
+    Console.WriteLine(int(a[1]))
     a[1] = Color.Blue
-    System.Console.WriteLine(int(a[1]))
+    Console.WriteLine(int(a[1]))
 }", "src-enum-array", target);
 
             Assert.Equal("0\r\n1\r\n2\r\n", output);
@@ -1052,7 +1091,8 @@ function Main()
         [Fact]
         public void NativeSource_Interface_ReportsUnsupported()
         {
-            var syntaxTree = SyntaxTree.Parse(@"
+            var syntaxTree = SyntaxTree.Parse(@"using System
+
 public interface IShape
 {
     function Area(): int
@@ -1069,7 +1109,7 @@ public class Circle extends IShape
 function Main()
 {
     var s: IShape = new Circle()
-    System.Console.WriteLine(s.Area())
+    Console.WriteLine(s.Area())
 }");
             var compilation = Compilation.Create(syntaxTree);
             TargetPlatform.TryParse(X64, out var platform);
@@ -1083,11 +1123,12 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_CSharpStyleTopLevelFunctions(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System;
+
 public static void Main()
 {
-    System.Console.WriteLine(Add(2, 3));
-    System.Console.WriteLine(Square(4));
+    Console.WriteLine(Add(2, 3));
+    Console.WriteLine(Square(4));
 }
 
 public int Add(int x, int y)
@@ -1108,10 +1149,11 @@ public int Square(int n)
         [InlineData(X86)]
         public void NativeSource_NoKeywordTopLevelFunction(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
-    System.Console.WriteLine(Add(2, 3))
+    Console.WriteLine(Add(2, 3))
 }
 
 function Add(a: int, b: int): int
@@ -1127,13 +1169,14 @@ function Add(a: int, b: int): int
         [InlineData(X86)]
         public void NativeSource_CSharpStyleConstLocal(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System;
+
 public static void Main()
 {
     const int x = 10;
-    System.Console.WriteLine(x);
+    Console.WriteLine(x);
     const string s = ""hi"";
-    System.Console.WriteLine(s);
+    Console.WriteLine(s);
 }", "src-cs-const", target, useCs: true);
 
             Assert.Equal("10\r\nhi\r\n", output);
@@ -1144,14 +1187,15 @@ public static void Main()
         [InlineData(X86)]
         public void NativeSource_ExpressionBodiedTopLevelFunctions(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Add(a: int, b: int): int => a + b
 function Triple(x: int): int => x * 3
 
 function Main()
 {
-    System.Console.WriteLine(Add(2, 3))
-    System.Console.WriteLine(Triple(4))
+    Console.WriteLine(Add(2, 3))
+    Console.WriteLine(Triple(4))
 }", "src-expression-body-top-level", target);
 
             Assert.Equal("5\r\n12\r\n", output);
@@ -1162,18 +1206,19 @@ function Main()
         [InlineData(X86)]
         public void NativeSource_StringInterpolation(string target)
         {
-            var output = CompileAndRun(@"
+            var output = CompileAndRun(@"using System
+
 function Main()
 {
     var name = ""Cocoa""
     var a = 10
     var b = 20
-    System.Console.WriteLine($""Hello {name}"")
-    System.Console.WriteLine($""{a} + {b} = {a + b}"")
-    System.Console.WriteLine($""{3.5}"")
-    System.Console.WriteLine($""{true}"")
-    System.Console.WriteLine($""{'A'}"")
-    System.Console.WriteLine($""{{escaped}} {a}"")
+    Console.WriteLine($""Hello {name}"")
+    Console.WriteLine($""{a} + {b} = {a + b}"")
+    Console.WriteLine($""{3.5}"")
+    Console.WriteLine($""{true}"")
+    Console.WriteLine($""{'A'}"")
+    Console.WriteLine($""{{escaped}} {a}"")
 }", "src-interp", target);
 
             Assert.Equal("Hello Cocoa\r\n10 + 20 = 30\r\n3.5\r\nTrue\r\nA\r\n{escaped} 10\r\n", output);

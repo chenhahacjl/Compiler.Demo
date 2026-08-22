@@ -510,6 +510,12 @@ namespace Cocoa.CodeAnalysis
                 return EvaluateBuiltinCall(node.Method, node.Arguments);
             }
 
+            // 静态容器类方法调用（6e-M18：System.Console.WriteLine / System.Math.Max ...）：按函数调用求值
+            if (node.Method != null)
+            {
+                return EvaluateCallExpression(new BoundCallExpression(node.Syntax, node.Method, node.Arguments));
+            }
+
             var target = (string)EvaluateExpression(node.Expression)!;
             var start = Convert.ToInt32(EvaluateExpression(node.Arguments[0]));
             var count = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));

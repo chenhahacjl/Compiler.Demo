@@ -8,7 +8,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         private static readonly string[] References = new[]
         {
             typeof(object).Assembly.Location,    // System.Private.CoreLib
-            typeof(System.Console).Assembly.Location, // System.Console.dll
+            typeof(System.Console).Assembly.Location, // Console.dll
         };
 
         private static MetadataReader CreateReader() => new MetadataReader(References);
@@ -90,7 +90,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var builder = new MetadataBuilder("test", "test");
             var reader = CreateReader();
 
-            var method = reader.FindMethod("System.Random", "get_Shared", System.Array.Empty<string>(), builder);
+            var method = reader.FindMethod("System.Random", "get_Shared", Array.Empty<string>(), builder);
 
             Assert.NotNull(method);
             Assert.Equal("get_Shared", method!.Name);
@@ -132,7 +132,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var builder = new MetadataBuilder("test", "test");
             var reader = CreateReader();
 
-            var method = reader.FindMethod("System.Console", "DoesNotExist", System.Array.Empty<string>(), builder);
+            var method = reader.FindMethod("System.Console", "DoesNotExist", Array.Empty<string>(), builder);
 
             Assert.Null(method);
         }

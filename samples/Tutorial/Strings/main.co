@@ -1,18 +1,19 @@
+using System
 function Main()
 {
     var s = "hello"
-    System.Console.WriteLine(s.Length)
-    System.Console.WriteLine(s[0])
-    System.Console.WriteLine(int(s[1]))
-    System.Console.WriteLine(Middle(s))
-    System.Console.WriteLine(Middle(s) + "!")
-    System.Console.WriteLine(FirstChar(s))
+    Console.WriteLine(s.Length)
+    Console.WriteLine(s[0])
+    Console.WriteLine(int(s[1]))
+    Console.WriteLine(Middle(s))
+    Console.WriteLine(Middle(s) + "!")
+    Console.WriteLine(FirstChar(s))
 
     var c = 'a'
-    System.Console.WriteLine(c)
-    System.Console.WriteLine(c == 'a')
-    System.Console.WriteLine(char(98))
+    Console.WriteLine(c)
+    Console.WriteLine(c == 'a')
+    Console.WriteLine(char(98))
 
-    System.Console.WriteLine(s == "hello")
-    System.Console.WriteLine(s == "world")
+    Console.WriteLine(s == "hello")
+    Console.WriteLine(s == "world")
 }

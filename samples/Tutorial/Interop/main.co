@@ -1,7 +1,8 @@
+using System
 function Main()
 {
-    System.Console.WriteLine(IsRunning())
+    Console.WriteLine(IsRunning())
 
-    var r = System.Runtime.Random(100)
-    System.Console.WriteLine(InRange(r, 100))
+    var r = Runtime.Random(100)
+    Console.WriteLine(InRange(r, 100))
 }

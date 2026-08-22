@@ -26,15 +26,16 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         public void Dump_Variables(string target)
         {
             TargetPlatform.TryParse(target, out var platform);
-            var source = @"
+            var source = @"using System
+
 function Main()
 {
     var x = 10
     x = x + 5
-    System.Console.WriteLine(x)
+    Console.WriteLine(x)
     var y = 3
     y = x * y
-    System.Console.WriteLine(y)
+    Console.WriteLine(y)
 }";
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create(syntaxTree);

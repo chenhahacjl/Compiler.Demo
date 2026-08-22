@@ -70,8 +70,8 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
-                // 类常规方法（隐式构造等）不在容器序列化范围，跳过
-                if (fn.ContainingClass != null && fn.BuiltinKind == null && !fn.IsExtern)
+                // 容器类方法（静态）序列化函数体；实例方法/隐式构造等常规方法不在容器序列化范围，跳过
+                if (fn.ContainingClass != null && !fn.IsStatic)
                 {
                     continue;
                 }
@@ -664,6 +664,14 @@ namespace Cocoa.CodeAnalysis.Cod
                         w.End();
                         break;
                     }
+                case BoundNodeKind.ThisExpression:
+                    {
+                        var n = (BoundThisExpression)expression;
+                        w.Open("this");
+                        w.Field(registry.Get(n.Type));
+                        w.End();
+                        break;
+                    }
             }
         }
 
@@ -727,8 +735,8 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field(Str(classType.Namespace));
             w.Field(Str(classType.Name));
             w.Field((int)classType.Visibility);
-            // 仅序列化容器方法（syscall/extern）：隐式构造等常规方法不参与容器语义
-            var methods = classType.Methods.Where(m => m.BuiltinKind != null || m.IsExtern).ToArray();
+            // 序列化全部静态方法（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）
+            var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
             w.Field(methods.Length);
             foreach (var method in methods)
             {
@@ -1008,8 +1016,8 @@ namespace Cocoa.CodeAnalysis.Cod
                     return id;
                 }
 
-                // 类方法：仅容器方法（syscall/extern）作为独立 fn 序列化；隐式构造等常规方法由类壳过滤
-                if (fn.ContainingClass != null && fn.BuiltinKind == null && !fn.IsExtern)
+                // 类方法：容器类全静态（syscall/extern 及带体静态方法，6e-M18）作为独立 fn 序列化；实例方法/构造由类壳过滤
+                if (fn.ContainingClass != null && !fn.IsStatic)
                 {
                     return -1;
                 }
@@ -1314,8 +1322,8 @@ namespace Cocoa.CodeAnalysis.Cod
 
             SetAt(symbolsById, id, function);
 
-            // 类方法回填：含类归属的 fn 归入其类（仅容器方法——syscall/extern，含 IsStatic 语义）
-            if (containingClass != null && (builtinKind != null || isExtern))
+            // 类方法回填：含类归属的 fn 归入其类（6e-M18：容器类全静态——syscall/extern 及带体静态方法）
+            if (containingClass != null)
             {
                 function.IsStatic = true;
                 containingClass.AddMethod(function);
@@ -1631,6 +1639,12 @@ namespace Cocoa.CodeAnalysis.Cod
                         var typeId = reader.ExpectInt();
                         var type = (ClassTypeSymbol)symbolsById[typeId];
                         return new BoundStaticTypeExpression(null, type);
+                    }
+                case "this":
+                    {
+                        var typeId = reader.ExpectInt();
+                        var type = (TypeSymbol)symbolsById[typeId];
+                        return new BoundThisExpression(null, (ClassTypeSymbol)type);
                     }
                 default:
                     throw new InvalidDataException($"Unknown expression kind '{kind}'");

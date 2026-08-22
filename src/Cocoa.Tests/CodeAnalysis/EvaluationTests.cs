@@ -202,11 +202,12 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Foreach_CollectionNotArrayOrString_ReportsCannotIterate()
         {
-            var text = @"
+            var text = @"using System
+
                 var n = 10
                 foreach (var x in [n])
                 {
-                    System.Runtime.Print(x)
+                    Runtime.Print(x)
                 }
             ";
 
@@ -235,14 +236,15 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Switch_CaseValueMustBeConstant()
         {
-            var text = @"
+            var text = @"using System
+
                 var x = 1
                 var y = 2
                 switch (x)
                 {
                     case [y]:
                     {
-                        System.Console.WriteLine(""one"")
+                        Console.WriteLine(""one"")
                         break
                     }
                 }
@@ -258,13 +260,14 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Switch_MissingBreak_ReportsFallThrough()
         {
-            var text = @"
+            var text = @"using System
+
                 var x = 1
                 switch (x)
                 {
                     case 1:
                     {
-                        [System.Console.WriteLine(""one"")]
+                        [Console.WriteLine(""one"")]
                     }
                 }
             ";
@@ -799,8 +802,9 @@ function Main()
         [Fact]
         public void Evaluator_InvokeFunctionArguments_Missing()
         {
-            var text = @"
-                System.Console.[WriteLine]()
+            var text = @"using System
+
+                Console.[WriteLine]()
             ";
 
             var diagnostics = @"
@@ -813,8 +817,9 @@ function Main()
         [Fact]
         public void Evaluator_InvokeFunctionArguments_Exceeding()
         {
-            var text = @"
-                System.Console.[WriteLine](""Hello"", "" "", "" world!"")
+            var text = @"using System
+
+                Console.[WriteLine](""Hello"", "" "", "" world!"")
             ";
 
             var diagnostics = @"
@@ -828,8 +833,9 @@ function Main()
         public void Evaluator_InvokeFunctionArguments_NoInfiniteLoop()
         {
             // 赋值运算符出现在实参位置的坏输入：不得无限循环，诊断保持有限数量
-            var text = @"
-                System.Console.WriteLine(""Hi""=)
+            var text = @"using System
+
+                Console.WriteLine(""Hi""=)
             ";
 
             var syntaxTree = SyntaxTree.Parse(text);
@@ -844,10 +850,11 @@ function Main()
         public void Evaluator_FunctionParameters_NoInfiniteLoop()
         {
             // 坏类型子句 + 函数体外壳的坏输入：不得无限循环，诊断保持有限数量
-            var text = @"
+            var text = @"using System
+
                 function hi(name: string=)
                 {
-                    System.Console.WriteLine(""Hi "" + name + ""!"" )
+                    Console.WriteLine(""Hi "" + name + ""!"" )
                 }
             ";
 
@@ -1358,17 +1365,18 @@ function Main()
         [Fact]
         public void Evaluator_IfStatement_Reports_NotReachableCode_Warning()
         {
-            var text = @"
+            var text = @"using System
+
                 function test()
                 {
                     let x = 4 * 3
                     if x > 12
                     {
-                        System.Console.[WriteLine](""x"")
+                        Console.[WriteLine](""x"")
                     }
                     else
                     {
-                        System.Console.WriteLine(""x"")
+                        Console.WriteLine(""x"")
                     }
                 }
             ";
@@ -1730,7 +1738,8 @@ stdcall function GetTickCount(): int";
         [Fact]
         public void Evaluator_SyscallFunction_ClassMethod_NoDiagnostics()
         {
-            var text = @"
+            var text = @"using System
+
 class Runtime
 {
     syscall function Random(max: int): int
@@ -1783,12 +1792,13 @@ syscall function [Random](): int";
         [Fact]
         public void Evaluator_Builtin_Sleep_Now_Exit()
         {
-            var text = @"
+            var text = @"using System
+
 function Main(): int
 {
-    var t0 = System.Runtime.Now()
-    System.Runtime.Sleep(1)
-    var t1 = System.Runtime.Now()
+    var t0 = Runtime.Now()
+    Runtime.Sleep(1)
+    var t1 = Runtime.Now()
     if t1 < t0
     {
         return 1
