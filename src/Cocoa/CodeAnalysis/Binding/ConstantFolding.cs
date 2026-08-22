@@ -2,38 +2,54 @@ using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
+    /// <summary>
+    /// 常量折叠（6e-M21 Phase 2）：按操作数类型的计算域分发——
+    /// 有符号整数在 long 域、无符号在 ulong 域（右移为逻辑移位）、f32 在 float 域、f64 在 double 域；
+    /// 结果按目标位宽截断归位（装箱为对应 CLR 原生类型）。
+    /// </summary>
     internal static class ConstantFolding
     {
         public static BoundConstant? Fold(BoundUnaryOperator op, BoundExpression operand)
         {
-            if (operand.ConstantValue != null)
+            if (operand.ConstantValue == null)
             {
-                switch (op.Kind)
-                {
-                    case BoundUnaryOperatorKind.Identity:
-                        if (operand.Type == TypeSymbol.Double)
-                            return new BoundConstant((double)operand.ConstantValue.Value);
-                        if (operand.Type == TypeSymbol.Int64)
-                            return new BoundConstant((long)operand.ConstantValue.Value);
-                        return new BoundConstant((int)operand.ConstantValue.Value);
-                    case BoundUnaryOperatorKind.Negation:
-                        if (operand.Type == TypeSymbol.Double)
-                            return new BoundConstant(-(double)operand.ConstantValue.Value);
-                        if (operand.Type == TypeSymbol.Int64)
-                            return new BoundConstant(-(long)operand.ConstantValue.Value);
-                        return new BoundConstant(-(int)operand.ConstantValue.Value);
-                    case BoundUnaryOperatorKind.LogicalNegation:
-                        return new BoundConstant(!(bool)operand.ConstantValue.Value);
-                    case BoundUnaryOperatorKind.OnesComplement:
-                        if (operand.Type == TypeSymbol.Int64)
-                            return new BoundConstant(~(long)operand.ConstantValue.Value);
-                        return new BoundConstant(~(int)operand.ConstantValue.Value);
-                    default:
-                        throw new Exception($"Unexcepted unary operator {op.Kind}");
-                }
+                return null;
             }
 
-            return null;
+            var value = operand.ConstantValue.Value;
+            var type = operand.Type;
+
+            switch (op.Kind)
+            {
+                case BoundUnaryOperatorKind.Identity:
+                    return new BoundConstant(value);
+                case BoundUnaryOperatorKind.Negation:
+                    if (type.IsInteger && !type.IsPlaceholder128)
+                    {
+                        return type.IsSigned
+                            ? new BoundConstant(Box(type, unchecked(-ToSigned64(value))))
+                            : new BoundConstant(Box(type, unchecked(0UL - ToUnsigned64(value))));
+                    }
+
+                    if (type == TypeSymbol.Float32)
+                        return new BoundConstant(-(float)value);
+                    if (type == TypeSymbol.Double)
+                        return new BoundConstant(-(double)value);
+                    break;
+                case BoundUnaryOperatorKind.LogicalNegation:
+                    return new BoundConstant(!(bool)value);
+                case BoundUnaryOperatorKind.OnesComplement:
+                    if (type.IsInteger && !type.IsPlaceholder128)
+                    {
+                        return type.IsSigned
+                            ? new BoundConstant(Box(type, ~ToSigned64(value)))
+                            : new BoundConstant(Box(type, ~ToUnsigned64(value)));
+                    }
+
+                    break;
+            }
+
+            throw new Exception($"Unexcepted unary operator {op.Kind}");
         }
 
         public static BoundConstant? Fold(BoundExpression left, BoundBinaryOperator op, BoundExpression right)
@@ -67,6 +83,19 @@ namespace Cocoa.CodeAnalysis.Binding
             if (leftConstant == null || rightConstant == null)
             {
                 return null;
+            }
+
+            var type = left.Type;
+
+            // 6e-M21 Phase 1 的二元提升保证到达此处时 left.Type == right.Type == 公共计算类型。
+            if (type.IsInteger && !type.IsPlaceholder128)
+            {
+                return FoldInteger(op, leftConstant.Value, rightConstant.Value, type);
+            }
+
+            if (type == TypeSymbol.Float32)
+            {
+                return FoldFloat32(op, leftConstant.Value, rightConstant.Value);
             }
 
             switch (op.Kind)
@@ -168,5 +197,146 @@ namespace Cocoa.CodeAnalysis.Binding
                     throw new Exception($"Unexpected binary operator {op.Kind}");
             }
         }
+
+        /// <summary>整数二元折叠：有符号在 long 域、无符号在 ulong 域（除零不折叠、移位计数掩码、无符号右移为逻辑移位）。</summary>
+        private static BoundConstant? FoldInteger(BoundBinaryOperator op, object lv, object rv, TypeSymbol type)
+        {
+            if (type.IsSigned)
+            {
+                var a = ToSigned64(lv);
+                var b = ToSigned64(rv);
+                switch (op.Kind)
+                {
+                    case BoundBinaryOperatorKind.Addition: return new BoundConstant(Box(type, unchecked(a + b)));
+                    case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(Box(type, unchecked(a - b)));
+                    case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(Box(type, unchecked(a * b)));
+                    case BoundBinaryOperatorKind.Division: return b == 0 ? null : new BoundConstant(Box(type, a / b));
+                    case BoundBinaryOperatorKind.Modulo: return b == 0 ? null : new BoundConstant(Box(type, a % b));
+                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(Box(type, a << ((int)b & 63)));
+                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(Box(type, a >> ((int)b & 63)));
+                    case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(Box(type, a & b));
+                    case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(Box(type, a | b));
+                    case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(Box(type, a ^ b));
+                    case BoundBinaryOperatorKind.Equals: return new BoundConstant(a == b);
+                    case BoundBinaryOperatorKind.NotEquals: return new BoundConstant(a != b);
+                    case BoundBinaryOperatorKind.Less: return new BoundConstant(a < b);
+                    case BoundBinaryOperatorKind.LessOrEquals: return new BoundConstant(a <= b);
+                    case BoundBinaryOperatorKind.Greater: return new BoundConstant(a > b);
+                    case BoundBinaryOperatorKind.GreaterOrEquals: return new BoundConstant(a >= b);
+                }
+            }
+            else
+            {
+                var a = ToUnsigned64(lv);
+                var b = ToUnsigned64(rv);
+                switch (op.Kind)
+                {
+                    case BoundBinaryOperatorKind.Addition: return new BoundConstant(Box(type, unchecked(a + b)));
+                    case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(Box(type, unchecked(a - b)));
+                    case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(Box(type, unchecked(a * b)));
+                    case BoundBinaryOperatorKind.Division: return b == 0UL ? null : new BoundConstant(Box(type, a / b));
+                    case BoundBinaryOperatorKind.Modulo: return b == 0UL ? null : new BoundConstant(Box(type, a % b));
+                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(Box(type, a << ((int)b & 63)));
+                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(Box(type, a >> ((int)b & 63)));
+                    case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(Box(type, a & b));
+                    case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(Box(type, a | b));
+                    case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(Box(type, a ^ b));
+                    case BoundBinaryOperatorKind.Equals: return new BoundConstant(a == b);
+                    case BoundBinaryOperatorKind.NotEquals: return new BoundConstant(a != b);
+                    case BoundBinaryOperatorKind.Less: return new BoundConstant(a < b);
+                    case BoundBinaryOperatorKind.LessOrEquals: return new BoundConstant(a <= b);
+                    case BoundBinaryOperatorKind.Greater: return new BoundConstant(a > b);
+                    case BoundBinaryOperatorKind.GreaterOrEquals: return new BoundConstant(a >= b);
+                }
+            }
+
+            throw new Exception($"Unexpected integer binary operator {op.Kind}");
+        }
+
+        /// <summary>f32 折叠：float 域四则与比较。</summary>
+        private static BoundConstant? FoldFloat32(BoundBinaryOperator op, object lv, object rv)
+        {
+            var a = (float)lv;
+            var b = (float)rv;
+            switch (op.Kind)
+            {
+                case BoundBinaryOperatorKind.Addition: return new BoundConstant(a + b);
+                case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(a - b);
+                case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(a * b);
+                case BoundBinaryOperatorKind.Division: return new BoundConstant(a / b);
+                case BoundBinaryOperatorKind.Equals: return new BoundConstant(a == b);
+                case BoundBinaryOperatorKind.NotEquals: return new BoundConstant(a != b);
+                case BoundBinaryOperatorKind.Less: return new BoundConstant(a < b);
+                case BoundBinaryOperatorKind.LessOrEquals: return new BoundConstant(a <= b);
+                case BoundBinaryOperatorKind.Greater: return new BoundConstant(a > b);
+                case BoundBinaryOperatorKind.GreaterOrEquals: return new BoundConstant(a >= b);
+            }
+
+            throw new Exception($"Unexpected float binary operator {op.Kind}");
+        }
+
+        /// <summary>按类型位宽截断归位：有符号装箱 sbyte/short/int/long，无符号装箱 byte/ushort/uint/ulong。</summary>
+        private static object Box(TypeSymbol type, long value)
+        {
+            return type.IsSigned ? BoxSigned(type, value) : BoxUnsigned(type, unchecked((ulong)value));
+        }
+
+        private static object BoxSigned(TypeSymbol type, long value)
+        {
+            // 注意：各 arm 必须显式转 object——否则 switch 表达式的自然类型会被推断为公共类型 long，
+            // 导致 (int) 归位值被静默提升回 long（6e-M21 Phase2 踩坑记录）
+            return type.BitWidth switch
+            {
+                8 => (object)(sbyte)value,
+                16 => (object)(short)value,
+                32 => (object)(int)value,
+                _ => value,
+            };
+        }
+
+        private static object Box(TypeSymbol type, ulong value)
+        {
+            return type.IsSigned ? Box(type, unchecked((long)value)) : BoxUnsigned(type, value);
+        }
+
+        private static object BoxUnsigned(TypeSymbol type, ulong value)
+        {
+            // 同 BoxSigned：arm 显式转 object，避免公共类型推断为 ulong
+            return type.BitWidth switch
+            {
+                8 => (object)(byte)value,
+                16 => (object)(ushort)value,
+                32 => (object)(uint)value,
+                _ => value,
+            };
+        }
+
+        private static long ToSigned64(object value) => value switch
+        {
+            int i => i,
+            long l => l,
+            char c => c,
+            sbyte sb => sb,
+            short s => s,
+            uint u => unchecked((long)u),
+            byte b => b,
+            ushort us => us,
+            ulong ul => unchecked((long)ul),
+            _ => throw new System.InvalidOperationException($"Not an integer constant: {value}"),
+        };
+
+        private static ulong ToUnsigned64(object value) => value switch
+        {
+            uint u => u,
+            ulong ul => ul,
+            byte b => b,
+            ushort us => us,
+            int i => unchecked((ulong)i),
+            long l => unchecked((ulong)l),
+            char c => c,
+            sbyte sb => unchecked((ulong)sb),
+            short s => unchecked((ulong)s),
+            _ => throw new System.InvalidOperationException($"Not an integer constant: {value}"),
+        };
     }
 }
