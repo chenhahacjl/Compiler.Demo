@@ -279,6 +279,20 @@ namespace System
         syscall function Random(max: int): int
     }
 
+    class Utils
+    {
+        static function Triple(x: int): int
+        {
+            return x * 3
+        }
+
+        static function Max(a: int, b: int): int
+        {
+            if (a > b) return a
+            return b
+        }
+    }
+
     namespace Math
     {
         function Max(a: int, b: int): int
@@ -301,8 +315,71 @@ namespace System
             Assert.Equal(BuiltinKind.Print, print.BuiltinKind);
             Assert.Same(runtime, print.ContainingClass);
 
-            var math = Assert.Single(cod.Functions, f => f.Name == "Max");
+            // 6e-M18：静态方法容器类（方法带函数体）符号往返
+            var utils = Assert.Single(cod.Classes, c => c.Name == "Utils");
+            Assert.Equal("System.Utils", utils.FullName);
+            Assert.Equal(2, utils.Methods.Length);
+
+            var triple = Assert.Single(utils.Methods, m => m.Name == "Triple");
+            Assert.True(triple.IsStatic);
+            Assert.Same(utils, triple.ContainingClass);
+            Assert.Contains(cod.Functions, f => f.Name == "Triple" && f.ContainingClass == utils);
+
+            var utilsMax = Assert.Single(utils.Methods, m => m.Name == "Max");
+            Assert.Same(utils, utilsMax.ContainingClass);
+            Assert.Contains(cod.Functions, f => f.Name == "Max" && f.ContainingClass == utils);
+
+            var math = Assert.Single(cod.Functions, f => f.Name == "Max" && f.ContainingClass == null);
             Assert.Equal("System.Math", math.Namespace);
+        }
+
+        [Fact]
+        public void Cod_ContainerClass_StaticMethod_EndToEnd()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace System
+{
+    class Utils
+    {
+        static function Triple(x: int): int
+        {
+            return x * 3
+        }
+
+        static function Max(a: int, b: int): int
+        {
+            if (a > b) return a
+            return b
+        }
+    }
+}
+";
+            var diagnostics = Compilation.Create(SyntaxTree.Parse(source)).EmitCocoa("System.Core", Path.Combine(dir, "System.Core.cod"));
+            Assert.Empty(diagnostics);
+            Assert.True(File.Exists(Path.Combine(dir, "System.Core.cod")));
+
+            var previous = Environment.GetEnvironmentVariable("COCOA_STDLIB");
+            try
+            {
+                Environment.SetEnvironmentVariable("COCOA_STDLIB", dir);
+                SystemLibrary.Reset();
+
+                var compilation = Compilation.Create(SyntaxTree.Parse(@"using System
+
+function Main(): int
+{
+    return Utils.Triple(3) + Utils.Max(2, 7)
+}"));
+                var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+                Assert.Empty(result.Diagnostics);
+                Assert.Equal(9 + 7, result.Value);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("COCOA_STDLIB", previous);
+                SystemLibrary.Reset();
+            }
         }
 
         [Fact]

@@ -1,8 +1,0 @@
-name = System.Core
-output = cocoa
-
-[sources]
-System.co
-
-[options]
-outputPath = out
