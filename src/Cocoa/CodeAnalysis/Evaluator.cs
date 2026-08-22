@@ -229,22 +229,40 @@ namespace Cocoa.CodeAnalysis
 
             Debug.Assert(operand != null);
 
+            var operandType = unary.Op.OperandType;
+
             switch (unary.Op.Kind)
             {
                 case BoundUnaryOperatorKind.Identity:
-                    if (unary.Operand.Type == TypeSymbol.Int64)
+                    if (operandType == TypeSymbol.Int64)
                         return (long)operand!;
-                    return (int)operand;
+                    if (operandType == TypeSymbol.Int32)
+                        return (int)operand;
+                    return operand!; // 其余类型运行时装箱值即正确表示（6e-M21 Phase 3）
                 case BoundUnaryOperatorKind.Negation:
-                    if (unary.Operand.Type == TypeSymbol.Int64)
-                        return -(long)operand!;
-                    if (unary.Operand.Type == TypeSymbol.Double)
+                    if (operandType.IsInteger && !operandType.IsPlaceholder128)
+                    {
+                        return operandType.IsSigned
+                            ? Binding.NumericBox.Box(operandType, unchecked(-Binding.NumericBox.ToSigned64(operand)))
+                            : Binding.NumericBox.Box(operandType, unchecked(0UL - Binding.NumericBox.ToUnsigned64(operand)));
+                    }
+
+                    if (operandType == TypeSymbol.Float32)
+                        return -(float)operand;
+                    if (operandType == TypeSymbol.Double)
                         return -(double)operand;
                     return -(int)operand;
                 case BoundUnaryOperatorKind.LogicalNegation:
                     return !(bool)operand;
                 case BoundUnaryOperatorKind.OnesComplement:
-                    if (unary.Operand.Type == TypeSymbol.Int64)
+                    if (operandType.IsInteger && !operandType.IsPlaceholder128)
+                    {
+                        return operandType.IsSigned
+                            ? Binding.NumericBox.Box(operandType, ~Binding.NumericBox.ToSigned64(operand))
+                            : Binding.NumericBox.Box(operandType, ~Binding.NumericBox.ToUnsigned64(operand));
+                    }
+
+                    if (operandType == TypeSymbol.Int64)
                         return ~(long)operand!;
                     return ~(int)operand;
                 default:
@@ -260,6 +278,18 @@ namespace Cocoa.CodeAnalysis
             Debug.Assert(left != null && right != null ||
                          binary.Op.Kind == BoundBinaryOperatorKind.Equals ||
                          binary.Op.Kind == BoundBinaryOperatorKind.NotEquals);
+
+            // 6e-M21 Phase 3：整数按符号域（long/ulong）、f32 按 float 域求值后归位
+            var resultType = binary.Type;
+            if (resultType.IsInteger && !resultType.IsPlaceholder128)
+            {
+                return EvaluateIntegerBinary(binary.Op.Kind, left!, right!, resultType);
+            }
+
+            if (resultType == TypeSymbol.Float32)
+            {
+                return EvaluateFloat32Binary(binary.Op.Kind, left!, right!);
+            }
 
             switch (binary.Op.Kind)
             {
@@ -463,7 +493,8 @@ namespace Cocoa.CodeAnalysis
                     return (int)doubleValue;
                 }
 
-                return Convert.ToInt32(value);
+                // 无符号大值按位模式截断（与 C# unchecked 窄化一致）
+                return unchecked((int)Binding.NumericBox.ToSigned64(value));
             }
             else if (node.Type == TypeSymbol.Int64)
             {
@@ -478,7 +509,17 @@ namespace Cocoa.CodeAnalysis
                     return (long)longInt;
                 }
 
-                return Convert.ToInt64(value);
+                if (value is uint longUint)
+                {
+                    return (long)longUint;
+                }
+
+                if (value is ulong longUlong)
+                {
+                    return unchecked((long)longUlong);
+                }
+
+                return Binding.NumericBox.ToSigned64(value);
             }
             else if (node.Type == TypeSymbol.Char)
             {
@@ -493,6 +534,40 @@ namespace Cocoa.CodeAnalysis
 
                 // 无符号字节截断，与 (byte)300 == 44 语义一致
                 return unchecked((byte)Convert.ToInt32(value));
+            }
+            else if (node.Type == TypeSymbol.Int8)
+            {
+                if (value is double sbyteDouble)
+                    return unchecked((sbyte)(int)sbyteDouble);
+                return unchecked((sbyte)Binding.NumericBox.ToSigned64(value));
+            }
+            else if (node.Type == TypeSymbol.Int16)
+            {
+                if (value is double shortDouble)
+                    return unchecked((short)(int)shortDouble);
+                return unchecked((short)Binding.NumericBox.ToSigned64(value));
+            }
+            else if (node.Type == TypeSymbol.UInt16)
+            {
+                if (value is double ushortDouble)
+                    return unchecked((ushort)(int)ushortDouble);
+                return unchecked((ushort)Binding.NumericBox.ToUnsigned64(value));
+            }
+            else if (node.Type == TypeSymbol.UInt32)
+            {
+                if (value is double uintDouble)
+                    return unchecked((uint)(long)uintDouble);
+                return unchecked((uint)Binding.NumericBox.ToUnsigned64(value));
+            }
+            else if (node.Type == TypeSymbol.UInt64)
+            {
+                if (value is double ulongDouble)
+                    return unchecked((ulong)(long)ulongDouble);
+                return Binding.NumericBox.ToUnsigned64(value);
+            }
+            else if (node.Type == TypeSymbol.Float32)
+            {
+                return Convert.ToSingle(value);
             }
             else if (node.Type == TypeSymbol.Double)
             {
@@ -613,6 +688,86 @@ namespace Cocoa.CodeAnalysis
                 var locals = _locals.Peek();
                 locals[variable] = value!;
             }
+        }
+
+        /// <summary>
+        /// 6e-M21 Phase 3：整数二元求值——有符号在 long 域、无符号在 ulong 域（右移为逻辑移位），
+        /// 移位计数按结果位宽掩码（32 位 &31 / 64 位 &63），结果按类型归位装箱。
+        /// </summary>
+        private static object EvaluateIntegerBinary(BoundBinaryOperatorKind kind, object left, object right, TypeSymbol type)
+        {
+            if (type.IsSigned)
+            {
+                var a = Binding.NumericBox.ToSigned64(left);
+                var b = Binding.NumericBox.ToSigned64(right);
+                switch (kind)
+                {
+                    case BoundBinaryOperatorKind.Addition: return Binding.NumericBox.Box(type, unchecked(a + b));
+                    case BoundBinaryOperatorKind.Subtraction: return Binding.NumericBox.Box(type, unchecked(a - b));
+                    case BoundBinaryOperatorKind.Multiplication: return Binding.NumericBox.Box(type, unchecked(a * b));
+                    case BoundBinaryOperatorKind.Division: return Binding.NumericBox.Box(type, a / b);
+                    case BoundBinaryOperatorKind.Modulo: return Binding.NumericBox.Box(type, a % b);
+                    case BoundBinaryOperatorKind.ShiftLeft: return Binding.NumericBox.Box(type, a << ((int)b & (type.BitWidth - 1)));
+                    case BoundBinaryOperatorKind.ShiftRight: return Binding.NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1)));
+                    case BoundBinaryOperatorKind.BitwiseAnd: return Binding.NumericBox.Box(type, a & b);
+                    case BoundBinaryOperatorKind.BitwiseOr: return Binding.NumericBox.Box(type, a | b);
+                    case BoundBinaryOperatorKind.BitwiseXor: return Binding.NumericBox.Box(type, a ^ b);
+                    case BoundBinaryOperatorKind.Equals: return a == b;
+                    case BoundBinaryOperatorKind.NotEquals: return a != b;
+                    case BoundBinaryOperatorKind.Less: return a < b;
+                    case BoundBinaryOperatorKind.LessOrEquals: return a <= b;
+                    case BoundBinaryOperatorKind.Greater: return a > b;
+                    case BoundBinaryOperatorKind.GreaterOrEquals: return a >= b;
+                }
+            }
+            else
+            {
+                var a = Binding.NumericBox.ToUnsigned64(left);
+                var b = Binding.NumericBox.ToUnsigned64(right);
+                switch (kind)
+                {
+                    case BoundBinaryOperatorKind.Addition: return Binding.NumericBox.Box(type, unchecked(a + b));
+                    case BoundBinaryOperatorKind.Subtraction: return Binding.NumericBox.Box(type, unchecked(a - b));
+                    case BoundBinaryOperatorKind.Multiplication: return Binding.NumericBox.Box(type, unchecked(a * b));
+                    case BoundBinaryOperatorKind.Division: return Binding.NumericBox.Box(type, a / b);
+                    case BoundBinaryOperatorKind.Modulo: return Binding.NumericBox.Box(type, a % b);
+                    case BoundBinaryOperatorKind.ShiftLeft: return Binding.NumericBox.Box(type, a << ((int)b & (type.BitWidth - 1)));
+                    case BoundBinaryOperatorKind.ShiftRight: return Binding.NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1)));
+                    case BoundBinaryOperatorKind.BitwiseAnd: return Binding.NumericBox.Box(type, a & b);
+                    case BoundBinaryOperatorKind.BitwiseOr: return Binding.NumericBox.Box(type, a | b);
+                    case BoundBinaryOperatorKind.BitwiseXor: return Binding.NumericBox.Box(type, a ^ b);
+                    case BoundBinaryOperatorKind.Equals: return a == b;
+                    case BoundBinaryOperatorKind.NotEquals: return a != b;
+                    case BoundBinaryOperatorKind.Less: return a < b;
+                    case BoundBinaryOperatorKind.LessOrEquals: return a <= b;
+                    case BoundBinaryOperatorKind.Greater: return a > b;
+                    case BoundBinaryOperatorKind.GreaterOrEquals: return a >= b;
+                }
+            }
+
+            throw new Exception($"Unexpected integer binary operator {kind}");
+        }
+
+        /// <summary>f32 二元求值：float 域四则与比较。</summary>
+        private static object EvaluateFloat32Binary(BoundBinaryOperatorKind kind, object left, object right)
+        {
+            var a = (float)left;
+            var b = (float)right;
+            switch (kind)
+            {
+                case BoundBinaryOperatorKind.Addition: return a + b;
+                case BoundBinaryOperatorKind.Subtraction: return a - b;
+                case BoundBinaryOperatorKind.Multiplication: return a * b;
+                case BoundBinaryOperatorKind.Division: return a / b;
+                case BoundBinaryOperatorKind.Equals: return a == b;
+                case BoundBinaryOperatorKind.NotEquals: return a != b;
+                case BoundBinaryOperatorKind.Less: return a < b;
+                case BoundBinaryOperatorKind.LessOrEquals: return a <= b;
+                case BoundBinaryOperatorKind.Greater: return a > b;
+                case BoundBinaryOperatorKind.GreaterOrEquals: return a >= b;
+            }
+
+            throw new Exception($"Unexpected float binary operator {kind}");
         }
     }
 }

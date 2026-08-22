@@ -27,8 +27,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (type.IsInteger && !type.IsPlaceholder128)
                     {
                         return type.IsSigned
-                            ? new BoundConstant(Box(type, unchecked(-ToSigned64(value))))
-                            : new BoundConstant(Box(type, unchecked(0UL - ToUnsigned64(value))));
+                            ? new BoundConstant(NumericBox.Box(type, unchecked(-NumericBox.ToSigned64(value))))
+                            : new BoundConstant(NumericBox.Box(type, unchecked(0UL - NumericBox.ToUnsigned64(value))));
                     }
 
                     if (type == TypeSymbol.Float32)
@@ -42,8 +42,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (type.IsInteger && !type.IsPlaceholder128)
                     {
                         return type.IsSigned
-                            ? new BoundConstant(Box(type, ~ToSigned64(value)))
-                            : new BoundConstant(Box(type, ~ToUnsigned64(value)));
+                            ? new BoundConstant(NumericBox.Box(type, ~NumericBox.ToSigned64(value)))
+                            : new BoundConstant(NumericBox.Box(type, ~NumericBox.ToUnsigned64(value)));
                     }
 
                     break;
@@ -203,20 +203,20 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             if (type.IsSigned)
             {
-                var a = ToSigned64(lv);
-                var b = ToSigned64(rv);
+                var a = NumericBox.ToSigned64(lv);
+                var b = NumericBox.ToSigned64(rv);
                 switch (op.Kind)
                 {
-                    case BoundBinaryOperatorKind.Addition: return new BoundConstant(Box(type, unchecked(a + b)));
-                    case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(Box(type, unchecked(a - b)));
-                    case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(Box(type, unchecked(a * b)));
-                    case BoundBinaryOperatorKind.Division: return b == 0 ? null : new BoundConstant(Box(type, a / b));
-                    case BoundBinaryOperatorKind.Modulo: return b == 0 ? null : new BoundConstant(Box(type, a % b));
-                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(Box(type, a << ((int)b & 63)));
-                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(Box(type, a >> ((int)b & 63)));
-                    case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(Box(type, a & b));
-                    case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(Box(type, a | b));
-                    case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(Box(type, a ^ b));
+                    case BoundBinaryOperatorKind.Addition: return new BoundConstant(NumericBox.Box(type, unchecked(a + b)));
+                    case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(NumericBox.Box(type, unchecked(a - b)));
+                    case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(NumericBox.Box(type, unchecked(a * b)));
+                    case BoundBinaryOperatorKind.Division: return b == 0 ? null : new BoundConstant(NumericBox.Box(type, a / b));
+                    case BoundBinaryOperatorKind.Modulo: return b == 0 ? null : new BoundConstant(NumericBox.Box(type, a % b));
+                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(NumericBox.Box(type, a << ((int)b & 63)));
+                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(NumericBox.Box(type, a >> ((int)b & 63)));
+                    case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(NumericBox.Box(type, a & b));
+                    case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(NumericBox.Box(type, a | b));
+                    case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(NumericBox.Box(type, a ^ b));
                     case BoundBinaryOperatorKind.Equals: return new BoundConstant(a == b);
                     case BoundBinaryOperatorKind.NotEquals: return new BoundConstant(a != b);
                     case BoundBinaryOperatorKind.Less: return new BoundConstant(a < b);
@@ -227,20 +227,20 @@ namespace Cocoa.CodeAnalysis.Binding
             }
             else
             {
-                var a = ToUnsigned64(lv);
-                var b = ToUnsigned64(rv);
+                var a = NumericBox.ToUnsigned64(lv);
+                var b = NumericBox.ToUnsigned64(rv);
                 switch (op.Kind)
                 {
-                    case BoundBinaryOperatorKind.Addition: return new BoundConstant(Box(type, unchecked(a + b)));
-                    case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(Box(type, unchecked(a - b)));
-                    case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(Box(type, unchecked(a * b)));
-                    case BoundBinaryOperatorKind.Division: return b == 0UL ? null : new BoundConstant(Box(type, a / b));
-                    case BoundBinaryOperatorKind.Modulo: return b == 0UL ? null : new BoundConstant(Box(type, a % b));
-                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(Box(type, a << ((int)b & 63)));
-                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(Box(type, a >> ((int)b & 63)));
-                    case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(Box(type, a & b));
-                    case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(Box(type, a | b));
-                    case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(Box(type, a ^ b));
+                    case BoundBinaryOperatorKind.Addition: return new BoundConstant(NumericBox.Box(type, unchecked(a + b)));
+                    case BoundBinaryOperatorKind.Subtraction: return new BoundConstant(NumericBox.Box(type, unchecked(a - b)));
+                    case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(NumericBox.Box(type, unchecked(a * b)));
+                    case BoundBinaryOperatorKind.Division: return b == 0UL ? null : new BoundConstant(NumericBox.Box(type, a / b));
+                    case BoundBinaryOperatorKind.Modulo: return b == 0UL ? null : new BoundConstant(NumericBox.Box(type, a % b));
+                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(NumericBox.Box(type, a << ((int)b & 63)));
+                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(NumericBox.Box(type, a >> ((int)b & 63)));
+                    case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(NumericBox.Box(type, a & b));
+                    case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(NumericBox.Box(type, a | b));
+                    case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(NumericBox.Box(type, a ^ b));
                     case BoundBinaryOperatorKind.Equals: return new BoundConstant(a == b);
                     case BoundBinaryOperatorKind.NotEquals: return new BoundConstant(a != b);
                     case BoundBinaryOperatorKind.Less: return new BoundConstant(a < b);
@@ -340,3 +340,5 @@ namespace Cocoa.CodeAnalysis.Binding
         };
     }
 }
+
+
