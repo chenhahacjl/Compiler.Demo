@@ -77,18 +77,26 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         }
 
         private const string ImportTwoDlls = @"
-import kernel32.dll
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function ExitProcess(exitCode: int)
+    }
+}
 
-stdcall function ExitProcess(exitCode: int)
-
-import user32.dll
-
-stdcall function MessageBoxW(hWnd: int, lpText: int, lpCaption: int, uType: int): int
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function MessageBoxW(hWnd: int, lpText: int, lpCaption: int, uType: int): int
+    }
+}
 
 function Main()
 {
-    var m = MessageBoxW(0, 0, 0, 0)
-    ExitProcess(m)
+    var m = User32.MessageBoxW(0, 0, 0, 0)
+    Kernel32.ExitProcess(m)
 }";
 
         [Fact]

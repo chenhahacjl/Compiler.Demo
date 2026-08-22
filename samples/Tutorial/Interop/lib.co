@@ -1,10 +1,15 @@
-import kernel32.dll
-
-stdcall function GetTickCount(): int
+// 6e-M17 Step 4：extern 强制进类 import 块（`import <dll> { static extern ... }`，声明式归属）
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+}
 
 function IsRunning(): bool
 {
-    var ticks = GetTickCount()
+    var ticks = Kernel32.GetTickCount()
     if ticks > 0
     {
         return true

@@ -82,13 +82,17 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
         {
             var source = @"using System
 
-import kernel32.dll
-
-stdcall function GetCurrentProcessId(): int
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetCurrentProcessId(): int
+    }
+}
 
 function Main()
 {
-    var t = GetCurrentProcessId()
+    var t = Kernel32.GetCurrentProcessId()
     Console.WriteLine(t)
 }";
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source);

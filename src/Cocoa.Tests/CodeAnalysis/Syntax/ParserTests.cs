@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Syntax;
 using System.Diagnostics;
+using System.Linq;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Syntax
@@ -140,6 +141,53 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 e.AssertToken(SyntaxKind.DotToken, ".");
                 e.AssertToken(SyntaxKind.IdentifierToken, "dll");
             }
+        }
+
+        [Fact]
+        public void Parser_ImportBlock_ClassMember_ParsesExternFunctions()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+        static stdcall function ExitProcess(exitCode: int)
+    }
+}");
+            var root = syntaxTree.Root;
+            var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var importBlock = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
+
+            Assert.Equal("kernel32.dll", importBlock.DllName);
+            Assert.Equal(2, importBlock.Members.Length);
+            Assert.All(importBlock.Members, m => Assert.IsType<FunctionDeclarationSyntax>(m));
+            Assert.All(importBlock.Members.Cast<FunctionDeclarationSyntax>(), f => Assert.Null(f.Body));
+        }
+
+        [Fact]
+        public void Parser_ImportBlock_TwoBlocksInSameClass()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+
+    import user32.dll
+    {
+        static stdcall function MessageBeep(uType: int): int
+    }
+}");
+            var root = syntaxTree.Root;
+            var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var blocks = classDecl.Members.OfType<ImportBlockSyntax>().ToArray();
+
+            Assert.Equal(2, blocks.Length);
+            Assert.Equal("kernel32.dll", blocks[0].DllName);
+            Assert.Equal("user32.dll", blocks[1].DllName);
         }
 
         [Fact]

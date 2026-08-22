@@ -509,10 +509,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (isExtern)
             {
-                if (importedDll == null)
-                {
-                    _diagnostics.ReportExternFunctionWithoutImport(syntax.Identifier.Location);
-                }
+                // 6e-M17 Step 4：顶层位置式 extern 废弃 —— extern 必须声明在类的 import 块内
+                _diagnostics.ReportExternFunctionTopLevel(syntax.Identifier.Location);
 
                 if (syntax.Body != null)
                 {
@@ -852,7 +850,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else if (member is FunctionDeclarationSyntax methodDeclaration)
                 {
-                    var method = BindClassMethodDeclaration(methodDeclaration, classType);
+                    var method = BindClassMethodDeclaration(methodDeclaration, classType, dllName: null);
 
                     if (!classType.HasDeclaredMethodSignature(methodDeclaration.Identifier.Text, method))
                     {
@@ -863,6 +861,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
                     }
+                }
+                else if (member is ImportBlockSyntax importBlock)
+                {
+                    BindImportBlock(importBlock, classType, classFunctions);
                 }
                 else if (member is PropertyDeclarationSyntax propertyDeclaration)
                 {
@@ -1440,13 +1442,14 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType)
+        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null)
         {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
             var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
-            // syscall 方法缺省 public（System.Runtime.Runtime.Print 供 System.Console 封装层调用）
-            var visibility = GetVisibility(syntax.Modifiers, isSyscall ? Visibility.Public : Visibility.Private);
+            var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+            // syscall/extern 方法缺省 public（System.Runtime.Runtime.Print 供 System.Console 封装层调用；extern 供类外限定调用）
+            var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var isVirtual = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.VirtualKeyword);
             var isOverride = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.OverrideKeyword);
@@ -1472,8 +1475,28 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 6e-M17 Step 4：extern 校验 —— 在 import 块内（dllName != null）必须 static 且不能有 body；
+            // 在 import 块外声明 extern（stdcall/cdecl 方法）→ 报错（须进 import 块）
+            if (isExtern)
+            {
+                if (dllName == null)
+                {
+                    _diagnostics.ReportExternFunctionMustBeInImportBlock(syntax.Identifier.Location);
+                }
+
+                if (!isStatic)
+                {
+                    _diagnostics.ReportExternFunctionMustBeStatic(syntax.Identifier.Location);
+                }
+
+                if (syntax.Body != null)
+                {
+                    _diagnostics.ReportExternFunctionCannotHaveBody(syntax.Body.Location);
+                }
+            }
+
             // syscall 方法隐含 static（System.Runtime.Runtime.Print 类名调用）
-            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: false, containingClass: classType, visibility: visibility, builtinKind: builtinKind)
+            var method = new FunctionSymbol(syntax.Identifier.Text, parameters, type, syntax, isExtern: isExtern, dllName: dllName, callingConvention: GetCallingConvention(syntax), containingClass: classType, visibility: visibility, builtinKind: builtinKind)
             {
                 IsStatic = isStatic || isSyscall,
                 IsVirtual = isVirtual,
@@ -1508,6 +1531,53 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return method;
+        }
+
+        private static CallingConvention GetCallingConvention(FunctionDeclarationSyntax syntax)
+        {
+            return syntax.Modifiers.Select(m => m.Kind)
+                .FirstOrDefault(k => k == SyntaxKind.CdeclKeyword || k == SyntaxKind.StdcallKeyword) switch
+            {
+                SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
+                SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
+                _ => CallingConvention.Winapi,
+            };
+        }
+
+        /// <summary>
+        /// 绑定 import 块（6e-M17 Step 4）：`import <dll> { static extern ... }`。
+        /// 块内成员只允许 extern 函数声明，DLL 归属由块声明式绑定；外部使用类名限定调用（`Kernel32.GetTickCount()`）。
+        /// </summary>
+        private void BindImportBlock(ImportBlockSyntax importBlock, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
+        {
+            foreach (var blockMember in importBlock.Members)
+            {
+                if (blockMember is FunctionDeclarationSyntax functionDeclaration)
+                {
+                    // 块内只允许 extern 函数声明（stdcall/cdecl）；普通带体函数 → 诊断
+                    var isExternDecl = functionDeclaration.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+                    if (!isExternDecl)
+                    {
+                        _diagnostics.ReportImportBlockOnlyExternFunctions(functionDeclaration.Identifier.Location);
+                    }
+
+                    var method = BindClassMethodDeclaration(functionDeclaration, classType, dllName: importBlock.DllName);
+
+                    if (!classType.HasDeclaredMethodSignature(functionDeclaration.Identifier.Text, method))
+                    {
+                        classType.AddMethod(method);
+                        classFunctions.Add(method);
+                    }
+                    else
+                    {
+                        _diagnostics.ReportSymbolAlreadyDeclared(functionDeclaration.Identifier.Location, functionDeclaration.Identifier.Text);
+                    }
+                }
+                else
+                {
+                    _diagnostics.ReportImportBlockOnlyExternFunctions(blockMember.Location);
+                }
+            }
         }
 
         private BoundConstructorChainExpression? BindConstructorChain(ConstructorDeclarationSyntax syntax, ClassTypeSymbol classType)

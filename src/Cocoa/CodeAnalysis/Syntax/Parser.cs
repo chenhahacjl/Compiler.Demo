@@ -188,6 +188,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             if (Current.Kind == SyntaxKind.ImportKeyword)
             {
+                // 顶层位置式 import 已废弃（6e-M17 Step 4）：须作类成员 import 块
+                if (!AllowTopLevelImport())
+                {
+                    ReportError(Current.Location, "顶层 `import` 声明已废弃：请改用类内 import 块 `class Kernel32 { import kernel32.dll { static extern ... } }`。");
+                }
+
                 return ParseImportClause();
             }
 
@@ -475,6 +481,35 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ImportClauseSyntax(_syntaxTree, importKeyword, nameTokens.ToImmutable());
         }
 
+        /// <summary>顶层位置式 `import <dll>` 是否允许（6e-M17 Step 4 起废弃，双方言一律拒绝 → false）。</summary>
+        protected virtual bool AllowTopLevelImport() => false;
+
+        /// <summary>解析 import 块：`import <dll> { static extern ... }`（6e-M17 Step 4，仅作类成员）。</summary>
+        private MemberSyntax ParseImportBlock()
+        {
+            var importKeyword = MatchToken(SyntaxKind.ImportKeyword);
+            var nameTokens = ParseQualifiedName();
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+            while (Current.Kind != SyntaxKind.CloseBraceToken &&
+                   Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                // 块内成员以函数声明为主（static extern）；跳过孤立分号
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
+                members.Add(ParseClassMember(""));
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            return new ImportBlockSyntax(_syntaxTree, importKeyword, nameTokens, openBraceToken, members.ToImmutable(), closeBraceToken);
+        }
+
         protected virtual MemberSyntax ParseUsingDirective()
         {
             return ParseUsingDirectiveCore();
@@ -649,6 +684,12 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private MemberSyntax ParseClassMember(string className)
         {
+            // import 块（6e-M17 Step 4）：`import kernel32.dll { static extern ... }` —— 块内成员只允许 extern 函数声明
+            if (Current.Kind == SyntaxKind.ImportKeyword)
+            {
+                return ParseImportBlock();
+            }
+
             // 统一修饰符：public/private/stdcall/cdecl（顺序无关）
             var modifiers = ParseModifiers();
 

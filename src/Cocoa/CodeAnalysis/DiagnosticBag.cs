@@ -214,15 +214,37 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
-        public void ReportExternFunctionWithoutImport(TextLocation location)
-        {
-            var message = "An extern function declaration must be preceded by an 'import' clause.";
-            ReportError(location, message);
-        }
-
         public void ReportExternFunctionCannotHaveBody(TextLocation location)
         {
             var message = "An extern function declaration cannot have a body.";
+            ReportError(location, message);
+        }
+
+        /// <summary>顶层位置式 extern（6e-M17 Step 4 废弃）：extern 必须声明在类的 import 块内。</summary>
+        public void ReportExternFunctionTopLevel(TextLocation location)
+        {
+            var message = "Top-level extern declarations are deprecated: declare extern functions inside a class import block (e.g. `class Kernel32 { import kernel32.dll { static extern ... } }`).";
+            ReportError(location, message);
+        }
+
+        /// <summary>类内但 import 块外的 extern 声明（6e-M17 Step 4）：extern 必须声明在类的 import 块内。</summary>
+        public void ReportExternFunctionMustBeInImportBlock(TextLocation location)
+        {
+            var message = "An extern function must be declared inside a class import block (e.g. `import kernel32.dll { static extern ... }`).";
+            ReportError(location, message);
+        }
+
+        /// <summary>extern 函数必须 static（对齐 C# `static extern`）。</summary>
+        public void ReportExternFunctionMustBeStatic(TextLocation location)
+        {
+            var message = "An extern function must be declared static.";
+            ReportError(location, message);
+        }
+
+        /// <summary>import 块内只允许 extern 函数声明。</summary>
+        public void ReportImportBlockOnlyExternFunctions(TextLocation location)
+        {
+            var message = "An import block may only contain extern function declarations (e.g. `static stdcall function GetTickCount(): int`).";
             ReportError(location, message);
         }
 

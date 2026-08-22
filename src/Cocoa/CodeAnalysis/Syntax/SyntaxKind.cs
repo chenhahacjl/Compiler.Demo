@@ -133,7 +133,8 @@ ColonToken,               // :
         PropertyAccessor,         // get/set 访问器
         NamespaceDeclaration,     // 命名空间声明
         UsingDirective,           // using 导入
-        ImportClause,             // import 声明
+        ImportClause,             // import 声明（顶层位置式，6e-M17 Step 4 废弃）
+        ImportBlock,              // import 块（`import <dll> { static extern ... }`，类成员）
         GlobalStatement,          // 全局声明
         Parameter,                // 参数
         TypeClause,               // 类型 语句

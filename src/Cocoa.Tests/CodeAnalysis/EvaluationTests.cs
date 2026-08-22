@@ -1707,19 +1707,23 @@ function Main()
             var text = @"
 stdcall function [GetTickCount](): int";
 
-            AssertDiagnostics(text, "An extern function declaration must be preceded by an 'import' clause.");
+            AssertDiagnostics(text, "Top-level extern declarations are deprecated: declare extern functions inside a class import block (e.g. `class Kernel32 { import kernel32.dll { static extern ... } }`).");
         }
 
         [Fact]
         public void Evaluator_ExternFunction_WithBody_ReportsError()
         {
             var text = @"
-import kernel32.dll
-
-stdcall function GetTickCount(): int
-[{
-    return 0
-}]";
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+        [{
+            return 0
+        }]
+    }
+}";
 
             AssertDiagnostics(text, "An extern function declaration cannot have a body.");
         }
@@ -1728,11 +1732,97 @@ stdcall function GetTickCount(): int
         public void Evaluator_ExternFunction_WithImport_ReportsNoDiagnostics()
         {
             var text = @"
-import kernel32.dll
-
-stdcall function GetTickCount(): int";
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+}";
 
             AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_ImportBlock_ExternNotStatic_ReportsError()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        stdcall function [GetTickCount](): int
+    }
+}";
+
+            AssertDiagnostics(text, "An extern function must be declared static.");
+        }
+
+        [Fact]
+        public void Evaluator_ImportBlock_NonExternFunction_ReportsError()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static function [GetTickCount](): int
+        {
+            return 0
+        }
+    }
+}";
+
+            AssertDiagnostics(text, "An import block may only contain extern function declarations (e.g. `static stdcall function GetTickCount(): int`).");
+        }
+
+        [Fact]
+        public void Evaluator_ImportBlock_SameDllTwoBlocks_ReportsNoDiagnostics()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+
+    import kernel32.dll
+    {
+        static stdcall function GetCurrentProcessId(): int
+    }
+}";
+
+            AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_ExternClassMethod_CallsClassQualified_NoDiagnostics()
+        {
+            var text = @"
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+}
+
+function Main(): int
+{
+    return Kernel32.GetTickCount() > 0 ? 1 : 0
+}";
+
+            AssertDiagnostics(text, "");
+        }
+
+        [Fact]
+        public void Evaluator_TopLevelImport_ReportsDeprecationError()
+        {
+            var text = @"
+[import] kernel32.dll";
+
+            AssertDiagnostics(text, "顶层 `import` 声明已废弃：请改用类内 import 块 `class Kernel32 { import kernel32.dll { static extern ... } }`。");
         }
 
         [Fact]

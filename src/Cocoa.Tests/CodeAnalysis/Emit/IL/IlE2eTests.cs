@@ -248,13 +248,17 @@ function Main()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
 
-import kernel32.dll
-
-stdcall function GetTickCount(): int
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+}
 
 function Main()
 {
-    var t = GetTickCount()
+    var t = Kernel32.GetTickCount()
     if t > 0
     {
         Console.WriteLine(""up"")
@@ -269,13 +273,17 @@ function Main()
         public void Run_CocoaProgram_WithPInvokeArguments_Stdcall_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-import kernel32.dll
-
-stdcall function ExitProcess(exitCode: int)
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function ExitProcess(exitCode: int)
+    }
+}
 
 function Main()
 {
-    ExitProcess(42)
+    Kernel32.ExitProcess(42)
 }", "e2e-pinvoke-stdcall-args");
 
             // 退出码 42 证明 int 参数正确穿越 P/Invoke 桩到达 native
@@ -287,13 +295,17 @@ function Main()
         public void Run_CocoaProgram_WithPInvokeArguments_Cdecl_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"
-import kernel32.dll
-
-cdecl function ExitProcess(exitCode: int)
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static cdecl function ExitProcess(exitCode: int)
+    }
+}
 
 function Main()
 {
-    ExitProcess(7)
+    Kernel32.ExitProcess(7)
 }", "e2e-pinvoke-cdecl-args");
 
             // x64 上 cdecl/stdcall 无差异，验证 cdecl 关键字全链路（ImplMap 0x0200 + 参数穿越）
@@ -306,13 +318,17 @@ function Main()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
 
-import kernel32.dll
-
-stdcall function GetModuleHandleW(moduleName: int): int
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetModuleHandleW(moduleName: int): int
+    }
+}
 
 function Main()
 {
-    var h = GetModuleHandleW(0)
+    var h = Kernel32.GetModuleHandleW(0)
     if h != 0
     {
         Console.WriteLine(""ok"")

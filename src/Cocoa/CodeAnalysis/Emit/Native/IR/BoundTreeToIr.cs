@@ -689,6 +689,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // 静态容器类方法调用（6e-M18：Console.WriteLine / Math.Max / String.ToUpper ...）：按用户函数调用发射
             if (node.Expression is BoundStaticTypeExpression && node.Method != null && node.Method.IsStatic)
             {
+                // extern 类方法（6e-M17 Step 4）：`Kernel32.GetTickCount()` → 导入表符号
+                if (node.Method.IsExtern)
+                {
+                    return EmitExternCall(node.Method, node.Arguments);
+                }
+
                 return EmitFunctionCall(node.Method, node.Arguments);
             }
 
@@ -1149,14 +1155,18 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private IrVirtualRegister EmitExternCall(BoundCallExpression node)
         {
+            return EmitExternCall(node.Function, node.Arguments);
+        }
+
+        private IrVirtualRegister EmitExternCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        {
             var instructions = _currentFunction.Instructions;
-            var arguments = node.Arguments;
             var count = arguments.Length;
 
             // 平台化 SysCall：x64 寄存器 + 第 5 参槽 / x86 栈传递；当前上限 5 参（与运行时所一致）
             if (count > 5)
             {
-                throw new Exception($"Extern function '{node.Function.Name}' has {count} parameters; native backend supports at most 5");
+                throw new Exception($"Extern function '{function.Name}' has {count} parameters; native backend supports at most 5");
             }
 
             for (var i = 0; i < count; i++)
@@ -1165,13 +1175,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(i), IrOperand.Reg(value)));
             }
 
-            var import = new IrImport(node.Function.DllName!, node.Function.Name, node.Function.CallingConvention == CallingConvention.Cdecl);
+            var import = new IrImport(function.DllName!, function.Name, function.CallingConvention == CallingConvention.Cdecl);
             if (!_irProgram.Imports.Contains(import))
             {
                 _irProgram.Imports.Add(import);
             }
 
-            var result = node.Function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(node.Function.ReturnType));
+            var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
             Add(instructions, new IrInstruction(IrOpCode.SysCall, result, IrOperand.Import(import), IrOperand.Constant(count)));
             return result ?? VoidResult();
         }

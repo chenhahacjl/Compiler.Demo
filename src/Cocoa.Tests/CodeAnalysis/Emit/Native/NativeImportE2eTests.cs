@@ -60,13 +60,17 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         public void Native_StdCallExtern_ExitProcess_ExitCode()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-import kernel32.dll
-
-stdcall function ExitProcess(exitCode: int)
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function ExitProcess(exitCode: int)
+    }
+}
 
 function Main()
 {
-    ExitProcess(42)
+    Kernel32.ExitProcess(42)
 }", "native-import-exitprocess", X64);
 
             Assert.Equal(42, exitCode);
@@ -77,13 +81,17 @@ function Main()
         public void Native_CdeclExtern_ExitProcess_ExitCode()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-import kernel32.dll
-
-cdecl function ExitProcess(exitCode: int)
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static cdecl function ExitProcess(exitCode: int)
+    }
+}
 
 function Main()
 {
-    ExitProcess(7)
+    Kernel32.ExitProcess(7)
 }", "native-import-cdecl-exitprocess", X64);
 
             // x64 上约定统一；验证 cdecl 关键字走通多 DLL stub 关键路径
@@ -96,18 +104,26 @@ function Main()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
-import kernel32.dll
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetTickCount(): int
+    }
+}
 
-stdcall function GetTickCount(): int
-
-import user32.dll
-
-stdcall function MessageBeep(uType: int): int
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function MessageBeep(uType: int): int
+    }
+}
 
 function Main()
 {
-    var t = GetTickCount()
-    var b = MessageBeep(0)
+    var t = Kernel32.GetTickCount()
+    var b = User32.MessageBeep(0)
     if t > 0 && b != 0
     {
         Console.WriteLine(""ok"")
@@ -124,13 +140,17 @@ function Main()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
-import kernel32.dll
-
-stdcall function GetStdHandle(nStdHandle: int): int
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetStdHandle(nStdHandle: int): int
+    }
+}
 
 function Main()
 {
-    var h = GetStdHandle(0 - 10)
+    var h = Kernel32.GetStdHandle(0 - 10)
     if h != 0
     {
         Console.WriteLine(""ok"")
@@ -196,13 +216,17 @@ function Main()
         public void Native_X86_StdCallExtern_ExitProcess_ExitCode()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-import kernel32.dll
-
-stdcall function ExitProcess(exitCode: int)
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function ExitProcess(exitCode: int)
+    }
+}
 
 function Main()
 {
-    ExitProcess(42)
+    Kernel32.ExitProcess(42)
 }", "native-import-x86-exitprocess", X86);
 
             Assert.Equal(42, exitCode);
@@ -213,13 +237,17 @@ function Main()
         public void Native_X86_CdeclExtern_Args_CallerCleanup()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-import kernel32.dll
-
-cdecl function ExitProcess(exitCode: int)
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static cdecl function ExitProcess(exitCode: int)
+    }
+}
 
 function Main()
 {
-    ExitProcess(5)
+    Kernel32.ExitProcess(5)
 }", "native-import-x86-cdecl", X86);
 
             // x86 cdecl：调用方清栈路径
@@ -232,13 +260,17 @@ function Main()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
-import user32.dll
-
-stdcall function MessageBeep(uType: int): int
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function MessageBeep(uType: int): int
+    }
+}
 
 function Main()
 {
-    var b = MessageBeep(0)
+    var b = User32.MessageBeep(0)
     if b != 0
     {
         Console.WriteLine(""ok"")
@@ -281,13 +313,17 @@ function Main(): int
         public void Native_UnknownSymbol_ReportsWarningDiagnostic()
         {
             var syntaxTree = SyntaxTree.Parse(@"
-import kernel32.dll
-
-stdcall function NotARealSymbol(x: int): int
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function NotARealSymbol(x: int): int
+    }
+}
 
 function Main()
 {
-    var v = NotARealSymbol(1)
+    var v = Kernel32.NotARealSymbol(1)
 }
 ");
             var compilation = Compilation.Create(syntaxTree);
