@@ -265,6 +265,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     frameBytes += 0x80;
                 }
 
+                // 6e-M21 Phase 5b：x87 控制字专用槽（-frameBytes），与变量槽/LeaSlot 缓冲隔离，
+                // 避免恢复 fldcw 覆盖 fistp 写入的转换结果（m2 冒烟踩坑：cwBuf 与重排缓冲同址致 i64(f32)=639）
+                if (function.Instructions.Any(i => i.OpCode == IrOpCode.FCvtSD64))
+                {
+                    frameBytes += 8;
+                }
+
                 _a.Sub(X64Size.Dword, X64Register.RSP, frameBytes);
                 _frameBytes = frameBytes;
             }
@@ -455,6 +462,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     break;
                 case IrOpCode.FCvtSD64:
                     EmitFCvtSD64(instruction);
+                    break;
+                case IrOpCode.FCvtDS:
+                    EmitFCvtDS(instruction);
+                    break;
+                case IrOpCode.FCvtSSD:
+                    EmitFCvtSSD(instruction);
                     break;
                 case IrOpCode.Movsx64:
                     EmitMovsx64(instruction);
@@ -1660,116 +1673,186 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private void EmitFConst(IrInstruction instruction)
         {
             var key = (string)instruction.A.Symbol!;
+            if (instruction.SinglePrecision)
+            {
+                _a.MovssRip(X64Register.XMM0, _dataSymbols[key]);
+                StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: true);
+                return;
+            }
+
             _a.MovsdRip(X64Register.XMM0, _dataSymbols[key]);
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
         }
 
         private void EmitFMove(IrInstruction instruction)
         {
-            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
-            StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, instruction.SinglePrecision);
+            StoreSlotXmm(instruction.Dst!, X64Register.XMM0, instruction.SinglePrecision);
         }
 
         private void EmitFBinary(IrInstruction instruction)
         {
-            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
-            LoadSlotXmm(X64Register.XMM1, instruction.B.Register!);
+            var single = instruction.SinglePrecision;
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single);
+            LoadSlotXmm(X64Register.XMM1, instruction.B.Register!, single);
 
             switch (instruction.OpCode)
             {
                 case IrOpCode.FAdd:
-                    _a.Addsd(X64Register.XMM0, X64Register.XMM1);
+                    if (single) { _a.Addss(X64Register.XMM0, X64Register.XMM1); } else { _a.Addsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
                 case IrOpCode.FSub:
-                    _a.Subsd(X64Register.XMM0, X64Register.XMM1);
+                    if (single) { _a.Subss(X64Register.XMM0, X64Register.XMM1); } else { _a.Subsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
                 case IrOpCode.FMul:
-                    _a.Mulsd(X64Register.XMM0, X64Register.XMM1);
+                    if (single) { _a.Mulss(X64Register.XMM0, X64Register.XMM1); } else { _a.Mulsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
                 case IrOpCode.FDiv:
-                    _a.Divsd(X64Register.XMM0, X64Register.XMM1);
+                    if (single) { _a.Divss(X64Register.XMM0, X64Register.XMM1); } else { _a.Divsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
             }
 
-            StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+            StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single);
         }
 
         private void EmitFNeg(IrInstruction instruction)
         {
-            var slot = GetSlotOffset(instruction.Dst!);
+            var dstSlot = GetSlotOffset(instruction.Dst!);
+            if (instruction.SinglePrecision)
+            {
+                // 单精度：4 字节槽直接翻转符号位
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+                _a.Xor(X64Size.Dword, X64Register.EAX, unchecked((int)0x80000000));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+                return;
+            }
+
             if (_isX64)
             {
-                _a.Mov(X64Size.Qword, X64Register.RAX, new X64MemoryOperand(X64Register.RBP, slot));
+                _a.Mov(X64Size.Qword, X64Register.RAX, new X64MemoryOperand(X64Register.RBP, dstSlot));
                 _a.Mov(X64Register.RCX, unchecked((long)0x8000000000000000UL));
                 _a.Xor(X64Size.Qword, X64Register.RAX, X64Register.RCX);
-                _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.RAX);
+                _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.RAX);
             }
             else
             {
-                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
-                _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, slot - 4));
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+                _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
                 _a.Xor(X64Size.Dword, X64Register.ECX, unchecked((int)0x80000000));
-                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
-                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.ECX);
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
             }
         }
 
         private void EmitFCmp(IrInstruction instruction)
         {
-            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
-            LoadSlotXmm(X64Register.XMM1, instruction.B.Register!);
-            _a.Ucomisd(X64Register.XMM0, X64Register.XMM1);
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, instruction.SinglePrecision);
+            LoadSlotXmm(X64Register.XMM1, instruction.B.Register!, instruction.SinglePrecision);
+            if (instruction.SinglePrecision)
+            {
+                _a.Ucomiss(X64Register.XMM0, X64Register.XMM1);
+            }
+            else
+            {
+                _a.Ucomisd(X64Register.XMM0, X64Register.XMM1);
+            }
         }
 
         /// <summary>浮点单参数学（SSE）：值已在槽中，载入 XMM0 计算后写回槽。</summary>
         private void EmitFUnary(IrInstruction instruction)
         {
-            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
+            var single = instruction.SinglePrecision;
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single);
 
             switch (instruction.OpCode)
             {
                 case IrOpCode.FSqrt:
-                    _a.Sqrtsd(X64Register.XMM0, X64Register.XMM0);
+                    if (single) { _a.Sqrtss(X64Register.XMM0, X64Register.XMM0); } else { _a.Sqrtsd(X64Register.XMM0, X64Register.XMM0); }
                     break;
                 case IrOpCode.FFloor:
-                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x01);
+                    if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x01); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x01); }
                     break;
                 case IrOpCode.FCeiling:
-                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x02);
+                    if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x02); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x02); }
                     break;
                 case IrOpCode.FTruncate:
-                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x03);
+                    if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x03); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x03); }
                     break;
                 case IrOpCode.FRound:
-                    _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x00);
+                    if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x00); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x00); }
                     break;
             }
 
-            StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+            StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single);
         }
 
         private void EmitFCvtSI(IrInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
-            _a.Cvtsi2sd(X64Register.XMM0, X64Register.EAX);
-            StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+            if (instruction.SinglePrecision)
+            {
+                _a.Cvtsi2ss(X64Register.XMM0, X64Register.EAX);
+                StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: true);
+            }
+            else
+            {
+                _a.Cvtsi2sd(X64Register.XMM0, X64Register.EAX);
+                StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+            }
         }
 
         private void EmitFCvtSD(IrInstruction instruction)
         {
-            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
-            _a.Cvttsd2si(X64Register.EAX, X64Register.XMM0);
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, instruction.SinglePrecision);
+            if (instruction.SinglePrecision)
+            {
+                _a.Cvttss2si(X64Register.EAX, X64Register.XMM0);
+            }
+            else
+            {
+                _a.Cvttsd2si(X64Register.EAX, X64Register.XMM0);
+            }
+
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>long → double。x64：cvtsi2sd r64；x86：fild qword + fstp qword（双槽位模式直读）。</summary>
+        /// <summary>float ↔ double 精度转换（6e-M21 Phase 5b）。</summary>
+        private void EmitFCvtDS(IrInstruction instruction)
+        {
+            // double → float：读双槽位模式，cvtsd2ss，写 4 字节槽
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single: false);
+            _a.Cvtsd2ss(X64Register.XMM0, X64Register.XMM0);
+            StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: true);
+        }
+
+        private void EmitFCvtSSD(IrInstruction instruction)
+        {
+            // float → double：movss 读 4 字节槽，cvtss2sd，写双槽位模式
+            LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single: true);
+            _a.Cvtss2sd(X64Register.XMM0, X64Register.XMM0);
+            StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: false);
+        }
+
+        /// <summary>long → double/float。x64：cvtsi2sd/cvtsi2ss r64；x86：fild qword + fstp qword/dword（双槽位模式直读）。</summary>
         private void EmitFCvtSI64(IrInstruction instruction)
         {
+            var single = instruction.SinglePrecision;
             if (_isX64)
             {
                 LoadSlot(X64Register.RAX, instruction.A.Register!, 8);
-                _a.Cvtsi2sd64(X64Register.XMM0, X64Register.RAX);
-                StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+                if (single)
+                {
+                    // cvtsi2ss r64：经 double 中转（Cvtsi2sd64 + Cvtsd2ss），避免新增 REX.W 变体封装
+                    _a.Cvtsi2sd64(X64Register.XMM0, X64Register.RAX);
+                    _a.Cvtsd2ss(X64Register.XMM0, X64Register.XMM0);
+                    StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: true);
+                }
+                else
+                {
+                    _a.Cvtsi2sd64(X64Register.XMM0, X64Register.RAX);
+                    StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+                }
+
                 return;
             }
 
@@ -1785,21 +1868,41 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
 
             _a.FildM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
-            _a.FstpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            if (single)
+            {
+                _a.FstpM32(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            }
+            else
+            {
+                _a.FstpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
 
-            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
-            _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, dstSlot));
-            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
-            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
+            }
         }
 
-        /// <summary>double → long 截断。x64：cvttsd2si r64；x86：fldcw 切换向零舍入 + fistp。</summary>
+        /// <summary>double/float → long 截断。x64：cvttsd2si/cvttss2si r64；x86：fldcw 切换向零舍入 + fistp。</summary>
         private void EmitFCvtSD64(IrInstruction instruction)
         {
+            var single = instruction.SinglePrecision;
             if (_isX64)
             {
-                LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
-                _a.Cvttsd2si64(X64Register.RAX, X64Register.XMM0);
+                LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single);
+                if (single)
+                {
+                    // cvttss2si r64 经 double 中转（Cvtss2sd + Cvttsd2si64）
+                    _a.Cvtss2sd(X64Register.XMM0, X64Register.XMM0);
+                    _a.Cvttsd2si64(X64Register.RAX, X64Register.XMM0);
+                }
+                else
+                {
+                    _a.Cvttsd2si64(X64Register.RAX, X64Register.XMM0);
+                }
+
                 StoreSlot(instruction.Dst!, X64Register.RAX);
                 return;
             }
@@ -1807,15 +1910,25 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var srcSlot = GetSlotOffset(instruction.A.Register!);
             var dstSlot = GetSlotOffset(instruction.Dst!);
 
-            // double 在双槽中为大端（低32位@[srcSlot]，高32位@[srcSlot-4]），FPU 按小端读写，
-            // 先把 double 以小端形式放到 [dstSlot-4..dstSlot]（低32位@[dstSlot-4]，高32位@[dstSlot]）。
+            // 浮点在双槽中为大端（低32位@[srcSlot]，高32位@[srcSlot-4]），FPU 按小端读写，
+            // 先以小端形式放到 [dstSlot-4..dstSlot]（低32位@[dstSlot-4]，高32位@[dstSlot]）。
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.EAX);
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot - 4));
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
 
-            // 控制字缓冲：LeaSlot 帧底缓冲区；保存原始 cw，置 RC=11（截断），转换后恢复。
-            var cwBuf = new X64MemoryOperand(X64Register.RBP, -_frameBytes + _slotSize);
+            if (single)
+            {
+                // float 单精度：fld m32（D9 /0）读 4 字节
+                _a.FldM32(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            }
+            else
+            {
+                _a.FldM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            }
+
+            // 控制字缓冲：帧底专用槽（-frameBytes，与 LeaSlot 缓冲/变量槽隔离）；保存原始 cw，置 RC=11（截断），转换后恢复。
+            var cwBuf = new X64MemoryOperand(X64Register.RBP, -_frameBytes);
 
             _a.FnstcwM16(cwBuf);
             _a.Movzx(X64Size.Dword, X64Register.EAX, cwBuf);
@@ -1824,7 +1937,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(X64Size.Word, cwBuf, X64Register.EAX);
             _a.FldcwM16(cwBuf);
 
-            _a.FldM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
             _a.FistpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
 
             // 恢复原始控制字
@@ -2084,10 +2196,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(ToSize(RegisterSize(register)), operand, eax);
         }
 
-        /// <summary>把 double 槽的 64 位位模式装入 XMM 寄存器（x86 槽宽 4：高 dword 在低槽位；x64 槽宽 8：槽内 +4）。</summary>
-        private void LoadSlotXmm(X64Register xmm, IrVirtualRegister register)
+        /// <summary>把 double 槽的 64 位位模式装入 XMM 寄存器（x86 槽宽 4：高 dword 在低槽位；x64 槽宽 8：槽内 +4）。
+        /// single=true 时按 4 字节 float 位模式 movss 直读（6e-M21 Phase 5b）。</summary>
+        private void LoadSlotXmm(X64Register xmm, IrVirtualRegister register, bool single = false)
         {
             var slot = GetSlotOffset(register);
+            if (single)
+            {
+                _a.Movss(xmm, new X64MemoryOperand(X64Register.RBP, slot));
+                return;
+            }
+
             var hi = slot + (_isX64 ? 4 : -4);
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
             _a.MovdGprToXmm(xmm, X64Register.EAX);
@@ -2095,10 +2214,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Pinsrd(xmm, X64Register.EAX, 1);
         }
 
-        /// <summary>把 XMM 寄存器的 64 位位模式存入 double 槽（pextrd + movd 拆分，两架构通用）。</summary>
-        private void StoreSlotXmm(IrVirtualRegister register, X64Register xmm)
+        /// <summary>把 XMM 寄存器的 64 位位模式存入 double 槽（pextrd + movd 拆分，两架构通用）。
+        /// single=true 时按 4 字节 float 位模式 movss 直写。</summary>
+        private void StoreSlotXmm(IrVirtualRegister register, X64Register xmm, bool single = false)
         {
             var slot = GetSlotOffset(register);
+            if (single)
+            {
+                _a.Movss(new X64MemoryOperand(X64Register.RBP, slot), xmm);
+                return;
+            }
+
             var hi = slot + (_isX64 ? 4 : -4);
             _a.Pextrd(X64Register.EAX, xmm, 1);
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, hi), X64Register.EAX);

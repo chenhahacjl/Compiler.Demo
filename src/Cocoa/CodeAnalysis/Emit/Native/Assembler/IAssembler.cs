@@ -101,9 +101,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
 
         // x87 FPU（仅 long ↔ double 转换用；x86 实现，x64 走 SSE）
         void FildM64(X64MemoryOperand src);
-        void FstpM64(X64MemoryOperand dst);
         void FistpM64(X64MemoryOperand dst);
+        void FstpM64(X64MemoryOperand dst);
         void FldM64(X64MemoryOperand src);
+        void FstpM32(X64MemoryOperand dst);
+        void FldM32(X64MemoryOperand src);
         void FldcwM16(X64MemoryOperand src);
         void FnstcwM16(X64MemoryOperand dst);
 
@@ -149,6 +151,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         void MovqXmmToGpr(X64Register r64Dst, X64Register xmmSrc);
         void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm);
         void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm);
+
+        // SSE（float 单精度，6e-M21 Phase 5b）
+        void Movss(X64Register xmmDst, X64MemoryOperand src);
+        void Movss(X64MemoryOperand dst, X64Register xmmSrc);
+        void MovssRip(X64Register xmmDst, int symbol);
+        void Addss(X64Register xmmDst, X64Register xmmSrc);
+        void Subss(X64Register xmmDst, X64Register xmmSrc);
+        void Mulss(X64Register xmmDst, X64Register xmmSrc);
+        void Divss(X64Register xmmDst, X64Register xmmSrc);
+        void Sqrtss(X64Register xmmDst, X64Register xmmSrc);
+        void Roundss(X64Register xmmDst, X64Register xmmSrc, byte imm);
+        void Cvtsi2ss(X64Register xmmDst, X64Register r32Src);
+        void Cvttss2si(X64Register r32Dst, X64Register xmmSrc);
+        void Cvtss2sd(X64Register xmmDst, X64Register xmmSrc);
+        void Cvtsd2ss(X64Register xmmDst, X64Register xmmSrc);
+        void Ucomiss(X64Register xmmA, X64Register xmmB);
 
         void Ret();
         void Nop();

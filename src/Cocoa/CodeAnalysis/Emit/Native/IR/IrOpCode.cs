@@ -112,6 +112,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         Movsx64,     // Movsx64 <dst> <src>            — int/enum → long 符号扩展
         Movzx64,     // Movzx64 <dst> <src>            — byte/char → long 零扩展
         Trunc64,     // Trunc64 <dst> <src>            — long 低 32 位截断
+        FCvtDS,      // FCvtDS <dst> <src>             — double → float（cvtsd2ss，6e-M21 Phase 5b）
+        FCvtSSD,     // FCvtSSD <dst> <src>            — float → double（cvtss2sd）
 
         // 调试/信息
         Nop,         // Nop

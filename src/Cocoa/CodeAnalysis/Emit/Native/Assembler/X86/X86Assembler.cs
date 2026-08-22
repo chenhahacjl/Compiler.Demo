@@ -446,6 +446,24 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
             EmitMemoryRest(src, memory);
         }
 
+        /// <summary>FSTP m32（DD /1）：弹出栈顶并以 float 位模式存储 4 字节（6e-M21 Phase 5b）。</summary>
+        public void FstpM32(X64MemoryOperand dst)
+        {
+            var memory = EncodeMemory(dst);
+            EmitByte(0xDD);
+            EmitModRMByte(memory.Mod, 1, memory.Rm);
+            EmitMemoryRest(dst, memory);
+        }
+
+        /// <summary>FLD m32（D9 /0）：压入 float。</summary>
+        public void FldM32(X64MemoryOperand src)
+        {
+            var memory = EncodeMemory(src);
+            EmitByte(0xD9);
+            EmitModRMByte(memory.Mod, 0, memory.Rm);
+            EmitMemoryRest(src, memory);
+        }
+
         /// <summary>FLDCW m16：加载 x87 控制字（舍入模式切换）。</summary>
         public void FldcwM16(X64MemoryOperand src)
         {
@@ -609,6 +627,40 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
         public void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x7E, 0x66, r32Dst, xmmSrc);
         public void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm) => EmitSseRegImm(0x22, 0x66, xmmDst, r32Src, imm);
         public void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x16, 0x66, r32Dst, xmmSrc, imm);
+
+        // ------------------------------------------------------------------
+        // SSE（float 单精度，IEEE-754 binary32，前缀 F3）
+        // ------------------------------------------------------------------
+
+        public void Movss(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(0x10, 0xF3, xmmDst, src);
+        public void Movss(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(0x11, 0xF3, dst, xmmSrc);
+        public void Addss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x58, 0xF3, xmmDst, xmmSrc);
+        public void Subss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5C, 0xF3, xmmDst, xmmSrc);
+        public void Mulss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x59, 0xF3, xmmDst, xmmSrc);
+        public void Divss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5E, 0xF3, xmmDst, xmmSrc);
+        public void Sqrtss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x51, 0xF3, xmmDst, xmmSrc);
+        public void Roundss(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x0B, 0xF3, xmmDst, xmmSrc, imm);
+        public void Cvtsi2ss(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF3, xmmDst, r32Src);
+        public void Cvttss2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF3, r32Dst, xmmSrc);
+        public void Cvtss2sd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5A, 0xF3, xmmDst, xmmSrc);
+        public void Cvtsd2ss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5A, 0xF2, xmmDst, xmmSrc);
+
+        public void Ucomiss(X64Register xmmA, X64Register xmmB)
+        {
+            EmitByte(0x0F); // UCOMISS 无前缀
+            EmitByte(0x2E);
+            EmitModRMByte(3, (int)xmmA & 7, (int)xmmB & 7);
+        }
+
+        public void MovssRip(X64Register xmmDst, int symbol)
+        {
+            EmitByte(0xF3);
+            EmitByte(0x0F);
+            EmitByte(0x10);
+            EmitModRMByte(0, (int)xmmDst & 7, 5);
+            _dataFixups.Add((Position, symbol));
+            EmitInt32(0);
+        }
 
         public void MovqGprToXmm(X64Register xmmDst, X64Register r64Src)
         {

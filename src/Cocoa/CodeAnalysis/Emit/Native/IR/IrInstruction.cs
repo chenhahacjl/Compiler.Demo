@@ -67,6 +67,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
     /// <summary>
     /// 单条 IR 指令：三地址码（至多一个目的寄存器 + 两个操作数）。
     /// Load/Store 经 <see cref="IrMem"/> 构造，携带偏移与字节宽。
+    /// <see cref="SinglePrecision"/> 标记 F* 浮点指令按 32 位单精度（SSE ss 族）发射（6e-M21 Phase 5b）。
     /// </summary>
     internal sealed class IrInstruction
     {
@@ -76,8 +77,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         public IrOperand B { get; }
         public int Offset { get; }
         public int ByteSize { get; }
+        public bool SinglePrecision { get; }
 
-        public IrInstruction(IrOpCode opCode, IrVirtualRegister? dst, IrOperand a, IrOperand b, int offset, int byteSize)
+        public IrInstruction(IrOpCode opCode, IrVirtualRegister? dst, IrOperand a, IrOperand b, int offset, int byteSize, bool singlePrecision = false)
         {
             OpCode = opCode;
             Dst = dst;
@@ -85,6 +87,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             B = b;
             Offset = offset;
             ByteSize = byteSize;
+            SinglePrecision = singlePrecision;
         }
 
         public IrInstruction(IrOpCode opCode, IrVirtualRegister? dst)

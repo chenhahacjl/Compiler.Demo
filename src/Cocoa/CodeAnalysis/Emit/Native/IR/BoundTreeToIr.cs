@@ -514,6 +514,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitDoubleConst(doubleValue);
             }
 
+            if (value is float floatConst)
+            {
+                return EmitFloatConst(floatConst);
+            }
+
             throw new Exception($"Unexpected constant: {value}");
         }
 
@@ -564,6 +569,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitDoubleConst(doubleValue);
             }
 
+            if (value is float floatLiteral)
+            {
+                return EmitFloatConst(floatLiteral);
+            }
+
             throw new Exception($"Unexpected literal: {value}");
         }
 
@@ -601,6 +611,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }));
             var register = AllocateRegister(8);
             Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.FConst, register, IrOperand.Data(key)));
+            return register;
+        }
+
+        /// <summary>float 常量：4 字节数据段 + FConst（single 标志 → movss 装载）（6e-M21 Phase 5b）。</summary>
+        private IrVirtualRegister EmitFloatConst(float value)
+        {
+            var bits = BitConverter.SingleToInt32Bits(value);
+            var key = "f:" + unchecked((uint)bits).ToString("X8");
+            _irProgram.AddData(IrDataItem.ByteArray(key, new[]
+            {
+                (byte)bits, (byte)(bits >> 8), (byte)(bits >> 16), (byte)(bits >> 24),
+            }));
+            var register = AllocateRegister(4);
+            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.FConst, register, IrOperand.Data(key), IrOperand.None, 0, 0, true));
             return register;
         }
 
@@ -955,6 +979,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundUnaryOperatorKind.Negation:
                     {
+                        if (node.Operand.Type == TypeSymbol.Float)
+                        {
+                            // 6e-M21 Phase 5b：单精度取反（4 字节槽翻转符号位）
+                            var resultSingle = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.FMov, resultSingle, IrOperand.Reg(operand), IrOperand.None, 0, 0, true));
+                            Add(instructions, new IrInstruction(IrOpCode.FNeg, resultSingle, IrOperand.None, IrOperand.None, 0, 0, true));
+                            return resultSingle;
+                        }
+
                         if (node.Operand.Type == TypeSymbol.Double)
                         {
                             var result = AllocateRegister(8);
@@ -963,7 +996,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             return result;
                         }
 
-                        if (node.Operand.Type == TypeSymbol.Int64)
+                        if (node.Operand.Type == TypeSymbol.Int64 || node.Operand.Type == TypeSymbol.UInt64)
                         {
                             var resultLong = AllocateRegister(8);
                             Add(instructions, new IrInstruction(IrOpCode.Mov, resultLong, IrOperand.Reg(operand)));
@@ -1240,6 +1273,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
 
+            // 6e-M21 Phase 5b：f32 走真正单精度 SSE（ss 族），f64 保持双精度
+            var single = node.Left.Type == TypeSymbol.Float;
+            var resultSize = single ? 4 : 8;
+
             switch (op)
             {
                 case BoundBinaryOperatorKind.Addition:
@@ -1247,7 +1284,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BoundBinaryOperatorKind.Multiplication:
                 case BoundBinaryOperatorKind.Division:
                     {
-                        var result = AllocateRegister(8);
+                        var result = AllocateRegister(resultSize);
                         var fOp = op switch
                         {
                             BoundBinaryOperatorKind.Addition => IrOpCode.FAdd,
@@ -1255,7 +1292,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             BoundBinaryOperatorKind.Multiplication => IrOpCode.FMul,
                             _ => IrOpCode.FDiv,
                         };
-                        Add(instructions, new IrInstruction(fOp, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                        Add(instructions, new IrInstruction(fOp, result, IrOperand.Reg(left), IrOperand.Reg(right), 0, 0, single));
                         return result;
                     }
 
@@ -1267,7 +1304,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     {
                         var result = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.FCmp, IrOperand.Reg(left), IrOperand.Reg(right)));
+                        Add(instructions, new IrInstruction(IrOpCode.FCmp, null, IrOperand.Reg(left), IrOperand.Reg(right), 0, 0, single));
 
                         // ucomisd 在 unordered（NaN 参与）时置 ZF=PF=CF=1；
                         // 全部 6 个比较条件对 NaN 一律 false、!= 对 NaN 为 true（IEEE-754 语义）。
@@ -1449,6 +1486,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var text = AllocateRegister(8);
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+            }
+            else if (type == TypeSymbol.Float)
+            {
+                // 6e-M21 Phase 5b：float 打印经单→双精度中转复用 DoubleToString
+                var asDouble = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, asDouble, IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(asDouble)));
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
@@ -1646,6 +1694,187 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return false;
         }
 
+        /// <summary>
+        /// 6e-M21 Phase 5b：涉及浮点的系统化转换。
+        /// 无符号 ≤32 位整数经 Movzx64 零扩展后按 long 转换（值非负语义正确）；
+        /// float↔double 用 FCvtSSD/FCvtDS；f32 目标/源全部带 single 标志走 ss 族指令。
+        /// </summary>
+        private bool TryEmitFloatConversion(BoundConversionExpression node, IrVirtualRegister value, out IrVirtualRegister result)
+        {
+            result = value;
+            var from = node.Expression.Type;
+            var to = node.Type;
+
+            if (from.IsPlaceholder128 || to.IsPlaceholder128)
+            {
+                return false;
+            }
+
+            var toIsFloat = to == TypeSymbol.Float || to == TypeSymbol.Double;
+            var fromIsFloatType = from == TypeSymbol.Float;
+            if (!toIsFloat && !fromIsFloatType)
+            {
+                return false;
+            }
+
+            var singleTarget = to == TypeSymbol.Float;
+            if (!(from.IsNumeric && !from.IsPlaceholder128) && from != TypeSymbol.Char && !(from is EnumTypeSymbol))
+            {
+                return false; // 字符串等走既有专用路径
+            }
+
+            var instructions = _currentFunction.Instructions;
+
+            // 6e-M21 Phase 5b：float → 整数（cvttss2si 截断；宽整型经 double 中转的 64 位路径）
+            if (from == TypeSymbol.Float)
+            {
+                if (to == TypeSymbol.Double)
+                {
+                    var widened = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, widened, IrOperand.Reg(value)));
+                    result = widened;
+                    return true;
+                }
+
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.UInt32)
+                {
+                    var r32 = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD, r32, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+                    result = r32;
+                    return true;
+                }
+
+                if (to == TypeSymbol.Int64 || to == TypeSymbol.UInt64)
+                {
+                    var r64 = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD64, r64, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+                    result = r64;
+                    return true;
+                }
+
+                // 窄整型：先截断到 int32，再按槽内规范表示收窄
+                if (to == TypeSymbol.Int8 || to == TypeSymbol.Int16 ||
+                    to == TypeSymbol.UInt8 || to == TypeSymbol.UInt16)
+                {
+                    var truncated = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD, truncated, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+
+                    switch (to.Name)
+                    {
+                        case "byte":
+                        {
+                            var r = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(truncated), IrOperand.Constant(0xFF)));
+                            result = r;
+                            break;
+                        }
+                        case "ushort":
+                        {
+                            var r = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(truncated), IrOperand.Constant(0xFFFF)));
+                            result = r;
+                            break;
+                        }
+                        case "sbyte":
+                        {
+                            var shifted = AllocateRegister(4);
+                            var r = AllocateRegister(4);
+                            var c24 = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.Const, c24, IrOperand.Constant(24)));
+                            Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(truncated), IrOperand.Reg(c24)));
+                            Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(c24)));
+                            result = r;
+                            break;
+                        }
+                        default: // short
+                        {
+                            var shifted = AllocateRegister(4);
+                            var r = AllocateRegister(4);
+                            var c16 = AllocateRegister(4);
+                            Add(instructions, new IrInstruction(IrOpCode.Const, c16, IrOperand.Constant(16)));
+                            Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(truncated), IrOperand.Reg(c16)));
+                            Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(c16)));
+                            result = r;
+                            break;
+                        }
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (to == TypeSymbol.Double)
+            {
+                if (from == TypeSymbol.Float)
+                {
+                    var r = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, r, IrOperand.Reg(value)));
+                    result = r;
+                    return true;
+                }
+
+                if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64)
+                {
+                    var r = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(value)));
+                    result = r;
+                    return true;
+                }
+
+                if (from.IsInteger && !from.IsSigned || from == TypeSymbol.Char)
+                {
+                    // 无符号零扩展后按 long 转（u32 最大值在 double 精度内精确）
+                    var wide = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.Movzx64, wide, IrOperand.Reg(value)));
+                    var r = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(wide)));
+                    result = r;
+                    return true;
+                }
+
+                // 有符号整数/enum → double
+                var signedResult = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSI, signedResult, IrOperand.Reg(value)));
+                result = signedResult;
+                return true;
+            }
+
+            // to == Float
+            if (from == TypeSymbol.Double)
+            {
+                var r4 = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtDS, r4, IrOperand.Reg(value)));
+                result = r4;
+                return true;
+            }
+
+            if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64)
+            {
+                var r8 = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r8, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+                result = r8;
+                return true;
+            }
+
+            if (from.IsInteger && !from.IsSigned || from == TypeSymbol.Char)
+            {
+                var wide = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Movzx64, wide, IrOperand.Reg(value)));
+                var r = AllocateRegister(4);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(wide), IrOperand.None, 0, 0, true));
+                result = r;
+                return true;
+            }
+
+            // 有符号整数/enum → float
+            var fResult = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.FCvtSI, fResult, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+            result = fResult;
+            return true;
+        }
+
         private IrVirtualRegister EmitConversionExpression(BoundConversionExpression node)
         {
             var instructions = _currentFunction.Instructions;
@@ -1662,6 +1891,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (TryEmitIntegerConversion(node, value, out var integerResult))
             {
                 return integerResult;
+            }
+
+            // 6e-M21 Phase 5b：涉及 float/double 的系统化转换（命中即返回）
+            if (TryEmitFloatConversion(node, value, out var floatResult))
+            {
+                return floatResult;
             }
 
             if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||

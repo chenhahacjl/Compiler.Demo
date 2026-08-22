@@ -513,9 +513,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         public void Cdq() => throw new NotSupportedException("CDQ is not used on x64; use Cqo for 64-bit division.");
 
         public void FildM64(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
-        public void FstpM64(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FistpM64(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FstpM64(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FldM64(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FstpM32(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FldM32(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FldcwM16(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FnstcwM16(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
 
@@ -684,6 +686,41 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         public void MovqXmmToGpr(X64Register r64Dst, X64Register xmmSrc) => EmitSseRegReg(0xD6, 0x66, xmmSrc, r64Dst, rexW: true);
         public void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm) => EmitSseRegImm(0x22, 0x66, xmmDst, r32Src, imm);
         public void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x16, 0x66, r32Dst, xmmSrc, imm);
+
+        // ------------------------------------------------------------------
+        // SSE（float 单精度，IEEE-754 binary32，前缀 F3）
+        // ------------------------------------------------------------------
+
+        public void Movss(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(0x10, 0xF3, xmmDst, src);
+        public void Movss(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(0x11, 0xF3, dst, xmmSrc);
+        public void Addss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x58, 0xF3, xmmDst, xmmSrc);
+        public void Subss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5C, 0xF3, xmmDst, xmmSrc);
+        public void Mulss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x59, 0xF3, xmmDst, xmmSrc);
+        public void Divss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5E, 0xF3, xmmDst, xmmSrc);
+        public void Sqrtss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x51, 0xF3, xmmDst, xmmSrc);
+        public void Roundss(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x0B, 0xF3, xmmDst, xmmSrc, imm);
+        public void Cvtsi2ss(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF3, xmmDst, r32Src);
+        public void Cvttss2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF3, r32Dst, xmmSrc);
+        public void Cvtss2sd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5A, 0xF3, xmmDst, xmmSrc);
+        public void Cvtsd2ss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5A, 0xF2, xmmDst, xmmSrc);
+
+        public void Ucomiss(X64Register xmmA, X64Register xmmB)
+        {
+            EmitByte(0x0F); // UCOMISS 无前缀
+            EmitByte(0x2E);
+            EmitModRMByte(3, (int)xmmA & 7, (int)xmmB & 7);
+        }
+
+        public void MovssRip(X64Register xmmDst, int symbol)
+        {
+            EmitRex(0x40 | (((int)xmmDst & 8) != 0 ? 0x04 : 0));
+            EmitByte(0xF3);
+            EmitByte(0x0F);
+            EmitByte(0x10);
+            EmitModRMByte(0, (int)xmmDst & 7, 5);
+            _dataFixups.Add((Position, symbol));
+            EmitInt32(0);
+        }
 
         public void MovsdRip(X64Register xmmDst, int symbol)
         {
