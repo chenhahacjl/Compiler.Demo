@@ -20,6 +20,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly FunctionSymbol? _function;
         private readonly ClassTypeSymbol? _currentClass;
         private readonly string[] _references;
+        private readonly LanguageDialect _dialect;
 
         private readonly List<string> _usingNamespaces = new List<string>();
         private readonly List<string> _usingStatics = new List<string>();
@@ -29,13 +30,14 @@ namespace Cocoa.CodeAnalysis.Binding
         private int _labelCounter;
         private BoundScope _scope;
 
-        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null)
+        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, LanguageDialect dialect, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
             _function = function;
             _currentClass = function?.ContainingClass;
             _references = references.ToArray();
+            _dialect = dialect;
             _usingNamespaces.AddRange(usingNamespaces);
             if (!usingStatics.IsDefaultOrEmpty)
             {
@@ -62,7 +64,8 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var parentScope = CreateParentScope(previous);
             InjectCodSymbols(parentScope, codLibraries);
-            var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty);
+            var dialect = syntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : syntaxTrees[0].Dialect;
+            var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, dialect);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
@@ -317,7 +320,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, usingStatics, usingAliases, (references ?? Array.Empty<string>()).ToImmutableArray());
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default, LanguageDialect dialect = LanguageDialect.Cocoa)
         {
             var parentScope = CreateParentScope(globalScope);
             InjectCodSymbols(parentScope, codLibraries);
@@ -354,7 +357,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
                 }
 
-                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, globalScope.UsingStatics, globalScope.UsingAliases);
+                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases);
                 BoundBlockStatement body;
 
                 if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
@@ -1912,12 +1915,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return false;
             }
 
-            if (type == TypeSymbol.Int32 || type == TypeSymbol.Byte)
+            if (type == TypeSymbol.Int32 || type == TypeSymbol.UInt8)
             {
                 return 0;
             }
 
-            if (type == TypeSymbol.Long)
+            if (type == TypeSymbol.Int64)
             {
                 return 0L;
             }
@@ -2020,9 +2023,16 @@ namespace Cocoa.CodeAnalysis.Binding
             if (type == null)
             {
                 _diagnostics.ReportUndefinedType(syntax.Identifier.Location, syntax.Identifier.Text);
+                return null;
             }
 
-            return type!;
+            if (type.IsPlaceholder128)
+            {
+                _diagnostics.ReportUnsupported128BitType(syntax.Identifier.Location, syntax.Identifier.Text);
+                return null;
+            }
+
+            return type;
         }
 
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
@@ -3625,7 +3635,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!allowExplicit && conversion.IsExplicit)
             {
-                if (type == TypeSymbol.Byte && TryGetIntConstant(expression, out var intValue))
+                if (type == TypeSymbol.UInt8 && TryGetIntConstant(expression, out var intValue))
                 {
                     if (intValue < 0 || intValue > 255)
                     {
@@ -3681,75 +3691,120 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private TypeSymbol? LookupType(string name)
         {
+            var builtin = LookupBuiltinType(name);
+            if (builtin != null)
+            {
+                return builtin;
+            }
+
+            // using 别名（6e-M18）：`using Rt = System.Runtime;` + 类型位置 / Rt.StaticMethod()
+            if (_usingAliases.TryGetValue(name, out var aliasTarget))
+            {
+                return LookupType(aliasTarget);
+            }
+
+            var lookup = _scope.TryLookupSymbol(name);
+            if (lookup is TypeSymbol declaredType)
+            {
+                return declaredType;
+            }
+
+            // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
+            if (name.IndexOf('.') >= 0)
+            {
+                var fullNameClass = FindDeclaredClassByFullName(name);
+                if (fullNameClass != null)
+                {
+                    return fullNameClass;
+                }
+
+                var fullNameEnum = FindDeclaredEnumByFullName(name);
+                if (fullNameEnum != null)
+                {
+                    return fullNameEnum;
+                }
+
+                return ExternalTypeResolver.TryResolve(name, _references);
+            }
+
+            // using 前缀：`using Foo.Bar;` 后 `LookupType("Point")` → 内部命名空间类/枚举 + 引用程序集
+            foreach (var ns in _usingNamespaces)
+            {
+                var fullName = ns.Length == 0 ? name : ns + "." + name;
+                var internalClass = FindDeclaredClassByFullName(fullName);
+                if (internalClass != null)
+                {
+                    return internalClass;
+                }
+
+                var internalEnum = FindDeclaredEnumByFullName(fullName);
+                if (internalEnum != null)
+                {
+                    return internalEnum;
+                }
+
+                var externalType = ExternalTypeResolver.TryResolve(fullName, _references);
+                if (externalType != null)
+                {
+                    return externalType;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 按方言解析内建类型名。CO 方言只认简写（i8/u8/.../f32/f64 + 128 占位），
+        /// C# 方言只认原名（sbyte/byte/short/.../float/double）。两方言共享 bool/char/string/void/any。
+        /// </summary>
+        private TypeSymbol? LookupBuiltinType(string name)
+        {
             switch (name)
             {
                 case "any": return TypeSymbol.Any;
                 case "bool": return TypeSymbol.Boolean;
-                case "int": return TypeSymbol.Int32;
-                case "long": return TypeSymbol.Long;
-                case "byte": return TypeSymbol.Byte;
-                case "double": return TypeSymbol.Double;
                 case "char": return TypeSymbol.Char;
                 case "string": return TypeSymbol.String;
                 case "void": return TypeSymbol.Void;
-                default:
+            }
+
+            if (_dialect == LanguageDialect.CSharp)
+            {
+                switch (name)
                 {
-                    // using 别名（6e-M18）：`using Rt = System.Runtime;` + 类型位置 / Rt.StaticMethod()
-                    if (_usingAliases.TryGetValue(name, out var aliasTarget))
-                    {
-                        return LookupType(aliasTarget);
-                    }
-
-                    var lookup = _scope.TryLookupSymbol(name);
-                    if (lookup is TypeSymbol declaredType)
-                    {
-                        return declaredType;
-                    }
-
-                    // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
-                    if (name.IndexOf('.') >= 0)
-                    {
-                        var fullNameClass = FindDeclaredClassByFullName(name);
-                        if (fullNameClass != null)
-                        {
-                            return fullNameClass;
-                        }
-
-                        var fullNameEnum = FindDeclaredEnumByFullName(name);
-                        if (fullNameEnum != null)
-                        {
-                            return fullNameEnum;
-                        }
-
-                        return ExternalTypeResolver.TryResolve(name, _references);
-                    }
-
-                    // using 前缀：`using Foo.Bar;` 后 `LookupType("Point")` → 内部命名空间类/枚举 + 引用程序集
-                    foreach (var ns in _usingNamespaces)
-                    {
-                        var fullName = ns.Length == 0 ? name : ns + "." + name;
-                        var internalClass = FindDeclaredClassByFullName(fullName);
-                        if (internalClass != null)
-                        {
-                            return internalClass;
-                        }
-
-                        var internalEnum = FindDeclaredEnumByFullName(fullName);
-                        if (internalEnum != null)
-                        {
-                            return internalEnum;
-                        }
-
-                        var externalType = ExternalTypeResolver.TryResolve(fullName, _references);
-                        if (externalType != null)
-                        {
-                            return externalType;
-                        }
-                    }
-
-                    return null;
+                    case "int": return TypeSymbol.Int32;
+                    case "long": return TypeSymbol.Int64;
+                    case "short": return TypeSymbol.Int16;
+                    case "ushort": return TypeSymbol.UInt16;
+                    case "uint": return TypeSymbol.UInt32;
+                    case "ulong": return TypeSymbol.UInt64;
+                    case "sbyte": return TypeSymbol.Int8;
+                    case "byte": return TypeSymbol.UInt8;
+                    case "float": return TypeSymbol.Float32;
+                    case "double": return TypeSymbol.Double;
                 }
             }
+            else
+            {
+                switch (name)
+                {
+                    case "i8": return TypeSymbol.Int8;
+                    case "u8": return TypeSymbol.UInt8;
+                    case "i16": return TypeSymbol.Int16;
+                    case "u16": return TypeSymbol.UInt16;
+                    case "i32": return TypeSymbol.Int32;
+                    case "u32": return TypeSymbol.UInt32;
+                    case "i64": return TypeSymbol.Int64;
+                    case "u64": return TypeSymbol.UInt64;
+                    case "f32": return TypeSymbol.Float32;
+                    case "f64": return TypeSymbol.Double;
+                    case "i128": return TypeSymbol.Int128;
+                    case "u128": return TypeSymbol.UInt128;
+                    case "f128": return TypeSymbol.Float128;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>按全名（`Namespace.ClassName`）沿作用域链查找内部声明的类。</summary>
@@ -3868,7 +3923,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static bool IsNumeric(TypeSymbol type)
         {
-            return type == TypeSymbol.Int32 || type == TypeSymbol.Long || type == TypeSymbol.Byte || type == TypeSymbol.Double;
+            return type == TypeSymbol.Int32 || type == TypeSymbol.Int64 || type == TypeSymbol.UInt8 || type == TypeSymbol.Double;
         }
 
         private void BindEnumDeclaration(EnumDeclarationSyntax syntax, string @namespace = "")

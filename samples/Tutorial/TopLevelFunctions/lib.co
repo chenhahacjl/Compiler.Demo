@@ -1,17 +1,17 @@
 // 顶层函数（function 关键字，类型后置）
-function Add(a: int, b: int): int
+function Add(a: i32, b: i32): i32
 {
     return a + b
 }
 
 // 顶层函数：数组返回类型
-function GetNumbers(): int[]
+function GetNumbers(): i32[]
 {
-    return new int[] { 7, 8, 9 }
+    return new i32[] { 7, 8, 9 }
 }
 
 // 顶层函数：字符串参数与返回
-function Repeat(s: string, n: int): string
+function Repeat(s: string, n: i32): string
 {
     var result = ""
     for var i = 0 to n

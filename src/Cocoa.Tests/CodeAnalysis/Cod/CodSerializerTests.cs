@@ -17,12 +17,12 @@ namespace MyLib
 {
     public enum Color { Red, Green, Blue }
 
-    function Add(a: int, b: int): int
+    function Add(a: i32, b: i32): i32
     {
         return a + b
     }
 
-    function Factorial(n: int): int
+    function Factorial(n: i32): i32
     {
         var result = 1
         for var i = 1 to n
@@ -32,7 +32,7 @@ namespace MyLib
         return result
     }
 
-    function Sum(items: int[]): int
+    function Sum(items: i32[]): i32
     {
         var total = 0
         for var i = 0 to items.Length - 1
@@ -47,7 +47,7 @@ namespace MyLib
         return c == Color.Green
     }
 
-    function Countdown(n: int): int
+    function Countdown(n: i32): i32
     {
         var steps = 0
         var current = n
@@ -229,7 +229,7 @@ namespace MyLib
         {
             var dir = NewDir();
             var source = @"
-function Add(a: int, b: int): int
+function Add(a: i32, b: i32): i32
 {
     return a + b
 }
@@ -252,8 +252,8 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: int
-        public function X(): int { return _x }
+        private _x: i32
+        public function X(): i32 { return _x }
     }
 }
 ";
@@ -276,17 +276,17 @@ namespace System
     class Runtime
     {
         syscall function WriteLine(text: string): void
-        syscall function Random(max: int): int
+        syscall function Random(max: i32): i32
     }
 
     class Utils
     {
-        static function Triple(x: int): int
+        static function Triple(x: i32): i32
         {
             return x * 3
         }
 
-        static function Max(a: int, b: int): int
+        static function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
@@ -295,7 +295,7 @@ namespace System
 
     namespace Math
     {
-        function Max(a: int, b: int): int
+        function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
@@ -344,7 +344,7 @@ namespace System
     {
         import kernel32.dll
         {
-            static stdcall function GetTickCountAlias(): int
+            static stdcall function GetTickCountAlias(): i32
                 extern(entry = GetTickCount, charset = ansi)
         }
     }
@@ -373,7 +373,7 @@ namespace System
     {
         import kernel32.dll
         {
-            static stdcall function GetTickCount(): int
+            static stdcall function GetTickCount(): i32
         }
     }
 }
@@ -397,12 +397,12 @@ namespace System
 {
     class Utils
     {
-        static function Triple(x: int): int
+        static function Triple(x: i32): i32
         {
             return x * 3
         }
 
-        static function Max(a: int, b: int): int
+        static function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
@@ -422,7 +422,7 @@ namespace System
 
                 var compilation = Compilation.Create(SyntaxTree.Parse(@"using System
 
-function Main(): int
+function Main(): i32
 {
     return Utils.Triple(3) + Utils.Max(2, 7)
 }"));
@@ -485,7 +485,7 @@ function Main(): int
                 var demoTree = SyntaxTree.Parse(@"
 namespace System.Demo
 {
-    function Ping(): int
+    function Ping(): i32
     {
         return 42
     }
@@ -509,7 +509,7 @@ namespace System.Demo
                     // 端到端：用户程序同时命中核心库与额外模块（同 scope 注入）
                     var compilation = Compilation.Create(SyntaxTree.Parse(@"using System
 
-function Main(): int
+function Main(): i32
 {
     Console.WriteLine(System.Demo.Ping())
     return System.Demo.Ping()

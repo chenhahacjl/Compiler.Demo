@@ -16,12 +16,12 @@ namespace System
             Runtime.WriteLine(text)
         }
 
-        static function WriteLine(text: int): void
+        static function WriteLine(text: i32): void
         {
             Runtime.WriteLine(text)
         }
 
-        static function WriteLine(text: double): void
+        static function WriteLine(text: f64): void
         {
             Runtime.WriteLine(text)
         }
@@ -36,12 +36,12 @@ namespace System
             Runtime.WriteLine(text)
         }
 
-        static function WriteLine(text: byte): void
+        static function WriteLine(text: u8): void
         {
             Runtime.WriteLine(text)
         }
 
-        static function WriteLine(text: long): void
+        static function WriteLine(text: i64): void
         {
             Runtime.WriteLine(text)
         }
@@ -51,12 +51,12 @@ namespace System
             Runtime.Write(text)
         }
 
-        static function Write(text: int): void
+        static function Write(text: i32): void
         {
             Runtime.Write(text)
         }
 
-        static function Write(text: double): void
+        static function Write(text: f64): void
         {
             Runtime.Write(text)
         }
@@ -71,12 +71,12 @@ namespace System
             Runtime.Write(text)
         }
 
-        static function Write(text: byte): void
+        static function Write(text: u8): void
         {
             Runtime.Write(text)
         }
 
-        static function Write(text: long): void
+        static function Write(text: i64): void
         {
             Runtime.Write(text)
         }
@@ -91,7 +91,7 @@ namespace System
             return Runtime.ReadKey(intercept)
         }
 
-        static function Beep(frequency: int, duration: int): void
+        static function Beep(frequency: i32, duration: i32): void
         {
             Runtime.Beep(frequency, duration)
         }

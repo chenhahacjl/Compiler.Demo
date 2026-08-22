@@ -3,7 +3,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 }
 
@@ -17,7 +17,7 @@ function IsRunning(): bool
     return false
 }
 
-function InRange(value: int, max: int): bool
+function InRange(value: i32, max: i32): bool
 {
     if value >= 0 && value < max
     {

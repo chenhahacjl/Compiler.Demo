@@ -14,9 +14,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                                             out CompilationUnitSyntax root,
                                             out ImmutableArray<Diagnostic> diagnostics);
 
-        private SyntaxTree(SourceText text, ParseHandler handler)
+        private SyntaxTree(SourceText text, ParseHandler handler, LanguageDialect dialect = LanguageDialect.Cocoa)
         {
             Text = text;
+            Dialect = dialect;
 
             handler(this, out var root, out var diagnostics);
 
@@ -27,6 +28,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SourceText Text { get; }
         public ImmutableArray<Diagnostic> Diagnostics { get; }
         public CompilationUnitSyntax Root { get; }
+
+        /// <summary>解析本语法树所用的语言方言（6e-M21：CO 简写 / C# 原名类型词汇分流依据）。</summary>
+        public LanguageDialect Dialect { get; }
 
         public static SyntaxTree Load(string fileName)
         {
@@ -71,7 +75,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public static SyntaxTree Parse(SourceText text, LanguageDialect dialect)
         {
-            return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, dialect, out root, out diagnostics));
+            return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, dialect, out root, out diagnostics), dialect);
         }
 
         public static ImmutableArray<SyntaxToken> ParseTokens(string text, bool includeEndOfFile = false)

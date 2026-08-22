@@ -1,18 +1,18 @@
 // Cocoa 式参数（类型后置）+ Cocoa 式体
-function Add(a: int, b: int): int
+function Add(a: i32, b: i32): i32
 {
     var sum = a + b
     return sum
 }
 
 // Cocoa 式参数（类型后置）+ 无分号语句
-function Square(x: int): int
+function Square(x: i32): i32
 {
     return x * x
 }
 
-// Cocoa 式参数（数组参数 int[]）+ Cocoa 式方法体
-function SumArray(values: int[]): int
+// Cocoa 式参数（数组参数 i32[]）+ Cocoa 式方法体
+function SumArray(values: i32[]): i32
 {
     var total = 0
     var i = 0
@@ -25,7 +25,7 @@ function SumArray(values: int[]): int
 }
 
 // Cocoa 式参数 + var 类型推断
-function Describe(name: string, age: int): string
+function Describe(name: string, age: i32): string
 {
     var greeting = "Hi, " + name
     var years = age * 1

@@ -1,11 +1,11 @@
 using System
 function Main()
 {
-    var b1: byte = 65
+    var b1: u8 = 65
     Console.WriteLine(b1)
     Console.WriteLine(AsInt(b1))
 
-    var buf: byte[] = new byte[3]
+    var buf: u8[] = new u8[3]
     buf[0] = 200
     buf[1] = 0xFF
     Console.WriteLine(buf[0])

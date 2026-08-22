@@ -1,5 +1,5 @@
 // Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
-// class String —— 纯 Cocoa 源码静态类，只依赖语言核心（字符串/char↔int 转换）
+// class String —— 纯 Cocoa 源码静态类，只依赖语言核心（字符串/char↔i32 转换）
 // 详细分层设计见 docs/标准库设计.md
 
 namespace System
@@ -12,7 +12,7 @@ namespace System
             var i = 0
             while i < s.Length
             {
-                var v = int(s[i])
+                var v = i32(s[i])
                 if v >= 97 && v <= 122
                 {
                     result = result + string(char(v - 32))
@@ -32,7 +32,7 @@ namespace System
             var i = 0
             while i < s.Length
             {
-                var v = int(s[i])
+                var v = i32(s[i])
                 if v >= 65 && v <= 90
                 {
                     result = result + string(char(v + 32))
@@ -82,7 +82,7 @@ namespace System
             return false
         }
 
-        static function IndexOf(s: string, sub: string): int
+        static function IndexOf(s: string, sub: string): i32
         {
             if sub.Length == 0
             {
@@ -112,7 +112,7 @@ namespace System
             return result
         }
 
-        static function Replicate(s: string, n: int): string
+        static function Replicate(s: string, n: i32): string
         {
             var result = ""
             var i = 0
@@ -124,7 +124,7 @@ namespace System
             return result
         }
 
-        static function CountChar(s: string, c: char): int
+        static function CountChar(s: string, c: char): i32
         {
             var count = 0
             var i = 0
@@ -221,7 +221,7 @@ namespace System
             return result
         }
 
-        static function CountSubstring(s: string, sub: string): int
+        static function CountSubstring(s: string, sub: string): i32
         {
             if sub.Length == 0
             {
@@ -244,7 +244,7 @@ namespace System
             return count
         }
 
-        static function PadLeft(s: string, totalWidth: int, padChar: char): string
+        static function PadLeft(s: string, totalWidth: i32, padChar: char): string
         {
             var result = s
             while result.Length < totalWidth
@@ -254,7 +254,7 @@ namespace System
             return result
         }
 
-        static function PadRight(s: string, totalWidth: int, padChar: char): string
+        static function PadRight(s: string, totalWidth: i32, padChar: char): string
         {
             var result = s
             while result.Length < totalWidth

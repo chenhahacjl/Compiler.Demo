@@ -24,7 +24,7 @@ namespace Foo
 {
     namespace Bar
     {
-        function Max(a: int, b: int): int
+        function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
@@ -32,7 +32,7 @@ namespace Foo
     }
 }
 
-function Main(): int
+function Main(): i32
 {
     return Foo.Bar.Max(3, 5)
 }
@@ -47,7 +47,7 @@ namespace System
 {
     namespace Math
     {
-        function Max(a: int, b: int): int
+        function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
@@ -57,7 +57,7 @@ namespace System
 
 using System
 
-function Main(): int
+function Main(): i32
 {
     return Math.Max(3, 5)
 }
@@ -72,7 +72,7 @@ namespace System
 {
     namespace Math
     {
-        function Max(a: int, b: int): int
+        function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
@@ -82,7 +82,7 @@ namespace System
 
 using System.Math
 
-function Main(): int
+function Main(): i32
 {
     return Max(3, 5)
 }
@@ -95,19 +95,19 @@ function Main(): int
         public void Evaluator_Overload_IntChosenForIntArgs()
         {
             AssertValue(@"
-function Max(a: int, b: int): int
+function Max(a: i32, b: i32): i32
 {
     if (a > b) return a
     return b
 }
 
-function Max(a: double, b: double): double
+function Max(a: f64, b: f64): f64
 {
     if (a > b) return a
     return b
 }
 
-function Main(): int
+function Main(): i32
 {
     return Max(3, 5)
 }
@@ -118,19 +118,19 @@ function Main(): int
         public void Evaluator_Overload_DoubleChosenForDoubleArgs()
         {
             AssertValue(@"
-function Max(a: int, b: int): int
+function Max(a: i32, b: i32): i32
 {
     if (a > b) return a
     return b
 }
 
-function Max(a: double, b: double): double
+function Max(a: f64, b: f64): f64
 {
     if (a > b) return a
     return b
 }
 
-function Main(): int
+function Main(): i32
 {
     if Max(3.0, 5.0) == 5.0
     {
@@ -150,13 +150,13 @@ namespace System
 {
     namespace Math
     {
-        function Max(a: int, b: int): int
+        function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
         }
 
-        function Max(a: double, b: double): double
+        function Max(a: f64, b: f64): f64
         {
             if (a > b) return a
             return b
@@ -164,7 +164,7 @@ namespace System
     }
 }
 
-function Main(): int
+function Main(): i32
 {
     var i = Math.Max(3, 5)
     var d = Math.Max(1.5, 0.5)
@@ -177,19 +177,19 @@ function Main(): int
         public void Evaluator_Overload_Ambiguous_ReportsDiagnostic()
         {
             var text = @"
-                function G(a: int): int
+                function G(a: i32): i32
                 {
                     return a
                 }
 
-                function G(a: double): int
+                function G(a: f64): i32
                 {
-                    return int(a)
+                    return i32(a)
                 }
 
-                function Main(): int
+                function Main(): i32
                 {
-                    return [G](byte(3))
+                    return [G](u8(3))
                 }
             ";
 
@@ -204,19 +204,19 @@ function Main(): int
         public void Evaluator_Overload_NoMatchingOverload_ReportsDiagnostic()
         {
             var text = @"
-                function Max(a: int, b: int): int
+                function Max(a: i32, b: i32): i32
                 {
                     if (a > b) return a
                     return b
                 }
 
-                function Max(a: double, b: double): double
+                function Max(a: f64, b: f64): f64
                 {
                     if (a > b) return a
                     return b
                 }
 
-                function Main(): int
+                function Main(): i32
                 {
                     return [Max](""x"", 5)
                 }
@@ -233,12 +233,12 @@ function Main(): int
         public void Evaluator_Overload_DuplicateSignature_ReportsDiagnostic()
         {
             var text = @"
-                function F(a: int): int
+                function F(a: i32): i32
                 {
                     return a
                 }
 
-                function [F](a: int): string
+                function [F](a: i32): string
                 {
                     return """"
                 }
@@ -261,13 +261,13 @@ namespace System
 {
     namespace Math
     {
-        function Max(a: int, b: int): int
+        function Max(a: i32, b: i32): i32
         {
             if (a > b) return a
             return b
         }
 
-        function Max(a: double, b: double): double
+        function Max(a: f64, b: f64): f64
         {
             if (a > b) return a
             return b

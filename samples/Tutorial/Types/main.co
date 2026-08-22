@@ -8,7 +8,7 @@ function Main()
     Console.WriteLine(y)
     Console.WriteLine(x + y)
     let name: string = "Alice"
-    let pi: double = 3.14
+    let pi: f64 = 3.14
     let flag: bool = true
     Console.WriteLine(name)
     Console.WriteLine(pi)

@@ -86,7 +86,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetCurrentProcessId(): int
+        static stdcall function GetCurrentProcessId(): i32
     }
 }
 
@@ -133,7 +133,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCountAlias(): int
+        static stdcall function GetTickCountAlias(): i32
             extern(entry = GetTickCount, charset = unicode)
     }
 }
@@ -173,7 +173,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
             extern(charset = ansi)
     }
 }

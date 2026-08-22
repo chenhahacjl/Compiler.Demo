@@ -9,17 +9,17 @@ namespace MathLib
 {
     enum Day { Mon, Tue, Wed, Thu, Fri, Sat, Sun }
 
-    function Add(a: int, b: int): int
+    function Add(a: i32, b: i32): i32
     {
         return a + b
     }
 
-    function Mul(a: int, b: int): int
+    function Mul(a: i32, b: i32): i32
     {
         return a * b
     }
 
-    function Factorial(n: int): int
+    function Factorial(n: i32): i32
     {
         var result = 1
         for var i = 1 to n

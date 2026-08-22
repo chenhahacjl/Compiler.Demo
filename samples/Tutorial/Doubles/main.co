@@ -1,7 +1,7 @@
 using System
 function Main()
 {
-    var d: double = 3.14
+    var d: f64 = 3.14
     Console.WriteLine(d)
     Console.WriteLine(Add(1.5, 2.25))
     Console.WriteLine(Divide(10.0, 4))
@@ -9,9 +9,9 @@ function Main()
     Console.WriteLine(7 - 1.5)
     Console.WriteLine(IsBigger(1.5, 2.5))
     Console.WriteLine(Truncated(3.9))
-    Console.WriteLine((double)3)
+    Console.WriteLine((f64)3)
 
-    var arr: double[] = new double[2] {1.5, 2.5}
+    var arr: f64[] = new f64[2] {1.5, 2.5}
     Console.WriteLine(arr[0])
     Console.WriteLine(arr[1])
     Console.WriteLine(Add(arr[0], arr[1]))

@@ -74,7 +74,7 @@ platform = x64
             var projectPath = CreateProject(
                 "native-run",
                 "App",
-                "function add(a: int, b: int): int { return a + b }\n\nfunction Main()\n{\n    Console.WriteLine(add(20, 22))\n}\n");
+                "function add(a: i32, b: i32): i32 { return a + b }\n\nfunction Main()\n{\n    Console.WriteLine(add(20, 22))\n}\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\" -b native");
             Assert.True(exitCode == 0, $"build failed: {stderr}");
@@ -220,7 +220,7 @@ output = cocoa
             var run = "cod-format";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "Lib.co"), "namespace MyLib\n{\n    function Add(a: int, b: int): int\n    {\n        return a + b\n    }\n}\n");
+            File.WriteAllText(Path.Combine(dir, "Lib.co"), "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
             var projectPath = Path.Combine(dir, "Lib.coproj");
             File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
@@ -256,12 +256,12 @@ output = cocoa
             File.WriteAllText(Path.Combine(libDir, "Lib.co"), @"
 namespace MyLib
 {
-    function Add(a: int, b: int): int
+    function Add(a: i32, b: i32): i32
     {
         return a + b
     }
 
-    function Triple(x: int): int
+    function Triple(x: i32): i32
     {
         return Add(x, Add(x, x))
     }
@@ -352,7 +352,7 @@ entry = Main
             Directory.CreateDirectory(libDir);
             Directory.CreateDirectory(appDir);
 
-            File.WriteAllText(Path.Combine(libDir, "lib.co"), "namespace MyLib\n{\n    public class Util\n    {\n        public function Double(x: int): int\n        {\n            return x * 2\n        }\n    }\n}\n");
+            File.WriteAllText(Path.Combine(libDir, "lib.co"), "namespace MyLib\n{\n    public class Util\n    {\n        public function Double(x: i32): i32\n        {\n            return x * 2\n        }\n    }\n}\n");
             File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = library\n\n[sources]\n*.co\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    Console.WriteLine(\"hi\")\n}\n");

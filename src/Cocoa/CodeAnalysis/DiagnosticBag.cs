@@ -106,6 +106,12 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        public void ReportUnsupported128BitType(TextLocation location, string name)
+        {
+            var message = $"Type '{name}' (128-bit) is not supported yet.";
+            ReportError(location, message);
+        }
+
         public void ReportCannotConvert(TextLocation location, TypeSymbol fromType, TypeSymbol toType)
         {
             var message = $"Cannot convert type '{fromType}' to '{toType}'.";

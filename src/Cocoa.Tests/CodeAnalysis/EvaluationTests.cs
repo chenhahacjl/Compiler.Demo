@@ -103,20 +103,20 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Theory]
-        [InlineData("var a: int return a", 0)]
-        [InlineData("var a: int a = 5 return a", 5)]
-        [InlineData("var a: int return a + 1", 1)]
-        [InlineData("var a: int a = 5 a = a + 1 return a", 6)]
+        [InlineData("var a: i32 return a", 0)]
+        [InlineData("var a: i32 a = 5 return a", 5)]
+        [InlineData("var a: i32 return a + 1", 1)]
+        [InlineData("var a: i32 a = 5 a = a + 1 return a", 6)]
         [InlineData("var b: bool return b", false)]
-        [InlineData("var d: double return d", 0.0)]
-        [InlineData("var c: char return int(c)", 0)]
-        [InlineData("var b: byte return int(b)", 0)]
-        [InlineData("public enum Color { Red, Green, Blue } var c: Color return int(c)", 0)]
+        [InlineData("var d: f64 return d", 0.0)]
+        [InlineData("var c: char return i32(c)", 0)]
+        [InlineData("var b: u8 return i32(b)", 0)]
+        [InlineData("public enum Color { Red, Green, Blue } var c: Color return i32(c)", 0)]
         [InlineData("var s: string return s == s", true)]
         [InlineData("var s: string s = \"abc\" return s", "abc")]
         [InlineData("const x = 5 return x", 5)]
         [InlineData("const x = 5 return x + 1", 6)]
-        [InlineData("const x: int = 5 return x", 5)]
+        [InlineData("const x: i32 = 5 return x", 5)]
         public void Evaluator_DefaultInitialization_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -170,12 +170,12 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Theory]
-        [InlineData("{ var arr = new int[] {1, 2, 3} var sum = 0 foreach (var x in arr) { sum = sum + x } return sum }", 6)]
-        [InlineData("{ var arr = new int[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 continue sum = sum + x } return sum }", 7)]
-        [InlineData("{ var arr = new int[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 break sum = sum + x } return sum }", 3)]
-        [InlineData("{ var arr = new int[] {1, 2, 3} var count = 0 foreach (var x in arr) { count = count + 1 } return count }", 3)]
+        [InlineData("{ var arr = new i32[] {1, 2, 3} var sum = 0 foreach (var x in arr) { sum = sum + x } return sum }", 6)]
+        [InlineData("{ var arr = new i32[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 continue sum = sum + x } return sum }", 7)]
+        [InlineData("{ var arr = new i32[] {1, 2, 3, 4} var sum = 0 foreach (var x in arr) { if x == 3 break sum = sum + x } return sum }", 3)]
+        [InlineData("{ var arr = new i32[] {1, 2, 3} var count = 0 foreach (var x in arr) { count = count + 1 } return count }", 3)]
         [InlineData("{ var s = \"abc\" var count = 0 foreach (var c in s) { count = count + 1 } return count }", 3)]
-        [InlineData("{ var arr = new int[] {1, 2} var result = 0 foreach (var x in arr) { foreach (var y in arr) { result = result + x * y } } return result }", 9)]
+        [InlineData("{ var arr = new i32[] {1, 2} var result = 0 foreach (var x in arr) { foreach (var y in arr) { result = result + x * y } } return result }", 9)]
         public void Evaluator_Foreach_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -185,7 +185,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Evaluator_Foreach_LoopVariable_IsReadOnly()
         {
             var text = @"
-                var arr = new int[[]] {1, 2, 3}
+                var arr = new i32[[]] {1, 2, 3}
                 foreach (var x in arr)
                 {
                     x [=] 5
@@ -334,7 +334,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var i = 5 i-- return i }", 4)]
         [InlineData("{ var i = 1 i++ i++ return i }", 3)]
         [InlineData("{ var i = 1 var r = i++ return r }", 2)]
-        [InlineData("{ var d: double = 1.5 d++ return d }", 2.5)]
+        [InlineData("{ var d: f64 = 1.5 d++ return d }", 2.5)]
         public void Evaluator_PostfixIncrement_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -346,7 +346,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var i = 1 var r = ++i return r }", 2)]
         [InlineData("{ var i = 1 var r = ++i + 10 return r }", 12)]
         [InlineData("{ var i = 3 i = ++i return i }", 4)]
-        [InlineData("{ var d: double = 1.5 return ++d }", 2.5)]
+        [InlineData("{ var d: f64 = 1.5 return ++d }", 2.5)]
         public void Evaluator_PrefixIncrement_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -392,7 +392,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("-7 % 3", -1)]
         [InlineData("7 % -3", 1)]
         [InlineData("0 % 5", 0)]
-        [InlineData("(byte)5 % 2", 1)]
+        [InlineData("(u8)5 % 2", 1)]
         [InlineData("1 << 4", 16)]
         [InlineData("8 >> 1", 4)]
         [InlineData("-8 >> 1", -4)]
@@ -411,7 +411,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Evaluator_Var_WithType_NoInitializer_ReportsNoDiagnostics()
         {
             var text = @"
-                var a: int
+                var a: i32
             ";
 
             AssertDiagnostics(text, "");
@@ -421,7 +421,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Evaluator_Let_WithoutInitializer_ReportsError()
         {
             var text = @"
-                [let x: int]
+                [let x: i32]
             ";
 
             var diagnostics = @"
@@ -435,7 +435,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Evaluator_Const_WithoutInitializer_ReportsError()
         {
             var text = @"
-                [const x: int]
+                [const x: i32]
             ";
 
             var diagnostics = @"
@@ -477,25 +477,25 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Array_Initializers()
         {
-            AssertValue("var a = new int[3] {10, 20, 30} return a[1]", 20);
+            AssertValue("var a = new i32[3] {10, 20, 30} return a[1]", 20);
         }
 
         [Fact]
         public void Evaluator_Array_Assignment()
         {
-            AssertValue("var a = new int[2] a[0] = 5 return a[0]", 5);
+            AssertValue("var a = new i32[2] a[0] = 5 return a[0]", 5);
         }
 
         [Fact]
         public void Evaluator_Array_ElementArithmetic()
         {
-            AssertValue("var a = new int[2] {7, 8} return a[0] + a[1]", 15);
+            AssertValue("var a = new i32[2] {7, 8} return a[0] + a[1]", 15);
         }
 
         [Fact]
         public void Evaluator_Array_Length()
         {
-            AssertValue("var a = new int[3] return a.Length", 3);
+            AssertValue("var a = new i32[3] return a.Length", 3);
         }
 
         [Fact]
@@ -549,7 +549,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Char_ConvertToInt()
         {
-            AssertValue("var c = 'a' return int(c)", 97);
+            AssertValue("var c = 'a' return i32(c)", 97);
         }
 
         [Fact]
@@ -620,7 +620,7 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var text = @"
                 var n = ""x""
-                var a = new int[[[n]]] return a
+                var a = new i32[[[n]]] return a
             ";
 
             var diagnostics = @"
@@ -633,23 +633,23 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Enum_ImplicitValues()
         {
-            AssertValue("public enum Color { Red, Green, Blue } return int(Color.Red)", 0);
-            AssertValue("public enum Color { Red, Green, Blue } return int(Color.Green)", 1);
-            AssertValue("public enum Color { Red, Green, Blue } return int(Color.Blue)", 2);
+            AssertValue("public enum Color { Red, Green, Blue } return i32(Color.Red)", 0);
+            AssertValue("public enum Color { Red, Green, Blue } return i32(Color.Green)", 1);
+            AssertValue("public enum Color { Red, Green, Blue } return i32(Color.Blue)", 2);
         }
 
         [Fact]
         public void Evaluator_Enum_ExplicitValues()
         {
-            AssertValue("public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 } return int(HttpStatus.NotFound)", 404);
-            AssertValue("public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 } return int(HttpStatus.InternalServerError)", 500);
+            AssertValue("public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 } return i32(HttpStatus.NotFound)", 404);
+            AssertValue("public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 } return i32(HttpStatus.InternalServerError)", 500);
         }
 
         [Fact]
         public void Evaluator_Enum_MixedValues()
         {
-            AssertValue("public enum E { A, B = 10, C, D = 20, E } return int(E.C)", 11);
-            AssertValue("public enum E { A, B = 10, C, D = 20, E } return int(E.E)", 21);
+            AssertValue("public enum E { A, B = 10, C, D = 20, E } return i32(E.C)", 11);
+            AssertValue("public enum E { A, B = 10, C, D = 20, E } return i32(E.E)", 21);
         }
 
         [Fact]
@@ -663,8 +663,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Evaluator_Enum_ExplicitConversions()
         {
-            AssertValue("public enum Color { Red, Green, Blue } return int(Color(5))", 5);
-            AssertValue("public enum Color { Red, Green, Blue } return int(Color(5)) == 5", true);
+            AssertValue("public enum Color { Red, Green, Blue } return i32(Color(5))", 5);
+            AssertValue("public enum Color { Red, Green, Blue } return i32(Color(5)) == 5", true);
         }
 
         [Fact]
@@ -672,9 +672,9 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             AssertValue(@"
 public enum Color { Red, Green, Blue }
-function f(c: Color): int { return int(c) }
+function f(c: Color): i32 { return i32(c) }
 function g(): Color { return Color.Blue }
-return int(f(g()))", 2);
+return i32(f(g()))", 2);
         }
 
         [Fact]
@@ -683,7 +683,7 @@ return int(f(g()))", 2);
             AssertValue(@"
 public enum Color { Red, Green, Blue }
 var a = new Color[2] {Color.Red, Color.Green}
-return int(a[1])", 1);
+return i32(a[1])", 1);
         }
 
         [Fact]
@@ -870,7 +870,7 @@ function Main()
         public void Evaluator_FunctionReturn_Missing()
         {
             var text = @"
-                function [add](a: int, b: int): int
+                function [add](a: i32, b: i32): i32
                 {
                 }
             ";
@@ -1313,7 +1313,7 @@ function Main()
         public void Evaluator_Function_With_ReturnValue_Should_Not_Return_Void()
         {
             var text = @"
-                function test(): int
+                function test(): i32
                 {
                     [return]
                 }
@@ -1330,7 +1330,7 @@ function Main()
         public void Evaluator_Not_All_Code_Paths_Return_Value()
         {
             var text = @"
-                function [test](n: int): bool
+                function [test](n: i32): bool
                 {
                     if (n > 10)
                        return true
@@ -1348,7 +1348,7 @@ function Main()
         public void Evaluator_Expression_Must_Have_Value()
         {
             var text = @"
-                function test(n: int)
+                function test(n: i32)
                 {
                     return
                 }
@@ -1391,7 +1391,7 @@ function Main()
         public void Evaluator_ElseStatement_Reports_NotReachableCode_Warning()
         {
             var text = @"
-                function test(): int
+                function test(): i32
                 {
                     if true
                     {
@@ -1457,7 +1457,7 @@ function Main()
         public void Evaluator_Parameter_Already_Declared()
         {
             var text = @"
-                function sum(a: int, b: int, [a: int]): int
+                function sum(a: i32, b: i32, [a: i32]): i32
                 {
                     return a + b + c
                 }
@@ -1474,7 +1474,7 @@ function Main()
         public void Evaluator_Function_Must_Have_Name()
         {
             var text = @"
-                function [(]a: int, b: int): int
+                function [(]a: i32, b: i32): i32
                 {
                     return a + b
                 }
@@ -1491,7 +1491,7 @@ function Main()
         public void Evaluator_Wrong_Argument_Type()
         {
             var text = @"
-                function test(n: int): bool
+                function test(n: i32): bool
                 {
                     return n > 10
                 }
@@ -1555,7 +1555,7 @@ function Main()
         [Fact]
         public void Evaluator_Byte_Cast_Truncates_To_Unsigned_Byte()
         {
-            AssertValue("(byte)300", (byte)44);
+            AssertValue("(u8)300", (byte)44);
         }
 
 
@@ -1590,37 +1590,37 @@ function Main()
         [Fact]
         public void Evaluator_Double_Conversions()
         {
-            AssertValue("(double)3", 3.0);
-            AssertValue("(int)3.9", 3);
-            AssertValue("(byte)3.9", (byte)3);
-            AssertValue("(int)3.14 + 1", 4);
+            AssertValue("(f64)3", 3.0);
+            AssertValue("(i32)3.9", 3);
+            AssertValue("(u8)3.9", (byte)3);
+            AssertValue("(i32)3.14 + 1", 4);
         }
 
         [Fact]
         public void Evaluator_Double_Byte_EndToEnd()
         {
-            AssertValue("(double)255 == 255.0", true);
-            AssertValue("(int)(3.5 + 0.5)", 4);
+            AssertValue("(f64)255 == 255.0", true);
+            AssertValue("(i32)(3.5 + 0.5)", 4);
         }
 
 
         [Fact]
         public void Evaluator_Byte_Cast_From_Int_To_Byte()
         {
-            AssertValue("(byte)42", (byte)42);
+            AssertValue("(u8)42", (byte)42);
         }
 
         [Fact]
         public void Evaluator_Byte_ExplicitCast_To_Int()
         {
-            AssertValue("(int)(byte)255", 255);
+            AssertValue("(i32)(u8)255", 255);
         }
 
         [Fact]
         public void Evaluator_Byte_Implicit_Int_Constant_Comparison()
         {
-            AssertValue("(byte)200 == (byte)200", true);
-            AssertValue("(byte)200 != (byte)201", true);
+            AssertValue("(u8)200 == (u8)200", true);
+            AssertValue("(u8)200 != (u8)201", true);
         }
 
         [Fact]
@@ -1634,7 +1634,7 @@ function Main()
         public void Evaluator_Byte_Constant_OutOfRange_ReportsError()
         {
             var text = @"
-                let b: byte = [300]
+                let b: u8 = [300]
             ";
 
             var diagnostics = @"
@@ -1648,7 +1648,7 @@ function Main()
         public void Evaluator_Byte_ConstantInRange_NoError()
         {
             var text = @"
-                let b: byte = 255
+                let b: u8 = 255
             ";
 
             var syntaxTree = SyntaxTree.Parse(text);
@@ -1662,7 +1662,7 @@ function Main()
         public void Evaluator_Byte_Assignment_OutOfRange_ReportsError()
         {
             var text = @"
-                var b: byte = 1
+                var b: u8 = 1
                 b = [300]
             ";
 
@@ -1677,7 +1677,7 @@ function Main()
         public void Evaluator_Byte_ExplicitCast_Allows_OutOfRange()
         {
             var text = @"
-                let b: byte = (byte)300
+                let b: u8 = (u8)300
             ";
 
             var syntaxTree = SyntaxTree.Parse(text);
@@ -1705,7 +1705,7 @@ function Main()
         public void Evaluator_ExternFunction_WithoutImport_ReportsError()
         {
             var text = @"
-stdcall function [GetTickCount](): int";
+stdcall function [GetTickCount](): i32";
 
             AssertDiagnostics(text, "Top-level extern declarations are deprecated: declare extern functions inside a class import block (e.g. `class Kernel32 { import kernel32.dll { static extern ... } }`).");
         }
@@ -1718,7 +1718,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
         [{
             return 0
         }]
@@ -1736,7 +1736,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 }";
 
@@ -1751,7 +1751,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        stdcall function [GetTickCount](): int
+        stdcall function [GetTickCount](): i32
     }
 }";
 
@@ -1766,7 +1766,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static function [GetTickCount](): int
+        static function [GetTickCount](): i32
         {
             return 0
         }
@@ -1784,12 +1784,12 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 
     import kernel32.dll
     {
-        static stdcall function GetCurrentProcessId(): int
+        static stdcall function GetCurrentProcessId(): i32
     }
 }";
 
@@ -1804,11 +1804,11 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 }
 
-function Main(): int
+function Main(): i32
 {
     return Kernel32.GetTickCount() > 0 ? 1 : 0
 }";
@@ -1833,12 +1833,12 @@ class User32
 {
     import user32.dll
     {
-        static stdcall function MessageBoxW(hWnd: int, text: int, caption: int, type: int): int
+        static stdcall function MessageBoxW(hWnd: i32, text: i32, caption: i32, type: i32): i32
             extern(entry = MessageBoxA, charset = unicode)
     }
 }
 
-function Main(): int
+function Main(): i32
 {
     return User32.MessageBoxW(0, 0, 0, 0)
 }";
@@ -1854,7 +1854,7 @@ class Kernel32
 {
     import kernel32.dll charset = unicode
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 }";
 
@@ -1869,7 +1869,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
             extern(charset = [utf16])
     }
 }";
@@ -1885,7 +1885,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
             extern([exactspelling] = trueValue)
     }
 }";
@@ -1900,10 +1900,10 @@ class Kernel32
 
 class Runtime
 {
-    syscall function Random(max: int): int
+    syscall function Random(max: i32): i32
 }
 
-function Main(): int
+function Main(): i32
 {
     return Runtime.Random(100) < 100 ? 1 : 0
 }";
@@ -1917,7 +1917,7 @@ function Main(): int
             var text = @"
 class Runtime
 {
-    syscall function [NoSuchPrimitive](): int
+    syscall function [NoSuchPrimitive](): i32
 }";
 
             AssertDiagnostics(text, "Syscall function 'NoSuchPrimitive' does not match any built-in primitive.");
@@ -1929,7 +1929,7 @@ class Runtime
             var text = @"
 class Runtime
 {
-    syscall function Random(max: int): int
+    syscall function Random(max: i32): i32
     [{
         return 1
     }]
@@ -1942,7 +1942,7 @@ class Runtime
         public void Evaluator_SyscallFunction_TopLevel_ReportsError()
         {
             var text = @"
-syscall function [Random](): int";
+syscall function [Random](): i32";
 
             AssertDiagnostics(text, "A syscall function must be declared inside a class (e.g. `class Runtime { syscall function ... }`).");
         }
@@ -1952,7 +1952,7 @@ syscall function [Random](): int";
         {
             var text = @"using System
 
-function Main(): int
+function Main(): i32
 {
     var t0 = Runtime.TickCount()
     Runtime.Sleep(1)
@@ -1978,7 +1978,7 @@ function Main(): int
         {
             var text = @"using System
 
-function Main(): int
+function Main(): i32
 {
     Runtime.Beep(800, 50)
     return 0
@@ -1998,7 +1998,7 @@ function Main(): int
         {
             var text = @"using System
 
-function Main(): int
+function Main(): i32
 {
     if Runtime.Sqrt(4.0) != 2.0 return 1
     if Runtime.Floor(2.7) != 2.0 return 2

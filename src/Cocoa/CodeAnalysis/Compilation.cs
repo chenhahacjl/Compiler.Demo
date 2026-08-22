@@ -125,7 +125,7 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries);
+            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : SyntaxTrees[0].Dialect);
         }
 
         /// <summary>

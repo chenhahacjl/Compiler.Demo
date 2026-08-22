@@ -2,26 +2,26 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: int
-        private _y: int
+        private _x: i32
+        private _y: i32
 
-        public constructor(x: int, y: int)
+        public constructor(x: i32, y: i32)
         {
             _x = x
             _y = y
         }
 
-        public function X(): int
+        public function X(): i32
         {
             return _x
         }
 
-        public function Y(): int
+        public function Y(): i32
         {
             return _y
         }
 
-        public function Area(): int
+        public function Area(): i32
         {
             return _x * _y
         }

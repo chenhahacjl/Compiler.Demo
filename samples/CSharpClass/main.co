@@ -7,12 +7,12 @@ public class Person
 {
     // Cocoa 式字段
     private _name: string
-    private _age: int
+    private _age: i32
     // Cocoa 式静态字段 + 初始化器（合成 .cctor）
-    public static Count: int = 0
+    public static Count: i32 = 0
 
     // Cocoa 式构造函数（constructor 关键字）+ Cocoa 式参数
-    public constructor(name: string, age: int)
+    public constructor(name: string, age: i32)
     {
         _name = name
         _age = age
@@ -23,10 +23,10 @@ public class Person
     public property Name: string { get set }
 
     // Cocoa 式自动属性 + 初始化器（作用于后备字段 _Age，构造链之后执行）
-    public property Age: int { get set } = 18
+    public property Age: i32 { get set } = 18
 
     // Cocoa 式方法（function 关键字 + 类型后置）
-    public function NextAge(): int
+    public function NextAge(): i32
     {
         return Age + 1
     }

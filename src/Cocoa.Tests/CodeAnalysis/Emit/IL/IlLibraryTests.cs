@@ -22,14 +22,14 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var code = @"
 public class Point
 {
-    private _x: int
+    private _x: i32
 
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _x
     }
@@ -68,14 +68,14 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: int
+        private _x: i32
 
-        public constructor(x: int)
+        public constructor(x: i32)
         {
             _x = x
         }
 
-        public function Get(): int
+        public function Get(): i32
         {
             return _x
         }
@@ -109,19 +109,19 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: int
+        private _x: i32
 
-        public constructor(x: int)
+        public constructor(x: i32)
         {
             _x = x
         }
 
-        public function Get(): int
+        public function Get(): i32
         {
             return _x
         }
 
-        public function Add(other: int): int
+        public function Add(other: i32): i32
         {
             return _x + other
         }
@@ -171,19 +171,19 @@ namespace MyLib
 {
     public class Account
     {
-        internal _balance: int
+        internal _balance: i32
 
-        protected function GetBalance(): int
+        protected function GetBalance(): i32
         {
             return _balance
         }
 
-        internal function Add(balance: int)
+        internal function Add(balance: i32)
         {
             _balance = _balance + balance
         }
 
-        public constructor(balance: int)
+        public constructor(balance: i32)
         {
             _balance = balance
         }
@@ -191,7 +191,7 @@ namespace MyLib
 
     internal class Hidden
     {
-        public function Noop(): int
+        public function Noop(): i32
         {
             return 0
         }
@@ -244,7 +244,7 @@ namespace MyLib
 {
     internal class Hidden
     {
-        public function Noop(): int
+        public function Noop(): i32
         {
             return 0
         }
@@ -301,9 +301,9 @@ public class Shape
 
 public class Circle extends Shape
 {
-    private _radius: int
+    private _radius: i32
 
-    public constructor(name: string, radius: int) extends base(name)
+    public constructor(name: string, radius: i32) extends base(name)
     {
         _radius = radius
     }
@@ -392,7 +392,7 @@ public class Resource extends IDisposable
             var code = @"
 public class MathHelpers
 {
-    public static function Square(x: int): int
+    public static function Square(x: i32): i32
     {
         return x * x
     }
@@ -421,7 +421,7 @@ public class MathHelpers
             var code = @"
 public class Config
 {
-    public static Max: int = 100
+    public static Max: i32 = 100
     public static Name: string = ""cocoa""
 }";
             var syntaxTree = SyntaxTree.Parse(code);

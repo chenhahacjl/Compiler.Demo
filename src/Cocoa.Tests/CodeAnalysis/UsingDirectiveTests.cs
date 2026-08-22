@@ -46,7 +46,7 @@ function Main()
             AssertValue(@"
 using System
 
-function Main(): int
+function Main(): i32
 {
     return Math.Max(3, 5)
 }
@@ -59,12 +59,12 @@ function Main(): int
             AssertValue(@"
 using System
 
-function Pick(): double
+function Pick(): f64
 {
     return Math.Max(3.5, 2.5)
 }
 
-function Main(): int
+function Main(): i32
 {
     if Pick() == 3.5
     {
@@ -81,7 +81,7 @@ function Main(): int
             AssertValue(@"
 using static System.Math
 
-function Main(): int
+function Main(): i32
 {
     return Max(3, 5)
 }
@@ -94,12 +94,12 @@ function Main(): int
             AssertValue(@"
 using static System.Math
 
-function Pick(): double
+function Pick(): f64
 {
     return Max(3.5, 2.5)
 }
 
-function Main(): int
+function Main(): i32
 {
     if Pick() == 3.5
     {
@@ -117,7 +117,7 @@ function Main(): int
             var result = Evaluate(@"
 using static System.Runtime
 
-function Main(): int
+function Main(): i32
 {
     var r = Random(100)
     if r >= 0 && r < 100
@@ -137,7 +137,7 @@ function Main(): int
             AssertValue(@"
 using M = System.Math
 
-function Main(): int
+function Main(): i32
 {
     return M.Max(3, 5)
 }

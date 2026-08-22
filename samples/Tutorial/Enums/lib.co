@@ -7,7 +7,7 @@ function IsGreen(c: Color): bool
     return c == Color.Green
 }
 
-function AsInt(c: Color): int
+function AsInt(c: Color): i32
 {
-    return int(c)
+    return i32(c)
 }

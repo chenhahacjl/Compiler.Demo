@@ -92,7 +92,7 @@ function Main()
 
 class Runtime
 {
-    syscall function Random(max: int): int
+    syscall function Random(max: i32): i32
 }
 
 function Main()
@@ -238,19 +238,19 @@ function Main()
 
 function Main()
 {
-    var a: int
+    var a: i32
     var b: bool
-    var d: double
+    var d: f64
     var c: char
-    var by: byte
+    var by: u8
     var s: string
     Console.WriteLine(a)
     Console.WriteLine(b)
     Console.WriteLine(d)
-    Console.WriteLine(int(c))
-    Console.WriteLine(int(by))
+    Console.WriteLine(i32(c))
+    Console.WriteLine(i32(by))
     Console.WriteLine(s == s)
-    const x: int = 42
+    const x: i32 = 42
     Console.WriteLine(x)
     const y = 7
     Console.WriteLine(y + 1)
@@ -268,12 +268,12 @@ function Main()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
 
-function add(a: int, b: int): int
+function add(a: i32, b: i32): i32
 {
     return a + b
 }
 
-function square(x: int): int
+function square(x: i32): i32
 {
     return x * x
 }
@@ -283,7 +283,7 @@ function greet(name: string): string
     return ""Hello, "" + name
 }
 
-function fib(n: int): int
+function fib(n: i32): i32
 {
     if n <= 1
     {
@@ -292,7 +292,7 @@ function fib(n: int): int
     return fib(n - 1) + fib(n - 2)
 }
 
-function isPositive(n: int): bool
+function isPositive(n: i32): bool
 {
     return n > 0
 }
@@ -321,7 +321,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 }
 
@@ -346,7 +346,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function ExitProcess(exitCode: int)
+        static stdcall function ExitProcess(exitCode: i32)
     }
 }
 
@@ -368,7 +368,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static cdecl function ExitProcess(exitCode: int)
+        static cdecl function ExitProcess(exitCode: i32)
     }
 }
 
@@ -391,7 +391,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetModuleHandleW(moduleName: int): int
+        static stdcall function GetModuleHandleW(moduleName: i32): i32
     }
 }
 
@@ -469,7 +469,7 @@ function Main()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
 
-function sum10(a: int, b: int, c: int, d: int, e: int, f: int, g: int, h: int, i: int, j: int): int
+function sum10(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32, h: i32, i: i32, j: i32): i32
 {
     return a + b + c + d + e + f + g + h + i + j
 }
@@ -493,7 +493,7 @@ function Main()
         {
             // main(): int 的返回值成为进程退出码（入口统一为 static int Main()）
             var (exitCode, stdout) = EmitAndRun(@"
-function Main(): int
+function Main(): i32
 {
     return 7
 }", "e2e-main-int-return");
@@ -508,7 +508,7 @@ function Main(): int
             // main(): int 缺 return 与其他非 void 函数一致：必须返回
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"using System
 
-function Main(): int
+function Main(): i32
 {
     Console.WriteLine(""hi"")
 }
@@ -524,7 +524,7 @@ function Main(): int
         public void Main_WithNonArrayArgument_OnDotnetHost_ReportsError()
         {
             var syntaxTree = Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(@"
-function Main(x: int)
+function Main(x: i32)
 {
 }
 ");
@@ -572,7 +572,7 @@ function Main(): bool
 
 function Main()
 {
-    var a = new int[3] {10, 20, 30}
+    var a = new i32[3] {10, 20, 30}
     a[1] = 99
     Console.WriteLine(a[0])
     Console.WriteLine(a[1])
@@ -609,7 +609,7 @@ function Main()
 
 function Main()
 {
-    var a = new int[2]
+    var a = new i32[2]
     a[0] = 1
     a[1] = 2
     Console.WriteLine(a[5])
@@ -625,7 +625,7 @@ function Main()
 
 function Main()
 {
-    var a = new int[5]
+    var a = new i32[5]
     var i = 0
     while i < 5
     {
@@ -656,7 +656,7 @@ function Main()
     var s = ""hello""
     Console.WriteLine(s.Length)
     Console.WriteLine(s[0])
-    Console.WriteLine(int(s[1]))
+    Console.WriteLine(i32(s[1]))
     var c = s[2]
     Console.WriteLine(c)
     Console.WriteLine(char(97))
@@ -706,16 +706,16 @@ function Main()
 
 public enum Color { Red, Green, Blue }
 public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
-function f(c: Color): int { return int(c) }
+function f(c: Color): i32 { return i32(c) }
 function Main()
 {
     var c = Color.Green
-    Console.WriteLine(int(c))
-    Console.WriteLine(int(HttpStatus.NotFound))
+    Console.WriteLine(i32(c))
+    Console.WriteLine(i32(HttpStatus.NotFound))
     Console.WriteLine(c == Color.Green)
     Console.WriteLine(c == Color.Red)
-    Console.WriteLine(int(f(Color.Blue)))
-    Console.WriteLine(int(Color(99)) == 99)
+    Console.WriteLine(i32(f(Color.Blue)))
+    Console.WriteLine(i32(Color(99)) == 99)
 }", "e2e-enum");
 
             Assert.Equal(0, exitCode);
@@ -731,10 +731,10 @@ public enum Color { Red, Green, Blue }
 function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
-    Console.WriteLine(int(a[0]))
-    Console.WriteLine(int(a[1]))
+    Console.WriteLine(i32(a[0]))
+    Console.WriteLine(i32(a[1]))
     a[1] = Color.Blue
-    Console.WriteLine(int(a[1]))
+    Console.WriteLine(i32(a[1]))
 }", "e2e-enum-array");
 
             Assert.Equal(0, exitCode);
@@ -748,16 +748,16 @@ function Main()
 
 function Main()
 {
-    var b1: byte = 65
+    var b1: u8 = 65
     Console.WriteLine(b1)
-    var buf: byte[] = new byte[3]
+    var buf: u8[] = new u8[3]
     buf[0] = 200
     buf[1] = 0xFF
     Console.WriteLine(buf[0])
     Console.WriteLine(buf[1])
-    Console.WriteLine((byte)300)
-    Console.WriteLine((int)buf[0])
-    Console.WriteLine((byte)200 == (byte)200)
+    Console.WriteLine((u8)300)
+    Console.WriteLine((i32)buf[0])
+    Console.WriteLine((u8)200 == (u8)200)
     Console.WriteLine(0xFF)
 }", "e2e-byte");
 
@@ -772,7 +772,7 @@ function Main()
 
 function Main()
 {
-    var d: double = 3.14
+    var d: f64 = 3.14
     Console.WriteLine(d)
     Console.WriteLine(1.5 + 2.25)
     Console.WriteLine(10.0 / 4)
@@ -780,14 +780,14 @@ function Main()
     Console.WriteLine(7 - 1.5)
     Console.WriteLine(1.5 < 2.5)
     Console.WriteLine(1.5 == 1.5)
-    Console.WriteLine((int)3.9)
-    Console.WriteLine((byte)3.9)
-    Console.WriteLine((double)3)
-    var arr: double[] = new double[2] {1.5, 2.5}
+    Console.WriteLine((i32)3.9)
+    Console.WriteLine((u8)3.9)
+    Console.WriteLine((f64)3)
+    var arr: f64[] = new f64[2] {1.5, 2.5}
     arr[0] = 3.5
     Console.WriteLine(arr[0])
     Console.WriteLine(arr[1])
-    var sum: double = 0.0
+    var sum: f64 = 0.0
     sum = sum + arr[0]
     Console.WriteLine(sum)
 }", "e2e-double");
@@ -804,7 +804,7 @@ function Main()
 function Main()
 {
     Console.WriteLine(""d="" + 1.5)
-    Console.WriteLine(""x="" + (double)3)
+    Console.WriteLine(""x="" + (f64)3)
     Console.WriteLine((string)2.75)
 }", "e2e-string-double");
 
@@ -819,32 +819,32 @@ function Main()
 
 public class Point
 {
-    private _x: int
-    private _y: int
+    private _x: i32
+    private _y: i32
 
-    public constructor(x: int, y: int)
+    public constructor(x: i32, y: i32)
     {
         _x = x
         _y = y
     }
 
-    public function Area(): int
+    public function Area(): i32
     {
         return _x * _y
     }
 
-    public function Scale(factor: int)
+    public function Scale(factor: i32)
     {
         _x = _x * factor
         _y = _y * factor
     }
 
-    public function X(): int
+    public function X(): i32
     {
         return _x
     }
 
-    public function Y(): int
+    public function Y(): i32
     {
         return _y
     }
@@ -871,9 +871,9 @@ function Main()
 
 public class Counter
 {
-    private _count: int
+    private _count: i32
 
-    public constructor(start: int)
+    public constructor(start: i32)
     {
         _count = start
     }
@@ -883,12 +883,12 @@ public class Counter
         _count = _count + 1
     }
 
-    public function Value(): int
+    public function Value(): i32
     {
         return _count
     }
 
-    public function Double(): int
+    public function Double(): i32
     {
         return Value() * 2
     }
@@ -913,14 +913,14 @@ function Main()
 
 public class Box
 {
-    private _value: int
+    private _value: i32
 
-    public constructor(v: int)
+    public constructor(v: i32)
     {
         _value = v
     }
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _value
     }
@@ -945,10 +945,10 @@ function Main()
 
 public class Calc
 {
-    public function Add(a: int, b: int): int => a + b
-    public function Square(x: int): int => x * x
-    public function Subtract(a: int, b: int): int => a - b
-    public function Triple(x: int): int => x * 3
+    public function Add(a: i32, b: i32): i32 => a + b
+    public function Square(x: i32): i32 => x * x
+    public function Subtract(a: i32, b: i32): i32 => a - b
+    public function Triple(x: i32): i32 => x * 3
 }
 
 function Main()
@@ -971,12 +971,12 @@ function Main()
 
 public class Rect
 {
-    private _w: int = 3
-    private _h: int = 4
+    private _w: i32 = 3
+    private _h: i32 = 4
 
-    public property Area: int => _w * _h
-    public property Width: int => _w
-    public property DoubleW: int => _w * 2
+    public property Area: i32 => _w * _h
+    public property Width: i32 => _w
+    public property DoubleW: i32 => _w * 2
 }
 
 function Main()
@@ -998,9 +998,9 @@ function Main()
 
 public class Account
 {
-    public property Balance: int { get private set }
+    public property Balance: i32 { get private set }
 
-    public function Deposit(amount: int)
+    public function Deposit(amount: i32)
     {
         Balance = Balance + amount
     }
@@ -1024,7 +1024,7 @@ function Main()
             var messages = GetEmitDiagnostics(@"
 public class Account
 {
-    public property Balance: int { get private set }
+    public property Balance: i32 { get private set }
 }
 
 function Main()
@@ -1059,9 +1059,9 @@ public class Shape
 
 public class Circle extends Shape
 {
-    private _radius: int
+    private _radius: i32
 
-    public constructor(name: string, radius: int) extends base(name)
+    public constructor(name: string, radius: i32) extends base(name)
     {
         _radius = radius
     }
@@ -1071,7 +1071,7 @@ public class Circle extends Shape
         return base.Describe() + (string)_radius
     }
 
-    public property Area: int
+    public property Area: i32
     {
         get { return _radius * _radius }
     }
@@ -1079,7 +1079,7 @@ public class Circle extends Shape
 
 public static class MathHelpers
 {
-    public static function Square(x: int): int
+    public static function Square(x: i32): i32
     {
         return x * x
     }
@@ -1104,20 +1104,20 @@ function Main()
 
 public interface IShape
 {
-    function Area(): int
+    function Area(): i32
     property Name: string { get }
 }
 
 public class Circle extends IShape
 {
-    private _radius: int
+    private _radius: i32
 
-    public constructor(radius: int)
+    public constructor(radius: i32)
     {
         _radius = radius
     }
 
-    public function Area(): int
+    public function Area(): i32
     {
         return _radius * _radius
     }
@@ -1148,7 +1148,7 @@ function Main()
 
 public interface IShape
 {
-    function Area(): int
+    function Area(): i32
 }
 
 public interface IColoredShape extends IShape
@@ -1158,14 +1158,14 @@ public interface IColoredShape extends IShape
 
 public class ColoredSquare extends IColoredShape
 {
-    private _side: int
+    private _side: i32
 
-    public constructor(side: int)
+    public constructor(side: i32)
     {
         _side = side
     }
 
-    public function Area(): int
+    public function Area(): i32
     {
         return _side * _side
     }
@@ -1197,14 +1197,14 @@ function Main()
 public interface IAnimal
 {
     function Speak(): string
-    property Age: int { get set }
+    property Age: i32 { get set }
 }
 
 public class Dog extends IAnimal
 {
-    private _age: int
+    private _age: i32
 
-    public constructor(age: int)
+    public constructor(age: i32)
     {
         _age = age
     }
@@ -1214,7 +1214,7 @@ public class Dog extends IAnimal
         return ""woof""
     }
 
-    public property Age: int
+    public property Age: i32
     {
         get { return _age }
         set { _age = value }
@@ -1223,7 +1223,7 @@ public class Dog extends IAnimal
 
 public class Puppy extends Dog
 {
-    public constructor(age: int) extends base(age)
+    public constructor(age: i32) extends base(age)
     {
     }
 }
@@ -1265,7 +1265,7 @@ function Main()
 
 public interface IFighter
 {
-    function Power(): int
+    function Power(): i32
     function Name(): string
 }
 
@@ -1276,12 +1276,12 @@ public abstract class BaseUnit extends IFighter
         return ""unit""
     }
 
-    public abstract function Power(): int
+    public abstract function Power(): i32
 }
 
 public class Knight extends BaseUnit
 {
-    public function Power(): int
+    public function Power(): i32
     {
         return 10
     }
@@ -1289,7 +1289,7 @@ public class Knight extends BaseUnit
 
 public class Archer extends BaseUnit
 {
-    public function Power(): int
+    public function Power(): i32
     {
         return 5
     }
@@ -1438,7 +1438,7 @@ function Main()
     Console.WriteLine(i)
     i = --i
     Console.WriteLine(i)
-    var d: double = 1.5
+    var d: f64 = 1.5
     d = ++d
     Console.WriteLine(d)
     var n = 7
@@ -1520,14 +1520,14 @@ public class Animal
 
 public class Dog extends Animal
 {
-    private _tricks: int
+    private _tricks: i32
 
     public constructor(name: string): base(name)
     {
         _tricks = 0
     }
 
-    public function Tricks(): int
+    public function Tricks(): i32
     {
         return _tricks
     }
@@ -1646,9 +1646,9 @@ public static void Main()
 
 public class Counter
 {
-    private _count: int = 5
+    private _count: i32 = 5
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _count
     }
@@ -1671,8 +1671,8 @@ function Main()
 
 public class Config
 {
-    public static Max: int = 100
-    public static Base: int = 7
+    public static Max: i32 = 100
+    public static Base: i32 = 7
 }
 
 function Main()
@@ -1691,8 +1691,8 @@ function Main()
 
 public class Point
 {
-    public property X: int { get set } = 10
-    public property Y: int { get set } = 20
+    public property X: i32 { get set } = 10
+    public property Y: i32 { get set } = 20
 }
 
 function Main()
@@ -1712,7 +1712,7 @@ function Main()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
 
-function Trace(tag: string): int
+function Trace(tag: string): i32
 {
     Base.Text = Base.Text + tag + "";""
     return 0
@@ -1730,7 +1730,7 @@ public class Base
 
 public class Derived extends Base
 {
-    private _x: int = Trace(""field"")
+    private _x: i32 = Trace(""field"")
 
     public constructor()
     {
@@ -1755,8 +1755,8 @@ function Main()
 
 public class Counter
 {
-    public static Start: int = 5
-    public static End: int = Start + 10
+    public static Start: i32 = 5
+    public static End: i32 = Start + 10
 }
 
 function Main()
@@ -1834,7 +1834,7 @@ function Main()
     Console.WriteLine(Add(2, 3))
 }
 
-function Add(a: int, b: int): int
+function Add(a: i32, b: i32): i32
 {
     return a + b
 }", "e2e-no-keyword-top-level");
@@ -1964,7 +1964,7 @@ namespace My.App
 {
     public class Utils
     {
-        public static function Square(x: int): int
+        public static function Square(x: i32): i32
         {
             return x * x
         }
@@ -1974,7 +1974,7 @@ namespace My.App
 
     public class Config
     {
-        public static Version: int = 7
+        public static Version: i32 = 7
     }
 }
 
@@ -1982,7 +1982,7 @@ function Main()
 {
     Console.WriteLine(My.App.Utils.Square(4))
     Console.WriteLine(My.App.Config.Version)
-    Console.WriteLine(int(My.App.Color.Green))
+    Console.WriteLine(i32(My.App.Color.Green))
 }", "e2e-dotted-access");
 
             Assert.Equal(0, exitCode);
@@ -1998,7 +1998,7 @@ namespace Foo.Bar
 {
     public class Point
     {
-        public function X(): int
+        public function X(): i32
         {
             return 3
         }
@@ -2030,7 +2030,7 @@ function Main()
 
 public class Program
 {
-    public static function X(): int
+    public static function X(): i32
     {
         return 42
     }
@@ -2294,7 +2294,7 @@ public static void Main()
             var (exitCode, stdout) = EmitAndRun(
 "function Main()\n" +
 "{\n" +
-"    var arr = new int[] {1, 2, 3}\n" +
+"    var arr = new i32[] {1, 2, 3}\n" +
 "    foreach (var x in arr)\n" +
 "    {\n" +
 "        Console.WriteLine(x)\n" +
@@ -2305,12 +2305,12 @@ public static void Main()
 "        sum = sum + x\n" +
 "    }\n" +
 "    Console.WriteLine(sum)\n" +
-"    var bytes: byte[] = new byte[] {10, 20, 30}\n" +
+"    var bytes: u8[] = new u8[] {10, 20, 30}\n" +
 "    foreach (var b in bytes)\n" +
 "    {\n" +
 "        Console.WriteLine(b)\n" +
 "    }\n" +
-"    var doubles: double[] = new double[] {1.5, 2.5}\n" +
+"    var doubles: f64[] = new f64[] {1.5, 2.5}\n" +
 "    foreach (var d in doubles)\n" +
 "    {\n" +
 "        Console.WriteLine(d)\n" +
@@ -2337,7 +2337,7 @@ public static void Main()
 "    {\n" +
 "        Console.WriteLine(c)\n" +
 "    }\n" +
-"    var arr = new int[] {1, 2, 3, 4}\n" +
+"    var arr = new i32[] {1, 2, 3, 4}\n" +
 "    foreach (var x in arr)\n" +
 "    {\n" +
 "        if x == 3 continue\n" +
@@ -2469,7 +2469,7 @@ public static void Main()
 
 public interface IShape
 {
-    function Area(): int
+    function Area(): i32
 }
 
 public interface ICloneable
@@ -2479,16 +2479,16 @@ public interface ICloneable
 
 public class Rectangle extends IShape, ICloneable
 {
-    private _w: int
-    private _h: int
+    private _w: i32
+    private _h: i32
 
-    public constructor(w: int, h: int)
+    public constructor(w: i32, h: i32)
     {
         _w = w
         _h = h
     }
 
-    public function Area(): int
+    public function Area(): i32
     {
         return _w * _h
     }
@@ -2519,7 +2519,7 @@ function Main()
 
 public class Base
 {
-    public function B(): int
+    public function B(): i32
     {
         return 5
     }
@@ -2527,12 +2527,12 @@ public class Base
 
 public interface IExtra
 {
-    function X(): int
+    function X(): i32
 }
 
 public class Derived extends Base, IExtra
 {
-    public function X(): int
+    public function X(): i32
     {
         return 7
     }
@@ -2567,14 +2567,14 @@ public class C extends A, B { }", "Main");
 
 public class Config
 {
-    public static Max: int
+    public static Max: i32
 
     static constructor()
     {
         Max = 42
     }
 
-    public static function GetMax(): int
+    public static function GetMax(): i32
     {
         return Max
     }
@@ -2596,14 +2596,14 @@ function Main()
 
 public class Config
 {
-    public static Max: int
+    public static Max: i32
 
     static constructor()
     {
         Max = 7
     }
 
-    public static function GetMax(): int
+    public static function GetMax(): i32
     {
         return Max
     }
@@ -2626,14 +2626,14 @@ function Main()
 
 public class Config
 {
-    public static Order: int = 1
+    public static Order: i32 = 1
 
     static constructor()
     {
         Order = 2
     }
 
-    public static function GetOrder(): int
+    public static function GetOrder(): i32
     {
         return Order
     }
@@ -2656,21 +2656,21 @@ function Main()
 
 public class Account
 {
-    public static Seq: int
+    public static Seq: i32
 
     static constructor()
     {
         Seq = 100
     }
 
-    private _base: int
+    private _base: i32
 
     public constructor()
     {
         _base = Seq
     }
 
-    public function GetBase(): int
+    public function GetBase(): i32
     {
         return _base
     }
@@ -2693,7 +2693,7 @@ function Main()
             var messages = GetEmitDiagnostics(@"
 public class Foo
 {
-    static Foo(int x)
+    static Foo(i32 x)
     {
     }
 }", "Main");
@@ -2720,7 +2720,7 @@ public class Foo extends Base
             var messages = GetEmitDiagnostics(@"
 public class Foo
 {
-    private _x: int
+    private _x: i32
 
     static constructor()
     {
@@ -2736,7 +2736,7 @@ public class Foo
             var messages = GetEmitDiagnostics(@"
 public class Foo
 {
-    private _x: int
+    private _x: i32
 
     static constructor()
     {
@@ -2780,14 +2780,14 @@ function Main()
     Console.WriteLine(l - i)
     Console.WriteLine(i * l)
     var big = 123456789012L
-    Console.WriteLine((int)big)
-    Console.WriteLine((double)big)
-    Console.WriteLine((long)(double)big)
+    Console.WriteLine((i32)big)
+    Console.WriteLine((f64)big)
+    Console.WriteLine((i64)(f64)big)
     var d = 123456789012.0
-    Console.WriteLine((long)d)
-    Console.WriteLine((long)3.9)
-    Console.WriteLine((long)-2.9)
-    Console.WriteLine((long)i)
+    Console.WriteLine((i64)d)
+    Console.WriteLine((i64)3.9)
+    Console.WriteLine((i64)-2.9)
+    Console.WriteLine((i64)i)
     Console.WriteLine(-big)
     Console.WriteLine(i == l)
     Console.WriteLine(i < l)

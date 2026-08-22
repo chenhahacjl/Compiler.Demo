@@ -51,7 +51,7 @@ namespace Cocoa.Tests.Compiler
             var outputPath = Path.Combine(dir, "cli-smoke.exe");
             File.WriteAllText(sourcePath, @"using System
 
-function twice(x: int): int
+function twice(x: i32): i32
 {
     return x * 2
 }

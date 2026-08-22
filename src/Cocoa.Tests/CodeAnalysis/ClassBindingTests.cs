@@ -16,14 +16,14 @@ namespace Cocoa.Tests.CodeAnalysis
 
 public class Point
 {
-    private _x: int
+    private _x: i32
 
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _x
     }
@@ -49,14 +49,14 @@ function Main()
 
 public class Point
 {
-    private _x: int
+    private _x: i32
 
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
 
-    public function Double(): int
+    public function Double(): i32
     {
         return _x * 2
     }
@@ -78,7 +78,7 @@ function Main()
 
 public class Point
 {
-    private _x: int
+    private _x: i32
 }
 
 function Main()
@@ -125,9 +125,9 @@ function Main()
 
 public class Point
 {
-    private _x: int
+    private _x: i32
 
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
@@ -150,9 +150,9 @@ function Main()
 
 public class Point
 {
-    private _x: int
+    private _x: i32
 
-    private function Secret(): int
+    private function Secret(): i32
     {
         return 42
     }
@@ -209,12 +209,12 @@ function Main()
 
 public class Foo
 {
-    public static function Bar(): int
+    public static function Bar(): i32
     {
         return this._x
     }
 
-    private _x: int
+    private _x: i32
 }
 
 function Main()
@@ -232,9 +232,9 @@ function Main()
 
 public class Foo
 {
-    private readonly _x: int
+    private readonly _x: i32
 
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
@@ -259,14 +259,14 @@ function Main()
             var code = @"
 public class Foo
 {
-    private _x: int
+    private _x: i32
 
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
 
-    public property X: int
+    public property X: i32
     {
         get { return _x }
     }
@@ -288,9 +288,9 @@ function Main()
 
 public class Foo
 {
-    internal _x: int
+    internal _x: i32
 
-    internal function Bar(): int
+    internal function Bar(): i32
     {
         return 42
     }
@@ -313,14 +313,14 @@ function Main()
 
 public class Animal
 {
-    protected _age: int
+    protected _age: i32
 
-    protected function Age(): int
+    protected function Age(): i32
     {
         return _age
     }
 
-    protected property AgeProp: int
+    protected property AgeProp: i32
     {
         get { return _age }
     }
@@ -328,12 +328,12 @@ public class Animal
 
 public class Dog extends Animal
 {
-    public constructor(age: int)
+    public constructor(age: i32)
     {
         _age = age
     }
 
-    public function GetAge(): int
+    public function GetAge(): i32
     {
         return _age + Age() + AgeProp
     }
@@ -355,19 +355,19 @@ function Main()
 
 public class Animal
 {
-    protected _age: int
+    protected _age: i32
 }
 
 public class Dog extends Animal { }
 
 public class Puppy extends Dog
 {
-    public constructor(age: int)
+    public constructor(age: i32)
     {
         _age = age
     }
 
-    public function GetAge(): int
+    public function GetAge(): i32
     {
         return _age
     }
@@ -389,12 +389,12 @@ function Main()
 
 public class Animal
 {
-    protected _age: int
+    protected _age: i32
 }
 
 public class Keeper
 {
-    public function ReadAge(a: Animal): int
+    public function ReadAge(a: Animal): i32
     {
         return a._age
     }
@@ -415,7 +415,7 @@ function Main()
 
 public class Animal
 {
-    protected function Eat(): int
+    protected function Eat(): i32
     {
         return 1
     }
@@ -505,17 +505,17 @@ function Main()
 
 public partial class Point
 {
-    private _x: int
+    private _x: i32
 }
 
 public partial class Point
 {
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _x
     }
@@ -542,7 +542,7 @@ function Main()
 
 public partial class Point
 {
-    private _x: int
+    private _x: i32
 }
 
 function Main()
@@ -553,12 +553,12 @@ function Main()
             var tree2 = SyntaxTree.Parse(@"
 public partial class Point
 {
-    public constructor(x: int)
+    public constructor(x: i32)
     {
         _x = x
     }
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _x
     }
@@ -582,12 +582,12 @@ public partial class Point
 
 public partial class A
 {
-    private _x: int
+    private _x: i32
 }
 
 public partial class A
 {
-    public function Get(): int
+    public function Get(): i32
     {
         return 42
     }
@@ -699,7 +699,7 @@ function Main()
 
 public class Foo
 {
-    public partial function Bar(): int
+    public partial function Bar(): i32
     {
         return 1
     }
@@ -721,9 +721,9 @@ function Main()
 public class Person
 {
     private _name: string
-    private _age: int
+    private _age: i32
 
-    public constructor(name: string, age: int)
+    public constructor(name: string, age: i32)
     {
         _name = name
         _age = age
@@ -731,7 +731,7 @@ public class Person
 
     public property Name: string { get set }
 
-    public function GetAge(): int
+    public function GetAge(): i32
     {
         return _age
     }
@@ -753,9 +753,9 @@ function Main()
 
 public class Counter
 {
-    private _count: int = 5
+    private _count: i32 = 5
 
-    public function Get(): int
+    public function Get(): i32
     {
         return _count
     }
@@ -777,9 +777,9 @@ function Main()
 
 public class Point
 {
-    public property X: int { get set } = 10
+    public property X: i32 { get set } = 10
 
-    public function GetX(): int
+    public function GetX(): i32
     {
         return X
     }
@@ -801,7 +801,7 @@ function Main()
 
 public class Config
 {
-    public static Max: int = 100
+    public static Max: i32 = 100
 }
 
 function Main()
@@ -823,8 +823,8 @@ function Main()
 
 public class Foo
 {
-    public static Max: int
-    private _x: int
+    public static Max: i32
+    private _x: i32
 }
 
 function Main()
@@ -847,7 +847,7 @@ function Main()
 
 public class Config
 {
-    public static Max: int
+    public static Max: i32
 
     static constructor()
     {
@@ -875,7 +875,7 @@ function Main()
 
 public class Config
 {
-    public static Max: int
+    public static Max: i32
 
     static constructor()
     {
@@ -903,7 +903,7 @@ function Main()
 
 public class Config
 {
-    public static Max: int
+    public static Max: i32
 
     static constructor()
     {
@@ -931,7 +931,7 @@ function Main()
 
 public class Foo
 {
-    static Foo(int x)
+    static Foo(i32 x)
     {
     }
 }
@@ -995,7 +995,7 @@ function Main()
 
 public class Foo
 {
-    private _x: int
+    private _x: i32
 
     static constructor()
     {
@@ -1018,7 +1018,7 @@ function Main()
 
 public class Foo
 {
-    private _x: int
+    private _x: i32
 
     static constructor()
     {
@@ -1065,9 +1065,9 @@ function Main()
 
 public class Immutable
 {
-    public readonly Id: int = 42
+    public readonly Id: i32 = 42
 
-    public function Get(): int
+    public function Get(): i32
     {
         return Id
     }
@@ -1089,7 +1089,7 @@ function Main()
 
 public class Calculator
 {
-    public function Add(a: int, b: int): int
+    public function Add(a: i32, b: i32): i32
     {
         var sum = a + b
         var product = a * b
@@ -1113,14 +1113,14 @@ function Main()
 
 public class Account
 {
-    public property Balance: int { get private set }
+    public property Balance: i32 { get private set }
 
-    public function Deposit(amount: int)
+    public function Deposit(amount: i32)
     {
         Balance = Balance + amount
     }
 
-    public function Get(): int
+    public function Get(): i32
     {
         return Balance
     }
@@ -1143,7 +1143,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    private property X: int { get private set }
+    private property X: i32 { get private set }
 }
 
 function Main()
@@ -1160,7 +1160,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    private property X: int { get public set }
+    private property X: i32 { get public set }
 }
 
 function Main()
@@ -1178,7 +1178,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    protected property X: int { internal get }
+    protected property X: i32 { internal get }
 }
 
 function Main()
@@ -1195,7 +1195,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    public property X: int { private get private set }
+    public property X: i32 { private get private set }
 }
 
 function Main()

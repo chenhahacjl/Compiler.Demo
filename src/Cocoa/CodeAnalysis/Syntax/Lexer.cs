@@ -1273,7 +1273,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             var length = 0;
             var isHex = false;
             var hasExponent = false;
-            var hasLongSuffix = false;
 
             if (Current == '0' && Peek(1) == 'x')
             {
@@ -1331,24 +1330,66 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            // long 后缀（6e-M19 M1）：`42L` / `0xFFL`（大小写均可）。
-            // 仅当 L 后非标识符字符时生效，避免吞掉 let / long 等关键字
-            // （如 `9696let` 应拆为 9696 + let，`1234long` 应拆为 1234 + long）。
-            bool canTakeLongSuffix = !char.IsLetterOrDigit(Peek(1));
-            if (!isHex && !hasExponent && (Current == 'L' || Current == 'l') && canTakeLongSuffix)
+            // 类型后缀（6e-M21）：`42L`/`0xFFL`、`1u`/`1U`、`1ul`/`1UL`/`1lu`/`1LU`、`1.0f`/`1e5f`。
+            // 仅当后缀后非标识符字符时生效，避免吞掉 let / long / ulong / using 等关键字/标识符
+            // （如 `9696let` 应拆为 9696 + let，`1234long` 应拆为 1234 + long，`1ul` 不应拆成 `1`+`ul`）。
+            bool canTakeSuffix = !char.IsLetterOrDigit(Peek(1));
+            bool uSuffix = false, lSuffix = false, fSuffix = false;
+            if (canTakeSuffix)
             {
-                hasLongSuffix = true;
-                _position++;
-                length++;
-            }
-            else if (isHex && (Current == 'L' || Current == 'l') && canTakeLongSuffix)
-            {
-                hasLongSuffix = true;
-                _position++;
-                length++;
+                var s = Current;
+                if (s == 'u' || s == 'U')
+                {
+                    uSuffix = true;
+                    _position++;
+                    length++;
+                    if (Current == 'l' || Current == 'L')
+                    {
+                        lSuffix = true;
+                        _position++;
+                        length++;
+                    }
+                }
+                else if (s == 'l' || s == 'L')
+                {
+                    lSuffix = true;
+                    _position++;
+                    length++;
+                    if (Current == 'u' || Current == 'U')
+                    {
+                        uSuffix = true;
+                        _position++;
+                        length++;
+                    }
+                }
+                else if (s == 'f' || s == 'F')
+                {
+                    fSuffix = true;
+                    _position++;
+                    length++;
+                }
             }
 
             var text = _text.ToString(_start, length);
+
+            if (fSuffix)
+            {
+                var floatText = isHex ? text.Substring(2, text.Length - 3) : text.Substring(0, text.Length - 1);
+                var floatStyle = isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Float;
+                if (double.TryParse(floatText, floatStyle, null, out var floatDouble))
+                {
+                    _value = (float)floatDouble;
+                    _kind = SyntaxKind.DoubleToken;
+                    return;
+                }
+
+                var span = new TextSpan(_start, length);
+                var location = new TextLocation(_text, span);
+                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Float32);
+                _value = 0.0f;
+                _kind = SyntaxKind.DoubleToken;
+                return;
+            }
 
             if (!isHex && (text.Contains('.') || hasExponent))
             {
@@ -1365,11 +1406,28 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return;
             }
 
-            if (hasLongSuffix)
+            if (lSuffix)
             {
+                if (uSuffix)
+                {
+                    var ulongText = isHex ? text.Substring(2, text.Length - 3) : text.Substring(0, text.Length - 2);
+                    if (ulong.TryParse(ulongText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var ulongValue))
+                    {
+                        _value = ulongValue;
+                        _kind = SyntaxKind.NumberToken;
+                        return;
+                    }
+
+                    var span = new TextSpan(_start, length);
+                    var location = new TextLocation(_text, span);
+                    _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.UInt64);
+                    _value = 0UL;
+                    _kind = SyntaxKind.NumberToken;
+                    return;
+                }
+
                 var longText = isHex ? text.Substring(2, text.Length - 3) : text.Substring(0, text.Length - 1);
-                var longParsed = long.TryParse(longText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var longValue);
-                if (longParsed)
+                if (long.TryParse(longText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var longValue))
                 {
                     _value = longValue;
                     _kind = SyntaxKind.NumberToken;
@@ -1378,8 +1436,26 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 var longSpan = new TextSpan(_start, length);
                 var longLocation = new TextLocation(_text, longSpan);
-                _diagnostics.ReportInvalidNumber(longLocation, text, TypeSymbol.Long);
+                _diagnostics.ReportInvalidNumber(longLocation, text, TypeSymbol.Int64);
                 _value = 0L;
+                _kind = SyntaxKind.NumberToken;
+                return;
+            }
+
+            if (uSuffix)
+            {
+                var uintText = isHex ? text.Substring(2, text.Length - 2) : text.Substring(0, text.Length - 1);
+                if (uint.TryParse(uintText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var uintValue))
+                {
+                    _value = uintValue;
+                    _kind = SyntaxKind.NumberToken;
+                    return;
+                }
+
+                var span = new TextSpan(_start, length);
+                var location = new TextLocation(_text, span);
+                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.UInt32);
+                _value = 0U;
                 _kind = SyntaxKind.NumberToken;
                 return;
             }

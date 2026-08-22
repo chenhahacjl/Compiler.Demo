@@ -151,8 +151,8 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
-        static stdcall function ExitProcess(exitCode: int)
+        static stdcall function GetTickCount(): i32
+        static stdcall function ExitProcess(exitCode: i32)
     }
 }");
             var root = syntaxTree.Root;
@@ -173,12 +173,12 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 
     import user32.dll
     {
-        static stdcall function MessageBeep(uType: int): int
+        static stdcall function MessageBeep(uType: i32): i32
     }
 }");
             var root = syntaxTree.Root;
@@ -198,7 +198,7 @@ class User32
 {
     import user32.dll
     {
-        static stdcall function MessageBoxW(hWnd: int, text: int, caption: int, type: int): int
+        static stdcall function MessageBoxW(hWnd: i32, text: i32, caption: i32, type: i32): i32
             extern(entry = MessageBoxA, charset = ansi)
     }
 }");
@@ -224,7 +224,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
             extern entry = GetTickCount, charset = unicode
     }
 }");
@@ -247,7 +247,7 @@ class User32
 {
     import user32.dll charset = unicode
     {
-        static stdcall function MessageBeep(uType: int): int
+        static stdcall function MessageBeep(uType: i32): i32
     }
 }");
             var root = syntaxTree.Root;
@@ -265,7 +265,7 @@ class User32
             var syntaxTree = SyntaxTree.Parse(@"
 class Runtime
 {
-    syscall function Random(max: int): int
+    syscall function Random(max: i32): i32
 }");
             var root = syntaxTree.Root;
             var classMember = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
@@ -304,7 +304,7 @@ class Runtime
         public void Parser_CdeclExternDeclaration_ParsesBodyWhenPresent()
         {
             var syntaxTree = SyntaxTree.Parse(@"
-cdecl function double(x: int): int
+cdecl function double(x: i32): i32
 {
     return x * 2
 }");
@@ -322,16 +322,16 @@ cdecl function double(x: int): int
             var syntaxTree = SyntaxTree.Parse(@"
 public class Point
 {
-    private _x: int
-    private _y: int
+    private _x: i32
+    private _y: i32
 
-    public constructor(x: int, y: int)
+    public constructor(x: i32, y: i32)
     {
         _x = x
         _y = y
     }
 
-    public function Area(): int
+    public function Area(): i32
     {
         return _x * _y
     }

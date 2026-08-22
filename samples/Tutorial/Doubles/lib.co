@@ -1,19 +1,19 @@
-function Add(a: double, b: double): double
+function Add(a: f64, b: f64): f64
 {
     return a + b
 }
 
-function Divide(a: double, b: double): double
+function Divide(a: f64, b: f64): f64
 {
     return a / b
 }
 
-function IsBigger(a: double, b: double): bool
+function IsBigger(a: f64, b: f64): bool
 {
     return a > b
 }
 
-function Truncated(d: double): int
+function Truncated(d: f64): i32
 {
-    return int(d)
+    return i32(d)
 }

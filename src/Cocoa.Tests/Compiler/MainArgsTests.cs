@@ -83,7 +83,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithStringArrayArgs_ReturnsArgCount()
         {
-            var result = EvaluateWithArgs("function Main(args: string[]): int { return args.Length }", new[] { "a", "b", "c" });
+            var result = EvaluateWithArgs("function Main(args: string[]): i32 { return args.Length }", new[] { "a", "b", "c" });
             Assert.Empty(result.Diagnostics);
             Assert.Equal(3, result.Value);
         }
@@ -91,7 +91,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithStringArrayArgs_ReadsIndexedValue()
         {
-            var result = EvaluateWithArgs("function Main(args: string[]): int { if args[1] == \"b\" { return 9 } return 0 }", new[] { "a", "b", "c" });
+            var result = EvaluateWithArgs("function Main(args: string[]): i32 { if args[1] == \"b\" { return 9 } return 0 }", new[] { "a", "b", "c" });
             Assert.Empty(result.Diagnostics);
             Assert.Equal(9, result.Value);
         }
@@ -99,7 +99,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithNoArgs_ReturnsZeroWhenNoArgsPassed()
         {
-            var result = EvaluateWithArgs("function Main(args: string[]): int { return args.Length }", Array.Empty<string>());
+            var result = EvaluateWithArgs("function Main(args: string[]): i32 { return args.Length }", Array.Empty<string>());
             Assert.Empty(result.Diagnostics);
             Assert.Equal(0, result.Value);
         }
@@ -107,7 +107,7 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Interpreter_MainWithNonArrayParameter_ReportsError()
         {
-            var compilation = Compilation.Create(SyntaxTree.Parse("function Main(x: int) { return x }"));
+            var compilation = Compilation.Create(SyntaxTree.Parse("function Main(x: i32) { return x }"));
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
             Assert.NotEmpty(result.Diagnostics);
         }
@@ -236,7 +236,7 @@ namespace Cocoa.Tests.Compiler
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(appDir);
             File.WriteAllText(Path.Combine(appDir, "App.co"),
-                "namespace My.App { public class Program { public x: int = 0\npublic static function Main() { Console.WriteLine(7) } } }");
+                "namespace My.App { public class Program { public x: i32 = 0\npublic static function Main() { Console.WriteLine(7) } } }");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"),
                 $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");

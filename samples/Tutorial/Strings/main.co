@@ -4,7 +4,7 @@ function Main()
     var s = "hello"
     Console.WriteLine(s.Length)
     Console.WriteLine(s[0])
-    Console.WriteLine(int(s[1]))
+    Console.WriteLine(i32(s[1]))
     Console.WriteLine(Middle(s))
     Console.WriteLine(Middle(s) + "!")
     Console.WriteLine(FirstChar(s))

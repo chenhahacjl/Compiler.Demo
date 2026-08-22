@@ -8,12 +8,12 @@ function FirstChar(s: string): char
     return s[0]
 }
 
-function CharCode(s: string, index: int): int
+function CharCode(s: string, index: i32): i32
 {
-    return int(s[index])
+    return i32(s[index])
 }
 
-function LengthOf(s: string): int
+function LengthOf(s: string): i32
 {
     return s.Length
 }

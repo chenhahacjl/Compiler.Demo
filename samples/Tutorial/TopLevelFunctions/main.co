@@ -15,7 +15,7 @@ function Main()
 }
 
 // 顶层函数（类型后置 + 冒号返回类型）
-function Double(x: int): int
+function Double(x: i32): i32
 {
     return x * 2
 }

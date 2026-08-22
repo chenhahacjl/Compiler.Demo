@@ -3,7 +3,7 @@ function Greeting(name: string): string
     return "Hello, " + name + "!"
 }
 
-function Sum(a: int, b: int): int
+function Sum(a: i32, b: i32): i32
 {
     return a + b
 }

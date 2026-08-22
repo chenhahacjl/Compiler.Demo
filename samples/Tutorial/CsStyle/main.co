@@ -8,11 +8,11 @@ function Main()
 
     // Cocoa 式局部变量（类型后置 / 推断，无分号）
     var c = 5
-    let d: int = 1
+    let d: i32 = 1
 
     Console.WriteLine(Add(a, b))
     Console.WriteLine(Square(c))
-    Console.WriteLine(SumArray(new int[] {1, 2, 3, 4}))
+    Console.WriteLine(SumArray(new i32[] {1, 2, 3, 4}))
     Console.WriteLine(Describe("Cocoa", 3))
     Console.WriteLine(msg)
     Console.WriteLine(d)

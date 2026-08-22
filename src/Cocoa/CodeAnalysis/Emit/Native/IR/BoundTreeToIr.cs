@@ -171,7 +171,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
-            type == TypeSymbol.Double || type == TypeSymbol.Long || type.ElementType != null;
+            type == TypeSymbol.Double || type == TypeSymbol.Int64 || type.ElementType != null;
 
         // ------------------------------------------------------------------
         // 函数
@@ -588,7 +588,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return 1;
             }
 
-            if (type == TypeSymbol.Byte)
+            if (type == TypeSymbol.UInt8)
             {
                 return 1;
             }
@@ -603,7 +603,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return 4;
             }
 
-            if (type == TypeSymbol.Long)
+            if (type == TypeSymbol.Int64)
             {
                 return 8;
             }
@@ -849,7 +849,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             else if (type == TypeSymbol.Boolean) typeKind = 3;
             else if (type == TypeSymbol.Char) typeKind = 4;
             else if (type == TypeSymbol.Double) typeKind = 1;
-            else if (type == TypeSymbol.Long) typeKind = 5; // M1：long 插值格式仅默认十进制（StringFormat 内忽略格式码，见开发计划）
+            else if (type == TypeSymbol.Int64) typeKind = 5; // M1：long 插值格式仅默认十进制（StringFormat 内忽略格式码，见开发计划）
             else typeKind = 0; // int / byte / enum
 
             var value = EmitExpression(node.Value);
@@ -940,7 +940,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             return result;
                         }
 
-                        if (node.Operand.Type == TypeSymbol.Long)
+                        if (node.Operand.Type == TypeSymbol.Int64)
                         {
                             var resultLong = AllocateRegister(8);
                             Add(instructions, new IrInstruction(IrOpCode.Mov, resultLong, IrOperand.Reg(operand)));
@@ -964,7 +964,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundUnaryOperatorKind.OnesComplement:
                     {
-                        if (node.Operand.Type == TypeSymbol.Long)
+                        if (node.Operand.Type == TypeSymbol.Int64)
                         {
                             var resultLong = AllocateRegister(8);
                             Add(instructions, new IrInstruction(IrOpCode.Mov, resultLong, IrOperand.Reg(operand)));
@@ -1024,7 +1024,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitFloatBinary(node);
             }
 
-            if (node.Left.Type == TypeSymbol.Long)
+            if (node.Left.Type == TypeSymbol.Int64)
             {
                 return EmitLongBinary(node);
             }
@@ -1401,7 +1401,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.Byte)
+            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.UInt8)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(intFn), IrOperand.Constant(0)));
@@ -1428,7 +1428,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Long)
+            else if (type == TypeSymbol.Int64)
             {
                 // long 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
                 Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
@@ -1508,7 +1508,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 from == TypeSymbol.Int32 && to == TypeSymbol.Char ||
                 from is EnumTypeSymbol && to == TypeSymbol.Int32 ||
                 from == TypeSymbol.Int32 && to is EnumTypeSymbol ||
-                from == TypeSymbol.Byte && to == TypeSymbol.Int32)
+                from == TypeSymbol.UInt8 && to == TypeSymbol.Int32)
             {
                 // 同为 4 字节值，无需指令
                 return value;
@@ -1521,7 +1521,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return result;
             }
 
-            if (from == TypeSymbol.Double && to == TypeSymbol.Long)
+            if (from == TypeSymbol.Double && to == TypeSymbol.Int64)
             {
                 // 截断取整（与 C# 一致）；LeaSlot 保证 x86 帧底缓冲（EmitFCvtSD64 的控制字区）
                 var scratch = AllocateRegister(8);
@@ -1531,7 +1531,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return result;
             }
 
-            if (to == TypeSymbol.Long)
+            if (to == TypeSymbol.Int64)
             {
                 if (from == TypeSymbol.Int32 || from is EnumTypeSymbol)
                 {
@@ -1541,7 +1541,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     return result;
                 }
 
-                if (from == TypeSymbol.Byte)
+                if (from == TypeSymbol.UInt8)
                 {
                     // 零扩展（byte 无符号）
                     var result = AllocateRegister(8);
@@ -1568,7 +1568,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 throw new Exception($"Unexpected conversion from {from} to {to}");
             }
 
-            if (from == TypeSymbol.Long)
+            if (from == TypeSymbol.Int64)
             {
                 if (to == TypeSymbol.Int32)
                 {
@@ -1578,7 +1578,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     return result;
                 }
 
-                if (to == TypeSymbol.Byte)
+                if (to == TypeSymbol.UInt8)
                 {
                     var truncatedLong = AllocateRegister(4);
                     Add(instructions, new IrInstruction(IrOpCode.Trunc64, truncatedLong, IrOperand.Reg(value)));
@@ -1613,14 +1613,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             if (from == TypeSymbol.Int32 && to == TypeSymbol.Double ||
-                from == TypeSymbol.Byte && to == TypeSymbol.Double)
+                from == TypeSymbol.UInt8 && to == TypeSymbol.Double)
             {
                 var result = AllocateRegister(8);
                 Add(instructions, new IrInstruction(IrOpCode.FCvtSI, result, IrOperand.Reg(value)));
                 return result;
             }
 
-            if (to == TypeSymbol.Byte)
+            if (to == TypeSymbol.UInt8)
             {
                 if (from == TypeSymbol.Double)
                 {

@@ -1,19 +1,19 @@
-function Wrap(value: int): byte
+function Wrap(value: i32): u8
 {
-    return (byte)value
+    return (u8)value
 }
 
-function AsInt(b: byte): int
+function AsInt(b: u8): i32
 {
-    return int(b)
+    return i32(b)
 }
 
-function FirstElement(buf: byte[]): byte
+function FirstElement(buf: u8[]): u8
 {
     return buf[0]
 }
 
-function LastElement(buf: byte[]): byte
+function LastElement(buf: u8[]): u8
 {
     return buf[buf.Length - 1]
 }

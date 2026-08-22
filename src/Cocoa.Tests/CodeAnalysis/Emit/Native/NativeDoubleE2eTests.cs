@@ -69,7 +69,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 
 function Main()
 {
-    var d: double = 3.14
+    var d: f64 = 3.14
     Console.WriteLine(d)
     Console.WriteLine(1.5 + 2.25)
     Console.WriteLine(10.0 / 4)
@@ -77,14 +77,14 @@ function Main()
     Console.WriteLine(7 - 1.5)
     Console.WriteLine(1.5 < 2.5)
     Console.WriteLine(1.5 == 1.5)
-    Console.WriteLine((int)3.9)
-    Console.WriteLine((byte)3.9)
-    Console.WriteLine((double)3)
-    var arr: double[] = new double[2] {1.5, 2.5}
+    Console.WriteLine((i32)3.9)
+    Console.WriteLine((u8)3.9)
+    Console.WriteLine((f64)3)
+    var arr: f64[] = new f64[2] {1.5, 2.5}
     arr[0] = 3.5
     Console.WriteLine(arr[0])
     Console.WriteLine(arr[1])
-    var sum: double = 0.0
+    var sum: f64 = 0.0
     sum = sum + arr[0]
     Console.WriteLine(sum)
 }", "e2e-double", (TargetPlatform)platform);
@@ -111,7 +111,7 @@ function Main()
     Console.WriteLine(0.0 / 0.0)
     Console.WriteLine(""d="" + 1.5)
     Console.WriteLine((string)2.75)
-    var x: double = -0.0
+    var x: f64 = -0.0
     Console.WriteLine(x)
     Console.WriteLine(0.1 + 0.2)
 }", "e2e-double-fmt", (TargetPlatform)platform);
@@ -462,9 +462,9 @@ function Main()
     Console.WriteLine(parts[0])
     Console.WriteLine(parts[1])
     Console.WriteLine(parts[2])
-    var arr = new int[] {3, 1, 2}
+    var arr = new i32[] {3, 1, 2}
     Console.WriteLine(Array.Average(arr))
-    var darr = new double[] {1.5, 2.5}
+    var darr = new f64[] {1.5, 2.5}
     Console.WriteLine(Array.Average(darr))
 }", "e2e-stdlib-extensions", (TargetPlatform)platform);
 

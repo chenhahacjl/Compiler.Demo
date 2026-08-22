@@ -64,7 +64,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function ExitProcess(exitCode: int)
+        static stdcall function ExitProcess(exitCode: i32)
     }
 }
 
@@ -85,7 +85,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static cdecl function ExitProcess(exitCode: int)
+        static cdecl function ExitProcess(exitCode: i32)
     }
 }
 
@@ -108,7 +108,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
     }
 }
 
@@ -116,7 +116,7 @@ class User32
 {
     import user32.dll
     {
-        static stdcall function MessageBeep(uType: int): int
+        static stdcall function MessageBeep(uType: i32): i32
     }
 }
 
@@ -144,7 +144,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetStdHandle(nStdHandle: int): int
+        static stdcall function GetStdHandle(nStdHandle: i32): i32
     }
 }
 
@@ -173,15 +173,15 @@ function Main()
 
 function Main()
 {
-    var b1: byte = 65
+    var b1: u8 = 65
     Console.WriteLine(b1)
-    var buf: byte[] = new byte[3]
+    var buf: u8[] = new u8[3]
     buf[0] = 200
     buf[1] = 0xFF
     Console.WriteLine(buf[0])
     Console.WriteLine(buf[1])
-    Console.WriteLine((byte)300)
-    Console.WriteLine((int)buf[0])
+    Console.WriteLine((u8)300)
+    Console.WriteLine((i32)buf[0])
     Console.WriteLine(0xFF)
 }", "native-byte-e2e", X64);
 
@@ -196,15 +196,15 @@ function Main()
 
 function Main()
 {
-    var b1: byte = 65
+    var b1: u8 = 65
     Console.WriteLine(b1)
-    var buf: byte[] = new byte[3]
+    var buf: u8[] = new u8[3]
     buf[0] = 200
     buf[1] = 0xFF
     Console.WriteLine(buf[0])
     Console.WriteLine(buf[1])
-    Console.WriteLine((byte)300)
-    Console.WriteLine((int)buf[0])
+    Console.WriteLine((u8)300)
+    Console.WriteLine((i32)buf[0])
     Console.WriteLine(0xFF)
 }", "native-byte-e2e-x86", X86);
 
@@ -220,7 +220,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function ExitProcess(exitCode: int)
+        static stdcall function ExitProcess(exitCode: i32)
     }
 }
 
@@ -241,7 +241,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static cdecl function ExitProcess(exitCode: int)
+        static cdecl function ExitProcess(exitCode: i32)
     }
 }
 
@@ -264,7 +264,7 @@ class User32
 {
     import user32.dll
     {
-        static stdcall function MessageBeep(uType: int): int
+        static stdcall function MessageBeep(uType: i32): i32
     }
 }
 
@@ -287,7 +287,7 @@ function Main()
         {
             // main(): int 的返回值成为进程退出码（EAX → ECX → ExitProcess）
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function Main(): int
+function Main(): i32
 {
     return 42
 }", "native-main-int-return", X64);
@@ -300,7 +300,7 @@ function Main(): int
         public void Native_X86_MainWithIntReturn_ExitCode()
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"
-function Main(): int
+function Main(): i32
 {
     return 42
 }", "native-x86-main-int-return", X86);
@@ -317,7 +317,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function NotARealSymbol(x: int): int
+        static stdcall function NotARealSymbol(x: i32): i32
     }
 }
 
@@ -344,7 +344,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCountAlias(): int
+        static stdcall function GetTickCountAlias(): i32
             extern(entry = GetTickCount)
     }
 }
@@ -370,7 +370,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function GetTickCount(): int
+        static stdcall function GetTickCount(): i32
             extern(charset = ansi)
     }
 }

@@ -1,9 +1,9 @@
-function Plus(a: int, b: int): int
+function Plus(a: i32, b: i32): i32
 {
     return a + b
 }
 
-function Classify(x: int): string
+function Classify(x: i32): string
 {
     if x > 0
     {
@@ -16,7 +16,7 @@ function Classify(x: int): string
     return "negative"
 }
 
-function SumUpTo(n: int): int
+function SumUpTo(n: i32): i32
 {
     var total = 0
     for var i = 1 to n
@@ -26,7 +26,7 @@ function SumUpTo(n: int): int
     return total
 }
 
-function Countdown(n: int): int
+function Countdown(n: i32): i32
 {
     var steps = 0
     var current = n
@@ -38,7 +38,7 @@ function Countdown(n: int): int
     return steps
 }
 
-function DoOnce(): int
+function DoOnce(): i32
 {
     var i = 0
     do

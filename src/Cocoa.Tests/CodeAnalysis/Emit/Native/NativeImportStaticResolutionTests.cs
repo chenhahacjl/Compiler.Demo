@@ -81,7 +81,7 @@ class Kernel32
 {
     import kernel32.dll
     {
-        static stdcall function ExitProcess(exitCode: int)
+        static stdcall function ExitProcess(exitCode: i32)
     }
 }
 
@@ -89,7 +89,7 @@ class User32
 {
     import user32.dll
     {
-        static stdcall function MessageBoxW(hWnd: int, lpText: int, lpCaption: int, uType: int): int
+        static stdcall function MessageBoxW(hWnd: i32, lpText: i32, lpCaption: i32, uType: i32): i32
     }
 }
 

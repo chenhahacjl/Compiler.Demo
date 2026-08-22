@@ -99,19 +99,19 @@ function Main()
 
 function Main()
 {
-    var a: int
+    var a: i32
     var b: bool
-    var d: double
+    var d: f64
     var c: char
-    var by: byte
+    var by: u8
     var s: string
     Console.WriteLine(a)
     Console.WriteLine(b)
     Console.WriteLine(d)
-    Console.WriteLine(int(c))
-    Console.WriteLine(int(by))
+    Console.WriteLine(i32(c))
+    Console.WriteLine(i32(by))
     Console.WriteLine(s == s)
-    const k: int = 7
+    const k: i32 = 7
     Console.WriteLine(k)
 }", "dbg-default", target);
 
@@ -211,12 +211,12 @@ function Main()
         {
             var output = CompileAndRun(@"using System
 
-function add(a: int, b: int): int
+function add(a: i32, b: i32): i32
 {
     return a + b
 }
 
-function square(x: int): int
+function square(x: i32): i32
 {
     return x * x
 }
@@ -240,7 +240,7 @@ function Main()
         {
             var output = CompileAndRun(@"using System
 
-function factorial(n: int): int
+function factorial(n: i32): i32
 {
     if n <= 1
     {
@@ -249,7 +249,7 @@ function factorial(n: int): int
     return n * factorial(n - 1)
 }
 
-function fibonacci(n: int): int
+function fibonacci(n: i32): i32
 {
     if n <= 1
     {
@@ -634,7 +634,7 @@ function Main()
 
 class Runtime
 {
-    syscall function Random(max: int): int
+    syscall function Random(max: i32): i32
 }
 
 function Main()
@@ -706,7 +706,7 @@ function Main()
 
 function Main()
 {
-    var a = new int[3] {10, 20, 30}
+    var a = new i32[3] {10, 20, 30}
     a[1] = 99
     Console.WriteLine(a[0])
     Console.WriteLine(a[1])
@@ -745,7 +745,7 @@ function Main()
 
 function Main()
 {
-    var a = new int[5]
+    var a = new i32[5]
     var i = 0
     while i < 5
     {
@@ -774,7 +774,7 @@ function Main()
 
 function Main()
 {
-    var arr = new int[] {1, 2, 3}
+    var arr = new i32[] {1, 2, 3}
     foreach (var x in arr)
     {
         Console.WriteLine(x)
@@ -785,7 +785,7 @@ function Main()
         sum = sum + x
     }
     Console.WriteLine(sum)
-    var doubles: double[] = new double[] {1.5, 2.5}
+    var doubles: f64[] = new f64[] {1.5, 2.5}
     foreach (var d in doubles)
     {
         Console.WriteLine(d)
@@ -814,7 +814,7 @@ function Main()
     {
         Console.WriteLine(c)
     }
-    var arr = new int[] {1, 2, 3, 4}
+    var arr = new i32[] {1, 2, 3, 4}
     foreach (var x in arr)
     {
         if x == 3 continue
@@ -949,7 +949,7 @@ function Main()
 
 function Main()
 {
-    var a = new int[2]
+    var a = new i32[2]
     a[0] = 1
     a[1] = 2
     Console.WriteLine(a[5])
@@ -967,8 +967,8 @@ function Main()
             var syntaxTree = SyntaxTree.Parse(@"
 function Main()
 {
-    var rows = new int[2]
-    var row = new int[2] {5, 6}
+    var rows = new i32[2]
+    var row = new i32[2] {5, 6}
     rows[0] = row
 }");
             var compilation = Compilation.Create(syntaxTree);
@@ -989,7 +989,7 @@ function Main()
     var s = ""hello""
     Console.WriteLine(s.Length)
     Console.WriteLine(s[0])
-    Console.WriteLine(int(s[1]))
+    Console.WriteLine(i32(s[1]))
     var c = s[2]
     Console.WriteLine(c)
     Console.WriteLine(char(97))
@@ -1059,16 +1059,16 @@ function Main()
 
 public enum Color { Red, Green, Blue }
 public enum HttpStatus { OK = 200, NotFound = 404, InternalServerError = 500 }
-function f(c: Color): int { return int(c) }
+function f(c: Color): i32 { return i32(c) }
 function Main()
 {
     var c = Color.Green
-    Console.WriteLine(int(c))
-    Console.WriteLine(int(HttpStatus.NotFound))
+    Console.WriteLine(i32(c))
+    Console.WriteLine(i32(HttpStatus.NotFound))
     Console.WriteLine(c == Color.Green)
     Console.WriteLine(c == Color.Red)
-    Console.WriteLine(int(f(Color.Blue)))
-    Console.WriteLine(int(Color(99)) == 99)
+    Console.WriteLine(i32(f(Color.Blue)))
+    Console.WriteLine(i32(Color(99)) == 99)
 }", "src-enum", target);
 
             Assert.Equal("1\r\n404\r\nTrue\r\nFalse\r\n2\r\nTrue\r\n", output);
@@ -1085,10 +1085,10 @@ public enum Color { Red, Green, Blue }
 function Main()
 {
     var a = new Color[2] {Color.Red, Color.Green}
-    Console.WriteLine(int(a[0]))
-    Console.WriteLine(int(a[1]))
+    Console.WriteLine(i32(a[0]))
+    Console.WriteLine(i32(a[1]))
     a[1] = Color.Blue
-    Console.WriteLine(int(a[1]))
+    Console.WriteLine(i32(a[1]))
 }", "src-enum-array", target);
 
             Assert.Equal("0\r\n1\r\n2\r\n", output);
@@ -1101,12 +1101,12 @@ function Main()
 
 public interface IShape
 {
-    function Area(): int
+    function Area(): i32
 }
 
 public class Circle extends IShape
 {
-    public function Area(): int
+    public function Area(): i32
     {
         return 1
     }
@@ -1162,7 +1162,7 @@ function Main()
     Console.WriteLine(Add(2, 3))
 }
 
-function Add(a: int, b: int): int
+function Add(a: i32, b: i32): i32
 {
     return a + b
 }", "src-no-keyword-top-level", target);
@@ -1195,8 +1195,8 @@ public static void Main()
         {
             var output = CompileAndRun(@"using System
 
-function Add(a: int, b: int): int => a + b
-function Triple(x: int): int => x * 3
+function Add(a: i32, b: i32): i32 => a + b
+function Triple(x: i32): i32 => x * 3
 
 function Main()
 {

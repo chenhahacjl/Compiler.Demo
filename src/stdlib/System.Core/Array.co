@@ -6,7 +6,7 @@ namespace System
 {
     class Array
     {
-        static function Sum(a: int[]): int
+        static function Sum(a: i32[]): i32
         {
             var sum = 0
             var i = 0
@@ -18,7 +18,7 @@ namespace System
             return sum
         }
 
-        static function Sum(a: double[]): double
+        static function Sum(a: f64[]): f64
         {
             var sum = 0.0
             var i = 0
@@ -30,7 +30,7 @@ namespace System
             return sum
         }
 
-        static function Min(a: int[]): int
+        static function Min(a: i32[]): i32
         {
             if a.Length == 0
             {
@@ -49,7 +49,7 @@ namespace System
             return m
         }
 
-        static function Min(a: double[]): double
+        static function Min(a: f64[]): f64
         {
             if a.Length == 0
             {
@@ -68,7 +68,7 @@ namespace System
             return m
         }
 
-        static function Max(a: int[]): int
+        static function Max(a: i32[]): i32
         {
             if a.Length == 0
             {
@@ -87,7 +87,7 @@ namespace System
             return m
         }
 
-        static function Max(a: double[]): double
+        static function Max(a: f64[]): f64
         {
             if a.Length == 0
             {
@@ -106,7 +106,7 @@ namespace System
             return m
         }
 
-        static function Average(a: int[]): double
+        static function Average(a: i32[]): f64
         {
             if a.Length == 0
             {
@@ -115,7 +115,7 @@ namespace System
             return Sum(a) / a.Length
         }
 
-        static function Average(a: double[]): double
+        static function Average(a: f64[]): f64
         {
             if a.Length == 0
             {
@@ -124,7 +124,7 @@ namespace System
             return Sum(a) / a.Length
         }
 
-        static function Contains(a: int[], v: int): bool
+        static function Contains(a: i32[], v: i32): bool
         {
             var i = 0
             while i < a.Length
@@ -138,7 +138,7 @@ namespace System
             return false
         }
 
-        static function Contains(a: double[], v: double): bool
+        static function Contains(a: f64[], v: f64): bool
         {
             var i = 0
             while i < a.Length
@@ -152,7 +152,7 @@ namespace System
             return false
         }
 
-        static function IndexOf(a: int[], v: int): int
+        static function IndexOf(a: i32[], v: i32): i32
         {
             var i = 0
             while i < a.Length
@@ -166,7 +166,7 @@ namespace System
             return -1
         }
 
-        static function IndexOf(a: double[], v: double): int
+        static function IndexOf(a: f64[], v: f64): i32
         {
             var i = 0
             while i < a.Length
@@ -180,10 +180,10 @@ namespace System
             return -1
         }
 
-        static function Reverse(a: int[]): int[]
+        static function Reverse(a: i32[]): i32[]
         {
             var n = a.Length
-            var result = new int[n]
+            var result = new i32[n]
             var i = 0
             while i < n
             {
@@ -193,10 +193,10 @@ namespace System
             return result
         }
 
-        static function Reverse(a: double[]): double[]
+        static function Reverse(a: f64[]): f64[]
         {
             var n = a.Length
-            var result = new double[n]
+            var result = new f64[n]
             var i = 0
             while i < n
             {
@@ -206,10 +206,10 @@ namespace System
             return result
         }
 
-        static function Sort(a: int[]): int[]
+        static function Sort(a: i32[]): i32[]
         {
             var n = a.Length
-            var result = new int[n]
+            var result = new i32[n]
             var i = 0
             while i < n
             {
@@ -235,10 +235,10 @@ namespace System
             return result
         }
 
-        static function Sort(a: double[]): double[]
+        static function Sort(a: f64[]): f64[]
         {
             var n = a.Length
-            var result = new double[n]
+            var result = new f64[n]
             var i = 0
             while i < n
             {
