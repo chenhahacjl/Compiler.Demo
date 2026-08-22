@@ -3,7 +3,7 @@
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
 > 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs/开发计划.md`](docs/开发计划.md)）
-> 最新：6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；**6e-M15（2026-08-21）：双前端拆分 ✅ — `.co` 宽松主方言 / `.cs` 严格 C# 方言（`cocoa new csharp`、`cocoa app.cs`），按扩展名分派，特性全部共享（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）**
+> 最新：6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；**6e-M15（2026-08-21）：双前端拆分 ✅ — `.co` 宽松主方言 / `.cs` 严格 C# 方言（`cocoa new csharp`、`cocoa app.cs`），按扩展名分派，特性全部共享（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）**；**6e-M19 规划（2026-08-22）：System.Object 基类 + 全类型成员方法（`1.ToString()`/`"ABC".Substring(0,2)`/`arr.Sum()`）+ `System.Type` + `long`/`Int64` + native 对象模型（真 vtable）——设计见 [`docs/对象模型设计.md`](docs/对象模型设计.md)（🔧）**；**6e-M20 规划（2026-08-22）：泛型（类/接口/方法 + 约束）——编译期单态化，解锁 `List<T>` 与枚举器 foreach，设计见 [`docs/泛型设计.md`](docs/泛型设计.md)（🔧）**
 
 ## 路线图（摘要）
 
@@ -91,8 +91,10 @@ cocoa build -p foo.coproj -b dotnet
 | [`docs/语法手册.md`](docs/语法手册.md) | Cocoa 语言语法参考（状态标记：✅ 已实现 · 🔧 设计中 · 📋 待实现） |
 | [`docs/语法对照表.md`](docs/语法对照表.md) | **Cocoa ↔ C# 方言具体拼写对照**（描述 / `.co` 写法 / `.cs` 写法，变体逐行，含 `.cs` 拒绝清单） |
 | [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`cocoa` 子命令：`new`/`build`/`run`/`list`/`add reference`/`remove reference`/`clean`、`-i` REPL、构建选项、增量构建） |
-| [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/三格式分工：`.cod` Cocoa 程序集 / .NET dll 跨语言桥 / native 后置） |
-| [`docs/OOP设计.md`](docs/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型后置） |
+| [`docs/类库设计.md`](docs/类库设计.md) | 类库体系设计（class/namespace/using/三格式分工：`.cod` Cocoa 程序集 / .NET dll 跨语言桥 / native 对象模型规划） |
+| [`docs/OOP设计.md`](docs/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型规划） |
+| [`docs/对象模型设计.md`](docs/对象模型设计.md) | **System.Object 基类 + 全类型成员方法 + System.Type + native vtable 对象模型**（6e-M19 规划） |
+| [`docs/泛型设计.md`](docs/泛型设计.md) | **泛型（类/接口/方法 + 约束）编译期单态化设计**（6e-M20 规划） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |
 | [`docs/实现目标.md`](docs/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs/开发计划.md`](docs/开发计划.md) | 阶段 0-9 路线图与里程碑 |
