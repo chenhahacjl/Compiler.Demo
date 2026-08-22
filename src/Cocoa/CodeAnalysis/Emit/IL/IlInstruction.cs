@@ -8,6 +8,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         Void,
         Boolean,
         Int32,
+        Int64,          // System.Int64（long，6e-M19 M1）
         Char,
         U1,             // System.Byte（无符号 8 位整数）
         Double,
@@ -48,6 +49,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public static readonly IlType Void = new IlType(IlTypeKind.Void);
         public static readonly IlType Boolean = new IlType(IlTypeKind.Boolean);
         public static readonly IlType Int32 = new IlType(IlTypeKind.Int32);
+        public static readonly IlType Int64 = new IlType(IlTypeKind.Int64);
         public static readonly IlType Char = new IlType(IlTypeKind.Char);
         public static readonly IlType Byte = new IlType(IlTypeKind.U1);
         public static readonly IlType Double = new IlType(IlTypeKind.Double);
@@ -64,6 +66,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             IlTypeKind.Void => "System.Void",
             IlTypeKind.Boolean => "System.Boolean",
             IlTypeKind.Int32 => "System.Int32",
+            IlTypeKind.Int64 => "System.Int64",
             IlTypeKind.Char => "System.Char",
             IlTypeKind.U1 => "System.Byte",
             IlTypeKind.Double => "System.Double",

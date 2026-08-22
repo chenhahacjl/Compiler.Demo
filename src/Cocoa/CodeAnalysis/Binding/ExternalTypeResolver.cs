@@ -83,6 +83,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case IlTypeKind.Void: return TypeSymbol.Void;
                 case IlTypeKind.Boolean: return TypeSymbol.Boolean;
                 case IlTypeKind.Int32: return TypeSymbol.Int32;
+                case IlTypeKind.Int64: return TypeSymbol.Long;
                 case IlTypeKind.Char: return TypeSymbol.Char;
                 case IlTypeKind.U1: return TypeSymbol.Byte;
                 case IlTypeKind.Double: return TypeSymbol.Double;

@@ -441,6 +441,84 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
             EmitModRMByte(3, 7, (int)divisor & 7);
         }
 
+        // ------------------------------------------------------------------
+        // 64 位整型辅助（long，6e-M19 M1）：x64 主路径为 qword 单指令，
+        // 以下仅 Adc/Sbb/Shld/Shrd/Mul 备用；x87 FPU 转换在 x64 上走 SSE，不支持。
+        // ------------------------------------------------------------------
+
+        public void Mul(X64Size size, X64Register divisor)
+        {
+            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)divisor >= 8 ? 0x01 : 0));
+            EmitByte(0xF7);
+            EmitModRMByte(3, 4, (int)divisor & 7);
+        }
+
+        public void Adc(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x11, size, dst, src);
+        public void Adc(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x13, size, dst, src);
+        public void Sbb(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x19, size, dst, src);
+        public void Sbb(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x1B, size, dst, src);
+
+        public void AdcRegImm(X64Register dst, int imm)
+        {
+            EmitRex(0x40 | ((int)dst >= 8 ? 0x01 : 0));
+            if (imm is >= -128 and <= 127)
+            {
+                EmitByte(0x83);
+                EmitModRMByte(3, 2, (int)dst & 7);
+                EmitByte(unchecked((byte)(sbyte)imm));
+            }
+            else
+            {
+                EmitByte(0x81);
+                EmitModRMByte(3, 2, (int)dst & 7);
+                EmitInt32(imm);
+            }
+        }
+
+        public void ShldCl(X64Register dst, X64Register src)
+        {
+            EmitRex(0x40 | ((int)dst >= 8 ? 0x01 : 0) | ((int)src >= 8 ? 0x04 : 0));
+            EmitByte(0x0F);
+            EmitByte(0xA5);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+        }
+
+        public void ShldImm8(X64Register dst, X64Register src, byte count)
+        {
+            EmitRex(0x40 | ((int)dst >= 8 ? 0x01 : 0) | ((int)src >= 8 ? 0x04 : 0));
+            EmitByte(0x0F);
+            EmitByte(0xA4);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+            EmitByte(count);
+        }
+
+        public void ShrdCl(X64Register dst, X64Register src)
+        {
+            EmitRex(0x40 | ((int)dst >= 8 ? 0x01 : 0) | ((int)src >= 8 ? 0x04 : 0));
+            EmitByte(0x0F);
+            EmitByte(0xAD);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+        }
+
+        public void ShrdImm8(X64Register dst, X64Register src, byte count)
+        {
+            EmitRex(0x40 | ((int)dst >= 8 ? 0x01 : 0) | ((int)src >= 8 ? 0x04 : 0));
+            EmitByte(0x0F);
+            EmitByte(0xAC);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+            EmitByte(count);
+        }
+
+        /// <summary>CDQE（x86 的 CDQ 在 x64 对应符号扩展 EAX→RAX；本后端未使用）。</summary>
+        public void Cdq() => throw new NotSupportedException("CDQ is not used on x64; use Cqo for 64-bit division.");
+
+        public void FildM64(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FstpM64(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FistpM64(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FldM64(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FldcwM16(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FnstcwM16(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+
         public void Movzx(X64Size dstSize, X64Register dst, X64Register src)
         {
             EmitRex(0x40 | (dstSize == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x04 : 0) | ((int)src >= 8 ? 0x01 : 0));
@@ -464,6 +542,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
             EmitRex(0x48 | ((int)dst >= 8 ? 0x04 : 0) | ((int)src >= 8 ? 0x01 : 0));
             EmitByte(0x63);
             EmitModRMByte(3, (int)dst & 7, (int)src & 7);
+        }
+
+        /// <summary>CQO：RDX:RAX ← 符号扩展 RAX（64 位有符号除法前置）。</summary>
+        public void Cqo()
+        {
+            EmitRex(0x48);
+            EmitByte(0x99);
         }
 
         public void Lea(X64Register dst, X64MemoryOperand src)
@@ -590,6 +675,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         public void Roundsd(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x0B, 0x66, xmmDst, xmmSrc, imm);
         public void Cvtsi2sd(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF2, xmmDst, r32Src);
         public void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF2, r32Dst, xmmSrc);
+        public void Cvtsi2sd64(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(0x2A, 0xF2, xmmDst, r64Src, rexW: true);
+        public void Cvttsd2si64(X64Register r64Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF2, r64Dst, xmmSrc, rexW: true);
         public void Ucomisd(X64Register xmmA, X64Register xmmB) => EmitSseRegReg(0x2E, 0x66, xmmA, xmmB);
         public void MovdGprToXmm(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r32Src);
         public void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x7E, 0x66, xmmSrc, r32Dst);

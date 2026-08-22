@@ -85,6 +85,28 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         void Div(X64Size size, X64Register divisor);
         void Idiv(X64Size size, X64Register divisor);
 
+        // 64 位整型（long，6e-M19 M1）
+        void Mul(X64Size size, X64Register divisor);      // x86：EDX:EAX ← EAX × r/m32
+        void Adc(X64Size size, X64Register dst, X64Register src);
+        void Adc(X64Size size, X64Register dst, X64MemoryOperand src);
+        void Sbb(X64Size size, X64Register dst, X64Register src);
+        void Sbb(X64Size size, X64Register dst, X64MemoryOperand src);
+        void AdcRegImm(X64Register dst, int imm);         // x86
+        void ShldCl(X64Register dst, X64Register src);    // x86
+        void ShldImm8(X64Register dst, X64Register src, byte count); // x86
+        void ShrdCl(X64Register dst, X64Register src);    // x86
+        void ShrdImm8(X64Register dst, X64Register src, byte count); // x86
+        void Cdq();                                       // x86：EDX:EAX ← 符号扩展 EAX
+        void Cqo();                                       // x64：RDX:RAX ← 符号扩展 RAX
+
+        // x87 FPU（仅 long ↔ double 转换用；x86 实现，x64 走 SSE）
+        void FildM64(X64MemoryOperand src);
+        void FstpM64(X64MemoryOperand dst);
+        void FistpM64(X64MemoryOperand dst);
+        void FldM64(X64MemoryOperand src);
+        void FldcwM16(X64MemoryOperand src);
+        void FnstcwM16(X64MemoryOperand dst);
+
         void Movzx(X64Size dstSize, X64Register dst, X64Register src);
         void Movzx(X64Size dstSize, X64Register dst, X64MemoryOperand src);
         void Movsxd(X64Register dst, X64Register src);
@@ -118,6 +140,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         void Roundsd(X64Register xmmDst, X64Register xmmSrc, byte imm);
         void Cvtsi2sd(X64Register xmmDst, X64Register r32Src);
         void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc);
+        void Cvtsi2sd64(X64Register xmmDst, X64Register r64Src);
+        void Cvttsd2si64(X64Register r64Dst, X64Register xmmSrc);
         void Ucomisd(X64Register xmmA, X64Register xmmB);
         void MovdGprToXmm(X64Register xmmDst, X64Register r32Src);
         void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc);

@@ -213,6 +213,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _currentFunction = function;
             _asmLabelCache.Clear();
             _sysArgs.Clear();
+            _pendingCmp64Trichotomy = false;
 
             _slots = new Dictionary<IrVirtualRegister, int>();
             var registers = new List<IrVirtualRegister>(function.RegisterSizes.Keys);
@@ -335,6 +336,32 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case IrOpCode.Not:
                     EmitUnary(instruction);
                     break;
+                case IrOpCode.Add64:
+                case IrOpCode.Sub64:
+                case IrOpCode.Imul64:
+                case IrOpCode.And64:
+                case IrOpCode.Or64:
+                case IrOpCode.Xor64:
+                    EmitBinary64(instruction);
+                    break;
+                case IrOpCode.Idiv64:
+                    EmitIdiv64(instruction);
+                    break;
+                case IrOpCode.Irem64:
+                    EmitIrem64(instruction);
+                    break;
+                case IrOpCode.Neg64:
+                case IrOpCode.Not64:
+                    EmitUnary64(instruction);
+                    break;
+                case IrOpCode.Shl64:
+                case IrOpCode.Shr64:
+                case IrOpCode.Sar64:
+                    EmitShift64(instruction);
+                    break;
+                case IrOpCode.Cmp64:
+                    EmitCmp64(instruction);
+                    break;
                 case IrOpCode.Shl:
                 case IrOpCode.Shr:
                 case IrOpCode.Sar:
@@ -353,6 +380,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     _a.Jmp(GetLabel((int)instruction.A.Imm));
                     break;
                 case IrOpCode.Jcc:
+                    if (_pendingCmp64Trichotomy)
+                    {
+                        // x86 Cmp64 三路结果在 EAX：cmp eax,0 后按条件分支
+                        _a.Cmp(X64Size.Dword, X64Register.EAX, 0);
+                        _pendingCmp64Trichotomy = false;
+                    }
+
                     _a.Jcc(MapCond((IrCond)instruction.A.Imm), GetLabel((int)instruction.B.Imm));
                     break;
                 case IrOpCode.Call:
@@ -410,6 +444,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case IrOpCode.FCvtSD:
                     EmitFCvtSD(instruction);
                     break;
+                case IrOpCode.FCvtSI64:
+                    EmitFCvtSI64(instruction);
+                    break;
+                case IrOpCode.FCvtSD64:
+                    EmitFCvtSD64(instruction);
+                    break;
+                case IrOpCode.Movsx64:
+                    EmitMovsx64(instruction);
+                    break;
+                case IrOpCode.Movzx64:
+                    EmitMovzx64(instruction);
+                    break;
+                case IrOpCode.Trunc64:
+                    EmitTrunc64(instruction);
+                    break;
                 case IrOpCode.StoreRet:
                     EmitStoreRet(instruction);
                     break;
@@ -443,7 +492,32 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         {
             if (RegisterSize(instruction.Dst!) == 8)
             {
-                _a.Mov(X64Register.RAX, instruction.A.Imm);
+                if (_isX64)
+                {
+                    _a.Mov(X64Register.RAX, instruction.A.Imm);
+                }
+                else
+                {
+                    // x86：64 位立即数拆低/高两个 dword 写入双槽
+                    var slot = GetSlotOffset(instruction.Dst!);
+                    var low = unchecked((int)instruction.A.Imm);
+                    var high = unchecked((int)(instruction.A.Imm >> 32));
+                    if (high == 0)
+                    {
+                        _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), 0);
+                        _a.Mov(X64Size.Dword, X64Register.EAX, low);
+                        _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
+                    }
+                    else
+                    {
+                        _a.Mov(X64Size.Dword, X64Register.EAX, high);
+                        _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.EAX);
+                        _a.Mov(X64Size.Dword, X64Register.EAX, low);
+                        _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
+                    }
+
+                    return;
+                }
             }
             else
             {
@@ -764,8 +838,497 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         // ------------------------------------------------------------------
-        // 比较/标志
+        // 64 位整型（long，6e-M19 M1）
+        // x64：值在单 8 字节槽 → qword 单指令（除法 cqo+idiv）。
+        // x86：值在双 4 字节槽（[slot]=低32，[slot-4]=高32）→ 进位链 / shld 序列 /
+        //      除法经运行时 Idiv64/Irem64（EDX:EAX 约定），比较经三路结果（-1/0/+1）。
         // ------------------------------------------------------------------
+
+        private bool _pendingCmp64Trichotomy;
+
+        private void EmitBinary64(IrInstruction instruction)
+        {
+            var dst = instruction.Dst!;
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.A.Register!, 8);
+                LoadSlot(X64Register.RCX, instruction.B.Register!, 8);
+
+                switch (instruction.OpCode)
+                {
+                    case IrOpCode.Add64:
+                        _a.Add(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                        break;
+                    case IrOpCode.Sub64:
+                        _a.Sub(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                        break;
+                    case IrOpCode.Imul64:
+                        _a.Imul(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                        break;
+                    case IrOpCode.And64:
+                        _a.And(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                        break;
+                    case IrOpCode.Or64:
+                        _a.Or(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                        break;
+                    case IrOpCode.Xor64:
+                        _a.Xor(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                        break;
+                }
+
+                StoreSlot(dst, X64Register.RAX);
+                return;
+            }
+
+            var dstSlot = GetSlotOffset(dst);
+            var aSlot = GetSlotOffset(instruction.A.Register!);
+            var bSlot = GetSlotOffset(instruction.B.Register!);
+            var aLo = new X64MemoryOperand(X64Register.RBP, aSlot);
+            var aHi = new X64MemoryOperand(X64Register.RBP, aSlot - 4);
+            var bLo = new X64MemoryOperand(X64Register.RBP, bSlot);
+            var bHi = new X64MemoryOperand(X64Register.RBP, bSlot - 4);
+            var dLo = new X64MemoryOperand(X64Register.RBP, dstSlot);
+            var dHi = new X64MemoryOperand(X64Register.RBP, dstSlot - 4);
+
+            switch (instruction.OpCode)
+            {
+                case IrOpCode.Add64:
+                    // 低 32 位相加 + adc 高 32 位
+                    _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+                    _a.Add(X64Size.Dword, X64Register.EAX, bLo);
+                    _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
+                    _a.Adc(X64Size.Dword, X64Register.ECX, bHi);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
+                    break;
+
+                case IrOpCode.Sub64:
+                    _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+                    _a.Sub(X64Size.Dword, X64Register.EAX, bLo);
+                    _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
+                    _a.Sbb(X64Size.Dword, X64Register.ECX, bHi);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
+                    break;
+
+                case IrOpCode.Imul64:
+                    EmitImul64X86(aLo, aHi, bLo, bHi, dLo, dHi);
+                    break;
+
+                case IrOpCode.And64:
+                    _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+                    _a.And(X64Size.Dword, X64Register.EAX, bLo);
+                    _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
+                    _a.And(X64Size.Dword, X64Register.ECX, bHi);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
+                    break;
+
+                case IrOpCode.Or64:
+                    _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+                    _a.Or(X64Size.Dword, X64Register.EAX, bLo);
+                    _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
+                    _a.Or(X64Size.Dword, X64Register.ECX, bHi);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
+                    break;
+
+                case IrOpCode.Xor64:
+                    _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+                    _a.Xor(X64Size.Dword, X64Register.EAX, bLo);
+                    _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
+                    _a.Xor(X64Size.Dword, X64Register.ECX, bHi);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
+                    break;
+            }
+        }
+
+        /// <summary>x86 有符号 64×64→64 低 64 位：无符号低积（k1 进位）+ 高位交叉积（t1、t2）；补码乘积低位即位模式无符号乘积模 2^64，无需额外符号修正。</summary>
+        private void EmitImul64X86(
+            X64MemoryOperand aLo, X64MemoryOperand aHi,
+            X64MemoryOperand bLo, X64MemoryOperand bHi,
+            X64MemoryOperand dLo, X64MemoryOperand dHi)
+        {
+            _a.Push(X64Register.EBX);
+            _a.Push(X64Register.ESI);
+            _a.Push(X64Register.EDI);
+
+            // 低 32 × 低 32 全积
+            _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+            _a.Mov(X64Size.Dword, X64Register.EBX, bLo);
+            _a.Mul(X64Size.Dword, X64Register.EBX);   // EDX:EAX = aLo×bLo（无符号）
+            _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.EAX); // 积低 32
+            _a.Mov(X64Size.Dword, X64Register.ESI, X64Register.EDX); // 进位
+
+            // 高位交叉积（imul 保号取低 32）
+            _a.Mov(X64Size.Dword, X64Register.EAX, aHi);
+            _a.Imul(X64Size.Dword, X64Register.EAX, X64Register.EBX);
+            _a.Add(X64Size.Dword, X64Register.ESI, X64Register.EAX);
+            _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
+            _a.Mov(X64Size.Dword, X64Register.EBX, bHi);
+            _a.Imul(X64Size.Dword, X64Register.EAX, X64Register.EBX);
+            _a.Add(X64Size.Dword, X64Register.ESI, X64Register.EAX);
+
+            // 注：补码 64 位乘积低位 = 位模式无符号乘积模 2^64，高位 32 位 = k1 + t1 + t2（mod 2^32），
+            // 无需额外符号修正（之前“a<0 减 bLo / b<0 减 aLo”会重复扣减而算错，见 -12345 × -2 用例）。
+
+            _a.Mov(X64Size.Dword, dLo, X64Register.ECX);
+            _a.Mov(X64Size.Dword, dHi, X64Register.ESI);
+
+            _a.Pop(X64Register.EDI);
+            _a.Pop(X64Register.ESI);
+            _a.Pop(X64Register.EBX);
+        }
+
+        private void EmitIdiv64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.Dst!, 8);
+                LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
+
+                _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
+                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+
+                _a.Cqo();
+                _a.Idiv(X64Size.Qword, X64Register.RCX);
+                StoreSlot(instruction.Dst!, X64Register.RAX);
+                return;
+            }
+
+            // x86：运行时 Idiv64(aLo=ECX, aHi=EDX, bLo=ESI, bHi=EDI) → 商 EDX:EAX
+            LoadIdivArgs(instruction);
+            CallRuntimeHelper("Idiv64");
+            StoreCallResult(instruction.Dst!);
+        }
+
+        private void EmitIrem64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.Dst!, 8);
+                LoadSlot(X64Register.RCX, instruction.A.Register!, 8);
+
+                _a.Test(X64Size.Qword, X64Register.RCX, X64Register.RCX);
+                _a.Jcc(X64CondCode.Equal, _nameToLabel["DivByZero"]);
+
+                _a.Cqo();
+                _a.Idiv(X64Size.Qword, X64Register.RCX);
+                StoreSlot(instruction.Dst!, X64Register.RDX);
+                return;
+            }
+
+            // x86：运行时 Irem64(aLo=ECX, aHi=EDX, bLo=ESI, bHi=EDI) → 余数 EDX:EAX
+            LoadIdivArgs(instruction);
+            CallRuntimeHelper("Irem64");
+            StoreCallResult(instruction.Dst!);
+        }
+
+        /// <summary>x86：把被除数（dst 槽）与除数（A 槽）装入 ECX/EDX/ESI/EDI。</summary>
+        private void LoadIdivArgs(IrInstruction instruction)
+        {
+            var slot = GetSlotOffset(instruction.Dst!);
+            var divisorSlot = GetSlotOffset(instruction.A.Register!);
+            _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, slot));
+            _a.Mov(X64Size.Dword, X64Register.EDX, new X64MemoryOperand(X64Register.RBP, slot - 4));
+            _a.Mov(X64Size.Dword, X64Register.ESI, new X64MemoryOperand(X64Register.RBP, divisorSlot));
+            _a.Mov(X64Size.Dword, X64Register.EDI, new X64MemoryOperand(X64Register.RBP, divisorSlot - 4));
+        }
+
+        /// <summary>x86：直接 call 运行时辅助函数（对齐补丁 + 结果已在 EDX:EAX）。</summary>
+        private void CallRuntimeHelper(string name)
+        {
+            var aligned = EmitAlign(0);
+            _a.Call(_nameToLabel[name]);
+            if (aligned)
+            {
+                _a.Add(X64Size.Qword, X64Register.RSP, 8);
+                _stackDepth--;
+            }
+        }
+
+        private void EmitUnary64(IrInstruction instruction)
+        {
+            var dst = instruction.Dst!;
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, dst, 8);
+                if (instruction.OpCode == IrOpCode.Neg64)
+                {
+                    _a.Neg(X64Size.Qword, X64Register.RAX);
+                }
+                else
+                {
+                    _a.Not(X64Size.Qword, X64Register.RAX);
+                }
+
+                StoreSlot(dst, X64Register.RAX);
+                return;
+            }
+
+            var slot = GetSlotOffset(dst);
+            var lo = new X64MemoryOperand(X64Register.RBP, slot);
+            var hi = new X64MemoryOperand(X64Register.RBP, slot - 4);
+            if (instruction.OpCode == IrOpCode.Neg64)
+            {
+                // neg lo; adc hi,0; neg hi
+                _a.Mov(X64Size.Dword, X64Register.EAX, lo);
+                _a.Neg(X64Size.Dword, X64Register.EAX);
+                _a.Mov(X64Size.Dword, X64Register.ECX, hi);
+                _a.AdcRegImm(X64Register.ECX, 0);
+                _a.Neg(X64Size.Dword, X64Register.ECX);
+                _a.Mov(X64Size.Dword, lo, X64Register.EAX);
+                _a.Mov(X64Size.Dword, hi, X64Register.ECX);
+            }
+            else
+            {
+                _a.Mov(X64Size.Dword, X64Register.EAX, lo);
+                _a.Not(X64Size.Dword, X64Register.EAX);
+                _a.Mov(X64Size.Dword, X64Register.ECX, hi);
+                _a.Not(X64Size.Dword, X64Register.ECX);
+                _a.Mov(X64Size.Dword, lo, X64Register.EAX);
+                _a.Mov(X64Size.Dword, hi, X64Register.ECX);
+            }
+        }
+
+        private void EmitShift64(IrInstruction instruction)
+        {
+            var dst = instruction.Dst!;
+            var src = instruction.A.Register!;
+            var countIsConst = instruction.B.Kind == IrOperandKind.Constant;
+
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, src, 8);
+                if (countIsConst)
+                {
+                    var count = (int)instruction.B.Imm;
+                    switch (instruction.OpCode)
+                    {
+                        case IrOpCode.Shl64:
+                            _a.Shl(X64Size.Qword, X64Register.RAX, count);
+                            break;
+                        case IrOpCode.Shr64:
+                            _a.Shr(X64Size.Qword, X64Register.RAX, count);
+                            break;
+                        case IrOpCode.Sar64:
+                            _a.Sar(X64Size.Qword, X64Register.RAX, count);
+                            break;
+                    }
+                }
+                else
+                {
+                    LoadSlot(X64Register.ECX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
+                    switch (instruction.OpCode)
+                    {
+                        case IrOpCode.Shl64:
+                            _a.Shl(X64Size.Qword, X64Register.RAX);
+                            break;
+                        case IrOpCode.Shr64:
+                            _a.Shr(X64Size.Qword, X64Register.RAX);
+                            break;
+                        case IrOpCode.Sar64:
+                            _a.Sar(X64Size.Qword, X64Register.RAX);
+                            break;
+                    }
+                }
+
+                StoreSlot(dst, X64Register.RAX);
+                return;
+            }
+
+            // x86：64 位移位 = 双 dword + shld/shrd；count ≥ 32 分支
+            var srcSlot = GetSlotOffset(src);
+            var lo = new X64MemoryOperand(X64Register.RBP, srcSlot);
+            var hi = new X64MemoryOperand(X64Register.RBP, srcSlot - 4);
+            var dSlot = GetSlotOffset(dst);
+            var dLo = new X64MemoryOperand(X64Register.RBP, dSlot);
+            var dHi = new X64MemoryOperand(X64Register.RBP, dSlot - 4);
+
+            var smallLabel = _a.CreateLabel();
+            var doneLabel = _a.CreateLabel();
+
+            if (countIsConst)
+            {
+                var count = ((int)instruction.B.Imm) & 63;
+                if (count == 0)
+                {
+                    // 移位 0：原样
+                    _a.Mov(X64Size.Dword, X64Register.EAX, lo);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, X64Register.EAX, hi);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.EAX);
+                    return;
+                }
+
+                if (count < 32)
+                {
+                    _a.Mov(X64Size.Dword, X64Register.EAX, lo);
+                    _a.Mov(X64Size.Dword, X64Register.ECX, hi);
+                    EmitShldShrd64(instruction.OpCode, count, X64Register.ECX, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
+                }
+                else
+                {
+                    // count ≥ 32：结果 = lo 单独移位（高/低换位）
+                    var inner = count - 32;
+                    _a.Mov(X64Size.Dword, X64Register.EAX, lo);
+                    EmitShift32Reg(instruction.OpCode, inner, X64Register.EAX);
+                    _a.Mov(X64Size.Dword, dLo, 0);
+                    _a.Mov(X64Size.Dword, dHi, X64Register.EAX);
+                }
+
+                return;
+            }
+
+            // 运行时 count（ECX）
+            LoadSlot(X64Register.ECX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
+            _a.Mov(X64Size.Dword, X64Register.EAX, lo);
+            _a.Mov(X64Size.Dword, X64Register.EDX, hi);
+            _a.Test(X64Size.Dword, X64Register.ECX, X64Register.ECX);
+            _a.Jcc(X64CondCode.Equal, smallLabel); // count 低 32 位为 0 → 原样（count mod 2^32 语义）
+            _a.Cmp(X64Size.Dword, X64Register.ECX, 32);
+            _a.Jcc(X64CondCode.Below, smallLabel);
+            // count ≥ 32：lo 单独移位进 hi，lo 置 0
+            var bigLabel = _a.CreateLabel();
+            var bigDone = _a.CreateLabel();
+            _a.Sub(X64Size.Dword, X64Register.ECX, 32);
+            _a.Mov(X64Size.Dword, X64Register.EDX, X64Register.EAX); // 把 lo 升为高
+            EmitShift32Reg(instruction.OpCode, -1, X64Register.EDX); // cl 计数
+            _a.Xor(X64Size.Dword, X64Register.EAX, X64Register.EAX);
+            _a.Jmp(bigDone);
+            _a.MarkLabel(smallLabel);
+            _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.ECX);
+            // shld/shrd：dst=hi(src), src=lo
+            switch (instruction.OpCode)
+            {
+                case IrOpCode.Shl64:
+                    _a.ShldCl(X64Register.EDX, X64Register.EAX);
+                    _a.Shl(X64Size.Dword, X64Register.EAX);
+                    break;
+                case IrOpCode.Shr64:
+                    _a.ShrdCl(X64Register.EAX, X64Register.EDX);
+                    _a.Shr(X64Size.Dword, X64Register.EDX);
+                    break;
+                case IrOpCode.Sar64:
+                    _a.ShrdCl(X64Register.EAX, X64Register.EDX);
+                    _a.Sar(X64Size.Dword, X64Register.EDX);
+                    break;
+            }
+
+            _a.MarkLabel(bigDone);
+            _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
+            _a.Mov(X64Size.Dword, dHi, X64Register.EDX);
+        }
+
+        /// <summary>按移位方向对单个 32 位寄存器执行 shl/shr/sar；count=-1 表示用 CL 计数。</summary>
+        private void EmitShift32Reg(IrOpCode opCode, int count, X64Register reg)
+        {
+            var size = X64Size.Dword;
+            if (count >= 0)
+            {
+                switch (opCode)
+                {
+                    case IrOpCode.Shl64:
+                    case IrOpCode.Shl:
+                        _a.Shl(size, reg, count);
+                        break;
+                    case IrOpCode.Shr64:
+                    case IrOpCode.Shr:
+                        _a.Shr(size, reg, count);
+                        break;
+                    case IrOpCode.Sar64:
+                    case IrOpCode.Sar:
+                        _a.Sar(size, reg, count);
+                        break;
+                }
+            }
+            else
+            {
+                switch (opCode)
+                {
+                    case IrOpCode.Shl64:
+                    case IrOpCode.Shl:
+                        _a.Shl(size, reg);
+                        break;
+                    case IrOpCode.Shr64:
+                    case IrOpCode.Shr:
+                        _a.Shr(size, reg);
+                        break;
+                    case IrOpCode.Sar64:
+                    case IrOpCode.Sar:
+                        _a.Sar(size, reg);
+                        break;
+                }
+            }
+        }
+
+        private void EmitShldShrd64(IrOpCode opCode, int count, X64Register dst, X64Register src)
+        {
+            switch (opCode)
+            {
+                case IrOpCode.Shl64:
+                    _a.ShldImm8(dst, src, (byte)count);
+                    _a.Shl(X64Size.Dword, src, count);
+                    break;
+                case IrOpCode.Shr64:
+                    _a.ShrdImm8(dst, src, (byte)count);
+                    _a.Shr(X64Size.Dword, dst, count);
+                    break;
+                case IrOpCode.Sar64:
+                    _a.ShrdImm8(dst, src, (byte)count);
+                    _a.Sar(X64Size.Dword, dst, count);
+                    break;
+            }
+        }
+
+        /// <summary>64 位比较。x64：qword cmp 直接置标志；x86：计算三路结果（-1/0/+1）入 EAX，
+        /// 紧随其后的 Setcc/Jcc 先 cmp eax,0 再按条件分支（_pendingCmp64Trichotomy 标记）。</summary>
+        private void EmitCmp64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.A.Register!, 8);
+                LoadSlot(X64Register.RCX, instruction.B.Register!, 8);
+                _a.Cmp(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+                _pendingCmp64Trichotomy = false;
+                return;
+            }
+
+            var aSlot = GetSlotOffset(instruction.A.Register!);
+            var bSlot = GetSlotOffset(instruction.B.Register!);
+            var lessLabel = _a.CreateLabel();
+            var greaterLabel = _a.CreateLabel();
+            var doneLabel = _a.CreateLabel();
+
+            // 先比较高 32 位（有符号）
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, aSlot - 4));
+            _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, bSlot - 4));
+            _a.Cmp(X64Size.Dword, X64Register.EAX, X64Register.ECX);
+            _a.Jcc(X64CondCode.Less, lessLabel);
+            _a.Jcc(X64CondCode.Greater, greaterLabel);
+
+            // 高相等 → 比低 32 位（无符号）
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, aSlot));
+            _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, bSlot));
+            _a.Cmp(X64Size.Dword, X64Register.EAX, X64Register.ECX);
+            _a.Jcc(X64CondCode.Below, lessLabel);
+            _a.Jcc(X64CondCode.Above, greaterLabel);
+
+            // 相等
+            _a.Mov(X64Size.Dword, X64Register.EAX, 0);
+            _a.Jmp(doneLabel);
+            _a.MarkLabel(lessLabel);
+            _a.Mov(X64Size.Dword, X64Register.EAX, -1);
+            _a.Jmp(doneLabel);
+            _a.MarkLabel(greaterLabel);
+            _a.Mov(X64Size.Dword, X64Register.EAX, 1);
+            _a.MarkLabel(doneLabel);
+
+            _pendingCmp64Trichotomy = true;
+        }
 
         private void EmitCmp(IrInstruction instruction)
         {
@@ -784,6 +1347,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private void EmitSetcc(IrInstruction instruction)
         {
+            if (_pendingCmp64Trichotomy)
+            {
+                // x86 Cmp64 三路结果在 EAX（-1/0/+1）：cmp eax,0 后按条件 setcc
+                _a.Cmp(X64Size.Dword, X64Register.EAX, 0);
+                _pendingCmp64Trichotomy = false;
+            }
+
             _a.Setcc(MapCond((IrCond)instruction.A.Imm), X64Register.RAX);
             _a.Movzx(X64Size.Dword, X64Register.RAX, X64Register.RAX);
             StoreSlot(instruction.Dst!, X64Register.EAX);
@@ -1141,6 +1711,135 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
             _a.Cvttsd2si(X64Register.EAX, X64Register.XMM0);
             StoreSlot(instruction.Dst!, X64Register.EAX);
+        }
+
+        /// <summary>long → double。x64：cvtsi2sd r64；x86：fild qword + fstp qword（双槽位模式直读）。</summary>
+        private void EmitFCvtSI64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.A.Register!, 8);
+                _a.Cvtsi2sd64(X64Register.XMM0, X64Register.RAX);
+                StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
+                return;
+            }
+
+            // x86：long 在双槽中为大端（低32位@[slot]，高32位@[slot-4]），而 FPU 按小端读写，需重排。
+            // 先把 long 以小端形式放到 [dstSlot-4..dstSlot]（低32位@[dstSlot-4]，高32位@[dstSlot]），
+            // 再 fild/fstp，最后把结果重排回槽约定（低32位@[dstSlot]，高32位@[dstSlot-4]）。
+            var srcSlot = GetSlotOffset(instruction.A.Register!);
+            var dstSlot = GetSlotOffset(instruction.Dst!);
+
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.EAX);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot - 4));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+
+            _a.FildM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            _a.FstpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
+        }
+
+        /// <summary>double → long 截断。x64：cvttsd2si r64；x86：fldcw 切换向零舍入 + fistp。</summary>
+        private void EmitFCvtSD64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlotXmm(X64Register.XMM0, instruction.A.Register!);
+                _a.Cvttsd2si64(X64Register.RAX, X64Register.XMM0);
+                StoreSlot(instruction.Dst!, X64Register.RAX);
+                return;
+            }
+
+            var srcSlot = GetSlotOffset(instruction.A.Register!);
+            var dstSlot = GetSlotOffset(instruction.Dst!);
+
+            // double 在双槽中为大端（低32位@[srcSlot]，高32位@[srcSlot-4]），FPU 按小端读写，
+            // 先把 double 以小端形式放到 [dstSlot-4..dstSlot]（低32位@[dstSlot-4]，高32位@[dstSlot]）。
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.EAX);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot - 4));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+
+            // 控制字缓冲：LeaSlot 帧底缓冲区；保存原始 cw，置 RC=11（截断），转换后恢复。
+            var cwBuf = new X64MemoryOperand(X64Register.RBP, -_frameBytes + _slotSize);
+
+            _a.FnstcwM16(cwBuf);
+            _a.Movzx(X64Size.Dword, X64Register.EAX, cwBuf);
+            _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.EAX); // 保存原始 cw
+            _a.Or(X64Size.Dword, X64Register.EAX, 0x0C00);
+            _a.Mov(X64Size.Word, cwBuf, X64Register.EAX);
+            _a.FldcwM16(cwBuf);
+
+            _a.FldM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            _a.FistpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+
+            // 恢复原始控制字
+            _a.Mov(X64Size.Word, cwBuf, X64Register.ECX);
+            _a.FldcwM16(cwBuf);
+
+            // [dstSlot-4..dstSlot] 现为小端 long（低32位@[dstSlot-4]，高32位@[dstSlot]），重排为槽约定。
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+            _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
+        }
+
+        /// <summary>int/enum → long 符号扩展。x64：movsxd；x86：cdq 后低 dword 存高槽。</summary>
+        private void EmitMovsx64(IrInstruction instruction)
+        {
+            if (_isX64)
+            {
+                LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
+                _a.Movsxd(X64Register.RAX, X64Register.EAX);
+                StoreSlot(instruction.Dst!, X64Register.RAX);
+                return;
+            }
+
+            var srcSlot = GetSlotOffset(instruction.A.Register!);
+            var dstSlot = GetSlotOffset(instruction.Dst!);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+            _a.Cdq();
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.EDX);
+        }
+
+        /// <summary>byte/char → long 零扩展（源 32 位值无符号）。x64：mov eax,[slot] 自动清高 32；x86：写低 dword、高 dword 置 0。</summary>
+        private void EmitMovzx64(IrInstruction instruction)
+        {
+            var srcSlot = GetSlotOffset(instruction.A.Register!);
+            if (_isX64)
+            {
+                // 32 位加载零扩展高 32 位，全 qword 写入目标槽
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+                StoreSlot(instruction.Dst!, X64Register.RAX);
+                return;
+            }
+
+            var dstSlot = GetSlotOffset(instruction.Dst!);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), 0);
+        }
+
+        /// <summary>long → int 低 32 位截断。x64：qword 清高；x86：仅写低 dword。</summary>
+        private void EmitTrunc64(IrInstruction instruction)
+        {
+            var srcSlot = GetSlotOffset(instruction.A.Register!);
+            if (_isX64)
+            {
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+                StoreSlot(instruction.Dst!, X64Register.RAX);
+                return;
+            }
+
+            var dstSlot = GetSlotOffset(instruction.Dst!);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
         }
 
         /// <summary>double 运行时参数：x64 单 64 位寄存器（rcx/rdx/r8/r9）；x86 拆 low/high 两个 32 位寄存器。</summary>

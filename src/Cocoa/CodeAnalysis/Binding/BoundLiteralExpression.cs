@@ -26,6 +26,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.Boolean;
             if (value is int)
                 return TypeSymbol.Int32;
+            if (value is long)
+                return TypeSymbol.Long;
             if (value is char)
                 return TypeSymbol.Char;
             if (value is double)

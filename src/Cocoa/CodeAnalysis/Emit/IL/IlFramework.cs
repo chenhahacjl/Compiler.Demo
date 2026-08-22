@@ -34,6 +34,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             StringConcatArray = RequireMethod("System.String", "Concat", new[] { "System.String[]" });
             ConvertToBoolean = RequireMethod("System.Convert", "ToBoolean", new[] { "System.Object" });
             ConvertToInt32 = RequireMethod("System.Convert", "ToInt32", new[] { "System.Object" });
+            ConvertToInt64 = RequireMethod("System.Convert", "ToInt64", new[] { "System.Object" });
             ConvertToString = RequireMethod("System.Convert", "ToString", new[] { "System.Object" });
             StringChars = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
             StringLength = RequireMethod("System.String", "get_Length", Array.Empty<string>());
@@ -68,6 +69,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef StringConcatArray { get; }
         public IlMethodRef ConvertToBoolean { get; }
         public IlMethodRef ConvertToInt32 { get; }
+        public IlMethodRef ConvertToInt64 { get; }
         public IlMethodRef ConvertToString { get; }
         public IlMethodRef StringChars { get; }
         public IlMethodRef StringLength { get; }

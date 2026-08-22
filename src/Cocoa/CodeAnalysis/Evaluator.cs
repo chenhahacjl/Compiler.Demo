@@ -232,12 +232,20 @@ namespace Cocoa.CodeAnalysis
             switch (unary.Op.Kind)
             {
                 case BoundUnaryOperatorKind.Identity:
+                    if (unary.Operand.Type == TypeSymbol.Long)
+                        return (long)operand!;
                     return (int)operand;
                 case BoundUnaryOperatorKind.Negation:
+                    if (unary.Operand.Type == TypeSymbol.Long)
+                        return -(long)operand!;
+                    if (unary.Operand.Type == TypeSymbol.Double)
+                        return -(double)operand;
                     return -(int)operand;
                 case BoundUnaryOperatorKind.LogicalNegation:
                     return !(bool)operand;
                 case BoundUnaryOperatorKind.OnesComplement:
+                    if (unary.Operand.Type == TypeSymbol.Long)
+                        return ~(long)operand!;
                     return ~(int)operand;
                 default:
                     throw new Exception($"Unexcepted unary operator {unary.Op}");
@@ -257,40 +265,66 @@ namespace Cocoa.CodeAnalysis
             {
                 case BoundBinaryOperatorKind.Addition:
                     if (binary.Type == TypeSymbol.Int32)
-                        return (int)left + (int)right;
+                        return (int)left! + (int)right!;
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left! + (long)right!;
                     if (binary.Type == TypeSymbol.Double)
                         return (double)left + (double)right;
                     return (string)left + (string)right;
                 case BoundBinaryOperatorKind.Subtraction:
                     if (binary.Type == TypeSymbol.Double)
                         return (double)left - (double)right;
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left - (long)right;
                     return (int)left - (int)right;
                 case BoundBinaryOperatorKind.Multiplication:
                     if (binary.Type == TypeSymbol.Double)
                         return (double)left * (double)right;
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left * (long)right;
                     return (int)left * (int)right;
                 case BoundBinaryOperatorKind.Division:
                     if (binary.Type == TypeSymbol.Double)
                         return (double)left / (double)right;
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left / (long)right;
                     return (int)left / (int)right;
                 case BoundBinaryOperatorKind.Modulo:
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left % (long)right;
                     return (int)left % (int)right;
                 case BoundBinaryOperatorKind.ShiftLeft:
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left << (int)right;
                     return (int)left << (int)right;
                 case BoundBinaryOperatorKind.ShiftRight:
+                    if (binary.Type == TypeSymbol.Long)
+                        return (long)left >> (int)right;
                     return (int)left >> (int)right;
                 case BoundBinaryOperatorKind.BitwiseAnd:
-                    return binary.Type == TypeSymbol.Int32 ?
-                        (int)left & (int)right :
-                        (bool)left & (bool)right;
+                    if (binary.Type == TypeSymbol.Int32 || binary.Type == TypeSymbol.Long)
+                    {
+                        if (binary.Type == TypeSymbol.Long)
+                            return (long)left & (long)right;
+                        return (int)left & (int)right;
+                    }
+                    return (bool)left & (bool)right;
                 case BoundBinaryOperatorKind.BitwiseOr:
-                    return binary.Type == TypeSymbol.Int32 ?
-                        (int)left | (int)right :
-                        (bool)left | (bool)right;
+                    if (binary.Type == TypeSymbol.Int32 || binary.Type == TypeSymbol.Long)
+                    {
+                        if (binary.Type == TypeSymbol.Long)
+                            return (long)left | (long)right;
+                        return (int)left | (int)right;
+                    }
+                    return (bool)left | (bool)right;
                 case BoundBinaryOperatorKind.BitwiseXor:
-                    return binary.Type == TypeSymbol.Int32 ?
-                        (int)left ^ (int)right :
-                        (bool)left ^ (bool)right;
+                    if (binary.Type == TypeSymbol.Int32 || binary.Type == TypeSymbol.Long)
+                    {
+                        if (binary.Type == TypeSymbol.Long)
+                            return (long)left ^ (long)right;
+                        return (int)left ^ (int)right;
+                    }
+                    return (bool)left ^ (bool)right;
                 case BoundBinaryOperatorKind.LogicalAnd:
                     return (bool)left && (bool)right;
                 case BoundBinaryOperatorKind.LogicalOr:
@@ -302,18 +336,26 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.Less:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left < (double)right;
+                    if (binary.Op.LeftType == TypeSymbol.Long)
+                        return (long)left < (long)right;
                     return (int)left < (int)right;
                 case BoundBinaryOperatorKind.LessOrEquals:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left <= (double)right;
+                    if (binary.Op.LeftType == TypeSymbol.Long)
+                        return (long)left <= (long)right;
                     return (int)left <= (int)right;
                 case BoundBinaryOperatorKind.Greater:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left > (double)right;
+                    if (binary.Op.LeftType == TypeSymbol.Long)
+                        return (long)left > (long)right;
                     return (int)left > (int)right;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left >= (double)right;
+                    if (binary.Op.LeftType == TypeSymbol.Long)
+                        return (long)left >= (long)right;
                     return (int)left >= (int)right;
                 default:
                     throw new Exception($"Unexpected binary operator {binary.Op}");
@@ -422,6 +464,21 @@ namespace Cocoa.CodeAnalysis
                 }
 
                 return Convert.ToInt32(value);
+            }
+            else if (node.Type == TypeSymbol.Long)
+            {
+                if (value is double longDouble)
+                {
+                    return (long)longDouble;
+                }
+
+                if (value is int longInt)
+                {
+                    // 符号扩展（与 C# (long)int 一致）
+                    return (long)longInt;
+                }
+
+                return Convert.ToInt64(value);
             }
             else if (node.Type == TypeSymbol.Char)
             {

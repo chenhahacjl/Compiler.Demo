@@ -1917,6 +1917,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 return 0;
             }
 
+            if (type == TypeSymbol.Long)
+            {
+                return 0L;
+            }
+
             if (type == TypeSymbol.Char)
             {
                 return '\0';
@@ -3681,6 +3686,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "any": return TypeSymbol.Any;
                 case "bool": return TypeSymbol.Boolean;
                 case "int": return TypeSymbol.Int32;
+                case "long": return TypeSymbol.Long;
                 case "byte": return TypeSymbol.Byte;
                 case "double": return TypeSymbol.Double;
                 case "char": return TypeSymbol.Char;
@@ -3862,7 +3868,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static bool IsNumeric(TypeSymbol type)
         {
-            return type == TypeSymbol.Int32 || type == TypeSymbol.Byte || type == TypeSymbol.Double;
+            return type == TypeSymbol.Int32 || type == TypeSymbol.Long || type == TypeSymbol.Byte || type == TypeSymbol.Double;
         }
 
         private void BindEnumDeclaration(EnumDeclarationSyntax syntax, string @namespace = "")

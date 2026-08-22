@@ -41,6 +41,11 @@ namespace System
             Runtime.WriteLine(text)
         }
 
+        static function WriteLine(text: long): void
+        {
+            Runtime.WriteLine(text)
+        }
+
         static function Write(text: string): void
         {
             Runtime.Write(text)
@@ -67,6 +72,11 @@ namespace System
         }
 
         static function Write(text: byte): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: long): void
         {
             Runtime.Write(text)
         }

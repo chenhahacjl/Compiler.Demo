@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Explicit;
             }
 
-            if (from == TypeSymbol.Boolean || from == TypeSymbol.Int32 || from == TypeSymbol.Byte)
+            if (from == TypeSymbol.Boolean || from == TypeSymbol.Int32 || from == TypeSymbol.Byte || from == TypeSymbol.Long)
             {
                 if (to == TypeSymbol.String)
                 {
@@ -75,11 +75,36 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return Conversion.Implicit;
                 }
+
+                if (to == TypeSymbol.Long)
+                {
+                    // 符号扩展（C# int→long 隐式）
+                    return Conversion.Implicit;
+                }
             }
 
             if (from == TypeSymbol.Byte)
             {
-                if (to == TypeSymbol.Int32 || to == TypeSymbol.Double)
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.Double || to == TypeSymbol.Long)
+                {
+                    return Conversion.Implicit;
+                }
+            }
+
+            if (from == TypeSymbol.Char && to == TypeSymbol.Long)
+            {
+                // char → long 零扩展（与 char → int 一致）
+                return Conversion.Implicit;
+            }
+
+            if (from == TypeSymbol.Long)
+            {
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.Byte || to == TypeSymbol.Char)
+                {
+                    return Conversion.Explicit;
+                }
+
+                if (to == TypeSymbol.Double)
                 {
                     return Conversion.Implicit;
                 }
@@ -87,7 +112,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (from == TypeSymbol.Double)
             {
-                if (to == TypeSymbol.Int32 || to == TypeSymbol.Byte || to == TypeSymbol.String)
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.Byte || to == TypeSymbol.String || to == TypeSymbol.Long)
                 {
                     return Conversion.Explicit;
                 }
@@ -95,7 +120,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (from == TypeSymbol.String)
             {
-                if (to == TypeSymbol.Boolean || to == TypeSymbol.Int32)
+                if (to == TypeSymbol.Boolean || to == TypeSymbol.Int32 || to == TypeSymbol.Long)
                 {
                     return Conversion.Explicit;
                 }

@@ -1273,6 +1273,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var length = 0;
             var isHex = false;
             var hasExponent = false;
+            var hasLongSuffix = false;
 
             if (Current == '0' && Peek(1) == 'x')
             {
@@ -1330,6 +1331,23 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
+            // long 后缀（6e-M19 M1）：`42L` / `0xFFL`（大小写均可）。
+            // 仅当 L 后非标识符字符时生效，避免吞掉 let / long 等关键字
+            // （如 `9696let` 应拆为 9696 + let，`1234long` 应拆为 1234 + long）。
+            bool canTakeLongSuffix = !char.IsLetterOrDigit(Peek(1));
+            if (!isHex && !hasExponent && (Current == 'L' || Current == 'l') && canTakeLongSuffix)
+            {
+                hasLongSuffix = true;
+                _position++;
+                length++;
+            }
+            else if (isHex && (Current == 'L' || Current == 'l') && canTakeLongSuffix)
+            {
+                hasLongSuffix = true;
+                _position++;
+                length++;
+            }
+
             var text = _text.ToString(_start, length);
 
             if (!isHex && (text.Contains('.') || hasExponent))
@@ -1347,6 +1365,25 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return;
             }
 
+            if (hasLongSuffix)
+            {
+                var longText = isHex ? text.Substring(2, text.Length - 3) : text.Substring(0, text.Length - 1);
+                var longParsed = long.TryParse(longText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var longValue);
+                if (longParsed)
+                {
+                    _value = longValue;
+                    _kind = SyntaxKind.NumberToken;
+                    return;
+                }
+
+                var longSpan = new TextSpan(_start, length);
+                var longLocation = new TextLocation(_text, longSpan);
+                _diagnostics.ReportInvalidNumber(longLocation, text, TypeSymbol.Long);
+                _value = 0L;
+                _kind = SyntaxKind.NumberToken;
+                return;
+            }
+
             var value = 0;
             var parsed = isHex
                 ? int.TryParse(text.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out value)
@@ -1354,6 +1391,15 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (!parsed)
             {
+                // >int.MaxValue 的整数字面量自动升格为 long（C# 同构：十进制大整数取最小可容纳类型）
+                var bigText = isHex ? text.Substring(2) : text;
+                if (long.TryParse(bigText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var upgraded))
+                {
+                    _value = upgraded;
+                    _kind = SyntaxKind.NumberToken;
+                    return;
+                }
+
                 var span = new TextSpan(_start, length);
                 var location = new TextLocation(_text, span);
                 _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Int32);

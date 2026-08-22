@@ -875,7 +875,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x07: return IlType.Class(new IlTypeRef("System", "UInt16", null));
                 case 0x08: return IlType.Int32;
                 case 0x09: return IlType.Class(new IlTypeRef("System", "UInt32", null));
-                case 0x0A: return IlType.Class(new IlTypeRef("System", "Int64", null));
+                case 0x0A: return IlType.Int64;
                 case 0x0B: return IlType.Class(new IlTypeRef("System", "UInt64", null));
                 case 0x0C: return IlType.Class(new IlTypeRef("System", "Single", null));
                 case 0x0D: return IlType.Double;

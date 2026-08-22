@@ -9,6 +9,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly TypeSymbol Any = new TypeSymbol("any");
         public static readonly TypeSymbol Boolean = new TypeSymbol("bool");
         public static readonly TypeSymbol Int32 = new TypeSymbol("int");
+        public static readonly TypeSymbol Long = new TypeSymbol("long");
         public static readonly TypeSymbol Byte = new TypeSymbol("byte");
         public static readonly TypeSymbol Double = new TypeSymbol("double");
         public static readonly TypeSymbol Char = new TypeSymbol("char");

@@ -2745,5 +2745,59 @@ public class Foo
 }", "Main");
             Assert.Contains(messages, m => m.Contains("实例字段"));
         }
+
+        [Fact]
+        public void Long_Arithmetic_Bitwise_And_Conversions_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    var a = 1000000L
+    var b = 7L
+    Console.WriteLine(a * b)
+    Console.WriteLine(a / b)
+    Console.WriteLine(a % b)
+    Console.WriteLine(a + b)
+    Console.WriteLine(a - b)
+    Console.WriteLine(a * a)
+    var c = -12345L
+    Console.WriteLine(c * -2L)
+
+    var x = 0xFL
+    var y = 0x3L
+    Console.WriteLine(x & y)
+    Console.WriteLine(x | y)
+    Console.WriteLine(x ^ y)
+    Console.WriteLine(~x)
+    var s = 1L
+    Console.WriteLine(s << 4)
+    Console.WriteLine(s >> 2)
+
+    var i = 5
+    var l = 10L
+    Console.WriteLine(i + l)
+    Console.WriteLine(l - i)
+    Console.WriteLine(i * l)
+    var big = 123456789012L
+    Console.WriteLine((int)big)
+    Console.WriteLine((double)big)
+    Console.WriteLine((long)(double)big)
+    var d = 123456789012.0
+    Console.WriteLine((long)d)
+    Console.WriteLine((long)3.9)
+    Console.WriteLine((long)-2.9)
+    Console.WriteLine((long)i)
+    Console.WriteLine(-big)
+    Console.WriteLine(i == l)
+    Console.WriteLine(i < l)
+}", "il-long");
+            Assert.Equal(0, exitCode);
+            Assert.Equal(
+                "7000000\r\n142857\r\n1\r\n1000007\r\n999993\r\n1000000000000\r\n24690\r\n" +
+                "3\r\n15\r\n12\r\n-16\r\n16\r\n0\r\n" +
+                "15\r\n5\r\n50\r\n-1097262572\r\n123456789012\r\n123456789012\r\n123456789012\r\n3\r\n-2\r\n5\r\n-123456789012\r\nFalse\r\nTrue\r\n",
+                stdout);
+        }
     }
 }

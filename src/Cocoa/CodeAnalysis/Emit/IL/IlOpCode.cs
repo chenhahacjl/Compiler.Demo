@@ -133,6 +133,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Conv_I2", 0x68, IlOperandType.InlineNone);
             Define("Conv_I4", 0x69, IlOperandType.InlineNone);
             Define("Conv_U1", 0xD2, IlOperandType.InlineNone);
+            Define("Conv_U2", 0xD4, IlOperandType.InlineNone);
             Define("Conv_I8", 0x6A, IlOperandType.InlineNone);
             Define("Conv_R4", 0x6B, IlOperandType.InlineNone);
             Define("Conv_R8", 0x6C, IlOperandType.InlineNone);
@@ -180,11 +181,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Ldelem_I4", 0x94, IlOperandType.InlineNone);
             Define("Ldelem_I2", 0x92, IlOperandType.InlineNone);
             Define("Ldelem_U2", 0x93, IlOperandType.InlineNone);
+            Define("Ldelem_I8", 0x97, IlOperandType.InlineNone);
             Define("Ldelem_R8", 0x99, IlOperandType.InlineNone);
             Define("Ldelem_Ref", 0x9A, IlOperandType.InlineNone);
             Define("Stelem_I1", 0x9C, IlOperandType.InlineNone);
             Define("Stelem_I2", 0x9D, IlOperandType.InlineNone);
             Define("Stelem_I4", 0x9E, IlOperandType.InlineNone);
+            Define("Stelem_I8", 0x9F, IlOperandType.InlineNone);
             Define("Stelem_R8", 0xA1, IlOperandType.InlineNone);
             Define("Stelem_Ref", 0xA2, IlOperandType.InlineNone);
 

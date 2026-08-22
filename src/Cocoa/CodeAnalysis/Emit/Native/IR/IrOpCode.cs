@@ -38,6 +38,24 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         Shr,         // Shr <dst> <src> <count>
         Sar,         // Sar <dst> <src> <count>
 
+        // 64 位整型（long，6e-M19 M1）：值在槽中以 64 位位模式存放
+        // （x64 单 8 字节槽 → qword 指令；x86 双 4 字节槽 [slot]=低32/[slot-4]=高32 → 进位链序列）
+        // 注意与 8 字节指针的 Add 区分：指针运算保持 32 位（x86），*64 仅用于真 64 位整型值。
+        Add64,       // Add64 <dst> <srcA> <srcB>
+        Sub64,       // Sub64 <dst> <srcA> <srcB>
+        Imul64,      // Imul64 <dst> <srcA> <srcB>   — 有符号 64×64→64（低 64 位）
+        And64,       // And64 <dst> <srcA> <srcB>
+        Or64,        // Or64 <dst> <srcA> <srcB>
+        Xor64,       // Xor64 <dst> <srcA> <srcB>
+        Idiv64,      // Idiv64 <dst> <src>           — 有符号除法：dst / src → dst（除零走 DivByZero）
+        Irem64,      // Irem64 <dst> <src>           — 有符号取余：dst % src → dst
+        Neg64,       // Neg64 <dst>
+        Not64,       // Not64 <dst>
+        Shl64,       // Shl64 <dst> <src> <count>
+        Shr64,       // Shr64 <dst> <src> <count>    — 逻辑右移
+        Sar64,       // Sar64 <dst> <src> <count>    — 算术右移
+        Cmp64,       // Cmp64 <srcA> <srcB>          — 64 位比较（x86 经三路结果，紧随 Setcc/Jcc）
+
         // 比较（Cmp 设标志，Setcc 紧随使用；Jcc 配最近一次 Cmp 的标志）
         Cmp,         // Cmp <srcA> <srcB>
         Setcc,       // Setcc <dst> <cond>
@@ -85,6 +103,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         FCeiling,    // FCeiling <dst> <src>           — roundsd imm=2（向 +∞）
         FTruncate,   // FTruncate <dst> <src>          — roundsd imm=3（向 0）
         FRound,      // FRound <dst> <src>             — roundsd imm=0（最近偶数，.NET Math.Round 语义）
+
+        // long ↔ double 与 64 位整型移动（6e-M19 M1）
+        FCvtSI64,    // FCvtSI64 <dst> <src>           — long → double（x64 cvtsi2sd r64；x86 fild/fstp）
+        FCvtSD64,    // FCvtSD64 <dst> <src>           — double → long 截断（x64 cvttsd2si r64；x86 fldcw 链 + fistp）
+        Movsx64,     // Movsx64 <dst> <src>            — int/enum → long 符号扩展
+        Movzx64,     // Movzx64 <dst> <src>            — byte/char → long 零扩展
+        Trunc64,     // Trunc64 <dst> <src>            — long 低 32 位截断
 
         // 调试/信息
         Nop,         // Nop

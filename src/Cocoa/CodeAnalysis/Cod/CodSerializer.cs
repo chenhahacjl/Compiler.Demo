@@ -1706,6 +1706,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 "char" => TypeSymbol.Char,
                 "double" => TypeSymbol.Double,
                 "int" => TypeSymbol.Int32,
+                "long" => TypeSymbol.Long,
                 "string" => TypeSymbol.String,
                 "void" => TypeSymbol.Void,
                 "error" => TypeSymbol.Error,

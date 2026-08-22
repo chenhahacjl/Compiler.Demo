@@ -324,6 +324,146 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
             EmitModRMByte(3, 7, (int)divisor & 7);
         }
 
+        /// <summary>MUL r/m32：EDX:EAX ← EAX × r/m32（无符号全积，64 位整型乘法用）。</summary>
+        public void Mul(X64Size size, X64Register divisor)
+        {
+            EmitByte(0xF7);
+            EmitModRMByte(3, 4, (int)divisor & 7);
+        }
+
+        public void Adc(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x11, size, dst, src);
+        public void Adc(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x13, size, dst, src);
+
+        public void Sbb(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x19, size, dst, src);
+        public void Sbb(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x1B, size, dst, src);
+
+        /// <summary>ADC r32, imm（0x83 /2 短形式或 0x81 /2 长形式）。</summary>
+        public void AdcRegImm(X64Register dst, int imm)
+        {
+            if (imm is >= -128 and <= 127)
+            {
+                EmitByte(0x83);
+                EmitModRMByte(3, 2, (int)dst & 7);
+                EmitByte(unchecked((byte)(sbyte)imm));
+            }
+            else
+            {
+                EmitByte(0x81);
+                EmitModRMByte(3, 2, (int)dst & 7);
+                EmitInt32(imm);
+            }
+        }
+
+        /// <summary>SHLD r/m32, r32, CL（双精度左移：dst:src 联合左移 CL 位，dst 取高位）。</summary>
+        public void ShldCl(X64Register dst, X64Register src)
+        {
+            EmitByte(0x0F);
+            EmitByte(0xA5);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+        }
+
+        /// <summary>SHLD r/m32, r32, imm8。</summary>
+        public void ShldImm8(X64Register dst, X64Register src, byte count)
+        {
+            EmitByte(0x0F);
+            EmitByte(0xA4);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+            EmitByte(count);
+        }
+
+        /// <summary>SHRD r/m32, r32, CL（双精度右移）。</summary>
+        public void ShrdCl(X64Register dst, X64Register src)
+        {
+            EmitByte(0x0F);
+            EmitByte(0xAD);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+        }
+
+        /// <summary>SHRD r/m32, r32, imm8。</summary>
+        public void ShrdImm8(X64Register dst, X64Register src, byte count)
+        {
+            EmitByte(0x0F);
+            EmitByte(0xAC);
+            EmitModRMByte(3, (int)src & 7, (int)dst & 7);
+            EmitByte(count);
+        }
+
+        /// <summary>CDQ：EDX:EAX ← 符号扩展 EAX。</summary>
+        public void Cdq()
+        {
+            EmitByte(0x99);
+        }
+
+        /// <summary>CQO：x86 32 位模式无 64 位 RDX:RAX 符号扩展；64 位除法走 Idiv64 运行时辅助，不会调用本方法。</summary>
+        public void Cqo()
+        {
+            throw new NotSupportedException("CQO 在 x86 32 位模式下不可用；64 位除法应使用 Idiv64 运行时辅助函数。");
+        }
+
+        public void Cvtsi2sd64(X64Register xmmDst, X64Register r64Src)
+            => throw new NotSupportedException("Cvtsi2sd64 在 x86 32 位模式下不可用；long→double 转换应走 fild/fstp。");
+
+        public void Cvttsd2si64(X64Register r64Dst, X64Register xmmSrc)
+            => throw new NotSupportedException("Cvttsd2si64 在 x86 32 位模式下不可用；double→long 转换应走 fldcw/fistp。");
+
+        // ------------------------------------------------------------------
+        // x87 FPU（仅用于 long ↔ double 转换；double 运算走 SSE）
+        // ------------------------------------------------------------------
+
+        /// <summary>FILD m64int：压入 64 位有符号整数（long → double 入口）。</summary>
+        public void FildM64(X64MemoryOperand src)
+        {
+            var memory = EncodeMemory(src);
+            EmitByte(0xDF);
+            EmitModRMByte(memory.Mod, 5, memory.Rm);
+            EmitMemoryRest(src, memory);
+        }
+
+        /// <summary>FSTP m64：弹出栈顶并以 double 位模式存储。</summary>
+        public void FstpM64(X64MemoryOperand dst)
+        {
+            var memory = EncodeMemory(dst);
+            EmitByte(0xDD);
+            EmitModRMByte(memory.Mod, 3, memory.Rm);
+            EmitMemoryRest(dst, memory);
+        }
+
+        /// <summary>FISTP m64int：栈顶按当前舍入模式存为 64 位整数并出栈。</summary>
+        public void FistpM64(X64MemoryOperand dst)
+        {
+            var memory = EncodeMemory(dst);
+            EmitByte(0xDF);
+            EmitModRMByte(memory.Mod, 7, memory.Rm);
+            EmitMemoryRest(dst, memory);
+        }
+
+        /// <summary>FLD m64：压入 double。</summary>
+        public void FldM64(X64MemoryOperand src)
+        {
+            var memory = EncodeMemory(src);
+            EmitByte(0xDD);
+            EmitModRMByte(memory.Mod, 0, memory.Rm);
+            EmitMemoryRest(src, memory);
+        }
+
+        /// <summary>FLDCW m16：加载 x87 控制字（舍入模式切换）。</summary>
+        public void FldcwM16(X64MemoryOperand src)
+        {
+            var memory = EncodeMemory(src);
+            EmitByte(0xD9);
+            EmitModRMByte(memory.Mod, 5, memory.Rm);
+            EmitMemoryRest(src, memory);
+        }
+
+        /// <summary>FNSTCW m16：保存 x87 控制字。</summary>
+        public void FnstcwM16(X64MemoryOperand dst)
+        {
+            var memory = EncodeMemory(dst);
+            EmitByte(0xD9);
+            EmitModRMByte(memory.Mod, 7, memory.Rm);
+            EmitMemoryRest(dst, memory);
+        }
+
         public void Movzx(X64Size dstSize, X64Register dst, X64Register src)
         {
             EmitByte(0x0F);
