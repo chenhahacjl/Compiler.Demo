@@ -4095,6 +4095,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 ["PositiveInfinity"] = double.PositiveInfinity,
                 ["NegativeInfinity"] = double.NegativeInfinity,
             },
+            ["System.Boolean"] = new Dictionary<string, object>
+            {
+                ["TrueString"] = "True",
+                ["FalseString"] = "False",
+            },
         };
 
         /// <summary>基元类型 → facade 全名（全基元集，与 FacadeTargets 保持一致）。</summary>

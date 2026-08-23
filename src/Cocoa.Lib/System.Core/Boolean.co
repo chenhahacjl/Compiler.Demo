@@ -9,5 +9,19 @@ namespace System
         {
             return Runtime.BooleanToString(this)
         }
+
+        public static function Parse(s: string): bool
+        {
+            return s == "True"
+        }
+
+        public static function Parse(s: string, ignoreCase: bool): bool
+        {
+            if ignoreCase
+            {
+                return s.ToLower() == "true"
+            }
+            return s == "True"
+        }
     }
 }
