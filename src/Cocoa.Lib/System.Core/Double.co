@@ -9,5 +9,18 @@ namespace System
         {
             return Runtime.DoubleToString(this)
         }
+
+        public function CompareTo(value: f64): i32
+        {
+            if this < value
+            {
+                return -1
+            }
+            if this > value
+            {
+                return 1
+            }
+            return 0
+        }
     }
 }
