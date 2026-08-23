@@ -1417,7 +1417,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 if (uSuffix)
                 {
-                    var ulongText = isHex ? text.Substring(2, text.Length - 3) : text.Substring(0, text.Length - 2);
+                    var ulongText = isHex ? text.Substring(2, text.Length - 4) : text.Substring(0, text.Length - 2);
                     if (ulong.TryParse(ulongText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var ulongValue))
                     {
                         _value = ulongValue;
@@ -1451,7 +1451,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (uSuffix)
             {
-                var uintText = isHex ? text.Substring(2, text.Length - 2) : text.Substring(0, text.Length - 1);
+                var uintText = isHex ? text.Substring(2, text.Length - 3) : text.Substring(0, text.Length - 1);
                 if (uint.TryParse(uintText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var uintValue))
                 {
                     _value = uintValue;

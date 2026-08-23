@@ -1603,6 +1603,79 @@ function Main()
             AssertValue("(i32)(3.5 + 0.5)", 4);
         }
 
+        [Fact]
+        public void Evaluator_Narrow_Integer_Arithmetic_Promotion()
+        {
+            // 6e-M21：<32 位同符号二元升 32 位（C# 同构）；混符号按无损规则提升
+            AssertValue("(i8)-100 == -100", true);
+            AssertValue("(i16)300 * (i16)300 == 90000", true);
+            AssertValue("(u16)60000 + (u16)50000 == 110000", true);           // u16+u16→u32
+            AssertValue("(i8)-100 + (u8)200 == 100", true);                   // i8+u8→i16
+            AssertValue("(i32)2000000000 + (u32)2000000000 == 4000000000", true); // i32+u32→i64
+        }
+
+        [Fact]
+        public void Evaluator_Unsigned_Division_Remainder_Shift()
+        {
+            AssertValue("(u32)4000000000 / (u32)2 == 2000000000", true);
+            AssertValue("(i64)((u64)18000000000 / (u64)3) == 6000000000", true);
+            AssertValue("(u32)0x80000000 >> 1 == 1073741824", true);          // 无符号逻辑右移
+            AssertValue("-8 >> 1 == -4", true);                               // 有符号算术右移
+            AssertValue("(u32)4000000000 > (u32)3999999999", true);           // 无符号比较
+            AssertValue("(u32)-1 > 10", true);                                // u32 位模式 0xFFFFFFFF
+        }
+
+        [Fact]
+        public void Evaluator_Float32_Arithmetic_And_Conversions()
+        {
+            AssertValue("(f32)1.5 * (f32)4.0 == (f32)6.0", true);
+            AssertValue("(f64)((f32)1.5 + (f32)0.25) == 1.75", true);
+            AssertValue("i32(3.9f)", 3);
+            AssertValue("(f64)f32(2.75) == 2.75", true);
+            AssertValue("i64((f32)1.5 * (f32)4.0) == 6", true);
+        }
+
+        [Fact]
+        public void Evaluator_Long_Plus_ULong_Reports_Undefined()
+        {
+            var text = @"
+var x: i64 = 1
+var y: u64 = 2
+var z = x [+] y
+            ";
+
+            var diagnostics = @"
+                Binary operator '+' is not defined for types 'long' and 'ulong'.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_I128_NotSupported_ReportsError()
+        {
+            var text = @"var x: [i128] = 0";
+
+            var diagnostics = @"
+                Type 'i128' (128-bit) is not supported yet.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_UShort_Constant_OutOfRange_ReportsError()
+        {
+            var text = @"var x: u16 = [70000]";
+
+            var diagnostics = @"
+                Constant value '70000' is out of range for 'ushort'. Use an explicit cast.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+
 
         [Fact]
         public void Evaluator_Byte_Cast_From_Int_To_Byte()

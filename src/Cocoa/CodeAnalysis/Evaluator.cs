@@ -366,26 +366,26 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.Less:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left < (double)right;
-                    if (binary.Op.LeftType == TypeSymbol.Int64)
-                        return (long)left < (long)right;
+                    if (binary.Op.LeftType.IsInteger && !binary.Op.LeftType.IsPlaceholder128)
+                        return EvaluateIntegerBinary(binary.Op.Kind, left!, right!, binary.Op.LeftType);
                     return (int)left < (int)right;
                 case BoundBinaryOperatorKind.LessOrEquals:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left <= (double)right;
-                    if (binary.Op.LeftType == TypeSymbol.Int64)
-                        return (long)left <= (long)right;
+                    if (binary.Op.LeftType.IsInteger && !binary.Op.LeftType.IsPlaceholder128)
+                        return EvaluateIntegerBinary(binary.Op.Kind, left!, right!, binary.Op.LeftType);
                     return (int)left <= (int)right;
                 case BoundBinaryOperatorKind.Greater:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left > (double)right;
-                    if (binary.Op.LeftType == TypeSymbol.Int64)
-                        return (long)left > (long)right;
+                    if (binary.Op.LeftType.IsInteger && !binary.Op.LeftType.IsPlaceholder128)
+                        return EvaluateIntegerBinary(binary.Op.Kind, left!, right!, binary.Op.LeftType);
                     return (int)left > (int)right;
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left >= (double)right;
-                    if (binary.Op.LeftType == TypeSymbol.Int64)
-                        return (long)left >= (long)right;
+                    if (binary.Op.LeftType.IsInteger && !binary.Op.LeftType.IsPlaceholder128)
+                        return EvaluateIntegerBinary(binary.Op.Kind, left!, right!, binary.Op.LeftType);
                     return (int)left >= (int)right;
                 default:
                     throw new Exception($"Unexpected binary operator {binary.Op}");
@@ -488,9 +488,9 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Type == TypeSymbol.Int32)
             {
-                if (value is double doubleValue)
+                if (value is double || value is float)
                 {
-                    return (int)doubleValue;
+                    return (int)Convert.ToDouble(value);
                 }
 
                 // 无符号大值按位模式截断（与 C# unchecked 窄化一致）
@@ -498,9 +498,9 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Type == TypeSymbol.Int64)
             {
-                if (value is double longDouble)
+                if (value is double || value is float)
                 {
-                    return (long)longDouble;
+                    return (long)Convert.ToDouble(value);
                 }
 
                 if (value is int longInt)

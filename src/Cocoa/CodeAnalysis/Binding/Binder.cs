@@ -3351,6 +3351,24 @@ namespace Cocoa.CodeAnalysis.Binding
         /// </summary>
         private static TypeSymbol? GetBinaryNumericResultType(TypeSymbol left, TypeSymbol right, SyntaxKind operatorKind)
         {
+            var raw = GetRawBinaryNumericResultType(left, right, operatorKind);
+            if (raw == null)
+            {
+                return null;
+            }
+
+            // 统一归一化：任何落在 <32 位域的整数结果升到 32 位（运算符表仅注册 32/64 位算术）
+            if (raw.IsInteger && !raw.IsPlaceholder128 && raw.BitWidth < 32 &&
+                operatorKind != SyntaxKind.ShiftLeftToken && operatorKind != SyntaxKind.ShiftRightToken)
+            {
+                return raw.IsSigned ? TypeSymbol.Int32 : TypeSymbol.UInt32;
+            }
+
+            return raw;
+        }
+
+        private static TypeSymbol? GetRawBinaryNumericResultType(TypeSymbol left, TypeSymbol right, SyntaxKind operatorKind)
+        {
             if (operatorKind == SyntaxKind.ShiftLeftToken || operatorKind == SyntaxKind.ShiftRightToken)
             {
                 return left.IsInteger && left.BitWidth < 32 ? TypeSymbol.Int32 : left;
@@ -3368,11 +3386,23 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (left == right)
             {
+                // 同型窄整型先升 32 位（C# 先升后算同构），其余保持
+                if (left.IsInteger && !left.IsPlaceholder128 && left.BitWidth < 32)
+                {
+                    return left.IsSigned ? TypeSymbol.Int32 : TypeSymbol.UInt32;
+                }
+
                 return left;
             }
 
             if (left.IsSigned == right.IsSigned)
             {
+                // C# 同构：位宽 <32 的同符号整数二元先升 32 位，避免 i16*i16 类中间截断
+                if (left.BitWidth < 32 && right.BitWidth < 32)
+                {
+                    return left.IsSigned ? TypeSymbol.Int32 : TypeSymbol.UInt32;
+                }
+
                 return left.BitWidth >= right.BitWidth ? left : right;
             }
 
@@ -4007,12 +4037,13 @@ namespace Cocoa.CodeAnalysis.Binding
             return type.IsNumeric && !type.IsPlaceholder128;
         }
 
-        /// <summary>6e-M21 Phase 4：可接受范围内常量隐式窄化的目标窄整型。</summary>
+        /// <summary>6e-M21 Phase 4/6：可接受范围内常量隐式窄化的目标整型（含 64 位：ulong y = 2 与 C# 同构）。</summary>
         private static bool IsNarrowIntegerTarget(TypeSymbol type)
         {
             return type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
                    type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16 ||
-                   type == TypeSymbol.UInt32;
+                   type == TypeSymbol.UInt32 || type == TypeSymbol.Int64 ||
+                   type == TypeSymbol.UInt64;
         }
 
         private static bool FitsInIntegerType(long value, TypeSymbol type)

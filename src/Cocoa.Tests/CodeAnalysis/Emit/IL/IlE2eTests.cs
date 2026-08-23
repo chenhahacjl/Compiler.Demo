@@ -2747,6 +2747,42 @@ public class Foo
         }
 
         [Fact]
+        public void Numeric_Types_Full_Matrix_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    var s: i8 = (i8)-100
+    Console.WriteLine(i32(s))
+    Console.WriteLine(i32(s * 2))
+    var h: i16 = 300
+    Console.WriteLine(i32(h * h))
+    Console.WriteLine(i32((i16)70000))
+    var w: u16 = 60000
+    Console.WriteLine(i64(w + w))
+    var m: u32 = 4000000000U
+    Console.WriteLine(i64(m / 2U))
+    Console.WriteLine(m > 3999999999U)
+    var un: u32 = 0x80000000U
+    Console.WriteLine(i64(un >> 1))
+    var sg: i32 = -8
+    Console.WriteLine(sg >> 1)
+    var big: u64 = 18000000000UL
+    Console.WriteLine(big / 3UL)
+    var a: f32 = 1.5f
+    Console.WriteLine(f64(a * 4.0f))
+    Console.WriteLine(f64(-a))
+    Console.WriteLine(i32(3.9f))
+    Console.WriteLine(f64(f32(2.75)))
+}", "numeric-matrix");
+            Assert.Equal(0, exitCode);
+            Assert.Equal(
+                "-100\r\n-200\r\n90000\r\n4464\r\n120000\r\n2000000000\r\nTrue\r\n1073741824\r\n-4\r\n6000000000\r\n6\r\n-1.5\r\n3\r\n2.75\r\n",
+                stdout);
+        }
+
+        [Fact]
         public void Long_Arithmetic_Bitwise_And_Conversions_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
