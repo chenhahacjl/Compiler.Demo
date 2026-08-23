@@ -1481,12 +1481,14 @@ namespace Cocoa.CodeAnalysis.Binding
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
 
             // 6e-M19 M2-b：facade 类实例方法编译期降级——隐藏首参 this（类型 = 承载类型）+ 强制静态，
-            // 三后端按普通静态容器方法发射（对齐 C# 基元别名模型：Int32.ToString 等成员面载体）
+            // 三后端按普通静态容器方法发射（对齐 C# 基元别名模型：Int32.ToString 等成员面载体）。
+            // 声明参数 ordinal 整体 +1（真静态无 instance offset，this 占据 arg0）
             if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass)
             {
                 isStatic = true;
                 var thisParameter = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0);
-                parameters = new[] { thisParameter }.Concat(parameters).ToImmutableArray();
+                var shifted = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal + 1)).ToArray();
+                parameters = new[] { thisParameter }.Concat(shifted).ToImmutableArray();
             }
 
             var isVirtual = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.VirtualKeyword);
@@ -3314,7 +3316,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i + 1].Type));
             }
 
-            return new BoundMemberCallExpression(syntax, receiver, identifier, boundArguments.ToImmutable(), method.ReturnType, method);
+            // 6e-M19 M2-b：走 BoundCallExpression（顶层静态调用形状）——与 .cod 库函数消费同路径，
+            // 规避 MemberCall 静态分支对含类归属符号的发射差异
+            return new BoundCallExpression(syntax, method, boundArguments.ToImmutable());
         }
 
         /// <summary>receiver 类型 → facade 类（stdlib cod 注入；全名解析优先，cod 库直查兜底）。</summary>

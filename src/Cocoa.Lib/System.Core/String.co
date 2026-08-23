@@ -1,79 +1,85 @@
-// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
-// class String —— 纯 Cocoa 源码静态类，只依赖语言核心（字符串/char↔i32 转换）
-// 详细分层设计见 docs-dev/标准库设计.md
+﻿// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
+// class String —— string 的成员面载体（6e-M19 M2-b 全面 facade，对齐 C# System.String）：
+// 实例方法编译期降级为静态（隐藏首参 this: string，声明参数 ordinal 整体 +1），
+// 旧静态调用形态签名不变、天然兼容。设计见 docs-dev/对象模型设计.md §4.4/§5
 
 namespace System
 {
-    class String
+    public class String
     {
-        static function ToUpper(s: string): string
+        public static function IsNullOrEmpty(s: string): bool
+        {
+            return s == ""
+        }
+
+        public function ToUpper(): string
         {
             var result = ""
             var i = 0
-            while i < s.Length
+            while i < this.Length
             {
-                var v = i32(s[i])
+                var v = i32(this[i])
                 if v >= 97 && v <= 122
                 {
                     result = result + string(char(v - 32))
                 }
                 else
                 {
-                    result = result + string(s[i])
+                    result = result + string(this[i])
                 }
                 i = i + 1
             }
             return result
         }
 
-        static function ToLower(s: string): string
+        public function ToLower(): string
         {
             var result = ""
             var i = 0
-            while i < s.Length
+            while i < this.Length
             {
-                var v = i32(s[i])
+                var v = i32(this[i])
                 if v >= 65 && v <= 90
                 {
                     result = result + string(char(v + 32))
                 }
                 else
                 {
-                    result = result + string(s[i])
+                    result = result + string(this[i])
                 }
                 i = i + 1
             }
             return result
         }
 
-        static function StartsWith(s: string, prefix: string): bool
+        public function StartsWith(prefix: string): bool
         {
-            if prefix.Length > s.Length
+            if prefix.Length > this.Length
             {
                 return false
             }
-            return s.substring(0, prefix.Length) == prefix
+            return this.substring(0, prefix.Length) == prefix
         }
 
-        static function EndsWith(s: string, suffix: string): bool
+        public function EndsWith(suffix: string): bool
         {
-            if suffix.Length > s.Length
+            if suffix.Length > this.Length
             {
                 return false
             }
-            return s.substring(s.Length - suffix.Length, suffix.Length) == suffix
+            return this.substring(this.Length - suffix.Length, suffix.Length) == suffix
         }
 
-        static function Contains(s: string, sub: string): bool
+        public function Contains(sub: string): bool
         {
             if sub.Length == 0
             {
                 return true
             }
             var i = 0
-            while i <= s.Length - sub.Length
+            while i <= this.Length - sub.Length
             {
-                if s.substring(i, sub.Length) == sub
+                if this.substring(i, sub.Length) == sub
                 {
                     return true
                 }
@@ -82,16 +88,16 @@ namespace System
             return false
         }
 
-        static function IndexOf(s: string, sub: string): i32
+        public function IndexOf(sub: string): i32
         {
             if sub.Length == 0
             {
                 return 0
             }
             var i = 0
-            while i <= s.Length - sub.Length
+            while i <= this.Length - sub.Length
             {
-                if s.substring(i, sub.Length) == sub
+                if this.substring(i, sub.Length) == sub
                 {
                     return i
                 }
@@ -100,37 +106,37 @@ namespace System
             return -1
         }
 
-        static function Reverse(s: string): string
+        public function Reverse(): string
         {
             var result = ""
-            var i = s.Length - 1
+            var i = this.Length - 1
             while i >= 0
             {
-                result = result + string(s[i])
+                result = result + string(this[i])
                 i = i - 1
             }
             return result
         }
 
-        static function Replicate(s: string, n: i32): string
+        public function Replicate(n: i32): string
         {
             var result = ""
             var i = 0
             while i < n
             {
-                result = result + s
+                result = result + this
                 i = i + 1
             }
             return result
         }
 
-        static function CountChar(s: string, c: char): i32
+        public function CountChar(c: char): i32
         {
             var count = 0
             var i = 0
-            while i < s.Length
+            while i < this.Length
             {
-                if s[i] == c
+                if this[i] == c
                 {
                     count = count + 1
                 }
@@ -139,13 +145,13 @@ namespace System
             return count
         }
 
-        static function IsPalindrome(s: string): bool
+        public function IsPalindrome(): bool
         {
             var lo = 0
-            var hi = s.Length - 1
+            var hi = this.Length - 1
             while lo < hi
             {
-                if s[lo] != s[hi]
+                if this[lo] != this[hi]
                 {
                     return false
                 }
@@ -155,15 +161,15 @@ namespace System
             return true
         }
 
-        static function Trim(s: string): string
+        public function Trim(): string
         {
             var start = 0
-            var end = s.Length
+            var end = this.Length
             var first = char(0)
             var last = char(0)
             while start < end
             {
-                first = s[start]
+                first = this[start]
                 if first == ' '
                 {
                     start = start + 1
@@ -175,7 +181,7 @@ namespace System
             }
             while end > start
             {
-                last = s[end - 1]
+                last = this[end - 1]
                 if last == ' '
                 {
                     end = end - 1
@@ -189,39 +195,39 @@ namespace System
             {
                 return ""
             }
-            return s.substring(start, end - start)
+            return this.substring(start, end - start)
         }
 
-        static function Replace(s: string, old: string, replacement: string): string
+        public function Replace(old: string, replacement: string): string
         {
             if old.Length == 0
             {
-                return s
+                return this
             }
             var result = ""
             var i = 0
-            while i < s.Length
+            while i < this.Length
             {
-                if i > s.Length - old.Length
+                if i > this.Length - old.Length
                 {
-                    result = result + string(s[i])
+                    result = result + string(this[i])
                     i = i + 1
                 }
-                else if s.substring(i, old.Length) == old
+                else if this.substring(i, old.Length) == old
                 {
                     result = result + replacement
                     i = i + old.Length
                 }
                 else
                 {
-                    result = result + string(s[i])
+                    result = result + string(this[i])
                     i = i + 1
                 }
             }
             return result
         }
 
-        static function CountSubstring(s: string, sub: string): i32
+        public function CountSubstring(sub: string): i32
         {
             if sub.Length == 0
             {
@@ -229,9 +235,9 @@ namespace System
             }
             var count = 0
             var i = 0
-            while i <= s.Length - sub.Length
+            while i <= this.Length - sub.Length
             {
-                if s.substring(i, sub.Length) == sub
+                if this.substring(i, sub.Length) == sub
                 {
                     count = count + 1
                     i = i + sub.Length
@@ -244,9 +250,9 @@ namespace System
             return count
         }
 
-        static function PadLeft(s: string, totalWidth: i32, padChar: char): string
+        public function PadLeft(totalWidth: i32, padChar: char): string
         {
-            var result = s
+            var result = this
             while result.Length < totalWidth
             {
                 result = string(padChar) + result
@@ -254,9 +260,14 @@ namespace System
             return result
         }
 
-        static function PadRight(s: string, totalWidth: i32, padChar: char): string
+        public function PadLeft(totalWidth: i32): string
         {
-            var result = s
+            return this.PadLeft(totalWidth, ' ')
+        }
+
+        public function PadRight(totalWidth: i32, padChar: char): string
+        {
+            var result = this
             while result.Length < totalWidth
             {
                 result = result + string(padChar)
@@ -264,24 +275,29 @@ namespace System
             return result
         }
 
-        static function Split(s: string, sep: char): string[]
+        public function PadRight(totalWidth: i32): string
         {
-            var count = CountChar(s, sep) + 1
+            return this.PadRight(totalWidth, ' ')
+        }
+
+        public function Split(sep: char): string[]
+        {
+            var count = this.CountChar(sep) + 1
             var result = new string[count]
             var start = 0
             var index = 0
             var i = 0
-            while i < s.Length
+            while i < this.Length
             {
-                if s[i] == sep
+                if this[i] == sep
                 {
-                    result[index] = s.substring(start, i - start)
+                    result[index] = this.substring(start, i - start)
                     index = index + 1
                     start = i + 1
                 }
                 i = i + 1
             }
-            result[index] = s.substring(start, s.Length - start)
+            result[index] = this.substring(start, this.Length - start)
             return result
         }
     }
