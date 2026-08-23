@@ -1469,8 +1469,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.UInt8 ||
-                     type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
-                     type == TypeSymbol.UInt32)
+                     type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(intFn), IrOperand.Constant(0)));
@@ -1508,9 +1507,29 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64)
+            else if (type == TypeSymbol.UInt32)
             {
-                // long/ulong 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
+                // u32 零扩展进 8 字节寄存器后按无符号 64 位打印（值域非负，符号解释正确）
+                var widened = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Movzx64, widened, IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(widened)));
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+            }
+            else if (type == TypeSymbol.UInt64)
+            {
+                // u64 打印：UInt64ToString（无符号十进制，支持 >2^63 大值）→ PrintString/WriteString
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+            }
+            else if (type == TypeSymbol.Int64)
+            {
+                // long 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
                 Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
                 var text = AllocateRegister(8);
                 Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));

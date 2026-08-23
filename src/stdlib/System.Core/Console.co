@@ -46,6 +46,36 @@ namespace System
             Runtime.WriteLine(text)
         }
 
+        static function WriteLine(text: i8): void
+        {
+            Runtime.WriteLine(text)
+        }
+
+        static function WriteLine(text: i16): void
+        {
+            Runtime.WriteLine(text)
+        }
+
+        static function WriteLine(text: u16): void
+        {
+            Runtime.WriteLine(text)
+        }
+
+        static function WriteLine(text: u32): void
+        {
+            Runtime.WriteLine(text)
+        }
+
+        static function WriteLine(text: u64): void
+        {
+            Runtime.WriteLine(text)
+        }
+
+        static function WriteLine(text: f32): void
+        {
+            Runtime.WriteLine(text)
+        }
+
         static function Write(text: string): void
         {
             Runtime.Write(text)
@@ -77,6 +107,36 @@ namespace System
         }
 
         static function Write(text: i64): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: i8): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: i16): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: u16): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: u32): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: u64): void
+        {
+            Runtime.Write(text)
+        }
+
+        static function Write(text: f32): void
         {
             Runtime.Write(text)
         }

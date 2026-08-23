@@ -104,6 +104,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     _ = BeginFunction("Urem64", 4, 4, 4, 4);
                     EmitUrem64();
                 }
+                // 6e-M21 Phase 7：无符号 64 位十进制字符串（双平台，u32/u64 打印用）
+                if (_isX64)
+                {
+                    _ = BeginFunction("UInt64ToString", 8);
+                }
+                else
+                {
+                    _ = BeginFunction("UInt64ToString", 4, 4);
+                }
+                EmitUInt64ToString();
                 if (_isX64)
                 {
                     _ = BeginFunction("DoubleToString", 8);
@@ -4134,6 +4144,118 @@ Store(obj, 0, lenChars, 4);
                 Mark(oom);
                 var z2 = C(8, 0);
                 StoreRet(z2);
+
+                Mark(doneL);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            /// <summary>
+            /// UInt64ToString：无符号 64 位 → 十进制字符串（6e-M21 Phase 7 补遗）。
+            /// 与 Int64ToString 共用除 10 循环（DivChain 为无符号 Udiv），仅去掉符号分支。
+            /// </summary>
+            private void EmitUInt64ToString()
+            {
+                var lo = NewReg(4);
+                var hi = NewReg(4);
+                if (_isX64)
+                {
+                    var tmp = NewReg(8);
+                    Mov(tmp, _args[0]);
+                    var buf0 = NewReg(8);
+                    var scratch = NewReg(8);
+                    LeaSlot(buf0, scratch);
+                    Store(buf0, 0, tmp, 8);
+                    Load(lo, buf0, 0, 4);
+                    Load(hi, buf0, 4, 4);
+                }
+                else
+                {
+                    Mov(lo, _args[0]);
+                    Mov(hi, _args[1]);
+                }
+
+                var buf = NewReg(8);
+                var bufScratch = NewReg(8);
+                LeaSlot(buf, bufScratch);
+                Store(buf, 0, lo, 4);
+                Store(buf, 4, hi, 4);
+                var zero = C(4, 0);
+                Store(buf, 8, zero, 4);
+                Store(buf, 12, zero, 4);
+
+                var end = NewReg(8);
+                Lea(end, buf, 64);
+                var tail = NewReg(8);
+                Mov(tail, end);
+                var ten = C(4, 10);
+
+                var loop = NewLabel();
+                var done = NewLabel();
+                Mark(loop);
+                var acc = NewReg(4);
+                Const(acc, 0);
+                for (var i = 0; i < 8; i++)
+                {
+                    var w = NewReg(4);
+                    Load(w, buf, i * 2, 2);
+                    Or(acc, acc, w);
+                }
+                Cmp(acc, 0);
+                Jcc(IrCond.Equal, done);
+
+                var rem = NewReg(4);
+                CallRuntime(rem, "DivChain", buf, ten);
+                var ch = NewReg(4);
+                AddI(ch, rem, (int)'0');
+                SubI(tail, tail, 2);
+                Store(tail, 0, ch, 2);
+                Jmp(loop);
+                Mark(done);
+
+                Cmp(tail, end);
+                var hasDigits = NewLabel();
+                Jcc(IrCond.NotEqual, hasDigits);
+                SubI(tail, tail, 2);
+                var zch = C(4, (int)'0');
+                Store(tail, 0, zch, 2);
+                Mark(hasDigits);
+
+                var lenBytes = NewReg(4);
+                Sub(lenBytes, end, tail);
+
+                var size = NewReg(4);
+                Mov(size, lenBytes);
+                AddI(size, size, 2);
+                Shr(size, size, 2);
+                Shl(size, size, 2);
+                AddI(size, size, 4);
+
+                var obj = NewReg(8);
+                CallRuntime(obj, "Alloc", size);
+                Cmp(obj, 0);
+                var oom = NewLabel();
+                Jcc(IrCond.Equal, oom);
+
+                var chars = NewReg(4);
+                Mov(chars, lenBytes);
+                Shr(chars, chars, 1);
+                Store(obj, 0, chars, 4);
+
+                var count = NewReg(4);
+                Mov(count, lenBytes);
+                AddI(count, count, 2);
+                Shr(count, count, 2);
+                var dst = NewReg(8);
+                Lea(dst, obj, 4);
+                CallRuntime(null, "CopyChars", dst, tail, count);
+
+                StoreRet(obj);
+                var doneL = NewLabel();
+                Jmp(doneL);
+
+                Mark(oom);
+                var zz = C(8, 0);
+                StoreRet(zz);
 
                 Mark(doneL);
                 EndFunction(_currentFunction!, 8);
