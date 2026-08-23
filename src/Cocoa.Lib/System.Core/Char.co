@@ -1,5 +1,6 @@
 // Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
 // class Char —— char 的成员面载体（6e-M19 M2-b，对齐 C# System.Char）。
+// 注：char 无关系运算符，判定/比较统一经 i32 转换（'0'=48 '9'=57 'A'=65 'Z'=90 'a'=97 'z'=122）。
 
 namespace System
 {
@@ -8,6 +9,58 @@ namespace System
         public function ToString(): string
         {
             return Runtime.CharToString(this)
+        }
+
+        public function CompareTo(value: char): i32
+        {
+            var a = i32(this)
+            var b = i32(value)
+            if a < b
+            {
+                return -1
+            }
+            if a > b
+            {
+                return 1
+            }
+            return 0
+        }
+
+        public static function IsDigit(c: char): bool
+        {
+            var v = i32(c)
+            return v >= 48 && v <= 57
+        }
+
+        public static function IsLetter(c: char): bool
+        {
+            var v = i32(c)
+            return (v >= 97 && v <= 122) || (v >= 65 && v <= 90)
+        }
+
+        public static function IsWhiteSpace(c: char): bool
+        {
+            return c == ' ' || c == '\t' || c == '\n' || c == '\r'
+        }
+
+        public static function ToUpper(c: char): char
+        {
+            var v = i32(c)
+            if v >= 97 && v <= 122
+            {
+                return char(v - 32)
+            }
+            return c
+        }
+
+        public static function ToLower(c: char): char
+        {
+            var v = i32(c)
+            if v >= 65 && v <= 90
+            {
+                return char(v + 32)
+            }
+            return c
         }
     }
 }
