@@ -39,5 +39,35 @@ function Main()
             Assert.Contains("A", stdout);
             Assert.Contains("200", stdout);
         }
+
+        [Fact]
+        public void Facade_ParseAndCompareTo_Il()
+        {
+            var source = @"using System
+
+function Main()
+{
+    var a = Int32.Parse(""123"")
+    var b = Int64.Parse(""-456"")
+    Console.WriteLine(a)
+    Console.WriteLine(b)
+    Console.WriteLine(a.CompareTo(100))
+    Console.WriteLine(a.CompareTo(200))
+    Console.WriteLine(Char.IsDigit('5'))
+    Console.WriteLine(Char.ToUpper('q'))
+    Console.WriteLine(u8.MaxValue)
+    Console.WriteLine(i32.MinValue)
+}";
+            var (exitCode, stdout) = CodeAnalysis.Emit.IL.IlE2eTests.EmitAndRun(source, "FacadeParseCmp");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("123", stdout);
+            Assert.Contains("-456", stdout);
+            Assert.Contains("1", stdout);
+            Assert.Contains("-1", stdout);
+            Assert.Contains("True", stdout);
+            Assert.Contains("Q", stdout);
+            Assert.Contains("255", stdout);
+            Assert.Contains("-2147483648", stdout);
+        }
     }
 }
