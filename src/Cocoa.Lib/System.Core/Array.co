@@ -1,6 +1,6 @@
 // Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
 // class Array —— 纯 Cocoa 源码静态类，只依赖语言核心（数组/控制流）
-// 详细分层设计见 docs/标准库设计.md
+// 详细分层设计见 docs-dev/标准库设计.md
 
 namespace System
 {

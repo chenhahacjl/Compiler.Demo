@@ -30,7 +30,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
                 if (function.IsExtern && function.CharSet == CharSet.Ansi)
                 {
                     builder.Add(Diagnostic.Error(function.Declaration?.Identifier.Location ?? default,
-                        $"extern function '{function.Name}' 声明 charset = ansi，native 后端未实现（仅支持 unicode，见 docs/内部调用与互操作设计.md §5.3）。"));
+                        $"extern function '{function.Name}' 声明 charset = ansi，native 后端未实现（仅支持 unicode，见 docs-dev/内部调用与互操作设计.md §5.3）。"));
                     continue;
                 }
 

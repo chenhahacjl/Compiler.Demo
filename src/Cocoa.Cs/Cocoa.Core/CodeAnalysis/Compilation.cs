@@ -258,7 +258,7 @@ namespace Cocoa.CodeAnalysis
             }
 
             // native 后端仅放行"纯容器类"（6e-M17）：类只含 syscall/静态 extern 方法、无实例字段/构造/属性/继承。
-            // 对象模型（实例字段/方法/继承/多态）仍后置——见 docs/类库设计.md。
+            // 对象模型（实例字段/方法/继承/多态）仍后置——见 docs-dev/类库设计.md。
             if (program.Classes.Length > 0)
             {
                 var offendingClass = program.Classes.FirstOrDefault(c => !IsPureContainerClass(c));
@@ -266,7 +266,7 @@ namespace Cocoa.CodeAnalysis
                 {
                     var location = offendingClass.Declaration?.Identifier.Location
                                    ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"class '{offendingClass.Name}' 含实例成员/构造/字段/属性/基类，暂不支持 native 后端（native 仅放行纯 syscall/extern 容器类，见 docs/内部调用与互操作设计.md）"));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"class '{offendingClass.Name}' 含实例成员/构造/字段/属性/基类，暂不支持 native 后端（native 仅放行纯 syscall/extern 容器类，见 docs-dev/内部调用与互操作设计.md）"));
                 }
             }
 

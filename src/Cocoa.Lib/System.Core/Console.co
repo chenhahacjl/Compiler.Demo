@@ -1,6 +1,6 @@
 // Cocoa 系统标准库 · System.Core 封装层（namespace System）
 // class Console —— Write/WriteLine/ReadLine/ReadKey（调 Runtime.WriteLine/Write/ReadLine/ReadKey），C# 同构静态类
-// 详细分层设计见 docs/标准库设计.md
+// 详细分层设计见 docs-dev/标准库设计.md
 
 namespace System
 {

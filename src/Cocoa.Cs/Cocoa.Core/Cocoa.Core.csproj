@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\stdlib\System.Core\out\System.Core.cod" Link="System.Core.cod" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\Cocoa.Lib\System.Core\out\System.Core.cod" Link="System.Core.cod" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
