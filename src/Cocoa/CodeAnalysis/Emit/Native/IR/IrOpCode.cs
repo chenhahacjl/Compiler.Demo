@@ -114,6 +114,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         Trunc64,     // Trunc64 <dst> <src>            — long 低 32 位截断
         FCvtDS,      // FCvtDS <dst> <src>             — double → float（cvtsd2ss，6e-M21 Phase 5b）
         FCvtSSD,     // FCvtSSD <dst> <src>            — float → double（cvtss2sd）
+        FCvtSI64U,   // FCvtSI64U <dst> <src>          — u64 → double/float 精确转换（清 MSB + 补偿 2^63，Phase 7）
 
         // 调试/信息
         Nop,         // Nop

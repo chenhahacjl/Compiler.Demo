@@ -106,8 +106,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         void FldM64(X64MemoryOperand src);
         void FstpM32(X64MemoryOperand dst);
         void FldM32(X64MemoryOperand src);
+        void FildM32(X64MemoryOperand src);
         void FldcwM16(X64MemoryOperand src);
         void FnstcwM16(X64MemoryOperand dst);
+        void Fmulp();
+        void Faddp();
 
         void Movzx(X64Size dstSize, X64Register dst, X64Register src);
         void Movzx(X64Size dstSize, X64Register dst, X64MemoryOperand src);

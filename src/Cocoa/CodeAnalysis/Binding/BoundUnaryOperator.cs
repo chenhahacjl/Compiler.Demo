@@ -48,12 +48,14 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var t in numericTypes)
             {
-                ops.Add(new BoundUnaryOperator(SyntaxKind.PlusToken, BoundUnaryOperatorKind.Identity, t));
-                ops.Add(new BoundUnaryOperator(SyntaxKind.MinusToken, BoundUnaryOperatorKind.Negation, t));
+                // 6e-M21 Phase 7：<32 位整数一元 +/-/~ 结果升 Int32（C# 同构：-(byte)5 / ~(byte)5 均为 int）
+                var result = t.IsInteger && t.BitWidth < 32 ? TypeSymbol.Int32 : t;
+                ops.Add(new BoundUnaryOperator(SyntaxKind.PlusToken, BoundUnaryOperatorKind.Identity, t, result));
+                ops.Add(new BoundUnaryOperator(SyntaxKind.MinusToken, BoundUnaryOperatorKind.Negation, t, result));
 
                 if (t.IsInteger)
                 {
-                    ops.Add(new BoundUnaryOperator(SyntaxKind.TildeToken, BoundUnaryOperatorKind.OnesComplement, t));
+                    ops.Add(new BoundUnaryOperator(SyntaxKind.TildeToken, BoundUnaryOperatorKind.OnesComplement, t, result));
                 }
             }
 

@@ -150,6 +150,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Explicit;
             }
 
+            // 6e-M21 Phase 7：全部数值类型（含窄整型/无符号/f32）→ string 显式转换（ToString 同构）
+            if (to == TypeSymbol.String &&
+                ((from.IsInteger && !from.IsPlaceholder128) || from.IsFloat || from == TypeSymbol.Boolean))
+            {
+                return Conversion.Explicit;
+            }
+
             if (from == TypeSymbol.String)
             {
                 if (to == TypeSymbol.Boolean || to == TypeSymbol.Int32 || to == TypeSymbol.Int64)

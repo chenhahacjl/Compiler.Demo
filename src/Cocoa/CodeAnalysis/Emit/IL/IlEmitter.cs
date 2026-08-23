@@ -1311,6 +1311,27 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            // 6e-M21 Phase 7：其余数值类型 → string（装箱 + Convert.ToString）
+            if ((node.Expression.Type.IsInteger && node.Expression.Type != TypeSymbol.Boolean) &&
+                !node.Expression.Type.IsPlaceholder128 && node.Type == TypeSymbol.String)
+            {
+                var boxedName = node.Expression.Type == TypeSymbol.Int8 ? "System.SByte"
+                    : node.Expression.Type == TypeSymbol.Int16 ? "System.Int16"
+                    : node.Expression.Type == TypeSymbol.UInt16 ? "System.UInt16"
+                    : node.Expression.Type == TypeSymbol.UInt32 ? "System.UInt32"
+                    : "System.UInt64";
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(boxedName));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
+            if (node.Expression.Type == TypeSymbol.Float && node.Type == TypeSymbol.String)
+            {
+                il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType("System.Single"));
+                il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                return;
+            }
+
             if (node.Expression.Type == TypeSymbol.String && node.Type == TypeSymbol.Int64)
             {
                 il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt64);

@@ -884,12 +884,50 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。</summary>
+        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。
+        /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道。</summary>
         private IrVirtualRegister EmitFormatExpression(BoundFormatExpression node)
         {
             var type = node.Value.Type;
             var format = node.Format;
             var width = node.Width ?? 0;
+
+            var value = EmitExpression(node.Value);
+            var instructions = _currentFunction.Instructions;
+
+            // 新类型预转字符串（复用既有 ToString 原语），统一走 string 通道
+            if (type == TypeSymbol.Float)
+            {
+                var asDouble = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, asDouble, IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(asDouble)));
+                value = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, value, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                type = TypeSymbol.String;
+            }
+            else if (type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64)
+            {
+                var src = value;
+                if (type == TypeSymbol.UInt32)
+                {
+                    src = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.Movzx64, src, IrOperand.Reg(value)));
+                }
+
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(src)));
+                value = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, value, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
+                type = TypeSymbol.String;
+            }
+            else if (type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
+                     type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16)
+            {
+                // 窄整型槽内已是 32 位规范表示，直接走 IntToString
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                value = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Call, value, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
+                type = TypeSymbol.String;
+            }
 
             int typeKind;
             if (type == TypeSymbol.String) typeKind = 2;
@@ -898,8 +936,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             else if (type == TypeSymbol.Double) typeKind = 1;
             else if (type == TypeSymbol.Int64) typeKind = 5; // M1：long 插值格式仅默认十进制（StringFormat 内忽略格式码，见开发计划）
             else typeKind = 0; // int / byte / enum
-
-            var value = EmitExpression(node.Value);
 
             var fmtPtr = EmitStringLiteral(format ?? "");
 
@@ -1837,7 +1873,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64)
                 {
                     var r = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(value)));
+                    if (from == TypeSymbol.UInt64)
+                    {
+                        // 6e-M21 Phase 7：无符号精确转换（清 MSB + 补偿 2^63），支持 >2^63 大值
+                        Add(instructions, new IrInstruction(IrOpCode.FCvtSI64U, r, IrOperand.Reg(value)));
+                    }
+                    else
+                    {
+                        Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(value)));
+                    }
+
                     result = r;
                     return true;
                 }
@@ -1869,20 +1914,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return true;
             }
 
-            if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64)
-            {
-                var r8 = AllocateRegister(4);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r8, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
-                result = r8;
-                return true;
-            }
-
             if (from.IsInteger && !from.IsSigned || from == TypeSymbol.Char)
             {
                 var wide = AllocateRegister(8);
                 Add(instructions, new IrInstruction(IrOpCode.Movzx64, wide, IrOperand.Reg(value)));
-                var r = AllocateRegister(4);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(wide), IrOperand.None, 0, 0, true));
+                if (to == TypeSymbol.Float)
+                {
+                    // u32 值域非负：零扩展后按无符号 long 路径精确转换到 f32
+                    var r4 = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64U, r4, IrOperand.Reg(wide), IrOperand.None, 0, 0, true));
+                    result = r4;
+                    return true;
+                }
+
+                var r = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(wide)));
                 result = r;
                 return true;
             }

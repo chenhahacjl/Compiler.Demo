@@ -265,11 +265,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     frameBytes += 0x80;
                 }
 
-                // 6e-M21 Phase 5b：x87 控制字专用槽（-frameBytes），与变量槽/LeaSlot 缓冲隔离，
-                // 避免恢复 fldcw 覆盖 fistp 写入的转换结果（m2 冒烟踩坑：cwBuf 与重排缓冲同址致 i64(f32)=639）
-                if (function.Instructions.Any(i => i.OpCode == IrOpCode.FCvtSD64))
+                // 6e-M21 Phase 5b/7：x87 控制字专用槽（-frameBytes）+ u64→浮点常量槽（[-fb+8..+16)），
+                // 与变量槽/LeaSlot 缓冲隔离，避免恢复 fldcw 覆盖 fistp 写入的转换结果
+                if (function.Instructions.Any(i => i.OpCode == IrOpCode.FCvtSD64 || i.OpCode == IrOpCode.FCvtSI64U))
                 {
-                    frameBytes += 8;
+                    frameBytes += 16;
                 }
 
                 _a.Sub(X64Size.Dword, X64Register.RSP, frameBytes);
@@ -468,6 +468,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     break;
                 case IrOpCode.FCvtSSD:
                     EmitFCvtSSD(instruction);
+                    break;
+                case IrOpCode.FCvtSI64U:
+                    EmitFCvtSI64U(instruction);
                     break;
                 case IrOpCode.Movsx64:
                     EmitMovsx64(instruction);
@@ -1884,8 +1887,76 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
             }
         }
+        /// <summary>
+        /// 6e-M21 Phase 7锛歶64 鈫?double/float 绮剧‘杞崲锛堝惈 >2^63 澶у€硷級銆?        /// 鎭掔瓑寮忥細(double)u = (double)(u 娓?MSB) + hiBit路2^63锛屽悇姝ュ潎绮剧‘鍙〃绀恒€?        /// x64锛歴hl1/shr1 娓?MSB + movabs 甯搁噺 2^63锛堟棤鍒嗘敮锛夛紱x86锛欶PU 鏃犲垎鏀袱娈靛拰锛堝父閲忓啓甯т笓鐢ㄦЫ锛夈€?        /// </summary>
+        private void EmitFCvtSI64U(IrInstruction instruction)
+        {
+            var single = instruction.SinglePrecision;
+            var srcSlot = GetSlotOffset(instruction.A.Register!);
+            var dstSlot = GetSlotOffset(instruction.Dst!);
 
-        /// <summary>double/float → long 截断。x64：cvttsd2si/cvttss2si r64；x86：fldcw 切换向零舍入 + fistp。</summary>
+            if (_isX64)
+            {
+                LoadSlot(X64Register.RAX, instruction.A.Register!, 8);
+                _a.Mov(X64Size.Qword, X64Register.RCX, X64Register.RAX);
+                _a.Shr(X64Size.Qword, X64Register.RCX, 63);                 // hiBit (logical)
+                _a.Mov(X64Size.Qword, X64Register.RDX, X64Register.RAX);
+                _a.Shl(X64Size.Qword, X64Register.RDX, 1);                  // 宸︾Щ涓?MSB
+                _a.Shr(X64Size.Qword, X64Register.RDX, 1);                  // 鍙崇Щ琛?0 鈫?娓?MSB
+                _a.Cvtsi2sd64(X64Register.XMM0, X64Register.RDX);           // 灏句綋绮剧‘
+                _a.Cvtsi2sd64(X64Register.XMM1, X64Register.RCX);           // hiBit as double
+                _a.Mov(X64Register.RDX, unchecked((long)0x43E0000000000000));
+                _a.MovqGprToXmm(X64Register.XMM2, X64Register.RDX);         // double 浣嶆ā寮?2^63
+                _a.Mulsd(X64Register.XMM1, X64Register.XMM2);
+                _a.Addsd(X64Register.XMM0, X64Register.XMM1);
+                if (single)
+                {
+                    _a.Cvtsd2ss(X64Register.XMM0, X64Register.XMM0);
+                }
+
+                StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single);
+                return;
+            }
+
+            // x86锛氶噸鎺?u64 鍒?[dstSlot-4..dstSlot] 灏忕缂撳啿锛堜笌鏃㈡湁 FPU 璺緞涓€鑷达級
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.EAX);
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, srcSlot - 4));
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+
+            var bitBuf = new X64MemoryOperand(X64Register.RBP, -_frameBytes);       // hiBit 暂存（本函数不用 cw）
+            var constLo = new X64MemoryOperand(X64Register.RBP, -_frameBytes + 8);  // double 2^63 低 dword
+            var constHi = new X64MemoryOperand(X64Register.RBP, -_frameBytes + 12); // 高 dword
+
+            _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+            _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.EAX);
+            _a.Shr(X64Size.Dword, X64Register.ECX, 31);                             // hiBit
+            _a.Mov(X64Size.Dword, bitBuf, X64Register.ECX);
+            _a.And(X64Size.Dword, X64Register.EAX, 0x7FFFFFFF);
+            _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            _a.Mov(X64Size.Dword, constLo, 0);
+            _a.Mov(X64Size.Dword, constHi, unchecked((int)0x43E00000));
+
+            _a.FildM32(bitBuf);                                                     // st0 = hiBit (0.0/1.0)
+            _a.FldM64(constLo);                                                    // st0 = 2^63, st1 = hiBit
+            _a.Fmulp();                                                            // st0 = hiBit*2^63
+            _a.FildM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));       // st0 = 灏句綋
+            _a.Faddp();                                                            // st0 = 鍜?
+            if (single)
+            {
+                _a.FstpM32(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+            }
+            else
+            {
+                _a.FstpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
+                _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, dstSlot));
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
+                _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
+            }
+        }
         private void EmitFCvtSD64(IrInstruction instruction)
         {
             var single = instruction.SinglePrecision;

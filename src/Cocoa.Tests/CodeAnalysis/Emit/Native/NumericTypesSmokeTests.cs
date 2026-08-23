@@ -62,6 +62,35 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 
         [Theory]
         [MemberData(nameof(GetPlatforms))]
+        public void Compound_Assignment_And_Typed_Arrays(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+function Main()
+{
+    var x: i64 = 100
+    x += 50
+    x -= 30
+    Console.WriteLine(x)
+    var f: f32 = 1.5f
+    f *= 2.0f
+    Console.WriteLine(f64(f))
+    var arr: i16[] = new i16[] { 10, 20, 30 }
+    arr[1] = (i16)320
+    Console.WriteLine(i32(arr[1]) + i32(arr[0]))
+    Console.WriteLine(arr.Length)
+    var bytes: u8[] = new u8[3]
+    bytes[0] = (u8)200
+    Console.WriteLine(i32(bytes[0]))
+    Console.WriteLine(bytes.Length)
+}", "numeric-compound", (TargetPlatform)platform);
+            Assert.Equal(
+                "120\n3\n330\n3\n200\n3\n",
+                stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
         public void Signed_Narrow_Integers_Semantics(object platform)
         {
             var (exitCode, stdout) = EmitNativeAndRun(@"using System

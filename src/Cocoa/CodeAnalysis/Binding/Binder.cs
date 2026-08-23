@@ -2774,6 +2774,17 @@ namespace Cocoa.CodeAnalysis.Binding
                     var equivalentOperatorTokenKind = SyntaxFacts.GetBinaryOperatorOfAssignmentOperator(syntax.AssignmentToken.Kind);
                     var boundOperator = BoundBinaryOperator.Bind(equivalentOperatorTokenKind, variable.Type, boundExpression.Type);
 
+                    // 6e-M21 Phase 7：数值复合赋值走二元提升（x: i64 += 50 等），失败再报未定义
+                    if (boundOperator == null && IsNumeric(variable.Type) && IsNumeric(boundExpression.Type))
+                    {
+                        var commonType = GetBinaryNumericResultType(variable.Type, boundExpression.Type, equivalentOperatorTokenKind);
+                        if (commonType != null)
+                        {
+                            boundExpression = BindConversion(boundExpression.Syntax.Location, boundExpression, commonType, allowExplicit: false);
+                            boundOperator = BoundBinaryOperator.Bind(equivalentOperatorTokenKind, commonType, commonType);
+                        }
+                    }
+
                     if (boundOperator == null)
                     {
                         _diagnostics.ReportUndefinedBinaryOperator(syntax.AssignmentToken.Location, syntax.AssignmentToken.Text, variable.Type, boundExpression.Type);

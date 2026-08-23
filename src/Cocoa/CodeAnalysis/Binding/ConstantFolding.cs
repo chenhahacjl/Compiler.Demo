@@ -18,17 +18,17 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var value = operand.ConstantValue.Value;
             var type = operand.Type;
+            // 6e-M21 Phase 7：窄整型一元结果升 Int32——归位以结果类型为准
+            var resultType = op.ResultType;
 
             switch (op.Kind)
             {
                 case BoundUnaryOperatorKind.Identity:
-                    return new BoundConstant(value);
+                    return new BoundConstant(NumericBox.Box(resultType, NumericBox.ToSigned64(value)));
                 case BoundUnaryOperatorKind.Negation:
                     if (type.IsInteger && !type.IsPlaceholder128)
                     {
-                        return type.IsSigned
-                            ? new BoundConstant(NumericBox.Box(type, unchecked(-NumericBox.ToSigned64(value))))
-                            : new BoundConstant(NumericBox.Box(type, unchecked(0UL - NumericBox.ToUnsigned64(value))));
+                        return new BoundConstant(NumericBox.Box(resultType, unchecked(-NumericBox.ToSigned64(value))));
                     }
 
                     if (type == TypeSymbol.Float)
@@ -41,9 +41,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundUnaryOperatorKind.OnesComplement:
                     if (type.IsInteger && !type.IsPlaceholder128)
                     {
-                        return type.IsSigned
-                            ? new BoundConstant(NumericBox.Box(type, ~NumericBox.ToSigned64(value)))
-                            : new BoundConstant(NumericBox.Box(type, ~NumericBox.ToUnsigned64(value)));
+                        if (resultType.IsSigned)
+                        {
+                            return new BoundConstant(NumericBox.Box(resultType, ~NumericBox.ToSigned64(value)));
+                        }
+
+                        return new BoundConstant(NumericBox.Box(resultType, ~NumericBox.ToUnsigned64(value)));
                     }
 
                     break;

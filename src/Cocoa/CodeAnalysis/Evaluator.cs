@@ -230,21 +230,21 @@ namespace Cocoa.CodeAnalysis
             Debug.Assert(operand != null);
 
             var operandType = unary.Op.OperandType;
+            // 6e-M21 Phase 7：窄整型一元结果升 Int32——归位以结果类型为准
+            var resultType = unary.Op.ResultType;
 
             switch (unary.Op.Kind)
             {
                 case BoundUnaryOperatorKind.Identity:
-                    if (operandType == TypeSymbol.Int64)
-                        return (long)operand!;
-                    if (operandType == TypeSymbol.Int32)
-                        return (int)operand;
-                    return operand!; // 其余类型运行时装箱值即正确表示（6e-M21 Phase 3）
+                    if (operandType == resultType)
+                        return operand!;
+                    if (operandType.IsInteger && !operandType.IsPlaceholder128)
+                        return Binding.NumericBox.Box(resultType, Binding.NumericBox.ToSigned64(operand));
+                    return operand!;
                 case BoundUnaryOperatorKind.Negation:
                     if (operandType.IsInteger && !operandType.IsPlaceholder128)
                     {
-                        return operandType.IsSigned
-                            ? Binding.NumericBox.Box(operandType, unchecked(-Binding.NumericBox.ToSigned64(operand)))
-                            : Binding.NumericBox.Box(operandType, unchecked(0UL - Binding.NumericBox.ToUnsigned64(operand)));
+                        return Binding.NumericBox.Box(resultType, unchecked(-Binding.NumericBox.ToSigned64(operand)));
                     }
 
                     if (operandType == TypeSymbol.Float)
@@ -257,9 +257,9 @@ namespace Cocoa.CodeAnalysis
                 case BoundUnaryOperatorKind.OnesComplement:
                     if (operandType.IsInteger && !operandType.IsPlaceholder128)
                     {
-                        return operandType.IsSigned
-                            ? Binding.NumericBox.Box(operandType, ~Binding.NumericBox.ToSigned64(operand))
-                            : Binding.NumericBox.Box(operandType, ~Binding.NumericBox.ToUnsigned64(operand));
+                        return resultType.IsSigned
+                            ? Binding.NumericBox.Box(resultType, ~Binding.NumericBox.ToSigned64(operand))
+                            : Binding.NumericBox.Box(resultType, ~Binding.NumericBox.ToUnsigned64(operand));
                     }
 
                     if (operandType == TypeSymbol.Int64)

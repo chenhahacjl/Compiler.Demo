@@ -464,13 +464,36 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X86
             EmitMemoryRest(src, memory);
         }
 
+        /// <summary>FILD m32int（DB /0）：压入 32 位有符号整数（6e-M21 Phase 7）。</summary>
+        public void FildM32(X64MemoryOperand src)
+        {
+            var memory = EncodeMemory(src);
+            EmitByte(0xDB);
+            EmitModRMByte(memory.Mod, 0, memory.Rm);
+            EmitMemoryRest(src, memory);
+        }
         /// <summary>FLDCW m16：加载 x87 控制字（舍入模式切换）。</summary>
         public void FldcwM16(X64MemoryOperand src)
         {
+
             var memory = EncodeMemory(src);
             EmitByte(0xD9);
             EmitModRMByte(memory.Mod, 5, memory.Rm);
             EmitMemoryRest(src, memory);
+        }
+
+        /// <summary>FMULP st(1),st(0)：栈顶两元素相乘并弹出（6e-M21 Phase 7）。</summary>
+        public void Fmulp()
+        {
+            EmitByte(0xDE);
+            EmitByte(0xC9);
+        }
+
+        /// <summary>FADDP st(1),st(0)：栈顶两元素相加并弹出。</summary>
+        public void Faddp()
+        {
+            EmitByte(0xDE);
+            EmitByte(0xC1);
         }
 
         /// <summary>FNSTCW m16：保存 x87 控制字。</summary>

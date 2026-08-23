@@ -518,8 +518,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         public void FldM64(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FstpM32(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FldM32(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void FildM32(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FldcwM16(X64MemoryOperand src) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void FnstcwM16(X64MemoryOperand dst) => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void Fmulp() => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
+        public void Faddp() => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
 
         public void Movzx(X64Size dstSize, X64Register dst, X64Register src)
         {
@@ -682,7 +685,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         public void Ucomisd(X64Register xmmA, X64Register xmmB) => EmitSseRegReg(0x2E, 0x66, xmmA, xmmB);
         public void MovdGprToXmm(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r32Src);
         public void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x7E, 0x66, xmmSrc, r32Dst);
-        public void MovqGprToXmm(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(0x7E, 0xF3, xmmDst, r64Src, rexW: true);
+        public void MovqGprToXmm(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r64Src, rexW: true);
         public void MovqXmmToGpr(X64Register r64Dst, X64Register xmmSrc) => EmitSseRegReg(0xD6, 0x66, xmmSrc, r64Dst, rexW: true);
         public void Pinsrd(X64Register xmmDst, X64Register r32Src, byte imm) => EmitSseRegImm(0x22, 0x66, xmmDst, r32Src, imm);
         public void Pextrd(X64Register r32Dst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x16, 0x66, r32Dst, xmmSrc, imm);
