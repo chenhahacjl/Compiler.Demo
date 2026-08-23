@@ -23,6 +23,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ConsoleKeyInfoType = RequireType("System.ConsoleKeyInfo");
             Int32Type = RequireType("System.Int32");
             Int64Type = RequireType("System.Int64");
+            UInt64Type = RequireType("System.UInt64");
 
             ObjectEquals = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
             ConsoleReadLine = RequireMethod("System.Console", "ReadLine", Array.Empty<string>());
@@ -65,6 +66,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlTypeRef ConsoleKeyInfoType { get; }
         public IlTypeRef Int32Type { get; }
         public IlTypeRef Int64Type { get; }
+        public IlTypeRef UInt64Type { get; }
         public IlMethodRef ObjectEquals { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }

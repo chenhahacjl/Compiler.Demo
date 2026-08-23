@@ -1,0 +1,10 @@
+﻿namespace System
+{
+    public class UInt32
+    {
+        public function ToString(): string
+        {
+            return Runtime.UInt64ToString(u64(this))
+        }
+    }
+}

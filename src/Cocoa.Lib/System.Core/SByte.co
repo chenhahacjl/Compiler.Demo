@@ -1,0 +1,12 @@
+﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System，6e-M19 M2-b）
+
+namespace System
+{
+    public class SByte
+    {
+        public function ToString(): string
+        {
+            return Runtime.Int32ToString(i32(this))
+        }
+    }
+}

@@ -3100,6 +3100,15 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // 6e-M19 M2-b：facade 静态常量（i32.MaxValue / Double.NaN 等）——左侧为基元类型名，折叠为字面量
+            if (ResolveDottedTypeName(syntax.Expression) is string facadeConstTypeName &&
+                LookupType(facadeConstTypeName) is TypeSymbol constReceiverType &&
+                FacadeNameOfType(constReceiverType) is string constFacadeName &&
+                FacadeConstants[constFacadeName].TryGetValue(identifier, out var constantValue))
+            {
+                return new BoundLiteralExpression(syntax, constantValue);
+            }
+
             var boundTarget = BindExpression(syntax.Expression);
 
             if (boundTarget.Type == TypeSymbol.Error)
@@ -3324,15 +3333,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>receiver 类型 → facade 类（stdlib cod 注入；全名解析优先，cod 库直查兜底）。</summary>
         private ClassTypeSymbol? ResolveFacadeClass(TypeSymbol receiverType)
         {
-            var fullName = receiverType == TypeSymbol.String ? "System.String"
-                : receiverType == TypeSymbol.Int32 ? "System.Int32"
-                : receiverType == TypeSymbol.Int64 ? "System.Int64"
-                : receiverType == TypeSymbol.Double ? "System.Double"
-                : receiverType == TypeSymbol.Boolean ? "System.Boolean"
-                : receiverType == TypeSymbol.Char ? "System.Char"
-                : receiverType == TypeSymbol.UInt8 ? "System.Byte"
-                : null;
-
+            var fullName = FacadeNameOfType(receiverType);
             if (fullName == null)
             {
                 return null;
@@ -4050,15 +4051,70 @@ namespace Cocoa.CodeAnalysis.Binding
         private static readonly Dictionary<string, TypeSymbol?> FacadeTargets = new Dictionary<string, TypeSymbol?>
         {
             ["System.String"] = TypeSymbol.String,
+            ["System.SByte"] = TypeSymbol.Int8,
+            ["System.Int16"] = TypeSymbol.Int16,
             ["System.Int32"] = TypeSymbol.Int32,
             ["System.Int64"] = TypeSymbol.Int64,
+            ["System.Byte"] = TypeSymbol.UInt8,
+            ["System.UInt16"] = TypeSymbol.UInt16,
+            ["System.UInt32"] = TypeSymbol.UInt32,
+            ["System.UInt64"] = TypeSymbol.UInt64,
+            ["System.Single"] = TypeSymbol.Float,
             ["System.Double"] = TypeSymbol.Double,
             ["System.Boolean"] = TypeSymbol.Boolean,
             ["System.Char"] = TypeSymbol.Char,
-            ["System.Byte"] = TypeSymbol.UInt8,
             ["System.Object"] = null,
             ["System.Type"] = null,
         };
+
+        /// <summary>6e-M19 M2-b：facade 静态常量表（i32.MaxValue 等，编译期折叠为字面量）。</summary>
+        private static readonly Dictionary<string, Dictionary<string, object>> FacadeConstants = new Dictionary<string, Dictionary<string, object>>
+        {
+            ["System.Int32"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = int.MaxValue,
+                ["MinValue"] = int.MinValue,
+            },
+            ["System.Int64"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = long.MaxValue,
+                ["MinValue"] = long.MinValue,
+            },
+            ["System.Byte"] = new Dictionary<string, object>
+            {
+                // 归一为 i32（u8 常量值域安全，且字面量发射器不识别 byte 装箱）
+                ["MaxValue"] = (int)byte.MaxValue,
+                ["MinValue"] = (int)byte.MinValue,
+            },
+            ["System.Double"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = double.MaxValue,
+                ["MinValue"] = double.MinValue,
+                ["Epsilon"] = double.Epsilon,
+                ["NaN"] = double.NaN,
+                ["PositiveInfinity"] = double.PositiveInfinity,
+                ["NegativeInfinity"] = double.NegativeInfinity,
+            },
+        };
+
+        /// <summary>基元类型 → facade 全名（全基元集，与 FacadeTargets 保持一致）。</summary>
+        private static string? FacadeNameOfType(TypeSymbol receiverType)
+        {
+            if (receiverType == TypeSymbol.String) return "System.String";
+            if (receiverType == TypeSymbol.Boolean) return "System.Boolean";
+            if (receiverType == TypeSymbol.Char) return "System.Char";
+            if (receiverType == TypeSymbol.Int8) return "System.SByte";
+            if (receiverType == TypeSymbol.Int16) return "System.Int16";
+            if (receiverType == TypeSymbol.Int32) return "System.Int32";
+            if (receiverType == TypeSymbol.Int64) return "System.Int64";
+            if (receiverType == TypeSymbol.UInt8) return "System.Byte";
+            if (receiverType == TypeSymbol.UInt16) return "System.UInt16";
+            if (receiverType == TypeSymbol.UInt32) return "System.UInt32";
+            if (receiverType == TypeSymbol.UInt64) return "System.UInt64";
+            if (receiverType == TypeSymbol.Float) return "System.Single";
+            if (receiverType == TypeSymbol.Double) return "System.Double";
+            return null;
+        }
 
         /// <summary>6e-M19 M2-a：System.Object / System.Type 内建单例按名解析（裸 Type 不在此列，避免劫持 using 导入的同名类型）。</summary>
         private static TypeSymbol? ResolveBuiltInSystemType(string fullName)

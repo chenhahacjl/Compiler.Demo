@@ -1233,11 +1233,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleBeep);
                     break;
                 case BuiltinKind.Int32ToString:
-                case BuiltinKind.Int64ToString:
+                case BuiltinKind.UInt64ToString:
                     // box 值（框架 TypeRef）→ Convert.ToString(object)
                     il.Emit(
                         IlOpCodeTable.Get("Box"),
-                        function.BuiltinKind == BuiltinKind.Int32ToString ? (object)_framework.Int32Type : _framework.Int64Type);
+                        function.BuiltinKind == BuiltinKind.Int32ToString ? (object)_framework.Int32Type : _framework.UInt64Type);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                    break;
+                case BuiltinKind.Int64ToString:
+                    il.Emit(
+                        IlOpCodeTable.Get("Box"),
+                        (object)_framework.Int64Type);
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
                     break;
                 case BuiltinKind.DoubleToString:

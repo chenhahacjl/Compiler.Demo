@@ -898,6 +898,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ParseInt64"), IrOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.UInt64ToString:
+                {
+                    // ulong → 字符串：UInt64ToString（无符号十进制，SetArg64 统一双架构）
+                    var value = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.TickCount:
                 {
                     var result = AllocateRegister(4);
