@@ -8,5 +8,11 @@ namespace System
         {
             return Runtime.UInt64ToString(this)
         }
+        public function CompareTo(value: u64): i32
+        {
+            if this < value { return -1 }
+            if this > value { return 1 }
+            return 0
+        }
     }
 }
