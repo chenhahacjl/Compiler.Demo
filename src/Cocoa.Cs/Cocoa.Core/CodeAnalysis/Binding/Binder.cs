@@ -4102,9 +4102,15 @@ namespace Cocoa.CodeAnalysis.Binding
             },
         };
 
-        /// <summary>基元类型 → facade 全名（全基元集，与 FacadeTargets 保持一致）。</summary>
+        /// <summary>基元类型 → facade 全名（全基元集 + facade 类符号自身——dotted 类名形式解析产物）。</summary>
         private static string? FacadeNameOfType(TypeSymbol receiverType)
         {
+            if (receiverType is ClassTypeSymbol classSymbol &&
+                (classSymbol.IsFacadeClass || FacadeTargets.ContainsKey(classSymbol.FullName)))
+            {
+                return classSymbol.FullName;
+            }
+
             if (receiverType == TypeSymbol.String) return "System.String";
             if (receiverType == TypeSymbol.Boolean) return "System.Boolean";
             if (receiverType == TypeSymbol.Char) return "System.Char";
