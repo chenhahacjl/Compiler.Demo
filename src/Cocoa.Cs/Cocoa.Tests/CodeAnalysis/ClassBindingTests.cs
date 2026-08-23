@@ -1292,18 +1292,120 @@ public class Point extends Object
         }
 
         [Fact]
-        public void ObjectModel_ObjectOnlyBase_Override_ReportsNoBase()
+        public void ObjectModel_NoExplicitBase_OverrideObjectMethods_Binds()
         {
+            // 6e-M19 M2-c 反转：System.Object 携带真实成员面后，无显式基类类可直接 override 其虚方法
             var code = @"
 public class Point
 {
+    private _x: i32
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+
     public override function ToString(): string
     {
-        return ""Point""
+        return ""Point("" + (string)_x + "")""
+    }
+
+    public override function GetHashCode(): i32
+    {
+        return _x * 31
+    }
+
+    public override function Equals(other: any): bool
+    {
+        // v1 以引用同一性演示 override 生效（null/as 随后续里程碑引入）
+        return System.Object.ReferenceEquals(other, this)
+    }
+}
+
+function Main(): i32
+{
+    var p = new Point(7)
+    if p.ToString() != ""Point(7)"" return 1
+    if p.GetHashCode() != 217 return 2
+    if !p.Equals(p) return 3
+    return 0
+}";
+            Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void ObjectModel_Override_SignatureMismatch_Reports()
+        {
+            // CS0115/CS1715 对齐：基类有同名虚方法但签名不匹配（GetHashCode 返回类型错）
+            var code = @"
+public class Point
+{
+    public override function GetHashCode(): string
+    {
+        return ""x""
     }
 }";
             var diagnostics = GetDiagnostics(code);
-            Assert.Contains(diagnostics, d => d.Message.Contains("没有基类"));
+            Assert.Contains(diagnostics, d => d.Message.Contains("签名不匹配"));
+        }
+
+        [Fact]
+        public void ObjectModel_Override_WrongParameterCount_Reports()
+        {
+            // Equals(other: any) 参数个数不符 → 签名不匹配诊断
+            var code = @"
+public class Point
+{
+    public override function Equals(a: any, b: any): bool
+    {
+        return false
+    }
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("签名不匹配"));
+        }
+
+        [Fact]
+        public void ObjectModel_Override_NonVirtualGetType_Reports()
+        {
+            // GetType 非虚（C# 同构）：override 被拒绝
+            var code = @"
+public class Point
+{
+    public override function GetType(): object
+    {
+        return this
+    }
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("找不到可重写"));
+        }
+
+        [Fact]
+        public void ObjectModel_ExplicitObjectBase_Chain_And_BaseCall_Bind()
+        {
+            // 显式 extends Object + base(...) 零参链 + base.ToString() 直调默认实现
+            var code = @"using System
+
+public class Point extends Object
+{
+    public constructor() extends base()
+    {
+    }
+
+    public function Describe(): string
+    {
+        return base.ToString()
+    }
+}
+
+function Main(): i32
+{
+    var p = new Point()
+    Console.WriteLine(p.Describe())
+    return 0
+}";
+            Assert.Empty(GetDiagnostics(code));
         }
 
         [Fact]
@@ -1315,6 +1417,107 @@ public class Holder
     private _o: object
 }";
             Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void ObjectModel_ObjectMemberCalls_ResolveOnClassReceivers()
+        {
+            // 6e-M19 M2-c：用户类实例沿继承链解析 Object 内建成员（ToString/GetHashCode/Equals/GetType）
+            var code = @"using System
+
+public class Point
+{
+    private _x: i32
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+}
+
+function Main(): i32
+{
+    var p = new Point(1)
+    var s = p.ToString()
+    var h = p.GetHashCode()
+    var e = p.Equals(p)
+    var t = p.GetType()
+    return 0
+}";
+            Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void ObjectModel_ObjectStaticMethods_BindDotted()
+        {
+            // 6e-M19 M2-c：System.Object 静态 Equals/ReferenceEquals 点号调用
+            var code = @"using System
+
+public class Point
+{
+}
+
+function Main(): i32
+{
+    var a = new Point()
+    if !Object.Equals(a, a) return 1
+    if !System.Object.ReferenceEquals(a, a) return 2
+    return 0
+}";
+            Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void ObjectModel_ClassEquality_BindsReferenceKind()
+        {
+            // 6e-M19 M2-c：类类型 == / != 绑定为引用相等 kind（含基类/派生类混合比较）
+            var code = @"using System
+
+public class Point
+{
+}
+
+public class Point3D extends Point
+{
+}
+
+function Main(): i32
+{
+    var p = new Point()
+    var q = p
+    if !(p == q) return 1
+    if p != q return 2
+    var d = new Point3D()
+    var o: object = d
+    if !(o == d) return 3
+    if o != p return 4
+    return 0
+}";
+            Assert.Empty(GetDiagnostics(code));
+        }
+
+        [Fact]
+        public void ObjectModel_UnrelatedClassEquality_Reports()
+        {
+            // 无继承关系的两类比较：既无转换也无引用可比性 → 报错（对齐 C# CS0019）
+            var code = @"
+public class A
+{
+}
+
+public class B
+{
+}
+
+function Main(): i32
+{
+    var a = new A()
+    var b = new B()
+    if a == b return 1
+    return 0
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.NotEmpty(diagnostics);
         }
 
         private static ImmutableArray<Diagnostic> GetDiagnostics(string code)

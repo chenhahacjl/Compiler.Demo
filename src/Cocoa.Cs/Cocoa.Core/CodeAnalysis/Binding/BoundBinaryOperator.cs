@@ -125,6 +125,25 @@ namespace Cocoa.CodeAnalysis.Binding
                     return new BoundBinaryOperator(syntaxKind, BoundBinaryOperatorKind.NotEquals, enumType, TypeSymbol.Boolean);
             }
 
+            // 6e-M19 M2-c：类类型 == / != → 引用相等（动态合成，仿 enum 先例）。
+            // 条件：双侧均为类（含 System.Object/接口/外部类），且存在继承关系（同型或一侧可隐式转换到另一侧）。
+            // string/值类型/any 走既有值比较表，不受影响。
+            if (leftType is ClassTypeSymbol leftClass && rightType is ClassTypeSymbol rightClass &&
+                (leftClass == rightClass || leftClass.IsBaseOf(rightClass) || rightClass.IsBaseOf(leftClass)))
+            {
+                var referenceKind = syntaxKind switch
+                {
+                    SyntaxKind.EqualsEqualsToken => BoundBinaryOperatorKind.ReferenceEquals,
+                    SyntaxKind.BangEqualsToken => BoundBinaryOperatorKind.ReferenceNotEquals,
+                    _ => (BoundBinaryOperatorKind?)null,
+                };
+
+                if (referenceKind != null)
+                {
+                    return new BoundBinaryOperator(syntaxKind, referenceKind.Value, leftClass, rightClass, TypeSymbol.Boolean);
+                }
+            }
+
             foreach (var op in _operators)
             {
                 if (op.SyntaxKind == syntaxKind && op.LeftType == leftType && op.RightType == rightType)

@@ -728,6 +728,15 @@ namespace Cocoa.CodeAnalysis.Cod
             }
         }
 
+        /// <summary>6e-M19 M2-c：内建单例（System.Object/System.Type）按全名序列化，读侧映射回单例。</summary>
+        private static void EmitBuiltinSystemClass(Writer w, Registry registry, ClassTypeSymbol classType)
+        {
+            w.Open("systype");
+            w.Field(registry.Get(classType));
+            w.Field(Str(classType.FullName));
+            w.End();
+        }
+
         private static void EmitClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
         {
             w.Open("cls");
@@ -1004,6 +1013,16 @@ namespace Cocoa.CodeAnalysis.Cod
                     return id;
                 }
 
+                // 6e-M19 M2-c：内建单例（System.Object/System.Type）不发 cls——读侧会造出新类破坏单例同一性；
+                // 发 systype 按全名映射回单例（成员面由 Ensure 内建注入，不序列化）
+                if (SystemObjectMembers.IsBuiltinSystemClass(classType))
+                {
+                    id = _ids.Count;
+                    _ids[classType] = id;
+                    Emitters.Add((w, r) => EmitBuiltinSystemClass(w, r, classType));
+                    return id;
+                }
+
                 // 纯容器类（仅 syscall/extern 静态方法）：方法符号已在 Functions 注册，这里只发壳
                 id = _ids.Count;
                 _ids[classType] = id;
@@ -1018,8 +1037,9 @@ namespace Cocoa.CodeAnalysis.Cod
                     return id;
                 }
 
-                // 类方法：容器类全静态（syscall/extern 及带体静态方法，6e-M18）作为独立 fn 序列化；实例方法/构造由类壳过滤
-                if (fn.ContainingClass != null && !fn.IsStatic)
+                // 类方法：容器类全静态（syscall/extern 及带体静态方法，6e-M18）作为独立 fn 序列化；实例方法/构造由类壳过滤。
+                // 例外：Object 内建方法（M2-c）带 BuiltinKind，读侧经单例复用重建，须随引用序列化
+                if (fn.ContainingClass != null && !fn.IsStatic && !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass))
                 {
                     return -1;
                 }
@@ -1201,6 +1221,21 @@ namespace Cocoa.CodeAnalysis.Cod
                             reader.End();
                             break;
                         }
+                    case "systype":
+                        {
+                            // 6e-M19 M2-c：内建单例按全名映射（成员面已由 Ensure 内建注入）
+                            var id = reader.ExpectInt();
+                            var fullName = reader.ExpectString();
+                            var singleton = fullName switch
+                            {
+                                "System.Object" => (object)ClassTypeSymbol.SystemObject,
+                                "System.Type" => ClassTypeSymbol.SystemType,
+                                _ => throw new InvalidDataException($"Unknown builtin system class '{fullName}'"),
+                            };
+                            SetAt(symbolsById, id, singleton);
+                            reader.End();
+                            break;
+                        }
                     case "arr":
                         {
                             var elementId = reader.ExpectInt();
@@ -1263,6 +1298,8 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
+            // 6e-M19 M2-c：.cod 类默认继承 System.Object（与源码绑定一致；.cod v1 不序列化接口声明）
+            classType.BaseType = ClassTypeSymbol.SystemObject;
             SetAt(symbolsById, id, classType);
             reader.End();
         }
@@ -1280,7 +1317,7 @@ namespace Cocoa.CodeAnalysis.Cod
             var ns = nsToken == "-" ? "" : nsToken;
             var containingClassId = reader.ExpectInt();
             var builtinKindToken = reader.ExpectString();
-            var builtinKind = builtinKindToken == "-" ? (BuiltinKind?)null : BuiltinFunctions.GetByKindName(builtinKindToken);
+            var builtinKind = builtinKindToken == "-" ? (BuiltinKind?)null : BuiltinFunctions.GetByKindName(builtinKindToken) ?? SystemObjectMembers.GetByKindName(builtinKindToken);
             var entryPointToken = reader.ExpectString();
             var entryPoint = entryPointToken == "-" ? null : entryPointToken;
             var charSetValue = reader.ExpectInt();
@@ -1302,6 +1339,18 @@ namespace Cocoa.CodeAnalysis.Cod
 
             var returnType = (TypeSymbol)symbolsById[returnTypeId];
             var containingClass = containingClassId >= 0 ? (ClassTypeSymbol)symbolsById[containingClassId] : null;
+
+            // 6e-M19 M2-c：Object 内建方法复用单例（保持符号同一性，发射器按 BuiltinKind 分发）
+            if (containingClass != null && builtinKind != null && SystemObjectMembers.IsBuiltinSystemClass(containingClass))
+            {
+                var singleton = SystemObjectMembers.GetByKind(builtinKind.Value);
+                if (singleton != null)
+                {
+                    SetAt(symbolsById, id, singleton);
+                    reader.End();
+                    return;
+                }
+            }
 
             // 含类归属或内置种类：不复用全局单例（内置单例无类归属），重建带上下文符号
             FunctionSymbol function;
@@ -1336,8 +1385,9 @@ namespace Cocoa.CodeAnalysis.Cod
 
             SetAt(symbolsById, id, function);
 
-            // 类方法回填：含类归属的 fn 归入其类（6e-M18：容器类全静态——syscall/extern 及带体静态方法）
-            if (containingClass != null)
+            // 类方法回填：含类归属的 fn 归入其类（6e-M18：容器类全静态——syscall/extern 及带体静态方法）。
+            // 内建单例（System.Object/System.Type，M2-c）成员已由 Ensure 注入，跳过回填防重复/防误标 static
+            if (containingClass != null && !SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
                 function.IsStatic = true;
                 containingClass.AddMethod(function);

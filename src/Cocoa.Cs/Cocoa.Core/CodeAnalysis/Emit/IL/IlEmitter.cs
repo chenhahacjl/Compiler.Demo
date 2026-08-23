@@ -1008,6 +1008,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
                     il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
+
+                // 6e-M19 M2-c：类类型引用相等——ceq 对栈上引用即指针比较（值语义走 Equals 分支不受影响）
+                case BoundBinaryOperatorKind.ReferenceEquals:
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
+                    break;
+                case BoundBinaryOperatorKind.ReferenceNotEquals:
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Ceq"));
+                    break;
                 case BoundBinaryOperatorKind.Less:
                     il.Emit(IlOpCodeTable.Get(isUnsigned ? "Clt_Un" : "Clt"));
                     break;
@@ -1258,6 +1268,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BuiltinKind.ParseInt64:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt64FromString);
                     break;
+
+                // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
+                case BuiltinKind.ObjectStaticEquals:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
+                    break;
+                case BuiltinKind.ObjectReferenceEquals:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectReferenceEquals);
+                    break;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }
@@ -1426,9 +1444,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     return;
                 }
 
-                if (!toClass.IsInterface && fromClass.IsBaseOf(toClass))
+                if (!toClass.IsInterface && toClass.IsBaseOf(fromClass))
                 {
-                    // 派生类 → 基类：引用转换，无指令
+                    // 派生类 → 基类（6e-M19 M2-c 方向修正）：引用转换，栈上引用不变
+                    return;
+                }
+
+                if (!fromClass.IsInterface && !toClass.IsInterface && fromClass.IsBaseOf(toClass))
+                {
+                    // 基类 → 派生类：显式向下引用转换（castclass）
+                    il.Emit(IlOpCodeTable.Get("Castclass"), ToIlType(toClass));
                     return;
                 }
             }
@@ -1691,6 +1716,56 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             var isStatic = node.Method != null && node.Method.IsStatic;
 
+            // 6e-M19 M2-c：System.Object 实例方法（receiver 在栈上，值类型先装箱）→ mscorlib callvirt；
+            // 用户类 override 经 CLR callvirt 天然虚分派；base.Method() 用 Call 直调基类实现（防虚分派回 override）
+            if (node.Method?.BuiltinKind != null && !isStatic)
+            {
+                var objectCallOp = node.IsBase ? "Call" : "Callvirt";
+                switch (node.Method.BuiltinKind.Value)
+                {
+                    case BuiltinKind.ObjectToString:
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        il.Emit(IlOpCodeTable.Get(objectCallOp), _framework.ObjectToString);
+                        return;
+                    case BuiltinKind.ObjectGetHashCode:
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        il.Emit(IlOpCodeTable.Get(objectCallOp), _framework.ObjectGetHashCode);
+                        return;
+                    case BuiltinKind.ObjectEquals:
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        EmitExpression(il, node.Arguments[0]);
+                        EmitBoxIfValueType(il, node.Arguments[0].Type);
+                        il.Emit(IlOpCodeTable.Get(objectCallOp), _framework.ObjectEqualsInstance);
+                        return;
+                    case BuiltinKind.ObjectGetType:
+                        // GetType 非虚：base./this. 语义一致
+                        EmitExpression(il, node.Expression);
+                        EmitBoxIfValueType(il, node.Expression.Type);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.ObjectGetType);
+                        return;
+
+                    // 6e-M19 M3-b：System.Type 只读属性（receiver 为 CLR Type 引用，无装箱）。
+                    // Name = FullName.Substring(FullName.LastIndexOf('.')+1)——无点时 -1+1=0 回退全名
+                    case BuiltinKind.TypeName:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetFullName);
+                        il.Emit(IlOpCodeTable.Get("Dup"));
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_S"), (sbyte)'.');
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.StringLastIndexOfChar);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_1"));
+                        il.Emit(IlOpCodeTable.Get("Add"));
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.StringSubstringFrom);
+                        return;
+                    case BuiltinKind.TypeFullName:
+                        EmitExpression(il, node.Expression);
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), _framework.TypeGetFullName);
+                        return;
+                }
+            }
+
             if (node.Method?.BuiltinKind != null)
             {
                 // syscall 静态方法调用：复用内置函数分发（如 System.Runtime.Runtime.Print → Console.WriteLine）
@@ -1808,6 +1883,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitConstructorChainExpression(IlAssembler il, BoundConstructorChainExpression node)
         {
+            // 6e-M19 M2-c：链到内建 System.Object（无 .ctor 符号）——0 参 no-op，CLR newobj 已隐式调 object::.ctor
+            if (node.Constructor == null)
+            {
+                return;
+            }
+
             // this(arg0) + args → call 基类/本类 .ctor
             il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
             foreach (var argument in node.Arguments)

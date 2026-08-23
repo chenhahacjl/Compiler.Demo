@@ -30,6 +30,18 @@ namespace Cocoa.CodeAnalysis.Symbols
         CharToString,
         ParseInt64,
         UInt64ToString,
+
+        // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
+        // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
+        // `.cod` 序列化经 GetByKindName → SystemObjectMembers.GetByKindName 解析。
+        ObjectToString,
+        ObjectGetHashCode,
+        ObjectEquals,
+        ObjectGetType,
+        ObjectStaticEquals,
+        ObjectReferenceEquals,
+        TypeName,
+        TypeFullName,
     }
 
     /// <summary>鍐呯疆鍑芥暟瑙勬牸锛氬悕绉?绛惧悕 + 绉嶇被锛堝姛鑳藉眰澹版槑锛夈€?/summary>

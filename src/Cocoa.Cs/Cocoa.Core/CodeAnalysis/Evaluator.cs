@@ -17,6 +17,12 @@ namespace Cocoa.CodeAnalysis
         private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
 
+        // 6e-M19 M3-c：OOP 运行时状态——实例字段布局缓存 / 静态字段槽 / .cctor 已初始化集 / this 接收者栈
+        private readonly Dictionary<ClassTypeSymbol, ImmutableArray<FieldSymbol>> _instanceFields = new Dictionary<ClassTypeSymbol, ImmutableArray<FieldSymbol>>();
+        private readonly Dictionary<FieldSymbol, object> _staticFields = new Dictionary<FieldSymbol, object>();
+        private readonly HashSet<ClassTypeSymbol> _staticsInitialized = new HashSet<ClassTypeSymbol>();
+        private readonly Stack<object> _thisStack = new Stack<object>();
+
         private object? _lastValue;
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
@@ -187,6 +193,19 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateMemberCallExpression((BoundMemberCallExpression)node);
                 case BoundNodeKind.FormatExpression:
                     return EvaluateFormatExpression((BoundFormatExpression)node);
+
+                // 6e-M19 M3-c：OOP 五节点（此前 default throw，REPL 无对象概念）
+                case BoundNodeKind.ObjectCreationExpression:
+                    return EvaluateObjectCreation((BoundObjectCreationExpression)node);
+                case BoundNodeKind.ThisExpression:
+                    return _thisStack.Peek();
+                case BoundNodeKind.BaseExpression:
+                    // base 与 this 指向同一实例；base.Method() 的非虚目标由绑定期 Method 直接解析
+                    return _thisStack.Peek();
+                case BoundNodeKind.ConstructorChainExpression:
+                    return EvaluateConstructorChain((BoundConstructorChainExpression)node);
+                case BoundNodeKind.MemberAssignmentExpression:
+                    return EvaluateMemberAssignment((BoundMemberAssignmentExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -363,6 +382,12 @@ namespace Cocoa.CodeAnalysis
                     return Equals(left, right);
                 case BoundBinaryOperatorKind.NotEquals:
                     return !Equals(left, right);
+
+                // 6e-M19 M2-c：类类型引用相等（C# 对齐；值语义不受影响）
+                case BoundBinaryOperatorKind.ReferenceEquals:
+                    return ReferenceEquals(left, right);
+                case BoundBinaryOperatorKind.ReferenceNotEquals:
+                    return !ReferenceEquals(left, right);
                 case BoundBinaryOperatorKind.Less:
                     if (binary.Op.LeftType == TypeSymbol.Double)
                         return (double)left < (double)right;
@@ -416,6 +441,12 @@ namespace Cocoa.CodeAnalysis
                 locals.Add(parameter, value);
             }
 
+            // 类静态方法直呼（using static 等）：首次触碰触发 .cctor（M3-c）
+            if (node.Function.ContainingClass != null && node.Function.IsStatic)
+            {
+                EnsureStaticInit(node.Function.ContainingClass);
+            }
+
             _locals.Push(locals);
 
             var statement = _functions[node.Function];
@@ -426,6 +457,14 @@ namespace Cocoa.CodeAnalysis
             return result;
         }
 
+        /// <summary>求值器显示形态：用户类实例 → 类名（对齐 IL 默认 ToString）；类型值 → 全名。</summary>
+        private static string DisplayValue(object? value) => value switch
+        {
+            EvaluatorObject o => o.Class.Name,
+            EvaluatorTypeInfo t => t.FullName,
+            _ => value?.ToString() ?? "",
+        };
+
         private object? EvaluateBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
         {
             switch (function.BuiltinKind)
@@ -434,11 +473,11 @@ namespace Cocoa.CodeAnalysis
                     return Console.ReadLine();
                 case BuiltinKind.WriteLine:
                     var writeLineValue = EvaluateExpression(arguments[0]);
-                    Console.WriteLine(writeLineValue);
+                    Console.WriteLine(DisplayValue(writeLineValue));
                     return null;
                 case BuiltinKind.Write:
                     var writeValue = EvaluateExpression(arguments[0]);
-                    Console.Write(writeValue);
+                    Console.Write(DisplayValue(writeValue));
                     return null;
                 case BuiltinKind.ReadKey:
                     var intercept = (bool)EvaluateExpression(arguments[0])!;
@@ -485,6 +524,16 @@ namespace Cocoa.CodeAnalysis
                     return Convert.ToInt64((string)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.UInt64ToString:
                     return Convert.ToString((ulong)EvaluateExpression(arguments[0])!);
+
+                // 6e-M19 M2-c：System.Object 静态方法（CLR 直通）
+                case BuiltinKind.ObjectStaticEquals:
+                    var equalsLeft = EvaluateExpression(arguments[0]);
+                    var equalsRight = EvaluateExpression(arguments[1]);
+                    return object.Equals(equalsLeft, equalsRight);
+                case BuiltinKind.ObjectReferenceEquals:
+                    var refLeft = EvaluateExpression(arguments[0]);
+                    var refRight = EvaluateExpression(arguments[1]);
+                    return object.ReferenceEquals(refLeft, refRight);
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }
@@ -596,6 +645,11 @@ namespace Cocoa.CodeAnalysis
                 // 枚举底层为 int，无操作
                 return Convert.ToInt32(value);
             }
+            else if (node.Type is Symbols.ClassTypeSymbol)
+            {
+                // 6e-M19 M2-c：类间引用转换（派生→基类隐式 / 基类→派生显式）——CLR 对象直通
+                return value;
+            }
             else
             {
                 throw new Exception($"Unexpected type {node.Type}");
@@ -655,6 +709,20 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateMemberAccessExpression(BoundMemberAccessExpression node)
         {
+            // 6e-M19 M3-c：类字段读（实例沿扁平化布局取槽；静态走字段槽字典）
+            if (node.Field != null)
+            {
+                if (node.Field.IsStatic)
+                {
+                    EnsureStaticInit(node.Field.ContainingClass);
+                    return _staticFields.TryGetValue(node.Field, out var value) ? value : DefaultValueOf(node.Field.Type)!;
+                }
+
+                var instance = (EvaluatorObject)EvaluateExpression(node.Target)!;
+                var fieldValue = instance.Fields[FieldOrdinal(node.Field, instance.Class)];
+                return fieldValue ?? DefaultValueOf(node.Field.Type)!;
+            }
+
             var target = EvaluateExpression(node.Target)!;
 
             if (node.Identifier == "Length")
@@ -673,15 +741,41 @@ namespace Cocoa.CodeAnalysis
 
         private object? EvaluateMemberCallExpression(BoundMemberCallExpression node)
         {
-            if (node.Method?.BuiltinKind != null)
+            var method = node.Method;
+
+            // 实例方法：用户类虚链分派 / Object 内建面 / System.Type 属性 getter
+            if (method != null && !method.IsStatic)
             {
-                return EvaluateBuiltinCall(node.Method, node.Arguments);
+                var receiver = EvaluateExpression(node.Expression);
+
+                if (receiver is EvaluatorObject instance)
+                {
+                    return DispatchOnInstance(node, method, instance);
+                }
+
+                if (method.BuiltinKind != null)
+                {
+                    return EvaluateBuiltinInstanceFace(method.BuiltinKind.Value, receiver!, node);
+                }
+
+                throw new Exception($"Unexpected instance call '{method.Name}' on {receiver}");
             }
 
-            // 静态容器类方法调用（6e-M18：System.Console.WriteLine / System.Math.Max ...）：按函数调用求值
-            if (node.Method != null)
+            if (method?.BuiltinKind != null)
             {
-                return EvaluateCallExpression(new BoundCallExpression(node.Syntax, node.Method, node.Arguments));
+                return EvaluateBuiltinCall(method, node.Arguments);
+            }
+
+            // 静态容器类方法调用（6e-M18：System.Console.WriteLine / System.Math.Max ...）：按函数调用求值；
+            // 首次触碰类静态成员时触发其 .cctor（M3-c）
+            if (method != null)
+            {
+                if (method.ContainingClass != null && method.IsStatic)
+                {
+                    EnsureStaticInit(method.ContainingClass);
+                }
+
+                return EvaluateCallExpression(new BoundCallExpression(node.Syntax, method, node.Arguments));
             }
 
             var target = (string)EvaluateExpression(node.Expression)!;
@@ -689,6 +783,319 @@ namespace Cocoa.CodeAnalysis
             var count = Convert.ToInt32(EvaluateExpression(node.Arguments[1]));
 
             return target.Substring(start, count);
+        }
+
+        /// <summary>
+        /// 用户类实例上的调用分派：非 base 沿运行时类链找最近实现（override 生效）；
+        /// 走到内建单例即默认实现（ToString→类名等）。
+        /// </summary>
+        private object? DispatchOnInstance(BoundMemberCallExpression node, FunctionSymbol declared, EvaluatorObject instance)
+        {
+            var target = node.IsBase ? declared : ResolveDispatch(instance.Class, declared) ?? declared;
+            var argumentValues = MaterializeArguments(node);
+
+            if (target.BuiltinKind != null)
+            {
+                return EvaluateBuiltinDefaultOnInstance(target.BuiltinKind.Value, instance, node);
+            }
+
+            return InvokeFunction(target, instance, argumentValues);
+        }
+
+        /// <summary>内建默认实现的求值器语义（对齐 C# System.Object 默认行为）。</summary>
+        private object? EvaluateBuiltinDefaultOnInstance(BuiltinKind kind, EvaluatorObject instance, BoundMemberCallExpression node)
+        {
+            switch (kind)
+            {
+                case BuiltinKind.ObjectToString:
+                    return instance.Class.Name;
+                case BuiltinKind.ObjectGetHashCode:
+                    return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(instance);
+                case BuiltinKind.ObjectEquals:
+                    var other = EvaluateExpression(node.Arguments[0]);
+                    return ReferenceEquals(instance, other);
+                case BuiltinKind.ObjectGetType:
+                    return new EvaluatorTypeInfo(instance.Class.FullName);
+                default:
+                    throw new Exception($"Unexpected builtin kind {kind} on instance");
+            }
+        }
+
+        /// <summary>非用户类接收者（基元/string/CLR Type/EvaluatorTypeInfo）的内建面直通。</summary>
+        private object? EvaluateBuiltinInstanceFace(BuiltinKind kind, object receiver, BoundMemberCallExpression node)
+        {
+            switch (kind)
+            {
+                case BuiltinKind.ObjectToString:
+                    return receiver!.ToString();
+                case BuiltinKind.ObjectGetHashCode:
+                    return receiver!.GetHashCode();
+                case BuiltinKind.ObjectEquals:
+                    return object.Equals(receiver, EvaluateExpression(node.Arguments[0]));
+                case BuiltinKind.ObjectGetType:
+                    return receiver.GetType();
+
+                // 6e-M19 M3-b：System.Type 只读属性（Name 与 IL 同构——FullName 末段；用户类为 EvaluatorTypeInfo）
+                case BuiltinKind.TypeName:
+                    var fullName = FullNameOfTypeValue(receiver);
+                    var lastDot = fullName.LastIndexOf('.');
+                    return lastDot < 0 ? fullName : fullName.Substring(lastDot + 1);
+                case BuiltinKind.TypeFullName:
+                    return FullNameOfTypeValue(receiver);
+                default:
+                    throw new Exception($"Unexpected builtin kind {kind}");
+            }
+        }
+
+        private static string FullNameOfTypeValue(object receiver) => receiver switch
+        {
+            System.Type clrType => clrType.FullName ?? clrType.Name,
+            EvaluatorTypeInfo info => info.FullName,
+            _ => throw new Exception($"Unexpected type value {receiver}"),
+        };
+
+        // ------------------------------------------------------ 6e-M19 M3-c：OOP 运行时辅助
+
+        /// <summary>类的扁平化实例字段布局（基类字段在前、声明序；跨继承链，按类缓存）。</summary>
+        private ImmutableArray<FieldSymbol> InstanceFieldsOf(ClassTypeSymbol classType)
+        {
+            if (_instanceFields.TryGetValue(classType, out var cached))
+            {
+                return cached;
+            }
+
+            var fields = new List<FieldSymbol>();
+            for (var current = (ClassTypeSymbol?)classType; current != null; current = current.BaseType)
+            {
+                foreach (var field in current.Fields)
+                {
+                    if (!field.IsStatic)
+                    {
+                        fields.Add(field);
+                    }
+                }
+            }
+
+            var result = fields.ToImmutableArray();
+            _instanceFields[classType] = result;
+            return result;
+        }
+
+        private int FieldOrdinal(FieldSymbol field, ClassTypeSymbol classType)
+        {
+            var layout = InstanceFieldsOf(classType);
+            for (var i = 0; i < layout.Length; i++)
+            {
+                if (layout[i] == field)
+                {
+                    return i;
+                }
+            }
+
+            throw new Exception($"Field '{field.Name}' not found on '{classType.Name}'");
+        }
+
+        /// <summary>字段零值默认（语言无 null 字面量，未赋值读取给类型零值；引用类型 null）。</summary>
+        private static object? DefaultValueOf(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Int32 || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8 ||
+                type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 || type == TypeSymbol.UInt32 ||
+                type == TypeSymbol.Char || type is EnumTypeSymbol)
+            {
+                return 0;
+            }
+
+            if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64)
+            {
+                return 0L;
+            }
+
+            if (type == TypeSymbol.Double || type == TypeSymbol.Float)
+            {
+                return 0.0;
+            }
+
+            if (type == TypeSymbol.Boolean)
+            {
+                return false;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 静态初始化（CLR 语义近似）：首次触碰类静态成员时执行其 .cctor（字段初始化器已由绑定前缀进体）。
+        /// </summary>
+        private void EnsureStaticInit(ClassTypeSymbol classType)
+        {
+            if (!_staticsInitialized.Add(classType))
+            {
+                return;
+            }
+
+            var cctor = classType.Methods.FirstOrDefault(m => m.IsConstructor && m.IsStatic);
+            if (cctor != null && _functions.ContainsKey(cctor))
+            {
+                InvokeFunction(cctor, thisReceiver: null, Array.Empty<object?>());
+            }
+        }
+
+        private object EvaluateObjectCreation(BoundObjectCreationExpression node)
+        {
+            var classType = (ClassTypeSymbol)node.Type;
+            var argumentValues = new object?[node.Arguments.Length];
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                argumentValues[i] = EvaluateExpression(node.Arguments[i]);
+            }
+
+            var instance = new EvaluatorObject(classType, new object?[InstanceFieldsOf(classType).Length]);
+
+            // 构造函数解析：与绑定期一致（名字=类名，参数个数+类型逐一匹配）；无显式构造时隐式默认构造已在 Functions 中
+            foreach (var candidate in classType.Methods)
+            {
+                if (!candidate.IsConstructor || candidate.IsStatic || candidate.Parameters.Length != argumentValues.Length)
+                {
+                    continue;
+                }
+
+                var match = true;
+                for (var i = 0; i < argumentValues.Length; i++)
+                {
+                    if (candidate.Parameters[i].Type != node.Arguments[i].Type)
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match)
+                {
+                    // 构造体已由绑定注入 base(...) 链 + 字段初始化器前缀（隐式链对 Object 无 .ctor 自动跳过）
+                    InvokeFunction(candidate, instance, argumentValues);
+                    break;
+                }
+            }
+
+            return instance;
+        }
+
+        private object? EvaluateConstructorChain(BoundConstructorChainExpression node)
+        {
+            // 链到内建 System.Object（Constructor=null）：no-op
+            if (node.Constructor == null)
+            {
+                return null;
+            }
+
+            var argumentValues = new object?[node.Arguments.Length];
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                argumentValues[i] = EvaluateExpression(node.Arguments[i]);
+            }
+
+            InvokeFunction(node.Constructor, _thisStack.Peek(), argumentValues);
+            return null;
+        }
+
+        private object? EvaluateMemberAssignment(BoundMemberAssignmentExpression node)
+        {
+            var value = EvaluateExpression(node.Expression);
+
+            if (node.Field.IsStatic)
+            {
+                EnsureStaticInit(node.Field.ContainingClass);
+                _staticFields[node.Field] = value!;
+                return value;
+            }
+
+            var target = (EvaluatorObject)EvaluateExpression(node.Target)!;
+            target.Fields[FieldOrdinal(node.Field, target.Class)] = value;
+            return value;
+        }
+
+        /// <summary>
+        /// 实例函数调用环境：参数入局部帧 + this 压接收者栈（BoundThisExpression 求值返回栈顶），退出对称弹栈。
+        /// </summary>
+        private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues)
+        {
+            var locals = new Dictionary<VariableSymbol, object>();
+            for (var i = 0; i < function.Parameters.Length; i++)
+            {
+                locals[function.Parameters[i]] = argumentValues[i]!;
+            }
+
+            _locals.Push(locals);
+            if (thisReceiver != null)
+            {
+                _thisStack.Push(thisReceiver);
+            }
+
+            try
+            {
+                return EvaluateStatement(_functions[function]);
+            }
+            finally
+            {
+                if (thisReceiver != null)
+                {
+                    _thisStack.Pop();
+                }
+
+                _locals.Pop();
+            }
+        }
+
+        /// <summary>
+        /// 虚分派（镜像 CLR 槽复用语义）：沿运行时类继承链找最近同名同签名实现——
+        /// 内建单例位于链根自然最后命中（即 C# 默认实现）。IsBase 直调绑定期解析的基类实现，不经此重派发。
+        /// </summary>
+        private FunctionSymbol? ResolveDispatch(ClassTypeSymbol runtimeClass, FunctionSymbol declared)
+        {
+            for (var current = (ClassTypeSymbol?)runtimeClass; current != null; current = current.BaseType)
+            {
+                foreach (var method in current.Methods)
+                {
+                    if (method.IsAbstract || method.IsStatic || method.IsConstructor)
+                    {
+                        continue;
+                    }
+
+                    if (method.Name != declared.Name || method.ReturnType != declared.ReturnType ||
+                        method.Parameters.Length != declared.Parameters.Length)
+                    {
+                        continue;
+                    }
+
+                    var match = true;
+                    for (var i = 0; i < method.Parameters.Length; i++)
+                    {
+                        if (method.Parameters[i].Type != declared.Parameters[i].Type)
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match)
+                    {
+                        return method;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private object?[] MaterializeArguments(BoundMemberCallExpression node)
+        {
+            var values = new object?[node.Arguments.Length];
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                values[i] = EvaluateExpression(node.Arguments[i]);
+            }
+
+            return values;
         }
 
         private void Assign(VariableSymbol variable, object? value)

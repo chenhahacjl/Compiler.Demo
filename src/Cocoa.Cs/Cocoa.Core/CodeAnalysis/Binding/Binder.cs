@@ -64,6 +64,10 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null, ImmutableArray<CodProgram> codLibraries = default)
         {
+            // 6e-M19 M2-c：System.Object 成员面注入（幂等）——须先于类成员绑定，
+            // 用户类 override 解析与成员沿链上溯依赖 Object 四虚方法已就位
+            SystemObjectMembers.Ensure();
+
             var parentScope = CreateParentScope(previous);
             InjectCodSymbols(parentScope, codLibraries);
             var dialect = syntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : syntaxTrees[0].Dialect;
@@ -184,18 +188,23 @@ namespace Cocoa.CodeAnalysis.Binding
                     classType.FacadeThisType = facadeTarget;
                 }
 
-                for (var i = 0; i < parts.Count; i++)
+                // 3.5a：先落位全部部分的显式基类（部分类一致性检查 + 循环继承检测）
+                foreach (var (baseSyntax, _) in parts)
                 {
-                    var (syntax, ns) = parts[i];
-                    binder.BindClassBase(syntax, classType);
-                    binder.BindClassMembers(syntax, classType, classFunctions, ns);
+                    binder.BindClassBase(baseSyntax, classType);
                 }
 
-                // 6e-M19 M2-a：无显式基类的非接口类默认继承 System.Object（在 BindClassBase 之后落位，
-                // 不干扰部分类基类一致性检查与循环继承检测；接口不默认）
+                // 6e-M19 M2-c 前移：无显式基类的非接口类默认继承 System.Object——
+                // 须先于成员绑定，override 签名解析/base 表达式/成员沿链上溯依赖基类链就位（接口不默认）
                 if (!classType.IsInterface && classType.BaseType == null)
                 {
                     classType.BaseType = ClassTypeSymbol.SystemObject;
+                }
+
+                // 3.5b：成员绑定
+                foreach (var (syntax, ns) in parts)
+                {
+                    binder.BindClassMembers(syntax, classType, classFunctions, ns);
                 }
 
                 binder.DeclareImplicitConstructor(classType, classFunctions, primary);
@@ -778,11 +787,12 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 是否有用户显式声明的基类（6e-M19 M2-a）。内建 Object 根不算——其成员面随 M2-b/M2-c
-        /// 接入前，base 表达式/override/隐式基构造等路径保持与"无基类"一致的行为。
+        /// 是否有可用基类（6e-M19 M2-c 反转）：内建 System.Object 携带真实成员面（虚四方法），
+        /// 视为真基类——override 解析、base 表达式、成员沿链上溯均正常工作。
+        /// 仅接口（BaseType=null）无基类。
         /// </summary>
-        private static bool HasExplicitBase(ClassTypeSymbol classType)
-            => classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot;
+        private static bool HasBaseClass(ClassTypeSymbol classType)
+            => classType.BaseType != null;
 
         private void BindClassMembers(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
         {
@@ -1567,19 +1577,41 @@ namespace Cocoa.CodeAnalysis.Binding
                 IsSealed = isSealed,
             };
 
-            // override 语义：绑定到基类同签名 virtual/abstract 方法
+            // override 语义（6e-M19 M2-c 升级）：沿基类链找同签名 virtual/abstract 方法——
+            // 参数个数/类型逐一相同 + 返回类型相同（C# CS0115/CS1715 对齐，协变返回不做）
             if (isOverride)
             {
-                if (!HasExplicitBase(classType))
+                if (!HasBaseClass(classType))
                 {
                     _diagnostics.ReportError(syntax.Identifier.Location, $"方法 '{syntax.Identifier.Text}' 标记 override，但类型没有基类。");
                 }
                 else
                 {
-                    var baseMethod = classType.BaseType.GetMethod(syntax.Identifier.Text);
-                    if (baseMethod == null || !baseMethod.IsVirtual && !baseMethod.IsAbstract || baseMethod.IsSealed)
+                    var candidates = classType.BaseType!.GetMethods(syntax.Identifier.Text)
+                        .Where(m => (m.IsVirtual || m.IsAbstract) && !m.IsSealed)
+                        .ToImmutableArray();
+
+                    FunctionSymbol? baseMethod = null;
+                    foreach (var candidate in candidates)
                     {
-                        _diagnostics.ReportError(syntax.Identifier.Location, $"基类中找不到可重写的 virtual/abstract 方法 '{syntax.Identifier.Text}'。");
+                        if (IsOverrideSignatureMatch(candidate, method))
+                        {
+                            baseMethod = candidate;
+                            break;
+                        }
+                    }
+
+                    if (baseMethod == null)
+                    {
+                        if (candidates.IsEmpty)
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"基类中找不到可重写的 virtual/abstract 方法 '{syntax.Identifier.Text}'。");
+                        }
+                        else
+                        {
+                            var nearest = classType.BaseType.GetMethod(syntax.Identifier.Text);
+                            _diagnostics.ReportOverrideSignatureMismatch(syntax.Identifier.Location, syntax.Identifier.Text, nearest?.ReturnType ?? method.ReturnType, method.ReturnType);
+                        }
                     }
                     else
                     {
@@ -1593,6 +1625,29 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return method;
+        }
+
+        private static bool IsOverrideSignatureMatch(FunctionSymbol baseMethod, FunctionSymbol overrideMethod)
+        {
+            if (baseMethod.ReturnType != overrideMethod.ReturnType)
+            {
+                return false;
+            }
+
+            if (baseMethod.Parameters.Length != overrideMethod.Parameters.Length)
+            {
+                return false;
+            }
+
+            for (var i = 0; i < baseMethod.Parameters.Length; i++)
+            {
+                if (baseMethod.Parameters[i].Type != overrideMethod.Parameters[i].Type)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static CallingConvention GetCallingConvention(FunctionDeclarationSyntax syntax)
@@ -1678,6 +1733,18 @@ namespace Cocoa.CodeAnalysis.Binding
             if (targetClass == null)
             {
                 _diagnostics.ReportError(syntax.InitializerKeyword!.Location, "类型没有基类，不能调用 base(...)。");
+                return null;
+            }
+
+            // 6e-M19 M2-c：显式链到内建 System.Object——仅 0 参（无 .ctor 符号，等价 CLR 隐式基构造 no-op）
+            if (isBase && SystemObjectMembers.IsBuiltinSystemClass(targetClass))
+            {
+                if (syntax.InitializerArguments.Count == 0)
+                {
+                    return new BoundConstructorChainExpression(syntax, ConstructorInitializerKind.Base, constructor: null, ImmutableArray<BoundExpression>.Empty);
+                }
+
+                _diagnostics.ReportError(syntax.InitializerKeyword!.Location, "System.Object 没有带参数的构造函数。");
                 return null;
             }
 
@@ -2006,7 +2073,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            if (!HasExplicitBase(_currentClass))
+            if (!HasBaseClass(_currentClass))
             {
                 _diagnostics.ReportError(syntax.Location, $"类型 {_currentClass.Name} 没有基类，不能使用 base。");
                 return new BoundErrorExpression(syntax);
@@ -3276,8 +3343,62 @@ namespace Cocoa.CodeAnalysis.Binding
                 return demoted;
             }
 
+            // 6e-M19 M2-c：Object 成员面回退——基元/string/any receiver 的 Object 方法
+            // （ToString/GetHashCode/Equals/GetType；facade 同名方法优先，未命中才落到这里）
+            var objectFace = TryBindObjectFaceMemberCall(syntax, identifier, boundExpression, boundArguments.ToImmutable());
+            if (objectFace != null)
+            {
+                return objectFace;
+            }
+
             _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
             return new BoundErrorExpression(syntax);
+        }
+
+        /// <summary>
+        /// 6e-M19 M2-c：Object 成员面回退绑定。receiver 非 ClassTypeSymbol（基元/string/any）时查
+        /// SystemObject 单例的实例方法（虚四方法），receiver 保持表达式形状（三后端按 BuiltinKind 分发，
+        /// 值类型装箱由发射器处理）。用户类 receiver 走上方 GetMethod 沿链路径，不经此处。
+        /// </summary>
+        private BoundExpression? TryBindObjectFaceMemberCall(
+            MemberCallExpressionSyntax syntax,
+            string identifier,
+            BoundExpression receiver,
+            ImmutableArray<BoundExpression> arguments)
+        {
+            if (receiver.Type == TypeSymbol.Void || receiver.Type == TypeSymbol.Error)
+            {
+                return null;
+            }
+
+            var candidates = ClassTypeSymbol.SystemObject.GetMethods(identifier)
+                .Where(m => !m.IsStatic && m.BuiltinKind != null && IsAccessibleMember(m.Visibility, ClassTypeSymbol.SystemObject))
+                .ToImmutableArray();
+            if (candidates.IsEmpty)
+            {
+                return null;
+            }
+
+            var method = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, candidates, arguments);
+            if (method == null)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (method.Parameters.Length != arguments.Length)
+            {
+                _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, method.Parameters.Length, arguments.Length);
+                return new BoundErrorExpression(syntax);
+            }
+
+            var converted = ImmutableArray.CreateBuilder<BoundExpression>(arguments.Length);
+            for (var i = 0; i < arguments.Length; i++)
+            {
+                // 参数类型 any：非 void 值隐式装箱/引用转换（Conversion.Classify）
+                converted.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i].Type));
+            }
+
+            return new BoundMemberCallExpression(syntax, receiver, identifier, converted.ToImmutable(), method.ReturnType, method);
         }
 
         /// <summary>

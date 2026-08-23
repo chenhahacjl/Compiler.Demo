@@ -26,6 +26,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             UInt64Type = RequireType("System.UInt64");
 
             ObjectEquals = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
+            ObjectToString = RequireMethod("System.Object", "ToString", Array.Empty<string>());
+            ObjectGetHashCode = RequireMethod("System.Object", "GetHashCode", Array.Empty<string>());
+            ObjectEqualsInstance = RequireMethod("System.Object", "Equals", new[] { "System.Object" });
+            ObjectGetType = RequireMethod("System.Object", "GetType", Array.Empty<string>());
+            ObjectReferenceEquals = RequireMethod("System.Object", "ReferenceEquals", new[] { "System.Object", "System.Object" });
+            // net9 CoreLib 的 System.Type 无 get_Name（Name 属性非虚实现），Type.Name 经 FullName+切分组合
+            TypeGetFullName = RequireMethod("System.Type", "get_FullName", Array.Empty<string>());
+            StringLastIndexOfChar = RequireMethod("System.String", "LastIndexOf", new[] { "System.Char" });
+            StringSubstringFrom = RequireMethod("System.String", "Substring", new[] { "System.Int32" });
             ConsoleReadLine = RequireMethod("System.Console", "ReadLine", Array.Empty<string>());
             ConsoleWriteLine = RequireMethod("System.Console", "WriteLine", new[] { "System.Object" });
             ConsoleWrite = RequireMethod("System.Console", "Write", new[] { "System.Object" });
@@ -68,6 +77,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlTypeRef Int64Type { get; }
         public IlTypeRef UInt64Type { get; }
         public IlMethodRef ObjectEquals { get; }
+
+        /// <summary>6e-M19 M2-c：System.Object 实例虚/静态方法（Object 成员面 IL 发射）。</summary>
+        public IlMethodRef ObjectToString { get; }
+        public IlMethodRef ObjectGetHashCode { get; }
+        public IlMethodRef ObjectEqualsInstance { get; }
+        public IlMethodRef ObjectGetType { get; }
+        public IlMethodRef ObjectReferenceEquals { get; }
+
+        /// <summary>6e-M19 M3-b：System.Type 只读属性（Type.Name 经 FullName 切分；Type.FullName 直取）。</summary>
+        public IlMethodRef TypeGetFullName { get; }
+        public IlMethodRef StringLastIndexOfChar { get; }
+        public IlMethodRef StringSubstringFrom { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }
         public IlMethodRef ConsoleWrite { get; }

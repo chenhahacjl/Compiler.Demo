@@ -3,7 +3,7 @@
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
 > 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs-dev/开发计划.md`](docs-dev/开发计划.md)）
-> 最新：6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；**6e-M15（2026-08-21）：双前端拆分 ✅ — `.co` 宽松主方言 / `.cs` 严格 C# 方言（`cocoa new csharp`、`cocoa app.cs`），按扩展名分派，特性全部共享（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）**；**6e-M19 规划（2026-08-22）：System.Object 基类 + 全类型成员方法（`1.ToString()`/`"ABC".Substring(0,2)`/`arr.Sum()`）+ `System.Type` + `long`/`Int64` + native 对象模型（真 vtable）——设计见 [`docs-dev/对象模型设计.md`](docs-dev/对象模型设计.md)（🔧）**；**6e-M20 规划（2026-08-22）：泛型（类/接口/方法 + 约束）——编译期单态化，解锁 `List<T>` 与枚举器 foreach，设计见 [`docs-dev/泛型设计.md`](docs-dev/泛型设计.md)（🔧）**
+> 最新：**6h 对象模型 M2-c+M3（2026-08-23）已落地：System.Object 基类内建成员面（`1.ToString()`/`p.Equals(p)`/`GetType()`）、用户类 override 虚分派（IL 槽复用 / REPL 运行时链分派）、override 签名匹配校验、类 `==` 引用相等、System.Type（Name/FullName/ToString 三路一致）——REPL 现已支持类定义/继承/多态；native 对象模型（vtable）为下一里程碑（详见 [`docs-dev/对象模型设计.md`](docs-dev/对象模型设计.md)）**；6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；**6e-M15（2026-08-21）：双前端拆分 ✅ — `.co` 宽松主方言 / `.cs` 严格 C# 方言（`cocoa new csharp`、`cocoa app.cs`），按扩展名分派，特性全部共享（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）**；**6e-M20 规划（2026-08-22）：泛型（类/接口/方法 + 约束）——编译期单态化，解锁 `List<T>` 与枚举器 foreach，设计见 [`docs-dev/泛型设计.md`](docs-dev/泛型设计.md)（🔧）**
 
 ## 路线图（摘要）
 

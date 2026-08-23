@@ -276,6 +276,14 @@ namespace Cocoa.CodeAnalysis
                 return backendDiagnostics;
             }
 
+            // 6e-M19 M2-c：Object 成员面调用守卫（native 对象模型随 M4 落地，先给明确"未实现"诊断）
+            var objectFaceBag = new DiagnosticBag();
+            NativeObjectFaceValidator.Validate(program, objectFaceBag, new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0)));
+            if (objectFaceBag.Any())
+            {
+                return diagnostics.Concat(objectFaceBag).ToImmutableArray();
+            }
+
             var importWarnings = NativeImportValidator.Validate(program, platform.Arch);
 
             NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);

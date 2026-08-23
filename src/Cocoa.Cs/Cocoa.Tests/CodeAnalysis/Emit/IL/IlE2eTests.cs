@@ -1098,6 +1098,187 @@ function Main()
         }
 
         [Fact]
+        public void ObjectModel_ObjectFace_Members_And_StaticEquals_OnDotnetHost()
+        {
+            // 6e-M19 M2-c：System.Object 内建成员面（默认实现 + 静态相等）IL 发射
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Point
+{
+    private _x: i32
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+}
+
+function Main()
+{
+    var p = new Point(1)
+    var q = new Point(1)
+    Console.WriteLine(Object.Equals(p, p))
+    Console.WriteLine(Object.Equals(p, q))
+    Console.WriteLine(System.Object.ReferenceEquals(p, p))
+    Console.WriteLine(""abc"".ToString())
+    Console.WriteLine(42.ToString())
+    var s = p.ToString()
+    Console.WriteLine(s.Contains(""Point""))
+}", "e2e-object-members");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("True\r\nFalse\r\nTrue\r\nabc\r\n42\r\nTrue\r\n", stdout);
+        }
+
+        [Fact]
+        public void ObjectModel_ReferenceEquality_ClassTypes_OnDotnetHost()
+        {
+            // 6e-M19 M2-c：类类型 == / != 引用相等（同引用 True、独立实例 False、基类/派生混合）
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Point
+{
+    private _x: i32
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+}
+
+public class Point3D extends Point
+{
+    public constructor(x: i32) extends base(x)
+    {
+    }
+}
+
+function Main()
+{
+    var p = new Point(1)
+    var q = p
+    var r = new Point(1)
+    Console.WriteLine(p == q)
+    Console.WriteLine(p == r)
+    Console.WriteLine(p != q)
+    var d = new Point3D(2)
+    var o: object = d
+    Console.WriteLine(o == d)
+    Console.WriteLine(o == p)
+}", "e2e-reference-equality");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("True\r\nFalse\r\nFalse\r\nTrue\r\nFalse\r\n", stdout);
+        }
+
+        [Fact]
+        public void ObjectModel_Override_ToString_VirtualDispatch_OnDotnetHost()
+        {
+            // 6e-M19 M2-c/M3-a：用户类 override ToString——经 object 引用调用时 CLR 虚分派到派生实现；
+            // base.ToString() 非虚直调基类实现（Animal），不递归
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Animal
+{
+    public override function ToString(): string
+    {
+        return ""animal""
+    }
+
+    public function DescribeVia(o: object): string
+    {
+        return ""D="" + o.ToString()
+    }
+}
+
+public class Dog extends Animal
+{
+    public override function ToString(): string
+    {
+        return ""dog("" + base.ToString() + "")""
+    }
+}
+
+function Main()
+{
+    var d = new Dog()
+    var o: object = d
+    Console.WriteLine(o.ToString())
+    Console.WriteLine(d.DescribeVia(d))
+}", "e2e-override-tostring");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("dog(animal)\r\nD=dog(animal)\r\n", stdout);
+        }
+
+        [Fact]
+        public void ObjectModel_Override_GetHashCode_Equals_OnDotnetHost()
+        {
+            // 6e-M19 M2-c/M3-a：GetHashCode/Equals override 生效（含经 object 引用的槽复用分派）
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Box
+{
+    private _v: i32
+
+    public constructor(v: i32)
+    {
+        _v = v
+    }
+
+    public override function GetHashCode(): i32
+    {
+        return _v
+    }
+
+    public override function Equals(other: any): bool
+    {
+        // v1 引用同一性演示 override 生效（null/is/as 随后续里程碑引入）
+        return System.Object.ReferenceEquals(other, this)
+    }
+}
+
+function Main(): i32
+{
+    var b = new Box(9)
+    if b.GetHashCode() != 9 return 1
+    var o: object = b
+    if o.GetHashCode() != 9 return 2
+    if !o.Equals(b) return 3
+    return 0
+}", "e2e-override-hashcode-equals");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("", stdout);
+        }
+
+        [Fact]
+        public void ObjectModel_SystemType_Name_FullName_OnDotnetHost()
+        {
+            // 6e-M19 M3-b：GetType() → System.Type；Type.Name / FullName / ToString 三成员
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Point
+{
+}
+
+function Main()
+{
+    Console.WriteLine(42.GetType().Name)
+    var s = ""abc""
+    Console.WriteLine(s.GetType().Name)
+    var p = new Point()
+    Console.WriteLine(p.GetType().Name)
+    var t = 42.GetType()
+    Console.WriteLine(t.Name == ""Int32"")
+    Console.WriteLine(t.FullName)
+}", "e2e-system-type");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("Int32\r\nString\r\nPoint\r\nTrue\r\nSystem.Int32\r\n", stdout);
+        }
+
+        [Fact]
         public void Oop_Interface_Implementation_MethodAndProperty_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System

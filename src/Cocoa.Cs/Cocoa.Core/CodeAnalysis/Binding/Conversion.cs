@@ -195,13 +195,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else
                 {
-                    // 派生类 → 基类：隐式；基类 → 派生类：显式（cast）
-                    if (fromClass.IsBaseOf(toClass))
+                    // 派生类 → 基类：隐式（IsBaseOf(t) = this 在 t 的继承链上）
+                    if (toClass.IsBaseOf(fromClass))
                     {
                         return Conversion.Implicit;
                     }
 
-                    if (toClass.IsBaseOf(fromClass))
+                    // 基类 → 派生类：显式（cast）
+                    if (fromClass.IsBaseOf(toClass))
                     {
                         return Conversion.Explicit;
                     }

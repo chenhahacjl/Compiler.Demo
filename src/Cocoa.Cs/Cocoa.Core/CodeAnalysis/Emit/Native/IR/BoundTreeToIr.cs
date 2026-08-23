@@ -1246,6 +1246,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.NotEqual)));
                     break;
 
+                // 6e-M19 M2-c：类类型引用相等——M4 前 native 对象即指针，直接位比较
+                case BoundBinaryOperatorKind.ReferenceEquals:
+                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.Equal)));
+                    break;
+
+                case BoundBinaryOperatorKind.ReferenceNotEquals:
+                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.NotEqual)));
+                    break;
+
                 case BoundBinaryOperatorKind.Less:
                     Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
                     Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.Below : IrCond.Less))));

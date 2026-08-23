@@ -2095,6 +2095,279 @@ function Main(): i32
             Assert.Equal(0, result.Value);
         }
 
+        [Fact]
+        public void Evaluator_Object_Static_Equals_ReferenceEquals()
+        {
+            var text = @"using System
+
+function Main(): i32
+{
+    if !Object.Equals(1, 1) return 1
+    if Object.Equals(1, 2) return 2
+    if !System.Object.Equals(""a"", ""a"") return 3
+    // 值类型实参各自装箱 → ReferenceEquals 恒 false（CLR 语义，与 IL 一致）
+    if Object.ReferenceEquals(3, 3) return 4
+    // 字面量驻留属实现细节（Evaluator/IL 不一致），同一性断言一律走同变量
+    var s = ""a""
+    if !Object.ReferenceEquals(s, s) return 5
+    return 0
+}";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Object_Instance_ToString_GetHashCode()
+        {
+            var text = @"using System
+
+function Main(): i32
+{
+    var s = ""abc""
+    if s.ToString() != ""abc"" return 1
+    if s.GetHashCode() != s.GetHashCode() return 2
+    if !(bool)Object.Equals(s, s) return 3
+    return 0
+}";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Object_GetType_SystemType()
+        {
+            // 6e-M19 M3-b：GetType() → System.Type；Name 属性 CLR 直通
+            var text = @"using System
+
+function Main(): i32
+{
+    var t = 42.GetType()
+    if t.Name != ""Int32"" return 1
+    var s = ""abc""
+    if s.GetType().Name != ""String"" return 2
+    if t.ToString() != ""System.Int32"" return 3
+    return 0
+}";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors());
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Oop_Creation_Fields_InstanceMethods()
+        {
+            // 6e-M19 M3-c：new + 实例字段读写 + 实例方法 this 环境
+            var text = @"using System
+
+public class Counter
+{
+    private _count: i32
+    private _delta: i32
+
+    public constructor(delta: i32)
+    {
+        _delta = delta
+    }
+
+    public function Bump(): i32
+    {
+        _count = _count + _delta
+        return _count
+    }
+}
+
+function Main(): i32
+{
+    var c = new Counter(2)
+    if c.Bump() != 2 return 1
+    if c.Bump() != 4 return 2
+    return 0
+}";
+
+            AssertRunsClean(text);
+        }
+
+        [Fact]
+        public void Evaluator_Oop_Inheritance_Polymorphism_VirtualDispatch()
+        {
+            // 6e-M19 M3-c：经基类引用调用派生 override（运行时链分派）
+            var text = @"using System
+
+public class Shape
+{
+    public virtual function Area(): i32
+    {
+        return 0
+    }
+}
+
+public class Square extends Shape
+{
+    private _side: i32
+
+    public constructor(side: i32)
+    {
+        _side = side
+    }
+
+    public override function Area(): i32
+    {
+        return _side * _side
+    }
+}
+
+function Main(): i32
+{
+    var s: Shape = new Square(3)
+    if s.Area() != 9 return 1
+    var plain = new Shape()
+    if plain.Area() != 0 return 2
+    return 0
+}";
+
+            AssertRunsClean(text);
+        }
+
+        [Fact]
+        public void Evaluator_Oop_BaseChain_BaseCall_OverrideToString()
+        {
+            // 6e-M19 M3-c：extends base(...) 构造链 + base.Method() 直调 + Object.ToString override
+            var text = @"using System
+
+public class Animal
+{
+    protected _name: string
+
+    public constructor(name: string)
+    {
+        _name = name
+    }
+
+    public function Describe(): string
+    {
+        return _name
+    }
+}
+
+public class Dog extends Animal
+{
+    private _legs: i32
+
+    public constructor(name: string, legs: i32) extends base(""dog:"" + name)
+    {
+        _legs = legs
+    }
+
+    public function Tag(): string
+    {
+        return base.Describe() + ""/"" + (string)_legs
+    }
+
+    public override function ToString(): string
+    {
+        return ""Dog("" + _name + "")""
+    }
+}
+
+function Main(): i32
+{
+    var d = new Dog(""rex"", 4)
+    if d.Tag() != ""dog:rex/4"" return 1
+    var o: object = d
+    if o.ToString() != ""Dog(dog:rex)"" return 2
+    if d.GetType().Name != ""Dog"" return 3
+    if !Object.ReferenceEquals(o, d) return 4
+    return 0
+}";
+
+            AssertRunsClean(text);
+        }
+
+        [Fact]
+        public void Evaluator_Oop_StaticField_And_Cctor_LazyInit()
+        {
+            // 6e-M19 M3-c：静态字段初始化器（.cctor）惰性触发 + 静态方法/静态字段读写
+            var text = @"using System
+
+public class Registry
+{
+    public static _total: i32 = 5
+
+    public static function Add(v: i32): i32
+    {
+        _total = _total + v
+        return _total
+    }
+}
+
+function Main(): i32
+{
+    if Registry.Add(3) != 8 return 1
+    if Registry._total != 8 return 2
+    return 0
+}";
+
+            AssertRunsClean(text);
+        }
+
+        [Fact]
+        public void Evaluator_Oop_ScriptMode_ClassDeclaration()
+        {
+            // 6e-M19 M3-c：REPL（CreateScript）同管线——类定义/实例化/实例方法在交互模式可用
+            var text = @"
+public class Point
+{
+    private _x: i32
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+
+    public function Get(): i32
+    {
+        return _x
+    }
+}
+var p = new Point(3)
+return p.Get() * 2";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics));
+            Assert.Equal(6, result.Value);
+        }
+
+        private void AssertRunsClean(string text)
+        {
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.Create("Main", syntaxTree);
+            var variables = new Dictionary<VariableSymbol, object>();
+            var result = compilation.Evaluate(variables);
+
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics));
+            Assert.Equal(0, result.Value);
+        }
+
         private void AssertDiagnostics(string text, string diagnosticText)
         {
             AssertDiagnostics(text, diagnosticText, true);

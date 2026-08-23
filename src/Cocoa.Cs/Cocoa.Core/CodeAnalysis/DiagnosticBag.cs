@@ -514,6 +514,13 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>override 签名不匹配（6e-M19 M2-c，CS0115/CS1715 对齐）：基类有同名 virtual/abstract 但签名不同。</summary>
+        public void ReportOverrideSignatureMismatch(TextLocation location, string name, TypeSymbol baseReturnType, TypeSymbol overrideReturnType)
+        {
+            var message = $"方法 '{name}' 标记 override，但与基类同名方法的签名不匹配：返回类型应为 '{baseReturnType}'（实为 '{overrideReturnType}'），参数个数与类型也须逐一相同。";
+            ReportError(location, message);
+        }
+
         public void ReportCannotInheritSealed(TextLocation location, string baseName)
         {
             var message = $"不能继承 sealed 类 '{baseName}'。";
