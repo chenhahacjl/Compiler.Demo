@@ -1,0 +1,15 @@
+// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
+// class Int32 —— i32 的成员面载体（6e-M19 M2-b，对齐 C# System.Int32）：
+// 实例方法编译期降级为静态（隐藏首参 this: i32），三后端按普通静态容器方法发射。
+// 详细设计见 docs-dev/对象模型设计.md §4.2/§5
+
+namespace System
+{
+    public class Int32
+    {
+        public function ToString(): string
+        {
+            return Runtime.Int32ToString(this)
+        }
+    }
+}

@@ -20,5 +20,10 @@ namespace System
         syscall function Truncate(x: f64): f64
         syscall function Round(x: f64): f64
         syscall function Beep(frequency: i32, duration: i32): void
+        syscall function Int32ToString(value: i32): string
+        syscall function Int64ToString(value: i64): string
+        syscall function DoubleToString(value: f64): string
+        syscall function BooleanToString(value: bool): string
+        syscall function CharToString(value: char): string
     }
 }

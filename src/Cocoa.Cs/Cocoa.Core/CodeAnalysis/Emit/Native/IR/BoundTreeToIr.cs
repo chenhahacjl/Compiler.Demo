@@ -756,8 +756,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitBuiltinCall(node.Method, node.Arguments);
             }
 
-            // 静态容器类方法调用（6e-M18：Console.WriteLine / Math.Max / String.ToUpper ...）：按用户函数调用发射
-            if (node.Expression is BoundStaticTypeExpression && node.Method != null && node.Method.IsStatic)
+            // 静态容器类方法调用（6e-M18 限定/未限定 + 6e-M19 M2-b facade 降级：receiver 前置首参）：
+            // 统一按用户函数/extern 调用发射，跳过实例表达式
+            if (node.Method != null && node.Method.IsStatic)
             {
                 // extern 类方法（6e-M17 Step 4）：`Kernel32.GetTickCount()` → 导入表符号
                 if (node.Method.IsExtern)
@@ -765,13 +766,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     return EmitExternCall(node.Method, node.Arguments);
                 }
 
-                return EmitFunctionCall(node.Method, node.Arguments);
-            }
-
-            // 同容器类内未限定的静态方法调用（`Sum(a)`）绑定为 ThisExpression + 静态方法：
-            // 与 `Array.Sum(a)` 同路径，仅跳过实例表达式求值。
-            if (node.Expression is BoundThisExpression && node.Method != null && node.Method.IsStatic)
-            {
                 return EmitFunctionCall(node.Method, node.Arguments);
             }
 
@@ -846,6 +840,54 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(duration)));
                     Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Beep"), IrOperand.Constant(0)));
                     return VoidResult();
+                }
+                case BuiltinKind.Int32ToString:
+                {
+                    // int → 字符串：复用打印通道的 IntToString 运行时 helper
+                    var value = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.Int64ToString:
+                {
+                    // long → 字符串：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器，SetArg64 统一）
+                    var value = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.DoubleToString:
+                {
+                    var value = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    if (_isX64)
+                    {
+                        Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    }
+                    else
+                    {
+                        Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                        Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(value)));
+                    }
+
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.BooleanToString:
+                {
+                    var value = EmitExpression(arguments[0]);
+                    return EmitSelectString("True", "False", value);
+                }
+                case BuiltinKind.CharToString:
+                {
+                    var value = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
+                    return result;
                 }
                 case BuiltinKind.TickCount:
                 {

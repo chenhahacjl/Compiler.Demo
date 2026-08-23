@@ -94,18 +94,18 @@ namespace Cocoa.Projects
 
             if (useIncremental && BuildCache.IsUpToDate(cachePath, fingerprint))
             {
-                messageWriter.WriteLine($"'{project.Name}' is up to date");
+                messageWriter.WriteLine($"'{project.Name}' is up to date ({backend.ToString().ToLowerInvariant()})");
                 return new ProjectBuildResult(success: true, upToDate: true);
             }
-
-            var syntaxTrees = expansion.Files.Select(f => SyntaxTree.Load(f)).ToArray();
-            var compilation = project.Entry == null
-                ? Compilation.Create(references.ToArray(), syntaxTrees)
-                : Compilation.Create(project.Entry, references.ToArray(), syntaxTrees);
 
             ImmutableArray<Diagnostic> diagnostics;
             try
             {
+                var syntaxTrees = expansion.Files.Select(f => SyntaxTree.Load(f)).ToArray();
+                var compilation = project.Entry == null
+                    ? Compilation.Create(references.ToArray(), syntaxTrees)
+                    : Compilation.Create(project.Entry, references.ToArray(), syntaxTrees);
+
                 if (format == ProjectOutputFormat.Cod)
                 {
                     // `.cod` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关
@@ -157,6 +157,11 @@ namespace Cocoa.Projects
                 }
             }
             catch (NotSupportedException ex)
+            {
+                messageWriter.WriteLine($"error: {ex.Message}");
+                return ProjectBuildResult.Failed;
+            }
+            catch (InvalidDataException ex)
             {
                 messageWriter.WriteLine($"error: {ex.Message}");
                 return ProjectBuildResult.Failed;

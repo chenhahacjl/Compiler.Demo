@@ -8,7 +8,7 @@ namespace Cocoa.Tests.Compiler
 {
     /// <summary>
     /// Tutorial 样例冒烟测试：构建 samples/samples.cosln（native + dotnet 双后端），
-    /// 逐块运行 11 个功能块 exe 并断言输出，触发第二次 build 验证增量 up-to-date，
+    /// 逐块运行 13 个功能块 exe 并断言输出，触发第二次 build 验证增量 up-to-date，
     /// 并覆盖 Functions 块 entry=run 的带参/无参两种入口路径。
     /// </summary>
     public class SampleSmokeTests
@@ -91,8 +91,26 @@ namespace Cocoa.Tests.Compiler
             return Encoding.Unicode.GetString(output.ToArray());
         }
 
+        /// <summary>功能块 → Tutorial 主题组（Basics / Data / Dialects / Interop）。</summary>
+        private static readonly Dictionary<string, string> BlockGroups = new()
+        {
+            ["HelloWorld"] = "Basics",
+            ["Types"] = "Basics",
+            ["ControlFlow"] = "Basics",
+            ["Functions"] = "Basics",
+            ["Arrays"] = "Data",
+            ["Strings"] = "Data",
+            ["Doubles"] = "Data",
+            ["ByteArrays"] = "Data",
+            ["Enums"] = "Data",
+            ["CsStyle"] = "Dialects",
+            ["TopLevelFunctions"] = "Dialects",
+            ["CSharpDialect"] = "Dialects",
+            ["Interop"] = "Interop",
+        };
+
         private static string BlockExe(string runDir, string block)
-            => Path.Combine(runDir, "Tutorial", block, "out", block + ".exe");
+            => Path.Combine(runDir, "Tutorial", BlockGroups[block], block, "out", block + ".exe");
 
         private static void AssertBlockOutput(
             Func<string, string[], string> run, string runDir, string block, string[] expectedLines, string[] args)
@@ -159,7 +177,7 @@ namespace Cocoa.Tests.Compiler
 
         /// <summary>
         /// 容错构建（6e-M21）：聚合解决方案含 native 后端暂不支持的项目
-        /// （ClassLibrary 的 dll 库、CSharpClass 的对象创建/OOP）——允许整体退出非零，
+        /// （Libraries/NetLibrary 的 dll 库、Classes/CSharpClass 的对象创建/OOP）——允许整体退出非零，
         /// 仅要求 Tutorial 各功能块产物生成成功。
         /// </summary>
         private static string BuildTolerant(string backend, string? dotnetRuntime = null)

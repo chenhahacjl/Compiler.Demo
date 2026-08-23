@@ -8,7 +8,9 @@ dotnetRuntime = net48
 *.co
 
 [references]
-../mylib/out/MyLib.dll
+../mylib/out/MyLib.cod
 
 [options]
+incremental = true
+debug = false
 outputPath = out

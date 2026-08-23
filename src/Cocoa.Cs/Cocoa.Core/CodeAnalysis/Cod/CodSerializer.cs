@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Cod
     internal static class CodSerializer
     {
         public const string Magic = "COCOD";
-        public const int Version = 3;
+        public const int Version = 1;
 
         // ---------------------------------------------------------------- write
 
@@ -1081,6 +1081,10 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             var version = reader.ExpectInt();
+            if (version != Version)
+            {
+                throw new InvalidDataException($".cod version {version} is not supported (expected {Version}); rebuild the library");
+            }
 
             var symbolsById = new List<object>();
             var bodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();

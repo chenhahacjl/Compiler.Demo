@@ -23,6 +23,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         Truncate,
         Round,
         Beep,
+        Int32ToString,
+        Int64ToString,
+        DoubleToString,
+        BooleanToString,
+        CharToString,
     }
 
     /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>
@@ -51,7 +56,12 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.Ceiling, "Ceiling", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
             new BuiltinSpec(BuiltinKind.Truncate, "Truncate", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
             new BuiltinSpec(BuiltinKind.Round, "Round", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
-            new BuiltinSpec(BuiltinKind.Beep, "Beep", TypeSymbol.Void, new[] { ("frequency", TypeSymbol.Int32), ("duration", TypeSymbol.Int32) }));
+            new BuiltinSpec(BuiltinKind.Beep, "Beep", TypeSymbol.Void, new[] { ("frequency", TypeSymbol.Int32), ("duration", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Int32ToString, "Int32ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.Int64ToString, "Int64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Int64) }),
+            new BuiltinSpec(BuiltinKind.DoubleToString, "DoubleToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Double) }),
+            new BuiltinSpec(BuiltinKind.BooleanToString, "BooleanToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Boolean) }),
+            new BuiltinSpec(BuiltinKind.CharToString, "CharToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Char) }));
 
         /// <summary>
         /// 输出字符串并换行: void WriteLine(any text)（= Console.WriteLine）
@@ -123,6 +133,21 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// </summary>
         public static readonly FunctionSymbol Beep = Create(BuiltinKind.Beep);
 
+        /// <summary>整数转字符串: string Int32ToString(int value)（facade System.Int32.ToString 的底层原语）</summary>
+        public static readonly FunctionSymbol Int32ToString = Create(BuiltinKind.Int32ToString);
+
+        /// <summary>长整数转字符串: string Int64ToString(long value)（facade System.Int64.ToString 的底层原语）</summary>
+        public static readonly FunctionSymbol Int64ToString = Create(BuiltinKind.Int64ToString);
+
+        /// <summary>双精度转字符串: string DoubleToString(double value)（facade System.Double.ToString 的底层原语）</summary>
+        public static readonly FunctionSymbol DoubleToString = Create(BuiltinKind.DoubleToString);
+
+        /// <summary>布尔转字符串: string BooleanToString(bool value)（"True"/"False"，facade System.Boolean.ToString 的底层原语）</summary>
+        public static readonly FunctionSymbol BooleanToString = Create(BuiltinKind.BooleanToString);
+
+        /// <summary>字符转字符串: string CharToString(char value)（facade System.Char.ToString 的底层原语）</summary>
+        public static readonly FunctionSymbol CharToString = Create(BuiltinKind.CharToString);
+
         private static FunctionSymbol Create(BuiltinKind kind)
         {
             var spec = _specs.First(s => s.Kind == kind);
@@ -156,6 +181,11 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.Truncate => Truncate,
                 BuiltinKind.Round => Round,
                 BuiltinKind.Beep => Beep,
+                BuiltinKind.Int32ToString => Int32ToString,
+                BuiltinKind.Int64ToString => Int64ToString,
+                BuiltinKind.DoubleToString => DoubleToString,
+                BuiltinKind.BooleanToString => BooleanToString,
+                BuiltinKind.CharToString => CharToString,
                 _ => null,
             };
         }

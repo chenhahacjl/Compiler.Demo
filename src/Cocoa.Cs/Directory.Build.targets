@@ -1,0 +1,12 @@
+<Project>
+
+	<!-- 中央库仓 libs\ → 各项目输出目录自动分发（源由 tools\build-stdlib.cmd 收集；
+	     SkipUnchangedFiles 保证增量构建零开销；运行期 SystemLibrary 另有向上探测兜底） -->
+	<Target Name="DeployStdLib" AfterTargets="Build"
+			Condition="Exists('$(MSBuildThisFileDirectory)libs\System.Core.cod')">
+		<Copy SourceFiles="$(MSBuildThisFileDirectory)libs\System.Core.cod"
+				DestinationFolder="$(OutDir)"
+				SkipUnchangedFiles="true" />
+	</Target>
+
+</Project>

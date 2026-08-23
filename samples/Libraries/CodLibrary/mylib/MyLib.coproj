@@ -1,10 +1,11 @@
 name = MyLib
-output = library
+output = cocoa
 platform = x64
-dotnetRuntime = net48
 
 [sources]
 *.co
 
 [options]
+incremental = true
+debug = false
 outputPath = out

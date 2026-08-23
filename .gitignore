@@ -39,8 +39,8 @@ TestResult.xml
 *.exe
 *.dll
 *.cod
-# 标准库编译产物例外：入库保证 clone 后开箱可用（运行时按 System*.cod 发现）
-!src/Cocoa.Lib/out/*.cod
+# 标准库中央库仓：入库保证 clone 后开箱可用（构建分发到各 bin；运行时可向上探测 libs/）
+!src/Cocoa.Cs/libs/*.cod
 # IL 后端产物（dotnet host 运行时配置）
 *.runtimeconfig.json
 # Cocoa 集中状态目录（仿 .vs）

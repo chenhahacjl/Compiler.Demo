@@ -89,7 +89,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 for (var i = classes.Count - 1; i >= 0; i--)
                 {
                     var classType = classes[i];
-                    if (classType.BaseType == null || emitted.Contains(classType.BaseType))
+                    var baseReady = classType.BaseType == null
+                        || classType.BaseType.IsSystemObjectRoot
+                        || emitted.Contains(classType.BaseType);
+                    if (baseReady)
                     {
                         EmitClassDeclaration(classType);
                         emitted.Add(classType);
@@ -258,9 +261,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitClassDeclaration(ClassTypeSymbol classType)
         {
-            var baseTypeDef = classType.BaseType != null ? _classTypeDefs[classType.BaseType] : null;
-            // 接口在元数据中不能有基类（Extends = 0），否则 CoreCLR 加载时报 TypeLoadException
-            var baseTypeRef = classType.IsInterface ? null : (classType.BaseType == null ? _framework.ObjectType : null);
+            // 6e-M19 M2-a：内建 Object 根不产生 TypeDef——Extends 走框架 [mscorlib]System.Object TypeRef
+            var hasUserBase = classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot;
+            var baseTypeDef = hasUserBase ? _classTypeDefs[classType.BaseType!] : null;
+            // 接口在元数据中不能有基类（Extends = 0），否则 CoreCLR 加载时报 TypeLoadException；
+            // 仅继承内建 Object 的类 Extends = 框架 TypeRef，有用户基类的 Extends = 该基类 TypeDef
+            var baseTypeRef = !classType.IsInterface && !hasUserBase ? _framework.ObjectType : null;
             var typeDef = new IlTypeDef(classType.Name, classType.Namespace, baseTypeRef, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: baseTypeDef)
             {
                 IsAbstract = classType.IsAbstract,
@@ -456,6 +462,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 if (classType.IsExternal)
                 {
                     return IlType.Class(ResolveExternalTypeRef(classType));
+                }
+
+                // 6e-M19 M2-a：内建 Object/Type 单例不产生 TypeDef，映射框架 TypeRef
+                if (classType.IsSystemObjectRoot)
+                {
+                    return IlType.Class(_framework.ObjectType);
+                }
+
+                if (classType == ClassTypeSymbol.SystemType)
+                {
+                    return IlType.Class(_framework.RequireType("System.Type"));
                 }
 
                 return IlType.Class(_classTypeDefs[classType]);
@@ -1214,6 +1231,23 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     break;
                 case BuiltinKind.Beep:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleBeep);
+                    break;
+                case BuiltinKind.Int32ToString:
+                case BuiltinKind.Int64ToString:
+                    // box 值（框架 TypeRef）→ Convert.ToString(object)
+                    il.Emit(
+                        IlOpCodeTable.Get("Box"),
+                        function.BuiltinKind == BuiltinKind.Int32ToString ? (object)_framework.Int32Type : _framework.Int64Type);
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
+                    break;
+                case BuiltinKind.DoubleToString:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringDouble);
+                    break;
+                case BuiltinKind.BooleanToString:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringBoolean);
+                    break;
+                case BuiltinKind.CharToString:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringChar);
                     break;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");

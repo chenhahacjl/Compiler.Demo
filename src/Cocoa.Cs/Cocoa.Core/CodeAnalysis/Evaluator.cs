@@ -471,6 +471,16 @@ namespace Cocoa.CodeAnalysis
                     var duration = (int)EvaluateExpression(arguments[1])!;
                     Console.Beep(frequency, duration);
                     return null;
+                case BuiltinKind.Int32ToString:
+                    return Convert.ToString((int)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.Int64ToString:
+                    return Convert.ToString((long)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.DoubleToString:
+                    return Convert.ToString((double)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.BooleanToString:
+                    return (bool)EvaluateExpression(arguments[0])! ? "True" : "False";
+                case BuiltinKind.CharToString:
+                    return new string((char)EvaluateExpression(arguments[0])!, 1);
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }

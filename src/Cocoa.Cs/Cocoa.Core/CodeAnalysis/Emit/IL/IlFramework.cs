@@ -21,6 +21,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ObjectType = RequireType("System.Object");
             StringType = RequireType("System.String");
             ConsoleKeyInfoType = RequireType("System.ConsoleKeyInfo");
+            Int32Type = RequireType("System.Int32");
+            Int64Type = RequireType("System.Int64");
 
             ObjectEquals = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
             ConsoleReadLine = RequireMethod("System.Console", "ReadLine", Array.Empty<string>());
@@ -36,6 +38,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ConvertToInt32 = RequireMethod("System.Convert", "ToInt32", new[] { "System.Object" });
             ConvertToInt64 = RequireMethod("System.Convert", "ToInt64", new[] { "System.Object" });
             ConvertToString = RequireMethod("System.Convert", "ToString", new[] { "System.Object" });
+            ConvertToStringDouble = RequireMethod("System.Convert", "ToString", new[] { "System.Double" });
+            ConvertToStringBoolean = RequireMethod("System.Convert", "ToString", new[] { "System.Boolean" });
+            ConvertToStringChar = RequireMethod("System.Convert", "ToString", new[] { "System.Char" });
             StringChars = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
             StringLength = RequireMethod("System.String", "get_Length", Array.Empty<string>());
             StringSubstring = RequireMethod("System.String", "Substring", new[] { "System.Int32", "System.Int32" });
@@ -57,6 +62,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlTypeRef ObjectType { get; }
         public IlTypeRef StringType { get; }
         public IlTypeRef ConsoleKeyInfoType { get; }
+        public IlTypeRef Int32Type { get; }
+        public IlTypeRef Int64Type { get; }
         public IlMethodRef ObjectEquals { get; }
         public IlMethodRef ConsoleReadLine { get; }
         public IlMethodRef ConsoleWriteLine { get; }
@@ -71,6 +78,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef ConvertToInt32 { get; }
         public IlMethodRef ConvertToInt64 { get; }
         public IlMethodRef ConvertToString { get; }
+        public IlMethodRef ConvertToStringDouble { get; }
+        public IlMethodRef ConvertToStringBoolean { get; }
+        public IlMethodRef ConvertToStringChar { get; }
         public IlMethodRef StringChars { get; }
         public IlMethodRef StringLength { get; }
         public IlMethodRef StringSubstring { get; }

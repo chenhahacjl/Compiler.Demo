@@ -310,7 +310,7 @@ namespace Cocoa.CodeAnalysis
         /// </summary>
         private static bool IsPureContainerClass(ClassTypeSymbol classType)
         {
-            if (classType.IsInterface || classType.BaseType != null || classType.Fields.Any(f => !f.IsStatic))
+            if (classType.IsInterface || (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot) || classType.Fields.Any(f => !f.IsStatic))
             {
                 return false;
             }

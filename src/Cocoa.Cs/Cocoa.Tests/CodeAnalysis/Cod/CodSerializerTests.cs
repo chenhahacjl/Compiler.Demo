@@ -96,6 +96,14 @@ namespace MyLib
         }
 
         [Fact]
+        public void Cod_Read_Rejects_UnknownVersion()
+        {
+            var exception = Assert.Throws<InvalidDataException>(() => CodSerializer.Read("(cod COCOD 99)"));
+            Assert.Contains("version 99", exception.Message);
+            Assert.Contains("rebuild", exception.Message);
+        }
+
+        [Fact]
         public void Cod_Serialize_RoundTrip_Stable()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
@@ -434,6 +442,31 @@ function Main(): i32
             {
                 Environment.SetEnvironmentVariable("COCOA_STDLIB", previous);
                 SystemLibrary.Reset();
+            }
+        }
+
+        [Fact]
+        public void SystemLibrary_Probe_FindsLibsUpTree()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "cocoa-libs-probe", Guid.NewGuid().ToString("N"));
+            var deep = Path.Combine(root, "x", "y", "bin");
+            Directory.CreateDirectory(deep);
+            Directory.CreateDirectory(Path.Combine(root, "libs"));
+            File.WriteAllText(Path.Combine(root, "libs", "System.Core.cod"), "(cod COCOD 1)");
+
+            var isolatedRoot = Path.Combine(Path.GetTempPath(), "cocoa-libs-probe", Guid.NewGuid().ToString("N"));
+            var isolated = Path.Combine(isolatedRoot, "plain", "deeper");
+            Directory.CreateDirectory(isolated);
+
+            try
+            {
+                Assert.Equal(Path.GetFullPath(Path.Combine(root, "libs")), SystemLibrary.FindLibsStore(deep));
+                Assert.Null(SystemLibrary.FindLibsStore(isolated));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+                Directory.Delete(isolatedRoot, recursive: true);
             }
         }
 

@@ -96,7 +96,80 @@ platform = x64
 
             var second = Run($"build \"{projectPath}\" -b native");
             Assert.Equal(0, second.ExitCode);
-            Assert.Contains("'App' is up to date", second.Stdout);
+            Assert.Contains("'App' is up to date (native)", second.Stdout);
+        }
+
+        [Fact]
+        public void Build_Project_BackendSwitch_Invalidates()
+        {
+            var projectPath = CreateProject("backend-switch", "App", "function Main() { Console.WriteLine(1) }");
+
+            var dotnetBuild = Run($"build \"{projectPath}\" -b dotnet");
+            Assert.Equal(0, dotnetBuild.ExitCode);
+            Assert.DoesNotContain("up to date", dotnetBuild.Stdout);
+
+            var nativeBuild = Run($"build \"{projectPath}\" -b native");
+            Assert.Equal(0, nativeBuild.ExitCode);
+            Assert.DoesNotContain("up to date", nativeBuild.Stdout);
+            Assert.Contains("'App' is up to date (native)", Run($"build \"{projectPath}\" -b native").Stdout);
+
+            var dotnetAgain = Run($"build \"{projectPath}\" -b dotnet");
+            Assert.Equal(0, dotnetAgain.ExitCode);
+            Assert.DoesNotContain("up to date", dotnetAgain.Stdout);
+        }
+
+        [Fact]
+        public void Build_Project_CorruptCodReference_ReportsCleanError()
+        {
+            var dir = NewRunDir("corrupt-cod");
+            var libDir = Path.Combine(dir, "MyLib");
+            var appDir = Path.Combine(dir, "App");
+            Directory.CreateDirectory(libDir);
+            Directory.CreateDirectory(appDir);
+
+            File.WriteAllText(
+                Path.Combine(libDir, "Math.co"),
+                "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
+            File.WriteAllText(Path.Combine(libDir, "MyLib.coproj"), @"
+name = MyLib
+output = cocoa
+platform = x64
+
+[sources]
+*.co
+
+[options]
+outputPath = out
+");
+
+            var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.coproj")}\"");
+            Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
+            var codPath = Path.Combine(libDir, "out", "MyLib.cod");
+            Assert.True(File.Exists(codPath), $"cod not emitted: {libBuild.Stdout}{libBuild.Stderr}");
+
+            File.WriteAllText(codPath, "(cod COCOD 99)");
+
+            File.WriteAllText(
+                Path.Combine(appDir, "App.co"),
+                "using MyLib\nfunction Main()\n{\n    Console.WriteLine(Add(1, 2))\n}\n");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), $@"
+name = App
+output = executable
+platform = x64
+
+[sources]
+*.co
+
+[references]
+../MyLib/out/MyLib.cod
+");
+
+            var appBuild = Run($"build \"{Path.Combine(appDir, "App.coproj")}\"");
+            Assert.NotEqual(0, appBuild.ExitCode);
+            var output = appBuild.Stdout + appBuild.Stderr;
+            Assert.Contains(".cod version 99", output);
+            Assert.Contains("rebuild", output);
+            Assert.DoesNotContain("Unhandled exception", output);
         }
 
         [Fact]

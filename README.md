@@ -21,8 +21,9 @@
 ## 快速开始
 
 ```bash
-# 构建（Windows）
-src\build.cmd
+# 构建（编译器 + 标准库：cod 产物收集至 src\Cocoa.Cs\libs\，构建时自动分发到各 bin）
+dotnet build src\Cocoa.Cs\Cocoa.Compiler
+tools\build-stdlib.cmd
 
 # 创建新项目（模板 + 名称，仿 dotnet new）：console / library / cocoa / solution
 cocoa new console MyApp
@@ -38,46 +39,18 @@ cocoa new csharp MyApp
 cocoa hello.cs
 cocoa hello.cs -b native
 
-# 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net48，直接运行）
+# 构建仓库自带样例（18 项目聚合解决方案；分组结构与逐示例说明见 samples/README.md）
 cocoa build -p samples/samples.cosln
-cocoa build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
-./samples/Tutorial/HelloWorld/out/HelloWorld.exe
+./samples/Tutorial/Basics/HelloWorld/out/HelloWorld.exe
 
-# C# 式语法对照（Tutorial/CsStyle：C# 式参数/局部变量/分号 ↔ Cocoa 式，native + dotnet 双后端）
-cocoa build -p samples/Tutorial/CsStyle/CsStyle.coproj
-./samples/Tutorial/CsStyle/out/CsStyle.exe
-
-# C# 式顶层函数（Tutorial/TopLevelFunctions：`public static void Main()` / `public int Add(int x)` / Cocoa 无关键字 `Main(): void`）
-cocoa build -p samples/Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
-./samples/Tutorial/TopLevelFunctions/out/TopLevelFunctions.exe
-
-# C# 式类语法 + 字段/自动属性初始化器（samples/CSharpClass，仅 IL 后端）
-cocoa build -p samples/CSharpClass/CSharpClass.coproj
-./samples/CSharpClass/out/CSharpClass.exe
-
-# 纯 .cs 严格 C# 方言（Tutorial/CSharpDialect：类型前置/分号必选/namespace Foo;，native + dotnet 双后端，6e-M15）
-cocoa build -p samples/Tutorial/CSharpDialect/CSharpDialect.coproj -b native
-cocoa build -p samples/Tutorial/CSharpDialect/CSharpDialect.coproj -b dotnet
-./samples/Tutorial/CSharpDialect/out/CSharpDialect.exe
-
-# .cod 语义层程序集闭环（samples/CodLibrary：cocoa 库 → [references] 消费，native + dotnet 双后端）
-# mylib output=cocoa → .cod；app [references] 引用 → 编译期 IR 合并 → 独立 exe（CopyLocal 自动复制 .cod）
-# 默认 dotnetRuntime = net48（netfx），产物直接运行（无需 dotnet 前缀）
-cocoa build -p samples/CodLibrary/mylib/MyLib.coproj
-cocoa build -p samples/CodLibrary/app/App.coproj -b native
-./samples/CodLibrary/app/out/App.exe
-cocoa build -p samples/CodLibrary/app/App.coproj -b dotnet
-./samples/CodLibrary/app/out/App.exe
+# 库互操作三形态（.NET dll 库 / .cod 程序集 / native DLL import），命令见 samples/README.md
+cocoa build -p samples/Libraries/CodLibrary/app/App.coproj -b native
+./samples/Libraries/CodLibrary/app/out/App.exe
 
 # 指定输出格式与 .NET 目标框架
 cocoa build -p foo.coproj -f library
 cocoa build -p foo.coproj --dotnet-runtime net9.0
 # netcore 产物 = 托管 x.dll + 原生 apphost x.exe（SDK 标准布局）：x.exe 直接/双击运行，dotnet x.dll 亦可
-
-# 类库（dll）→ 消费：写 `using MyLib` + 引用库（samples/ClassLibrary，CopyLocal 自动复制 dll 到输出目录）
-cocoa build -p samples/ClassLibrary/mylib/MyLib.coproj -b dotnet
-cocoa build -p samples/ClassLibrary/app/App.coproj -b dotnet
-./samples/ClassLibrary/app/out/App.exe
 
 # netfx 默认：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
 cocoa build -p foo.coproj -b dotnet

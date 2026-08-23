@@ -25,12 +25,13 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly List<string> _usingNamespaces = new List<string>();
         private readonly List<string> _usingStatics = new List<string>();
         private readonly Dictionary<string, string> _usingAliases = new Dictionary<string, string>();
+        private readonly ImmutableArray<CodProgram> _codLibraries;
 
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
 
-        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, LanguageDialect dialect, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null)
+        private Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, LanguageDialect dialect, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<CodProgram> codLibraries = default)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
@@ -38,6 +39,7 @@ namespace Cocoa.CodeAnalysis.Binding
             _currentClass = function?.ContainingClass;
             _references = references.ToArray();
             _dialect = dialect;
+            _codLibraries = codLibraries.IsDefault ? ImmutableArray<CodProgram>.Empty : codLibraries;
             _usingNamespaces.AddRange(usingNamespaces);
             if (!usingStatics.IsDefaultOrEmpty)
             {
@@ -65,7 +67,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var parentScope = CreateParentScope(previous);
             InjectCodSymbols(parentScope, codLibraries);
             var dialect = syntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : syntaxTrees[0].Dialect;
-            var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, dialect);
+            var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, dialect, codLibraries: codLibraries);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
@@ -174,11 +176,26 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 var primary = parts[0].Syntax;
 
+                // 6e-M19 M2-b：facade 类标记（System.Int32/System.String 等，成员面载体）——
+                // 须先于成员绑定，实例方法声明时的降级依赖此标记
+                if (FacadeTargets.TryGetValue(classType.FullName, out var facadeTarget))
+                {
+                    classType.IsFacadeClass = true;
+                    classType.FacadeThisType = facadeTarget;
+                }
+
                 for (var i = 0; i < parts.Count; i++)
                 {
                     var (syntax, ns) = parts[i];
                     binder.BindClassBase(syntax, classType);
                     binder.BindClassMembers(syntax, classType, classFunctions, ns);
+                }
+
+                // 6e-M19 M2-a：无显式基类的非接口类默认继承 System.Object（在 BindClassBase 之后落位，
+                // 不干扰部分类基类一致性检查与循环继承检测；接口不默认）
+                if (!classType.IsInterface && classType.BaseType == null)
+                {
+                    classType.BaseType = ClassTypeSymbol.SystemObject;
                 }
 
                 binder.DeclareImplicitConstructor(classType, classFunctions, primary);
@@ -357,7 +374,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
                 }
 
-                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases);
+                var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
                 BoundBlockStatement body;
 
                 if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
@@ -759,6 +776,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
         }
+
+        /// <summary>
+        /// 是否有用户显式声明的基类（6e-M19 M2-a）。内建 Object 根不算——其成员面随 M2-b/M2-c
+        /// 接入前，base 表达式/override/隐式基构造等路径保持与"无基类"一致的行为。
+        /// </summary>
+        private static bool HasExplicitBase(ClassTypeSymbol classType)
+            => classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot;
 
         private void BindClassMembers(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
         {
@@ -1455,6 +1479,16 @@ namespace Cocoa.CodeAnalysis.Binding
             // syscall/extern 方法缺省 public（System.Runtime.Runtime.Print 供 System.Console 封装层调用；extern 供类外限定调用）
             var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
+
+            // 6e-M19 M2-b：facade 类实例方法编译期降级——隐藏首参 this（类型 = 承载类型）+ 强制静态，
+            // 三后端按普通静态容器方法发射（对齐 C# 基元别名模型：Int32.ToString 等成员面载体）
+            if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass)
+            {
+                isStatic = true;
+                var thisParameter = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0);
+                parameters = new[] { thisParameter }.Concat(parameters).ToImmutableArray();
+            }
+
             var isVirtual = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.VirtualKeyword);
             var isOverride = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.OverrideKeyword);
             var isAbstract = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
@@ -1534,7 +1568,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // override 语义：绑定到基类同签名 virtual/abstract 方法
             if (isOverride)
             {
-                if (classType.BaseType == null)
+                if (!HasExplicitBase(classType))
                 {
                     _diagnostics.ReportError(syntax.Identifier.Location, $"方法 '{syntax.Identifier.Text}' 标记 override，但类型没有基类。");
                 }
@@ -1791,6 +1825,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 // 容器类注入（6e-M17）：类壳注册进类型表；其方法已随 Functions 注入（ContainingClass 指向本类）
                 foreach (var classType in library.Classes)
                 {
+                    // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐
+                    if (!classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
+                    {
+                        classType.IsFacadeClass = true;
+                        classType.FacadeThisType = FacadeTargets[classType.FullName];
+                    }
+
                     scope.TryDeclareClass(classType);
                 }
             }
@@ -1963,7 +2004,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            if (_currentClass.BaseType == null)
+            if (!HasExplicitBase(_currentClass))
             {
                 _diagnostics.ReportError(syntax.Location, $"类型 {_currentClass.Name} 没有基类，不能使用 base。");
                 return new BoundErrorExpression(syntax);
@@ -1980,8 +2021,17 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // 6e-M19 M2-b：facade 降级方法（静态化 + 隐藏首参 this）——this 解析为首参变量
             if (_function?.IsStatic == true)
             {
+                var hiddenThis = _currentClass.IsFacadeClass
+                    ? _function.Parameters.FirstOrDefault(p => p.Ordinal == 0 && p.Name == "this")
+                    : null;
+                if (hiddenThis != null)
+                {
+                    return new BoundVariableExpression(syntax, hiddenThis);
+                }
+
                 _diagnostics.ReportError(syntax.Location, "静态方法中不能使用 this。");
                 return new BoundErrorExpression(syntax);
             }
@@ -3208,8 +3258,105 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), TypeSymbol.String);
             }
 
+            // 6e-M19 M2-b：facade 路由——基元/string receiver 的实例调用绑定到 facade 类（声明侧已降级静态）
+            var demoted = TryBindFacadeMemberCall(syntax, identifier, boundExpression, boundArguments.ToImmutable());
+            if (demoted != null)
+            {
+                return demoted;
+            }
+
             _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
             return new BoundErrorExpression(syntax);
+        }
+
+        /// <summary>
+        /// 6e-M19 M2-b：facade 成员路由。receiver 为基元/string 时查找对应 facade 类（System.Int32 等，
+        /// stdlib cod 注入）的方法（声明侧已降级为静态、首参 this），receiver 前置为首参完成静态容器
+        /// 调用绑定，三后端零特判发射。未命中返回 null（外层继续报 UnknownMember）。
+        /// </summary>
+        private BoundExpression? TryBindFacadeMemberCall(
+            MemberCallExpressionSyntax syntax,
+            string identifier,
+            BoundExpression receiver,
+            ImmutableArray<BoundExpression> arguments)
+        {
+            var facadeClass = ResolveFacadeClass(receiver.Type);
+            if (facadeClass == null)
+            {
+                return null;
+            }
+
+            var candidates = facadeClass.GetMethods(identifier)
+                .Where(m => m.IsStatic && !m.IsConstructor && IsAccessibleMember(m.Visibility, facadeClass))
+                .ToImmutableArray();
+            if (candidates.IsEmpty)
+            {
+                return null;
+            }
+
+            var demotedArguments = ImmutableArray.CreateBuilder<BoundExpression>(arguments.Length + 1);
+            demotedArguments.Add(receiver);
+            foreach (var argument in arguments)
+            {
+                demotedArguments.Add(argument);
+            }
+
+            var method = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, candidates, demotedArguments.ToImmutable());
+            if (method == null)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>(method.Parameters.Length);
+            boundArguments.Add(BindConversion(syntax.Expression.Location, receiver, method.Parameters[0].Type));
+            for (var i = 0; i < arguments.Length; i++)
+            {
+                boundArguments.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i + 1].Type));
+            }
+
+            return new BoundMemberCallExpression(syntax, receiver, identifier, boundArguments.ToImmutable(), method.ReturnType, method);
+        }
+
+        /// <summary>receiver 类型 → facade 类（stdlib cod 注入；全名解析优先，cod 库直查兜底）。</summary>
+        private ClassTypeSymbol? ResolveFacadeClass(TypeSymbol receiverType)
+        {
+            var fullName = receiverType == TypeSymbol.String ? "System.String"
+                : receiverType == TypeSymbol.Int32 ? "System.Int32"
+                : receiverType == TypeSymbol.Int64 ? "System.Int64"
+                : receiverType == TypeSymbol.Double ? "System.Double"
+                : receiverType == TypeSymbol.Boolean ? "System.Boolean"
+                : receiverType == TypeSymbol.Char ? "System.Char"
+                : receiverType == TypeSymbol.UInt8 ? "System.Byte"
+                : null;
+
+            if (fullName == null)
+            {
+                return null;
+            }
+
+            // 全名映射表为准（cod 注入类不带序列化标记；声明侧/注入侧均已补齐，此处双保险）
+            if (!FacadeTargets.ContainsKey(fullName))
+            {
+                return null;
+            }
+
+            if (LookupType(fullName) is ClassTypeSymbol viaLookup)
+            {
+                return viaLookup;
+            }
+
+            foreach (var library in _codLibraries)
+            {
+                foreach (var candidate in library.Classes)
+                {
+                    if (candidate.FullName == fullName)
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            return null;
         }
 
         /// <summary>命名空间限定函数调用解析：`System.Math.Max(...)`（精确前缀）或 `using System;` + `Math.Max(...)`（using 前缀）。</summary>
@@ -3832,6 +3979,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return declaredType;
             }
 
+            // 6e-M19 M2-a：System.Object 内建单例（用户同名类已由上方 scope 命中短路；小写关键字与 C# 原名皆可）
+            if (name is "object" or "Object")
+            {
+                return ClassTypeSymbol.SystemObject;
+            }
+
             // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
             if (name.IndexOf('.') >= 0)
             {
@@ -3845,6 +3998,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (fullNameEnum != null)
                 {
                     return fullNameEnum;
+                }
+
+                // 6e-M19 M2-a：System.Object / System.Type 内建（用户同名类优先）
+                var systemType = ResolveBuiltInSystemType(name);
+                if (systemType != null)
+                {
+                    return systemType;
                 }
 
                 return ExternalTypeResolver.TryResolve(name, _references);
@@ -3866,6 +4026,12 @@ namespace Cocoa.CodeAnalysis.Binding
                     return internalEnum;
                 }
 
+                var systemType = ResolveBuiltInSystemType(fullName);
+                if (systemType != null)
+                {
+                    return systemType;
+                }
+
                 var externalType = ExternalTypeResolver.TryResolve(fullName, _references);
                 if (externalType != null)
                 {
@@ -3874,6 +4040,36 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return null;
+        }
+
+        /// <summary>6e-M19 M2-b：facade 类全名 → 承载类型映射（null 值 = 自身，Object/Type facade）。</summary>
+        private static readonly Dictionary<string, TypeSymbol?> FacadeTargets = new Dictionary<string, TypeSymbol?>
+        {
+            ["System.String"] = TypeSymbol.String,
+            ["System.Int32"] = TypeSymbol.Int32,
+            ["System.Int64"] = TypeSymbol.Int64,
+            ["System.Double"] = TypeSymbol.Double,
+            ["System.Boolean"] = TypeSymbol.Boolean,
+            ["System.Char"] = TypeSymbol.Char,
+            ["System.Byte"] = TypeSymbol.UInt8,
+            ["System.Object"] = null,
+            ["System.Type"] = null,
+        };
+
+        /// <summary>6e-M19 M2-a：System.Object / System.Type 内建单例按名解析（裸 Type 不在此列，避免劫持 using 导入的同名类型）。</summary>
+        private static TypeSymbol? ResolveBuiltInSystemType(string fullName)
+        {
+            switch (fullName)
+            {
+                case "object":
+                case "Object":
+                case "System.Object":
+                    return ClassTypeSymbol.SystemObject;
+                case "System.Type":
+                    return ClassTypeSymbol.SystemType;
+                default:
+                    return null;
+            }
         }
 
         /// <summary>

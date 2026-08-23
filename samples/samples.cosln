@@ -1,25 +1,25 @@
 name = Samples
 
 [projects]
-# ---- Tutorial 教程（与 Tutorial/Tutorial.cosln 同集）----
-Tutorial/HelloWorld/HelloWorld.coproj
-Tutorial/Types/Types.coproj
-Tutorial/ControlFlow/ControlFlow.coproj
-Tutorial/Functions/Functions.coproj
-Tutorial/Arrays/Arrays.coproj
-Tutorial/Strings/Strings.coproj
-Tutorial/Enums/Enums.coproj
-Tutorial/ByteArrays/ByteArrays.coproj
-Tutorial/Doubles/Doubles.coproj
-Tutorial/Interop/Interop.coproj
-Tutorial/CsStyle/CsStyle.coproj
-Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
-Tutorial/CSharpDialect/CSharpDialect.coproj
-# ---- 类库示例：MyLib.dll 引用不在依赖图内，列表序即构建序（mylib 先于 app）----
-ClassLibrary/mylib/MyLib.coproj
-ClassLibrary/app/App.coproj
+# ---- Tutorial 教程（Basics / Data / Dialects / Interop 四组，详见 samples/README.md）----
+Tutorial/Basics/HelloWorld/HelloWorld.coproj
+Tutorial/Basics/Types/Types.coproj
+Tutorial/Basics/ControlFlow/ControlFlow.coproj
+Tutorial/Basics/Functions/Functions.coproj
+Tutorial/Data/Arrays/Arrays.coproj
+Tutorial/Data/Strings/Strings.coproj
+Tutorial/Data/Doubles/Doubles.coproj
+Tutorial/Data/ByteArrays/ByteArrays.coproj
+Tutorial/Data/Enums/Enums.coproj
+Tutorial/Interop/Interop/Interop.coproj
+Tutorial/Dialects/CsStyle/CsStyle.coproj
+Tutorial/Dialects/TopLevelFunctions/TopLevelFunctions.coproj
+Tutorial/Dialects/CSharpDialect/CSharpDialect.coproj
+# ---- 库示例：MyLib.dll 引用不在依赖图内，列表序即构建序（mylib 先于 app）----
+Libraries/NetLibrary/mylib/MyLib.coproj
+Libraries/NetLibrary/app/App.coproj
 # ---- Cod 库示例：cod 引用由拓扑排序自动识别 ----
-CodLibrary/mylib/MyLib.coproj
-CodLibrary/app/App.coproj
+Libraries/CodLibrary/mylib/MyLib.coproj
+Libraries/CodLibrary/app/App.coproj
 # ---- 单项目 ----
-CSharpClass/CSharpClass.coproj
+Classes/CSharpClass/CSharpClass.coproj

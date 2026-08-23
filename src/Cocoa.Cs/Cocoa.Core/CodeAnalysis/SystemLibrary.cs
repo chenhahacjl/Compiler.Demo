@@ -10,9 +10,10 @@ namespace Cocoa.CodeAnalysis
     /// <summary>
     /// 系统标准库加载器（标准库设计 §8）：目录内 `System*.cod` 自动发现加载（核心程序集
     /// `System.Core.cod` 强制首位），缓存。路径解析 `COCOA_STDLIB` env → 文件（仅加载该单文件，
-    /// 向后兼容）或目录（枚举 `System*.cod`）；缺省 `AppContext.BaseDirectory`。缺文件降级
-    /// （stdlib 不可用但不崩，绑定走空表）。编译器内建嵌入，与用户 `-r` 引用的 `.cod` 库
-    /// （_codLibraries）独立。
+    /// 向后兼容）或目录（枚举 `System*.cod`）；缺省时先从 exe 目录向上探测仓库中央库仓
+    /// `libs/`（开发期 bins 副本缺失/过旧时的兜底，见 <see cref="FindLibsStore"/>），
+    /// 未命中回落 `AppContext.BaseDirectory`。缺文件降级（stdlib 不可用但不崩，绑定走空表）。
+    /// 编译器内建嵌入，与用户 `-r` 引用的 `.cod` 库（_codLibraries）独立。
     ///
     /// 多程序集模型（仿 .NET 共享框架）：核心实现集中单一 `System.Core.cod`（Object/String/Math/
     /// Console 等，对应 C# System.Private.CoreLib）；未来大功能模块（System.Net.cod / System.Json.cod，
@@ -58,7 +59,7 @@ namespace Cocoa.CodeAnalysis
 
             var directory = !string.IsNullOrEmpty(env) && Directory.Exists(env)
                 ? env
-                : AppContext.BaseDirectory;
+                : FindLibsStore(AppContext.BaseDirectory) ?? AppContext.BaseDirectory;
 
             var files = Directory.EnumerateFiles(directory, "System*.cod")
                                  .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
@@ -95,6 +96,39 @@ namespace Cocoa.CodeAnalysis
                 // 系统库损坏 → 逐文件降级（跳过该文件，不影响其余），不影响用户程序编译
                 program = null!;
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// 从 startDirectory 逐级向上探测仓库中央库仓：名为 `libs` 且含 `System.Core.cod`
+        /// 的祖先目录。开发期 bins 副本被构建清空/过旧时的兜底发现路径；仓库外部署
+        /// （无 libs 祖先）自然回落 exe 旁目录。测试可直接注入起始目录。
+        /// </summary>
+        internal static string? FindLibsStore(string? startDirectory)
+        {
+            try
+            {
+                var current = Path.GetFullPath(startDirectory ?? ".");
+                while (true)
+                {
+                    var libs = Path.Combine(current, "libs");
+                    if (File.Exists(Path.Combine(libs, "System.Core.cod")))
+                    {
+                        return libs;
+                    }
+
+                    var parent = Directory.GetParent(current);
+                    if (parent == null || string.Equals(parent.FullName, current, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return null;
+                    }
+
+                    current = parent.FullName;
+                }
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 

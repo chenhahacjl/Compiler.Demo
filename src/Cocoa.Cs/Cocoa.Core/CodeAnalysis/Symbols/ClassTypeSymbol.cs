@@ -9,6 +9,12 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class ClassTypeSymbol : TypeSymbol
     {
+        /// <summary>System.Object 内建单例（6e-M19 M2-a）：所有无显式基类类的隐式根，成员面随 M2-b/M2-c 接入。</summary>
+        public static readonly ClassTypeSymbol SystemObject = new ClassTypeSymbol("Object", "System", Visibility.Public, declaration: null);
+
+        /// <summary>System.Type 内建单例（6e-M19 M2-a）：GetType() 的返回类型。</summary>
+        public static readonly ClassTypeSymbol SystemType = new ClassTypeSymbol("Type", "System", Visibility.Public, declaration: null);
+
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
         private readonly ImmutableArray<PropertySymbol>.Builder _properties;
@@ -44,8 +50,20 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public ClassDeclarationSyntax? Declaration { get; }
 
-        /// <summary>基类（null = System.Object）。</summary>
+        /// <summary>基类（null = 接口或未落位；非接口类绑定后恒为显式基类或 <see cref="SystemObject"/>）。</summary>
         public ClassTypeSymbol? BaseType { get; set; }
+
+        /// <summary>是否为内建 Object 根单例（区别于用户声明的类）。</summary>
+        public bool IsSystemObjectRoot => this == SystemObject;
+
+        /// <summary>
+        /// 是否为 facade 类（6e-M19 M2-b，对齐 C# 基元别名模型）：System.Int32/System.String 等承载
+        /// 基元/字符串类型的实例成员面。实例方法声明被编译期降级为静态（隐藏首参 this），不可 new、无字段。
+        /// </summary>
+        public bool IsFacadeClass { get; internal set; }
+
+        /// <summary>facade 承载的类型（Int32→i32、String→string；null = 自身，用于 Object/Type facade）。</summary>
+        public TypeSymbol? FacadeThisType { get; internal set; }
 
         public bool IsAbstract { get; internal set; }
 

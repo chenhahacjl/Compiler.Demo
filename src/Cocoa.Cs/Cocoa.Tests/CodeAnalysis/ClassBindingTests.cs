@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis
@@ -1212,6 +1213,109 @@ function Main()
             typeof(System.Console).Assembly.Location,
             typeof(System.Random).Assembly.Location,
         };
+
+        [Fact]
+        public void ObjectModel_NoExplicitBase_DefaultsToSystemObject()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+public class Point
+{
+    public function Get(): i32
+    {
+        return 1
+    }
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            var point = compilation.GlobalScope.Classes.Single(c => c.Name == "Point");
+            Assert.True(point.BaseType == ClassTypeSymbol.SystemObject);
+        }
+
+        [Fact]
+        public void ObjectModel_ExplicitObjectSpellings_BindToSingleton()
+        {
+            // 注：基类子句解析仅接受裸标识符（`System.Object` 点号拼写在 Parser 层尚不支持）；
+            // CO 方言继承用 extends 关键字（冒号为 .cs 方言拼写）
+            foreach (var baseName in new[] { "object", "Object" })
+            {
+                var code = $@"
+public class Point extends {baseName}
+{{
+    public function Get(): i32
+    {{
+        return 1
+    }}
+}}";
+                var syntaxTree = SyntaxTree.Parse(code);
+                var compilation = Compilation.Create(syntaxTree);
+                Assert.True(compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType == ClassTypeSymbol.SystemObject);
+                Assert.Empty(GetDiagnostics(code));
+            }
+        }
+
+        [Fact]
+        public void ObjectModel_Interface_BaseTypeNotDefaulted()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+interface IShape
+{
+    function Area(): i32
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            var iface = compilation.GlobalScope.Classes.Single(c => c.IsInterface);
+            Assert.Null(iface.BaseType);
+        }
+
+        [Fact]
+        public void ObjectModel_UserClassObject_ShadowsBuiltInSingleton()
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+public class Object
+{
+    public function Ping(): i32
+    {
+        return 7
+    }
+}
+
+public class Point extends Object
+{
+    public function Get(): i32
+    {
+        return 1
+    }
+}");
+            var compilation = Compilation.Create(syntaxTree);
+            var point = compilation.GlobalScope.Classes.Single(c => c.Name == "Point");
+            Assert.NotNull(point.BaseType);
+            Assert.False(point.BaseType!.IsSystemObjectRoot);
+            Assert.NotSame(ClassTypeSymbol.SystemObject, point.BaseType);
+        }
+
+        [Fact]
+        public void ObjectModel_ObjectOnlyBase_Override_ReportsNoBase()
+        {
+            var code = @"
+public class Point
+{
+    public override function ToString(): string
+    {
+        return ""Point""
+    }
+}";
+            var diagnostics = GetDiagnostics(code);
+            Assert.Contains(diagnostics, d => d.Message.Contains("没有基类"));
+        }
+
+        [Fact]
+        public void ObjectModel_FieldObjectTypeClause_Binds()
+        {
+            var code = @"
+public class Holder
+{
+    private _o: object
+}";
+            Assert.Empty(GetDiagnostics(code));
+        }
 
         private static ImmutableArray<Diagnostic> GetDiagnostics(string code)
         {

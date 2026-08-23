@@ -15,7 +15,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             return Path.Combine(directory, name + ".exe");
         }
 
-        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string? input = null)
+        internal static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string? input = null)
             => EmitAndRun(source, name, "Main", input, null, useCs: false);
 
         private static (int ExitCode, string Stdout) EmitAndRunCs(string source, string name, string? input = null)
