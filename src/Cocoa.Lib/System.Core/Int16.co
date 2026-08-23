@@ -14,5 +14,10 @@ namespace System
             if this > value { return 1 }
             return 0
         }
+        public static function Parse(s: string): i16
+        {
+            return i16(Runtime.ParseInt64(s))
+        }
     }
 }
+

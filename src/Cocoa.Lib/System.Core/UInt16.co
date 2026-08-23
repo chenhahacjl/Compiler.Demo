@@ -16,5 +16,10 @@ namespace System
             if a > b { return 1 }
             return 0
         }
+        public static function Parse(s: string): u16
+        {
+            return u16(Runtime.ParseInt64(s))
+        }
     }
 }
+
