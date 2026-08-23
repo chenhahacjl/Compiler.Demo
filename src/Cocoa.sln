@@ -1,9 +1,9 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 18
 VisualStudioVersion = 18.5.11709.299
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core", "Cocoa\Cocoa.Core.csproj", "{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core", "Cocoa.Core\Cocoa.Core.csproj", "{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Tests", "Cocoa.Tests\Cocoa.Tests.csproj", "{0216636A-D9C9-44A2-89D6-8F5A36935E91}"
 EndProject
