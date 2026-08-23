@@ -45,3 +45,4 @@ TestResult.xml
 .cocoa/
 # Cocoa 用户级配置（IDE/个人覆盖）
 *.coproj.user
+samples/**/out/

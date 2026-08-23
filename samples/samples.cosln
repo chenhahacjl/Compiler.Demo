@@ -1,0 +1,25 @@
+name = Samples
+
+[projects]
+# ---- Tutorial 教程（与 Tutorial/Tutorial.cosln 同集）----
+Tutorial/HelloWorld/HelloWorld.coproj
+Tutorial/Types/Types.coproj
+Tutorial/ControlFlow/ControlFlow.coproj
+Tutorial/Functions/Functions.coproj
+Tutorial/Arrays/Arrays.coproj
+Tutorial/Strings/Strings.coproj
+Tutorial/Enums/Enums.coproj
+Tutorial/ByteArrays/ByteArrays.coproj
+Tutorial/Doubles/Doubles.coproj
+Tutorial/Interop/Interop.coproj
+Tutorial/CsStyle/CsStyle.coproj
+Tutorial/TopLevelFunctions/TopLevelFunctions.coproj
+Tutorial/CSharpDialect/CSharpDialect.coproj
+# ---- 类库示例：MyLib.dll 引用不在依赖图内，列表序即构建序（mylib 先于 app）----
+ClassLibrary/mylib/MyLib.coproj
+ClassLibrary/app/App.coproj
+# ---- Cod 库示例：cod 引用由拓扑排序自动识别 ----
+CodLibrary/mylib/MyLib.coproj
+CodLibrary/app/App.coproj
+# ---- 单项目 ----
+CSharpClass/CSharpClass.coproj

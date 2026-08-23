@@ -3740,7 +3740,8 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 if (expression.Type != TypeSymbol.Error && type != TypeSymbol.Error)
                 {
-                    _diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
+                    System.Console.Error.WriteLine("[CV] cannot convert " + expression.Type.Name + " -> " + type.Name);
+                _diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
                 }
 
                 return new BoundErrorExpression(expression.Syntax);
