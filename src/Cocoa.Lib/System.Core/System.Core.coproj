@@ -5,4 +5,4 @@ output = cocoa
 *.co
 
 [options]
-outputPath = out
+outputPath = ..\out

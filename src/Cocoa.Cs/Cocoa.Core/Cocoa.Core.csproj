@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
@@ -13,10 +13,6 @@
     <ProjectReference Include="..\Cocoa.Generators\Cocoa.Generators.csproj"
                       OutputItemType="Analyzer" 
                       ReferenceOutputAssembly="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="..\..\Cocoa.Lib\System.Core\out\System.Core.cod" Link="System.Core.cod" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
