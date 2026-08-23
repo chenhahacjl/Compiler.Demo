@@ -1,6 +1,5 @@
 // Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
-// class Int64 —— i64 的成员面载体（6e-M19 M2-b，对齐 C# System.Int64）：
-// 实例方法编译期降级为静态（隐藏首参 this: i64），三后端按普通静态容器方法发射。
+// class Int64 —— i64 的成员面载体（6e-M19 M2-b，对齐 C# System.Int64）。
 
 namespace System
 {
@@ -9,6 +8,24 @@ namespace System
         public function ToString(): string
         {
             return Runtime.Int64ToString(this)
+        }
+
+        public function CompareTo(value: i64): i32
+        {
+            if this < value
+            {
+                return -1
+            }
+            if this > value
+            {
+                return 1
+            }
+            return 0
+        }
+
+        public static function Parse(s: string): i64
+        {
+            return Runtime.ParseInt64(s)
         }
     }
 }

@@ -889,6 +889,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.ParseInt64:
+                {
+                    // string → long：ParseInt64（返回 8 字节，x64 RAX / x86 EDX:EAX）
+                    var value = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ParseInt64"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.TickCount:
                 {
                     var result = AllocateRegister(4);

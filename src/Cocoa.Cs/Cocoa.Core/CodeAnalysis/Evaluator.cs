@@ -481,6 +481,8 @@ namespace Cocoa.CodeAnalysis
                     return (bool)EvaluateExpression(arguments[0])! ? "True" : "False";
                 case BuiltinKind.CharToString:
                     return new string((char)EvaluateExpression(arguments[0])!, 1);
+                case BuiltinKind.ParseInt64:
+                    return Convert.ToInt64((string)EvaluateExpression(arguments[0])!);
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }

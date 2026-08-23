@@ -28,6 +28,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         DoubleToString,
         BooleanToString,
         CharToString,
+        ParseInt64,
     }
 
     /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>
@@ -61,7 +62,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.Int64ToString, "Int64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Int64) }),
             new BuiltinSpec(BuiltinKind.DoubleToString, "DoubleToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Double) }),
             new BuiltinSpec(BuiltinKind.BooleanToString, "BooleanToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Boolean) }),
-            new BuiltinSpec(BuiltinKind.CharToString, "CharToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Char) }));
+            new BuiltinSpec(BuiltinKind.CharToString, "CharToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Char) }),
+            new BuiltinSpec(BuiltinKind.ParseInt64, "ParseInt64", TypeSymbol.Int64, new[] { ("s", TypeSymbol.String) }));
 
         /// <summary>
         /// 输出字符串并换行: void WriteLine(any text)（= Console.WriteLine）
@@ -148,6 +150,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>字符转字符串: string CharToString(char value)（facade System.Char.ToString 的底层原语）</summary>
         public static readonly FunctionSymbol CharToString = Create(BuiltinKind.CharToString);
 
+        /// <summary>字符串解析为长整数: long ParseInt64(string s)（facade System.Int64.Parse 的底层原语）</summary>
+        public static readonly FunctionSymbol ParseInt64 = Create(BuiltinKind.ParseInt64);
+
         private static FunctionSymbol Create(BuiltinKind kind)
         {
             var spec = _specs.First(s => s.Kind == kind);
@@ -186,6 +191,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.DoubleToString => DoubleToString,
                 BuiltinKind.BooleanToString => BooleanToString,
                 BuiltinKind.CharToString => CharToString,
+                BuiltinKind.ParseInt64 => ParseInt64,
                 _ => null,
             };
         }

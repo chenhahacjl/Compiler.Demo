@@ -1249,6 +1249,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BuiltinKind.CharToString:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringChar);
                     break;
+                case BuiltinKind.ParseInt64:
+                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt64FromString);
+                    break;
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }

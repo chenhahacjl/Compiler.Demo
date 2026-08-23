@@ -4276,6 +4276,22 @@ Store(obj, 0, lenChars, 4);
                 Load(len, s, 0, 4);
                 var p = NewReg(8);
                 Lea(p, s, 4);
+
+                // 负号前置检查：s[0] == '-' → neg=1，len-1、指针后移一个 UTF-16 字符
+                var neg = NewReg(4);
+                Const(neg, 0);
+                var skipNeg = NewLabel();
+                var c0 = NewReg(4);
+                Load(c0, s, 4, 2);
+                Cmp(c0, C(4, '-'));
+                Jcc(IrCond.NotEqual, skipNeg);
+                Const(neg, 1);
+                AddI(len, len, -1);
+                var p2 = NewReg(8);
+                Lea(p2, s, 6);
+                Mov(p, p2);
+                Mark(skipNeg);
+
                 var acc = NewReg(8);
                 Const(acc, 0);
                 var i = C(4, 0);
@@ -4301,6 +4317,14 @@ Store(obj, 0, lenChars, 4);
                 Jmp(loop);
 
                 Mark(done);
+
+                // 负号修正：neg != 0 → Neg64(acc)
+                Cmp(neg, 0);
+                var outLbl = NewLabel();
+                Jcc(IrCond.Equal, outLbl);
+                Add(IrOpCode.Neg64, acc, IrOperand.Reg(acc));
+                Mark(outLbl);
+
                 StoreRet(acc);
                 EndFunction(_currentFunction!, 8);
             }

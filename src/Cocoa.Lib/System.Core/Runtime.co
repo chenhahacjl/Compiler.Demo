@@ -25,5 +25,6 @@ namespace System
         syscall function DoubleToString(value: f64): string
         syscall function BooleanToString(value: bool): string
         syscall function CharToString(value: char): string
+        syscall function ParseInt64(s: string): i64
     }
 }
