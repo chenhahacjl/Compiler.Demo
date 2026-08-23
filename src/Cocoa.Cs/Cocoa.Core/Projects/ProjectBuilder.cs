@@ -115,9 +115,12 @@ namespace Cocoa.Projects
                 {
                     if (project.Output == ProjectOutputFormat.Dll)
                     {
-                        messageWriter.WriteLine($"error: library (dll) output 仅支持 .NET 后端（-b dotnet），native 后端暂不支持");
-                        return ProjectBuildResult.Failed;
+                        // 6e-M21：聚合解决方案（samples.cosln）中混有 dotnet-only 库项目——
+                        // native 全量构建时跳过而非失败，保持一键体验
+                        messageWriter.WriteLine($"skip: '{project.Name}' (library dll output is dotnet-only)");
+                        return new ProjectBuildResult(success: true, upToDate: false);
                     }
+
 
                     diagnostics = compilation.EmitNative(project.Name, outputFile, platform);
                 }

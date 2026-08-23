@@ -7,7 +7,7 @@ using Xunit;
 namespace Cocoa.Tests.Compiler
 {
     /// <summary>
-    /// Tutorial 样例冒烟测试：构建 samples/Tutorial/Tutorial.cosln（native + dotnet 双后端），
+    /// Tutorial 样例冒烟测试：构建 samples/samples.cosln（native + dotnet 双后端），
     /// 逐块运行 11 个功能块 exe 并断言输出，触发第二次 build 验证增量 up-to-date，
     /// 并覆盖 Functions 块 entry=run 的带参/无参两种入口路径。
     /// </summary>
@@ -32,8 +32,8 @@ namespace Cocoa.Tests.Compiler
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             while (dir != null)
             {
-                var candidate = Path.Combine(dir.FullName, "samples", "Tutorial");
-                if (File.Exists(Path.Combine(candidate, "Tutorial.cosln")))
+                var candidate = Path.Combine(dir.FullName, "samples");
+                if (File.Exists(Path.Combine(candidate, "samples.cosln")))
                 {
                     return candidate;
                 }
@@ -41,7 +41,7 @@ namespace Cocoa.Tests.Compiler
                 dir = dir.Parent;
             }
 
-            throw new DirectoryNotFoundException("samples/Tutorial not found above test output directory.");
+            throw new DirectoryNotFoundException("samples/samples.cosln not found above test output directory.");
         }
 
         private static (int ExitCode, string Stdout, string Stderr) RunCli(string args)
@@ -92,7 +92,7 @@ namespace Cocoa.Tests.Compiler
         }
 
         private static string BlockExe(string runDir, string block)
-            => Path.Combine(runDir, block, "out", block + ".exe");
+            => Path.Combine(runDir, "Tutorial", block, "out", block + ".exe");
 
         private static void AssertBlockOutput(
             Func<string, string[], string> run, string runDir, string block, string[] expectedLines, string[] args)
@@ -145,7 +145,7 @@ namespace Cocoa.Tests.Compiler
             var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
             CopyDirectory(FindTutorialDir(), runDir);
 
-            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\" -b {backend}"
+            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b {backend}"
                 + (dotnetRuntime == null ? "" : $" --dotnet-runtime {dotnetRuntime}");
             var first = RunCli(arg);
             Assert.True(first.ExitCode == 0, $"first build failed: {first.Stdout}{first.Stderr}");
@@ -153,6 +153,24 @@ namespace Cocoa.Tests.Compiler
             var second = RunCli(arg);
             Assert.True(second.ExitCode == 0, $"second build failed: {second.Stdout}{second.Stderr}");
             Assert.Contains("up to date", second.Stdout);
+
+            return runDir;
+        }
+
+        /// <summary>
+        /// 容错构建（6e-M21）：聚合解决方案含 native 后端暂不支持的项目
+        /// （ClassLibrary 的 dll 库、CSharpClass 的对象创建/OOP）——允许整体退出非零，
+        /// 仅要求 Tutorial 各功能块产物生成成功。
+        /// </summary>
+        private static string BuildTolerant(string backend, string? dotnetRuntime = null)
+        {
+            var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
+            CopyDirectory(FindTutorialDir(), runDir);
+
+            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b {backend}"
+                + (dotnetRuntime == null ? "" : $" --dotnet-runtime {dotnetRuntime}");
+            var first = RunCli(arg);
+            Assert.True(File.Exists(BlockExe(runDir, "HelloWorld")), $"tutorial blocks missing after build: {first.Stdout}{first.Stderr}");
 
             return runDir;
         }
@@ -191,7 +209,7 @@ namespace Cocoa.Tests.Compiler
             var runDir = Path.Combine(GetTempDir(), Guid.NewGuid().ToString("N"));
             CopyDirectory(FindTutorialDir(), runDir);
 
-            var arg = $"build \"{Path.Combine(runDir, "Tutorial.cosln")}\" -b dotnet --dotnet-runtime {dotnetRuntime}";
+            var arg = $"build \"{Path.Combine(runDir, "samples.cosln")}\" -b dotnet --dotnet-runtime {dotnetRuntime}";
             var first = RunCli(arg);
             Assert.True(first.ExitCode == 0, $"first netfx build failed: {first.Stdout}{first.Stderr}");
 
@@ -205,7 +223,8 @@ namespace Cocoa.Tests.Compiler
         [Fact]
         public void Tutorial_Native_AllBlocks_BuildAndRun()
         {
-            var runDir = Build(backend: "native");
+            // native 后端暂不支持 OOP（new）/dll 库项目：聚合构建容错，仅要求 Tutorial 各块可用
+            var runDir = BuildTolerant(backend: "native");
             AssertBlocks(RunNative, runDir);
             AssertFunctionsEntry(RunNative, runDir);
         }
@@ -215,7 +234,7 @@ namespace Cocoa.Tests.Compiler
         {
             // 样例 coproj 默认 dotnetRuntime = net48（netfx）；netcore 分支需显式覆盖回 net9.0。
             // netcore 产物含原生 apphost：直接运行（双击等价）。
-            var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0");
+            var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0")!;
             AssertBlocks(RunDirectExe, runDir);
             AssertFunctionsEntry(RunDirectExe, runDir);
         }

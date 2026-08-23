@@ -39,7 +39,7 @@ cocoa hello.cs
 cocoa hello.cs -b native
 
 # 编译仓库自带项目 / 解决方案样例（Tutorial：每功能块一个 exe，coproj 默认 dotnetRuntime = net48，直接运行）
-cocoa build -p samples/Tutorial/Tutorial.cosln
+cocoa build -p samples/samples.cosln
 cocoa build -p samples/Tutorial/HelloWorld/HelloWorld.coproj
 ./samples/Tutorial/HelloWorld/out/HelloWorld.exe
 

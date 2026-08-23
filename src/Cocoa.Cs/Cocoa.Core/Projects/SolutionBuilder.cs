@@ -43,11 +43,22 @@ namespace Cocoa.Projects
             var buildOptions = GetBuildOptions(options, solution.Directory);
             foreach (var index in order)
             {
-                var result = ProjectBuilder.Build(projects[index], buildOptions, messageWriter);
+                ProjectBuildResult result;
+                try
+                {
+                    // 6e-M21：聚合解决方案容错——单项目失败（如 native 后端遇 OOP/dotnet-only 示例）不中断其余构建
+                    result = ProjectBuilder.Build(projects[index], buildOptions, messageWriter);
+                }
+                catch (Exception ex)
+                {
+                    messageWriter.WriteLine($"error: project '{projects[index].Name}' crashed: {ex.Message}");
+                    allOk = false;
+                    continue;
+                }
+
                 if (!result.Success)
                 {
                     allOk = false;
-                    break;
                 }
             }
 
