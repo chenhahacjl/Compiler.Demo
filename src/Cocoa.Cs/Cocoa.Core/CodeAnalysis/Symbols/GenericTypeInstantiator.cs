@@ -84,7 +84,13 @@ namespace Cocoa.CodeAnalysis.Symbols
 
             foreach (var method in definition.Methods)
             {
-                instantiated.AddMethod(SubstituteMethod(method, instantiated, map));
+                // 实例构造器名须随实例化类名（`GetMethod(classType.Name)` 是全编译器的构造查找约定）；
+                // 静态构造 `.cctor` 与普通方法名不变
+                var nameOverride = method.IsConstructor && !method.IsStatic && method.Name == definition.Name
+                    ? instantiated.Name
+                    : null;
+
+                instantiated.AddMethod(SubstituteMethod(method, instantiated, map, nameOverride));
             }
 
             foreach (var property in definition.Properties)
@@ -96,7 +102,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>方法签名替换 + 关联容器改指实例化类（方法体在 G2 单态化阶段经语法重绑接管）。</summary>
-        internal static FunctionSymbol SubstituteMethod(FunctionSymbol method, InstantiatedTypeSymbol containingClass, Dictionary<TypeParameterSymbol, TypeSymbol> map)
+        internal static FunctionSymbol SubstituteMethod(FunctionSymbol method, InstantiatedTypeSymbol containingClass, Dictionary<TypeParameterSymbol, TypeSymbol> map, string? nameOverride = null)
         {
             var parameters = method.Parameters
                 .Select(p => new ParameterSymbol(p.Name, TypeSubstituter.Substitute(p.Type, map), p.Ordinal))
@@ -104,7 +110,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             var returnType = TypeSubstituter.Substitute(method.ReturnType, map);
 
             return new FunctionSymbol(
-                method.Name,
+                nameOverride ?? method.Name,
                 parameters,
                 returnType,
                 method.Declaration,
@@ -127,7 +133,6 @@ namespace Cocoa.CodeAnalysis.Symbols
                 IsConstructor = method.IsConstructor,
             };
         }
-
         /// <summary>mangle 名：`List_int` / `Dict_int_string` / `List_List_int` / `Box_int_Array`（简单名；跨命名空间唯一性由 FullName 承载）。</summary>
         public static string MangledName(ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {

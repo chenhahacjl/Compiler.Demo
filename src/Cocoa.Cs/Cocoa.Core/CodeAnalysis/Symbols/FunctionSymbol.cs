@@ -71,5 +71,11 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>override 方法在基类中的对应虚方法（沿继承链）。</summary>
         public FunctionSymbol? OverriddenMethod { get; internal set; }
+
+        /// <summary>泛型方法类型参数（6e-M20；空 = 非泛型方法。实例化后的具体方法此列表为空）。</summary>
+        public ImmutableArray<TypeParameterSymbol> TypeParameters { get; internal set; } = ImmutableArray<TypeParameterSymbol>.Empty;
+
+        /// <summary>是否为泛型方法定义（模板）。</summary>
+        public bool IsGenericMethod => TypeParameters.Length > 0;
     }
 }

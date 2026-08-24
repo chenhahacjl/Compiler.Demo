@@ -14,8 +14,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             Name = name;
             Namespace = @namespace ?? "";
-            BaseTypeRef = baseTypeRef;
-            BaseTypeDef = baseTypeDef;
+            _baseTypeRef = baseTypeRef;
+            _baseTypeDef = baseTypeDef;
             IsPublic = isPublic;
             Fields = new List<IlFieldDef>();
             Methods = new List<IlMethodDef>();
@@ -23,10 +23,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public string Name { get; }
         public string Namespace { get; }
-        public IlTypeRef? BaseTypeRef { get; }
+        private IlTypeRef? _baseTypeRef;
+        public IlTypeRef? BaseTypeRef => _baseTypeRef;
 
         /// <summary>本程序集内的基类 TypeDef（优先于 BaseTypeRef）。</summary>
-        public IlTypeDef? BaseTypeDef { get; }
+        private IlTypeDef? _baseTypeDef;
+        public IlTypeDef? BaseTypeDef => _baseTypeDef;
+
+        /// <summary>延迟填充基类（6e-M20：泛型实例化类的字段可前向引用兄弟实例化类，壳先注册、基类后填）。</summary>
+        internal void SetBase(IlTypeRef? baseTypeRef, IlTypeDef? baseTypeDef)
+        {
+            _baseTypeRef = baseTypeRef;
+            _baseTypeDef = baseTypeDef;
+        }
 
         public bool IsPublic { get; }
         public bool IsAbstract { get; set; }

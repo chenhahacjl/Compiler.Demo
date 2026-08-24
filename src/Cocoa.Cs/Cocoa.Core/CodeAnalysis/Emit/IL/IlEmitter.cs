@@ -84,21 +84,26 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             var emitted = new HashSet<ClassTypeSymbol>();
-            while (classes.Count > 0)
+
+            // 1a：先注册全部 TypeDef 壳（6e-M20：泛型实例化类的字段可前向引用兄弟实例化类，
+            // 依赖序无法仅按基类链排序——壳先行入表，Extends/字段随后填充）
+            foreach (var classType in classes)
             {
-                for (var i = classes.Count - 1; i >= 0; i--)
+                var typeDef = new IlTypeDef(classType.Name, classType.Namespace, null, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: null)
                 {
-                    var classType = classes[i];
-                    var baseReady = classType.BaseType == null
-                        || classType.BaseType.IsSystemObjectRoot
-                        || emitted.Contains(classType.BaseType);
-                    if (baseReady)
-                    {
-                        EmitClassDeclaration(classType);
-                        emitted.Add(classType);
-                        classes.RemoveAt(i);
-                    }
-                }
+                    IsAbstract = classType.IsAbstract,
+                    IsSealed = classType.IsSealed,
+                    IsInterface = classType.IsInterface,
+                };
+                _classTypeDefs.Add(classType, typeDef);
+                _metadata.AddTypeDef(typeDef);
+                emitted.Add(classType);
+            }
+
+            // 1b：填充 Extends + 字段（全部 TypeDef 已在表内，任意顺序安全）
+            foreach (var classType in classes)
+            {
+                EmitClassDeclaration(classType);
             }
 
             // 1.5 InterfaceImpl：所有 TypeDef 就绪后，把类实现/继承的接口（含基类链与接口继承）写入各自 TypeDef
@@ -262,18 +267,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private void EmitClassDeclaration(ClassTypeSymbol classType)
         {
             // 6e-M19 M2-a：内建 Object 根不产生 TypeDef——Extends 走框架 [mscorlib]System.Object TypeRef
+            // 6e-M20：壳已在 1a 阶段注册，此处填充 Extends 与字段
+            var typeDef = _classTypeDefs[classType];
             var hasUserBase = classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot;
             var baseTypeDef = hasUserBase ? _classTypeDefs[classType.BaseType!] : null;
             // 接口在元数据中不能有基类（Extends = 0），否则 CoreCLR 加载时报 TypeLoadException；
             // 仅继承内建 Object 的类 Extends = 框架 TypeRef，有用户基类的 Extends = 该基类 TypeDef
-            var baseTypeRef = !classType.IsInterface && !hasUserBase ? _framework.ObjectType : null;
-            var typeDef = new IlTypeDef(classType.Name, classType.Namespace, baseTypeRef, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: baseTypeDef)
-            {
-                IsAbstract = classType.IsAbstract,
-                IsSealed = classType.IsSealed,
-                IsInterface = classType.IsInterface,
-            };
-            _classTypeDefs.Add(classType, typeDef);
+            typeDef.SetBase(!classType.IsInterface && !hasUserBase ? _framework.ObjectType : null, baseTypeDef);
 
             foreach (var field in classType.Fields)
             {
@@ -281,8 +281,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 typeDef.Fields.Add(fieldDef);
                 _fieldDefs.Add(field, fieldDef);
             }
-
-            _metadata.AddTypeDef(typeDef);
         }
 
         private (byte[] Code, uint LocalSigToken, int MaxStack) EmitFunctionBody(IlMethodDef method, BoundBlockStatement body)
