@@ -67,9 +67,26 @@ namespace Cocoa.CodeAnalysis
                 _locals.Peek()[function.Parameters[0]] = (args ?? Array.Empty<string>()).Cast<object>().ToArray();
             }
 
-            var body = _functions[function];
+            // 6e-M22 C5：入口函数自身带捕获变量时（顶层 lambda 捕获入口局部——当前限定非顶层，占位防御）
+            var pushedEnvironment = false;
+            if (function.CapturedVariables is { Count: > 0 })
+            {
+                _closureEnvironments.Push(CreateEnvironment(function, null));
+                pushedEnvironment = true;
+            }
 
-            return EvaluateStatement(body);
+            try
+            {
+                var body = _functions[function];
+                return EvaluateStatement(body);
+            }
+            finally
+            {
+                if (pushedEnvironment)
+                {
+                    _closureEnvironments.Pop();
+                }
+            }
         }
 
         private object? EvaluateStatement(BoundBlockStatement body)
@@ -242,9 +259,51 @@ namespace Cocoa.CodeAnalysis
             public object? Receiver { get; }
         }
 
+        /// <summary>闭包环境对象（6e-M22 C5）：捕获变量的堆上规范存储。</summary>
+        internal sealed class ClosureEnvironment
+        {
+            public System.Collections.Generic.Dictionary<VariableSymbol, object> Slots { get; } = new();
+        }
+
+        private readonly System.Collections.Generic.Stack<ClosureEnvironment> _closureEnvironments = new();
+
+        private ClosureEnvironment PeekClosureEnvironment() => _closureEnvironments.Peek();
+
+        private static ClosureEnvironment CreateEnvironment(FunctionSymbol function, object?[]? argumentValues)
+        {
+            var environment = new ClosureEnvironment();
+
+            if (function.CapturedVariables != null && argumentValues != null)
+            {
+                foreach (var captured in function.CapturedVariables)
+                {
+                    if (captured is ParameterSymbol parameter)
+                    {
+                        environment.Slots[captured] = argumentValues[parameter.Ordinal]!;
+                    }
+                }
+            }
+
+            return environment;
+        }
+
         private object EvaluateFunctionValue(BoundFunctionValueExpression node)
         {
-            var receiver = node.Receiver == null ? null : EvaluateExpression(node.Receiver);
+            // 捕获 lambda：Receiver = 当前环境对象；方法组：Receiver = 接收者求值
+            object? receiver;
+            if (node.EnvironmentClass != null)
+            {
+                receiver = _closureEnvironments.Count > 0 ? PeekClosureEnvironment() : null;
+            }
+            else if (node.Receiver != null)
+            {
+                receiver = EvaluateExpression(node.Receiver);
+            }
+            else
+            {
+                receiver = null;
+            }
+
             return new EvaluatorFunctionValue(node.Function, receiver);
         }
 
@@ -259,7 +318,9 @@ namespace Cocoa.CodeAnalysis
             }
 
             var argumentValues = node.Arguments.Select(EvaluateExpression).ToArray();
-            return InvokeFunction(target.Function, target.Receiver, argumentValues);
+            var environment = target.Function.IsLambdaWithEnvironment ? target.Receiver as ClosureEnvironment : null;
+
+            return InvokeFunction(target.Function, target.Function.IsLambdaWithEnvironment ? null : target.Receiver, argumentValues, environment);
         }
 
         private object EvaluateVariableExpression(BoundVariableExpression variable)
@@ -268,11 +329,15 @@ namespace Cocoa.CodeAnalysis
             {
                 return _globals[variable.Variable];
             }
-            else
+
+            // 6e-M22 C5：捕获变量读写环境对象字段
+            if (variable.Variable.IsCaptured)
             {
-                var locals = _locals.Peek();
-                return locals[variable.Variable];
+                return PeekClosureEnvironment().Slots[variable.Variable];
             }
+
+            var locals = _locals.Peek();
+            return locals[variable.Variable];
         }
 
         private object EvaluateAssignmentExpression(BoundAssignmentExpression assignment)
@@ -484,6 +549,7 @@ namespace Cocoa.CodeAnalysis
             }
 
             var locals = new Dictionary<VariableSymbol, object>();
+            var argumentValues = new object?[node.Arguments.Length];
             for (var i = 0; i < node.Arguments.Length; i++)
             {
                 var parameter = node.Function.Parameters[i];
@@ -492,6 +558,7 @@ namespace Cocoa.CodeAnalysis
                 Debug.Assert(value != null);
 
                 locals.Add(parameter, value);
+                argumentValues[i] = value;
             }
 
             // 类静态方法直呼（using static 等）：首次触碰触发 .cctor（M3-c）
@@ -502,10 +569,30 @@ namespace Cocoa.CodeAnalysis
 
             _locals.Push(locals);
 
-            var statement = _functions[node.Function];
-            var result = EvaluateStatement(statement);
+            // 6e-M22 C5：宿主函数直呼路径同样需要环境对象
+            ClosureEnvironment? pushedEnvironment = null;
+            if (node.Function.CapturedVariables is { Count: > 0 })
+            {
+                pushedEnvironment = CreateEnvironment(node.Function, argumentValues);
+                _closureEnvironments.Push(pushedEnvironment);
+            }
 
-            _locals.Pop();
+            var statement = _functions[node.Function];
+
+            object? result;
+            try
+            {
+                result = EvaluateStatement(statement);
+            }
+            finally
+            {
+                if (pushedEnvironment != null)
+                {
+                    _closureEnvironments.Pop();
+                }
+
+                _locals.Pop();
+            }
 
             return result;
         }
@@ -1142,7 +1229,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 实例函数调用环境：参数入局部帧 + this 压接收者栈（BoundThisExpression 求值返回栈顶），退出对称弹栈。
         /// </summary>
-        private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues)
+        private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues, ClosureEnvironment? existingEnvironment = null)
         {
             var locals = new Dictionary<VariableSymbol, object>();
             for (var i = 0; i < function.Parameters.Length; i++)
@@ -1151,6 +1238,14 @@ namespace Cocoa.CodeAnalysis
             }
 
             _locals.Push(locals);
+
+            // 6e-M22 C5：环境对象入栈——lambda 用调用方传递的实例；宿主函数新建（捕获参数随入参播种）
+            var usesEnvironment = existingEnvironment != null || function.CapturedVariables is { Count: > 0 };
+            if (usesEnvironment)
+            {
+                _closureEnvironments.Push(existingEnvironment ?? CreateEnvironment(function, argumentValues));
+            }
+
             if (thisReceiver != null)
             {
                 _thisStack.Push(thisReceiver);
@@ -1165,6 +1260,11 @@ namespace Cocoa.CodeAnalysis
                 if (thisReceiver != null)
                 {
                     _thisStack.Pop();
+                }
+
+                if (usesEnvironment)
+                {
+                    _closureEnvironments.Pop();
                 }
 
                 _locals.Pop();
@@ -1228,6 +1328,11 @@ namespace Cocoa.CodeAnalysis
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
                 _globals[variable] = value!;
+            }
+            else if (variable.IsCaptured)
+            {
+                // 6e-M22 C5：捕获变量写环境对象字段
+                PeekClosureEnvironment().Slots[variable] = value!;
             }
             else
             {

@@ -77,5 +77,17 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>是否为泛型方法定义（模板）。</summary>
         public bool IsGenericMethod => TypeParameters.Length > 0;
+
+        /// <summary>
+        /// 本函数体内被 lambda 捕获的局部变量/参数（6e-M22 C5）——
+        /// 非空即表示该函数需要环境对象承载这些变量的规范存储。
+        /// </summary>
+        internal System.Collections.Generic.List<VariableSymbol>? CapturedVariables { get; set; }
+
+        /// <summary>提升 lambda 专有：其环境对象所属的宿主函数（嵌套 lambda 继承最外层非 lambda 函数）。</summary>
+        internal FunctionSymbol? EnvironmentOwner { get; set; }
+
+        /// <summary>提升 lambda 专有：调用时须把 Receiver（环境对象）压入环境栈。</summary>
+        public bool IsLambdaWithEnvironment { get; internal set; }
     }
 }

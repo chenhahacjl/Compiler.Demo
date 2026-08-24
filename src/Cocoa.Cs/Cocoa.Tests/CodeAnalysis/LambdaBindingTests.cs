@@ -124,6 +124,82 @@ function Main()
         }
 
         // ------------------------------------------------------------------
+        // 闭包捕获（6e-M22 C5）：Evaluator 后端
+        // ------------------------------------------------------------------
+
+        private const string ClosureCounterProgram = @"using System
+
+function MakeCounter(): () -> i32
+{
+    var count = 0
+
+    return () =>
+    {
+        count = count + 1
+        return count
+    }
+}
+
+function Main(): i32
+{
+    var c1 = MakeCounter()
+    var c2 = MakeCounter()
+
+    Console.WriteLine(c1())
+    Console.WriteLine(c1())
+    Console.WriteLine(c2())
+    Console.WriteLine(c1())
+
+    if c1() != 4 || c2() != 2
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        private const string ClosureParameterProgram = @"using System
+
+function Adder(n: i32): (i32) -> i32
+{
+    return (x: i32) =>
+    {
+        return x + n
+    }
+}
+
+function Main(): i32
+{
+    var add5 = Adder(5)
+    Console.WriteLine(add5(10))
+
+    var add1 = Adder(1)
+
+    if add1(7) != 8
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Closure_Counter_IndependentInstances()
+        {
+            var result = Evaluate(ClosureCounterProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Closure_ParameterCapture()
+        {
+            var result = Evaluate(ClosureParameterProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        // ------------------------------------------------------------------
         // native 后端（6e-M22 C4-c：[typeId][fnptr][env] 三字对象 + CallReg）
         // ------------------------------------------------------------------
 

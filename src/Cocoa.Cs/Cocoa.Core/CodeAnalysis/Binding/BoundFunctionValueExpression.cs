@@ -13,13 +13,14 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundFunctionValueExpression : BoundExpression
     {
-        public BoundFunctionValueExpression(SyntaxNode syntax, FunctionSymbol function, BoundExpression? receiver, BoundBlockStatement? body, FunctionTypeSymbol type)
+        public BoundFunctionValueExpression(SyntaxNode syntax, FunctionSymbol function, BoundExpression? receiver, BoundBlockStatement? body, FunctionTypeSymbol type, ClassTypeSymbol? environmentClass = null)
             : base(syntax)
         {
             Function = function;
             Receiver = receiver;
             Body = body;
             Type = type;
+            EnvironmentClass = environmentClass;
         }
 
         public override BoundNodeKind Kind => BoundNodeKind.FunctionValueExpression;
@@ -33,5 +34,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
         /// <summary>lambda 已绑定体；方法组为 null。</summary>
         public BoundBlockStatement? Body { get; }
+
+        /// <summary>捕获闭包时的合成环境类（6e-M22 C5）；null = 无捕获。</summary>
+        public ClassTypeSymbol? EnvironmentClass { get; }
     }
 }

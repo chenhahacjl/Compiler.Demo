@@ -46,6 +46,17 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>lambda 提升全局序号（6e-M22 C4）：进程内单调，保证合成名 `__Lambda$N` 唯一。</summary>
         private static int _lambdaGlobalSequence;
 
+        /// <summary>环境对象宿主函数（6e-M22 C5）：当前绑定上下文的捕获变量承载者；lambda 继承最外层非 lambda 函数。</summary>
+        private FunctionSymbol? _environmentOwner;
+
+        /// <summary>环境类缓存（6e-M22 C5）：每宿主函数一个合成 `__Env_&lt;fn&gt;` 类。</summary>
+        private readonly Dictionary<FunctionSymbol, ClassTypeSymbol> _environmentClasses = new();
+
+        /// <summary>lambda 体绑定深度（6e-M22 C5）：>0 时返回语句按推断语义处理（不套外层签名转换）。</summary>
+        private int _lambdaBodyDepth;
+
+        private bool IsBindingLambdaBody() => _lambdaBodyDepth > 0;
+
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
         internal void SetBindingClass(ClassTypeSymbol? classType) => _bindingClass = classType;
 
@@ -439,6 +450,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     pendingLambdaScopes.Enqueue(functionBodies[existing]);
                 }
 
+                var environmentClasses = new HashSet<ClassTypeSymbol>();
+
                 while (pendingLambdaScopes.Count > 0)
                 {
                     foreach (var node in EnumerateBoundDescendants(pendingLambdaScopes.Dequeue()))
@@ -449,8 +462,16 @@ namespace Cocoa.CodeAnalysis.Binding
                             functionBodies.Add(functionValue.Function, functionValue.Body);
                             pendingLambdaScopes.Enqueue(functionValue.Body);
                         }
+
+                        // 6e-M22 C5：合成环境类并入发射清单（堆上对象承载捕获变量）
+                        if (node is BoundFunctionValueExpression { EnvironmentClass: not null } withEnvironment)
+                        {
+                            environmentClasses.Add(withEnvironment.EnvironmentClass);
+                        }
                     }
                 }
+
+                emittedClasses = emittedClasses.Concat(environmentClasses).ToImmutableArray();
             }
 
             var compilationUnit = globalScope.Statements.Any()
@@ -532,6 +553,11 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            if (function.Syntax is not LambdaExpressionSyntax)
+            {
+                // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
+                binder._environmentOwner = function;
+            }
             BoundBlockStatement body;
 
             if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
@@ -617,6 +643,11 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            if (function.Syntax is not LambdaExpressionSyntax)
+            {
+                // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
+                binder._environmentOwner = function;
+            }
 
             foreach (var (name, type) in typeArgumentsByName)
             {
@@ -4008,10 +4039,18 @@ namespace Cocoa.CodeAnalysis.Binding
             }
             else
             {
+                var isLambdaBody = _lambdaBodyDepth > 0;
+
                 if (_function.ReturnType == TypeSymbol.Void)
                 {
-                    if (expression != null)
+                    if (expression != null && !isLambdaBody)
+                    {
                         _diagnostics.ReportInvalidReturnExpression(syntax.Expression!.Location, _function.Name);
+                    }
+                }
+                else if (isLambdaBody)
+                {
+                    // 6e-M22 C5：lambda 体返回类型由推断得出（InferLambdaReturnType），不按外层函数签名转换
                 }
                 else
                 {
@@ -4312,6 +4351,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 _scope.TryDeclareVariable(parameter);
             }
 
+            _lambdaBodyDepth++;
+
             BoundBlockStatement body;
             TypeSymbol returnType;
 
@@ -4345,6 +4386,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
             finally
             {
+                _lambdaBodyDepth--;
                 _scope = lambdaOuterScope;
             }
 
@@ -4361,15 +4403,106 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+
             var sequence = System.Threading.Interlocked.Increment(ref _lambdaGlobalSequence);
             var functionName = $"__Lambda${sequence}";
+
+            // 捕获分析（6e-M22 C5）：遍历体引用 → 外层局部/参数 = 捕获集；
+            // 体内部声明的变量不属于捕获。this 捕获留 C5 后续。
+            var ownSymbols = new HashSet<VariableSymbol>(parameterSymbols);
+            var referencedVariables = new HashSet<VariableSymbol>();
+            var declaredInBody = new HashSet<VariableSymbol>();
+            CollectVariableUsage(body, referencedVariables, declaredInBody);
+
+            var captures = new List<VariableSymbol>();
+            foreach (var variable in referencedVariables)
+            {
+                if (ownSymbols.Contains(variable) || declaredInBody.Contains(variable))
+                {
+                    continue;
+                }
+
+                if (variable is GlobalVariableSymbol)
+                {
+                    continue; // 全局变量静态存储，无需环境承载
+                }
+
+                captures.Add(variable);
+            }
+
+            FunctionSymbol? environmentOwner = null;
+            ClassTypeSymbol? environmentClass = null;
+
+            if (captures.Count > 0)
+            {
+                environmentOwner = _environmentOwner ?? _function;
+
+                if (environmentOwner == null || environmentOwner.Syntax is LambdaExpressionSyntax)
+                {
+                    _diagnostics.ReportError(syntax.Location, "lambda 捕获需要宿主函数上下文（顶层脚本暂不支持）。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                if (!_environmentClasses.TryGetValue(environmentOwner, out environmentClass))
+                {
+                    environmentClass = new ClassTypeSymbol($"__Env_{environmentOwner.Name}", string.Empty, Visibility.Private, declaration: null)
+                    {
+                        BaseType = ClassTypeSymbol.SystemObject,
+                    };
+                    _environmentClasses[environmentOwner] = environmentClass;
+                }
+
+                foreach (var captured in captures)
+                {
+                    captured.IsCaptured = true;
+                    environmentClass.AddField(new FieldSymbol(captured.Name, captured.Type, Visibility.Public, environmentClass));
+                }
+
+                environmentOwner.CapturedVariables ??= new List<VariableSymbol>();
+                foreach (var captured in captures)
+                {
+                    if (!environmentOwner.CapturedVariables.Contains(captured))
+                    {
+                        environmentOwner.CapturedVariables.Add(captured);
+                    }
+                }
+            }
+
             var function = new FunctionSymbol(functionName, parameterSymbols.ToImmutable(), returnType, declaration: null, syntax: syntax, containingClass: _currentClass, visibility: Visibility.Private)
             {
                 IsStatic = true,
+                EnvironmentOwner = environmentOwner,
+                IsLambdaWithEnvironment = environmentClass != null,
             };
 
             var computedType = FunctionTypeSymbol.Get(parameterTypes.ToImmutable(), returnType);
-            return new BoundFunctionValueExpression(syntax, function, receiver: null, body, computedType);
+            return new BoundFunctionValueExpression(syntax, function, receiver: null, body, computedType, environmentClass);
+        }
+
+        /// <summary>遍历绑定树收集变量引用与体内声明（6e-M22 C5 捕获分析用）。</summary>
+        private static void CollectVariableUsage(BoundNode node, HashSet<VariableSymbol> references, HashSet<VariableSymbol> declarations)
+        {
+            switch (node)
+            {
+                case BoundVariableExpression variableExpression:
+                    references.Add(variableExpression.Variable);
+                    break;
+                case BoundAssignmentExpression assignment:
+                    references.Add(assignment.Variable);
+                    break;
+                case BoundCompoundAssignmentExpression compoundAssignment:
+                    references.Add(compoundAssignment.Variable);
+                    break;
+                case BoundVariableDeclaration declaration:
+                    declarations.Add(declaration.Variable);
+                    references.Add(declaration.Variable); // 初始化器读旧值场景
+                    break;
+            }
+
+            foreach (var child in Compilation.BoundChildren(node))
+            {
+                CollectVariableUsage(child, references, declarations);
+            }
         }
 
         /// <summary>块体返回类型推断：取首条带值 return 的类型；无则 void。</summary>
