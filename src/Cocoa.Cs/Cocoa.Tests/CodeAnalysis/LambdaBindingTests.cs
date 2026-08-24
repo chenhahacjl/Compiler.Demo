@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Text;
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
@@ -122,14 +123,74 @@ function Main()
             Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("重载"));
         }
 
-        [Fact]
-        public void Emit_FunctionValue_GatedWithClearDiagnostic()
-        {
-            var syntaxTree = SyntaxTree.Parse(VariableInvokeProgram);
-            var compilation = Compilation.Create(syntaxTree);
-            var diagnostics = compilation.EmitNative("fn_gate", System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa_fn_gate.exe"));
+        // ------------------------------------------------------------------
+        // native 后端（6e-M22 C4-c：[typeId][fnptr][env] 三字对象 + CallReg）
+        // ------------------------------------------------------------------
 
-            Assert.Contains(diagnostics, d => d.IsError && d.Message.Contains("C4-c"));
+        public static System.Collections.Generic.IEnumerable<object[]> GetNativePlatforms()
+        {
+            yield return new object[] { new Cocoa.CodeAnalysis.Emit.Native.TargetPlatform(Cocoa.CodeAnalysis.Emit.Native.TargetOS.Windows, Cocoa.CodeAnalysis.Emit.Native.Architecture.X64) };
+            yield return new object[] { new Cocoa.CodeAnalysis.Emit.Native.TargetPlatform(Cocoa.CodeAnalysis.Emit.Native.TargetOS.Windows, Cocoa.CodeAnalysis.Emit.Native.Architecture.X86) };
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_LambdaVariable_Invoke(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(VariableInvokeProgram, "c4c_lambda_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_MethodGroup_ConvertsAndInvokes(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(MethodGroupProgram, "c4c_methodgroup_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("16\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_HigherOrder_FunctionTypeParameter(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(HigherOrderProgram, "c4c_higher_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\n10\n", stdout);
+        }
+
+        private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, Cocoa.CodeAnalysis.Emit.Native.TargetPlatform platform)
+        {
+            var syntaxTree = SyntaxTree.Parse(source);
+            var compilation = Compilation.Create(syntaxTree);
+            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa_c4c_native_tests");
+            System.IO.Directory.CreateDirectory(directory);
+            var suffix = platform.Arch == Cocoa.CodeAnalysis.Emit.Native.Architecture.X86 ? "-x86" : "";
+            var exePath = System.IO.Path.Combine(directory, name + suffix + ".exe");
+            var diagnostics = compilation.EmitNative(name, exePath, platform);
+
+            Assert.True(diagnostics.IsEmpty, string.Join("; ", diagnostics.Select(d => d.Message)));
+
+            var psi = new System.Diagnostics.ProcessStartInfo(exePath)
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            using var process = System.Diagnostics.Process.Start(psi)!;
+            using var output = new System.IO.MemoryStream();
+            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+
+            if (!process.WaitForExit(15000))
+            {
+                process.Kill();
+                throw new TimeoutException("Native exe did not exit in time.");
+            }
+
+            outputTask.Wait();
+            var stdout = Encoding.Unicode.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
+
+            return (process.ExitCode, stdout);
         }
 
         // ------------------------------------------------------------------

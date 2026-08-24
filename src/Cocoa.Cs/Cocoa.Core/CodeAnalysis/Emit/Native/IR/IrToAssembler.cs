@@ -112,6 +112,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var symbol = _a.CreateDataSymbol();
                 _a.MarkDataSymbol(symbol);
                 _dataSymbols.Add(item.Key, symbol);
+                if (item.Key.Contains("fnptr") || item.Key == "Double") System.Console.Error.WriteLine($"[probe] dataSym '{item.Key}' kind={item.Kind} symbol={symbol}");
 
                 switch (item.Kind)
                 {
@@ -1596,26 +1597,31 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var bytes = (int)instruction.A.Imm;
             var slots = bytes / _slotSize;
             var patch = _isX64 && (_stackDepth + slots) % 2 != 0;
+
+            // 实参区先落位（[rsp+offset] 即各实参，callee [rbp+16+] 一一对应）；
+            // 对齐 pad 置于保留块上方（更高地址、调用方侧），绝不挤移实参布局。
+            // （旧实现 pad 先推 → 触发对齐补位时实参整体 +8 错位，属潜伏缺陷，C4-c 间接调用首度踩中。）
+            _a.Sub(SlotSize, X64Register.RSP, bytes);
+            _stackDepth += slots;
+            _alignStack.Push(patch);
+
             if (patch)
             {
                 _a.Sub(X64Size.Qword, X64Register.RSP, 8);
                 _stackDepth++;
             }
-
-            _alignStack.Push(patch);
-
-            _a.Sub(SlotSize, X64Register.RSP, bytes);
-            _stackDepth += slots;
         }
 
         private void EmitFreeArgs(IrInstruction instruction)
         {
             var bytes = (int)instruction.A.Imm;
             var slots = bytes / _slotSize;
+            var patched = _alignStack.Pop();
+
             _a.Add(SlotSize, X64Register.RSP, bytes);
             _stackDepth -= slots;
 
-            if (_alignStack.Pop())
+            if (patched)
             {
                 _a.Add(X64Size.Qword, X64Register.RSP, 8);
                 _stackDepth--;

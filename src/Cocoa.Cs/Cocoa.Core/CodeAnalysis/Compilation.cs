@@ -253,12 +253,7 @@ namespace Cocoa.CodeAnalysis
                 return program.Diagnostics;
             }
 
-            // 6e-M22 C4：native 侧于 C4-c 接入
-            var nativeFunctionValueDiagnostic = FindFunctionValueDiagnostic(program);
-            if (nativeFunctionValueDiagnostic != null)
-            {
-                return ImmutableArray.Create(nativeFunctionValueDiagnostic);
-            }
+            // 6e-M22 C4-c 已落地：native 函数值发射（[typeId][fnptr][env] 三字对象 + CallReg）——门禁移除
 
             if (program.MainFunction == null)
             {

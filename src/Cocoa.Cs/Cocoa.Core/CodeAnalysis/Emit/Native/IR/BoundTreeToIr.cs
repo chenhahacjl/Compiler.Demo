@@ -24,7 +24,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private readonly Dictionary<VariableSymbol, IrVirtualRegister> _variables = new();
         private readonly Dictionary<BoundLabel, int> _labels = new();
 
-        /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
+        /// <summary>6e-M22 C4-c：env-first 形态的提升 lambda 集合（参数区前置 8 字节环境槽）。</summary>
+        private readonly Dictionary<FunctionSymbol, IrFunction> _staticThunks = new();
+        private readonly HashSet<FunctionSymbol> _environmentFirstFunctions = new();
+
+        /// <summary>M4：存活类集合        /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
         private readonly HashSet<ClassTypeSymbol> _liveClasses = new();
 
         /// <summary>M4：已登记的虚方法根（Object 固定三虚根预种子）。</summary>
@@ -165,7 +169,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 // 入口函数保持裸名（IrToAssembler 以 Name==EntryFunctionName 标记入口标签；
                 // 入口可为命名空间/类静态方法，mangle 名会破坏匹配）
                 var irName = function == _program.MainFunction ? function.Name : NativeObjectModel.FunctionIrName(function);
-                var irFunction = new IrFunction(irName, CreateParameters(function));
+
+                // 6e-M22 C4-c：提升 lambda 统一 env-first 形态（前置 8 字节环境槽）——
+                // 函数值对象调用约定恒为 (env, args...)；lambda 体不读该槽
+                var parameters = CreateParameters(function);
+                if (function.IsStatic && function.Syntax is LambdaExpressionSyntax)
+                {
+                    parameters.Insert(0, new IrParameter("__env", 0));
+                    for (var p = 0; p < parameters.Count; p++)
+                    {
+                        parameters[p] = new IrParameter(parameters[p].Name, p);
+                    }
+
+                    _environmentFirstFunctions.Add(function);
+                }
+
+                var irFunction = new IrFunction(irName, parameters);
                 irFunction.ReturnSize = ReturnSize(function.ReturnType);
                 _functionMap.Add(function, irFunction);
                 _irProgram.Functions.Add(irFunction);
@@ -357,6 +376,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         yield return memberCall.Method;
                     }
                     break;
+                case BoundFunctionValueExpression functionValue:
+                    // 6e-M22 C4-c：函数值目标（lambda/方法组）必须随发射集存活
+                    yield return functionValue.Function;
+                    break;
             }
 
             foreach (var child in Compilation.BoundChildren(node))
@@ -391,14 +414,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
-            type.ElementType != null || type is ClassTypeSymbol;
+            type.ElementType != null || type is ClassTypeSymbol || type is FunctionTypeSymbol;
 
         /// <summary>M4：实例方法/实例构造含隐藏 this 首参（静态成员与顶层函数无）。</summary>
         private static bool HasThisParameter(FunctionSymbol function)
             => function.ContainingClass != null && !function.IsStatic;
 
         /// <summary>this 参数在参数区占用的字节数（两架构均 8 字节槽；x86 双 dword）。</summary>
-        private int ThisParamBytes(FunctionSymbol function) => HasThisParameter(function) ? 8 : 0;
+        private int ThisParamBytes(FunctionSymbol function) => HasThisParameter(function) || _environmentFirstFunctions.Contains(function) ? 8 : 0;
 
         /// <summary>x86 用户函数实参/形参的字节偏移：double 占 8 字节，其余 4 字节（x64 统一每参 8 字节槽）。实例方法前置 8 字节 this 槽。</summary>
         private int ParamByteOffset(FunctionSymbol function, int index, int count)
@@ -742,6 +765,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundNodeKind.AsExpression:
                     return EmitAsExpression((BoundAsExpression)node);
+
+                // 6e-M22 C4-c：函数值对象与间接调用
+                case BoundNodeKind.FunctionValueExpression:
+                    return EmitFunctionValueExpression((BoundFunctionValueExpression)node);
+
+                case BoundNodeKind.InvocationExpression:
+                    return EmitInvocationExpression((BoundInvocationExpression)node);
 
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
@@ -1214,6 +1244,180 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             return layout;
+        }
+
+        /// <summary>
+        /// 函数值对象（6e-M22 C4-c）：`[0]=typeId 占位 0 [ps]=函数地址 [2ps]=环境槽(接收者/0)`。
+        /// 函数地址经数据项间接取（复用 vtable 槽的数据→代码绝对重定位机制）：
+        /// `__fnptr_&lt;IrName&gt;` = VTable 记录(typeId=0, 单槽)，槽内容为该函数绝对地址，偏移 8+ps。
+        /// 静态目标（无 this 槽）经 `EnsureStaticThunk` 适配为统一 env-first 形态。
+        /// </summary>
+        private IrVirtualRegister EmitFunctionValueExpression(BoundFunctionValueExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var function = node.Function;
+
+            var environmentFirst = node.Receiver != null ||
+                                   function.Syntax is LambdaExpressionSyntax ||
+                                   HasThisParameter(function);
+            var targetIr = environmentFirst
+                ? _functionMap[function]
+                : EnsureStaticThunk(function);
+
+            var key = "__fnptr_" + targetIr.Name;
+            _irProgram.AddData(IrDataItem.VTable(key, 0, _irProgram.InternString(function.Name), new[] { targetIr.Name }));
+
+            // obj = Alloc(pointerSize * 3)
+            var sizeRegister = EmitConst(pointerSize * 3);
+            var obj = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(sizeRegister)));
+            Add(instructions, new IrInstruction(IrOpCode.Call, obj, IrOperand.Runtime("Alloc"), IrOperand.Constant(0)));
+
+            // [0] typeId 槽占位 0（函数值不参与虚分派）
+            var zero = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(obj), IrOperand.Reg(zero), 0, 4));
+
+            // [ps] 函数地址：LeaData 地址表 → Load 解引用
+            var table = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.LeaData, table, IrOperand.Data(key)));
+            var functionPointer = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, functionPointer, IrOperand.Reg(table), IrOperand.None, 8 + pointerSize, pointerSize));
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(obj), IrOperand.Reg(functionPointer), pointerSize, pointerSize));
+
+            // [2ps] 环境槽：实例方法组 = 接收者；静态/lambda = 0
+            IrVirtualRegister environment;
+            if (node.Receiver != null)
+            {
+                environment = EmitExpression(node.Receiver);
+                if (_currentFunction.RegisterSize(environment) < 8)
+                {
+                    environment = WidenTo8(environment);
+                }
+            }
+            else
+            {
+                environment = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.Const, environment, IrOperand.Constant(0)));
+            }
+
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(obj), IrOperand.Reg(environment), pointerSize * 2, pointerSize));
+            return obj;
+        }
+
+        /// <summary>
+        /// 静态目标的 env 适配器（6e-M22 C4-c）：合成 `__thunk_&lt;IrName&gt;(env, p...) → fn(p...)`，
+        /// 丢弃首槽环境值后尾调真实函数——使静态目标与实例方法组/lambda 共享统一 env-first 调用约定。
+        /// </summary>
+        private IrFunction EnsureStaticThunk(FunctionSymbol function)
+        {
+            if (_staticThunks.TryGetValue(function, out var existing))
+            {
+                return existing;
+            }
+
+            var realIr = _functionMap[function];
+            var thunk = new IrFunction("__thunk_" + NativeObjectModel.FunctionIrName(function), new List<IrParameter>())
+            {
+                ReturnSize = ReturnSize(function.ReturnType),
+            };
+            thunk.EndLabelId = AllocLabel();
+
+            var savedCurrent = _currentFunction;
+            _currentFunction = thunk;
+            var instr = thunk.Instructions;
+
+            // 从自身帧加载原参数：env@0，p_i @ 8 + (x64 ? 8i : Σ 前序尺寸)
+            var paramRegisters = new List<IrVirtualRegister>();
+            for (var i = 0; i < function.Parameters.Length; i++)
+            {
+                int offset;
+                if (_isX64)
+                {
+                    offset = 8 + 8 * i;
+                }
+                else
+                {
+                    offset = 8;
+                    for (var j = 0; j < i; j++)
+                    {
+                        offset += ReturnSize(function.Parameters[j].Type);
+                    }
+                }
+
+                var size = ReturnSize(function.Parameters[i].Type);
+                var register = AllocateRegister(size);
+                Add(instr, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(offset)));
+                paramRegisters.Add(register);
+            }
+
+            var totalBytes = ParamsTotalBytes(function, function.Parameters.Length);
+            Add(instr, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
+
+            for (var i = function.Parameters.Length - 1; i >= 0; i--)
+            {
+                Add(instr, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(function, i, function.Parameters.Length)), IrOperand.Reg(paramRegisters[i])));
+            }
+
+            IrVirtualRegister? result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
+            Add(instr, new IrInstruction(IrOpCode.Call, result, IrOperand.Func(realIr), IrOperand.Constant(0)));
+            Add(instr, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));
+
+            // 返回值走 StoreRet/Ret 固定槽（[rbp-slot]），与 EmitFunction 收尾同构
+            if (result != null)
+            {
+                Add(instr, new IrInstruction(IrOpCode.StoreRet, IrOperand.Reg(result)));
+            }
+
+            Add(instr, new IrInstruction(IrOpCode.Ret, IrOperand.Label(thunk.EndLabelId)));
+
+            _currentFunction = savedCurrent;
+
+            _irProgram.Functions.Add(thunk);
+            _staticThunks[function] = thunk;
+            return thunk;
+        }
+
+        /// <summary>间接调用（6e-M22 C4-c）：加载 fnptr/env → 参数区(this=env@0 + 实参) → CallReg。签名形状取自被调者静态函数类型。</summary>
+        private IrVirtualRegister EmitInvocationExpression(BoundInvocationExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var functionType = (FunctionTypeSymbol)node.Callee.Type;
+
+            var callee = EmitExpression(node.Callee);
+
+            var functionPointer = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, functionPointer, IrOperand.Reg(callee), IrOperand.None, pointerSize, pointerSize));
+
+            var environment = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, environment, IrOperand.Reg(callee), IrOperand.None, pointerSize * 2, pointerSize));
+
+            // 参数区：this(env, 8B) + 实参（x64 每参 8；x86 按 ReturnSize 累计）——与 InvokeVirtualSlot 同构
+            var argumentOffsets = new int[node.Arguments.Length];
+            var running = 8;
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                argumentOffsets[i] = running;
+                running += _isX64 ? 8 : ReturnSize(functionType.ParameterTypes[i]);
+            }
+
+            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(running)));
+            Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(0), IrOperand.Reg(environment)));
+
+            for (var i = node.Arguments.Length - 1; i >= 0; i--)
+            {
+                var value = EmitExpression(node.Arguments[i]);
+                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(argumentOffsets[i]), IrOperand.Reg(value)));
+            }
+
+            var returnType = functionType.ReturnType;
+            IrVirtualRegister? result = returnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(returnType));
+            Add(instructions, new IrInstruction(IrOpCode.CallReg, result, IrOperand.None, IrOperand.Reg(functionPointer)));
+            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(running)));
+
+            return result ?? VoidResult();
         }
 
         private IrVirtualRegister EmitMemberCallExpression(BoundMemberCallExpression node)

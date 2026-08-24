@@ -29,6 +29,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
 
             var ir = BoundTreeToIr.Generate(program, platform);
             RuntimeEmitterIR.Append(ir, platform);
+            System.IO.File.WriteAllText(System.IO.Path.ChangeExtension(outputPath, ".ir.txt"), Cocoa.CodeAnalysis.Emit.Native.IR.IrPrinter.Format(ir));
 
             // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
             var result = IrToAssembler.Emit(a, ir, entryLabel, platform, null);
