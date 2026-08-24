@@ -193,8 +193,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 EmitReadKey();
                 _ = BeginFunction("Random", 4);
                 EmitRandom();
-                _ = BeginFunction("ObjectEquals", 8, 8);
+                BeginStackFunction("ObjectEquals", 8, 8);
                 EmitObjectEquals();
+                BeginStackFunction("ObjectToString", 8);
+                EmitObjectToString();
+                BeginStackFunction("ObjectGetHashCode", 8);
+                EmitObjectGetHashCode();
+                BeginStackFunction("ObjectGetType", 8);
+                EmitObjectGetType();
+                _ = BeginFunction("TypeSimpleName", 8);
+                EmitTypeSimpleName();
                 _ = BeginFunction("NewArray", 4, 4);
                 EmitNewArray();
                 _ = BeginFunction("ArrayBoundsCheck", 4, 4);
@@ -278,6 +286,35 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 }
 
                 return function;
+            }
+
+            /// <summary>
+            /// 栈 ABI 运行时函数（M4）：参数经 ReserveArgs/StoreArg 从栈传入（与用户函数一致），
+            /// 供 vtable 槽间接调用（callreg 无法区分槽内容是运行时默认还是用户 override，
+            /// 故 Object 面四个运行时函数统一用户 ABI）。x64 参数区每参 8 字节；x86 按宽度累计。
+            /// </summary>
+            private void BeginStackFunction(string name, params int[] argSizes)
+            {
+                var parameters = new List<IrParameter>(argSizes.Length);
+                for (var i = 0; i < argSizes.Length; i++)
+                {
+                    parameters.Add(new IrParameter(null, i));
+                }
+
+                var function = new IrFunction(name, parameters);
+                _currentFunction = function;
+                _instructions = function.Instructions;
+                _args.Clear();
+                _program.Functions.Add(function);
+
+                var offset = 0;
+                for (var i = 0; i < argSizes.Length; i++)
+                {
+                    var register = NewReg(argSizes[i]);
+                    _args.Add(register);
+                    Add(IrOpCode.InitParam, register, IrOperand.Constant(offset));
+                    offset += argSizes[i];
+                }
             }
 
             private void EndFunction(IrFunction function, int returnSize)
@@ -3680,6 +3717,132 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Setcc(result, IrCond.Equal);
                 StoreRet(result);
                 EndFunction(_currentFunction!, 4);
+            }
+
+            // ------------------------------------------------------------------
+            // ObjectToString(obj:ptr) → str（6e-M19 M4：读对象头 vtable → 名字指针）
+            // 对象布局 [0]=vtablePtr；vtable [8]=类型全名字符串指针（伪记录自引用使 Type 值同样成立）
+            // ------------------------------------------------------------------
+
+            private void EmitObjectToString()
+            {
+                var obj = _args[0];
+                var vtable = NewReg(8);
+                Load(vtable, obj, 0, _isX64 ? 8 : 4);
+                var name = NewReg(8);
+                Load(name, vtable, 8, _isX64 ? 8 : 4);
+                StoreRet(name);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
+            // ObjectGetHashCode(x:8) → int（指针/位模式散列：lo ^ hi 后乘黄金比例常数）
+            // x86 指针宽 4，仅低 dword 参与散列
+            // ------------------------------------------------------------------
+
+            private void EmitObjectGetHashCode()
+            {
+                var value = _args[0];
+                var lo = NewReg(4);
+                LoadSlotField(lo, value, 0, 4);
+
+                IrVirtualRegister mixed;
+                if (_isX64)
+                {
+                    var hi = NewReg(4);
+                    LoadSlotField(hi, value, 4, 4);
+                    mixed = NewReg(4);
+                    Xor(mixed, lo, hi);
+                }
+                else
+                {
+                    mixed = lo;
+                }
+
+                var hashed = NewReg(4);
+                Imul(hashed, mixed, C(4, unchecked((int)0x9E3779B1)));
+                StoreRet(hashed);
+                EndFunction(_currentFunction!, 4);
+            }
+
+            // ------------------------------------------------------------------
+            // ObjectGetType(obj:ptr) → vtablePtr（GetType 非虚，占槽 3 保持统一发射路径）
+            // ------------------------------------------------------------------
+
+            private void EmitObjectGetType()
+            {
+                var obj = _args[0];
+                var vtable = NewReg(8);
+                Load(vtable, obj, 0, _isX64 ? 8 : 4);
+                StoreRet(vtable);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
+            // TypeSimpleName(s:str) → str（最后一个 '.' 之后的部分；无点回退原串。
+            // 与 IL FullName.Substring(LastIndexOf('.')+1) 组合语义一致，三后端统一）
+            // ------------------------------------------------------------------
+
+            private void EmitTypeSimpleName()
+            {
+                var s = _args[0];
+                var len = NewReg(4);
+                Load(len, s, 0, 4);
+
+                var chars = NewReg(8);
+                Lea(chars, s, 4);
+
+                var index = NewReg(4);
+                Const(index, 0);
+                var lastDot = NewReg(4);
+                Const(lastDot, -1);
+                var loop = NewLabel();
+                var scanContinue = NewLabel();
+                var scanDone = NewLabel();
+                var noDot = NewLabel();
+                var done = NewLabel();
+
+                Mark(loop);
+                Cmp(index, len);
+                Jcc(IrCond.AboveOrEqual, scanDone);
+                var ch = NewReg(4);
+                {
+                    // chars[i]：基址寄存器可变偏移经 Lea+Add 组合
+                    var offset = NewReg(4);
+                    Mov(offset, index);
+                    Shl(offset, offset, 1);
+                    var address = NewReg(8);
+                    Lea(address, chars, 0);
+                    Add(address, address, offset);
+                    Load(ch, address, 0, 2);
+                }
+
+                Cmp(ch, '.');
+                Jcc(IrCond.NotEqual, scanContinue);
+                Mov(lastDot, index);
+
+                Mark(scanContinue);
+                AddI(index, index, 1);
+                Jmp(loop);
+
+                Mark(scanDone);
+                Cmp(lastDot, 0);
+                Jcc(IrCond.Less, noDot);
+
+                var start = NewReg(4);
+                AddI(start, lastDot, 1);
+                var count = NewReg(4);
+                Sub(count, len, start);
+                var result = NewReg(8);
+                CallRuntime(result, "Substring", s, start, count);
+                StoreRet(result);
+                Jmp(done);
+
+                Mark(noDot);
+                StoreRet(s);
+
+                Mark(done);
+                EndFunction(_currentFunction!, 8);
             }
 
             // ------------------------------------------------------------------

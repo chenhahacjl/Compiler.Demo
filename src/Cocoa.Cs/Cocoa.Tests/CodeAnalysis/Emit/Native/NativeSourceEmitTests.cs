@@ -1121,7 +1121,8 @@ function Main()
             TargetPlatform.TryParse(X64, out var platform);
             var diagnostics = compilation.EmitNative("test", GetExePath("native-interface", X64), platform);
             Assert.NotEmpty(diagnostics);
-            Assert.Contains(diagnostics, d => d.Message.Contains("含实例成员/构造/字段/属性/基类，暂不支持 native 后端"));
+            // 6e-M19 M4：接口分派未随对象模型落地，仍明确拒绝（原"实例成员类拒绝"门禁已移除）
+            Assert.Contains(diagnostics, d => d.Message.Contains("interface 'IShape' 暂不支持 native 后端"));
         }
 
         [Theory]

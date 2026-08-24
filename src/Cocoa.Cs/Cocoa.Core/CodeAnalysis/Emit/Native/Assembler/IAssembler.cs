@@ -31,6 +31,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler
         byte[] ToArray();
         byte[] GetData();
 
+        // 数据段绝对地址重定位（6e-M19 M4a：vtable 槽 → 代码 / 名字指针 → 数据）
+        void AddDataCodeFixup(int dataOffset, int label);
+        void AddDataDataFixup(int dataOffset, int symbol);
+
+        /// <summary>数据段内持有绝对地址的槽偏移集合（PE 基址重定位 .reloc 的生成依据）。</summary>
+        System.Collections.Generic.IReadOnlyList<int> DataAbsoluteFixups { get; }
+
         void Mov(X64Size size, X64Register dst, X64Register src);
         void Mov(X64Size size, X64Register dst, X64MemoryOperand src);
         void Mov(X64Size size, X64MemoryOperand dst, X64Register src);

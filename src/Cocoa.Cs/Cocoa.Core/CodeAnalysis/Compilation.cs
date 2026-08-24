@@ -257,16 +257,24 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(location, "native code generation requires a main function"));
             }
 
-            // native 后端仅放行"纯容器类"（6e-M17）：类只含 syscall/静态 extern 方法、无实例字段/构造/属性/继承。
-            // 对象模型（实例字段/方法/继承/多态）仍后置——见 docs-dev/类库设计.md。
+            // 6e-M19 M4：native 对象模型——用户类（字段/方法/继承/多态/vtable 虚分派）全面放行。
+            // 仍拒绝：接口声明（接口分派未实现）、含初始化器的静态构造（无 .cctor 触发时机）。
             if (program.Classes.Length > 0)
             {
-                var offendingClass = program.Classes.FirstOrDefault(c => !IsPureContainerClass(c));
-                if (offendingClass != null)
+                var interfaceClass = program.Classes.FirstOrDefault(c => c.IsInterface);
+                if (interfaceClass != null)
                 {
-                    var location = offendingClass.Declaration?.Identifier.Location
+                    var location = interfaceClass.Declaration?.Identifier.Location
                                    ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"class '{offendingClass.Name}' 含实例成员/构造/字段/属性/基类，暂不支持 native 后端（native 仅放行纯 syscall/extern 容器类，见 docs-dev/内部调用与互操作设计.md）"));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"interface '{interfaceClass.Name}' 暂不支持 native 后端（接口分派随后续里程碑落地，见 docs-dev/对象模型设计.md）"));
+                }
+
+                var staticInitClass = program.Classes.FirstOrDefault(HasStaticInitializer);
+                if (staticInitClass != null)
+                {
+                    var location = staticInitClass.Declaration?.Identifier.Location
+                                   ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"class '{staticInitClass.Name}' 含静态构造函数或静态字段初始化器，native 后端暂不支持静态初始化触发（字段可声明但保持零值；请改在显式代码中赋值）"));
                 }
             }
 
@@ -276,9 +284,9 @@ namespace Cocoa.CodeAnalysis
                 return backendDiagnostics;
             }
 
-            // 6e-M19 M2-c：Object 成员面调用守卫（native 对象模型随 M4 落地，先给明确"未实现"诊断）
+            // M4：Object 成员面 receiver 形状校验（any/数组/枚举接收者需装箱表示，明确报错不静默错编）
             var objectFaceBag = new DiagnosticBag();
-            NativeObjectFaceValidator.Validate(program, objectFaceBag, new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0)));
+            NativeObjectModelValidator.Validate(program, objectFaceBag, new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0)));
             if (objectFaceBag.Any())
             {
                 return diagnostics.Concat(objectFaceBag).ToImmutableArray();
@@ -312,9 +320,9 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 纯容器类判定（6e-M17，native 放行判据）：类只含 syscall/静态 extern 方法，
+        /// 纯容器类判定（6e-M17，.cod 库放行判据）：类只含 syscall/静态 extern 方法，
         /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
-        /// 不涉对象模型，native 可安全忽略类外壳直接发射其方法。
+        /// 不涉对象模型。
         /// </summary>
         private static bool IsPureContainerClass(ClassTypeSymbol classType)
         {
@@ -348,6 +356,24 @@ namespace Cocoa.CodeAnalysis
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// 类是否携带静态初始化语义（静态字段初始化器合成的 .cctor 或显式静态构造）。
+        /// Binder 仅在存在静态初始化器或显式声明时创建 .cctor 符号，故符号存在即需运行期触发——
+        /// native 后端无该时机，门禁拒绝并提示改写为显式赋值。
+        /// </summary>
+        private static bool HasStaticInitializer(ClassTypeSymbol classType)
+        {
+            foreach (var method in classType.Methods)
+            {
+                if (method.IsConstructor && method.IsStatic && method.Parameters.Length == 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

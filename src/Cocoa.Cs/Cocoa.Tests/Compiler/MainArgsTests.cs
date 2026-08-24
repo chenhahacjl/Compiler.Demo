@@ -229,9 +229,9 @@ namespace Cocoa.Tests.Compiler
         }
 
         [Fact]
-        public void Project_EntryField_QualifiedClassMethod_Native_RejectsClass()
+        public void Project_EntryField_QualifiedClassMethod_Native_RunsClass()
         {
-            // native 后端不支持实例成员类（6e-M18 起静态容器类放行）：含实例字段的类仍拒绝
+            // 6e-M19 M4：native 对象模型落地——含实例字段的类放行（原 6e-M18 拒绝门禁移除）
             var root = NewRoot("entry-qualified-native");
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(appDir);
@@ -240,8 +240,9 @@ namespace Cocoa.Tests.Compiler
             File.WriteAllText(Path.Combine(appDir, "App.coproj"),
                 $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");
-            Assert.Equal(1, exitCode);
-            Assert.Contains("暂不支持 native 后端", stdout + stderr);
+            Assert.Equal(0, exitCode);
+            var output = RunOutput(Path.Combine(appDir, "app.exe"), "");
+            Assert.Contains("7", output);
         }
     }
 }

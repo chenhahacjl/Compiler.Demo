@@ -2,13 +2,14 @@ using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis.Emit.Native.IR
 {
-    /// <summary>数据段项语义：Int32 / 指针（平台宽 4/8）/ UTF-16 字符串 / 原始字节。</summary>
+    /// <summary>数据段项语义：Int32 / 指针（平台宽 4/8）/ UTF-16 字符串 / 原始字节 / vtable 记录（M4）。</summary>
     internal enum IrDataKind
     {
         Int32,
         Pointer,
         Utf16,
         Bytes,
+        VTable,
     }
 
     /// <summary>数据段项（运行时数据与字符串字面量统一建模）。</summary>
@@ -29,10 +30,40 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         public string? Text { get; }
         public byte[]? Bytes { get; }
 
+        /// <summary>vtable 记录：类型 id（M4；伪记录 -1）。</summary>
+        public int TypeId { get; }
+
+        /// <summary>vtable 记录：类型全名字符串的数据 key（名字指针槽重定位目标）。</summary>
+        public string? NameKey { get; }
+
+        /// <summary>vtable 记录：函数名槽数组（用户函数 mangle 名或运行时函数名）。</summary>
+        public System.Collections.Generic.IReadOnlyList<string>? Slots { get; }
+
+        public IrDataItem(string key, IrDataKind kind, int intValue, string? text, byte[]? bytes,
+            int typeId = -1, string? nameKey = null, System.Collections.Generic.IReadOnlyList<string>? slots = null)
+        {
+            Key = key;
+            Kind = kind;
+            IntValue = intValue;
+            Text = text;
+            Bytes = bytes;
+            TypeId = typeId;
+            NameKey = nameKey;
+            Slots = slots;
+        }
+
         public static IrDataItem Int32(string key, int value) => new IrDataItem(key, IrDataKind.Int32, value, null, null);
         public static IrDataItem Pointer(string key) => new IrDataItem(key, IrDataKind.Pointer, 0, null, null);
         public static IrDataItem Utf16(string key, string text) => new IrDataItem(key, IrDataKind.Utf16, 0, text, null);
         public static IrDataItem ByteArray(string key, byte[] bytes) => new IrDataItem(key, IrDataKind.Bytes, 0, null, bytes);
+
+        /// <summary>
+        /// vtable 记录（M4，即 System.Type 对象）：[0] typeId:int [4] pad [8] 名字指针（数据重定位）
+        /// [8+ps·(i+1)] 槽 i 函数绝对地址（代码重定位）。typeId &lt; 0 = 基元/Type 伪记录
+        /// （[0] 为自引用指针，使 ObjectToString 等对 Type 值同样成立）。
+        /// </summary>
+        public static IrDataItem VTable(string key, int typeId, string nameKey, System.Collections.Generic.IReadOnlyList<string> slots)
+            => new IrDataItem(key, IrDataKind.VTable, 0, null, null, typeId, nameKey, slots);
     }
 
     /// <summary>函数参数：仅携带序号（调用约定由后端决定）。</summary>

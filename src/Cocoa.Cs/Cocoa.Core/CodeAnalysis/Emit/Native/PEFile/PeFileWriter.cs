@@ -40,7 +40,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -91,6 +91,23 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 directories.Add((PeDataDirectoryEntry.Iat, firstIatRva, (uint)(iatSlotCount * iatEntrySize)));
             }
 
+            // M4a：基址重定位（.reloc）——数据段内绝对地址槽（vtable 函数/名字指针）在镜像
+            // 被加载器重定位（ASLR/DYNAMIC_BASE）时必须同步修正，否则间接调用跳到旧 VA 崩溃。
+            // x64 用 DIR64、x86 用 HIGHLOW；无重定位项时不发节（保持 RelocsStripped 现状）。
+            var relocOffsets = dataAbsoluteFixups != null ? dataAbsoluteFixups.Distinct().OrderBy(x => x).ToList() : new List<int>();
+            byte[] relocBlob;
+            var relocRva = 0u;
+            if (relocOffsets.Count > 0)
+            {
+                relocRva = (uint)Align(idataRva + importLayout.Blob.Length, SectionAlignment);
+                relocBlob = BuildRelocBlob(relocOffsets, (uint)dataRva, pe32);
+                directories.Add((PeDataDirectoryEntry.BaseReloc, relocRva, (uint)relocBlob.Length));
+            }
+            else
+            {
+                relocBlob = Array.Empty<byte>();
+            }
+
             // 鍙墽琛岃妭铏氭嫙澶у皬涓嶅緱瓒呰繃 SectionAlignment锛?x1000锛夛紝鏁呬唬鐮佹寜椤垫媶鍒嗕负澶氫釜 .text 鑺傦紱
             // 鍚勮妭铏氭嫙鏈锛堝榻愬悗锛夊繀椤绘伆濂借惤鍦ㄤ笅涓€鑺傝捣鐐癸紙Windows 鍔犺浇鍣ㄦ寜鐩搁偦鑺傝繛缁牎楠岋級銆?
             var sections = new List<PeSectionSpec>();
@@ -109,6 +126,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
 
             sections.Add(new(".data", slotData, (uint)dataRva, PeSectionCharacteristics.Data));
             sections.Add(new(".idata", importLayout.Blob, (uint)idataRva, PeSectionCharacteristics.Data));
+            if (relocBlob.Length > 0)
+            {
+                sections.Add(new(".reloc", relocBlob, relocRva, PeSectionCharacteristics.Data | PeSectionCharacteristics.MemDiscardable));
+            }
 
             var config = new PeImageConfig(
                 pe32 ? PeMachine.I386 : PeMachine.AMD64,
@@ -121,8 +142,62 @@ namespace Cocoa.CodeAnalysis.Emit.Native.PEFile
                 SizeOfHeaders = (uint)SizeOfHeaders,
             };
 
-            var image = PeImageBuilder.Build(config, sections, directories, pe32 ? PeFileCharacteristics.RelocsStripped : (ushort)0);
+            // 有重定位节时不再声明 RelocsStripped（x86 历史行为保留：无重定位时仍声明剥离）
+            var fileCharacteristics = relocBlob.Length > 0 ? (ushort)0 : (pe32 ? PeFileCharacteristics.RelocsStripped : (ushort)0);
+            var image = PeImageBuilder.Build(config, sections, directories, fileCharacteristics);
             File.WriteAllBytes(outputPath, image);
+        }
+
+        /// <summary>M4a：按 4KB 页分组生成 .reloc blob（块头 PageRva+SizeOfBlock + TypeOffset WORD 数组，奇数项补 ABSOLUTE 对齐到 4 字节）。</summary>
+        private static byte[] BuildRelocBlob(IReadOnlyList<int> offsets, uint dataRva, bool pe32)
+        {
+            var entryType = pe32 ? PeRelocType.HighLow : PeRelocType.Dir64;
+            var blocks = new List<(uint PageRva, List<ushort> Entries)>();
+
+            foreach (var offset in offsets)
+            {
+                var rva = (uint)(dataRva + offset);
+                var page = rva & ~0xFFFu;
+                if (blocks.Count == 0 || blocks[^1].PageRva != page)
+                {
+                    blocks.Add((page, new List<ushort>()));
+                }
+
+                blocks[^1].Entries.Add((ushort)(((int)entryType << 12) | (int)(rva & 0xFFF)));
+            }
+
+            var blob = new List<byte>();
+            foreach (var (pageRva, entries) in blocks)
+            {
+                if (entries.Count % 2 != 0)
+                {
+                    entries.Add(0); // IMAGE_REL_BASED_ABSOLUTE 填充，保持块 4 字节对齐
+                }
+
+                var sizeOfBlock = 8 + 2 * entries.Count;
+                WriteUInt32Into(blob, pageRva);
+                WriteUInt32Into(blob, (uint)sizeOfBlock);
+                foreach (var entry in entries)
+                {
+                    WriteUInt16Into(blob, entry);
+                }
+            }
+
+            return blob.ToArray();
+        }
+
+        private static void WriteUInt32Into(List<byte> blob, uint value)
+        {
+            blob.Add((byte)value);
+            blob.Add((byte)(value >> 8));
+            blob.Add((byte)(value >> 16));
+            blob.Add((byte)(value >> 24));
+        }
+
+        private static void WriteUInt16Into(List<byte> blob, ushort value)
+        {
+            blob.Add((byte)value);
+            blob.Add((byte)(value >> 8));
         }
 
         private static void WriteUInt32(byte[] bytes, int offset, int value)

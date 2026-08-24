@@ -24,8 +24,31 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private readonly Dictionary<VariableSymbol, IrVirtualRegister> _variables = new();
         private readonly Dictionary<BoundLabel, int> _labels = new();
 
+        /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
+        private readonly HashSet<ClassTypeSymbol> _liveClasses = new();
+
+        /// <summary>M4：已登记的虚方法根（Object 固定三虚根预种子）。</summary>
+        private readonly HashSet<FunctionSymbol> _virtualRoots = new();
+
+        /// <summary>M4：根方法 → vtable 槽索引（可达性收敛后分配）。</summary>
+        private Dictionary<FunctionSymbol, int> _virtualSlots = new();
+
+        /// <summary>M4：类实例布局缓存（字段偏移 + 实例尺寸）。</summary>
+        private readonly Dictionary<ClassTypeSymbol, (Dictionary<FieldSymbol, int> Offsets, int InstanceSize)> _layoutCache = new();
+
+        /// <summary>M4：已发射的伪 vtable（System.Type 对象）key 集合。</summary>
+        private readonly HashSet<string> _pseudoVTableKeys = new();
+
         private IrFunction _currentFunction = null!;
+        private IrVirtualRegister? _thisRegister;
         private int _nextLabelId;
+
+        private static readonly FunctionSymbol[] ObjectBuiltinVirtualRoots =
+        {
+            SystemObjectMembers.ToString,
+            SystemObjectMembers.GetHashCode,
+            SystemObjectMembers.Equals,
+        };
 
         private BoundTreeToIr(BoundProgram program, TargetPlatform platform)
         {
@@ -38,19 +61,111 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         {
             var generator = new BoundTreeToIr(program, platform);
             generator.EmitProgram();
+            generator.EmitVTableData();
             return generator._irProgram;
+        }
+
+        /// <summary>
+        /// M4：为全部存活具体类发射 vtable 数据项（即 System.Type 对象）。
+        /// 槽 0..2 固定 Object 面（override 经 FindImplementation 覆写），GetType=3，
+        /// 用户虚根按槽位续接；类未继承的根槽以 ObjectGetType 填充（合法已发射函数名）。
+        /// </summary>
+        private void EmitVTableData()
+        {
+            foreach (var classType in _liveClasses.OrderBy(c => c.FullName, System.StringComparer.Ordinal))
+            {
+                // 数组按实际最大槽号定长（无用户虚根时仅 Object 固定四槽，不留 null 尾部）
+                var maxSlot = NativeObjectModel.SlotGetType;
+                foreach (var used in _virtualSlots.Values)
+                {
+                    if (used > maxSlot)
+                    {
+                        maxSlot = used;
+                    }
+                }
+
+                var slots = new string[maxSlot + 1];
+
+                slots[NativeObjectModel.SlotToString] = ResolveObjectSlot(classType, SystemObjectMembers.ToString, "ObjectToString");
+                slots[NativeObjectModel.SlotGetHashCode] = ResolveObjectSlot(classType, SystemObjectMembers.GetHashCode, "ObjectGetHashCode");
+                slots[NativeObjectModel.SlotEquals] = ResolveObjectSlot(classType, SystemObjectMembers.Equals, "ObjectEquals");
+                slots[NativeObjectModel.SlotGetType] = "ObjectGetType";
+
+                foreach (var kvp in _virtualSlots.Where(k => !NativeObjectModel.IsObjectBuiltinRoot(k.Key)).OrderBy(k => k.Value))
+                {
+                    // 类未继承该根 → 填充占位；继承 → 沿链最近实现
+                    var inherited = InheritsRoot(classType, kvp.Key);
+                    slots[kvp.Value] = inherited
+                        ? ResolveRequiredImplementation(classType, kvp.Key)
+                        : "ObjectGetType";
+                }
+
+                var key = NativeObjectModel.VTableKey(classType);
+                if (!_irProgram.Data.ContainsKey(key))
+                {
+                    // 全部 vtable 一律自引用头（[0]=自身地址）：使 Type 值（vtable 指针）与对象
+                    // 共用同一访问公式 [[x]+8] 取类型名——ObjectToString/Name/FullName 三路一致。
+                    // （typeId 字段无消费方，M4 不分配；后续 is/typeid 需求再扩展头部。）
+                    _irProgram.AddData(IrDataItem.VTable(key, -1, _irProgram.InternString(classType.FullName), slots));
+                }
+            }
+        }
+
+        /// <summary>类继承链是否包含虚根的声明类。</summary>
+        private static bool InheritsRoot(ClassTypeSymbol classType, FunctionSymbol root)
+        {
+            var declaringClass = root.ContainingClass;
+            if (declaringClass == null)
+            {
+                return false;
+            }
+
+            var seen = new HashSet<ClassTypeSymbol>();
+            for (var current = classType; current != null && !current.IsSystemObjectRoot && seen.Add(current); current = current.BaseType)
+            {
+                if (current == declaringClass)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private string ResolveObjectSlot(ClassTypeSymbol classType, FunctionSymbol root, string runtimeFallback)
+        {
+            var implementation = NativeObjectModel.FindImplementation(classType, root);
+            return implementation != null
+                ? NativeObjectModel.FunctionIrName(implementation)
+                : runtimeFallback;
+        }
+
+        private string ResolveRequiredImplementation(ClassTypeSymbol classType, FunctionSymbol root)
+        {
+            var implementation = NativeObjectModel.FindImplementation(classType, root)
+                ?? throw new Exception($"vtable slot for '{root.Name}' has no implementation in concrete class '{classType.FullName}'");
+
+            if (!_functionMap.ContainsKey(implementation))
+            {
+                throw new Exception($"vtable implementation '{implementation.Name}' of '{classType.FullName}' was not emitted (unreachable)");
+            }
+
+            return NativeObjectModel.FunctionIrName(implementation);
         }
 
         private void EmitProgram()
         {
-            // 可达性过滤（6e-M17）：仅发射从入口可达的函数（SystemLibrary 注入的未引用库函数
-            // 不发射，避免 any 装箱等 native 不支持路径在未引用库体上触发）
+            // 可达性过滤（6e-M17）：仅发射从入口可达的函数；M4 起存活类把构造函数与
+            // 虚槽实现并入可达集（vtable 分派目标无法静态枚举，须随类存活整体发射）
             var reachable = ComputeReachableFunctions(_program.MainFunction!);
             var functionsToEmit = _program.Functions.Where(kv => reachable.Contains(kv.Key)).ToArray();
 
             foreach (var (function, body) in functionsToEmit)
             {
-                var irFunction = new IrFunction(function.Name, CreateParameters(function));
+                // 入口函数保持裸名（IrToAssembler 以 Name==EntryFunctionName 标记入口标签；
+                // 入口可为命名空间/类静态方法，mangle 名会破坏匹配）
+                var irName = function == _program.MainFunction ? function.Name : NativeObjectModel.FunctionIrName(function);
+                var irFunction = new IrFunction(irName, CreateParameters(function));
                 irFunction.ReturnSize = ReturnSize(function.ReturnType);
                 _functionMap.Add(function, irFunction);
                 _irProgram.Functions.Add(irFunction);
@@ -62,16 +177,35 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        /// <summary>从入口沿绑定调用图收集可达函数（BoundCallExpression/MemberCallExpression 的 Method）。</summary>
+        // ------------------------------------------------------------------
+        // 可达性与存活类（M4）
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// 从入口沿绑定调用图收集可达函数；BoundObjectCreationExpression 把类标记为存活，
+        /// 存活类连带基类链、全部实例构造与虚槽实现（新根登记时对既有存活类补扫）。
+        /// </summary>
         private HashSet<FunctionSymbol> ComputeReachableFunctions(FunctionSymbol entry)
         {
-            var reachable = new HashSet<FunctionSymbol>();
-            var pending = new Stack<FunctionSymbol>();
-            pending.Push(entry);
-
-            while (pending.Count > 0)
+            foreach (var root in ObjectBuiltinVirtualRoots)
             {
-                var function = pending.Pop();
+                _virtualRoots.Add(root);
+            }
+
+            var reachable = new HashSet<FunctionSymbol>();
+            var pendingFunctions = new Stack<FunctionSymbol>();
+            var pendingClasses = new Stack<ClassTypeSymbol>();
+            pendingFunctions.Push(entry);
+
+            while (pendingFunctions.Count > 0 || pendingClasses.Count > 0)
+            {
+                if (pendingClasses.Count > 0)
+                {
+                    ProcessLiveClass(pendingClasses.Pop(), pendingFunctions, pendingClasses);
+                    continue;
+                }
+
+                var function = pendingFunctions.Pop();
                 if (!reachable.Add(function))
                 {
                     continue;
@@ -83,13 +217,118 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     {
                         if (!reachable.Contains(called))
                         {
-                            pending.Push(called);
+                            pendingFunctions.Push(called);
+                        }
+                    }
+
+                    foreach (var created in CollectCreatedClasses(body))
+                    {
+                        if (!_liveClasses.Contains(created))
+                        {
+                            pendingClasses.Push(created);
                         }
                     }
                 }
             }
 
+            _virtualSlots = NativeObjectModel.AssignVirtualSlots(_liveClasses);
             return reachable;
+        }
+
+        private void ProcessLiveClass(ClassTypeSymbol classType, Stack<FunctionSymbol> pendingFunctions, Stack<ClassTypeSymbol> pendingClasses)
+        {
+            if (!_liveClasses.Add(classType))
+            {
+                return;
+            }
+
+            // 基类链全部存活
+            var seenBases = new HashSet<ClassTypeSymbol>();
+            for (var baseType = classType.BaseType; baseType != null && !baseType.IsSystemObjectRoot && seenBases.Add(baseType); baseType = baseType.BaseType)
+            {
+                if (!_liveClasses.Contains(baseType))
+                {
+                    pendingClasses.Push(baseType);
+                }
+            }
+
+            // 实例构造函数（new 绑定的 ctor 由发射端查找；保守入队全部实例构造）
+            foreach (var method in classType.Methods)
+            {
+                if (method.IsConstructor && !method.IsStatic)
+                {
+                    pendingFunctions.Push(method);
+                }
+            }
+
+            // 本类链上新登记的虚根：对全部存活类补扫实现（override 所在派生类可能先于声明类处理）
+            foreach (var method in EnumerateDeclaredVirtualMethods(classType))
+            {
+                var root = NativeObjectModel.VirtualRoot(method);
+                if (_virtualRoots.Add(root))
+                {
+                    EnqueueImplementations(root, pendingFunctions);
+                }
+            }
+
+            // 已知全部虚根在本类的生效实现
+            foreach (var root in _virtualRoots)
+            {
+                EnqueueImplementation(classType, root, pendingFunctions);
+            }
+        }
+
+        private void EnqueueImplementations(FunctionSymbol root, Stack<FunctionSymbol> pendingFunctions)
+        {
+            foreach (var liveClass in _liveClasses)
+            {
+                EnqueueImplementation(liveClass, root, pendingFunctions);
+            }
+        }
+
+        private void EnqueueImplementation(ClassTypeSymbol classType, FunctionSymbol root, Stack<FunctionSymbol> pendingFunctions)
+        {
+            if (classType.IsAbstract || classType.IsInterface)
+            {
+                return;
+            }
+
+            var implementation = NativeObjectModel.FindImplementation(classType, root);
+            if (implementation != null)
+            {
+                pendingFunctions.Push(implementation);
+            }
+        }
+
+        private static IEnumerable<ClassTypeSymbol> CollectCreatedClasses(BoundNode node)
+        {
+            if (node.Kind == BoundNodeKind.ObjectCreationExpression && ((BoundObjectCreationExpression)node).Type is ClassTypeSymbol created)
+            {
+                yield return created;
+            }
+
+            foreach (var child in Compilation.BoundChildren(node))
+            {
+                foreach (var nested in CollectCreatedClasses(child))
+                {
+                    yield return nested;
+                }
+            }
+        }
+
+        private IEnumerable<FunctionSymbol> EnumerateDeclaredVirtualMethods(ClassTypeSymbol classType)
+        {
+            var seenTypes = new HashSet<ClassTypeSymbol>();
+            for (var current = classType; current != null && !current.IsSystemObjectRoot && seenTypes.Add(current); current = current.BaseType)
+            {
+                foreach (var method in current.Methods)
+                {
+                    if (!method.IsConstructor && !method.IsStatic && (method.IsVirtual || method.IsOverride))
+                    {
+                        yield return method;
+                    }
+                }
+            }
         }
 
         private static IEnumerable<FunctionSymbol> CollectCalledFunctions(BoundNode node)
@@ -127,39 +366,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return parameters;
         }
 
-        /// <summary>x86 用户函数实参/形参的字节偏移：double 占 8 字节，其余 4 字节（x64 统一每参 8 字节槽）。</summary>
-        private int ParamByteOffset(FunctionSymbol function, int index, int count)
-        {
-            if (_isX64)
-            {
-                return 8 * index;
-            }
-
-            var offset = 0;
-            for (var i = 0; i < index && i < count; i++)
-            {
-                offset += ReturnSize(function.Parameters[i].Type);
-            }
-
-            return offset;
-        }
-
-        private int ParamsTotalBytes(FunctionSymbol function, int count)
-        {
-            if (_isX64)
-            {
-                return 8 * count;
-            }
-
-            var total = 0;
-            for (var i = 0; i < count; i++)
-            {
-                total += ReturnSize(function.Parameters[i].Type);
-            }
-
-            return total;
-        }
-
         private static int ReturnSize(TypeSymbol type)
         {
             if (type == TypeSymbol.Void)
@@ -172,7 +378,47 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
-            type.ElementType != null;
+            type.ElementType != null || type is ClassTypeSymbol;
+
+        /// <summary>M4：实例方法/实例构造含隐藏 this 首参（静态成员与顶层函数无）。</summary>
+        private static bool HasThisParameter(FunctionSymbol function)
+            => function.ContainingClass != null && !function.IsStatic;
+
+        /// <summary>this 参数在参数区占用的字节数（两架构均 8 字节槽；x86 双 dword）。</summary>
+        private int ThisParamBytes(FunctionSymbol function) => HasThisParameter(function) ? 8 : 0;
+
+        /// <summary>x86 用户函数实参/形参的字节偏移：double 占 8 字节，其余 4 字节（x64 统一每参 8 字节槽）。实例方法前置 8 字节 this 槽。</summary>
+        private int ParamByteOffset(FunctionSymbol function, int index, int count)
+        {
+            var offset = ThisParamBytes(function);
+            if (_isX64)
+            {
+                return offset + 8 * index;
+            }
+
+            for (var i = 0; i < index && i < count; i++)
+            {
+                offset += ReturnSize(function.Parameters[i].Type);
+            }
+
+            return offset;
+        }
+
+        private int ParamsTotalBytes(FunctionSymbol function, int count)
+        {
+            var total = ThisParamBytes(function);
+            if (_isX64)
+            {
+                return total + 8 * count;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                total += ReturnSize(function.Parameters[i].Type);
+            }
+
+            return total;
+        }
 
         // ------------------------------------------------------------------
         // 函数
@@ -184,9 +430,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _variables.Clear();
             _labels.Clear();
             _nextLabelId = 0;
+            _thisRegister = null;
 
             irFunction.EndLabelId = AllocLabel();
             Add(irFunction.Instructions, new IrInstruction(IrOpCode.StackCheck));
+
+            if (HasThisParameter(function))
+            {
+                // M4：隐藏 this = 参数区偏移 0（BoundThisExpression/BaseExpression 映射该寄存器）
+                _thisRegister = AllocateRegister(8);
+                Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, _thisRegister, IrOperand.Constant(0)));
+            }
 
             foreach (var parameter in function.Parameters)
             {
@@ -451,6 +705,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BoundNodeKind.MemberCallExpression:
                     return EmitMemberCallExpression((BoundMemberCallExpression)node);
 
+                case BoundNodeKind.ThisExpression:
+                    return _thisRegister ?? throw new Exception("'this' used outside instance context");
+
+                case BoundNodeKind.BaseExpression:
+                    // base 与 this 同一对象表示（字段布局含基类区、直调基类实现由调用端处理）
+                    return _thisRegister ?? throw new Exception("'base' used outside instance context");
+
+                case BoundNodeKind.ObjectCreationExpression:
+                    return EmitObjectCreationExpression((BoundObjectCreationExpression)node);
+
+                case BoundNodeKind.ConstructorChainExpression:
+                    return EmitConstructorChainExpression((BoundConstructorChainExpression)node);
+
+                case BoundNodeKind.MemberAssignmentExpression:
+                    return EmitMemberAssignmentExpression((BoundMemberAssignmentExpression)node);
+
                 case BoundNodeKind.FormatExpression:
                     return EmitFormatExpression((BoundFormatExpression)node);
 
@@ -687,7 +957,55 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(address), IrOperand.Reg(value), 0, elementSize));
             }
 
+            // M4：类类型数组元素零值默认（null）——bump 分配器不复位脏页，逐元素清零
+            if (elementType is ClassTypeSymbol && node.Initializers.Length == 0)
+            {
+                EmitZeroFillElements(instructions, array, length, elementSize);
+            }
+
             return array;
+        }
+
+        /// <summary>M4：把数组数据区（[8..8+len·elem]）清零（i 循环，仅引用宽度场景使用）。</summary>
+        private void EmitZeroFillElements(List<IrInstruction> instructions, IrVirtualRegister array, IrVirtualRegister length, int elementSize)
+        {
+            var index = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Const, index, IrOperand.Constant(0)));
+
+            var loop = AllocLabel();
+            var done = AllocLabel();
+
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(loop)));
+            Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(index), IrOperand.Reg(length)));
+            Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.AboveOrEqual), IrOperand.Label(done)));
+
+            var offset = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Mov, offset, IrOperand.Reg(index)));
+            if (elementSize == 2)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(1)));
+            }
+            else if (elementSize == 4)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(2)));
+            }
+            else if (elementSize == 8)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(3)));
+            }
+
+            var address = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(array), IrOperand.None, 8, 0));
+            Add(instructions, new IrInstruction(IrOpCode.Add, address, IrOperand.Reg(address), IrOperand.Reg(offset)));
+
+            var zero = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(address), IrOperand.Reg(zero), 0, elementSize));
+
+            Add(instructions, new IrInstruction(IrOpCode.Add, index, IrOperand.Reg(index), IrOperand.Constant(1)));
+            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(loop)));
+
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(done)));
         }
 
         private IrVirtualRegister EmitElementAccessExpression(BoundElementAccessExpression node)
@@ -743,20 +1061,156 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private IrVirtualRegister EmitMemberAccessExpression(BoundMemberAccessExpression node)
         {
             var instructions = _currentFunction.Instructions;
-            var target = EmitExpression(node.Target);
+
+            // M4：类字段读（含静态字段存储槽）
+            if (node.Field != null)
+            {
+                var field = node.Field;
+                var fieldSize = NativeObjectModel.FieldSize(field.Type);
+
+                if (field.IsStatic)
+                {
+                    var slot = EmitStaticFieldAddress(field);
+                    var staticResult = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                    Add(instructions, new IrInstruction(IrOpCode.Load, staticResult, IrOperand.Reg(slot), IrOperand.None, 0, fieldSize));
+                    return staticResult;
+                }
+
+                var target = EmitExpression(node.Target);
+                var (offsets, _) = GetLayout((ClassTypeSymbol)field.ContainingClass);
+                var offset = offsets[field];
+                var result = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                Add(instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(target), IrOperand.None, offset, fieldSize));
+                return result;
+            }
+
+            var lengthTarget = EmitExpression(node.Target);
             var length = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(target), IrOperand.None, 0, 4));
+            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(lengthTarget), IrOperand.None, 0, 4));
             return length;
+        }
+
+        /// <summary>M4：静态字段 → 数据段零初始化存储槽（.cctor 触发 native 暂不支持，门禁拒绝非空静态构造）。</summary>
+        private IrVirtualRegister EmitStaticFieldAddress(FieldSymbol field)
+        {
+            var key = NativeObjectModel.StaticFieldKey(field);
+            _irProgram.AddData(IrDataItem.ByteArray(key, new byte[NativeObjectModel.FieldSize(field.Type)]));
+            var slot = AllocateRegister(8);
+            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.LeaData, slot, IrOperand.Data(key)));
+            return slot;
+        }
+
+        /// <summary>M4：类字段写（求值顺序对齐 IL：target 先于 value）。</summary>
+        private IrVirtualRegister EmitMemberAssignmentExpression(BoundMemberAssignmentExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var field = node.Field;
+
+            if (field.IsStatic)
+            {
+                var staticSlot = EmitStaticFieldAddress(field);
+                var staticValue = EmitExpression(node.Expression);
+                Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(staticSlot), IrOperand.Reg(staticValue), 0, NativeObjectModel.FieldSize(field.Type)));
+                return staticValue;
+            }
+
+            var target = EmitExpression(node.Target);
+            var value = EmitExpression(node.Expression);
+            var (offsets, _) = GetLayout((ClassTypeSymbol)field.ContainingClass);
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(target), IrOperand.Reg(value), offsets[field], NativeObjectModel.FieldSize(field.Type)));
+            return value;
+        }
+
+        /// <summary>
+        /// M4：`new Foo(args)` = Alloc(实例尺寸) + 存 vtable 指针 + 字段清零 + call .ctor(this, args)。
+        /// </summary>
+        private IrVirtualRegister EmitObjectCreationExpression(BoundObjectCreationExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var classType = (ClassTypeSymbol)node.Type;
+            var (offsets, instanceSize) = GetLayout(classType);
+            var pointerSize = _isX64 ? 8 : 4;
+
+            var sizeRegister = EmitConst(instanceSize);
+            var obj = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(sizeRegister)));
+            Add(instructions, new IrInstruction(IrOpCode.Call, obj, IrOperand.Runtime("Alloc"), IrOperand.Constant(0)));
+
+            // 对象头 [0] = 具体类 vtable 指针
+            var vtable = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.LeaData, vtable, IrOperand.Data(NativeObjectModel.VTableKey(classType))));
+            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(obj), IrOperand.Reg(vtable), 0, pointerSize));
+
+            // 字段零值默认（bump 分配器不复位脏页）
+            foreach (var field in NativeObjectModel.CollectInstanceFields(classType))
+            {
+                var fieldSize = NativeObjectModel.FieldSize(field.Type);
+                var zero = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                Add(instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
+                Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(obj), IrOperand.Reg(zero), offsets[field], fieldSize));
+            }
+
+            var ctor = FindInstanceConstructor(classType);
+            EmitInvoke(ctor, obj, node.Arguments);
+            return obj;
+        }
+
+        /// <summary>M4：`base(...)`/`this(...)` 构造链（ctor 体已由绑定前缀注入，this 即隐藏首参）。null = 链到 Object：no-op。</summary>
+        private IrVirtualRegister EmitConstructorChainExpression(BoundConstructorChainExpression node)
+        {
+            if (node.Constructor == null)
+            {
+                return VoidResult();
+            }
+
+            if (_thisRegister == null)
+            {
+                throw new Exception("constructor chain outside constructor context");
+            }
+
+            EmitInvoke(node.Constructor, _thisRegister, node.Arguments);
+            return VoidResult();
+        }
+
+        private static FunctionSymbol FindInstanceConstructor(ClassTypeSymbol classType)
+        {
+            foreach (var method in classType.Methods)
+            {
+                if (method.IsConstructor && !method.IsStatic)
+                {
+                    return method;
+                }
+            }
+
+            throw new Exception($"Class {classType.FullName} has no constructor.");
+        }
+
+        /// <summary>类实例布局缓存（偏移按继承链基类在前计算）。</summary>
+        private (Dictionary<FieldSymbol, int> Offsets, int InstanceSize) GetLayout(ClassTypeSymbol classType)
+        {
+            if (!_layoutCache.TryGetValue(classType, out var layout))
+            {
+                layout = NativeObjectModel.BuildLayout(classType);
+                _layoutCache.Add(classType, layout);
+            }
+
+            return layout;
         }
 
         private IrVirtualRegister EmitMemberCallExpression(BoundMemberCallExpression node)
         {
             if (node.Method?.BuiltinKind != null)
             {
+                if (!node.Method.IsStatic)
+                {
+                    // M4c：Object/Type 内建实例方法（receiver 独立于参数）
+                    return EmitObjectFaceInstanceCall(node);
+                }
+
                 return EmitBuiltinCall(node.Method, node.Arguments);
             }
 
-            // 静态容器类方法调用（6e-M18 限定/未限定 + 6e-M19 M2-b facade 降级：receiver 前置首参）：
+            // 静态容器类/facade 降级方法调用（6e-M18 + M2-b：receiver 前置首参）：
             // 统一按用户函数/extern 调用发射，跳过实例表达式
             if (node.Method != null && node.Method.IsStatic)
             {
@@ -769,22 +1223,431 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return EmitFunctionCall(node.Method, node.Arguments);
             }
 
-            var instructions = _currentFunction.Instructions;
-            var target = EmitExpression(node.Expression);
-            var start = EmitExpression(node.Arguments[0]);
-            var count = EmitExpression(node.Arguments[1]);
-
-            if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
+            // 特殊内建：string.substring（Method 为 null 的历史形状，先于实例分派）
+            if (node.Method == null)
             {
-                var result = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(target)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(start)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(2), IrOperand.Reg(count)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Substring"), IrOperand.Constant(0)));
-                return result;
+                var instructions = _currentFunction.Instructions;
+                var target = EmitExpression(node.Expression);
+                var start = EmitExpression(node.Arguments[0]);
+                var count = EmitExpression(node.Arguments[1]);
+
+                if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
+                {
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(target)));
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(start)));
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(2), IrOperand.Reg(count)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Substring"), IrOperand.Constant(0)));
+                    return result;
+                }
+
+                throw new Exception($"Unexpected member call {node.Identifier}");
             }
 
-            throw new Exception($"Unexpected member call {node.Identifier}");
+            // M4：用户类实例方法——base./非虚直调；virtual/override 经 vtable 虚分派
+            var method = node.Method;
+            var receiver = EmitExpression(node.Expression);
+
+            var isVirtualDispatch = !node.IsBase && (method.IsVirtual || method.IsOverride);
+            if (isVirtualDispatch)
+            {
+                var functionPointer = EmitLoadVirtualFunctionPointer(receiver, method);
+                return EmitInvoke(method, receiver, node.Arguments, indirectFunction: functionPointer);
+            }
+
+            return EmitInvoke(method, receiver, node.Arguments);
+        }
+
+        /// <summary>M4：加载 receiver 具体类的 vtable 槽函数指针（mov vt=[obj] → mov fn=[vt+8+ps·(slot+1)]）。</summary>
+        private IrVirtualRegister EmitLoadVirtualFunctionPointer(IrVirtualRegister receiver, FunctionSymbol method)
+        {
+            var instructions = _currentFunction.Instructions;
+            var root = NativeObjectModel.VirtualRoot(method);
+            var slot = _virtualSlots[root];
+            var pointerSize = _isX64 ? 8 : 4;
+
+            var vtable = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, vtable, IrOperand.Reg(receiver), IrOperand.None, 0, pointerSize));
+
+            var functionPointer = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, functionPointer, IrOperand.Reg(vtable), IrOperand.None, 8 + pointerSize * (slot + 1), pointerSize));
+            return functionPointer;
+        }
+
+        // ------------------------------------------------------------------
+        // M4c：System.Object / System.Type 内建成员面（native）
+        // 类 receiver → 固定槽虚分派（override 经槽内容天然生效）；base. → 运行时默认实现直调；
+        // 基元 receiver → 对应运行时原语；Type 值（vtable 记录指针）→ 名字字段读取。
+        // ------------------------------------------------------------------
+
+        private IrVirtualRegister EmitObjectFaceInstanceCall(BoundMemberCallExpression node)
+        {
+            var kind = node.Method!.BuiltinKind!.Value;
+            var receiverType = node.Expression.Type;
+
+            switch (kind)
+            {
+                case BuiltinKind.TypeFullName:
+                {
+                    // Type 值即 vtable 记录指针：[8] = 类型全名字符串
+                    var typeValue = EmitExpression(node.Expression);
+                    return EmitLoadPointerField(typeValue, 8);
+                }
+
+                case BuiltinKind.TypeName:
+                {
+                    // Name = TypeSimpleName(FullName)——与 IL 组合语义一致（无点回退全名）
+                    var typeValue = EmitExpression(node.Expression);
+                    var fullName = EmitLoadPointerField(typeValue, 8);
+                    var simple = AllocateRegister(8);
+                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(fullName)));
+                    Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, simple, IrOperand.Runtime("TypeSimpleName"), IrOperand.Constant(0)));
+                    return simple;
+                }
+
+                case BuiltinKind.ObjectGetType:
+                {
+                    var receiver = EmitExpression(node.Expression);
+                    if (receiverType is ClassTypeSymbol userClass && !userClass.IsFacadeClass)
+                    {
+                        // 用户类：对象头 [0] 即具体类 vtable（= System.Type 实例）
+                        return EmitLoadPointerField(receiver, 0);
+                    }
+
+                    // 基元/string/facade：伪记录（System.Int32 等）作为 Type 对象
+                    return EmitPseudoVTable(FacadeFullNameOfType(receiverType));
+                }
+
+                case BuiltinKind.ObjectToString:
+                {
+                    var receiver = EmitExpression(node.Expression);
+
+                    if (receiverType == TypeSymbol.String)
+                    {
+                        return receiver; // 字符串值自身即表示
+                    }
+
+                    if (receiverType == ClassTypeSymbol.SystemType)
+                    {
+                        // M4c：Type 值（vtable 记录指针）——名字字段读取。不走槽分派：
+                        // 槽 0 可能是用户 override（期望对象 this），对记录指针调用会踩字段布局。
+                        // 运行时默认读 [[x]+8] 与 IL(RuntimeType.ToString)/Evaluator 三后端一致。
+                        return EmitStackRuntimeCall("ObjectToString", 8, receiver);
+                    }
+
+                    if (receiverType is ClassTypeSymbol cls && !cls.IsFacadeClass)
+                    {
+                        if (node.IsBase)
+                        {
+                            return EmitRuntimeCall1("ObjectToString", receiver);
+                        }
+
+                        return InvokeVirtualSlot(cls, NativeObjectModel.SlotToString, receiver, node.Arguments);
+                    }
+
+                    return EmitPrimitiveToString(receiverType, receiver);
+                }
+
+                case BuiltinKind.ObjectGetHashCode:
+                {
+                    var receiver = EmitExpression(node.Expression);
+
+                    if (receiverType == ClassTypeSymbol.SystemType)
+                    {
+                        return EmitStackRuntimeCall("ObjectGetHashCode", 4, WidenTo8(receiver));
+                    }
+
+                    if (receiverType is ClassTypeSymbol hcls && !hcls.IsFacadeClass)
+                    {
+                        if (node.IsBase)
+                        {
+                            return EmitRuntimeCall1("ObjectGetHashCode", receiver);
+                        }
+
+                        return InvokeVirtualSlot(hcls, NativeObjectModel.SlotGetHashCode, receiver, node.Arguments);
+                    }
+
+                    return EmitRuntimeCall1("ObjectGetHashCode", receiver);
+                }
+
+                case BuiltinKind.ObjectEquals:
+                {
+                    var receiver = EmitExpression(node.Expression);
+
+                    if (receiverType == ClassTypeSymbol.SystemType)
+                    {
+                        var typeOther = EmitExpression(node.Arguments[0]);
+                        return EmitStackRuntimeCall("ObjectEquals", 4, WidenTo8(receiver), WidenTo8(typeOther));
+                    }
+
+                    if (receiverType is ClassTypeSymbol ecl && !ecl.IsFacadeClass)
+                    {
+                        if (node.IsBase)
+                        {
+                            var baseOther = EmitExpression(node.Arguments[0]);
+                            return EmitRuntimeCall2("ObjectEquals", receiver, baseOther);
+                        }
+
+                        return InvokeVirtualSlot(ecl, NativeObjectModel.SlotEquals, receiver, node.Arguments);
+                    }
+
+                    // 基元/string：string×string 走内容比较，其余按位比较（any 位模式直读，不解引用）
+                    if (receiverType == TypeSymbol.String && node.Arguments[0].Type == TypeSymbol.String)
+                    {
+                        var other = EmitExpression(node.Arguments[0]);
+                        return EmitRuntimeBinaryValues(receiver, other, "StrEquals", invert: false);
+                    }
+
+                    var widenedReceiver = receiver;
+                    var otherValue = node.Arguments.Length > 0 ? EmitExpression(node.Arguments[0]) : EmitConst(0);
+                    if (_currentFunction.RegisterSize(widenedReceiver) < 8)
+                    {
+                        widenedReceiver = WidenTo8(widenedReceiver);
+                    }
+
+                    if (_currentFunction.RegisterSize(otherValue) < 8)
+                    {
+                        otherValue = WidenTo8(otherValue);
+                    }
+
+                    return EmitRuntimeBinaryValues(widenedReceiver, otherValue, "ObjectEquals", invert: false);
+                }
+
+                default:
+                    throw new Exception($"Unexpected object face builtin kind: {kind}");
+            }
+        }
+
+        /// <summary>用户类 receiver 的固定槽分派（ToString/GetHashCode/Equals）。extraArguments 为 Equals 的实参。</summary>
+        private IrVirtualRegister InvokeVirtualSlot(ClassTypeSymbol classType, int slotIndex, IrVirtualRegister receiver, ImmutableArray<BoundExpression> extraArguments)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+
+            var vtable = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, vtable, IrOperand.Reg(receiver), IrOperand.None, 0, pointerSize));
+
+            var functionPointer = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Load, functionPointer, IrOperand.Reg(vtable), IrOperand.None, 8 + pointerSize * (slotIndex + 1), pointerSize));
+
+            // 参数区：this(8) + 实参（x64 每参 8；x86 按 ReturnSize 累计）
+            var argumentOffsets = new int[extraArguments.Length];
+            var running = 8;
+            for (var i = 0; i < extraArguments.Length; i++)
+            {
+                argumentOffsets[i] = running;
+                running += _isX64 ? 8 : ReturnSize(extraArguments[i].Type);
+            }
+
+            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(running)));
+            Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(0), IrOperand.Reg(receiver)));
+
+            for (var i = extraArguments.Length - 1; i >= 0; i--)
+            {
+                var value = EmitExpression(extraArguments[i]);
+                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(argumentOffsets[i]), IrOperand.Reg(value)));
+            }
+
+            var resultSize = slotIndex == NativeObjectModel.SlotToString ? 8 : 4;
+            var result = AllocateRegister(resultSize);
+            Add(instructions, new IrInstruction(IrOpCode.CallReg, result, IrOperand.None, IrOperand.Reg(functionPointer)));
+            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(running)));
+            return result;
+        }
+
+        private IrVirtualRegister EmitLoadPointerField(IrVirtualRegister baseRegister, int offset)
+        {
+            var result = AllocateRegister(8);
+            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(baseRegister), IrOperand.None, offset, _isX64 ? 8 : 4));
+            return result;
+        }
+
+        /// <summary>M4c：基元/伪记录 vtable（System.Type 对象），typeId=-1 表示自引用头。</summary>
+        private IrVirtualRegister EmitPseudoVTable(string fullName)
+        {
+            var key = NativeObjectModel.PseudoVTableKey(fullName);
+            if (_pseudoVTableKeys.Add(key))
+            {
+                _irProgram.AddData(IrDataItem.VTable(key, -1, _irProgram.InternString(fullName), NativeObjectModel.ObjectSlotFunctions));
+            }
+
+            var vtable = AllocateRegister(8);
+            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.LeaData, vtable, IrOperand.Data(key)));
+            return vtable;
+        }
+
+        /// <summary>类型对应的封装类全名（伪 vtable 名字来源）。</summary>
+        private static string FacadeFullNameOfType(TypeSymbol type)
+        {
+            if (type == ClassTypeSymbol.SystemType)
+            {
+                return "System.Type";
+            }
+
+            if (type.ElementType != null)
+            {
+                return "System.Array";
+            }
+
+            switch (type.Name)
+            {
+                case "int": return "System.Int32";
+                case "long": return "System.Int64";
+                case "double": return "System.Double";
+                case "bool": return "System.Boolean";
+                case "char": return "System.Char";
+                case "byte": return "System.Byte";
+                case "sbyte": return "System.SByte";
+                case "short": return "System.Int16";
+                case "ushort": return "System.UInt16";
+                case "uint": return "System.UInt32";
+                case "ulong": return "System.UInt64";
+                case "float": return "System.Single";
+                case "string": return "System.String";
+            }
+
+            if (type is EnumTypeSymbol enumType)
+            {
+                return enumType.FullName;
+            }
+
+            if (type is ClassTypeSymbol classType)
+            {
+                return classType.FullName;
+            }
+
+            return type.Name;
+        }
+
+        /// <summary>基元 ToString 分发（facade 未覆盖时的回退路径）。</summary>
+        private IrVirtualRegister EmitPrimitiveToString(TypeSymbol type, IrVirtualRegister value)
+        {
+            var instructions = _currentFunction.Instructions;
+
+            if (type == TypeSymbol.Boolean)
+            {
+                return EmitSelectString("True", "False", value);
+            }
+
+            if (type == TypeSymbol.Double)
+            {
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                return text;
+            }
+
+            if (type == TypeSymbol.Float)
+            {
+                var asDouble = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, asDouble, IrOperand.Reg(value)));
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(asDouble)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                return text;
+            }
+
+            if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64)
+            {
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));
+                return text;
+            }
+
+            if (type == TypeSymbol.Char)
+            {
+                var text = AllocateRegister(8);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
+                return text;
+            }
+
+            // int/uint/sbyte/short/ushort/byte/enum：32 位规范值
+            var intText = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+            Add(instructions, new IrInstruction(IrOpCode.Call, intText, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
+            return intText;
+        }
+
+        /// <summary>单参运行时调用（栈 ABI，M4；8 字节槽读取场景由调用方先 WidenTo8）。</summary>
+        private IrVirtualRegister EmitRuntimeCall1(string runtimeName, IrVirtualRegister value)
+            => EmitStackRuntimeCall(runtimeName, 8, value);
+
+        private IrVirtualRegister EmitRuntimeCall2(string runtimeName, IrVirtualRegister first, IrVirtualRegister second)
+            => EmitStackRuntimeCall(runtimeName, 4, first, second);
+
+        /// <summary>求值并把窄于 8 字节的值零扩展（ObjectGetHashCode 等按 8 字节槽读取的场景）。</summary>
+        private IrVirtualRegister EmitWidenedArgument(BoundExpression expression)
+        {
+            var value = EmitExpression(expression);
+            return _currentFunction.RegisterSize(value) < 8 ? WidenTo8(value) : value;
+        }
+
+        private IrVirtualRegister WidenTo8(IrVirtualRegister value)
+        {
+            var widened = AllocateRegister(8);
+            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Movzx64, widened, IrOperand.Reg(value)));
+            return widened;
+        }
+
+        /// <summary>两个已求值寄存器的运行时布尔比较。StrEquals 保持寄存器 ABI；ObjectEquals 走栈 ABI（M4）。</summary>
+        private IrVirtualRegister EmitRuntimeBinaryValues(IrVirtualRegister left, IrVirtualRegister right, string runtimeName, bool invert)
+        {
+            var result = AllocateRegister(4);
+            if (runtimeName == "ObjectEquals")
+            {
+                result = EmitStackRuntimeCall(runtimeName, 4, left, right);
+            }
+            else
+            {
+                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(left)));
+                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(right)));
+                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime(runtimeName), IrOperand.Constant(0)));
+            }
+
+            if (invert)
+            {
+                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Xor, result, IrOperand.Reg(result), IrOperand.Constant(1)));
+            }
+
+            return result;
+        }
+
+        /// <summary>M4c：Object.Equals(a,b)/Object.ReferenceEquals(a,b) 静态相等。双侧值类型 → 常量 false（装箱语义）；否则 ObjectEquals 指针比较。</summary>
+        private IrVirtualRegister EmitObjectStaticEquality(ImmutableArray<BoundExpression> arguments)
+        {
+            static bool IsPureValue(BoundExpression expression)
+            {
+                // 解开装箱转换取原始操作数类型（参数已转换为 any，直接看类型恒非值）
+                var current = expression;
+                while (current is BoundConversionExpression conversion)
+                {
+                    current = conversion.Expression;
+                }
+
+                var type = current.Type;
+                if (type is EnumTypeSymbol)
+                {
+                    return true;
+                }
+
+                if (type is ClassTypeSymbol || type.ElementType != null)
+                {
+                    return false;
+                }
+
+                return type != TypeSymbol.String && type != TypeSymbol.Any && type != TypeSymbol.Void && type != TypeSymbol.Error;
+            }
+
+            if (IsPureValue(arguments[0]) && IsPureValue(arguments[1]))
+            {
+                return EmitConst(0);
+            }
+
+            var left = EmitWidenedArgument(arguments[0]);
+            var right = EmitWidenedArgument(arguments[1]);
+            return EmitRuntimeBinaryValues(left, right, "ObjectEquals", invert: false);
         }
 
         private IrVirtualRegister EmitBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
@@ -906,6 +1769,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
                     return result;
+                }
+                case BuiltinKind.ObjectStaticEquals:
+                case BuiltinKind.ObjectReferenceEquals:
+                {
+                    // M4c：装箱语义——双侧均为值类型时恒 false（各自独立表示）；否则指针比较
+                    return EmitObjectStaticEquality(arguments);
                 }
                 case BuiltinKind.TickCount:
                 {
@@ -1475,17 +2344,48 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var instructions = _currentFunction.Instructions;
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
-            var result = AllocateRegister(resultSize);
 
-            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(left)));
-            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(right)));
-            Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime(runtimeName), IrOperand.Constant(0)));
+            IrVirtualRegister result;
+            if (runtimeName == "ObjectEquals")
+            {
+                // M4：ObjectEquals 为栈 ABI（与 vtable 槽共享实现）
+                result = EmitStackRuntimeCall(runtimeName, resultSize, WidenTo8(left), WidenTo8(right));
+            }
+            else
+            {
+                result = AllocateRegister(resultSize);
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(left)));
+                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(right)));
+                Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime(runtimeName), IrOperand.Constant(0)));
+            }
 
             if (invert)
             {
                 Add(instructions, new IrInstruction(IrOpCode.Xor, result, IrOperand.Reg(result), IrOperand.Constant(1)));
             }
 
+            return result;
+        }
+
+        /// <summary>
+        /// M4：栈 ABI 运行时调用。ObjectToString/ObjectGetHashCode/ObjectGetType/ObjectEquals 四个运行时
+        /// 函数同时作为 vtable 固定槽默认实现（槽内容可能是用户 override，callreg 无法区分 ABI），
+        /// 故统一采用与用户函数一致的 ReserveArgs/StoreArg 栈传参约定；参数一律 8 字节槽。
+        /// </summary>
+        private IrVirtualRegister EmitStackRuntimeCall(string name, int resultSize, params IrVirtualRegister[] args)
+        {
+            var instructions = _currentFunction.Instructions;
+            var totalBytes = 8 * args.Length;
+
+            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
+            for (var i = args.Length - 1; i >= 0; i--)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(8 * i), IrOperand.Reg(args[i])));
+            }
+
+            var result = AllocateRegister(resultSize);
+            Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime(name), IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));
             return result;
         }
 
@@ -1676,13 +2576,29 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         /// <summary>用户函数调用（栈 ABI）：ReserveArgs/StoreArg/Call/FreeArgs（6e-M18 起亦服务静态容器类方法调用）。</summary>
         private IrVirtualRegister EmitFunctionCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+            => EmitInvoke(function, null, arguments);
+
+        /// <summary>
+        /// M4：统一调用发射。receiver != null → 实例调用（this 为隐藏 arg0，参数区前置 8 字节）；
+        /// indirectFunction != null → CallReg 虚分派（vtable 槽指针）。实参右→左求值（与既有顺序一致）。
+        /// </summary>
+        private IrVirtualRegister? EmitInvoke(
+            FunctionSymbol function,
+            IrVirtualRegister? receiver,
+            ImmutableArray<BoundExpression> arguments,
+            IrVirtualRegister? indirectFunction = null)
         {
             var instructions = _currentFunction.Instructions;
+            var hasThis = receiver != null;
             var count = arguments.Length;
 
             var totalBytes = ParamsTotalBytes(function, count);
-
             Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
+
+            if (hasThis)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(0), IrOperand.Reg(receiver!)));
+            }
 
             for (var i = count - 1; i >= 0; i--)
             {
@@ -1690,9 +2606,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(function, i, count)), IrOperand.Reg(value)));
             }
 
-            var irFunction = _functionMap[function];
             var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
-            Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Func(irFunction), IrOperand.Constant(0)));
+            if (indirectFunction != null)
+            {
+                Add(instructions, new IrInstruction(IrOpCode.CallReg, result, IrOperand.None, IrOperand.Reg(indirectFunction)));
+            }
+            else
+            {
+                var irFunction = _functionMap[function];
+                Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Func(irFunction), IrOperand.Constant(0)));
+            }
 
             Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));
             return result ?? VoidResult();
@@ -2019,6 +2942,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var to = node.Type;
 
             if (from == TypeSymbol.Any || to == TypeSymbol.Any)
+            {
+                return value;
+            }
+
+            // M4：类/接口引用转换——同一指针表示，上转/下转均为直通（运行时不做类型检查）
+            if (from is ClassTypeSymbol && to is ClassTypeSymbol)
             {
                 return value;
             }

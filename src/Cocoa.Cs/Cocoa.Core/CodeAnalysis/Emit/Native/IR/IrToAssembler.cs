@@ -85,6 +85,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             EmitData();
             EmitStub();
             EmitFunctions();
+            RegisterVTableFixups();
         }
 
         private void DumpIr()
@@ -134,6 +135,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         break;
                     case IrDataKind.Bytes:
                         _a.WriteDataBytes(item.Bytes!);
+                        break;
+                    case IrDataKind.VTable:
+                        EmitVTableData(item);
                         break;
                     default:
                         throw new Exception($"Unexpected data kind: {item.Kind}");
@@ -186,6 +190,81 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _stubLabel = _a.CreateLabel();
             _a.MarkLabel(_stubLabel);
             _emitStub(_imports, _stubLabel);
+        }
+
+        // ------------------------------------------------------------------
+        // vtable 数据发射与重定位（6e-M19 M4）
+        // 布局：[0] typeId:int32（伪记录 = 自引用指针，宽 ps）[4] pad [8] 名字指针
+        //       [8+ps·(i+1)] 槽 i 函数绝对地址。两架构槽偏移公式一致。
+        // ------------------------------------------------------------------
+
+        private readonly List<(IrDataItem Item, int Symbol)> _vtableSymbols = new();
+
+        private void EmitVTableData(IrDataItem item)
+        {
+            var symbol = _dataSymbols[item.Key];
+            _vtableSymbols.Add((item, symbol));
+            var ps = _isX64 ? 8 : 4;
+
+            if (item.TypeId < 0)
+            {
+                // 伪记录：[0..ps) 自引用指针（Patch 阶段经 AddDataDataFixup 回填自身地址），
+                // 使 Type 值直接作为对象使用时 [[x+0]+8] 取名字成立。头部补齐到 8 字节：
+                // x64 自引用即占满 [0..8)；x86 补 4 字节 pad。
+                for (var i = 0; i < ps; i++)
+                {
+                    _a.WriteDataByte(0);
+                }
+
+                if (!_isX64)
+                {
+                    _a.WriteDataInt32(0);
+                }
+            }
+            else
+            {
+                _a.WriteDataInt32(item.TypeId);
+                _a.WriteDataInt32(0); // pad
+            }
+
+            _a.WriteDataBytes(new byte[ps]); // [8] 名字指针占位
+
+            foreach (var _ in item.Slots!)
+            {
+                _a.WriteDataBytes(new byte[ps]); // 函数指针槽占位
+            }
+        }
+
+        /// <summary>EmitFunctions 之后调用（_nameToLabel/_dataSymbols 已就绪）：注册 vtable 内部重定位。</summary>
+        private void RegisterVTableFixups()
+        {
+            var ps = _isX64 ? 8 : 4;
+
+            foreach (var (item, symbol) in _vtableSymbols)
+            {
+                var baseOffset = _a.GetDataOffset(symbol);
+
+                if (item.TypeId < 0)
+                {
+                    // 自引用指针 → 自身数据地址
+                    _a.AddDataDataFixup(baseOffset, symbol);
+                }
+
+                // 名字指针 @8 → 类型全名字符串数据项
+                _a.AddDataDataFixup(baseOffset + 8, _dataSymbols[item.NameKey!]);
+
+                // 函数槽 @8+ps·(i+1) → 函数代码绝对地址
+                for (var i = 0; i < item.Slots!.Count; i++)
+                {
+                    var functionName = item.Slots[i];
+                    if (!_nameToLabel.TryGetValue(functionName, out var label))
+                    {
+                        throw new Exception($"VTable slot function '{functionName}' was not emitted.");
+                    }
+
+                    _a.AddDataCodeFixup(baseOffset + 8 + ps * (i + 1), label);
+                }
+            }
         }
 
         private void EmitFunctions()

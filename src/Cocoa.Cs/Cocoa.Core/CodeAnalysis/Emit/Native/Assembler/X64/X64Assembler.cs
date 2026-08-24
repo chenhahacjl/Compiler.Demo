@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 
 using Cocoa.CodeAnalysis.Emit.Native.Assembler;
+using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 
 namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
 {
@@ -95,6 +96,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
         private readonly Dictionary<int, int> _dataOffsets = new Dictionary<int, int>();
         private readonly List<(int Offset, int Label)> _labelFixups = new List<(int Offset, int Label)>();
         private readonly List<(int Offset, int Symbol)> _dataFixups = new List<(int Offset, int Symbol)>();
+        private readonly List<(int DataOffset, int Label)> _dataCodeFixups = new List<(int DataOffset, int Label)>();
+        private readonly List<(int DataOffset, int Symbol)> _dataDataFixups = new List<(int DataOffset, int Symbol)>();
+        private readonly List<int> _dataAbsoluteFixups = new List<int>();
+
+        public System.Collections.Generic.IReadOnlyList<int> DataAbsoluteFixups => _dataAbsoluteFixups;
         private int _nextLabelId;
         private int _nextSymbolId;
 
@@ -205,6 +211,51 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Assembler.X64
 
                 WriteInt32At(fixup.Offset, dataTextDelta + dataOffset - (fixup.Offset + 4));
             }
+
+            // M4a：数据段内绝对地址（VA）——vtable 槽 → 代码 / 名字指针 → 数据
+            foreach (var fixup in _dataCodeFixups)
+            {
+                if (!_labels.TryGetValue(fixup.Label, out var labelOffset))
+                {
+                    throw new InvalidOperationException($"Label {fixup.Label} was never marked.");
+                }
+
+                WriteDataInt64At(fixup.DataOffset, imageBase + PeFileWriter.TextRva + labelOffset);
+            }
+
+            foreach (var fixup in _dataDataFixups)
+            {
+                if (!_dataOffsets.TryGetValue(fixup.Symbol, out var dataOffset))
+                {
+                    throw new InvalidOperationException($"Data symbol {fixup.Symbol} was never marked.");
+                }
+
+                WriteDataInt64At(fixup.DataOffset, imageBase + dataTextDelta + PeFileWriter.TextRva + dataOffset);
+            }
+        }
+
+        public void AddDataCodeFixup(int dataOffset, int label)
+        {
+            _dataCodeFixups.Add((dataOffset, label));
+            _dataAbsoluteFixups.Add(dataOffset);
+        }
+
+        public void AddDataDataFixup(int dataOffset, int symbol)
+        {
+            _dataDataFixups.Add((dataOffset, symbol));
+            _dataAbsoluteFixups.Add(dataOffset);
+        }
+
+        private void WriteDataInt64At(int offset, long value)
+        {
+            _data[offset] = (byte)value;
+            _data[offset + 1] = (byte)(value >> 8);
+            _data[offset + 2] = (byte)(value >> 16);
+            _data[offset + 3] = (byte)(value >> 24);
+            _data[offset + 4] = (byte)(value >> 32);
+            _data[offset + 5] = (byte)(value >> 40);
+            _data[offset + 6] = (byte)(value >> 48);
+            _data[offset + 7] = (byte)(value >> 56);
         }
 
         public byte[] ToArray()
