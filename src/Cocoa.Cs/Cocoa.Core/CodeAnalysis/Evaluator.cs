@@ -206,6 +206,10 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateConstructorChain((BoundConstructorChainExpression)node);
                 case BoundNodeKind.MemberAssignmentExpression:
                     return EvaluateMemberAssignment((BoundMemberAssignmentExpression)node);
+                case BoundNodeKind.IsExpression:
+                    return EvaluateIsExpression((BoundIsExpression)node);
+                case BoundNodeKind.AsExpression:
+                    return EvaluateAsExpression((BoundAsExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -546,6 +550,71 @@ namespace Cocoa.CodeAnalysis
                 default:
                     throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
             }
+        }
+
+        /// <summary>6e-M19 M5-b：is 运行时判定——用户类沿 Class 继承链，string/CLR 对象走宿主类型。</summary>
+        private object EvaluateIsExpression(BoundIsExpression node)
+        {
+            var value = EvaluateExpression(node.Expression);
+
+            if (value == null)
+            {
+                return false;
+            }
+
+            if (value is EvaluatorObject evalObject)
+            {
+                var targetClass = (Symbols.ClassTypeSymbol)node.TargetType;
+                for (var current = evalObject.Class; current != null; current = current.BaseType)
+                {
+                    if (current == targetClass)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
+            // string / CLR 对象（外部互操作值）：目标 string → 宿主类型判定；类目标对非 Evaluator 对象不可能
+            if (node.TargetType == TypeSymbol.String)
+            {
+                return value is string;
+            }
+
+            return false;
+        }
+
+        /// <summary>6e-M19 M5-b：as 运行时转换——命中返回原引用，失败得 null。</summary>
+        private object? EvaluateAsExpression(BoundAsExpression node)
+        {
+            var value = EvaluateExpression(node.Expression);
+
+            if (value == null)
+            {
+                return null;
+            }
+
+            if (value is EvaluatorObject evalObject)
+            {
+                var targetClass = (Symbols.ClassTypeSymbol)node.TargetType;
+                for (var current = evalObject.Class; current != null; current = current.BaseType)
+                {
+                    if (current == targetClass)
+                    {
+                        return value;
+                    }
+                }
+
+                return null;
+            }
+
+            if (node.TargetType == TypeSymbol.String)
+            {
+                return value is string ? value : null;
+            }
+
+            return null;
         }
 
         private object? EvaluateConversionExpression(BoundConversionExpression node)

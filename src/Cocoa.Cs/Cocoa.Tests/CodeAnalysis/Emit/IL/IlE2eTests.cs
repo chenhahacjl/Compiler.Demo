@@ -3051,5 +3051,46 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("False\r\nTrue\r\nTrue\r\nFalse\r\nTrue\r\nTrue\r\nx\r\n\r\nFalse\r\n", stdout);
         }
+
+        /// <summary>6e-M19 M5-b：is/as——isinst 动态判定、严格基类接收者、as 失败得 null。</summary>
+        [Fact]
+        public void IsAs_TypeTest_Conversion_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Animal
+{
+    public function Name(): string
+    {
+        return ""animal""
+    }
+}
+
+public class Dog extends Animal
+{
+    public function Bark(): i32
+    {
+        return 7
+    }
+}
+
+function Main()
+{
+    var a: Animal = new Dog()
+    Console.WriteLine(a is Dog)
+    Console.WriteLine(a is Animal)
+    var d = a as Dog
+    Console.WriteLine(d != null)
+    Console.WriteLine(d.Bark())
+    var plain: Animal = new Animal()
+    Console.WriteLine(plain is Dog)
+    var none = plain as Dog
+    Console.WriteLine(none == null)
+    Console.WriteLine(""text"" is String)
+}", "m5b-isas-il");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("True\r\nTrue\r\nTrue\r\n7\r\nFalse\r\nTrue\r\nTrue\r\n", stdout);
+        }
     }
 }

@@ -2040,6 +2040,23 @@ namespace Cocoa.CodeAnalysis.Syntax
                     break;
                 }
 
+                // 6e-M19 M5-b：is / as 类型测试与转换（与关系运算同优先级；目标为单标识符类型名，与 cast 先例一致）
+                if (Current.Kind == SyntaxKind.IsKeyword)
+                {
+                    var isKeyword = NextToken();
+                    var isTypeName = MatchToken(SyntaxKind.IdentifierToken);
+                    left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, isTypeName);
+                    continue;
+                }
+
+                if (Current.Kind == SyntaxKind.AsKeyword)
+                {
+                    var asKeyword = NextToken();
+                    var asTypeName = MatchToken(SyntaxKind.IdentifierToken);
+                    left = new AsExpressionSyntax(_syntaxTree, left, asKeyword, asTypeName);
+                    continue;
+                }
+
                 var operatorToken = NextToken();
                 var right = ParseBinaryExpression(precedence);
                 left = new BinaryExpressionSyntax(_syntaxTree, left, operatorToken, right);

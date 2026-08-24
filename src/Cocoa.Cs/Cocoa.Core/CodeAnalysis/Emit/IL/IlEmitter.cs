@@ -658,9 +658,31 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BoundNodeKind.ConstructorChainExpression:
                     EmitConstructorChainExpression(il, (BoundConstructorChainExpression)node);
                     break;
+                case BoundNodeKind.IsExpression:
+                    EmitIsExpression(il, (BoundIsExpression)node);
+                    break;
+                case BoundNodeKind.AsExpression:
+                    EmitAsExpression(il, (BoundAsExpression)node);
+                    break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
+        }
+
+        /// <summary>6e-M19 M5-b：is → isinst + ldnull + cgt.un（C# 规范模式：非 null 引用 &gt; null）。</summary>
+        private void EmitIsExpression(IlAssembler il, BoundIsExpression node)
+        {
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
+            il.Emit(IlOpCodeTable.Get("Ldnull"));
+            il.Emit(IlOpCodeTable.Get("Cgt_Un"));
+        }
+
+        /// <summary>6e-M19 M5-b：as → isinst（失败栈上即 null，与 C# 语义一致）。</summary>
+        private void EmitAsExpression(IlAssembler il, BoundAsExpression node)
+        {
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Isinst"), ToIlType(node.TargetType));
         }
 
         /// <summary>

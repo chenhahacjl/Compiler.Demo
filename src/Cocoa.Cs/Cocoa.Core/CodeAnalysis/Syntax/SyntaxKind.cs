@@ -72,6 +72,7 @@ ColonToken,               // :
 
         // Keywords
         AbstractKeyword,          // abstract
+        AsKeyword,                // as（6e-M19 M5-b）
         BaseKeyword,              // base
         BreakKeyword,             // break
         CaseKeyword,              // case
@@ -96,6 +97,7 @@ ColonToken,               // :
         InKeyword,                // in
         InterfaceKeyword,         // interface
         InternalKeyword,          // internal
+        IsKeyword,                // is（6e-M19 M5-b）
         LetKeyword,               // let
         NamespaceKeyword,         // namespace
         NewKeyword,               // new
@@ -186,5 +188,7 @@ ColonToken,               // :
         InterpolatedStringExpression, // 插值字符串 $"..."
         InterpolatedStringText,   // 插值字符串字面量段
         Interpolation,            // 插值洞 {expr}
+        IsExpression,             // is 类型测试表达式（6e-M19 M5-b）
+        AsExpression,             // as 类型转换表达式（6e-M19 M5-b）
     }
 }

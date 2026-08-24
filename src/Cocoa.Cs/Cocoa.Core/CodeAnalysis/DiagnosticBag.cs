@@ -125,6 +125,20 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>6e-M19 M5-b：is/as 目标须为非接口类（接口分派 native 未实现、数组无类型对象）。</summary>
+        public void ReportIsAsUnsupportedTarget(TextLocation location, string targetName)
+        {
+            var message = $"'{targetName}' is not a valid target for 'is'/'as'. Only non-interface class types are supported.";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M19 M5-b：is/as 接收者须为类/string/null 字面量（any/数组/值类型无运行时类型信息）。</summary>
+        public void ReportIsAsUnsupportedReceiver(TextLocation location, TypeSymbol receiverType)
+        {
+            var message = $"Operator 'is'/'as' requires a reference receiver (class or string), but got '{receiverType}'.";
+            ReportError(location, message);
+        }
+
         public void ReportCannotConvertImplicitly(TextLocation location, TypeSymbol fromType, TypeSymbol toType)
         {
             var message = $"Cannot convert type '{fromType}' to '{toType}'. An explicit conversion exists (are you missing a cast?)";

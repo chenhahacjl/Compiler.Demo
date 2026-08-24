@@ -2439,6 +2439,86 @@ return s + ""x"" == ""x"" ? 0 : 6";
                 "Binary operator '+' is not defined for types 'null' and 'int'.", assertLocation: false);
         }
 
+        // ── 6e-M19 M5-b：is / as 运算符 ──────────────────────────────────────
+
+        [Fact]
+        public void Evaluator_IsAs_DynamicDispatch_Folding_AndFailureNull()
+        {
+            var text = @"
+public class Animal
+{
+    public function Name(): string
+    {
+        return ""animal""
+    }
+}
+public class Dog extends Animal
+{
+    public function Bark(): i32
+    {
+        return 7
+    }
+}
+var a: Animal = new Dog()
+if !(a is Dog) return 1
+if !(a is Animal) return 2
+var d = a as Dog
+if d == null return 3
+if d.Bark() != 7 return 4
+var plain: Animal = new Animal()
+if plain is Dog return 5
+var none = plain as Dog
+if none != null return 6
+return 0";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Theory]
+        [InlineData("return \"x\" is String", true)]
+        [InlineData("return \"x\" is Dog", false)]
+        public void Evaluator_Is_Folds_StaticallyKnown(string text, bool expected)
+        {
+            var syntaxTree = SyntaxTree.Parse(@"
+public class Dog extends Animal { }
+public class Animal { }
+" + text);
+
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics));
+            Assert.Equal(expected, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Is_ValueReceiver_ReportsUnsupported()
+        {
+            var text = @"var n: i32 = 1
+return [n is String]";
+
+            AssertDiagnostics(text,
+                "Operator 'is'/'as' requires a reference receiver (class or string), but got 'int'.", assertLocation: false);
+        }
+
+        [Fact]
+        public void Evaluator_As_InterfaceTarget_ReportsUnsupported()
+        {
+            var text = @"
+public interface IShape { }
+public class Animal { }
+var a: Animal = new Animal()
+var s = [a as IShape]";
+
+            AssertDiagnostics(text,
+                "'IShape' is not a valid target for 'is'/'as'. Only non-interface class types are supported.", assertLocation: false);
+        }
+
         private void AssertRunsClean(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

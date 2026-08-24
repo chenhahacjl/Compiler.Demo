@@ -2129,6 +2129,131 @@ namespace Cocoa.CodeAnalysis.Binding
             return BindConversion(syntax.Expression, type, allowExplicit: true);
         }
 
+        /// <summary>6e-M19 M5-b：is 类型测试——静态可判定折叠，仅"接收者为目标的严格基类/接口"产生动态节点。</summary>
+        private BoundExpression BindIsExpression(IsExpressionSyntax syntax)
+        {
+            return BindTypeTestOrAs(syntax.Expression, syntax.TypeName, syntax, wantBool: true);
+        }
+
+        /// <summary>6e-M19 M5-b：as 类型转换——同 is 的静态判定；动态情形失败得 null。</summary>
+        private BoundExpression BindAsExpression(AsExpressionSyntax syntax)
+        {
+            return BindTypeTestOrAs(syntax.Expression, syntax.TypeName, syntax, wantBool: false);
+        }
+
+        private BoundExpression BindTypeTestOrAs(ExpressionSyntax expressionSyntax, SyntaxToken typeName, ExpressionSyntax ownerSyntax, bool wantBool)
+        {
+            var target = LookupType(typeName.Text ?? "?");
+            if (target == null)
+            {
+                _diagnostics.ReportUndefinedType(typeName.Location, typeName.Text ?? "?");
+                return new BoundErrorExpression(ownerSyntax);
+            }
+
+            if (target.IsPlaceholder128)
+            {
+                _diagnostics.ReportUnsupported128BitType(typeName.Location, typeName.Text ?? "?");
+                return new BoundErrorExpression(ownerSyntax);
+            }
+
+            // 目标约束：非接口类或 string（接口分派 native 未实现、数组无类型对象——三后端一致先拒）
+            var targetClass = target as ClassTypeSymbol;
+
+            // `is/as String` 解析为 System.String 承载类（facade/外部）→ 归一为基元 string
+            if (targetClass != null && targetClass.FullName == "System.String")
+            {
+                target = TypeSymbol.String;
+                targetClass = null;
+            }
+
+            if ((targetClass != null && targetClass.IsInterface) || target.ElementType != null ||
+                (targetClass == null && target != TypeSymbol.String))
+            {
+                _diagnostics.ReportIsAsUnsupportedTarget(typeName.Location, typeName.Text ?? "?");
+                return new BoundErrorExpression(ownerSyntax);
+            }
+
+            var operand = BindExpression(expressionSyntax);
+            if (operand.Type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(ownerSyntax);
+            }
+
+            var receiverType = operand.Type;
+
+            // 接收者约束：类（含接口变量）/string/null 字面量之外拒绝
+            if (receiverType != TypeSymbol.Null && receiverType != TypeSymbol.String &&
+                receiverType != TypeSymbol.Any && receiverType.ElementType == null &&
+                !(receiverType is ClassTypeSymbol))
+            {
+                _diagnostics.ReportIsAsUnsupportedReceiver(expressionSyntax.Location, receiverType);
+                return new BoundErrorExpression(ownerSyntax);
+            }
+
+            if (receiverType == TypeSymbol.Any || receiverType.ElementType != null)
+            {
+                _diagnostics.ReportIsAsUnsupportedReceiver(expressionSyntax.Location, receiverType);
+                return new BoundErrorExpression(ownerSyntax);
+            }
+
+            // null 字面量接收者：is 恒 false / as 恒 null
+            if (receiverType == TypeSymbol.Null)
+            {
+                return wantBool
+                    ? new BoundLiteralExpression(ownerSyntax, false)
+                    : new BoundLiteralExpression(ownerSyntax, null!, target);
+            }
+
+            // string 接收者：目标 string → 恒真/直通；其余恒假/null
+            if (receiverType == TypeSymbol.String)
+            {
+                if (target == TypeSymbol.String)
+                {
+                    return wantBool ? new BoundLiteralExpression(ownerSyntax, true) : operand;
+                }
+
+                return FoldNeverMatch(ownerSyntax, target, wantBool);
+            }
+
+            var receiverClass = (ClassTypeSymbol)receiverType;
+            if (!receiverClass.IsInterface)
+            {
+                // 目标在接收者继承链上（含同类）→ 每个 R 实例都是 C → 静态真/直通
+                if (targetClass!.IsBaseOf(receiverClass))
+                {
+                    return wantBool ? new BoundLiteralExpression(ownerSyntax, true) : operand;
+                }
+
+                // 接收者为目标严格基类 → 动态判定
+                if (receiverClass.IsBaseOf(targetClass!))
+                {
+                    return wantBool
+                        ? new BoundIsExpression(ownerSyntax, operand, target)
+                        : new BoundAsExpression(ownerSyntax, operand, target);
+                }
+            }
+            else
+            {
+                // 接口接收者：目标实现该接口 → 动态；否则不可能
+                if (targetClass!.GetAllInterfaces().Contains(receiverClass))
+                {
+                    return wantBool
+                        ? new BoundIsExpression(ownerSyntax, operand, target)
+                        : new BoundAsExpression(ownerSyntax, operand, target);
+                }
+            }
+
+            // 无继承关系 → 运行时不可能命中
+            return FoldNeverMatch(ownerSyntax, target, wantBool);
+        }
+
+        private BoundExpression FoldNeverMatch(ExpressionSyntax ownerSyntax, TypeSymbol targetType, bool wantBool)
+        {
+            return wantBool
+                ? new BoundLiteralExpression(ownerSyntax, false)
+                : new BoundLiteralExpression(ownerSyntax, null!, targetType);
+        }
+
         private TypeSymbol? BindTypeClause(TypeClauseSyntax? syntax)
         {
             if (syntax == null)
@@ -2710,6 +2835,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
                 case SyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
                 case SyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
+                case SyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
+                case SyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }

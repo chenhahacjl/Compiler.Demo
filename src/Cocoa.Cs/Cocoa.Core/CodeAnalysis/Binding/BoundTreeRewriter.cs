@@ -292,6 +292,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteFormatExpression((BoundFormatExpression)node);
                 }
+                case BoundNodeKind.IsExpression:
+                {
+                    return RewriteIsExpression((BoundIsExpression)node);
+                }
+                case BoundNodeKind.AsExpression:
+                {
+                    return RewriteAsExpression((BoundAsExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -538,6 +546,28 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundFormatExpression(node.Syntax, value, node.Width, node.Format);
+        }
+
+        protected virtual BoundExpression RewriteIsExpression(BoundIsExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundIsExpression(node.Syntax, expression, node.TargetType);
+        }
+
+        protected virtual BoundExpression RewriteAsExpression(BoundAsExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundAsExpression(node.Syntax, expression, node.TargetType);
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

@@ -276,7 +276,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 map[_typeRefs[i]] = TypeRefTable << 24 | (uint)(i + 1);
             }
 
-            var typeDefRow = 1;
+            // TypeDef 表第 1 行为 <Module>（与下方写表/InterfaceImpl 行号约定一致），
+            // 实际类型自第 2 行起——此前从 1 起导致所有 TypeDef token 偏小 1
+            // （castclass/isinst 类目标全错位一行，6e-M19 M5-b 首次运行时验证暴露）。
+            var typeDefRow = 2;
             foreach (var typeDef in _typeDefs)
             {
                 map[typeDef] = TypeDefTable << 24 | (uint)typeDefRow;

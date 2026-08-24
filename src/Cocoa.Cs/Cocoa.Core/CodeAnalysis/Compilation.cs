@@ -638,6 +638,10 @@ namespace Cocoa.CodeAnalysis
                     }
                 case BoundNodeKind.FormatExpression:
                     return new[] { ((BoundFormatExpression)node).Value };
+                case BoundNodeKind.IsExpression:
+                    return new[] { ((BoundIsExpression)node).Expression };
+                case BoundNodeKind.AsExpression:
+                    return new[] { ((BoundAsExpression)node).Expression };
                 case BoundNodeKind.StaticTypeExpression:
                     return Array.Empty<BoundNode>();
                 default:

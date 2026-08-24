@@ -351,6 +351,20 @@ namespace Cocoa.CodeAnalysis.Cod
                         registry.RegisterType(n.Type);
                         break;
                     }
+                case BoundNodeKind.IsExpression:
+                    {
+                        var n = (BoundIsExpression)expression;
+                        registry.RegisterType(n.TargetType);
+                        CollectExpression(registry, n.Expression, labels);
+                        break;
+                    }
+                case BoundNodeKind.AsExpression:
+                    {
+                        var n = (BoundAsExpression)expression;
+                        registry.RegisterType(n.TargetType);
+                        CollectExpression(registry, n.Expression, labels);
+                        break;
+                    }
             }
         }
 
@@ -591,6 +605,24 @@ namespace Cocoa.CodeAnalysis.Cod
                         var n = (BoundConversionExpression)expression;
                         w.Open("conv");
                         w.Field(registry.Get(n.Type));
+                        WriteExpression(w, registry, labels, n.Expression);
+                        w.End();
+                        break;
+                    }
+                case BoundNodeKind.IsExpression:
+                    {
+                        var n = (BoundIsExpression)expression;
+                        w.Open("istype");
+                        w.Field(registry.Get(n.TargetType));
+                        WriteExpression(w, registry, labels, n.Expression);
+                        w.End();
+                        break;
+                    }
+                case BoundNodeKind.AsExpression:
+                    {
+                        var n = (BoundAsExpression)expression;
+                        w.Open("astype");
+                        w.Field(registry.Get(n.TargetType));
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
                         break;
@@ -1711,6 +1743,20 @@ namespace Cocoa.CodeAnalysis.Cod
                         var typeId = reader.ExpectInt();
                         var type = (TypeSymbol)symbolsById[typeId];
                         return new BoundThisExpression(null, (ClassTypeSymbol)type);
+                    }
+                case "istype":
+                    {
+                        var typeId = reader.ExpectInt();
+                        var targetType = (TypeSymbol)symbolsById[typeId];
+                        var expression = ReadExpression(reader, symbolsById, labels);
+                        return new BoundIsExpression(null, expression, targetType);
+                    }
+                case "astype":
+                    {
+                        var typeId = reader.ExpectInt();
+                        var targetType = (TypeSymbol)symbolsById[typeId];
+                        var expression = ReadExpression(reader, symbolsById, labels);
+                        return new BoundAsExpression(null, expression, targetType);
                     }
                 default:
                     throw new InvalidDataException($"Unknown expression kind '{kind}'");

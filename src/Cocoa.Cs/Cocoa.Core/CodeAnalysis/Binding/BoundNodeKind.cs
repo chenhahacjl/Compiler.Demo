@@ -43,5 +43,7 @@ MemberCallExpression,
 MemberAssignmentExpression,
 ConstructorChainExpression,
 FormatExpression,
+IsExpression,
+AsExpression,
     }
 }

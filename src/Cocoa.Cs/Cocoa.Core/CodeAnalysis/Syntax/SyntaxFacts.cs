@@ -48,6 +48,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.LessOrEqualsToken:
                 case SyntaxKind.GreaterToken:
                 case SyntaxKind.GreaterOrEqualsToken:
+                case SyntaxKind.IsKeyword:
+                case SyntaxKind.AsKeyword:
                 {
                     return 3;
                 }
@@ -84,6 +86,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 case "abstract":
                     return SyntaxKind.AbstractKeyword;
+                case "as":
+                    return SyntaxKind.AsKeyword;
                 case "base":
                     return SyntaxKind.BaseKeyword;
                 case "break":
@@ -126,6 +130,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.InKeyword;
                 case "interface":
                     return SyntaxKind.InterfaceKeyword;
+                case "is":
+                    return SyntaxKind.IsKeyword;
                 case "internal":
                     return SyntaxKind.InternalKeyword;
                 case "new":
@@ -210,6 +216,12 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             foreach (var kind in kinds)
             {
+                // is/as 优先级参与解析但不产出 BinaryExpressionSyntax（独立节点），不入通用枚举
+                if (kind == SyntaxKind.IsKeyword || kind == SyntaxKind.AsKeyword)
+                {
+                    continue;
+                }
+
                 if (GetBinaryOperatorPrecedence(kind) > 0)
                 {
                     yield return kind;
@@ -339,6 +351,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "property";
                 case SyntaxKind.AbstractKeyword:
                     return "abstract";
+                case SyntaxKind.AsKeyword:
+                    return "as";
                 case SyntaxKind.BaseKeyword:
                     return "base";
                 case SyntaxKind.ThisKeyword:
@@ -371,6 +385,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "import";
                 case SyntaxKind.InterfaceKeyword:
                     return "interface";
+                case SyntaxKind.IsKeyword:
+                    return "is";
                 case SyntaxKind.InternalKeyword:
                     return "internal";
                 case SyntaxKind.NewKeyword:

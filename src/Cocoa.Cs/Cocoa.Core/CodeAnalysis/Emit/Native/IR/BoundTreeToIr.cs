@@ -307,6 +307,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 yield return created;
             }
 
+            // 6e-M19 M5-b：is/as 目标类标记存活（vtable 链比对依赖目标及祖先已发射）；抽象/接口无 vtable 不入
+            if (node.Kind == BoundNodeKind.IsExpression && ((BoundIsExpression)node).TargetType is ClassTypeSymbol isTarget &&
+                !isTarget.IsAbstract && !isTarget.IsInterface)
+            {
+                yield return isTarget;
+            }
+
+            if (node.Kind == BoundNodeKind.AsExpression && ((BoundAsExpression)node).TargetType is ClassTypeSymbol asTarget &&
+                !asTarget.IsAbstract && !asTarget.IsInterface)
+            {
+                yield return asTarget;
+            }
+
             foreach (var child in Compilation.BoundChildren(node))
             {
                 foreach (var nested in CollectCreatedClasses(child))
@@ -723,6 +736,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundNodeKind.FormatExpression:
                     return EmitFormatExpression((BoundFormatExpression)node);
+
+                case BoundNodeKind.IsExpression:
+                    return EmitIsExpression((BoundIsExpression)node);
+
+                case BoundNodeKind.AsExpression:
+                    return EmitAsExpression((BoundAsExpression)node);
 
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
@@ -2337,6 +2356,87 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(endLabel)));
 
             return result;
+        }
+
+        /// <summary>6e-M19 M5-b：is 动态判定——[obj] vtable 与目标祖先链 vtable 指针逐一比对（仅严格基类接收者到达）。</summary>
+        private IrVirtualRegister EmitIsExpression(BoundIsExpression node)
+        {
+            var result = AllocateRegister(4);
+            var obj = EmitExpression(node.Expression);
+            EmitTypeChainCompare(obj, node.TargetType, out var found, out var notFound, out var done);
+
+            var instructions = _currentFunction.Instructions;
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(found)));
+            var one = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Const, one, IrOperand.Constant(1)));
+            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(one)));
+            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(done)));
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(notFound)));
+            var zero = AllocateRegister(4);
+            Add(instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(zero)));
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(done)));
+
+            return result;
+        }
+
+        /// <summary>6e-M19 M5-b：as 动态转换——同一链比对，命中返回原引用、失败得 null（0）。</summary>
+        private IrVirtualRegister EmitAsExpression(BoundAsExpression node)
+        {
+            var result = AllocateRegister(8);
+            var obj = EmitExpression(node.Expression);
+            EmitTypeChainCompare(obj, node.TargetType, out var found, out var notFound, out var done);
+
+            var instructions = _currentFunction.Instructions;
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(found)));
+            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(obj)));
+            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(done)));
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(notFound)));
+            var nullReg = AllocateRegister(8);
+            Add(instructions, new IrInstruction(IrOpCode.Const, nullReg, IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(nullReg)));
+            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(done)));
+
+            return result;
+        }
+
+        /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命中/汇合三标签交调用方回填结果。</summary>
+        private void EmitTypeChainCompare(IrVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
+        {
+            var instructions = _currentFunction.Instructions;
+            var ps = _isX64 ? 8 : 4;
+            found = AllocLabel();
+            notFound = AllocLabel();
+            done = AllocLabel();
+
+            Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(obj), IrOperand.Constant(0)));
+            Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(notFound)));
+
+            var curVt = AllocateRegister(ps);
+            Add(instructions, new IrInstruction(IrOpCode.Load, curVt, IrOperand.Reg(obj), IrOperand.None, 0, ps));
+
+            var candidate = AllocateRegister(ps);
+            foreach (var key in EnumerateDescendantVTableKeys((ClassTypeSymbol)targetType))
+            {
+                Add(instructions, new IrInstruction(IrOpCode.LeaData, candidate, IrOperand.Data(key)));
+                Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(curVt), IrOperand.Reg(candidate)));
+                Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(found)));
+            }
+
+            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(notFound)));
+        }
+
+        /// <summary>
+        /// 6e-M19 M5-b：x is/as T 的运行时命中集 = 存活类中 T 的自身与全部后代（vtable 一一比对）。
+        /// 对象头只存自身 vtable 地址、无向下类型信息，故以编译期存活类闭包枚举后代；
+        /// 抽象/接口/根不实例化（不在 _liveClasses），行序取 Ordinal 保证确定性。
+        /// </summary>
+        private IEnumerable<string> EnumerateDescendantVTableKeys(ClassTypeSymbol targetClass)
+        {
+            return _liveClasses
+                .Where(c => c == targetClass || targetClass.IsBaseOf(c))
+                .OrderBy(c => c.FullName, System.StringComparer.Ordinal)
+                .Select(NativeObjectModel.VTableKey);
         }
 
         private IrVirtualRegister EmitRuntimeBinary(BoundBinaryExpression node, string runtimeName, int resultSize, bool invert = false)

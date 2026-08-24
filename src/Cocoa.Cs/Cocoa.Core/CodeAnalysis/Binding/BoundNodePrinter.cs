@@ -96,6 +96,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.FormatExpression:
                     WriteFormatExpression((BoundFormatExpression)node, writer);
                     break;
+                case BoundNodeKind.IsExpression:
+                    WriteIsExpression((BoundIsExpression)node, writer);
+                    break;
+                case BoundNodeKind.AsExpression:
+                    WriteAsExpression((BoundAsExpression)node, writer);
+                    break;
                 case BoundNodeKind.ArrayCreationExpression:
                     WriteArrayCreationExpression((BoundArrayCreationExpression)node, writer);
                     break;
@@ -491,6 +497,24 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             writer.WritePunctuation(SyntaxKind.CloseParenthesisToken);
+        }
+
+        private static void WriteIsExpression(BoundIsExpression node, IndentedTextWriter writer)
+        {
+            node.Expression.WriteTo(writer);
+            writer.WriteSpace();
+            writer.WriteKeyword(SyntaxKind.IsKeyword);
+            writer.WriteSpace();
+            writer.WriteIdentifier(node.TargetType.Name);
+        }
+
+        private static void WriteAsExpression(BoundAsExpression node, IndentedTextWriter writer)
+        {
+            node.Expression.WriteTo(writer);
+            writer.WriteSpace();
+            writer.WriteKeyword(SyntaxKind.AsKeyword);
+            writer.WriteSpace();
+            writer.WriteIdentifier(node.TargetType.Name);
         }
 
         private static void WriteArrayCreationExpression(BoundArrayCreationExpression node, IndentedTextWriter writer)
