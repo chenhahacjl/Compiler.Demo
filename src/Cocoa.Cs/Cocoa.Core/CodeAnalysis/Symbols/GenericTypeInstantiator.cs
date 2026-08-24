@@ -133,7 +133,11 @@ namespace Cocoa.CodeAnalysis.Symbols
                 IsConstructor = method.IsConstructor,
             };
         }
-        /// <summary>mangle 名：`List_int` / `Dict_int_string` / `List_List_int` / `Box_int_Array`（简单名；跨命名空间唯一性由 FullName 承载）。</summary>
+        /// <summary>
+        /// mangle 名：`List$int` / `Dict$int$string` / `List$List$int` / `Box$int$Array`
+        /// （简单名；`$` 在 Cocoa 标识符中非法——用户定义 `List_int` 不会与 `List&lt;int&gt;` 碰撞，
+        /// 与 FunctionIrName 的 `$` 约定一致）。跨命名空间唯一性由 FullName 承载。
+        /// </summary>
         public static string MangledName(ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {
             var builder = new System.Text.StringBuilder();
@@ -141,29 +145,30 @@ namespace Cocoa.CodeAnalysis.Symbols
 
             foreach (var argument in arguments)
             {
-                builder.Append('_');
+                builder.Append('$');
                 builder.Append(Encode(argument));
             }
 
             return builder.ToString();
         }
 
-        private static string Encode(TypeSymbol type)
+        /// <summary>类型实参编码（mangle 与缓存键共用）：数组 `$Array` 后缀、嵌套实例化递归、类取 FullName（`.`→`_`）。</summary>
+        public static string Encode(TypeSymbol type)
         {
             if (type is TypeParameterSymbol parameter)
             {
                 return parameter.Name;
             }
 
-            // 数组：元素类型 + Array 后缀（int[] → int_Array）
+            // 数组：元素类型 + $Array 后缀（int[] → int$Array）
             if (type.ElementType != null && type.Kind == SymbolKind.Type)
             {
-                return Encode(type.ElementType) + "_Array";
+                return Encode(type.ElementType) + "$Array";
             }
 
             if (type is InstantiatedTypeSymbol nested)
             {
-                return MangledName(nested.GenericDefinition, nested.TypeArguments).Replace('.', '_');
+                return MangledName(nested.GenericDefinition, nested.TypeArguments);
             }
 
             if (type is ClassTypeSymbol classType)

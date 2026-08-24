@@ -109,6 +109,28 @@ function Main(): i32
     return 0
 }";
 
+        private const string SwapProgram = @"using System
+
+function Swap<T>(a: T, b: T): T
+{
+    return a
+}
+
+function Main(): i32
+{
+    var result = Swap<i32>(7, 9)
+    Console.WriteLine(result)
+    var s = Swap<string>(""first"", ""second"")
+    Console.WriteLine(s)
+
+    if result != 7
+    {
+        return 1
+    }
+
+    return 0
+}";
+
         // ------------------------------------------------------------------
         // Evaluator
         // ------------------------------------------------------------------
@@ -126,6 +148,15 @@ function Main(): i32
         public void Evaluator_NestedGeneric_ReturnsZero()
         {
             var compilation = Compilation.Create(SyntaxTree.Parse(PairProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_GenericMethod_ExplicitArguments()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(SwapProgram));
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
             Assert.Empty(result.Diagnostics.Where(d => d.IsError));
             Assert.Equal(0, result.Value);
@@ -174,6 +205,14 @@ function Main()
             var (exitCode, stdout) = EmitIlAndRun(PairProgram, "generic_pair_il");
             Assert.Equal(0, exitCode);
             Assert.Equal("7\nseven\nseven\n", stdout);
+        }
+
+        [Fact]
+        public void Il_GenericMethod_WritesValues()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(SwapProgram, "generic_swap_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("7\nfirst\n", stdout);
         }
 
         private static (int ExitCode, string Stdout) EmitIlAndRun(string source, string name)
@@ -226,6 +265,15 @@ function Main()
             var (exitCode, stdout) = EmitNativeAndRun(PairProgram, "generic_pair_native", (TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("7\nseven\nseven\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_GenericMethod_WritesValues(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(SwapProgram, "generic_swap_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("7\nfirst\n", stdout);
         }
 
         private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, TargetPlatform platform)

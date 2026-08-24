@@ -30,6 +30,8 @@ namespace Cocoa.CodeAnalysis.Binding
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
             var helperBinder = new Binder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
             var seeded = new HashSet<InstantiatedTypeSymbol>();
+            var methodSeeds = new List<(FunctionSymbol Instantiated, FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)>();
+            var seenMethods = new HashSet<FunctionSymbol>();
 
             foreach (var (identifier, argumentClauses) in CollectGenericUsages(globalScope))
             {
@@ -40,7 +42,40 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if (seeded.Count == 0)
+            foreach (var (identifier, argumentClauses) in CollectGenericMethodUsages(globalScope))
+            {
+                var definition = helperBinder.ResolveGenericMethodDefinitionForExpansion(identifier.Text, argumentClauses.Length);
+                if (definition == null)
+                {
+                    continue;
+                }
+
+                var arguments = ImmutableArray.CreateBuilder<TypeSymbol>();
+                var valid = true;
+                foreach (var clause in argumentClauses)
+                {
+                    if (helperBinder.BindTypeClauseForExpansion(clause) is not TypeSymbol argument)
+                    {
+                        valid = false;
+                        break;
+                    }
+
+                    arguments.Add(argument);
+                }
+
+                if (!valid)
+                {
+                    continue;
+                }
+
+                var instantiated = GenericMethodInstantiator.Instantiate(definition, arguments.ToImmutable());
+                if (seenMethods.Add(instantiated))
+                {
+                    methodSeeds.Add((instantiated, definition, arguments.ToImmutable()));
+                }
+            }
+
+            if (seeded.Count == 0 && methodSeeds.Count == 0)
             {
                 return FilterDeclaredClasses(globalScope);
             }
@@ -82,7 +117,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         continue;
                     }
 
-                    var typeArgumentsByName = BuildNameMap(definition.TypeParameters, instantiated.TypeArguments, instantiated, diagnostics);
+                    var typeArgumentsByName = BuildNameMap(definition.TypeParameters, instantiated.TypeArguments, instantiated.Declaration, diagnostics);
                     if (typeArgumentsByName == null)
                     {
                         continue;
@@ -94,6 +129,22 @@ namespace Cocoa.CodeAnalysis.Binding
                     functionBodies[instantiatedMethod] = body;
                     diagnostics.AddRange(bodyDiagnostics);
                 }
+            }
+
+            // 3.5 泛型方法体重绑（6e-M20）：Swap<int> → Swap$int，定义语法 + 方法类型参数名→实参映射
+            foreach (var (instantiatedMethod, definition, arguments) in methodSeeds)
+            {
+                var typeArgumentsByName = BuildNameMap(definition.TypeParameters, arguments, definition.Declaration, diagnostics);
+                if (typeArgumentsByName == null)
+                {
+                    continue;
+                }
+
+                var (body, bodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
+                    isScript, parentScope, instantiatedMethod, globalScope, codLibraries, dialect, typeArgumentsByName);
+
+                functionBodies[instantiatedMethod] = body;
+                diagnostics.AddRange(bodyDiagnostics);
             }
 
             // 4. 发射清单：过滤泛型定义（模板）+ 并入活实例化
@@ -109,16 +160,16 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>定义类型参数名 → 实例化实参。实参若仍为类型参数（嵌套泛型上下文）暂不支持重绑，报明确诊断。</summary>
-        private static Dictionary<string, TypeSymbol>? BuildNameMap(ImmutableArray<TypeParameterSymbol> parameters, ImmutableArray<TypeSymbol> arguments, InstantiatedTypeSymbol owner, ImmutableArray<Diagnostic>.Builder diagnostics)
+        private static Dictionary<string, TypeSymbol>? BuildNameMap(ImmutableArray<TypeParameterSymbol> parameters, ImmutableArray<TypeSymbol> arguments, SyntaxNode? declaration, ImmutableArray<Diagnostic>.Builder diagnostics)
         {
             var map = new Dictionary<string, TypeSymbol>();
 
             for (var i = 0; i < parameters.Length && i < arguments.Length; i++)
             {
-                if (arguments[i] is TypeParameterSymbol)
+                if (arguments[i] is TypeParameterSymbol parameterArgument)
                 {
-                    var location = owner.Declaration?.Identifier.Location ?? default;
-                    diagnostics.Add(Diagnostic.Error(location, $"泛型嵌套上下文中的实例化 '{owner.Name}' 暂不支持（外层类型参数作实参，6e-M20 后续）。"));
+                    var location = declaration?.Location ?? default;
+                    diagnostics.Add(Diagnostic.Error(location, $"泛型嵌套上下文中的实例化暂不支持（外层类型参数 '{parameterArgument.Name}' 作实参，6e-M20 后续）。"));
                     return null;
                 }
 
@@ -129,12 +180,25 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 扫描本编译全部声明语法中的泛型用法站点（6e-M20）：
-        /// ① 类型位置的 GenericTypeClauseSyntax（`var x: List&lt;int&gt;` / extends / where）；
-        /// ② 对象创建站点的显式实参（`new Box&lt;i32&gt;(…)`——泛型信息在 TypeArguments 上，无子句节点）。
-        /// 返回 (类型名, 实参子句列表) 对。
+        /// 扫描泛型方法调用站点（6e-M20）：`Swap&lt;int&gt;(…)`——CallExpressionSyntax 的显式实参。
+        /// 返回 (方法名 token, 实参子句列表) 对。
         /// </summary>
-        private static IEnumerable<(SyntaxToken Identifier, ImmutableArray<TypeClauseSyntax> Arguments)> CollectGenericUsages(BoundGlobalScope globalScope)
+        private static IEnumerable<(SyntaxToken Identifier, ImmutableArray<TypeClauseSyntax> Arguments)> CollectGenericMethodUsages(BoundGlobalScope globalScope)
+        {
+            foreach (var root in CollectDeclarationRoots(globalScope))
+            {
+                foreach (var node in Walk(root))
+                {
+                    if (node is CallExpressionSyntax call && call.TypeArguments != null)
+                    {
+                        yield return (call.Identifier, call.TypeArguments.Arguments);
+                    }
+                }
+            }
+        }
+
+        /// <summary>声明语法根集合（类声明 / 函数语法），供泛型用法扫描共用。</summary>
+        private static IEnumerable<SyntaxNode> CollectDeclarationRoots(BoundGlobalScope globalScope)
         {
             var roots = new HashSet<SyntaxNode>();
 
@@ -155,7 +219,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            foreach (var root in roots)
+            return roots;
+        }
+
+        /// <summary>
+        /// 扫描本编译全部声明语法中的泛型用法站点（6e-M20）：
+        /// ① 类型位置的 GenericTypeClauseSyntax（`var x: List&lt;int&gt;` / extends / where）；
+        /// ② 对象创建站点的显式实参（`new Box&lt;i32&gt;(…)`——泛型信息在 TypeArguments 上，无子句节点）。
+        /// 返回 (类型名, 实参子句列表) 对。
+        /// </summary>
+        private static IEnumerable<(SyntaxToken Identifier, ImmutableArray<TypeClauseSyntax> Arguments)> CollectGenericUsages(BoundGlobalScope globalScope)
+        {
+            foreach (var root in CollectDeclarationRoots(globalScope))
             {
                 foreach (var node in Walk(root))
                 {

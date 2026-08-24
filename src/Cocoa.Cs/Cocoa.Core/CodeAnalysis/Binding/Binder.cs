@@ -40,6 +40,9 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>类/接口声明绑定上下文（6e-M20）：成员签名/基类/约束解析期间的类型参数来源。</summary>
         private ClassTypeSymbol? _bindingClass;
 
+        /// <summary>泛型方法签名绑定上下文（6e-M20）：BindFunctionDeclaration / 类方法 / 接口成员签名期间的 T 解析。</summary>
+        private ImmutableArray<TypeParameterSymbol> _declaringMethodTypeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
+
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
         internal void SetBindingClass(ClassTypeSymbol? classType) => _bindingClass = classType;
 
@@ -625,70 +628,81 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? namespaceName = null, string? importedDll = null)
         {
-            var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
+            // 泛型方法类型参数（6e-M20）先行落符号：签名 `(a: T, b: T): T` 的 T 解析依赖此上下文
+            var previousMethodTypeParameters = _declaringMethodTypeParameters;
+            _declaringMethodTypeParameters = BindFunctionTypeParameters(syntax.TypeParameters);
 
-            var seenParameterNames = new HashSet<string>();
-
-            foreach (var parameterSyntax in syntax.Parameters)
+            try
             {
-                var parameterName = parameterSyntax.Identifier.Text;
-                var parameterType = BindTypeClause(parameterSyntax.Type);
+                var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
 
-                if (!seenParameterNames.Add(parameterName))
+                var seenParameterNames = new HashSet<string>();
+
+                foreach (var parameterSyntax in syntax.Parameters)
                 {
-                    _diagnostics.ReportParameterAlreadyDeclared(parameterSyntax.Location, parameterName);
+                    var parameterName = parameterSyntax.Identifier.Text;
+                    var parameterType = BindTypeClause(parameterSyntax.Type);
+
+                    if (!seenParameterNames.Add(parameterName))
+                    {
+                        _diagnostics.ReportParameterAlreadyDeclared(parameterSyntax.Location, parameterName);
+                    }
+                    else
+                    {
+                        var parameter = new ParameterSymbol(parameterName, parameterType, parameters.Count);
+                        parameters.Add(parameter);
+                    }
                 }
-                else
+
+                var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
+
+                var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
+                var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
+
+                if (isSyscall)
                 {
-                    var parameter = new ParameterSymbol(parameterName, parameterType, parameters.Count);
-                    parameters.Add(parameter);
+                    _diagnostics.ReportSyscallFunctionTopLevel(syntax.Identifier.Location);
                 }
-            }
 
-            var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
-
-            var isExtern = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword);
-            var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
-
-            if (isSyscall)
-            {
-                _diagnostics.ReportSyscallFunctionTopLevel(syntax.Identifier.Location);
-            }
-
-            if (isExtern)
-            {
-                // 6e-M17 Step 4：顶层位置式 extern 废弃 —— extern 必须声明在类的 import 块内
-                _diagnostics.ReportExternFunctionTopLevel(syntax.Identifier.Location);
-
-                if (syntax.Body != null)
+                if (isExtern)
                 {
-                    _diagnostics.ReportExternFunctionCannotHaveBody(syntax.Body.Location);
+                    // 6e-M17 Step 4：顶层位置式 extern 废弃 —— extern 必须声明在类的 import 块内
+                    _diagnostics.ReportExternFunctionTopLevel(syntax.Identifier.Location);
+
+                    if (syntax.Body != null)
+                    {
+                        _diagnostics.ReportExternFunctionCannotHaveBody(syntax.Body.Location);
+                    }
+                }
+
+                var callingConvention = syntax.Modifiers.Select(m => m.Kind)
+                    .FirstOrDefault(k => k == SyntaxKind.CdeclKeyword || k == SyntaxKind.StdcallKeyword) switch
+                {
+                    SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
+                    SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
+                    _ => CallingConvention.Winapi,
+                };
+
+                var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax, isExtern, importedDll, callingConvention, @namespace: namespaceName ?? "")
+                {
+                    TypeParameters = _declaringMethodTypeParameters,
+                };
+                BindWhereClauses(syntax.WhereClauses, function.TypeParameters);
+
+                if (syntax.Identifier.Text != null && !_scope.TryDeclareFunction(function))
+                {
+                    _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);
+                }
+
+                // 命名空间函数同时注册进命名空间表（`Foo.Add(...)` 限定访问）；同名同签名由 TryDeclareFunction 已拦
+                if (function.Namespace.Length > 0)
+                {
+                    _scope.TryDeclareNamespaceFunction(function.Namespace, function);
                 }
             }
-
-            var callingConvention = syntax.Modifiers.Select(m => m.Kind)
-                .FirstOrDefault(k => k == SyntaxKind.CdeclKeyword || k == SyntaxKind.StdcallKeyword) switch
+            finally
             {
-                SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
-                SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
-                _ => CallingConvention.Winapi,
-            };
-
-            var function = new FunctionSymbol(syntax.Identifier.Text, parameters.ToImmutable(), type, syntax, isExtern, importedDll, callingConvention, @namespace: namespaceName ?? "");
-
-            // 泛型方法类型参数（6e-M20）：`function Swap<T>(…)`——签名与 where 子句落符号
-            function.TypeParameters = BindFunctionTypeParameters(syntax.TypeParameters, function);
-            BindWhereClauses(syntax.WhereClauses, function.TypeParameters);
-
-            if (syntax.Identifier.Text != null && !_scope.TryDeclareFunction(function))
-            {
-                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);
-            }
-
-            // 命名空间函数同时注册进命名空间表（`Foo.Add(...)` 限定访问）；同名同签名由 TryDeclareFunction 已拦
-            if (function.Namespace.Length > 0)
-            {
-                _scope.TryDeclareNamespaceFunction(function.Namespace, function);
+                _declaringMethodTypeParameters = previousMethodTypeParameters;
             }
         }
 
@@ -718,7 +732,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>泛型方法类型参数绑定（6e-M20）：建 TypeParameterSymbol 列表（重名/与类类型参数同名诊断）。</summary>
-        private ImmutableArray<TypeParameterSymbol> BindFunctionTypeParameters(TypeParameterListSyntax? syntax, FunctionSymbol function)
+        private ImmutableArray<TypeParameterSymbol> BindFunctionTypeParameters(TypeParameterListSyntax? syntax)
         {
             if (syntax == null)
             {
@@ -729,7 +743,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var seen = new HashSet<string>();
 
             // 类类型参数先入集：方法级同名遮蔽报错（对齐 C# CS0693 提示语义）
-            foreach (var outer in _currentClass?.TypeParameters ?? ImmutableArray<TypeParameterSymbol>.Empty)
+            foreach (var outer in _bindingClass?.TypeParameters ?? _currentClass?.TypeParameters ?? ImmutableArray<TypeParameterSymbol>.Empty)
             {
                 seen.Add(outer.Name);
             }
@@ -1422,27 +1436,37 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (member is FunctionDeclarationSyntax methodDeclaration)
                     {
                         var visibility = GetVisibility(methodDeclaration.Modifiers, Visibility.Public);
-                        var parameters = BindParameters(methodDeclaration.Parameters);
-                        var returnType = BindTypeClause(methodDeclaration.Type) ?? TypeSymbol.Void;
 
-                        if (interfaceType.GetDeclaredMethod(methodDeclaration.Identifier.Text) == null)
+                        // 泛型接口方法类型参数（6e-M20）先行：签名的 T 解析依赖此上下文
+                        var previousInterfaceMethodTypeParameters = _declaringMethodTypeParameters;
+                        _declaringMethodTypeParameters = BindFunctionTypeParameters(methodDeclaration.TypeParameters);
+
+                        try
                         {
-                            var method = new FunctionSymbol(methodDeclaration.Identifier.Text, parameters, returnType, methodDeclaration, containingClass: interfaceType, visibility: visibility)
+                            var parameters = BindParameters(methodDeclaration.Parameters);
+                            var returnType = BindTypeClause(methodDeclaration.Type) ?? TypeSymbol.Void;
+
+                            if (interfaceType.GetDeclaredMethod(methodDeclaration.Identifier.Text) == null)
                             {
-                                IsAbstract = true,
-                                IsVirtual = true,
-                            };
+                                var method = new FunctionSymbol(methodDeclaration.Identifier.Text, parameters, returnType, methodDeclaration, containingClass: interfaceType, visibility: visibility)
+                                {
+                                    IsAbstract = true,
+                                    IsVirtual = true,
+                                    TypeParameters = _declaringMethodTypeParameters,
+                                };
+                                BindWhereClauses(methodDeclaration.WhereClauses, method.TypeParameters);
 
-                            // 泛型接口方法类型参数（6e-M20）
-                            method.TypeParameters = BindFunctionTypeParameters(methodDeclaration.TypeParameters, method);
-                            BindWhereClauses(methodDeclaration.WhereClauses, method.TypeParameters);
-
-                            interfaceType.AddMethod(method);
-                            classFunctions.Add(method);
+                                interfaceType.AddMethod(method);
+                                classFunctions.Add(method);
+                            }
+                            else
+                            {
+                                _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
+                            }
                         }
-                        else
+                        finally
                         {
-                            _diagnostics.ReportSymbolAlreadyDeclared(methodDeclaration.Identifier.Location, methodDeclaration.Identifier.Text);
+                            _declaringMethodTypeParameters = previousInterfaceMethodTypeParameters;
                         }
                     }
                     else if (member is PropertyDeclarationSyntax propertyDeclaration)
@@ -1858,6 +1882,22 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
         {
+            // 泛型方法类型参数（6e-M20）先行落符号：签名 T 解析依赖此上下文
+            var previousMethodTypeParameters = _declaringMethodTypeParameters;
+            _declaringMethodTypeParameters = BindFunctionTypeParameters(syntax.TypeParameters);
+
+            try
+            {
+                return BindClassMethodDeclarationCore(syntax, classType, dllName, blockCharSet);
+            }
+            finally
+            {
+                _declaringMethodTypeParameters = previousMethodTypeParameters;
+            }
+        }
+
+        private FunctionSymbol BindClassMethodDeclarationCore(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
+        {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
             var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
@@ -1955,7 +1995,7 @@ namespace Cocoa.CodeAnalysis.Binding
             };
 
             // 泛型方法类型参数（6e-M20）：`function Map<U>(…)` 类内声明 + where 子句落符号
-            method.TypeParameters = BindFunctionTypeParameters(syntax.TypeParameters, method);
+            method.TypeParameters = _declaringMethodTypeParameters;
             BindWhereClauses(syntax.WhereClauses, method.TypeParameters);
 
             // override 语义（6e-M19 M2-c 升级）：沿基类链找同签名 virtual/abstract 方法——
@@ -2685,6 +2725,9 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>Monomorphizer 专用：泛型类型子句绑定（命中同一实例化缓存壳）。</summary>
         internal TypeSymbol? BindGenericTypeClauseForExpansion(GenericTypeClauseSyntax syntax) => BindGenericTypeClause(syntax);
 
+        /// <summary>Monomorphizer 专用：泛型方法实参子句绑定（任意类型子句）。</summary>
+        internal TypeSymbol? BindTypeClauseForExpansion(TypeClauseSyntax syntax) => BindTypeClause(syntax);
+
         /// <summary>Monomorphizer 专用：泛型类型名绑定（new/调用站点的 Identifier+实参列表，命中同一缓存壳）。</summary>
         internal TypeSymbol? BindGenericTypeNameForExpansion(SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses) => BindGenericTypeName(identifier, argumentClauses);
 
@@ -2738,15 +2781,131 @@ namespace Cocoa.CodeAnalysis.Binding
             return GenericTypeInstantiator.Instantiate(definition, arguments.ToImmutable());
         }
 
+        private BoundExpression BindGenericMethodCall(CallExpressionSyntax syntax)
+        {
+            var identifier = syntax.Identifier.Text;
+            var errorLocation = syntax.TypeArguments!.Location;
+            var definition = ResolveGenericMethodDefinition(identifier, syntax.TypeArguments.Arguments.Length, errorLocation);
+
+            if (definition == null)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<TypeSymbol>();
+            foreach (var argumentSyntax in syntax.TypeArguments.Arguments)
+            {
+                var argument = BindTypeClause(argumentSyntax);
+                if (argument == null)
+                {
+                    return new BoundErrorExpression(syntax);
+                }
+
+                arguments.Add(argument);
+            }
+
+            ValidateTypeArgumentConstraints(errorLocation, definition.TypeParameters, arguments.ToImmutable(), definition.Name);
+
+            var instantiated = GenericMethodInstantiator.Instantiate(definition, arguments.ToImmutable());
+
+            if (instantiated.Parameters.Length != syntax.Arguments.Count)
+            {
+                _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, identifier, instantiated.Parameters.Length, syntax.Arguments.Count);
+                return new BoundErrorExpression(syntax);
+            }
+
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            for (var i = 0; i < syntax.Arguments.Count; i++)
+            {
+                var boundArgument = BindConversion(syntax.Arguments[i].Location, BindExpression(syntax.Arguments[i]), instantiated.Parameters[i].Type);
+                boundArguments.Add(boundArgument);
+            }
+
+            return new BoundCallExpression(syntax, instantiated, boundArguments.ToImmutable());
+        }
+
+        /// <summary>泛型方法定义解析：裸函数 → using 命名空间函数；元数须恰一候选。</summary>
+        private FunctionSymbol? ResolveGenericMethodDefinition(string name, int typeArgumentCount, TextLocation errorLocation)
+        {
+            var candidates = _scope.TryLookupFunctions(name);
+
+            if (candidates == null)
+            {
+                foreach (var ns in _usingNamespaces)
+                {
+                    var usingCandidates = _scope.TryLookupNamespaceFunctions(ns, name);
+                    if (usingCandidates != null)
+                    {
+                        candidates = usingCandidates;
+                        break;
+                    }
+                }
+            }
+
+            if (candidates == null || candidates.Value.Length == 0)
+            {
+                _diagnostics.ReportUndefinedFunction(errorLocation, name);
+                return null;
+            }
+
+            var matches = candidates.Value.Where(f => f.IsGenericMethod && f.TypeParameters.Length == typeArgumentCount).ToImmutableArray();
+
+            if (matches.Length == 0)
+            {
+                _diagnostics.ReportError(errorLocation, $"找不到接受 {typeArgumentCount} 个类型实参的泛型方法 '{name}'。");
+                return null;
+            }
+
+            if (matches.Length > 1)
+            {
+                _diagnostics.ReportError(errorLocation, $"泛型方法 '{name}' 调用歧义。");
+                return null;
+            }
+
+            return matches[0];
+        }
+
+        /// <summary>Monomorphizer 专用：泛型方法定义解析（裸函数 + 命名空间；命中同一实例化缓存）。</summary>
+        internal FunctionSymbol? ResolveGenericMethodDefinitionForExpansion(string name, int typeArgumentCount)
+        {
+            var candidates = _scope.TryLookupFunctions(name);
+
+            if (candidates == null)
+            {
+                foreach (var ns in _usingNamespaces)
+                {
+                    var usingCandidates = _scope.TryLookupNamespaceFunctions(ns, name);
+                    if (usingCandidates != null)
+                    {
+                        candidates = usingCandidates;
+                        break;
+                    }
+                }
+            }
+
+            if (candidates == null)
+            {
+                return null;
+            }
+
+            var matches = candidates.Value.Where(f => f.IsGenericMethod && f.TypeParameters.Length == typeArgumentCount).ToImmutableArray();
+
+            return matches.Length == 1 ? matches[0] : null;
+        }
+
         /// <summary>
         /// 实例化期约束校验（6e-M20）：实参须满足 where 约束（引用类型/接口/基类）。
         /// 类型参数作实参（嵌套上下文）暂跳过——由 Monomorphizer 展开时按外层映射判定。
         /// </summary>
         private void ValidateTypeArgumentConstraints(TextLocation errorLocation, ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
+            => ValidateTypeArgumentConstraints(errorLocation, definition.TypeParameters, arguments, definition.Name);
+
+        /// <summary>类/方法两路共用的约束校验核心。</summary>
+        private void ValidateTypeArgumentConstraints(TextLocation errorLocation, ImmutableArray<TypeParameterSymbol> typeParameters, ImmutableArray<TypeSymbol> arguments, string definitionName)
         {
-            for (var i = 0; i < definition.TypeParameters.Length && i < arguments.Length; i++)
+            for (var i = 0; i < typeParameters.Length && i < arguments.Length; i++)
             {
-                var parameter = definition.TypeParameters[i];
+                var parameter = typeParameters[i];
                 var argument = arguments[i];
 
                 if (argument is TypeParameterSymbol)
@@ -2756,7 +2915,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 if (parameter.HasReferenceTypeConstraint && !IsReferenceType(argument))
                 {
-                    _diagnostics.ReportError(errorLocation, $"泛型类型 '{definition.Name}' 的类型参数 '{parameter.Name}' 要求引用类型（where {parameter.Name}: class），但实参 '{argument.Name}' 是值类型。");
+                    _diagnostics.ReportError(errorLocation, $"泛型 '{definitionName}' 的类型参数 '{parameter.Name}' 要求引用类型（where {parameter.Name}: class），但实参 '{argument.Name}' 是值类型。");
                     continue;
                 }
 
@@ -2772,7 +2931,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     if (argument is not ClassTypeSymbol argumentClass)
                     {
-                        _diagnostics.ReportError(errorLocation, $"泛型类型 '{definition.Name}' 的类型实参 '{argument.Name}' 不满足约束 '{constraintName}'。");
+                        _diagnostics.ReportError(errorLocation, $"泛型 '{definitionName}' 的类型实参 '{argument.Name}' 不满足约束 '{constraintName}'。");
                         continue;
                     }
 
@@ -2782,7 +2941,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     if (!satisfied)
                     {
-                        _diagnostics.ReportError(errorLocation, $"泛型类型 '{definition.Name}' 的类型实参 '{argument.Name}' 不满足约束 '{constraintName}'（where {parameter.Name}: {constraintName}）。");
+                        _diagnostics.ReportError(errorLocation, $"泛型 '{definitionName}' 的类型实参 '{argument.Name}' 不满足约束 '{constraintName}'（where {parameter.Name}: {constraintName}）。");
                     }
                 }
             }
@@ -4461,13 +4620,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindCallExpression(CallExpressionSyntax syntax)
         {
-            // 泛型显式实参（6e-M20 G0）：单态化在 G2 接管——先行明确诊断
+            // 泛型方法显式实参调用（6e-M20）：`Swap<int>(a, b)` → 实例化具体方法
             if (syntax.TypeArguments != null)
             {
-                _diagnostics.ReportGenericTypeArgumentsNotYetSupported(syntax.TypeArguments.Location, syntax.Identifier.Text);
-                return new BoundErrorExpression(syntax);
+                return BindGenericMethodCall(syntax);
             }
-
             if (syntax.Arguments.Count == 1 && LookupType(syntax.Identifier.Text) is TypeSymbol type)
             {
                 return BindConversion(syntax.Arguments[0], type, allowExplicit: true);
@@ -4815,6 +4972,15 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         return typeParameter;
                     }
+                }
+            }
+
+            // 泛型方法签名绑定上下文（6e-M20）
+            foreach (var methodTypeParameter in _declaringMethodTypeParameters)
+            {
+                if (methodTypeParameter.Name == name)
+                {
+                    return methodTypeParameter;
                 }
             }
 

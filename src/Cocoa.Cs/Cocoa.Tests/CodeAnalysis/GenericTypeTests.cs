@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Symbols;
+﻿using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 using System.Linq;
 using Xunit;
@@ -26,7 +26,7 @@ namespace Cocoa.Tests.CodeAnalysis
             var instantiated = GenericTypeInstantiator.Instantiate(definition, ImmutableArray.Create<TypeSymbol>(TypeSymbol.Int32));
 
             Assert.IsType<InstantiatedTypeSymbol>(instantiated);
-            Assert.Equal("Box_int", instantiated.Name);
+            Assert.Equal("Box$int", instantiated.Name);
             Assert.Equal(definition, Assert.IsType<InstantiatedTypeSymbol>(instantiated).GenericDefinition);
         }
 
@@ -40,7 +40,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
             Assert.Same(first, second);
             Assert.NotSame(first, other);
-            Assert.Equal("Box_string", other.Name);
+            Assert.Equal("Box$string", other.Name);
         }
 
         [Fact]
@@ -105,11 +105,11 @@ namespace Cocoa.Tests.CodeAnalysis
             var items = instantiated.GetDeclaredField("_items")!;
             Assert.Equal(TypeSymbol.ArrayOf(TypeSymbol.Int32), items.Type);
 
-            // Wrapper<Box<T>> + T=int → Wrapper_Box_int（实参递归替换）
+            // Wrapper<Box<T>> + T=int → Wrapper$Box$int（实参递归替换）
             var nestedField = instantiated.GetDeclaredField("_nested")!;
             var nested = Assert.IsType<InstantiatedTypeSymbol>(nestedField.Type);
-            Assert.Equal("Wrapper_Box_int", nested.Name);
-            Assert.Equal("Box_int", Assert.IsType<InstantiatedTypeSymbol>(Assert.Single(nested.TypeArguments)).Name);
+            Assert.Equal("Wrapper$Box$int", nested.Name);
+            Assert.Equal("Box$int", Assert.IsType<InstantiatedTypeSymbol>(Assert.Single(nested.TypeArguments)).Name);
         }
 
         [Fact]
@@ -123,7 +123,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
             var next = nodeInt.GetDeclaredField("_next")!;
             Assert.Equal(nodeInt, next.Type);
-            Assert.Equal("Node_int", next.Type.Name);
+            Assert.Equal("Node$int", next.Type.Name);
         }
 
         [Fact]
@@ -131,14 +131,14 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var (boxDef, boxT) = DeclareGeneric("Box");
 
-            // Box<int[]> → Box_int_Array
+            // Box<int[]> → Box$int$Array
             var boxOfArray = GenericTypeInstantiator.Instantiate(boxDef, ImmutableArray.Create<TypeSymbol>(TypeSymbol.ArrayOf(TypeSymbol.Int32)));
-            Assert.Equal("Box_int_Array", boxOfArray.Name);
+            Assert.Equal("Box$int$Array", boxOfArray.Name);
 
-            // Box<Box<int>> → Box_Box_int
+            // Box<Box<int>> → Box$Box$int
             var boxOfBox = GenericTypeInstantiator.Instantiate(boxDef, ImmutableArray.Create<TypeSymbol>(
                 GenericTypeInstantiator.Instantiate(boxDef, ImmutableArray.Create<TypeSymbol>(TypeSymbol.Int32))));
-            Assert.Equal("Box_Box_int", boxOfBox.Name);
+            Assert.Equal("Box$Box$int", boxOfBox.Name);
         }
 
         [Fact]
