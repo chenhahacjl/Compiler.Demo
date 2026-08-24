@@ -68,6 +68,7 @@ cocoa build -p foo.coproj -b dotnet
 | [`docs-dev/OOP设计.md`](docs-dev/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型规划） |
 | [`docs-dev/对象模型设计.md`](docs-dev/对象模型设计.md) | **System.Object 基类 + 全类型成员方法 + System.Type + native vtable 对象模型**（6e-M19 规划） |
 | [`docs-dev/泛型设计.md`](docs-dev/泛型设计.md) | **泛型（类/接口/方法 + 约束）编译期单态化设计**（6e-M20 规划） |
+| [`docs-dev/委托与Lambda设计.md`](docs-dev/委托与Lambda设计.md) | **函数类型 / Lambda / 闭包 / event / delegate 糖设计**（6e-M22 规划：结构化函数类型内核 + 三后端函数值 ABI + 自研事件多播） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |
 | [`docs-dev/实现目标.md`](docs-dev/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs-dev/开发计划.md`](docs-dev/开发计划.md) | 阶段 0-9 路线图与里程碑 |
