@@ -3092,5 +3092,42 @@ function Main()
             Assert.Equal(0, exitCode);
             Assert.Equal("True\r\nTrue\r\nTrue\r\n7\r\nFalse\r\nTrue\r\nTrue\r\n", stdout);
         }
+
+        /// <summary>6e-M19 M5-c：any==any 值语义三后端锁定（基元装箱相等/string 内容/同引用类实例/null）。</summary>
+        [Fact]
+        public void AnyEquality_ValueSemantics_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Point
+{
+    public _x: i32
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+}
+
+function Main()
+{
+    var a: any = 0
+    var b: any = 0
+    Console.WriteLine(a == b)
+    Console.WriteLine(a != b)
+    a = ""x""
+    b = ""x""
+    Console.WriteLine(a == b)
+    var n: any = null
+    Console.WriteLine(n == null)
+    Console.WriteLine(a == n)
+    var p1 = new Point(1)
+    var r1: any = p1
+    var r2: any = p1
+    Console.WriteLine(r1 == r2)
+}", "m5c-anyeq-il");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("True\r\nFalse\r\nTrue\r\nTrue\r\nFalse\r\nTrue\r\n", stdout);
+        }
     }
 }

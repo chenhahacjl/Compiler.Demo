@@ -108,9 +108,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 ops.Add(new BoundBinaryOperator(SyntaxKind.GreaterOrEqualsToken, BoundBinaryOperatorKind.GreaterOrEquals, t, TypeSymbol.Boolean));
             }
 
-            // any：相等
-            ops.Add(new BoundBinaryOperator(SyntaxKind.EqualsEqualsToken, BoundBinaryOperatorKind.Equals, TypeSymbol.Any));
-            ops.Add(new BoundBinaryOperator(SyntaxKind.BangEqualsToken, BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any));
+            // any：相等（6e-M19 M5-c 修：结果类型此前误为 any，致 WriteLine(if 条件等) 无法消费）
+            ops.Add(new BoundBinaryOperator(SyntaxKind.EqualsEqualsToken, BoundBinaryOperatorKind.Equals, TypeSymbol.Any, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(SyntaxKind.BangEqualsToken, BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any, TypeSymbol.Boolean));
 
             // 6e-M19 M5-a：null == null / null != null（恒 true/false，运行时平凡成立）
             ops.Add(new BoundBinaryOperator(SyntaxKind.EqualsEqualsToken, BoundBinaryOperatorKind.Equals, TypeSymbol.Null, TypeSymbol.Boolean));
