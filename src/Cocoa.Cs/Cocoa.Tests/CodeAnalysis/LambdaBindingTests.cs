@@ -132,6 +132,58 @@ function Main()
             Assert.Contains(diagnostics, d => d.IsError && d.Message.Contains("C4-c"));
         }
 
+        // ------------------------------------------------------------------
+        // IL 后端（6e-M22 C4-b：Func`N 委托映射 + TypeSpec 父 + VAR 开放 Invoke 签名）
+        // ------------------------------------------------------------------
+
+        [Fact]
+        public void Il_LambdaVariable_Invoke()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(VariableInvokeProgram, "c4b_lambda_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\n", stdout);
+        }
+
+        [Fact]
+        public void Il_MethodGroup_ConvertsAndInvokes()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(MethodGroupProgram, "c4b_methodgroup_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("16\n", stdout);
+        }
+
+        [Fact]
+        public void Il_HigherOrder_FunctionTypeParameter()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(HigherOrderProgram, "c4b_higher_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\n10\n", stdout);
+        }
+
+        private static (int ExitCode, string Stdout) EmitIlAndRun(string source, string name)
+        {
+            var syntaxTree = SyntaxTree.Parse(source);
+            var references = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
+            var compilation = Compilation.Create("Main", references, syntaxTree);
+            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa_c4b_il_tests");
+            System.IO.Directory.CreateDirectory(directory);
+            var exePath = System.IO.Path.Combine(directory, name + ".exe");
+            var diagnostics = compilation.Emit(name, references, exePath, Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+
+            Assert.True(diagnostics.IsEmpty, string.Join("; ", diagnostics.Select(d => d.Message)));
+
+            var psi = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{exePath}\"")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            using var process = System.Diagnostics.Process.Start(psi)!;
+            var stdout = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(15000);
+
+            return (process.ExitCode, stdout.Replace("\r\n", "\n"));
+        }
+
         private static EvaluationResult Evaluate(string code)
         {
             var tree = SyntaxTree.Parse(code);

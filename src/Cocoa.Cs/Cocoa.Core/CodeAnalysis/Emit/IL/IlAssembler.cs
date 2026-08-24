@@ -132,7 +132,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var depth = 0;
             foreach (var instruction in instructions)
             {
-                depth += StackDelta(instruction);
+                var delta = StackDelta(instruction);
+                depth += delta;
                 if (depth > max)
                 {
                     max = depth;
@@ -291,6 +292,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private static int StackDeltaInlineMethod(IlInstruction instruction)
         {
+            // Ldftn：压入方法指针（与目标签名无关，净 +1）
+            if (instruction.OpCode.Value == 0xFE06)
+            {
+                return 1;
+            }
+
             var parameterCount = instruction.Operand switch
             {
                 IlMethodRef methodRef => methodRef.ParameterTypes.Count,

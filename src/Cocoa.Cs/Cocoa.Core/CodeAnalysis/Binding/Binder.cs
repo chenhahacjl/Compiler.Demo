@@ -446,7 +446,6 @@ namespace Cocoa.CodeAnalysis.Binding
                         if (node is BoundFunctionValueExpression { Body: not null } functionValue &&
                             !functionBodies.ContainsKey(functionValue.Function))
                         {
-                            System.Console.Error.WriteLine("[probe] lambda body added: " + functionValue.Function.Name);
                             functionBodies.Add(functionValue.Function, functionValue.Body);
                             pendingLambdaScopes.Enqueue(functionValue.Body);
                         }

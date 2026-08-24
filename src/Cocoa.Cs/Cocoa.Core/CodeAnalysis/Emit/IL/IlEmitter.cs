@@ -29,6 +29,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly IlTypeDef _typeDefinition;
         private readonly Dictionary<ClassTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<ClassTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
+    private readonly DelegateShapeCache _delegateShapes;
         private HashSet<(string Namespace, string Name)>? _overloadedGroups;
         private bool _currentMethodIsInstance;
 
@@ -37,6 +38,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _moduleName = moduleName;
             _metadata = new MetadataBuilder(moduleName, moduleName);
             _framework = new IlFramework(_metadata, references);
+            _delegateShapes = new DelegateShapeCache(_metadata, _framework);
 
             // 顶层函数容器 TypeDef。名字用尖括号（非法标识符）杜绝与用户类同名冲突
             // （否则用户定义 `class Program` 时与默认 "Program" TypeDef 撞名 → BadImageFormatException）。
@@ -487,6 +489,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return IlType.SzArrayOf(ToIlType(type.ElementType));
             }
 
+            // 函数类型（6e-M22 C4-b）：映射 System.Func`N / Action`N 泛型实例化
+            if (type is FunctionTypeSymbol functionType)
+            {
+                return _delegateShapes.Resolve(functionType, ToIlType).Type;
+            }
+
             throw new System.Exception($"Unexpected type {type}");
         }
 
@@ -592,6 +600,39 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             EmitStatement(il, node.Statement);
         }
 
+        /// <summary>函数值构造（6e-M22 C4-b）：[接收者|ldnull] ldftn 目标方法 newobj Func`N::.ctor(object, native int)。</summary>
+        private void EmitFunctionValueExpression(IlAssembler il, BoundFunctionValueExpression node)
+        {
+            var shape = _delegateShapes.Resolve((FunctionTypeSymbol)node.Type, ToIlType);
+
+            if (node.Receiver != null)
+            {
+                // 实例方法组：接收者为委托 target（用户类引用型，无需装箱）
+                EmitExpression(il, node.Receiver);
+            }
+            else
+            {
+                il.Emit(IlOpCodeTable.Get("Ldnull"));
+            }
+
+            il.Emit(IlOpCodeTable.Get("Ldftn"), _methods[node.Function]);
+            il.Emit(IlOpCodeTable.Get("Newobj"), shape.Ctor);
+        }
+
+        /// <summary>间接调用（6e-M22 C4-b）：callee + args → callvirt Func`N::Invoke。</summary>
+        private void EmitInvocationExpression(IlAssembler il, BoundInvocationExpression node)
+        {
+            var shape = _delegateShapes.Resolve((FunctionTypeSymbol)node.Callee.Type, ToIlType);
+
+            EmitExpression(il, node.Callee);
+            foreach (var argument in node.Arguments)
+            {
+                EmitExpression(il, argument);
+            }
+
+            il.Emit(IlOpCodeTable.Get("Callvirt"), shape.Invoke);
+        }
+
         // ------------------------------------------------------------------
         // 表达式
         // ------------------------------------------------------------------
@@ -667,6 +708,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     break;
                 case BoundNodeKind.AsExpression:
                     EmitAsExpression(il, (BoundAsExpression)node);
+                    break;
+
+                // 6e-M22 C4-b：函数值构造（ldnull/接收者; ldftn; newobj Func`N::.ctor）与间接调用（callvirt Invoke）
+                case BoundNodeKind.FunctionValueExpression:
+                    EmitFunctionValueExpression(il, (BoundFunctionValueExpression)node);
+                    break;
+                case BoundNodeKind.InvocationExpression:
+                    EmitInvocationExpression(il, (BoundInvocationExpression)node);
                     break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");

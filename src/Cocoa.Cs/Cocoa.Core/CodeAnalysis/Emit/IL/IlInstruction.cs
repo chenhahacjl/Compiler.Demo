@@ -16,6 +16,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         Object,
         Class,          // 引用类型（TypeRef/TypeDef）
         SzArray,        // 一维数组（元素为另一个类型）
+        GenericInst,    // 泛型实例化 GENERICINST（6e-M22 C4-b：System.Func`N 等）
+        NativeInt,      // ELEMENT_TYPE_I（native int，委托 .ctor 第二参）
+        GenericParameter, // ELEMENT_TYPE_VAR !n（泛型实参变量，委托 Invoke 开放签名，6e-M22 C4-b）
         I1,             // System.SByte（6e-M21 Phase 4 起）
         I2,             // System.Int16
         U2,             // System.UInt16
@@ -35,19 +38,25 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     /// <summary>自研元数据引用：签名与 token 分配的最小描述。</summary>
     internal sealed class IlType
     {
-        public IlType(IlTypeKind kind, IlTypeRef? reference = null, IlType? elementType = null, IlTypeDef? typeDef = null, bool isValueType = false)
+        public IlType(IlTypeKind kind, IlTypeRef? reference = null, IlType? elementType = null, IlTypeDef? typeDef = null, bool isValueType = false, IReadOnlyList<IlType>? genericArguments = null, int genericOrdinal = -1)
         {
             Kind = kind;
             Reference = reference;
             ElementType = elementType;
             TypeDef = typeDef;
             IsValueType = isValueType;
+            GenericArguments = genericArguments;
+            GenericOrdinal = genericOrdinal;
         }
 
         public IlTypeKind Kind { get; }
         public IlTypeRef? Reference { get; }
         public IlType? ElementType { get; }
         public IlTypeDef? TypeDef { get; }
+        public IReadOnlyList<IlType>? GenericArguments { get; }
+
+        /// <summary>泛型实参序号（GenericParameter 专用，!n 的 n）。</summary>
+        public int GenericOrdinal { get; }
 
         /// <summary>是否为值类型（struct，签名编码用 VALUETYPE 0x11 而非 CLASS 0x12）。</summary>
         public bool IsValueType { get; }
@@ -71,6 +80,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public static IlType Class(IlTypeRef reference, bool isValueType = false) => new IlType(IlTypeKind.Class, reference, isValueType: isValueType);
         public static IlType Class(IlTypeDef typeDef, bool isValueType = false) => new IlType(IlTypeKind.Class, typeDef: typeDef, isValueType: isValueType);
         public static IlType SzArrayOf(IlType elementType) => new IlType(IlTypeKind.SzArray, elementType: elementType);
+
+        /// <summary>泛型实例化（6e-M22 C4-b）：定义 TypeRef（如 System.Func`2）+ 实参列表。</summary>
+        public static IlType GenericInstance(IlTypeRef definition, IReadOnlyList<IlType> arguments) => new IlType(IlTypeKind.GenericInst, definition, genericArguments: arguments);
+
+        /// <summary>native int（ELEMENT_TYPE_I 0x18，委托 .ctor 第二参）。</summary>
+        public static readonly IlType NativeInt = new IlType(IlTypeKind.NativeInt);
+
+        /// <summary>泛型实参变量 !n（委托 Invoke 开放签名，对齐 csc）。</summary>
+        public static IlType GenericVar(int ordinal) => new IlType(IlTypeKind.GenericParameter, genericOrdinal: ordinal);
 
         /// <summary>CLR 元数据全名（参数类型匹配用）。</summary>
         public string FullName => Kind switch
@@ -164,7 +182,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             IsStatic = isStatic;
         }
 
-        public IlTypeRef DeclaringType { get; }
+        /// <summary>泛型实例化父（6e-M22 C4-b）：Func`2&lt;..&gt; 的 .ctor/Invoke 经 TypeSpec 引用。</summary>
+        public IlMethodRef(IlTypeSpec declaringTypeSpec, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)
+        {
+            DeclaringTypeSpec = declaringTypeSpec;
+            Name = name;
+            ReturnType = returnType;
+            ParameterTypes = parameterTypes;
+            IsStatic = isStatic;
+        }
+
+        public IlTypeRef? DeclaringType { get; }
+        public IlTypeSpec? DeclaringTypeSpec { get; }
         public string Name { get; }
         public IlType ReturnType { get; }
         public IReadOnlyList<IlType> ParameterTypes { get; }
@@ -172,11 +201,36 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public override bool Equals(object? obj) =>
             obj is IlMethodRef other &&
-            other.DeclaringType.Equals(DeclaringType) && other.Name == Name &&
+            other.Name == Name &&
             other.ReturnType.Kind == ReturnType.Kind && other.IsStatic == IsStatic &&
-            System.Linq.Enumerable.SequenceEqual(other.ParameterTypes, ParameterTypes, ReferenceEqualityComparer.Instance);
+            System.Linq.Enumerable.SequenceEqual(other.ParameterTypes, ParameterTypes, ReferenceEqualityComparer.Instance) &&
+            (other.DeclaringTypeSpec == null
+                ? DeclaringTypeSpec == null && other.DeclaringType!.Equals(DeclaringType)
+                : DeclaringTypeSpec.Equals(other.DeclaringTypeSpec));
 
-        public override int GetHashCode() => System.HashCode.Combine(DeclaringType, Name, ReturnType.Kind, ParameterTypes.Count, IsStatic);
+        public override int GetHashCode() => System.HashCode.Combine(DeclaringType?.GetHashCode() ?? 0, DeclaringTypeSpec, Name, ReturnType.Kind, ParameterTypes.Count, IsStatic);
+    }
+
+    /// <summary>TypeSpec：类型规格签名（GENERICINST blob），作为 MemberRef 父（6e-M22 C4-b）。</summary>
+    internal sealed class IlTypeSpec : IlReference
+    {
+        public IlTypeSpec(byte[] signature) => Signature = signature;
+
+        public byte[] Signature { get; }
+
+        public override bool Equals(object? obj) =>
+            obj is IlTypeSpec other && System.Linq.Enumerable.SequenceEqual(other.Signature, Signature);
+
+        public override int GetHashCode()
+        {
+            var hash = 19;
+            foreach (var b in Signature)
+            {
+                hash = hash * 31 + b;
+            }
+
+            return hash;
+        }
     }
 
     /// <summary>自定义特性（CustomAttribute 表行）。</summary>

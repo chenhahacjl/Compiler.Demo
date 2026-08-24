@@ -160,6 +160,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly Dictionary<IlTypeRef, int> _typeRefIndex = new Dictionary<IlTypeRef, int>();
         private readonly Dictionary<IlAssemblyRef, int> _assemblyRefIndex = new Dictionary<IlAssemblyRef, int>();
         private readonly Dictionary<IlMethodRef, int> _memberRefIndex = new Dictionary<IlMethodRef, int>();
+        private readonly List<IlTypeSpec> _typeSpecs = new List<IlTypeSpec>();
         private readonly Dictionary<string, int> _strings = new Dictionary<string, int>();
         private readonly Dictionary<string, uint> _userStrings = new Dictionary<string, uint>();
         private readonly Dictionary<BlobKey, int> _blobs = new Dictionary<BlobKey, int>();
@@ -175,6 +176,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private const uint MethodDefTable = 0x06;
         private const uint ParamTable = 0x08;
         private const uint MemberRefTable = 0x0A;
+        private const uint TypeSpecTable = 0x1B;
         private const uint StandAloneSigTable = 0x11;
         private const uint AssemblyRefTable = 0x23;
         private const uint UserStringTable = 0x70;
@@ -226,6 +228,42 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef DefineMethodRef(IlTypeRef declaringType, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
         {
             var reference = new IlMethodRef(declaringType, name, returnType, parameterTypes, isStatic);
+            if (!_memberRefIndex.ContainsKey(reference))
+            {
+                _memberRefIndex.Add(reference, _memberRefs.Count + 1);
+                _memberRefs.Add(reference);
+            }
+
+            return reference;
+        }
+
+        /// <summary>TypeSpec 注册（6e-M22 C4-b）：GENERICINST 类型签名 → 表行（token 经 BuildTokenMap）。</summary>
+        public IlTypeSpec DefineTypeSpec(IlType instantiatedType)
+        {
+            var reference = new IlTypeSpec(EncodeTypeToBytes(instantiatedType));
+            foreach (var existing in _typeSpecs)
+            {
+                if (existing.Equals(reference))
+                {
+                    return existing;
+                }
+            }
+
+            _typeSpecs.Add(reference);
+            return reference;
+        }
+
+        private byte[] EncodeTypeToBytes(IlType type)
+        {
+            using var stream = new MemoryStream();
+            EncodeType(stream, type);
+            return stream.ToArray();
+        }
+
+        /// <summary>泛型实例化父的 MemberRef（6e-M22 C4-b）：Func`N&lt;..&gt;::.ctor / ::Invoke。</summary>
+        public IlMethodRef DefineMethodRef(IlTypeSpec declaringTypeSpec, string name, IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic)
+        {
+            var reference = new IlMethodRef(declaringTypeSpec, name, returnType, parameterTypes, isStatic);
             if (!_memberRefIndex.ContainsKey(reference))
             {
                 _memberRefIndex.Add(reference, _memberRefs.Count + 1);
@@ -314,6 +352,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             for (var i = 0; i < _memberRefs.Count; i++)
             {
                 map[_memberRefs[i]] = MemberRefTable << 24 | (uint)(i + 1);
+            }
+
+            for (var i = 0; i < _typeSpecs.Count; i++)
+            {
+                map[_typeSpecs[i]] = TypeSpecTable << 24 | (uint)(i + 1);
             }
 
             for (var i = 0; i < _standAloneSigs.Count; i++)
@@ -518,6 +561,27 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     stream.WriteByte(0x1D); // SZARRAY
                     EncodeType(stream, type.ElementType!);
                     break;
+                case IlTypeKind.NativeInt:
+                    stream.WriteByte(0x18); // ELEMENT_TYPE_I
+                    break;
+                case IlTypeKind.GenericParameter:
+                    stream.WriteByte(0x13); // ELEMENT_TYPE_VAR (!n)
+                    WriteCompressedInteger(stream, type.GenericOrdinal);
+                    break;
+                case IlTypeKind.GenericInst:
+                    {
+                        // GENERICINST CLASS/VALUETYPE TypeRefOrDef ArgCount Arg*
+                        stream.WriteByte(0x15);
+                        stream.WriteByte(type.IsValueType ? (byte)0x11 : (byte)0x12);
+                        WriteCompressedInteger(stream, CodedIndexTypeDefOrRef(type.Reference!, _typeRefIndex));
+                        WriteCompressedInteger(stream, type.GenericArguments!.Count);
+                        foreach (var argument in type.GenericArguments)
+                        {
+                            EncodeType(stream, argument);
+                        }
+
+                        break;
+                    }
                 default:
                     throw new InvalidOperationException($"Unhandled type kind {type.Kind}");
             }
@@ -612,6 +676,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var paramCount = methodDefs.Sum(m => m.ParameterTypes.Count);
             var interfaceImplCount = _typeDefs.Sum(t => t.Interfaces.Count);
             var memberRefCount = _memberRefs.Count;
+            var typeSpecCount = _typeSpecs.Count;
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
 
@@ -630,6 +695,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var propertyIsBig = propertyCount > 0xFFFF;
             var paramIsBig = paramCount > 0xFFFF;
             var memberRefIsBig = memberRefCount > 0xFFFF;
+            var typeSpecIsBig = typeSpecCount > 0xFFFF;
             var standAloneSigIsBig = standAloneSigCount > 0xFFFF;
             var assemblyRefIsBig = assemblyRefCount > 0xFFFF;
             var moduleRefIsBig = moduleRefCount > 0xFFFF;
@@ -637,7 +703,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // coded index 宽（tag 位后余量 < 16 → 4 字节）
             var resolutionScopeIsBig = typeRefCount + assemblyRefCount + 1 > (1 << 14);
             var typeDefOrRefIsBig = typeDefCount + typeRefCount > (1 << 14);
-            var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount + fieldDefCount > (1 << 13);
+            var memberRefParentIsBig = typeDefCount + typeRefCount + methodDefCount + fieldDefCount + typeSpecCount > (1 << 13);
             var hasCustomAttributeIsBig = new[] { typeRefCount, typeDefCount, methodDefCount, paramCount, memberRefCount, standAloneSigCount, 1, assemblyRefCount }.Max() > (1 << 11);
             var customAttributeTypeIsBig = Math.Max(methodDefCount, memberRefCount) > (1 << 13);
             var memberForwardedIsBig = Math.Max(methodDefCount, fieldDefCount) > (1 << 15); // 1 位 tag（MemberForwarded: Field=0/MethodDef=1）
@@ -666,6 +732,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (paramCount > 0) SetValid(0x08); // Param
             if (interfaceImplCount > 0) SetValid(0x09); // InterfaceImpl
             if (memberRefCount > 0) SetValid(0x0A); // MemberRef
+            if (typeSpecCount > 0) SetValid(0x1B); // TypeSpec（6e-M22 C4-b）
             if (customAttributeCount > 0) SetValid(0x0C); // CustomAttribute
             if (standAloneSigCount > 0) SetValid(0x11); // StandAloneSig
             if (propertyMapCount > 0) SetValid(0x15); // PropertyMap
@@ -697,6 +764,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             WriteRowCount(propertyCount);       // Property
             WriteRowCount(methodSemanticsCount); // MethodSemantics
             WriteRowCount(moduleRefCount);  // ModuleRef
+            // TypeSpec（0x1B）行数按表号序位于 ModuleRef(0x1A) 之后、ImplMap(0x1C) 之前
+            WriteRowCount(typeSpecCount);
             WriteRowCount(implMapCount);    // ImplMap
             WriteRowCount(1);               // Assembly
             WriteRowCount(assemblyRefCount);
@@ -865,7 +934,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // ---- MemberRef ----
             foreach (var memberRef in _memberRefs)
             {
-                WriteCoded(CodedIndexTypeRef(memberRef.DeclaringType, _typeRefIndex), memberRefParentIsBig);
+                // Parent（3 位 tag，ECMA-335 II.24.2.6）：TypeSpec=4 / TypeRef=1
+                var parentCoded = memberRef.DeclaringTypeSpec != null
+                    ? ((_typeSpecs.IndexOf(memberRef.DeclaringTypeSpec) + 1) << 3) | 4
+                    : CodedIndexTypeRef(memberRef.DeclaringType!, _typeRefIndex);
+                WriteCoded(parentCoded, memberRefParentIsBig);
                 WriteStringRef(memberRef.Name, stringIsBig);
                 WriteRef(GetOrAddBlob(EncodeMethodSignature(memberRef.ReturnType, memberRef.ParameterTypes, memberRef.IsStatic)), blobIsBig);
             }
@@ -952,6 +1025,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var dll in moduleRefs)
             {
                 WriteStringRef(dll, stringIsBig);
+            }
+
+            // ---- TypeSpec（行：TypeSignature #Blob；6e-M22 C4-b）----
+            foreach (var typeSpec in _typeSpecs)
+            {
+                WriteRef(GetOrAddBlob(typeSpec.Signature), blobIsBig);
             }
 
             // ---- ImplMap（按 MemberForwarded MethodDef 行递增排序；行：MappingFlags + MemberForwarded + ImportName + ImportScope）----

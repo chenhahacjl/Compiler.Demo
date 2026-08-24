@@ -221,12 +221,7 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
-            // 6e-M22 C4：函数值/函数类型签名发射于 C4-b（IL）接入——先行明确诊断而非发射器内部异常
-            var functionValueDiagnostic = FindFunctionValueDiagnostic(program);
-            if (functionValueDiagnostic != null)
-            {
-                return ImmutableArray.Create(functionValueDiagnostic);
-            }
+            // 6e-M22 C4-b：IL 后端已支持函数值（Func`N 委托映射），门禁移除；native 见 EmitNative
 
             var ilReferences = references
                 .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
@@ -408,6 +403,13 @@ namespace Cocoa.CodeAnalysis
             if (program.Diagnostics.HasErrors())
             {
                 return program.Diagnostics;
+            }
+
+            // 6e-M22：lambda/函数值节点入 `.cod` 序列化于 C6 接入——先行明确诊断
+            var cocoaFunctionValueDiagnostic = FindFunctionValueDiagnostic(program);
+            if (cocoaFunctionValueDiagnostic != null)
+            {
+                return ImmutableArray.Create(cocoaFunctionValueDiagnostic);
             }
 
             // 校验 1：库无入口
