@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Cod;
+﻿using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -101,14 +101,22 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 接口实例化仅作编译期能力标记/类型检查：不进发射清单（native 无接口分派、
+            // IL 接口定义成员携带类型参数无法按具体类发射）；foreach 走具体枚举器类
+            live.RemoveAll(i => i.GenericDefinition.IsInterface);
+
             // 3. 方法体重绑（定义语法 + T→实参映射；构造链/字段初始化器复用 BuildFunctionBody 管道）
             foreach (var instantiated in live)
             {
                 var definition = instantiated.GenericDefinition;
+                var typeArgumentsByName = BuildNameMap(definition.TypeParameters, instantiated.TypeArguments, instantiated.Declaration, diagnostics);
+                if (typeArgumentsByName == null)
+                {
+                    continue;
+                }
 
                 for (var i = 0; i < definition.Methods.Length && i < instantiated.Methods.Length; i++)
                 {
-                    var definitionMethod = definition.Methods[i];
                     var instantiatedMethod = instantiated.Methods[i];
 
                     if (instantiatedMethod.IsExtern || instantiatedMethod.IsAbstract || instantiatedMethod.BuiltinKind != null)
@@ -117,17 +125,36 @@ namespace Cocoa.CodeAnalysis.Binding
                         continue;
                     }
 
-                    var typeArgumentsByName = BuildNameMap(definition.TypeParameters, instantiated.TypeArguments, instantiated.Declaration, diagnostics);
-                    if (typeArgumentsByName == null)
-                    {
-                        continue;
-                    }
-
                     var (body, bodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
                         isScript, parentScope, instantiatedMethod, globalScope, codLibraries, dialect, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = body;
                     diagnostics.AddRange(bodyDiagnostics);
+                }
+
+                // 属性访问器（getter/setter）同样重绑：索引与定义对齐
+                for (var i = 0; i < definition.Properties.Length && i < instantiated.Properties.Length; i++)
+                {
+                    var definitionProperty = definition.Properties[i];
+                    var instantiatedProperty = instantiated.Properties[i];
+
+                    if (definitionProperty.Getter != null && instantiatedProperty.Getter != null &&
+                        !instantiatedProperty.Getter.IsExtern && !instantiatedProperty.Getter.IsAbstract)
+                    {
+                        var (getterBody, getterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
+                            isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, dialect, typeArgumentsByName);
+                        functionBodies[instantiatedProperty.Getter] = getterBody;
+                        diagnostics.AddRange(getterDiagnostics);
+                    }
+
+                    if (definitionProperty.Setter != null && instantiatedProperty.Setter != null &&
+                        !instantiatedProperty.Setter.IsExtern && !instantiatedProperty.Setter.IsAbstract)
+                    {
+                        var (setterBody, setterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
+                            isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, dialect, typeArgumentsByName);
+                        functionBodies[instantiatedProperty.Setter] = setterBody;
+                        diagnostics.AddRange(setterDiagnostics);
+                    }
                 }
             }
 

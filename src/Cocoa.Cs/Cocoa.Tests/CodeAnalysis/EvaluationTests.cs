@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis;
+﻿using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
@@ -212,7 +212,7 @@ namespace Cocoa.Tests.CodeAnalysis
             ";
 
             var diagnostics = @"
-                foreach 只能遍历数组或字符串，不能遍历 'int'。
+                foreach 只能遍历数组、字符串或实现 IEnumerable<T> 的集合，不能遍历 'int'。
             ";
 
             AssertDiagnostics(text, diagnostics);

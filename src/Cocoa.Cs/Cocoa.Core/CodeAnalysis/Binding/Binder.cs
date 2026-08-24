@@ -385,6 +385,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var function in globalScope.Functions)
             {
+                // 泛型定义方法（6e-M20）：模板体不进发射清单——实例化类方法经 Monomorphizer 重绑后并入
+                // （须先于 extern/abstract 短路：接口抽象成员含类型参数签名，入清单将令发射器无法编码）
+                if (function.ContainingClass?.IsGenericDefinition == true || function.IsGenericMethod)
+                {
+                    continue;
+                }
+
                 if (function.IsExtern)
                 {
                     functionBodies.Add(function, new BoundBlockStatement(function.Declaration!, ImmutableArray<BoundStatement>.Empty));
@@ -395,12 +402,6 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     // 抽象成员（接口/抽象类）无实现：空 body；syscall 内部原语同样无实现
                     functionBodies.Add(function, new BoundBlockStatement(function.Declaration!, ImmutableArray<BoundStatement>.Empty));
-                    continue;
-                }
-
-                // 泛型定义方法（6e-M20）：模板体不进发射清单——实例化类方法经 Monomorphizer 重绑后并入
-                if (function.ContainingClass?.IsGenericDefinition == true || function.IsGenericMethod)
-                {
                     continue;
                 }
 
@@ -571,7 +572,14 @@ namespace Cocoa.CodeAnalysis.Binding
             BoundBlockStatement body;
             var prefixStatements = ImmutableArray<BoundStatement>.Empty;
 
-            if (bodySyntax == null)
+            if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
+            {
+                bodyLocation = accessorSyntax.Keyword;
+                body = accessorSyntax.Body != null
+                    ? (BoundBlockStatement)binder.BindStatement(accessorSyntax.Body)
+                    : binder.BindAutoPropertyBody(accessorSyntax, function);
+            }
+            else if (bodySyntax == null)
             {
                 // 隐式构造/无体方法：空体
                 body = new BoundBlockStatement(function.Syntax ?? function.Declaration!, ImmutableArray<BoundStatement>.Empty);
@@ -1587,14 +1595,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 var parametersMatch = true;
                 for (var i = 0; i < method.Parameters.Length; i++)
                 {
-                    if (method.Parameters[i].Type != interfaceMethod.Parameters[i].Type)
+                    if (!TypesMatchForInterfaceImplementation(method.Parameters[i].Type, interfaceMethod.Parameters[i].Type))
                     {
                         parametersMatch = false;
                         break;
                     }
                 }
 
-                if (!parametersMatch || method.ReturnType != interfaceMethod.ReturnType)
+                if (!parametersMatch || !TypesMatchForInterfaceImplementation(method.ReturnType, interfaceMethod.ReturnType))
                 {
                     continue;
                 }
@@ -1603,6 +1611,79 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 接口实现签名匹配（6e-M20）：泛型接口的成员签名携带接口自身的类型参数符号，
+        /// 与实现类的类型参数符号必然引用不等——结构化递归比较，任一层为类型参数即视为通配。
+        /// </summary>
+        private static bool TypesMatchForInterfaceImplementation(TypeSymbol implementationType, TypeSymbol interfaceType)
+        {
+            if (ReferenceEquals(implementationType, interfaceType))
+            {
+                return true;
+            }
+
+            if (implementationType is TypeParameterSymbol || interfaceType is TypeParameterSymbol)
+            {
+                return true;
+            }
+
+            // 协变返回（6e-M20）：实现返回具体枚举器类、接口声明返回接口实例——
+            // 按「实现类型的全部接口包含该接口实例（实参通配）」判定
+            if (interfaceType is InstantiatedTypeSymbol requiredInterface &&
+                requiredInterface.GenericDefinition.IsInterface &&
+                implementationType is ClassTypeSymbol implementationClass)
+            {
+                foreach (var iface in implementationClass.GetAllInterfaces())
+                {
+                    if (iface is InstantiatedTypeSymbol implemented &&
+                        ReferenceEquals(implemented.GenericDefinition, requiredInterface.GenericDefinition) &&
+                        implemented.TypeArguments.Length == requiredInterface.TypeArguments.Length)
+                    {
+                        var argumentsMatch = true;
+                        for (var i = 0; i < implemented.TypeArguments.Length; i++)
+                        {
+                            if (!TypesMatchForInterfaceImplementation(implemented.TypeArguments[i], requiredInterface.TypeArguments[i]))
+                            {
+                                argumentsMatch = false;
+                                break;
+                            }
+                        }
+
+                        if (argumentsMatch)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            // 嵌套泛型实参逐位递归（IEnumerator$T vs IEnumerator$T' 等）
+            if (implementationType is InstantiatedTypeSymbol implInstantiated &&
+                interfaceType is InstantiatedTypeSymbol ifaceInstantiated &&
+                ReferenceEquals(implInstantiated.GenericDefinition, ifaceInstantiated.GenericDefinition) &&
+                implInstantiated.TypeArguments.Length == ifaceInstantiated.TypeArguments.Length)
+            {
+                for (var i = 0; i < implInstantiated.TypeArguments.Length; i++)
+                {
+                    if (!TypesMatchForInterfaceImplementation(implInstantiated.TypeArguments[i], ifaceInstantiated.TypeArguments[i]))
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            // 数组元素递归
+            if (implementationType.ElementType != null && interfaceType.ElementType != null &&
+                implementationType.Kind == SymbolKind.Type && interfaceType.Kind == SymbolKind.Type)
+            {
+                return TypesMatchForInterfaceImplementation(implementationType.ElementType, interfaceType.ElementType);
+            }
+
+            return false;
         }
 
         /// <summary>自动属性合成体：getter → return _Name；setter → _Name = value。</summary>
@@ -3100,8 +3181,17 @@ namespace Cocoa.CodeAnalysis.Binding
             }
             else
             {
+                // 6e-M20 G6 枚举器模式：集合实现 System.Collections.Generic.IEnumerable<T> →
+                // GetEnumerator()/MoveNext()/Current 降级循环（数组/string 保持索引路径）。
+                // 方法解析走具体枚举器类（GetEnumerator 返回类型），接口仅作编译期能力标记——native 免接口分派。
+                var enumeratorClass = FindEnumeratorClass(collection.Type);
+                if (enumeratorClass != null)
+                {
+                    return BindEnumeratorForeach(syntax, collection, enumeratorClass);
+                }
+
                 elementType = TypeSymbol.Error;
-                _diagnostics.ReportError(syntax.Collection.Location, $"foreach 只能遍历数组或字符串，不能遍历 '{collection.Type}'。");
+                _diagnostics.ReportError(syntax.Collection.Location, $"foreach 只能遍历数组、字符串或实现 IEnumerable<T> 的集合，不能遍历 '{collection.Type}'。");
             }
 
             _scope = new BoundScope(_scope);
@@ -3147,6 +3237,110 @@ namespace Cocoa.CodeAnalysis.Binding
             _scope = _scope.Parent!;
 
             return BoundNodeFactory.Block(syntax, counterInit, whileStatement);
+        }
+
+        /// <summary>
+        /// 集合是否可枚举（6e-M20 G6）：实现 System.Collections.Generic.IEnumerable&lt;T&gt; 实例化
+        /// 且存在无参 GetEnumerator() 方法 → 返回其具体枚举器类。
+        /// </summary>
+        private static ClassTypeSymbol? FindEnumeratorClass(TypeSymbol collectionType)
+        {
+            if (collectionType is not ClassTypeSymbol classType || classType.IsInterface)
+            {
+                return null;
+            }
+
+            var implementsEnumerable = false;
+            foreach (var iface in classType.GetAllInterfaces())
+            {
+                if (iface is InstantiatedTypeSymbol instantiated &&
+                    instantiated.GenericDefinition.Name == "IEnumerable" &&
+                    instantiated.GenericDefinition.Namespace == "System.Collections.Generic")
+                {
+                    implementsEnumerable = true;
+                    break;
+                }
+            }
+
+            if (!implementsEnumerable)
+            {
+                return null;
+            }
+
+            var getEnumerator = classType.GetMethod("GetEnumerator");
+            if (getEnumerator == null || getEnumerator.Parameters.Length > 0)
+            {
+                return null;
+            }
+
+            return getEnumerator.ReturnType as ClassTypeSymbol;
+        }
+
+        /// <summary>
+        /// foreach 枚举器降级（6e-M20 G6，P6 策略点兑现）：
+        /// var __enum = collection.GetEnumerator()
+        /// while __enum.MoveNext()
+        /// {
+        ///     var x = __enum.Current   // 只读局部，每迭代新建
+        ///     body
+        /// }
+        /// </summary>
+        private BoundStatement BindEnumeratorForeach(ForeachStatementSyntax syntax, BoundExpression collection, ClassTypeSymbol enumeratorClass)
+        {
+            _labelCounter++;
+            var counter = _labelCounter;
+
+            var moveNextMethod = enumeratorClass.GetMethod("MoveNext");
+            var currentProperty = enumeratorClass.GetProperty("Current");
+
+            if (moveNextMethod == null || currentProperty?.Getter == null)
+            {
+                _diagnostics.ReportError(syntax.Collection.Location, $"枚举器类型 '{enumeratorClass.Name}' 须实现 MoveNext() 与 Current。");
+                return new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
+            }
+
+            var elementType = currentProperty.Type;
+
+            _scope = new BoundScope(_scope);
+
+            // 隐藏枚举器变量 __enum
+            var enumToken = new SyntaxToken(syntax.SyntaxTree, SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, $"__foreach_e{counter}", $"__foreach_e{counter}", ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            var enumeratorDecl = BindVariableDeclaration(enumToken, isReadOnly: false, enumeratorClass);
+
+            var breakLabel = new BoundLabel($"break{counter}");
+            var continueLabel = new BoundLabel($"continue{counter}");
+            var whileContinueLabel = new BoundLabel($"whilecontinue{counter}");
+
+            var enumVariable = BoundNodeFactory.Variable(syntax, enumeratorDecl);
+
+            // init：collection.GetEnumerator()
+            var getEnumeratorMethod = ((ClassTypeSymbol)collection.Type).GetMethod("GetEnumerator")!;
+            var getEnumeratorCall = new BoundMemberCallExpression(syntax, collection, "GetEnumerator", ImmutableArray<BoundExpression>.Empty, enumeratorClass, getEnumeratorMethod);
+            var enumeratorInit = BoundNodeFactory.VariableDeclaration(syntax, enumeratorDecl, getEnumeratorCall);
+
+            // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
+            _scope = new BoundScope(_scope);
+            var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
+
+            var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
+            var currentRead = new BoundMemberCallExpression(syntax, enumVariable, "Current", ImmutableArray<BoundExpression>.Empty, elementType, currentProperty.Getter);
+            loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, currentRead));
+
+            _loopStack.Push((breakLabel, continueLabel));
+            loopBody.Add(BindStatement(syntax.Body));
+            _loopStack.Pop();
+
+            _scope = _scope.Parent!;
+
+            // 条件：__enum.MoveNext()
+            var condition = new BoundMemberCallExpression(syntax, enumVariable, "MoveNext", ImmutableArray<BoundExpression>.Empty, TypeSymbol.Boolean, moveNextMethod);
+
+            var whileStatement = BoundNodeFactory.While(syntax, condition,
+                new BoundBlockStatement(syntax, loopBody.ToImmutable()), breakLabel, whileContinueLabel);
+
+            _scope = _scope.Parent!;
+
+            return BoundNodeFactory.Block(syntax, enumeratorInit, whileStatement);
         }
 
         /// <summary>switch 绑定期降级为嵌套 if-else 链（不支持 fall-through）：</summary>

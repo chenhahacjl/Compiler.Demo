@@ -118,7 +118,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     }
                     else
                     {
-                        typeDef.Interfaces.Add(new IlInterfaceImpl(_classTypeDefs[iface], null));
+                        // 泛型标记接口（6e-M20 IEnumerable$T 等）不进发射清单：仅作编译期能力标记
+                        if (!_classTypeDefs.TryGetValue(iface, out var ifaceDef))
+                        {
+                            continue;
+                        }
+
+                        typeDef.Interfaces.Add(new IlInterfaceImpl(ifaceDef, null));
                     }
                 }
             }

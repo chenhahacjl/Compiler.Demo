@@ -134,6 +134,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>全部接口（本类直接实现 + 基类链 + 接口继承链，去重）。</summary>
         public ImmutableArray<ClassTypeSymbol> GetAllInterfaces()
         {
+            EnsureMembersMaterialized();
+
             var seen = new HashSet<ClassTypeSymbol>();
 
             for (var current = this; current != null; current = current.BaseType)

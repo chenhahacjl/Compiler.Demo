@@ -131,6 +131,124 @@ function Main(): i32
     return 0
 }";
 
+        private const string ForeachProgram = @"using System
+
+namespace System.Collections.Generic
+{
+
+public interface IEnumerable<T>
+{
+    function GetEnumerator(): IEnumerator<T>
+}
+
+public interface IEnumerator<T>
+{
+    function MoveNext(): bool
+    property Current: T { get }
+}
+
+public class List<T> extends IEnumerable<T>
+{
+    private _items: T[]
+    private _count: i32
+
+    public constructor()
+    {
+        _items = new T[4]
+        _count = 0
+    }
+
+    public function Add(item: T)
+    {
+        if _count == _items.Length
+        {
+            var bigger = new T[_count * 2]
+            var i = 0
+            while i < _count
+            {
+                bigger[i] = _items[i]
+                i = i + 1
+            }
+            _items = bigger
+        }
+        _items[_count] = item
+        _count = _count + 1
+    }
+
+    public function Get(index: i32): T
+    {
+        return _items[index]
+    }
+
+    public function Count(): i32
+    {
+        return _count
+    }
+
+    public function GetEnumerator(): ListEnumerator<T>
+    {
+        return new ListEnumerator<T>(this)
+    }
+}
+
+public class ListEnumerator<T> extends IEnumerator<T>
+{
+    private _list: List<T>
+    private _index: i32
+
+    public constructor(list: List<T>)
+    {
+        _list = list
+        _index = -1
+    }
+
+    public function MoveNext(): bool
+    {
+        _index = _index + 1
+        return _index < _list.Count()
+    }
+
+    public property Current: T
+    {
+        get
+        {
+            return _list.Get(_index)
+        }
+    }
+}
+
+}
+
+function Main(): i32
+{
+    var list = new List<i32>()
+    list.Add(10)
+    list.Add(20)
+    list.Add(30)
+
+    var sum = 0
+    foreach (var x in list)
+    {
+        sum = sum + x
+    }
+    Console.WriteLine(sum)
+
+    var names = new List<string>()
+    names.Add(""a"")
+    names.Add(""b"")
+    foreach (var n in names)
+    {
+        Console.WriteLine(n)
+    }
+
+    if sum != 60
+    {
+        return 1
+    }
+
+    return 0
+}";
+
         // ------------------------------------------------------------------
         // Evaluator
         // ------------------------------------------------------------------
@@ -160,6 +278,23 @@ function Main(): i32
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
             Assert.Empty(result.Diagnostics.Where(d => d.IsError));
             Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_ForeachEnumerator_SumsList()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(ForeachProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Il_ForeachEnumerator_WritesValues()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(ForeachProgram, "generic_foreach_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("60\na\nb\n", stdout);
         }
 
         [Fact]
@@ -274,6 +409,15 @@ function Main()
             var (exitCode, stdout) = EmitNativeAndRun(SwapProgram, "generic_swap_native", (TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("7\nfirst\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_ForeachEnumerator_WritesValues(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(ForeachProgram, "generic_foreach_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("60\na\nb\n", stdout);
         }
 
         private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, TargetPlatform platform)
