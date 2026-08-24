@@ -112,6 +112,20 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>6e-M20 G0：泛型语法已落地、绑定未接管（G1/G2 实现）——先行明确诊断，防错绑。</summary>
+        public void ReportGenericBindingNotYetSupported(TextLocation location, string name)
+        {
+            var message = $"Generic type '{name}' is not supported yet (6e-M20 in progress).";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M20 G0：显式类型实参调用/new 绑定未接管（G2 实现单态化）。</summary>
+        public void ReportGenericTypeArgumentsNotYetSupported(TextLocation location, string name)
+        {
+            var message = $"Explicit type arguments on '{name}' are not supported yet (6e-M20 in progress).";
+            ReportError(location, message);
+        }
+
         public void ReportCannotConvert(TextLocation location, TypeSymbol fromType, TypeSymbol toType)
         {
             var message = $"Cannot convert type '{fromType}' to '{toType}'.";

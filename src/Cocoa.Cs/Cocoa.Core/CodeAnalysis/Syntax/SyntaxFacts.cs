@@ -192,6 +192,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.PublicKeyword;
                 case "private":
                     return SyntaxKind.PrivateKeyword;
+                case "where":
+                    return SyntaxKind.WhereKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -431,6 +433,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "public";
                 case SyntaxKind.PrivateKeyword:
                     return "private";
+                case SyntaxKind.WhereKeyword:
+                    return "where";
                 default:
                     return null;
             }

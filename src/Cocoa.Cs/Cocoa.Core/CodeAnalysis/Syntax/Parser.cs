@@ -20,6 +20,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         private readonly ImmutableArray<SyntaxToken> _tokens;
         private int _position;
 
+        /// <summary>`>>` 拆分出的合成 token 队列（6e-M20 嵌套泛型 `List<List<int>>`；仅在泛型实参表解析窗口内非空）。</summary>
+        private readonly Queue<SyntaxToken> _syntheticTokens = new Queue<SyntaxToken>();
+
         /// <summary>当前解析方言（子类覆写；用于插值洞子解析与方言钩子默认行为）。</summary>
         protected abstract LanguageDialect Dialect { get; }
 
@@ -118,10 +121,15 @@ namespace Cocoa.CodeAnalysis.Syntax
             return _tokens[index];
         }
 
-        protected SyntaxToken Current => Peek(0);
+        protected SyntaxToken Current => _syntheticTokens.Count > 0 ? _syntheticTokens.Peek() : Peek(0);
 
         protected SyntaxToken NextToken()
         {
+            if (_syntheticTokens.Count > 0)
+            {
+                return _syntheticTokens.Dequeue();
+            }
+
             var current = Current;
             _position++;
 
@@ -281,7 +289,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>方言是否允许冒号 `:` 基类型/基接口（Cocoa 为 false，须用 extends；C# 为 true）。</summary>
         protected virtual bool AllowColonInheritance() => true;
 
-        /// <summary>C# 式顶层函数判定：`type name(` 或 `type[] name(`（返回类型可带数组后缀）。</summary>
+        /// <summary>C# 式顶层函数判定：`type name(` / `type[] name(` / `List&lt;int&gt; name&lt;T&gt;(`（返回类型/函数名均可带泛型后缀）。</summary>
         private bool IsCSharpStyleTopLevelFunction()
         {
             var offset = 0;
@@ -290,8 +298,21 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return false;
             }
 
-            // 类型后缀 `[]`：`int[] name(` / `string[][] name(`
             offset++;
+
+            // 泛型返回类型后缀：`List<int> Make(...)`（6e-M20）
+            if (Peek(offset).Kind == SyntaxKind.LessToken)
+            {
+                var afterAngles = ScanBalancedAngleSuffix(offset);
+                if (afterAngles < 0)
+                {
+                    return false;
+                }
+
+                offset = afterAngles;
+            }
+
+            // 类型后缀 `[]`：`int[] name(` / `string[][] name(`
             while (Peek(offset).Kind == SyntaxKind.OpenBracketToken &&
                    Peek(offset + 1).Kind == SyntaxKind.CloseBracketToken)
             {
@@ -303,7 +324,21 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return false;
             }
 
-            return Peek(offset + 1).Kind == SyntaxKind.OpenParenthesisToken;
+            offset++;
+
+            // 泛型方法类型参数后缀：`T Max<T>(…)`（6e-M20）
+            if (Peek(offset).Kind == SyntaxKind.LessToken)
+            {
+                var afterAngles = ScanBalancedAngleSuffix(offset);
+                if (afterAngles < 0)
+                {
+                    return false;
+                }
+
+                offset = afterAngles;
+            }
+
+            return Peek(offset).Kind == SyntaxKind.OpenParenthesisToken;
         }
 
         /// <summary>Cocoa 式无关键字顶层函数判定：`name(...)` 的 `)` 后紧跟 `{` 或 `:`。</summary>
@@ -375,7 +410,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 body = ParseBlockStatement();
             }
 
-            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, typeParameters: null, openParenthesisToken, parameters, closeParenthesisToken, type, body);
         }
 
         private ImmutableArray<SyntaxToken> ParseModifiers()
@@ -618,6 +653,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             // 若修饰符中夹带 stdcall/cdecl（历史写法 `stdcall function`），它们在 ParseModifiers 已收集
             var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var typeParameters = ParseOptionalTypeParameterList();
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
@@ -625,6 +661,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             // extern 元数据子句（6e-M17 Step 5）：`extern(entry=…, charset=…)` / `extern entry=…, charset=…`
             var externMetadata = ParseOptionalExternMetadata();
+
+            // 泛型约束子句：`function Max<T>(a: T, b: T): T where T: IComparable<T>`
+            var whereClauses = ParseWhereClauses();
 
             BlockStatementSyntax? body = null;
 
@@ -652,7 +691,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body, externMetadata);
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, typeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body, externMetadata, whereClauses);
         }
 
         /// <summary>解析可选的 extern 元数据子句：`extern(entry=…, charset=…)` 或 `extern entry=…, charset=…`（括号可选，命名键值，逗号分隔）。</summary>
@@ -704,6 +743,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var classKeyword = MatchToken(SyntaxKind.ClassKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var typeParameters = ParseOptionalTypeParameterList();
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
 
             // class Foo: Bar, IA, IB / class Foo extends Bar, IA —— 基类型列表（首个非接口 = 基类，其余须为接口）
@@ -730,11 +770,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
+            // 泛型约束子句：`class Foo<T>: Bar where T: IComparable<T>`（C# 顺序：类型参数 → 基类 → where）
+            var whereClauses = ParseWhereClauses();
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
             var members = ParseClassMemberList(identifier.Text);
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, baseTypes.ToImmutable(), openBraceToken, members, closeBraceToken);
+            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses, openBraceToken, members, closeBraceToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseClassMemberList(string className)
@@ -853,6 +896,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParsePrefixTypeClause();
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
 
+            // 泛型方法：`T Max<T>(…)` —— `<T>` 由 ParseCSharpStyleMethod 的类型参数解析接管
+            if (Current.Kind == SyntaxKind.LessToken)
+            {
+                return ParseCSharpStyleMethod(modifiers, type, identifier);
+            }
+
             switch (Current.Kind)
             {
                 case SyntaxKind.SemicolonToken:
@@ -918,12 +967,17 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword: null, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
         }
 
-        /// <summary>C# 式方法：`returnType name(params) { ... }` / `returnType name(params) => expr`（返回类型前置）。</summary>
+        /// <summary>C# 式方法：`returnType name&lt;T&gt;(params) where T: ... { ... }` / `returnType name(params) => expr`（返回类型前置）。</summary>
         private MemberSyntax ParseCSharpStyleMethod(ImmutableArray<SyntaxToken> modifiers, TypeClauseSyntax type, SyntaxToken identifier)
         {
+            // 泛型方法类型参数：`Max<T>(…)`（6e-M20）
+            var typeParameters = ParseOptionalTypeParameterList();
             var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
             var parameters = ParseParameterList();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            // 泛型约束子句：`where T: IComparable<T>`（签名后、函数体前）
+            var whereClauses = ParseWhereClauses();
 
             BlockStatementSyntax? body = null;
             if (Current.Kind == SyntaxKind.OpenBraceToken)
@@ -946,7 +1000,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 body = SynthesizeExpressionBodyBlock(expression, arrow);
             }
 
-            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, openParenthesisToken, parameters, closeParenthesisToken, type, body);
+            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, identifier, typeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body, whereClauses: whereClauses);
         }
 
         /// <summary>C# 式属性：`type name { get; set; }` / `{ get { ... } set { ... } }` / `type name => expr`，可带初始化器。</summary>
@@ -1003,11 +1057,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword: null, identifier, type, openBraceToken, getter, setter, closeBraceToken, equalsToken, initializer);
         }
 
-        /// <summary>前缀类型：`int` / `int[]`（无冒号，C# 式类型前置）。</summary>
+        /// <summary>前缀类型：`int` / `int[]` / `List&lt;int&gt;[]`（无冒号，C# 式类型前置）。</summary>
         protected TypeClauseSyntax ParsePrefixTypeClause()
         {
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            TypeClauseSyntax type = new TypeClauseSyntax(_syntaxTree, colonToken: null, identifier);
+            TypeClauseSyntax type = ParseGenericTypeSuffix(null, identifier);
 
             while (Current.Kind == SyntaxKind.OpenBracketToken &&
                    Peek(1).Kind == SyntaxKind.CloseBracketToken)
@@ -1061,6 +1115,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var interfaceKeyword = MatchToken(SyntaxKind.InterfaceKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var typeParameters = ParseOptionalTypeParameterList();
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
 
             // interface IBird: IAnimal, IFlyable / interface IBird extends IAnimal, IFlyable —— 基接口列表
@@ -1087,11 +1142,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
+            // 泛型约束子句：`interface IEnumerable<T> where T: class`
+            var whereClauses = ParseWhereClauses();
+
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
             var members = ParseInterfaceMemberList();
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
 
-            return new InterfaceDeclarationSyntax(_syntaxTree, modifiers, interfaceKeyword, identifier, baseTypes.ToImmutable(), openBraceToken, members, closeBraceToken);
+            return new InterfaceDeclarationSyntax(_syntaxTree, modifiers, interfaceKeyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses, openBraceToken, members, closeBraceToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseInterfaceMemberList()
@@ -1122,11 +1180,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                     // 接口成员：函数签名（无方法体）
                     var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
                     var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
+                    var memberTypeParameters = ParseOptionalTypeParameterList();
                     var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                     var parameters = ParseParameterList();
                     var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
                     var type = ParseOptionalTypeClause();
-                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, memberIdentifier, openParenthesisToken, parameters, closeParenthesisToken, type, body: null));
+                    var memberWhereClauses = ParseWhereClauses();
+                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, memberIdentifier, memberTypeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body: null, whereClauses: memberWhereClauses));
                 }
                 else if (Current.Kind == SyntaxKind.PropertyKeyword)
                 {
@@ -1138,7 +1198,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                     members.Add(ParsePropertyDeclaration(modifiers));
                 }
                 else if (Current.Kind == SyntaxKind.IdentifierToken &&
-                         Peek(1).Kind == SyntaxKind.IdentifierToken)
+                         (Peek(1).Kind == SyntaxKind.IdentifierToken ||
+                          // C# 式泛型类型成员：`IEnumerator<T> GetEnumerator()`（6e-M20）
+                          (Peek(1).Kind == SyntaxKind.LessToken && IsGenericTypeNameAhead())))
                 {
                     // C# 式接口成员：`type name (...)` 方法签名 / `type name { get; }` 属性
                     if (!AllowCSharpStyleMember())
@@ -1155,15 +1217,16 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else
                     {
-                        var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-                        var parameters = ParseParameterList();
-                        var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-                        if (Current.Kind == SyntaxKind.SemicolonToken)
-                        {
-                            NextToken();
-                        }
+                    var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+                    var parameters = ParseParameterList();
+                    var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+                    var csMemberWhereClauses = ParseWhereClauses();
+                    if (Current.Kind == SyntaxKind.SemicolonToken)
+                    {
+                        NextToken();
+                    }
 
-                        members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, memberIdentifier, openParenthesisToken, parameters, closeParenthesisToken, type, body: null));
+                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword: null, memberIdentifier, typeParameters: null, openParenthesisToken, parameters, closeParenthesisToken, type, body: null, whereClauses: csMemberWhereClauses));
                     }
                 }
                 else
@@ -1540,14 +1603,338 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var colonToken = MatchToken(SyntaxKind.ColonToken);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            TypeClauseSyntax type = new TypeClauseSyntax(_syntaxTree, colonToken, identifier);
+            TypeClauseSyntax type = ParseGenericTypeSuffix(colonToken, identifier);
+            type = WrapArrayTypeClause(colonToken, type);
 
+            return type;
+        }
+
+        /// <summary>数组后缀包裹：`int[]` / `int[][]`（ElementType 递归嵌套）。</summary>
+        private TypeClauseSyntax WrapArrayTypeClause(SyntaxToken? colonToken, TypeClauseSyntax elementType)
+        {
+            var type = elementType;
             while (Current.Kind == SyntaxKind.OpenBracketToken &&
                    Peek(1).Kind == SyntaxKind.CloseBracketToken)
             {
                 var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);
                 var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
                 type = new ArrayTypeClauseSyntax(_syntaxTree, colonToken, type, openBracketToken, closeBracketToken);
+            }
+
+            return type;
+        }
+
+        /// <summary>
+        /// 泛型后缀（6e-M20）：`List&lt;int&gt;` / `List&lt;List&lt;int&gt;&gt;`。
+        /// 仅当 `&lt;` 后紧跟合法类型实参首 token 时按泛型解析（类型位置无歧义）；非泛型回退普通类型名。
+        /// </summary>
+        private TypeClauseSyntax ParseGenericTypeSuffix(SyntaxToken? colonToken, SyntaxToken identifier)
+        {
+            // 标识符已被消费：当前 token 为 `<` 才按泛型解析（类型位置无歧义）
+            if (Current.Kind != SyntaxKind.LessToken)
+            {
+                return new TypeClauseSyntax(_syntaxTree, colonToken, identifier);
+            }
+
+            var lessThanToken = NextToken();
+            var arguments = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
+
+            while (true)
+            {
+                // 实参元素：类型子句（标识符 + 递归泛型/数组后缀）
+                if (Current.Kind != SyntaxKind.IdentifierToken)
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.IdentifierToken);
+                    break;
+                }
+
+                arguments.Add(ParseSingleTypeArgument());
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
+                break;
+            }
+
+            var greaterThanToken = ParseClosingAngle();
+            return new GenericTypeClauseSyntax(_syntaxTree, colonToken, identifier, lessThanToken, arguments.ToImmutable(), greaterThanToken);
+        }
+
+        /// <summary>单个类型实参：标识符 + 泛型/数组后缀（类型参数表与类型实参表共用）。</summary>
+        private TypeClauseSyntax ParseSingleTypeArgument()
+        {
+            var argIdentifier = NextToken();
+            TypeClauseSyntax arg = ParseGenericTypeSuffix(null, argIdentifier);
+
+            while (Current.Kind == SyntaxKind.OpenBracketToken &&
+                   Peek(1).Kind == SyntaxKind.CloseBracketToken)
+            {
+                var openBracket = MatchToken(SyntaxKind.OpenBracketToken);
+                var closeBracket = MatchToken(SyntaxKind.CloseBracketToken);
+                arg = new ArrayTypeClauseSyntax(_syntaxTree, null, arg, openBracket, closeBracket);
+            }
+
+            return arg;
+        }
+
+        /// <summary>
+        /// 前瞻扫描平衡的 `&lt;…&gt;` 区域（6e-M20）：从 offset 处（须为 LessToken）扫描，
+        /// 返回匹配 `&gt;` 之后一个 token 的下标；区域含非法 token（运算符等）返回 -1。
+        /// `&gt;&gt;` 视为连续两个闭合角（嵌套泛型收尾，词法层合并所致）。
+        /// </summary>
+        private int ScanBalancedAngleSuffix(int offset)
+        {
+            if (Peek(offset).Kind != SyntaxKind.LessToken)
+            {
+                return -1;
+            }
+
+            var depth = 0;
+            var i = offset;
+
+            while (true)
+            {
+                switch (Peek(i).Kind)
+                {
+                    case SyntaxKind.LessToken:
+                        depth++;
+                        i++;
+                        break;
+
+                    case SyntaxKind.GreaterToken:
+                        depth--;
+                        i++;
+                        if (depth == 0)
+                        {
+                            return i;
+                        }
+
+                        if (depth < 0)
+                        {
+                            return -1;
+                        }
+
+                        break;
+
+                    case SyntaxKind.ShiftRightToken:
+                        depth -= 2;
+                        i++;
+                        if (depth == 0)
+                        {
+                            return i;
+                        }
+
+                        if (depth < 0)
+                        {
+                            return -1;
+                        }
+
+                        break;
+
+                    case SyntaxKind.IdentifierToken:
+                    case SyntaxKind.CommaToken:
+                    case SyntaxKind.OpenBracketToken:
+                    case SyntaxKind.CloseBracketToken:
+                        i++;
+                        break;
+
+                    default:
+                        return -1;
+                }
+            }
+        }
+
+        /// <summary>C# 式声明中「泛型类型 + 成员名」判定：`IEnumerator&lt;T&gt; GetEnumerator` / `List&lt;int&gt; MakeList`。</summary>
+        private bool IsGenericTypeNameAhead()
+        {
+            var afterAngles = ScanBalancedAngleSuffix(1);
+            return afterAngles > 0 && Peek(afterAngles).Kind == SyntaxKind.IdentifierToken;
+        }
+
+        /// <summary>消费一个闭合 `&gt;`；遇 `&gt;&gt;` 拆分为合成 GreaterToken 入队（嵌套泛型收尾）。</summary>
+        private SyntaxToken ParseClosingAngle()
+        {
+            if (_syntheticTokens.Count > 0 && _syntheticTokens.Peek().Kind == SyntaxKind.GreaterToken)
+            {
+                return NextToken();
+            }
+
+            if (Current.Kind == SyntaxKind.GreaterToken)
+            {
+                return MatchToken(SyntaxKind.GreaterToken);
+            }
+
+            if (Current.Kind == SyntaxKind.ShiftRightToken)
+            {
+                // `>>` → 两个 `>`：当前槽位替换为第一个合成 `>`，第二个入队
+                var shiftRight = NextToken();
+                var second = new SyntaxToken(_syntaxTree, SyntaxKind.GreaterToken, shiftRight.Position + 1, ">", null, ImmutableArray<SyntaxTrivia>.Empty, shiftRight.TrailingTrivia);
+                _syntheticTokens.Enqueue(second);
+                return new SyntaxToken(_syntaxTree, SyntaxKind.GreaterToken, shiftRight.Position, ">", null, shiftRight.LeadingTrivia, ImmutableArray<SyntaxTrivia>.Empty);
+            }
+
+            _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GreaterToken);
+            return new SyntaxToken(_syntaxTree, SyntaxKind.GreaterToken, Current.Position, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+        }
+
+        /// <summary>泛型类型实参表：`&lt;int, List&lt;string&gt;&gt;`（调用/new 的显式实参，6e-M20 首版仅显式）；当前须为 `&lt;`。</summary>
+        private TypeArgumentListSyntax ParseTypeArgumentList()
+        {
+            var lessThanToken = NextToken(); // <
+            var arguments = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
+
+            while (true)
+            {
+                if (Current.Kind != SyntaxKind.IdentifierToken)
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.IdentifierToken);
+                    break;
+                }
+
+                arguments.Add(ParseSingleTypeArgument());
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                    continue;
+                }
+
+                break;
+            }
+
+            var greaterThanToken = ParseClosingAngle();
+            return new TypeArgumentListSyntax(_syntaxTree, lessThanToken, arguments.ToImmutable(), greaterThanToken);
+        }
+
+        /// <summary>泛型类型参数列表：`&lt;T, U&gt;`（6e-M20）；当前非 `&lt;` 返回 null。</summary>
+        private TypeParameterListSyntax? ParseOptionalTypeParameterList()
+        {
+            if (Current.Kind != SyntaxKind.LessToken || !IsTypeParameterListAhead())
+            {
+                return null;
+            }
+
+            var lessThanToken = NextToken();
+            var parameters = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (Current.Kind == SyntaxKind.IdentifierToken)
+            {
+                parameters.Add(NextToken());
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            var greaterThanToken = ParseClosingAngle();
+            return new TypeParameterListSyntax(_syntaxTree, lessThanToken, parameters.ToImmutable(), greaterThanToken);
+        }
+
+        /// <summary>区分类型参数表与方法体/比较表达式中的 `<`：`<T>` 或 `<T, U ...>` 形态才成立。</summary>
+        private bool IsTypeParameterListAhead()
+        {
+            var offset = 1;
+            var sawIdentifier = false;
+
+            while (true)
+            {
+                var kind = Peek(offset).Kind;
+                switch (kind)
+                {
+                    case SyntaxKind.IdentifierToken:
+                        sawIdentifier = true;
+                        offset++;
+                        break;
+
+                    case SyntaxKind.CommaToken:
+                        offset++;
+                        break;
+
+                    case SyntaxKind.GreaterToken:
+                        return sawIdentifier;
+
+                    case SyntaxKind.ShiftRightToken:
+                        // 嵌套泛型实参的 `>>` 不可能出现在参数表（无嵌套），视为非法
+                        return false;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>泛型约束子句序列（0 个或多个）：`where T: Base, IFoo&lt;T&gt; where U: new()`。</summary>
+        private ImmutableArray<WhereClauseSyntax> ParseWhereClauses()
+        {
+            var clauses = ImmutableArray.CreateBuilder<WhereClauseSyntax>();
+
+            while (Current.Kind == SyntaxKind.WhereKeyword)
+            {
+                var whereKeyword = NextToken();
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                var colonToken = MatchToken(SyntaxKind.ColonToken);
+                var constraints = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
+
+                while (Current.Kind == SyntaxKind.IdentifierToken ||
+                       Current.Kind == SyntaxKind.NewKeyword ||
+                       Current.Kind == SyntaxKind.ClassKeyword)
+                {
+                    constraints.Add(ParseConstraintType());
+
+                    if (Current.Kind == SyntaxKind.CommaToken)
+                    {
+                        NextToken();
+                        continue;
+                    }
+
+                    break;
+                }
+
+                clauses.Add(new WhereClauseSyntax(_syntaxTree, whereKeyword, identifier, colonToken, constraints.ToImmutable()));
+            }
+
+            return clauses.ToImmutable();
+        }
+
+        /// <summary>约束类型：普通/泛型/数组类型，或 `new()` / `class` / `struct` 特殊约束。</summary>
+        private TypeClauseSyntax ParseConstraintType()
+        {
+            if (Current.Kind == SyntaxKind.NewKeyword &&
+                Peek(1).Kind == SyntaxKind.OpenParenthesisToken &&
+                Peek(2).Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                // `new()` 无参构造约束：合成为名为 new() 的伪类型标识符（绑定层按文本识别）
+                var newKeyword = NextToken();
+                NextToken(); // (
+                NextToken(); // )
+                var synthesized = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, newKeyword.Position, "new()", "new()", ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                return new TypeClauseSyntax(_syntaxTree, null, synthesized);
+            }
+
+            // `class` 特殊约束：关键字合成为同名标识符（绑定层按文本识别；struct 约束待 struct 落地后扩展）
+            if (Current.Kind == SyntaxKind.ClassKeyword)
+            {
+                var keyword = NextToken();
+                var synthesizedIdentifier = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, keyword.Position, keyword.Text, keyword.Text, keyword.LeadingTrivia, keyword.TrailingTrivia);
+                return new TypeClauseSyntax(_syntaxTree, null, synthesizedIdentifier);
+            }
+
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            TypeClauseSyntax type = ParseGenericTypeSuffix(null, identifier);
+
+            while (Current.Kind == SyntaxKind.OpenBracketToken &&
+                   Peek(1).Kind == SyntaxKind.CloseBracketToken)
+            {
+                var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);
+                var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                type = new ArrayTypeClauseSyntax(_syntaxTree, null, type, openBracketToken, closeBracketToken);
             }
 
             return type;
@@ -1578,7 +1965,19 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            return new TypeClauseSyntax(_syntaxTree, prefixToken, identifier);
+
+            // 泛型基类/基接口：`extends List<T>`（6e-M20）
+            TypeClauseSyntax type = ParseGenericTypeSuffix(prefixToken, identifier);
+
+            while (Current.Kind == SyntaxKind.OpenBracketToken &&
+                   Peek(1).Kind == SyntaxKind.CloseBracketToken)
+            {
+                var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);
+                var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                type = new ArrayTypeClauseSyntax(_syntaxTree, prefixToken, type, openBracketToken, closeBracketToken);
+            }
+
+            return type;
         }
 
         protected virtual StatementSyntax ParseIfStatement()
@@ -2309,12 +2708,35 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private ExpressionSyntax ParseNameOrCallExpression()
         {
+            // 泛型调用：`Swap<int>(a, b)`（6e-M20 首版仅显式实参）——前瞻 `ident <…> (` 才按泛型解析，
+            // `a < b` 比较表达式不受影响（扫描遇非法 token 或闭合角后非 `(` 即回退）
+            if (Peek(1).Kind == SyntaxKind.LessToken)
+            {
+                var afterAngles = ScanBalancedAngleSuffix(1);
+                if (afterAngles > 0 && Peek(afterAngles).Kind == SyntaxKind.OpenParenthesisToken)
+                {
+                    return ParseGenericCallExpression();
+                }
+            }
+
             if (Peek(0).Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.OpenParenthesisToken)
             {
                 return ParseCallExpression();
             }
 
             return ParseNameExpression();
+        }
+
+        /// <summary>泛型函数调用：`Swap<int>(a, b)`（显式类型实参，6e-M20）。</summary>
+        private ExpressionSyntax ParseGenericCallExpression()
+        {
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var typeArguments = ParseTypeArgumentList();
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var arguments = ParseArguments();
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            return new CallExpressionSyntax(_syntaxTree, identifier, typeArguments, openParenthesisToken, arguments, closeParenthesisToken);
         }
 
         private ExpressionSyntax ParseCallExpression()
@@ -2324,7 +2746,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var arguments = ParseArguments();
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            return new CallExpressionSyntax(_syntaxTree, identifier, openParenthesisToken, arguments, closeParenthesisToken);
+            return new CallExpressionSyntax(_syntaxTree, identifier, typeArguments: null, openParenthesisToken, arguments, closeParenthesisToken);
         }
 
         private SeparatedSyntaxList<ExpressionSyntax> ParseArguments()
@@ -2376,12 +2798,28 @@ namespace Cocoa.CodeAnalysis.Syntax
                     var dotToken = NextToken();
                     var identifierToken = MatchToken(SyntaxKind.IdentifierToken);
 
+                    // 泛型成员调用：`list.Map<int>(f)`（6e-M20；前瞻 `<…> (` 消歧）
+                    TypeArgumentListSyntax? memberTypeArguments = null;
+                    if (Current.Kind == SyntaxKind.LessToken)
+                    {
+                        var afterAngles = ScanBalancedAngleSuffix(0);
+                        if (afterAngles > 0 && Peek(afterAngles).Kind == SyntaxKind.OpenParenthesisToken)
+                        {
+                            memberTypeArguments = ParseTypeArgumentList();
+                        }
+                    }
+
                     if (Current.Kind == SyntaxKind.OpenParenthesisToken)
                     {
                         var openParenthesisToken = NextToken();
                         var arguments = ParseArguments();
                         var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-                        expression = new MemberCallExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken, openParenthesisToken, arguments, closeParenthesisToken);
+                        expression = new MemberCallExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken, memberTypeArguments, openParenthesisToken, arguments, closeParenthesisToken);
+                    }
+                    else if (memberTypeArguments != null)
+                    {
+                        _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.OpenParenthesisToken);
+                        expression = new MemberAccessExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken);
                     }
                     else
                     {
@@ -2408,6 +2846,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             var newKeyword = MatchToken(SyntaxKind.NewKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
 
+            // 泛型类型实参：`new List<int>(args)`（6e-M20；`new` 后 `<` 无歧义）
+            TypeArgumentListSyntax? typeArguments = null;
+            if (Current.Kind == SyntaxKind.LessToken)
+            {
+                typeArguments = ParseTypeArgumentList();
+            }
+
             // new Foo(args) —— 对象创建
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
             {
@@ -2415,7 +2860,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                 var arguments = ParseArgumentList();
                 var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-                return new ObjectCreationExpressionSyntax(_syntaxTree, newKeyword, identifier, openParenthesisToken, arguments, closeParenthesisToken);
+                return new ObjectCreationExpressionSyntax(_syntaxTree, newKeyword, identifier, typeArguments, openParenthesisToken, arguments, closeParenthesisToken);
+            }
+
+            if (typeArguments != null)
+            {
+                // `new List<int>[n]`（泛型元素数组创建）暂不支持：报错后按普通数组恢复解析
+                _diagnostics.ReportError(typeArguments.Location, "泛型数组创建 `new T<n>[...]` 暂不支持（6e-M20 后续）。");
             }
 
             var openBracketToken = MatchToken(SyntaxKind.OpenBracketToken);

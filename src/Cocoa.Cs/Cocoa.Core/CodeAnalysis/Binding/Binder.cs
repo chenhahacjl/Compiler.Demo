@@ -506,6 +506,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? namespaceName = null, string? importedDll = null)
         {
+            // 泛型方法声明（6e-M20 G0）：绑定在 G1/G2 接管——先行明确诊断
+            if (syntax.TypeParameters != null)
+            {
+                _diagnostics.ReportGenericBindingNotYetSupported(syntax.TypeParameters.Location, $"{syntax.Identifier.Text}<...>");
+            }
+
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
 
             var seenParameterNames = new HashSet<string>();
@@ -682,6 +688,16 @@ namespace Cocoa.CodeAnalysis.Binding
             var primary = parts[0];
             var name = primary.Syntax.Identifier.Text;
             var visibility = GetVisibility(primary.Syntax.Modifiers, Visibility.Internal);
+
+            // 泛型声明（6e-M20 G0）：语法已落地，绑定在 G1/G2 接管——先行明确诊断
+            foreach (var (syntax, _) in parts)
+            {
+                if (syntax.TypeParameters != null)
+                {
+                    _diagnostics.ReportGenericBindingNotYetSupported(syntax.TypeParameters.Location, $"{name}<...>");
+                    break;
+                }
+            }
 
             if (parts.Count > 1)
             {
@@ -1006,6 +1022,12 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var name = syntax.Identifier.Text;
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Internal);
+
+            // 泛型接口声明（6e-M20 G0）：绑定在 G1/G2 接管——先行明确诊断
+            if (syntax.TypeParameters != null)
+            {
+                _diagnostics.ReportGenericBindingNotYetSupported(syntax.TypeParameters.Location, $"{name}<...>");
+            }
 
             if (visibility is Visibility.Private or Visibility.Protected)
             {
@@ -1481,6 +1503,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
         {
+            // 泛型方法声明（6e-M20 G0）：绑定在 G1/G2 接管——先行明确诊断
+            if (syntax.TypeParameters != null)
+            {
+                _diagnostics.ReportGenericBindingNotYetSupported(syntax.TypeParameters.Location, $"{syntax.Identifier.Text}<...>");
+            }
+
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
             var isSyscall = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
@@ -2270,6 +2298,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 return TypeSymbol.ArrayOf(elementType);
+            }
+
+            // 泛型类型实参（6e-M20 G0）：语法已落地，绑定在 G1/G2 接管——先行明确诊断，防错绑
+            if (syntax is GenericTypeClauseSyntax genericTypeClause)
+            {
+                _diagnostics.ReportGenericBindingNotYetSupported(genericTypeClause.Location, genericTypeClause.DisplayName);
+                return null;
             }
 
             var type = LookupType(syntax.Identifier.Text);
@@ -3187,6 +3222,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindObjectCreationExpression(ObjectCreationExpressionSyntax syntax)
         {
+            // 泛型显式实参（6e-M20 G0）：绑定在 G2 接管——先行明确诊断
+            if (syntax.TypeArguments != null)
+            {
+                _diagnostics.ReportGenericTypeArgumentsNotYetSupported(syntax.TypeArguments.Location, syntax.Identifier.Text);
+                return new BoundErrorExpression(syntax);
+            }
+
             var classType = LookupType(syntax.Identifier.Text) as ClassTypeSymbol;
             if (classType == null)
             {
@@ -3375,6 +3417,13 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindMemberCallExpression(MemberCallExpressionSyntax syntax)
         {
             var identifier = syntax.IdentifierToken.Text;
+
+            // 泛型显式实参（6e-M20 G0）：单态化在 G2 接管——先行明确诊断
+            if (syntax.TypeArguments != null)
+            {
+                _diagnostics.ReportGenericTypeArgumentsNotYetSupported(syntax.TypeArguments.Location, identifier);
+                return new BoundErrorExpression(syntax);
+            }
 
             // 命名空间限定函数调用：System.Math.Max(...) / using System; + Math.Max(...)
             // 先于类静态方法路径（避免 System.Math.Max 被 .NET 真实类型劫持）
@@ -3923,6 +3972,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindCallExpression(CallExpressionSyntax syntax)
         {
+            // 泛型显式实参（6e-M20 G0）：单态化在 G2 接管——先行明确诊断
+            if (syntax.TypeArguments != null)
+            {
+                _diagnostics.ReportGenericTypeArgumentsNotYetSupported(syntax.TypeArguments.Location, syntax.Identifier.Text);
+                return new BoundErrorExpression(syntax);
+            }
+
             if (syntax.Arguments.Count == 1 && LookupType(syntax.Identifier.Text) is TypeSymbol type)
             {
                 return BindConversion(syntax.Arguments[0], type, allowExplicit: true);

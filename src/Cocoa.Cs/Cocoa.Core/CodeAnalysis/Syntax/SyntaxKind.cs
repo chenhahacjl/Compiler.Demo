@@ -125,6 +125,7 @@ ColonToken,               // :
         WhenKeyword,              // when
         WhileKeyword,             // while
         SyscallKeyword,           // syscall
+        WhereKeyword,             // where（6e-M20 泛型约束子句）
 
         // Nodes
         CompilationUnit,          // 编译单元
@@ -145,6 +146,10 @@ ColonToken,               // :
         Parameter,                // 参数
         TypeClause,               // 类型 语句
         ArrayTypeClause,          // 数组类型
+        GenericTypeClause,        // 泛型类型 List<int>（6e-M20）
+        TypeParameterList,        // 泛型类型参数列表 <T, U>（6e-M20）
+        TypeArgumentList,         // 泛型类型实参列表 <int, string>（6e-M20）
+        WhereClause,              // 泛型约束子句 where T: ...（6e-M20）
         ElseClause,               // ELSE 子语句
         EnumDeclaration,          // 枚举声明
         EnumMember,               // 枚举成员
