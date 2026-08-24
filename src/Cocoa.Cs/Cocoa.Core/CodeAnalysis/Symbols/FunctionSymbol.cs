@@ -89,5 +89,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>提升 lambda 专有：调用时须把 Receiver（环境对象）压入环境栈。</summary>
         public bool IsLambdaWithEnvironment { get; internal set; }
+
+        /// <summary>合成环境类（6e-M22 C5）：宿主函数与其体内捕获 lambda 共享同一类（发射布局用）。</summary>
+        internal ClassTypeSymbol? EnvironmentClass { get; set; }
     }
 }

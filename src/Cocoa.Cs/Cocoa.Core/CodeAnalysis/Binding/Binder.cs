@@ -4466,6 +4466,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         environmentOwner.CapturedVariables.Add(captured);
                     }
                 }
+
+                environmentOwner.EnvironmentClass = environmentClass;
             }
 
             var function = new FunctionSymbol(functionName, parameterSymbols.ToImmutable(), returnType, declaration: null, syntax: syntax, containingClass: _currentClass, visibility: Visibility.Private)
@@ -4473,6 +4475,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 IsStatic = true,
                 EnvironmentOwner = environmentOwner,
                 IsLambdaWithEnvironment = environmentClass != null,
+                EnvironmentClass = environmentClass,
             };
 
             var computedType = FunctionTypeSymbol.Get(parameterTypes.ToImmutable(), returnType);

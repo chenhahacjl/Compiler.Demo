@@ -28,7 +28,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private readonly Dictionary<FunctionSymbol, IrFunction> _staticThunks = new();
         private readonly HashSet<FunctionSymbol> _environmentFirstFunctions = new();
 
-        /// <summary>M4：存活类集合        /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
+        /// <summary>6e-M22 C5：当前函数的环境对象寄存器与布局类（无捕获 = null）。</summary>
+        private IrVirtualRegister? _closureRegister;
+        private ClassTypeSymbol? _closureClass;
+
+        /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
         private readonly HashSet<ClassTypeSymbol> _liveClasses = new();
 
         /// <summary>M4：已登记的虚方法根（Object 固定三虚根预种子）。</summary>
@@ -471,6 +475,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             irFunction.EndLabelId = AllocLabel();
             Add(irFunction.Instructions, new IrInstruction(IrOpCode.StackCheck));
 
+            // 6e-M22 C5：闭包环境接线
+            _closureRegister = null;
+            _closureClass = function.EnvironmentClass;
+
+            if (_closureClass != null && function.Syntax is LambdaExpressionSyntax)
+            {
+                // lambda：隐藏 __env 首参（IrParameter 已在创建时前置）即环境对象
+                _closureRegister = AllocateRegister(8);
+                Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, _closureRegister, IrOperand.Constant(0)));
+            }
+
             if (HasThisParameter(function))
             {
                 // M4：隐藏 this = 参数区偏移 0（BoundThisExpression/BaseExpression 映射该寄存器）
@@ -490,6 +505,48 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(ParamByteOffset(function, parameter.Ordinal, function.Parameters.Length))));
                 }
+            }
+
+            // 宿主函数：入口处创建环境对象（清零 + 捕获参数播种）
+            if (_closureClass != null && function.Syntax is not LambdaExpressionSyntax)
+            {
+                var (envOffsets, envSize) = NativeObjectModel.BuildLayout(_closureClass);
+                var pointerSize = _isX64 ? 8 : 4;
+
+                var sizeRegister = EmitConst(envSize + pointerSize);
+                var envObject = AllocateRegister(8);
+                Add(irFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(sizeRegister)));
+                Add(irFunction.Instructions, new IrInstruction(IrOpCode.Call, envObject, IrOperand.Runtime("Alloc"), IrOperand.Constant(0)));
+
+                // [0] typeId 占位 0
+                var zero = AllocateRegister(4);
+                Add(irFunction.Instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
+                Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(envObject), IrOperand.Reg(zero), 0, 4));
+
+                // 字段清零
+                foreach (var field in NativeObjectModel.CollectInstanceFields(_closureClass))
+                {
+                    var fieldSize = NativeObjectModel.FieldSize(field.Type);
+                    var zeroField = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Const, zeroField, IrOperand.Constant(0)));
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(envObject), IrOperand.Reg(zeroField), envOffsets[field], fieldSize));
+                }
+
+                // 捕获参数播种：入参值写入环境字段
+                if (function.CapturedVariables != null)
+                {
+                    foreach (var captured in function.CapturedVariables)
+                    {
+                        if (captured is ParameterSymbol parameter)
+                        {
+                            var field = _closureClass.GetField(captured.Name)!;
+                            var value = GetVariable(parameter);
+                            Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(envObject), IrOperand.Reg(value), envOffsets[field], NativeObjectModel.FieldSize(captured.Type)));
+                        }
+                    }
+                }
+
+                _closureRegister = envObject;
             }
 
             EmitStatement(body);
@@ -549,6 +606,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     {
                         var declaration = (BoundVariableDeclaration)node;
                         var value = EmitExpression(declaration.Initializer);
+
+                        // 6e-M22 C5：捕获变量声明 → 初始化值写入环境对象字段
+                        if (declaration.Variable.IsCaptured && _closureRegister != null)
+                        {
+                            var field = _closureClass!.GetField(declaration.Variable.Name)!;
+                            var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
+                            var size = NativeObjectModel.FieldSize(field.Type);
+                            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(_closureRegister), IrOperand.Reg(value), offset, size));
+                            break;
+                        }
+
                         var variable = GetVariable(declaration.Variable);
                         Add(instructions, new IrInstruction(IrOpCode.Mov, variable, IrOperand.Reg(value)));
                         break;
@@ -700,12 +768,38 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     return EmitLiteralExpression((BoundLiteralExpression)node);
 
                 case BoundNodeKind.VariableExpression:
-                    return GetVariable(((BoundVariableExpression)node).Variable);
+                    {
+                        var variable = ((BoundVariableExpression)node).Variable;
+
+                        // 6e-M22 C5：捕获变量读环境对象字段
+                        if (variable.IsCaptured && _closureRegister != null)
+                        {
+                            var field = _closureClass!.GetField(variable.Name)!;
+                            var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
+                            var size = NativeObjectModel.FieldSize(field.Type);
+                            var result = AllocateRegister(size);
+                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(_closureRegister), IrOperand.None, offset, size));
+                            return result;
+                        }
+
+                        return GetVariable(variable);
+                    }
 
                 case BoundNodeKind.AssignmentExpression:
                     {
                         var assignment = (BoundAssignmentExpression)node;
                         var value = EmitExpression(assignment.Expression);
+
+                        // 6e-M22 C5：捕获变量写环境对象字段
+                        if (assignment.Variable.IsCaptured && _closureRegister != null)
+                        {
+                            var field = _closureClass!.GetField(assignment.Variable.Name)!;
+                            var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
+                            var size = NativeObjectModel.FieldSize(field.Type);
+                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(_closureRegister), IrOperand.Reg(value), offset, size));
+                            return value;
+                        }
+
                         var variable = GetVariable(assignment.Variable);
                         Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Mov, variable, IrOperand.Reg(value)));
                         return variable;
@@ -1295,6 +1389,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     environment = WidenTo8(environment);
                 }
+            }
+            else if (node.EnvironmentClass != null)
+            {
+                // 6e-M22 C5：捕获闭包——环境槽 = 当前函数的环境对象
+                environment = _closureRegister ?? throw new Exception("closure lambda created outside environment scope");
             }
             else
             {

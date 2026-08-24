@@ -199,6 +199,24 @@ function Main(): i32
             Assert.Equal(0, result.Value);
         }
 
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Closure_Counter_IndependentInstances(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(ClosureCounterProgram, "c5_counter_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("1\n2\n1\n3\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Closure_ParameterCapture(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(ClosureParameterProgram, "c5_param_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("15\n", stdout);
+        }
+
         // ------------------------------------------------------------------
         // native 后端（6e-M22 C4-c：[typeId][fnptr][env] 三字对象 + CallReg）
         // ------------------------------------------------------------------
