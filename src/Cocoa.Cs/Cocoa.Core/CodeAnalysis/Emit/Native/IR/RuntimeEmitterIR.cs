@@ -877,11 +877,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             private void EmitPrintString()
             {
                 var s = _args[0];
+                var nullStr = NewLabel();
+
+                // 6e-M19 M5-a：null 打印为空（对齐 Console.WriteLine(null)）
+                Cmp(s, 0);
+                Jcc(IrCond.Equal, nullStr);
                 var len = NewReg(4);
                 Load(len, s, 0, 4);
                 var chars = NewReg(8);
                 Lea(chars, s, 4);
                 CallRuntime(null, "WriteStr", chars, len);
+                Mark(nullStr);
                 EmitWriteNewLine();
                 EndFunction(_currentFunction!, 0);
             }
@@ -890,11 +896,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             private void EmitWriteString()
             {
                 var s = _args[0];
+                var writeDone = NewLabel();
+
+                // 6e-M19 M5-a：null 打印为空
+                Cmp(s, 0);
+                Jcc(IrCond.Equal, writeDone);
                 var len = NewReg(4);
                 Load(len, s, 0, 4);
                 var chars = NewReg(8);
                 Lea(chars, s, 4);
                 CallRuntime(null, "WriteStr", chars, len);
+                Mark(writeDone);
                 EndFunction(_currentFunction!, 0);
             }
 
@@ -2466,12 +2478,26 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var a = _args[0];
                 var b = _args[1];
                 var fail = NewLabel();
+                var copiedA = NewLabel();
+                var copiedB = NewLabel();
                 var done = NewLabel();
+                var lenADone = NewLabel();
+                var lenBDone = NewLabel();
 
+                // 6e-M19 M5-a：null 字符串按空串参与拼接（与 IL String.Concat / Evaluator 语义一致）
                 var lenA = NewReg(4);
+                Mov(lenA, C(4, 0));
+                Cmp(a, 0);
+                Jcc(IrCond.Equal, lenADone);
                 Load(lenA, a, 0, 4);
+                Mark(lenADone);
+
                 var lenB = NewReg(4);
+                Mov(lenB, C(4, 0));
+                Cmp(b, 0);
+                Jcc(IrCond.Equal, lenBDone);
                 Load(lenB, b, 0, 4);
+                Mark(lenBDone);
 
                 var size = NewReg(4);
                 Mov(size, lenA);
@@ -2491,6 +2517,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(total, total, lenB);
                 Store(obj, 0, total, 4);
 
+                // 拷贝 A（源为 null 时跳过——lenA 已按 0 计入总长与偏移）
+                Cmp(a, 0);
+                Jcc(IrCond.Equal, copiedA);
                 var countA = NewReg(4);
                 Mov(countA, lenA);
                 AddI(countA, countA, 1);
@@ -2500,7 +2529,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var dstA = NewReg(8);
                 Lea(dstA, obj, 4);
                 CallRuntime(null, "CopyChars", dstA, srcA, countA);
+                Mark(copiedA);
 
+                // 拷贝 B（目标偏移按 lenA 前进，null 时落头部）
+                Cmp(b, 0);
+                Jcc(IrCond.Equal, copiedB);
                 var countB = NewReg(4);
                 Mov(countB, lenB);
                 AddI(countB, countB, 1);
@@ -2514,6 +2547,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Shl(lenAQuad, lenAQuad, 1);
                 Add(dstB, dstB, lenAQuad);
                 CallRuntime(null, "CopyChars", dstB, srcB, countB);
+                Mark(copiedB);
 
                 StoreRet(obj);
                 Jmp(done);

@@ -22,6 +22,8 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static TypeSymbol InferType(object value)
         {
+            if (value == null)
+                return TypeSymbol.Null;
             if (value is bool)
                 return TypeSymbol.Boolean;
             if (value is int)

@@ -1989,6 +1989,15 @@ namespace Cocoa.CodeAnalysis.Binding
             var initializer = syntax.Initializer == null ? null : BindExpression(syntax.Initializer);
             var variableType = type ?? initializer?.Type ?? TypeSymbol.Error;
 
+            // 6e-M19 M5-a：var 无法从 null 推断类型（对齐 C# CS8374）——防 Null 单例泄漏成变量类型
+            if (type == null && variableType == TypeSymbol.Null)
+            {
+                _diagnostics.ReportCannotInferVarFromNull(syntax.Location);
+
+                var errorVariable = BindVariableDeclaration(syntax.Identifier, isReadOnly, TypeSymbol.Error);
+                return new BoundVariableDeclaration(syntax, errorVariable, new BoundErrorExpression(syntax.Identifier));
+            }
+
             if (initializer == null)
             {
                 if (syntax.Keyword?.Kind == SyntaxKind.LetKeyword ||
@@ -2780,6 +2789,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindLiteralExpression(LiteralExpressionSyntax syntax)
         {
+            // 6e-M19 M5-a：null 字面量 → Null 类型（绑定期经 BindConversion 落到目标引用型）
+            if (syntax.LiteralToken.Kind == SyntaxKind.NullKeyword)
+            {
+                return new BoundLiteralExpression(syntax, null!, TypeSymbol.Null);
+            }
+
             var value = syntax.Value ?? 0;
 
             return new BoundLiteralExpression(syntax, value);
@@ -3758,6 +3773,15 @@ namespace Cocoa.CodeAnalysis.Binding
                     return new BoundErrorExpression(syntax);
                 }
             }
+            else if (whenTrue.Type == TypeSymbol.Null && IsNullableReferenceType(whenFalse.Type))
+            {
+                // 6e-M19 M5-a：cond ? null : obj → obj 类型（null 分支随后隐式转换）
+                type = whenFalse.Type;
+            }
+            else if (whenFalse.Type == TypeSymbol.Null && IsNullableReferenceType(whenTrue.Type))
+            {
+                type = whenTrue.Type;
+            }
             else
             {
                 _diagnostics.ReportCannotConvert(syntax.WhenFalse.Location, whenFalse.Type, whenTrue.Type);
@@ -4435,6 +4459,13 @@ namespace Cocoa.CodeAnalysis.Binding
         private static bool IsNumeric(TypeSymbol type)
         {
             return type.IsNumeric && !type.IsPlaceholder128;
+        }
+
+        /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 字面量的合法转换目标。</summary>
+        private static bool IsNullableReferenceType(TypeSymbol type)
+        {
+            return type is ClassTypeSymbol || type == TypeSymbol.String ||
+                   type == TypeSymbol.Any || type.ElementType != null;
         }
 
         /// <summary>6e-M21 Phase 4/6：可接受范围内常量隐式窄化的目标整型（含 64 位：ulong y = 2 与 C# 同构）。</summary>

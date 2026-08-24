@@ -2357,6 +2357,88 @@ return p.Get() * 2";
             Assert.Equal(6, result.Value);
         }
 
+        // ── 6e-M19 M5-a：null 字面量 ──────────────────────────────────────────
+
+        [Theory]
+        [InlineData("return null == null", true)]
+        [InlineData("return null != null", false)]
+        [InlineData("var s: string = null return s == null", true)]
+        [InlineData("var s: string = null return s != null", false)]
+        [InlineData("var s: string = \"x\" return s == null", false)]
+        [InlineData("var s: string return s == null", true)]
+        [InlineData("var a: any = null return a == null", true)]
+        public void Evaluator_NullLiteral_Comparisons(string text, bool expected)
+        {
+            AssertValue(text, expected);
+        }
+
+        [Fact]
+        public void Evaluator_NullLiteral_ClassComparison_Ternary_Concat()
+        {
+            var text = @"
+public class Box
+{
+    public function Tag(): string
+    {
+        return ""b""
+    }
+}
+var b = new Box()
+if b == null return 1
+if !(b != null) return 2
+var n: Box = null
+if n != null return 3
+var picked = true ? b : null
+if picked == null return 4
+var other = false ? b : null
+if other != null return 5
+var s: string = null
+return s + ""x"" == ""x"" ? 0 : 6";
+
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            Assert.False(result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_VarFromNull_ReportsCannotInfer()
+        {
+            var text = @"[var x = null]";
+
+            AssertDiagnostics(text,
+                "Cannot infer the type of 'null'. Use an explicit type declaration instead.");
+        }
+
+        [Fact]
+        public void Evaluator_Null_ToNonReference_ReportsCannotConvert()
+        {
+            var text = @"var n: i32 = [null]";
+
+            AssertDiagnostics(text,
+                "Cannot convert type 'null' to 'int'.");
+        }
+
+        [Fact]
+        public void Evaluator_NullCast_ToNonReference_ReportsCannotConvert()
+        {
+            var text = @"var n: i32 = [(i32)null]";
+
+            AssertDiagnostics(text,
+                "Cannot convert type 'null' to 'int'.", assertLocation: false);
+        }
+
+        [Fact]
+        public void Evaluator_Null_Plus_Int_ReportsUndefinedOperator()
+        {
+            var text = @"return [null + 1]";
+
+            AssertDiagnostics(text,
+                "Binary operator '+' is not defined for types 'null' and 'int'.", assertLocation: false);
+        }
+
         private void AssertRunsClean(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);

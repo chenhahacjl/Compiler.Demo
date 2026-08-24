@@ -118,6 +118,13 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>6e-M19 M5-a：var x = null 无类型信息可推断（对齐 C# CS8374）。</summary>
+        public void ReportCannotInferVarFromNull(TextLocation location)
+        {
+            var message = "Cannot infer the type of 'null'. Use an explicit type declaration instead.";
+            ReportError(location, message);
+        }
+
         public void ReportCannotConvertImplicitly(TextLocation location, TypeSymbol fromType, TypeSymbol toType)
         {
             var message = $"Cannot convert type '{fromType}' to '{toType}'. An explicit conversion exists (are you missing a cast?)";

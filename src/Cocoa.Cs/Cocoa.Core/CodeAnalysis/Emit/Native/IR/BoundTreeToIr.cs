@@ -2941,6 +2941,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var from = node.Expression.Type;
             var to = node.Type;
 
+            // 6e-M19 M5-a：null 字面量 → 引用型——Const 0 即空引用，直通
+            if (from == TypeSymbol.Null)
+            {
+                return value;
+            }
+
             if (from == TypeSymbol.Any || to == TypeSymbol.Any)
             {
                 return value;

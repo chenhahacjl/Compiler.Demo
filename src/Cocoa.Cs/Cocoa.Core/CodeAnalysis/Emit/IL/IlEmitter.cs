@@ -1285,6 +1285,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             EmitExpression(il, node.Expression);
 
+            // 6e-M19 M5-a：null 字面量 → 引用型（类/接口/string/数组/any）——栈上已是 ldnull，直通
+            if (node.Expression.Type == TypeSymbol.Null)
+            {
+                return;
+            }
+
             // 6e-M21 Phase 4：数值↔数值系统化转换（含 char/enum 源），命中即返回
             if (TryEmitNumericConversion(il, node.Expression.Type, node.Type))
             {

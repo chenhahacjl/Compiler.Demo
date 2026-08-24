@@ -2067,6 +2067,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.TrueKeyword:
                     return ParseBooleanLiteral();
 
+                case SyntaxKind.NullKeyword:
+                    return ParseNullLiteral();
+
                 case SyntaxKind.NumberToken:
                 case SyntaxKind.DoubleToken:
                     return ParseNumberLiteral();
@@ -2115,6 +2118,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.NewKeyword:
                 case SyntaxKind.TrueKeyword:
                 case SyntaxKind.FalseKeyword:
+                case SyntaxKind.NullKeyword:
                 case SyntaxKind.BangToken:
                 case SyntaxKind.MinusToken:
                 case SyntaxKind.PlusToken:
@@ -2149,6 +2153,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             var keywordToken = isTrue ? MatchToken(SyntaxKind.TrueKeyword) : MatchToken(SyntaxKind.FalseKeyword);
 
             return new LiteralExpressionSyntax(_syntaxTree, keywordToken, isTrue);
+        }
+
+        /// <summary>6e-M19 M5-a：null 字面量（值 null，绑定层赋 TypeSymbol.Null）。</summary>
+        private ExpressionSyntax ParseNullLiteral()
+        {
+            var keywordToken = MatchToken(SyntaxKind.NullKeyword);
+            return new LiteralExpressionSyntax(_syntaxTree, keywordToken, (object)null!);
         }
 
         private ExpressionSyntax ParseNumberLiteral()

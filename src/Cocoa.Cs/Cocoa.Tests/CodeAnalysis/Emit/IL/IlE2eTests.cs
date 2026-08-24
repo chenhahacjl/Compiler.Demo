@@ -3016,5 +3016,40 @@ function Main()
                 "15\r\n5\r\n50\r\n-1097262572\r\n123456789012\r\n123456789012\r\n123456789012\r\n3\r\n-2\r\n5\r\n-123456789012\r\nFalse\r\nTrue\r\n",
                 stdout);
         }
+
+        /// <summary>6e-M19 M5-a：null 字面量——引用比较（ceq）/ 赋值转换 / 三元 null 分支 / 空串拼接与打印。</summary>
+        [Fact]
+        public void Null_Literal_Comparisons_Ternary_Concat_OnDotnetHost()
+        {
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+public class Box
+{
+    public function Tag(): string
+    {
+        return ""b""
+    }
+}
+
+function Main()
+{
+    var b = new Box()
+    Console.WriteLine(b == null)
+    Console.WriteLine(b != null)
+    var n: Box = null
+    Console.WriteLine(n == null)
+    Console.WriteLine(n != null)
+    Console.WriteLine(null == null)
+    var s: string = null
+    Console.WriteLine(s == null)
+    Console.WriteLine(s + ""x"")
+    Console.WriteLine(s)
+    var picked = true ? b : null
+    Console.WriteLine(picked == null)
+}", "m5a-null-il");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("False\r\nTrue\r\nTrue\r\nFalse\r\nTrue\r\nTrue\r\nx\r\n\r\nFalse\r\n", stdout);
+        }
     }
 }

@@ -429,5 +429,41 @@ function Main()
             var diagnostics = compilation.EmitNative("oop-sinit", Path.Combine(Path.GetTempPath(), "cocoa-native-oop-sinit.exe"), new TargetPlatform(TargetOS.Windows, Architecture.X64));
             Assert.Contains(diagnostics, d => d.Message.Contains("静态构造函数或静态字段初始化器"));
         }
+
+        /// <summary>6e-M19 M5-a：null 字面量——引用比较（Cmp 0）/ 赋值转换 / 三元 null 分支 / 空串拼接与打印。</summary>
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Null_Literal_Comparisons_Ternary_Concat(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+public class Box
+{
+    public function Tag(): string
+    {
+        return ""b""
+    }
+}
+
+function Main()
+{
+    var b = new Box()
+    Console.WriteLine(b == null)
+    Console.WriteLine(b != null)
+    var n: Box = null
+    Console.WriteLine(n == null)
+    Console.WriteLine(n != null)
+    Console.WriteLine(null == null)
+    var s: string = null
+    Console.WriteLine(s == null)
+    Console.WriteLine(s + ""x"")
+    Console.WriteLine(s)
+    var picked = true ? b : null
+    Console.WriteLine(picked == null)
+}", "m5a-null-native", (TargetPlatform)platform);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("False\r\nTrue\r\nTrue\r\nFalse\r\nTrue\r\nTrue\r\nx\r\n\r\nFalse\r\n", stdout);
+        }
     }
 }

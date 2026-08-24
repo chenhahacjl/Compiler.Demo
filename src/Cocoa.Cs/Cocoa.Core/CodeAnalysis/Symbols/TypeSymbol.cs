@@ -7,6 +7,9 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         public static readonly TypeSymbol Error = new TypeSymbol("?");
         public static readonly TypeSymbol Any = new TypeSymbol("any");
+
+        /// <summary>6e-M19 M5-a：null 字面量类型——只存在于字面量瞬间，绑定期即转换到目标引用型（类/接口/string/数组/any）。</summary>
+        public static readonly TypeSymbol Null = new TypeSymbol("null");
         public static readonly TypeSymbol Boolean = new TypeSymbol("bool");
         public static readonly TypeSymbol Int8 = new TypeSymbol("sbyte");
         public static readonly TypeSymbol Int16 = new TypeSymbol("short");

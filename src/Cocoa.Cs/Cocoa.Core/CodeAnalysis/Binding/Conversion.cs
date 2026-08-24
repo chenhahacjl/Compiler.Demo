@@ -28,12 +28,25 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Identity;
             }
 
+            // 6e-M19 M5-a：null 字面量 → 可空引用型（any/类/接口/string/数组）隐式；
+            // 其余目标（数值/bool/char/void）不存在转换。必须置于 any 双向规则之前，
+            // 否则 Null→any 被通用"非 void→any"吞掉、而 any→Null 会经 ③ 泄漏成合法显式转换。
+            if (from == TypeSymbol.Null)
+            {
+                if (to == TypeSymbol.Any || to == TypeSymbol.String || to is ClassTypeSymbol || to.ElementType != null)
+                {
+                    return Conversion.Implicit;
+                }
+
+                return Conversion.None;
+            }
+
             if (from != TypeSymbol.Void && to == TypeSymbol.Any)
             {
                 return Conversion.Implicit;
             }
 
-            if (from == TypeSymbol.Any && to != TypeSymbol.Void)
+            if (from == TypeSymbol.Any && to != TypeSymbol.Void && to != TypeSymbol.Null)
             {
                 return Conversion.Explicit;
             }

@@ -235,7 +235,12 @@ namespace Cocoa.CodeAnalysis
         {
             var value = EvaluateExpression(assignment.Expression);
 
-            Debug.Assert(value != null);
+            // 6e-M19 M5-a：null 赋值合法（可空引用型变量）；其余仍视为内部缺陷
+            Debug.Assert(value != null ||
+                         assignment.Variable.Type is Symbols.ClassTypeSymbol ||
+                         assignment.Variable.Type == TypeSymbol.String ||
+                         assignment.Variable.Type == TypeSymbol.Any ||
+                         assignment.Variable.Type.ElementType != null);
 
             Assign(assignment.Variable, value);
 
@@ -294,9 +299,13 @@ namespace Cocoa.CodeAnalysis
             var left = EvaluateExpression(binary.Left);
             var right = EvaluateExpression(binary.Right);
 
+            // 6e-M19 M5-a：引用相等与字符串拼接允许单侧 null（null 字面量比较 / 空串拼接语义）
             Debug.Assert(left != null && right != null ||
                          binary.Op.Kind == BoundBinaryOperatorKind.Equals ||
-                         binary.Op.Kind == BoundBinaryOperatorKind.NotEquals);
+                         binary.Op.Kind == BoundBinaryOperatorKind.NotEquals ||
+                         binary.Op.Kind == BoundBinaryOperatorKind.ReferenceEquals ||
+                         binary.Op.Kind == BoundBinaryOperatorKind.ReferenceNotEquals ||
+                         (binary.Op.Kind == BoundBinaryOperatorKind.Addition && binary.Type == TypeSymbol.String));
 
             // 6e-M21 Phase 3：整数按符号域（long/ulong）、f32 按 float 域求值后归位
             var resultType = binary.Type;
@@ -542,6 +551,13 @@ namespace Cocoa.CodeAnalysis
         private object? EvaluateConversionExpression(BoundConversionExpression node)
         {
             var value = EvaluateExpression(node.Expression);
+
+            // 6e-M19 M5-a：null → 引用型直通（必须先于 String 分支——Convert.ToString(null) 会折叠成 ""）
+            if (node.Expression.Type == TypeSymbol.Null)
+            {
+                return value;
+            }
+
             if (node.Type == TypeSymbol.Any)
             {
                 return value;

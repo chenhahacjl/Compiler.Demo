@@ -99,6 +99,7 @@ ColonToken,               // :
         LetKeyword,               // let
         NamespaceKeyword,         // namespace
         NewKeyword,               // new
+        NullKeyword,              // null（6e-M19 M5-a）
         OverrideKeyword,          // override
         PartialKeyword,           // partial
         PrivateKeyword,           // private

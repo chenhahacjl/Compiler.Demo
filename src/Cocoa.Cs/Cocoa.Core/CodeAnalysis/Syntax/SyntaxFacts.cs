@@ -130,6 +130,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.InternalKeyword;
                 case "new":
                     return SyntaxKind.NewKeyword;
+                case "null":
+                    return SyntaxKind.NullKeyword;
                 case "namespace":
                     return SyntaxKind.NamespaceKeyword;
                 case "override":
@@ -373,6 +375,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "internal";
                 case SyntaxKind.NewKeyword:
                     return "new";
+                case SyntaxKind.NullKeyword:
+                    return "null";
                 case SyntaxKind.NamespaceKeyword:
                     return "namespace";
                 case SyntaxKind.UsingKeyword:

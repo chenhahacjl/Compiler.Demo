@@ -817,6 +817,7 @@ namespace Cocoa.CodeAnalysis.Cod
         {
             switch (value)
             {
+                case null: return "n:"; // 6e-M19 M5-a：null 常量
                 case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
@@ -834,6 +835,7 @@ namespace Cocoa.CodeAnalysis.Cod
             var rest = token.Substring(2);
             switch (kind)
             {
+                case 'n': return null!; // 6e-M19 M5-a：null 常量
                 case 'i': return int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'b': return rest == "1";
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
@@ -1755,6 +1757,7 @@ namespace Cocoa.CodeAnalysis.Cod
             return name switch
             {
                 "any" => TypeSymbol.Any,
+                "null" => TypeSymbol.Null, // 6e-M19 M5-a
                 "bool" => TypeSymbol.Boolean,
                 "byte" => TypeSymbol.UInt8,
                 "sbyte" => TypeSymbol.Int8,

@@ -112,7 +112,17 @@ namespace Cocoa.CodeAnalysis.Binding
             ops.Add(new BoundBinaryOperator(SyntaxKind.EqualsEqualsToken, BoundBinaryOperatorKind.Equals, TypeSymbol.Any));
             ops.Add(new BoundBinaryOperator(SyntaxKind.BangEqualsToken, BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any));
 
+            // 6e-M19 M5-a：null == null / null != null（恒 true/false，运行时平凡成立）
+            ops.Add(new BoundBinaryOperator(SyntaxKind.EqualsEqualsToken, BoundBinaryOperatorKind.Equals, TypeSymbol.Null, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(SyntaxKind.BangEqualsToken, BoundBinaryOperatorKind.NotEquals, TypeSymbol.Null, TypeSymbol.Boolean));
+
             return ops.ToArray();
+        }
+
+        /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 比较与引用转换的合法目标。</summary>
+        private static bool IsNullableReference(TypeSymbol type)
+        {
+            return type is ClassTypeSymbol || type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null;
         }
 
         public static BoundBinaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol leftType, TypeSymbol rightType)
@@ -141,6 +151,25 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (referenceKind != null)
                 {
                     return new BoundBinaryOperator(syntaxKind, referenceKind.Value, leftClass, rightClass, TypeSymbol.Boolean);
+                }
+            }
+
+            // 6e-M19 M5-a：null 字面量与可空引用型（类/接口/string/数组/any）== / != → 引用相等。
+            // 不经值语义路径（string 值比较/native StrEquals 对单侧 null 会解引用崩溃），指针比较三后端天然一致。
+            if (syntaxKind == SyntaxKind.EqualsEqualsToken || syntaxKind == SyntaxKind.BangEqualsToken)
+            {
+                var referenceKind = syntaxKind == SyntaxKind.EqualsEqualsToken
+                    ? BoundBinaryOperatorKind.ReferenceEquals
+                    : BoundBinaryOperatorKind.ReferenceNotEquals;
+
+                if (leftType == TypeSymbol.Null && IsNullableReference(rightType))
+                {
+                    return new BoundBinaryOperator(syntaxKind, referenceKind, leftType, rightType, TypeSymbol.Boolean);
+                }
+
+                if (rightType == TypeSymbol.Null && IsNullableReference(leftType))
+                {
+                    return new BoundBinaryOperator(syntaxKind, referenceKind, leftType, rightType, TypeSymbol.Boolean);
                 }
             }
 
