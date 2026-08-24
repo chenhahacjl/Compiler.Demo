@@ -1,9 +1,9 @@
-// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
+﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
 // class Int32 —— i32 的成员面载体（6e-M19 M2-b，对齐 C# System.Int32）。
 
 namespace System
 {
-    public class Int32
+    public facade class Int32
     {
         public function ToString(): string
         {

@@ -5,7 +5,7 @@
 
 namespace System
 {
-    public class String
+    public facade class String
     {
         public static function IsNullOrEmpty(s: string): bool
         {

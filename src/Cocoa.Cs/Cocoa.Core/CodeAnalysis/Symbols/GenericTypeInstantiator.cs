@@ -134,46 +134,83 @@ namespace Cocoa.CodeAnalysis.Symbols
             };
         }
         /// <summary>
-        /// mangle 名：`List$int` / `Dict$int$string` / `List$List$int` / `Box$int$Array`
-        /// （简单名；`$` 在 Cocoa 标识符中非法——用户定义 `List_int` 不会与 `List&lt;int&gt;` 碰撞，
-        /// 与 FunctionIrName 的 `$` 约定一致）。跨命名空间唯一性由 FullName 承载。
+        /// mangle 名（6e-M20 Encode v3，CLR 风格）：`List`1#!System.Int32`。
+        /// 结构 = 定义全限定名 + backtick 元数 + `#` + 实参（`$` 分隔）。
+        /// `!` 前缀标记编译器权威身份（内建基元/开放类型参数）——均为用户不可声明实体
+        /// （!/`/#/$ 均非标识符字符），与用户 FullName 结构性隔离，零名字禁令自足注入。
         /// </summary>
         public static string MangledName(ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {
             var builder = new System.Text.StringBuilder();
-            builder.Append(definition.Name);
+            builder.Append(definition.FullName);
+            builder.Append('`');
+            builder.Append(arguments.Length);
+            builder.Append('#');
 
-            foreach (var argument in arguments)
+            for (var i = 0; i < arguments.Length; i++)
             {
-                builder.Append('$');
-                builder.Append(Encode(argument));
+                if (i > 0)
+                {
+                    builder.Append('$');
+                }
+
+                builder.Append(Encode(arguments[i]));
             }
 
             return builder.ToString();
         }
 
-        /// <summary>类型实参编码（mangle 与缓存键共用）：数组 `$Array` 后缀、嵌套实例化递归、类取 FullName（`.`→`_`）。</summary>
+        /// <summary>基元内建 → facade 全限定权威映射（`!` 前缀 = 编译器权威身份标记）。</summary>
+        private static readonly Dictionary<TypeSymbol, string> PrimitiveEncodeNames = new Dictionary<TypeSymbol, string>
+        {
+            [TypeSymbol.Int8] = "!System.SByte",
+            [TypeSymbol.Int16] = "!System.Int16",
+            [TypeSymbol.Int32] = "!System.Int32",
+            [TypeSymbol.Int64] = "!System.Int64",
+            [TypeSymbol.UInt8] = "!System.Byte",
+            [TypeSymbol.UInt16] = "!System.UInt16",
+            [TypeSymbol.UInt32] = "!System.UInt32",
+            [TypeSymbol.UInt64] = "!System.UInt64",
+            [TypeSymbol.Float] = "!System.Single",
+            [TypeSymbol.Double] = "!System.Double",
+            [TypeSymbol.Boolean] = "!System.Boolean",
+            [TypeSymbol.Char] = "!System.Char",
+            [TypeSymbol.String] = "!System.String",
+            [TypeSymbol.Any] = "!System.Object",
+            [TypeSymbol.Void] = "!System.Void",
+        };
+
+        /// <summary>类型实参编码（mangle 与缓存键共用）：`!` 权威实体 / FullName 点保留 / 数组 `[]` 后缀 / 嵌套实例化递归。</summary>
         public static string Encode(TypeSymbol type)
         {
+            // 开放类型参数（定义期壳）：! + 裸名
             if (type is TypeParameterSymbol parameter)
             {
-                return parameter.Name;
+                return "!" + parameter.Name;
             }
 
-            // 数组：元素类型 + $Array 后缀（int[] → int$Array）
+            // 数组：元素编码 + [] 后缀（[] 非标识符字符，注入安全）
             if (type.ElementType != null && type.Kind == SymbolKind.Type)
             {
-                return Encode(type.ElementType) + "$Array";
+                return Encode(type.ElementType) + "[]";
             }
 
+            // 内建基元：! + facade 全限定
+            if (PrimitiveEncodeNames.TryGetValue(type, out var primitiveName))
+            {
+                return primitiveName;
+            }
+
+            // 嵌套实例化：递归完整编码（含 backtick 元数与 #）
             if (type is InstantiatedTypeSymbol nested)
             {
                 return MangledName(nested.GenericDefinition, nested.TypeArguments);
             }
 
+            // 用户类/接口/枚举：FullName 点原样保留（点非标识符字符，一一映射）
             if (type is ClassTypeSymbol classType)
             {
-                return classType.FullName.Replace('.', '_');
+                return classType.FullName;
             }
 
             return type.Name;

@@ -194,6 +194,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.PrivateKeyword;
                 case "where":
                     return SyntaxKind.WhereKeyword;
+                case "facade":
+                    return SyntaxKind.FacadeKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -435,6 +437,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "private";
                 case SyntaxKind.WhereKeyword:
                     return "where";
+                case SyntaxKind.FacadeKeyword:
+                    return "facade";
                 default:
                     return null;
             }

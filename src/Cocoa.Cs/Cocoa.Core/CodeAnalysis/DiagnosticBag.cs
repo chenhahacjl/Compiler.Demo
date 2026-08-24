@@ -28,7 +28,7 @@ namespace Cocoa.CodeAnalysis
             _diagnostics.Add(diagnostic);
         }
 
-        private void ReportWarning(TextLocation location, string message)
+        public void ReportWarning(TextLocation location, string message)
         {
             var diagnostic = Diagnostic.Warning(location, message);
             _diagnostics.Add(diagnostic);
@@ -131,6 +131,20 @@ namespace Cocoa.CodeAnalysis
         {
             var message = $"Using the generic type '{name}' requires type arguments (e.g. '{name}<int>').";
             ReportError(location, message);
+        }
+
+        /// <summary>6e-M20：`facade` 标记用于非基元载体名。</summary>
+        public void ReportInvalidFacadeMarker(TextLocation location, string fullName)
+        {
+            var message = $"'{fullName}' is not a known primitive facade carrier name; the 'facade' modifier is only valid on System primitive carrier classes.";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M20：与基元成员面载体同名但缺 `facade` 标记——按普通类处理（警告引导显式化）。</summary>
+        public void ReportFacadeMarkerRecommended(TextLocation location, string fullName, string primitiveName)
+        {
+            var message = $"'{fullName}' matches the member-face carrier of primitive '{primitiveName}'. Add the 'facade' modifier to adopt it, or rename to avoid confusion.";
+            ReportWarning(location, message);
         }
 
         public void ReportCannotConvert(TextLocation location, TypeSymbol fromType, TypeSymbol toType)

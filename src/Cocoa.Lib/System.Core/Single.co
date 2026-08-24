@@ -2,7 +2,7 @@
 
 namespace System
 {
-    public class Single
+    public facade class Single
     {
         public function ToString(): string
         {

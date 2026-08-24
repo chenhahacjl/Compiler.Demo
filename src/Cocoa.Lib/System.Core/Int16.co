@@ -2,7 +2,7 @@
 
 namespace System
 {
-    public class Int16
+    public facade class Int16
     {
         public function ToString(): string
         {

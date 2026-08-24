@@ -1,10 +1,10 @@
-// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
+﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
 // class Byte —— u8 的成员面载体（6e-M19 M2-b，对齐 C# System.Byte）。
 // ToString 复用 Int32 原语（十进制输出一致）；比较经 i32 转换。
 
 namespace System
 {
-    public class Byte
+    public facade class Byte
     {
         public function ToString(): string
         {

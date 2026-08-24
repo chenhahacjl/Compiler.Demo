@@ -2,7 +2,7 @@
 
 namespace System
 {
-    public class SByte
+    public facade class SByte
     {
         public function ToString(): string
         {

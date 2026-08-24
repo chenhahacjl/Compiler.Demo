@@ -126,6 +126,7 @@ ColonToken,               // :
         WhileKeyword,             // while
         SyscallKeyword,           // syscall
         WhereKeyword,             // where（6e-M20 泛型约束子句）
+        FacadeKeyword,            // facade（6e-M20 基元成员面载体显式标记）
 
         // Nodes
         CompilationUnit,          // 编译单元

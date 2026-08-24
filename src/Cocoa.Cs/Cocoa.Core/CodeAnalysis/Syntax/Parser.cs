@@ -443,6 +443,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ReadonlyKeyword:
                 case SyntaxKind.PartialKeyword:
                     return true;
+                case SyntaxKind.FacadeKeyword:
+                    return true;
                 default:
                     return false;
             }

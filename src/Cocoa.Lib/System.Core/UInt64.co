@@ -2,7 +2,7 @@
 
 namespace System
 {
-    public class UInt64
+    public facade class UInt64
     {
         public function ToString(): string
         {

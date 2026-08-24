@@ -1,7 +1,7 @@
 ﻿// Cocoa 绯荤粺鏍囧噯搴?路 System.Core 鍩哄厓 facade锛坣amespace System锛?// class Char 鈥斺€?char 鐨勬垚鍛橀潰杞戒綋锛?e-M19 M2-b锛屽榻?C# System.Char锛夈€?// 娉細char 鏃犲叧绯昏繍绠楃锛屽垽瀹?姣旇緝缁熶竴缁?i32 杞崲锛?0'=48 '9'=57 'A'=65 'Z'=90 'a'=97 'z'=122锛夈€?
 namespace System
 {
-    public class Char
+    public facade class Char
     {
         public function ToString(): string
         {

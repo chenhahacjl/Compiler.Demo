@@ -204,12 +204,21 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 var primary = parts[0].Syntax;
 
-                // 6e-M19 M2-b：facade 类标记（System.Int32/System.String 等，成员面载体）——
+                // 6e-M19 M2-b → 6e-M20 v3：facade 类标记改为显式 `facade` 修饰符驱动——
+                // 命中 FacadeTargets 且带标记 → 认领；命中但无标记 → 警告（按普通类处理）；
                 // 须先于成员绑定，实例方法声明时的降级依赖此标记
+                var declaredFacade = primary.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword);
                 if (FacadeTargets.TryGetValue(classType.FullName, out var facadeTarget))
                 {
-                    classType.IsFacadeClass = true;
-                    classType.FacadeThisType = facadeTarget;
+                    if (declaredFacade)
+                    {
+                        classType.IsFacadeClass = true;
+                        classType.FacadeThisType = facadeTarget;
+                    }
+                    else
+                    {
+                        binder.Diagnostics.ReportFacadeMarkerRecommended(primary.Identifier.Location, classType.FullName, facadeTarget.Name);
+                    }
                 }
 
                 // 3.5a：先落位全部部分的显式基类（部分类一致性检查 + 循环继承检测）
@@ -865,6 +874,15 @@ namespace Cocoa.CodeAnalysis.Binding
             var primary = parts[0];
             var name = primary.Syntax.Identifier.Text;
             var visibility = GetVisibility(primary.Syntax.Modifiers, Visibility.Internal);
+
+            // `facade` 修饰符（6e-M20）：仅类有意义；须命中 FacadeTargets 才被认领为基元成员面载体
+            if (primary.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword) &&
+                !FacadeTargets.ContainsKey(primary.Namespace.Length == 0 ? name : primary.Namespace + "." + name))
+            {
+                _diagnostics.ReportInvalidFacadeMarker(
+                    primary.Syntax.Identifier.Location,
+                    primary.Namespace.Length == 0 ? name : primary.Namespace + "." + name);
+            }
 
             if (parts.Count > 1)
             {

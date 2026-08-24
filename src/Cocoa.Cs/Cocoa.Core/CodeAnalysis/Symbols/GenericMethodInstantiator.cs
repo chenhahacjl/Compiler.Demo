@@ -36,12 +36,21 @@ namespace Cocoa.CodeAnalysis.Symbols
                 .ToImmutableArray();
             var returnType = TypeSubstituter.Substitute(definition.ReturnType, map);
 
-            // mangle 名：`Swap$int` / `Max$int$long`（$ 非法标识符字符，与用户定义 Swap_int 无碰撞）
-            var builder = new System.Text.StringBuilder(definition.Name);
-            foreach (var argument in arguments)
+            // mangle 名（Encode v3 CLR 风格）：`Swap`1#!System.Int32`（定义全限定 + backtick 元数 + # 实参表）
+            var builder = new System.Text.StringBuilder();
+            builder.Append(definition.Namespace.Length == 0 ? definition.Name : definition.Namespace + "." + definition.Name);
+            builder.Append('`');
+            builder.Append(arguments.Length);
+            builder.Append('#');
+
+            for (var i = 0; i < arguments.Length; i++)
             {
-                builder.Append('$');
-                builder.Append(GenericTypeInstantiator.Encode(argument));
+                if (i > 0)
+                {
+                    builder.Append('$');
+                }
+
+                builder.Append(GenericTypeInstantiator.Encode(arguments[i]));
             }
 
             var instantiated = new FunctionSymbol(
