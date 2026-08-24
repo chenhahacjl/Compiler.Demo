@@ -43,6 +43,9 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>泛型方法签名绑定上下文（6e-M20）：BindFunctionDeclaration / 类方法 / 接口成员签名期间的 T 解析。</summary>
         private ImmutableArray<TypeParameterSymbol> _declaringMethodTypeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
 
+        /// <summary>lambda 提升全局序号（6e-M22 C4）：进程内单调，保证合成名 `__Lambda$N` 唯一。</summary>
+        private static int _lambdaGlobalSequence;
+
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
         internal void SetBindingClass(ClassTypeSymbol? classType) => _bindingClass = classType;
 
@@ -422,6 +425,35 @@ namespace Cocoa.CodeAnalysis.Binding
             // 6e-M20 G2 单态化展开：语法扫描收集活实例化 → 实例化类方法体重绑（T→实参）→ 类并入发射清单
             var emittedClasses = Monomorphizer.Expand(globalScope, parentScope, isScript, codLibraries, dialect, functionBodies, diagnostics);
 
+            // 6e-M22 C4：lambda 提升后处理——函数值携带的已绑定体入 Functions 清单
+            // （BoundProgram.Functions == bodies 键集）；体中嵌套 lambda 一并发现，工作表至不动点
+            {
+                var pendingLambdaScopes = new Queue<BoundNode>();
+                foreach (var statement in globalScope.Statements)
+                {
+                    pendingLambdaScopes.Enqueue(statement);
+                }
+
+                foreach (var existing in functionBodies.Keys)
+                {
+                    pendingLambdaScopes.Enqueue(functionBodies[existing]);
+                }
+
+                while (pendingLambdaScopes.Count > 0)
+                {
+                    foreach (var node in EnumerateBoundDescendants(pendingLambdaScopes.Dequeue()))
+                    {
+                        if (node is BoundFunctionValueExpression { Body: not null } functionValue &&
+                            !functionBodies.ContainsKey(functionValue.Function))
+                        {
+                            System.Console.Error.WriteLine("[probe] lambda body added: " + functionValue.Function.Name);
+                            functionBodies.Add(functionValue.Function, functionValue.Body);
+                            pendingLambdaScopes.Enqueue(functionValue.Body);
+                        }
+                    }
+                }
+            }
+
             var compilationUnit = globalScope.Statements.Any()
                 ? globalScope.Statements.First().Syntax.AncestorsAndSelf().LastOrDefault()
                 : null;
@@ -470,6 +502,20 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses);
+        }
+
+        /// <summary>绑定树先序递归枚举（6e-M22 C4）：lambda 后处理走查用。</summary>
+        private static IEnumerable<BoundNode> EnumerateBoundDescendants(BoundNode root)
+        {
+            yield return root;
+
+            foreach (var child in Compilation.BoundChildren(root))
+            {
+                foreach (var descendant in EnumerateBoundDescendants(child))
+                {
+                    yield return descendant;
+                }
+            }
         }
 
         /// <summary>
@@ -2463,11 +2509,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!_isScript || !isGlobal)
             {
-                if (result is BoundExpressionStatement es)
+                    if (result is BoundExpressionStatement es)
                 {
                     var isAllowedExpression = es.Expression.Kind == BoundNodeKind.ErrorExpression ||
                                               es.Expression.Kind == BoundNodeKind.AssignmentExpression ||
                                               es.Expression.Kind == BoundNodeKind.CallExpression ||
+                                              es.Expression.Kind == BoundNodeKind.InvocationExpression ||
                                               es.Expression.Kind == BoundNodeKind.CompoundAssignmentExpression ||
                                               es.Expression.Kind == BoundNodeKind.ConditionalExpression ||
                                               es.Expression.Kind == BoundNodeKind.ElementAssignmentExpression ||
@@ -4027,14 +4074,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
                 case SyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case SyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
-
-                // Lambda（6e-M22 C2）：语法已解析，提升/函数值于 C4 接入
-                case SyntaxKind.LambdaExpression:
-                    {
-                        var lambda = (LambdaExpressionSyntax)syntax;
-                        _diagnostics.ReportError(lambda.Location, "lambda 表达式的绑定将于 6e-M22 C4 接入（当前为语法层预览）。");
-                        return new BoundErrorExpression(syntax);
-                    }
+                case SyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
 
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
@@ -4180,6 +4220,33 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 函数值（6e-M22 C4）：类方法内裸标识符可引用本类方法（方法组 → 一等函数值）
+            if (_currentClass != null)
+            {
+                var groupCandidates = _currentClass.GetMethods(name).Where(m => !m.IsConstructor).ToImmutableArray();
+                if (groupCandidates.Length == 1)
+                {
+                    return CreateFunctionValue(syntax, receiver: null, groupCandidates[0]);
+                }
+            }
+
+            // 函数值（6e-M22 C4）：裸名引用顶层/命名空间函数（恰一候选，重载歧义报诊断）
+            var functionCandidates = _scope.TryLookupFunctions(name);
+            if (functionCandidates != null)
+            {
+                var functions = functionCandidates.Value.Where(f => !f.IsConstructor).ToImmutableArray();
+                if (functions.Length == 1)
+                {
+                    return CreateFunctionValue(syntax, receiver: null, functions[0]);
+                }
+
+                if (functions.Length > 1)
+                {
+                    _diagnostics.ReportError(syntax.IdentifierToken.Location, $"函数 '{name}' 存在多个重载，函数值引用须无歧义。");
+                    return new BoundErrorExpression(syntax);
+                }
+            }
+
             if (lookup == null)
             {
                 _diagnostics.ReportUndefinedVariable(syntax.IdentifierToken.Location, name);
@@ -4190,6 +4257,153 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundErrorExpression(syntax);
+        }
+
+        /// <summary>方法组 → 函数值（6e-M22 C4）：类型 = 签名形状（接收者作环境槽，不入参数表）。</summary>
+        private BoundFunctionValueExpression CreateFunctionValue(SyntaxNode syntax, BoundExpression? receiver, FunctionSymbol function)
+        {
+            var parameterTypes = function.Parameters.Select(p => p.Type).ToImmutableArray();
+            var functionType = FunctionTypeSymbol.Get(parameterTypes, function.ReturnType);
+
+            return new BoundFunctionValueExpression(syntax, function, receiver, body: null, functionType);
+        }
+
+        /// <summary>
+        /// Lambda 提升（6e-M22 C4）：`(x: int) =&gt; expr|block` → 合成静态方法符号 + 已绑定体随函数值携带
+        /// （BindProgram 后处理入 Functions 清单）。显式参数类型直接落签名；隐式参数须有目标函数类型
+        /// （期望类型经 <see cref="BindConversion"/> 钩子下推）；无目标且含隐式参数报诊断。
+        /// </summary>
+        private BoundExpression BindLambdaExpression(LambdaExpressionSyntax syntax, FunctionTypeSymbol? expectedType)
+        {
+            if (!syntax.HasExplicitParameterTypes && expectedType == null)
+            {
+                _diagnostics.ReportError(syntax.Location, "隐式类型 lambda 参数需要目标函数类型（如赋值/传参位置），当前上下文无法推导；请显式标注参数类型。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (expectedType != null && syntax.Parameters.Count != expectedType.ParameterTypes.Length)
+            {
+                _diagnostics.ReportError(syntax.Location, $"lambda 参数数 {syntax.Parameters.Count} 与目标函数类型的 {expectedType.ParameterTypes.Length} 不符。");
+                return new BoundErrorExpression(syntax);
+            }
+
+            var parameterSymbols = ImmutableArray.CreateBuilder<ParameterSymbol>();
+            var parameterTypes = ImmutableArray.CreateBuilder<TypeSymbol>();
+            for (var i = 0; i < syntax.Parameters.Count; i++)
+            {
+                var parameterSyntax = syntax.Parameters[i];
+                var parameterType = parameterSyntax.Type.Identifier.IsMissing
+                    ? expectedType!.ParameterTypes[i]
+                    : BindTypeClause(parameterSyntax.Type);
+
+                if (parameterType == null)
+                {
+                    return new BoundErrorExpression(syntax);
+                }
+
+                parameterTypes.Add(parameterType);
+                parameterSymbols.Add(new ParameterSymbol(parameterSyntax.Identifier.Text, parameterType, i));
+            }
+
+            // 体绑定：子作用域声明参数（沿用当前 Binder 上下文——类/静态/别名等语义一致）
+            var lambdaOuterScope = _scope;
+            _scope = new BoundScope(lambdaOuterScope);
+            foreach (var parameter in parameterSymbols)
+            {
+                _scope.TryDeclareVariable(parameter);
+            }
+
+            BoundBlockStatement body;
+            TypeSymbol returnType;
+
+            try
+            {
+                if (syntax.Body is BlockStatementSyntax blockSyntax)
+                {
+                    body = (BoundBlockStatement)BindStatement(blockSyntax);
+                    returnType = InferLambdaReturnType(body, syntax);
+                }
+                else
+                {
+                    var expression = BindExpression((ExpressionSyntax)syntax.Body);
+                    if (expression.Type == TypeSymbol.Error)
+                    {
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    returnType = expression.Type;
+                    if (returnType != TypeSymbol.Void)
+                    {
+                        var returnStatement = new BoundReturnStatement(syntax.Body, expression);
+                        body = new BoundBlockStatement(syntax.Body, ImmutableArray.Create<BoundStatement>(returnStatement));
+                    }
+                    else
+                    {
+                        var expressionStatement = new BoundExpressionStatement(syntax.Body, expression);
+                        body = new BoundBlockStatement(syntax.Body, ImmutableArray.Create<BoundStatement>(expressionStatement));
+                    }
+                }
+            }
+            finally
+            {
+                _scope = lambdaOuterScope;
+            }
+
+            if (expectedType != null && returnType != expectedType.ReturnType &&
+                Conversion.Classify(returnType, expectedType.ReturnType) is { Exists: true } conversion && !conversion.IsIdentity)
+            {
+                // 返回类型可（显式）转换到目标时自动补转换节点
+                body = ConvertLambdaBodyReturns(body, expectedType.ReturnType, syntax);
+                returnType = expectedType.ReturnType;
+            }
+            else if (returnType != expectedType?.ReturnType && expectedType != null)
+            {
+                _diagnostics.ReportCannotConvert(syntax.Location, returnType, expectedType.ReturnType);
+                return new BoundErrorExpression(syntax);
+            }
+
+            var sequence = System.Threading.Interlocked.Increment(ref _lambdaGlobalSequence);
+            var functionName = $"__Lambda${sequence}";
+            var function = new FunctionSymbol(functionName, parameterSymbols.ToImmutable(), returnType, declaration: null, syntax: syntax, containingClass: _currentClass, visibility: Visibility.Private)
+            {
+                IsStatic = true,
+            };
+
+            var computedType = FunctionTypeSymbol.Get(parameterTypes.ToImmutable(), returnType);
+            return new BoundFunctionValueExpression(syntax, function, receiver: null, body, computedType);
+        }
+
+        /// <summary>块体返回类型推断：取首条带值 return 的类型；无则 void。</summary>
+        private static TypeSymbol InferLambdaReturnType(BoundBlockStatement body, LambdaExpressionSyntax syntax)
+        {
+            foreach (var statement in body.Statements)
+            {
+                if (statement is BoundReturnStatement { Expression: { } expression } &&
+                    expression.Type != TypeSymbol.Void)
+                {
+                    return expression.Type;
+                }
+            }
+
+            return TypeSymbol.Void;
+        }
+
+        /// <summary>块体内全部带值 return 补转换到目标返回类型（表达式体已在合成前处理）。</summary>
+        private BoundBlockStatement ConvertLambdaBodyReturns(BoundBlockStatement body, TypeSymbol targetType, SyntaxNode syntax)
+        {
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            foreach (var statement in body.Statements)
+            {
+                if (statement is BoundReturnStatement { Expression: { } expression } returnStatement)
+                {
+                    statements.Add(new BoundReturnStatement(returnStatement.Syntax, BindConversion(returnStatement.Syntax.Location, expression, targetType)));
+                    continue;
+                }
+
+                statements.Add(statement);
+            }
+
+            return new BoundBlockStatement(body.Syntax, statements.ToImmutable());
         }
 
         private BoundExpression BindAssignmentExpression(AssignmentExpressionSyntax syntax)
@@ -4675,6 +4889,20 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method, isBase);
+                }
+
+                // 函数值字段间接调用（6e-M22 C4）：`obj.handler(x)` —— 实例字段持有函数值
+                var functionField = classType.GetField(identifier);
+                if (functionField?.Type is FunctionTypeSymbol fieldFunction)
+                {
+                    if (!IsAccessibleMember(functionField.Visibility, classType))
+                    {
+                        _diagnostics.ReportCannotAccessMember(syntax.IdentifierToken.Location, identifier, functionField.Visibility);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    var fieldCallee = new BoundMemberAccessExpression(syntax.Expression, functionField.Type, boundExpression, identifier, functionField);
+                    return BindFunctionValueInvocation(syntax.IdentifierToken.Location, identifier, syntax.Arguments, fieldCallee, fieldFunction);
                 }
 
                 _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
@@ -5164,6 +5392,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 return BindConversion(syntax.Arguments[0], type, allowExplicit: true);
             }
 
+            // 函数值间接调用（6e-M22 C4）：`f(x)` —— 标识符解析为函数类型的变量/参数
+            if (_scope.TryLookupSymbol(syntax.Identifier.Text) is VariableSymbol calleeVariable &&
+                calleeVariable.Type is FunctionTypeSymbol variableFunction)
+            {
+                return BindFunctionValueInvocation(
+                    syntax.Identifier.Location,
+                    syntax.Identifier.Text,
+                    syntax.Arguments,
+                    new BoundVariableExpression(syntax, calleeVariable),
+                    variableFunction);
+            }
+
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
 
             foreach (var argument in syntax.Arguments)
@@ -5388,9 +5628,70 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindConversion(ExpressionSyntax syntax, TypeSymbol type, bool allowExplicit = false)
         {
+            // 期望类型下推（6e-M22 C4）：lambda 字面量在目标函数类型位置按目标签名提升
+            if (type is FunctionTypeSymbol expectedFunction && syntax.Kind == SyntaxKind.LambdaExpression)
+            {
+                var lambdaValue = BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedFunction);
+                if (lambdaValue.Type != type && lambdaValue.Type != TypeSymbol.Error)
+                {
+                    _diagnostics.ReportCannotConvert(syntax.Location, lambdaValue.Type, type);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                return lambdaValue;
+            }
+
+            // 方法组到函数类型的转换（6e-M22 C4）：命名方法/实例方法引用 → 一等函数值
+            if (type is FunctionTypeSymbol functionTarget && syntax.Kind == SyntaxKind.NameExpression)
+            {
+                var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
+                if (asValue != null)
+                {
+                    if (asValue.Type != functionTarget)
+                    {
+                        _diagnostics.ReportCannotConvert(syntax.Location, asValue.Type, functionTarget);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    return asValue;
+                }
+            }
+
             var expression = BindExpression(syntax);
 
             return BindConversion(syntax.Location, expression, type, allowExplicit);
+        }
+
+        /// <summary>裸名 → 函数值尝试（6e-M22 C4）：恰一候选的非构造函数；否则 null 回落常规绑定。</summary>
+        private BoundFunctionValueExpression? TryBindNameAsFunctionValue(NameExpressionSyntax syntax)
+        {
+            var name = syntax.IdentifierToken.Text;
+            var candidates = _scope.TryLookupFunctions(name);
+            if (candidates == null)
+            {
+                return null;
+            }
+
+            var functions = candidates.Value.Where(f => !f.IsConstructor).ToImmutableArray();
+            return functions.Length == 1 ? CreateFunctionValue(syntax, receiver: null, functions[0]) : null;
+        }
+
+        /// <summary>函数值间接调用共享核心（6e-M22 C4）：元数校验 + 实参转换 + Invocation 节点。</summary>
+        private BoundExpression BindFunctionValueInvocation(TextLocation errorLocation, string displayName, SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, BoundExpression callee, FunctionTypeSymbol functionType)
+        {
+            if (functionType.ParameterTypes.Length != argumentSyntaxes.Count)
+            {
+                _diagnostics.ReportWrongArgumentCount(errorLocation, displayName, functionType.ParameterTypes.Length, argumentSyntaxes.Count);
+                return new BoundErrorExpression(callee.Syntax!);
+            }
+
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            for (var i = 0; i < argumentSyntaxes.Count; i++)
+            {
+                boundArguments.Add(BindConversion(argumentSyntaxes[i].Location, BindExpression(argumentSyntaxes[i]), functionType.ParameterTypes[i]));
+            }
+
+            return new BoundInvocationExpression(callee.Syntax!, callee, boundArguments.ToImmutable(), functionType.ReturnType);
         }
 
         private BoundExpression BindConversion(TextLocation diagnosticLocation, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)

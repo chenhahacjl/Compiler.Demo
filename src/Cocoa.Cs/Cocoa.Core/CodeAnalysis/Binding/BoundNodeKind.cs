@@ -45,5 +45,7 @@ ConstructorChainExpression,
 FormatExpression,
 IsExpression,
 AsExpression,
+FunctionValueExpression,   // 函数值：lambda 字面量 / 方法组（6e-M22 C4）
+InvocationExpression,      // 函数值间接调用 f(x)（6e-M22 C4）
     }
 }

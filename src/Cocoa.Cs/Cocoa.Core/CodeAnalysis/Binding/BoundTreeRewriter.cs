@@ -208,6 +208,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteErrorExpression((BoundErrorExpression)node);
                 }
+                case BoundNodeKind.FunctionValueExpression:
+                {
+                    return RewriteFunctionValueExpression((BoundFunctionValueExpression)node);
+                }
+                case BoundNodeKind.InvocationExpression:
+                {
+                    return RewriteInvocationExpression((BoundInvocationExpression)node);
+                }
                 case BoundNodeKind.LiteralExpression:
                 {
                     return RewriteLiteralExpression((BoundLiteralExpression)node);
@@ -310,6 +318,46 @@ namespace Cocoa.CodeAnalysis.Binding
         protected virtual BoundExpression RewriteErrorExpression(BoundErrorExpression node)
         {
             return node;
+        }
+
+        /// <summary>函数值（6e-M22 C4）：仅重写接收者；lambda 体不在表达式子树内（随符号入 Functions 清单）。</summary>
+        protected virtual BoundExpression RewriteFunctionValueExpression(BoundFunctionValueExpression node)
+        {
+            if (node.Receiver == null)
+            {
+                return node;
+            }
+
+            var receiver = RewriteExpression(node.Receiver);
+            return receiver == node.Receiver
+                ? node
+                : new BoundFunctionValueExpression(node.Syntax, node.Function, receiver, node.Body, (Symbols.FunctionTypeSymbol)node.Type);
+        }
+
+        protected virtual BoundExpression RewriteInvocationExpression(BoundInvocationExpression node)
+        {
+            var callee = RewriteExpression(node.Callee);
+
+            ImmutableArray<BoundExpression>.Builder? builder = null;
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                var oldArgument = node.Arguments[i];
+                var newArgument = RewriteExpression(oldArgument);
+                if (newArgument != oldArgument && builder == null)
+                {
+                    builder = ImmutableArray.CreateBuilder<BoundExpression>(node.Arguments.Length);
+                    for (var j = 0; j < i; j++)
+                    {
+                        builder.Add(node.Arguments[j]);
+                    }
+                }
+
+                builder?.Add(newArgument);
+            }
+
+            return callee == node.Callee && builder == null
+                ? node
+                : new BoundInvocationExpression(node.Syntax, callee, builder?.ToImmutable() ?? node.Arguments, node.Type);
         }
 
         protected virtual BoundExpression RewriteLiteralExpression(BoundLiteralExpression node)

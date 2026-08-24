@@ -221,6 +221,13 @@ namespace Cocoa.CodeAnalysis
 
             var program = GetProgram();
 
+            // 6e-M22 C4：函数值/函数类型签名发射于 C4-b（IL）接入——先行明确诊断而非发射器内部异常
+            var functionValueDiagnostic = FindFunctionValueDiagnostic(program);
+            if (functionValueDiagnostic != null)
+            {
+                return ImmutableArray.Create(functionValueDiagnostic);
+            }
+
             var ilReferences = references
                 .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
@@ -249,6 +256,13 @@ namespace Cocoa.CodeAnalysis
             if (program.Diagnostics.HasErrors())
             {
                 return program.Diagnostics;
+            }
+
+            // 6e-M22 C4：native 侧于 C4-c 接入
+            var nativeFunctionValueDiagnostic = FindFunctionValueDiagnostic(program);
+            if (nativeFunctionValueDiagnostic != null)
+            {
+                return ImmutableArray.Create(nativeFunctionValueDiagnostic);
             }
 
             if (program.MainFunction == null)
@@ -505,6 +519,66 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
+        /// <summary>函数值/函数类型签名扫描（6e-M22 C4）：发射器接入前的统一门禁。</summary>
+        private Diagnostic? FindFunctionValueDiagnostic(BoundProgram program)
+        {
+            foreach (var (function, body) in program.Functions)
+            {
+                if (HasFunctionValueNode(body))
+                {
+                    var location = function.Syntax?.Location ?? ZeroLocation;
+                    return Diagnostic.Error(location, "lambda/函数值的三后端发射将于 6e-M22 C4-b（IL）/C4-c（native）逐步接入。");
+                }
+
+                foreach (var parameter in function.Parameters)
+                {
+                    if (parameter.Type is FunctionTypeSymbol)
+                    {
+                        var location = function.Syntax?.Location ?? ZeroLocation;
+                        return Diagnostic.Error(location, $"函数 '{function.Name}' 的参数 '{parameter.Name}' 为函数类型，发射将于 6e-M22 C4-b/C4-c 接入。");
+                    }
+                }
+
+                if (function.ReturnType is FunctionTypeSymbol)
+                {
+                    var location = function.Syntax?.Location ?? ZeroLocation;
+                    return Diagnostic.Error(location, $"函数 '{function.Name}' 返回函数类型，发射将于 6e-M22 C4-b/C4-c 接入。");
+                }
+            }
+
+            foreach (var classType in program.Classes)
+            {
+                foreach (var field in classType.Fields)
+                {
+                    if (field.Type is FunctionTypeSymbol)
+                    {
+                        var location = classType.Declaration?.Identifier.Location ?? ZeroLocation;
+                        return Diagnostic.Error(location, $"类 '{classType.Name}' 的字段 '{field.Name}' 为函数类型，发射将于 6e-M22 C4-b/C4-c 接入。");
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static bool HasFunctionValueNode(BoundNode node)
+        {
+            if (node.Kind == BoundNodeKind.FunctionValueExpression || node.Kind == BoundNodeKind.InvocationExpression)
+            {
+                return true;
+            }
+
+            foreach (var child in BoundChildren(node))
+            {
+                if (HasFunctionValueNode(child))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>库体是否含 OOP/.NET API 节点（v1 拒绝：序列化阶段 6b 后置）。</summary>
         private static bool HasOopNode(BoundNode node)
         {
@@ -644,6 +718,18 @@ namespace Cocoa.CodeAnalysis
                     return new[] { ((BoundAsExpression)node).Expression };
                 case BoundNodeKind.StaticTypeExpression:
                     return Array.Empty<BoundNode>();
+                case BoundNodeKind.FunctionValueExpression:
+                    {
+                        var n = (BoundFunctionValueExpression)node;
+                        return n.Receiver == null
+                            ? Array.Empty<BoundNode>()
+                            : new[] { n.Receiver };
+                    }
+                case BoundNodeKind.InvocationExpression:
+                    {
+                        var n = (BoundInvocationExpression)node;
+                        return new BoundNode[] { n.Callee }.Concat(n.Arguments);
+                    }
                 default:
                     return Array.Empty<BoundNode>();
             }

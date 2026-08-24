@@ -210,6 +210,12 @@ namespace Cocoa.CodeAnalysis
                     return EvaluateIsExpression((BoundIsExpression)node);
                 case BoundNodeKind.AsExpression:
                     return EvaluateAsExpression((BoundAsExpression)node);
+
+                // 6e-M22 C4：函数值与间接调用
+                case BoundNodeKind.FunctionValueExpression:
+                    return EvaluateFunctionValue((BoundFunctionValueExpression)node);
+                case BoundNodeKind.InvocationExpression:
+                    return EvaluateInvocation((BoundInvocationExpression)node);
                 default:
                     throw new Exception($"Unexcepted node {node.Kind}");
             }
@@ -220,6 +226,40 @@ namespace Cocoa.CodeAnalysis
             Debug.Assert(expression.ConstantValue != null);
 
             return expression.ConstantValue.Value;
+        }
+
+        /// <summary>函数值运行期表示（6e-M22 C4）：目标方法 + 接收者（实例方法组的环境槽；静态/lambda 为 null）。</summary>
+        private sealed class EvaluatorFunctionValue
+        {
+            public EvaluatorFunctionValue(FunctionSymbol function, object? receiver)
+            {
+                Function = function;
+                Receiver = receiver;
+            }
+
+            public FunctionSymbol Function { get; }
+
+            public object? Receiver { get; }
+        }
+
+        private object EvaluateFunctionValue(BoundFunctionValueExpression node)
+        {
+            var receiver = node.Receiver == null ? null : EvaluateExpression(node.Receiver);
+            return new EvaluatorFunctionValue(node.Function, receiver);
+        }
+
+        private object? EvaluateInvocation(BoundInvocationExpression node)
+        {
+            var target = EvaluateExpression(node.Callee) as EvaluatorFunctionValue
+                ?? throw new Exception($"'{node.Callee.Type}' 不是可调用的函数值。");
+
+            if (target.Function.ContainingClass != null && target.Function.IsStatic)
+            {
+                EnsureStaticInit(target.Function.ContainingClass);
+            }
+
+            var argumentValues = node.Arguments.Select(EvaluateExpression).ToArray();
+            return InvokeFunction(target.Function, target.Receiver, argumentValues);
         }
 
         private object EvaluateVariableExpression(BoundVariableExpression variable)

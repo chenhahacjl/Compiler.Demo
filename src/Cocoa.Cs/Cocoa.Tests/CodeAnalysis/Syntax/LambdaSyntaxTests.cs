@@ -147,12 +147,13 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         // ------------------------------------------------------------------
 
         [Fact]
-        public void Binder_Lambda_GateDiagnosed()
+        public void Binder_Lambda_BindsCleanly()
         {
-            var tree = SyntaxTree.Parse("let f = (x: int) => x");
+            // C4：lambda 提升——仅赋值不调用，Evaluate 零诊断
+            var tree = SyntaxTree.Parse("let f: (i64) -> i64 = (x: i64) => x + 1");
             var compilation = Compilation.CreateScript(null, tree);
             var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<VariableSymbol, object>());
-            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("C4"));
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
         }
 
         [Fact]
