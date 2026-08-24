@@ -33,6 +33,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private HashSet<(string Namespace, string Name)>? _overloadedGroups;
         private bool _currentMethodIsInstance;
 
+        /// <summary>6e-M22 C5-c：当前方法的环境对象局部槽索引与布局类（无捕获 = null）。</summary>
+        private int? _closureEnvLocalIndex;
+        private ClassTypeSymbol? _closureClass;
+        private Dictionary<string, IlFieldDef>? _closureFieldDefs;
+        private readonly Dictionary<ClassTypeSymbol, IlMethodDef> environmentCtorDefs = new();
+
+        /// <summary>闭包环境类判定：Binder 合成的 `__Env_<fn>` 命名约定。</summary>
+        private static bool IsClosureEnvironmentClass(ClassTypeSymbol classType)
+            => classType.Name.StartsWith("__Env_", StringComparison.Ordinal);
+
         private IlEmitter(string moduleName, string[] references)
         {
             _moduleName = moduleName;
@@ -106,6 +116,21 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             foreach (var classType in classes)
             {
                 EmitClassDeclaration(classType);
+            }
+
+            // 6e-M22 C5-c：合成环境类的默认 .ctor（ldarg.0 → Object::.ctor → ret），
+            // 直接挂 TypeDef；方法体在本函数尾部统一手工组装
+            var environmentCtorBodies = new List<(ClassTypeSymbol ClassType, IlMethodDef Ctor)>();
+            foreach (var classType in classes)
+            {
+                if (IsClosureEnvironmentClass(classType))
+                {
+                    var ctorDef = new IlMethodDef(".ctor", IlType.Void, Array.Empty<IlType>(), null, isStatic: false) { Visibility = Visibility.Public };
+                    _metadata.AddMethodDef(_classTypeDefs[classType], ctorDef);
+                    environmentCtorDefs[classType] = ctorDef;
+                    
+                    environmentCtorBodies.Add((classType, ctorDef));
+                }
             }
 
             // 1.5 InterfaceImpl：所有 TypeDef 就绪后，把类实现/继承的接口（含基类链与接口继承）写入各自 TypeDef
@@ -200,8 +225,23 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 var method = _methods[functionWithBody.Key];
                 methods.Add(method);
                 _entryVoidMain = _entryFunction == functionWithBody.Key && functionWithBody.Key.ReturnType == TypeSymbol.Void;
-                var (code, localSigToken, maxStack) = EmitFunctionBody(method, functionWithBody.Value);
+                var (code, localSigToken, maxStack) = EmitFunctionBody(method, functionWithBody.Key, functionWithBody.Value);
                 bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack));
+            }
+
+            // 6e-M22 C5-c：环境类 .ctor 方法体（ldarg.0 → Object::.ctor → ret）
+            foreach (var (classType, ctorDef) in environmentCtorBodies)
+            {
+                var ctorAssembler = new IlAssembler();
+                ctorAssembler.Emit(IlOpCodeTable.Get("Ldarg_0"));
+                ctorAssembler.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectCtor);
+                ctorAssembler.Emit(IlOpCodeTable.Get("Ret"));
+
+                var ctorCode = ctorAssembler.Assemble();
+                ctorAssembler.PatchTokens(ctorCode, _metadata.BuildTokenMap());
+
+                methods.Add(ctorDef);
+                bodies.Add(new ManagedPEWriter.MethodBodyBlob(ctorCode, 0, 1));
             }
 
             _metadata.AddCustomAttribute(new IlCustomAttribute(_framework.DebuggableAttributeCtor, MetadataBuilder.EncodeDebuggableAttributeBlob()));
@@ -268,6 +308,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             };
             _methods.Add(function, method);
 
+            // 6e-M22 C5-c：捕获 lambda 声明为环境类的实例方法（this = 环境对象，经委托 target 传入）
+            if (function.EnvironmentClass != null && function.Syntax is LambdaExpressionSyntax)
+            {
+                method.IsStatic = false;
+                _metadata.AddMethodDef(_classTypeDefs[function.EnvironmentClass], method);
+                return;
+            }
+
             var declaringType = function.ContainingClass != null ? _classTypeDefs[function.ContainingClass] : _typeDefinition;
             _metadata.AddMethodDef(declaringType, method);
         }
@@ -291,7 +339,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
         }
 
-        private (byte[] Code, uint LocalSigToken, int MaxStack) EmitFunctionBody(IlMethodDef method, BoundBlockStatement body)
+        private (byte[] Code, uint LocalSigToken, int MaxStack) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body)
         {
             _locals.Clear();
             _labelTargets.Clear();
@@ -303,7 +351,53 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 预收集局部变量（按声明顺序分配索引）
             var localTypes = new List<IlType>();
             _currentFunctionLocals = localTypes;
+
+            // 6e-M22 C5-c：环境对象局部槽预留 + 前奏 IL
+            _closureClass = function.EnvironmentClass;
+            _closureEnvLocalIndex = null;
+
+            if (_closureClass != null)
+            {
+                var envIlType = ToIlType(_closureClass);
+                localTypes.Add(envIlType);
+                _closureEnvLocalIndex = localTypes.Count - 1;
+                _closureFieldDefs = _closureClass.Fields.ToDictionary(f => f.Name, f => _fieldDefs[f]);
+
+                if (function.IsLambdaWithEnvironment)
+                {
+                    // lambda：this（ldarg.0）即环境对象 → 存入局部
+                    assembler.Emit(IlOpCodeTable.Get("Ldarg_0"));
+                    assembler.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_closureEnvLocalIndex.Value);
+                }
+            }
+
             CollectLocals(body, localTypes);
+
+            // 宿主函数：newobj 环境实例 + 捕获参数播种
+            if (_closureClass != null && !function.IsLambdaWithEnvironment)
+            {
+                if (!environmentCtorDefs.TryGetValue(_closureClass, out var envCtorDef))
+                {
+                    throw new Exception($"环境类 {_closureClass.Name} 缺少 .ctor。");
+                }
+
+                assembler.Emit(IlOpCodeTable.Get("Newobj"), envCtorDef);
+                assembler.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_closureEnvLocalIndex!.Value);
+
+                if (function.CapturedVariables != null)
+                {
+                    foreach (var captured in function.CapturedVariables)
+                    {
+                        if (captured is ParameterSymbol parameter)
+                        {
+                            var field = _closureFieldDefs![captured.Name];
+                            assembler.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex.Value);
+                            assembler.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)(parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0)));
+                            assembler.Emit(IlOpCodeTable.Get("Stfld"), field);
+                        }
+                    }
+                }
+            }
 
             // 预收集 label 占位（前向引用需要目标指令对象）
             CollectLabels(body);
@@ -549,6 +643,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private void EmitVariableDeclaration(IlAssembler il, BoundVariableDeclaration node)
         {
             EmitExpression(il, node.Initializer);
+
+            // 6e-M22 C5-c：捕获变量声明 → 初始化值写入环境字段
+            if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex.Value);
+                il.Emit(IlOpCodeTable.Get("Stfld"), _closureFieldDefs![node.Variable.Name]);
+                return;
+            }
+
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
         }
 
@@ -605,7 +708,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             var shape = _delegateShapes.Resolve((FunctionTypeSymbol)node.Type, ToIlType);
 
-            if (node.Receiver != null)
+            if (node.EnvironmentClass != null)
+            {
+                // 6e-M22 C5-c：捕获闭包——target = 当前环境对象
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex!.Value);
+            }
+            else if (node.Receiver != null)
             {
                 // 实例方法组：接收者为委托 target（用户类引用型，无需装箱）
                 EmitExpression(il, node.Receiver);
@@ -945,6 +1053,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitVariableExpression(IlAssembler il, BoundVariableExpression node)
         {
+            // 6e-M22 C5-c：捕获变量读环境字段
+            if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex.Value);
+                il.Emit(IlOpCodeTable.Get("Ldfld"), _closureFieldDefs![node.Variable.Name]);
+                return;
+            }
+
             if (node.Variable is ParameterSymbol parameter)
             {
                 // 实例方法 arg0 = this，参数从 arg1 起
@@ -960,6 +1076,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private void EmitAssignmentExpression(IlAssembler il, BoundAssignmentExpression node)
         {
             EmitExpression(il, node.Expression);
+
+            // 6e-M22 C5-c：捕获变量写环境字段（值同时在栈顶作为表达式结果）
+            if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex.Value);
+                il.Emit(IlOpCodeTable.Get("Stfld"), _closureFieldDefs![node.Variable.Name]);
+                return;
+            }
+
             il.Emit(IlOpCodeTable.Get("Dup"));
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
         }

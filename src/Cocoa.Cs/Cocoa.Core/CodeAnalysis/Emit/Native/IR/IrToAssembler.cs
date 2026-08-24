@@ -112,7 +112,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var symbol = _a.CreateDataSymbol();
                 _a.MarkDataSymbol(symbol);
                 _dataSymbols.Add(item.Key, symbol);
-                if (item.Key.Contains("fnptr") || item.Key == "Double") System.Console.Error.WriteLine($"[probe] dataSym '{item.Key}' kind={item.Kind} symbol={symbol}");
 
                 switch (item.Kind)
                 {

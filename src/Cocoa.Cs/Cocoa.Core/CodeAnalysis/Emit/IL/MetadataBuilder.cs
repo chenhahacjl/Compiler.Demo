@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public string? ImportName { get; }
         public IlCallingConvention CallingConvention { get; }
         /// <summary>实例方法（含 this，签名 HAS_THIS）。</summary>
-        public bool IsStatic { get; }
+        public bool IsStatic { get; internal set; }
 
         /// <summary>P/Invoke 编码格式（ImplMap CharSet 位）。6e-M17 Step 5。</summary>
         public CharSet CharSet { get; }

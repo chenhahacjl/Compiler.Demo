@@ -197,7 +197,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public string Name { get; }
         public IlType ReturnType { get; }
         public IReadOnlyList<IlType> ParameterTypes { get; }
-        public bool IsStatic { get; }
+        public bool IsStatic { get; internal set; }
 
         public override bool Equals(object? obj) =>
             obj is IlMethodRef other &&

@@ -60,6 +60,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ThreadSleep = RequireMethod("System.Threading.Thread", "Sleep", new[] { "System.Int32" });
             EnvironmentTickCount = RequireMethod("System.Environment", "get_TickCount", Array.Empty<string>());
             EnvironmentExit = RequireMethod("System.Environment", "Exit", new[] { "System.Int32" });
+            ObjectCtor = RequireMethod("System.Object", ".ctor", Array.Empty<string>());
             DebuggableAttributeCtor = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
             StringFormat = RequireMethod("System.String", "Format", new[] { "System.String", "System.Object" });
             MathSqrt = RequireMethod("System.Math", "Sqrt", new[] { "System.Double" });
@@ -76,6 +77,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlTypeRef Int32Type { get; }
         public IlTypeRef Int64Type { get; }
         public IlTypeRef UInt64Type { get; }
+        public IlMethodRef ObjectCtor { get; }
         public IlMethodRef ObjectEquals { get; }
 
         /// <summary>6e-M19 M2-c：System.Object 实例虚/静态方法（Object 成员面 IL 发射）。</summary>
