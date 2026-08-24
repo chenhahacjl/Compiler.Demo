@@ -6,8 +6,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     /// <summary>
     /// 类类型：承载字段/方法/构造函数成员，支持单继承。
+    /// 派生：<see cref="InstantiatedTypeSymbol"/>（6e-M20 泛型实例化类，惰性物化成员）。
     /// </summary>
-    public sealed class ClassTypeSymbol : TypeSymbol
+    public class ClassTypeSymbol : TypeSymbol
     {
         /// <summary>System.Object 内建单例（6e-M19 M2-a）：所有无显式基类类的隐式根，成员面随 M2-b/M2-c 接入。</summary>
         public static readonly ClassTypeSymbol SystemObject = new ClassTypeSymbol("Object", "System", Visibility.Public, declaration: null);
@@ -41,7 +42,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsExternal { get; }
 
         /// <summary>是否为接口（interface 声明；不可实例化、成员无实现）。</summary>
-        public bool IsInterface { get; internal set; }
+        public virtual bool IsInterface { get; internal set; }
 
         /// <summary>完整类型名（含命名空间）。</summary>
         public string FullName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
@@ -51,7 +52,20 @@ namespace Cocoa.CodeAnalysis.Symbols
         public ClassDeclarationSyntax? Declaration { get; }
 
         /// <summary>基类（null = 接口或未落位；非接口类绑定后恒为显式基类或 <see cref="SystemObject"/>）。</summary>
-        public ClassTypeSymbol? BaseType { get; set; }
+        public virtual ClassTypeSymbol? BaseType
+        {
+            get
+            {
+                EnsureMembersMaterialized();
+                return _baseType;
+            }
+            set
+            {
+                _baseType = value;
+            }
+        }
+
+        private ClassTypeSymbol? _baseType;
 
         /// <summary>是否为内建 Object 根单例（区别于用户声明的类）。</summary>
         public bool IsSystemObjectRoot => this == SystemObject;
@@ -65,9 +79,23 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>facade 承载的类型（Int32→i32、String→string；null = 自身，用于 Object/Type facade）。</summary>
         public TypeSymbol? FacadeThisType { get; internal set; }
 
-        public bool IsAbstract { get; internal set; }
+        public virtual bool IsAbstract { get; internal set; }
 
-        public bool IsSealed { get; internal set; }
+        public virtual bool IsSealed { get; internal set; }
+
+        /// <summary>
+        /// 成员访问前钩子（6e-M20）：泛型实例化类在首次访问时惰性物化成员（定义类可能尚未完成绑定）；
+        /// 基类为空操作。
+        /// </summary>
+        protected virtual void EnsureMembersMaterialized()
+        {
+        }
+
+        /// <summary>泛型类型参数列表（6e-M20；空 = 非泛型。实例化类的此列表恒为空——实参见 <see cref="InstantiatedTypeSymbol.TypeArguments"/>）。</summary>
+        public ImmutableArray<TypeParameterSymbol> TypeParameters { get; internal set; } = ImmutableArray<TypeParameterSymbol>.Empty;
+
+        /// <summary>是否为泛型定义（模板；不可直接 new，须经类型实参实例化）。</summary>
+        public bool IsGenericDefinition => TypeParameters.Length > 0;
 
         public bool IsStatic => IsAbstract && IsSealed;
 
@@ -84,10 +112,24 @@ namespace Cocoa.CodeAnalysis.Symbols
         internal void AddBaseInterface(ClassTypeSymbol interfaceType) => _baseInterfaces.Add(interfaceType);
 
         /// <summary>类/接口直接列出的接口（不含继承）。</summary>
-        public ImmutableArray<ClassTypeSymbol> Interfaces => _interfaces.ToImmutableArray();
+        public ImmutableArray<ClassTypeSymbol> Interfaces
+        {
+            get
+            {
+                EnsureMembersMaterialized();
+                return _interfaces.ToImmutableArray();
+            }
+        }
 
         /// <summary>接口直接继承的基接口（不含递归）。</summary>
-        public ImmutableArray<ClassTypeSymbol> BaseInterfaces => _baseInterfaces.ToImmutableArray();
+        public ImmutableArray<ClassTypeSymbol> BaseInterfaces
+        {
+            get
+            {
+                EnsureMembersMaterialized();
+                return _baseInterfaces.ToImmutableArray();
+            }
+        }
 
         /// <summary>全部接口（本类直接实现 + 基类链 + 接口继承链，去重）。</summary>
         public ImmutableArray<ClassTypeSymbol> GetAllInterfaces()
@@ -112,21 +154,45 @@ namespace Cocoa.CodeAnalysis.Symbols
                 return;
             }
 
+            iface.EnsureMembersMaterialized();
+
             foreach (var baseIface in iface._baseInterfaces)
             {
                 CollectInterfaceHierarchy(baseIface, seen);
             }
         }
 
-        public ImmutableArray<FieldSymbol> Fields => _fields.ToImmutable();
+        public ImmutableArray<FieldSymbol> Fields
+        {
+            get
+            {
+                EnsureMembersMaterialized();
+                return _fields.ToImmutable();
+            }
+        }
 
-        public ImmutableArray<FunctionSymbol> Methods => _methods.ToImmutable();
+        public ImmutableArray<FunctionSymbol> Methods
+        {
+            get
+            {
+                EnsureMembersMaterialized();
+                return _methods.ToImmutable();
+            }
+        }
 
-        public ImmutableArray<PropertySymbol> Properties => _properties.ToImmutable();
+        public ImmutableArray<PropertySymbol> Properties
+        {
+            get
+            {
+                EnsureMembersMaterialized();
+                return _properties.ToImmutable();
+            }
+        }
 
         /// <summary>本类直接声明的属性（不含基类）。</summary>
         public PropertySymbol? GetDeclaredProperty(string name)
         {
+            EnsureMembersMaterialized();
             foreach (var property in _properties)
             {
                 if (property.Name == name)
@@ -141,8 +207,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>属性查找（沿继承链向上，含接口继承链）。</summary>
         public PropertySymbol? GetProperty(string name)
         {
+            EnsureMembersMaterialized();
             for (var type = this; type != null; type = type.BaseType)
             {
+                type.EnsureMembersMaterialized();
                 foreach (var property in type._properties)
                 {
                     if (property.Name == name)
@@ -176,6 +244,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>本类直接声明的字段（不含基类）。</summary>
         public FieldSymbol? GetDeclaredField(string name)
         {
+            EnsureMembersMaterialized();
             foreach (var field in _fields)
             {
                 if (field.Name == name)
@@ -190,6 +259,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>本类直接声明的方法（不含基类）。</summary>
         public FunctionSymbol? GetDeclaredMethod(string name)
         {
+            EnsureMembersMaterialized();
             foreach (var method in _methods)
             {
                 if (method.Name == name)
@@ -206,6 +276,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         {
             for (var type = this; type != null; type = type.BaseType)
             {
+                type.EnsureMembersMaterialized();
                 var field = type.GetDeclaredField(name);
                 if (field != null)
                 {
@@ -219,8 +290,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>方法查找（沿继承链向上，含接口继承链）。</summary>
         public FunctionSymbol? GetMethod(string name)
         {
+            EnsureMembersMaterialized();
             for (var type = this; type != null; type = type.BaseType)
             {
+                type.EnsureMembersMaterialized();
                 var method = type.GetDeclaredMethod(name);
                 if (method != null)
                 {
@@ -252,9 +325,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>全部同名方法（含重载，沿继承链向上）：静态容器类方法调用按参数类型解析重载（6e-M18）。</summary>
         public ImmutableArray<FunctionSymbol> GetMethods(string name)
         {
+            EnsureMembersMaterialized();
             var builder = ImmutableArray.CreateBuilder<FunctionSymbol>();
             for (var type = this; type != null; type = type.BaseType)
             {
+                type.EnsureMembersMaterialized();
                 foreach (var method in type.GetDeclaredMethods(name))
                 {
                     builder.Add(method);
@@ -291,6 +366,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>是否已声明同名同签名方法（重载按参数类型逐一比较，6e-M18 容器类重载支持）。</summary>
         internal bool HasDeclaredMethodSignature(string name, FunctionSymbol candidate)
         {
+            EnsureMembersMaterialized();
             foreach (var method in GetDeclaredMethods(name))
             {
                 if (method.Parameters.Length != candidate.Parameters.Length)
@@ -381,9 +457,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>this 是否为 base（含同一类型）或其派生类型（防循环继承死循环）。</summary>
         public bool IsBaseOf(ClassTypeSymbol type)
         {
+            EnsureMembersMaterialized();
             var seen = new System.Collections.Generic.HashSet<ClassTypeSymbol>();
             for (var current = type; current != null && seen.Add(current); current = current.BaseType)
             {
+                current.EnsureMembersMaterialized();
                 if (current == this)
                 {
                     return true;

@@ -126,6 +126,13 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>6e-M20：泛型定义须带类型实参才能作具体类型使用（`var x: List` → `List<int>`）。</summary>
+        public void ReportGenericDefinitionRequiresTypeArguments(TextLocation location, string name)
+        {
+            var message = $"Using the generic type '{name}' requires type arguments (e.g. '{name}<int>').";
+            ReportError(location, message);
+        }
+
         public void ReportCannotConvert(TextLocation location, TypeSymbol fromType, TypeSymbol toType)
         {
             var message = $"Cannot convert type '{fromType}' to '{toType}'.";

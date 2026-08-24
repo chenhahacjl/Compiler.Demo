@@ -2300,11 +2300,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.ArrayOf(elementType);
             }
 
-            // 泛型类型实参（6e-M20 G0）：语法已落地，绑定在 G1/G2 接管——先行明确诊断，防错绑
+            // 泛型类型实参（6e-M20）：解析定义 → 绑定实参 → 实例化去重（约束校验在实例化期，G2）
             if (syntax is GenericTypeClauseSyntax genericTypeClause)
             {
-                _diagnostics.ReportGenericBindingNotYetSupported(genericTypeClause.Location, genericTypeClause.DisplayName);
-                return null;
+                return BindGenericTypeClause(genericTypeClause);
             }
 
             var type = LookupType(syntax.Identifier.Text);
@@ -2320,7 +2319,54 @@ namespace Cocoa.CodeAnalysis.Binding
                 return null;
             }
 
+            // 裸泛型定义不可作具体类型使用（`var x: List` → 须 `List<int>`）
+            if (type is ClassTypeSymbol { IsGenericDefinition: true })
+            {
+                _diagnostics.ReportGenericDefinitionRequiresTypeArguments(syntax.Identifier.Location, type.Name);
+                return null;
+            }
+
             return type;
+        }
+
+        /// <summary>
+        /// 泛型类型子句绑定（6e-M20）：`List&lt;int&gt;` / 嵌套 `List&lt;List&lt;int&gt;&gt;`。
+        /// 定义查找 → 实参逐一绑定 → 元数校验 → 实例化去重缓存。约束校验于实例化期（G2）。
+        /// </summary>
+        private TypeSymbol? BindGenericTypeClause(GenericTypeClauseSyntax syntax)
+        {
+            var definition = LookupType(syntax.Identifier.Text) as ClassTypeSymbol;
+            if (definition == null)
+            {
+                _diagnostics.ReportUndefinedType(syntax.Identifier.Location, syntax.Identifier.Text);
+                return null;
+            }
+
+            if (!definition.IsGenericDefinition)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"'{definition.Name}' 不是泛型类型，不能带类型实参。");
+                return null;
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<TypeSymbol>();
+            foreach (var argumentSyntax in syntax.TypeArguments)
+            {
+                var argument = BindTypeClause(argumentSyntax);
+                if (argument == null)
+                {
+                    return null;
+                }
+
+                arguments.Add(argument);
+            }
+
+            if (arguments.Count != definition.TypeParameters.Length)
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"泛型类型 '{definition.Name}' 需要 {definition.TypeParameters.Length} 个类型实参，但提供了 {arguments.Count} 个。");
+                return null;
+            }
+
+            return GenericTypeInstantiator.Instantiate(definition, arguments.ToImmutable());
         }
 
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
