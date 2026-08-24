@@ -2811,11 +2811,28 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.ArrayOf(elementType);
             }
 
-            // 函数类型（6e-M22 C2）：语法已解析，符号层 FunctionTypeSymbol 于 C3 接入
-            if (syntax.Kind == SyntaxKind.FunctionType)
+            // 函数类型（6e-M22 C3）：`(A, B) -> R` → 结构化 FunctionTypeSymbol（工厂缓存同形状同实例）
+            if (syntax is FunctionTypeSyntax functionType)
             {
-                _diagnostics.ReportError(syntax.Location, "函数类型 '(A, B) -> R' 的绑定将于 6e-M22 C3 接入（当前为语法层预览）。");
-                return null;
+                var functionParameters = ImmutableArray.CreateBuilder<TypeSymbol>();
+                foreach (var parameterClause in functionType.ParameterTypes)
+                {
+                    var parameterType = BindTypeClause(parameterClause);
+                    if (parameterType == null)
+                    {
+                        return null;
+                    }
+
+                    functionParameters.Add(parameterType);
+                }
+
+                var boundReturnType = BindTypeClause(functionType.ReturnType);
+                if (boundReturnType == null)
+                {
+                    return null;
+                }
+
+                return FunctionTypeSymbol.Get(functionParameters.ToImmutable(), boundReturnType);
             }
 
             // 泛型类型实参（6e-M20）：解析定义 → 绑定实参 → 实例化去重（约束校验在实例化期，G2）
@@ -2853,6 +2870,88 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>Monomorphizer 专用：泛型方法实参子句绑定（任意类型子句）。</summary>
         internal TypeSymbol? BindTypeClauseForExpansion(TypeClauseSyntax syntax) => BindTypeClause(syntax);
 
+        /// <summary>
+        /// 内建委托家族解析（6e-M22 C3，设计 §2.3）：编译器预合成、零 stdlib 依赖、两方言共享。
+        /// `Func&lt;A1..An,R&gt;` = (A..) -&gt; R（1~16 参）；`Action&lt;A1..An&gt;` = (A..) -&gt; void（0~16 参）；
+        /// `Predicate&lt;T&gt;` = (T) -&gt; bool。非家族名返回 null 回落常规查找；命中但元数/绑定失败报诊断返回 Error 壳。
+        /// </summary>
+        private TypeSymbol? TryResolveDelegateFamily(SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
+        {
+            var name = identifier.Text;
+
+            if (name != "Func" && name != "Action" && name != "Predicate")
+            {
+                return null;
+            }
+
+            switch (name)
+            {
+                case "Func":
+                    if (argumentClauses.Length < 2 || argumentClauses.Length > 17)
+                    {
+                        _diagnostics.ReportError(identifier.Location, $"Func 需要 2~17 个类型实参（末位为返回类型，至多 16 个参数），实际 {argumentClauses.Length} 个。");
+                        return TypeSymbol.Error;
+                    }
+
+                    return BindDelegateFamilyShape(argumentClauses, returnTypeFromLastArgument: true);
+
+                case "Action":
+                    if (argumentClauses.Length > 16)
+                    {
+                        _diagnostics.ReportError(identifier.Location, $"Action 至多 16 个类型实参，实际 {argumentClauses.Length} 个。");
+                        return TypeSymbol.Error;
+                    }
+
+                    return BindDelegateFamilyShape(argumentClauses, returnTypeFromLastArgument: false);
+
+                default: // Predicate
+                    if (argumentClauses.Length != 1)
+                    {
+                        _diagnostics.ReportError(identifier.Location, $"Predicate 需要恰好 1 个类型实参，实际 {argumentClauses.Length} 个。");
+                        return TypeSymbol.Error;
+                    }
+
+                    var predicateParameter = BindTypeClauseForExpansion(argumentClauses[0]);
+                    if (predicateParameter == null)
+                    {
+                        return TypeSymbol.Error;
+                    }
+
+                    return FunctionTypeSymbol.Get(ImmutableArray.Create(predicateParameter), TypeSymbol.Boolean);
+            }
+        }
+
+        /// <summary>家族形状绑定：逐实参绑定 → Func 取末位为返回类型 / Action 返回 void。</summary>
+        private TypeSymbol? BindDelegateFamilyShape(ImmutableArray<TypeClauseSyntax> argumentClauses, bool returnTypeFromLastArgument)
+        {
+            var parameterCount = returnTypeFromLastArgument ? argumentClauses.Length - 1 : argumentClauses.Length;
+            var parameters = ImmutableArray.CreateBuilder<TypeSymbol>(parameterCount);
+
+            for (var i = 0; i < parameterCount; i++)
+            {
+                var parameterType = BindTypeClauseForExpansion(argumentClauses[i]);
+                if (parameterType == null)
+                {
+                    return TypeSymbol.Error;
+                }
+
+                parameters.Add(parameterType);
+            }
+
+            if (!returnTypeFromLastArgument)
+            {
+                return FunctionTypeSymbol.Get(parameters.ToImmutable(), TypeSymbol.Void);
+            }
+
+            var returnType = BindTypeClauseForExpansion(argumentClauses[^1]);
+            if (returnType == null)
+            {
+                return TypeSymbol.Error;
+            }
+
+            return FunctionTypeSymbol.Get(parameters.ToImmutable(), returnType);
+        }
+
         /// <summary>Monomorphizer 专用：泛型类型名绑定（new/调用站点的 Identifier+实参列表，命中同一缓存壳）。</summary>
         internal TypeSymbol? BindGenericTypeNameForExpansion(SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses) => BindGenericTypeName(identifier, argumentClauses);
 
@@ -2870,6 +2969,13 @@ namespace Cocoa.CodeAnalysis.Binding
         /// </summary>
         private TypeSymbol? BindGenericTypeName(SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
         {
+            // 内建委托家族（6e-M22 C3）：Func<…>/Action<…>/Predicate<T> → 结构化函数类型（两方言共享拼写）
+            var familyResult = TryResolveDelegateFamily(identifier, argumentClauses);
+            if (familyResult != null)
+            {
+                return familyResult;
+            }
+
             var definition = LookupType(identifier.Text) as ClassTypeSymbol;
             if (definition == null)
             {
@@ -5294,8 +5400,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 if (expression.Type != TypeSymbol.Error && type != TypeSymbol.Error)
                 {
-                    System.Console.Error.WriteLine("[CV] cannot convert " + expression.Type.Name + " -> " + type.Name);
-                _diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
+                    _diagnostics.ReportCannotConvert(diagnosticLocation, expression.Type, type);
                 }
 
                 return new BoundErrorExpression(expression.Syntax);

@@ -156,12 +156,13 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         }
 
         [Fact]
-        public void Binder_FunctionType_GateDiagnosed()
+        public void Binder_FunctionType_BindsCleanly()
         {
+            // C3：函数类型符号层接入——仅声明不调用，绑定零诊断
             var tree = SyntaxTree.Parse("function apply(f: (i64) -> i64): void { }");
             var compilation = Compilation.Create(tree);
             var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<VariableSymbol, object>());
-            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("C3"));
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
         }
 
         // ------------------------------------------------------------------
