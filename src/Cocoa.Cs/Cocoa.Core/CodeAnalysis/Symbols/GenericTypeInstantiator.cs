@@ -131,6 +131,9 @@ namespace Cocoa.CodeAnalysis.Symbols
                 IsSealed = method.IsSealed,
                 IsStatic = method.IsStatic,
                 IsConstructor = method.IsConstructor,
+                // 方法级类型参数原样保留（6e-M22 C1）：类实例化仅替换类参数，方法自己的 <U> 仍是模板，
+                // 签名中的类参数已被替换、U 引用保持开放——调用期经 GenericMethodInstantiator 二次实例化
+                TypeParameters = method.TypeParameters,
             };
         }
         /// <summary>

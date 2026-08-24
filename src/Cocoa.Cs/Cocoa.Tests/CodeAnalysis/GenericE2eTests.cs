@@ -131,8 +131,117 @@ function Main(): i32
     return 0
 }";
 
-        private const string ForeachProgram = @"using System
+        // 6e-M22 C1：实例泛型方法（非泛型类成员模板）
+        private const string MemberGenericProgram = @"using System
 
+public class Picker
+{
+    public function Pick<T>(a: T, b: T): T
+    {
+        return a
+    }
+}
+
+function Main(): i32
+{
+    var picker = new Picker()
+    Console.WriteLine(picker.Pick<i32>(11, 22))
+    Console.WriteLine(picker.Pick<string>(""win"", ""lose""))
+
+    if picker.Pick<i32>(5, 6) != 5
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        // 6e-M22 C1：类静态泛型方法（点号访问）
+        private const string StaticGenericMethodProgram = @"using System
+
+public class Codec
+{
+    public static function Second<T>(a: T, b: T): T
+    {
+        return b
+    }
+}
+
+function Main(): i32
+{
+    Console.WriteLine(Codec.Second<i32>(1, 2))
+    Console.WriteLine(Codec.Second<string>(""x"", ""y""))
+
+    if Codec.Second<i32>(9, 8) != 8
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        // 6e-M22 C1：命名空间限定泛型函数
+        private const string NamespaceGenericFunctionProgram = @"using System
+
+namespace MyUtil
+{
+    function FirstOf<T>(a: T, b: T): T
+    {
+        return a
+    }
+}
+
+function Main(): i32
+{
+    Console.WriteLine(MyUtil.FirstOf<i32>(3, 4))
+    Console.WriteLine(MyUtil.FirstOf<string>(""m"", ""n""))
+
+    if MyUtil.FirstOf<i32>(7, 6) != 7
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        // 6e-M22 C1：泛型类成员泛型方法（类实例化携带方法级类型参数模板 + 二次实例化）
+        private const string GenericClassMemberTemplateProgram = @"using System
+
+public class Box<T>
+{
+    private _value: T
+
+    public constructor(value: T)
+    {
+        _value = value
+    }
+
+    public function Get(): T
+    {
+        return _value
+    }
+
+    public function Echo<U>(value: U): U
+    {
+        return value
+    }
+}
+
+function Main(): i32
+{
+    var box = new Box<string>(""payload"")
+    Console.WriteLine(box.Get())
+    Console.WriteLine(box.Echo<i32>(77))
+
+    if box.Echo<i32>(42) != 42
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        private const string ForeachProgram = @"using System
 namespace System.Collections.Generic
 {
 
@@ -290,11 +399,218 @@ function Main(): i32
         }
 
         [Fact]
+        public void Evaluator_MemberGenericMethod_ReturnsZero()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(MemberGenericProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_StaticGenericMethod_ReturnsZero()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(StaticGenericMethodProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_NamespaceGenericFunction_ReturnsZero()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(NamespaceGenericFunctionProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_GenericClassMemberTemplate_ReturnsZero()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(GenericClassMemberTemplateProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        // 6e-M22 C1 负例：成员泛型方法元数不匹配
+        [Fact]
+        public void Evaluator_MemberGenericMethod_WrongArity_Diagnosed()
+        {
+            var code = @"using System
+
+public class Picker
+{
+    public function Pick<T>(a: T, b: T): T
+    {
+        return a
+    }
+}
+
+function Main()
+{
+    var picker = new Picker()
+    Console.WriteLine(picker.Pick<i32, string>(1, 2))
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("2 个类型实参"));
+        }
+
+        // 6e-M22 C1 负例：成员泛型方法约束违约
+        [Fact]
+        public void Evaluator_MemberGenericMethod_ConstraintViolation_Diagnosed()
+        {
+            var code = @"using System
+
+public class Holder
+{
+    public function Grab<T>(value: T): T where T: class
+    {
+        return value
+    }
+}
+
+function Main()
+{
+    var holder = new Holder()
+    Console.WriteLine(holder.Grab<i32>(5))
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("where T: class"));
+        }
+
+        // 6e-M22 C1：where T: struct 正例（值类型实参通过；运算符不作用于开放 T，仅按 T 值传递）
+        private const string StructConstraintProgram = @"using System
+
+public function Head<T>(values: T[]): T where T: struct
+{
+    return values[0]
+}
+
+function Main(): i32
+{
+    var numbers = new i32[] { 10, 20, 12 }
+    Console.WriteLine(Head<i32>(numbers))
+
+    var wides = new i64[] { 10, 30 }
+    if Head<i64>(wides) != 10
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_StructConstraint_AcceptsPrimitives()
+        {
+            var compilation = Compilation.Create(SyntaxTree.Parse(StructConstraintProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Il_StructConstraint_AcceptsPrimitives()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(StructConstraintProgram, "generic_struct_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_StructConstraint_AcceptsPrimitives(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(StructConstraintProgram, "generic_struct_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\n", stdout);
+        }
+
+        // 6e-M22 C1 负例：struct 约束违约（string 是引用类型）
+        [Fact]
+        public void Evaluator_StructConstraint_RejectsReferenceType()
+        {
+            var code = @"using System
+
+public class Values
+{
+    public static function Head<T>(values: T[]): T where T: struct
+    {
+        return values[0]
+    }
+}
+
+function Main()
+{
+    Console.WriteLine(Values.Head<string>(new string[] { ""nope"" }))
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("where T: struct"));
+        }
+
+        // 6e-M22 C1 负例：class 与 struct 约束互斥
+        [Fact]
+        public void Evaluator_StructAndClassConstraints_Conflict_Diagnosed()
+        {
+            var code = @"using System
+
+public function Only<T>(value: T): T where T: struct where T: class
+{
+    return value
+}
+
+function Main()
+{
+    Console.WriteLine(Only<i32>(1))
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("'struct' 与 'class' 约束"));
+        }
+
+        [Fact]
         public void Il_ForeachEnumerator_WritesValues()
         {
             var (exitCode, stdout) = EmitIlAndRun(ForeachProgram, "generic_foreach_il");
             Assert.Equal(0, exitCode);
             Assert.Equal("60\na\nb\n", stdout);
+        }
+
+        [Fact]
+        public void Il_MemberGenericMethod_WritesValues()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(MemberGenericProgram, "generic_member_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("11\nwin\n", stdout);
+        }
+
+        [Fact]
+        public void Il_StaticGenericMethod_WritesValues()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(StaticGenericMethodProgram, "generic_static_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("2\ny\n", stdout);
+        }
+
+        [Fact]
+        public void Il_NamespaceGenericFunction_WritesValues()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(NamespaceGenericFunctionProgram, "generic_ns_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("3\nm\n", stdout);
+        }
+
+        [Fact]
+        public void Il_GenericClassMemberTemplate_WritesValues()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(GenericClassMemberTemplateProgram, "generic_cls_member_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("payload\n77\n", stdout);
         }
 
         [Fact]
@@ -418,6 +734,42 @@ function Main()
             var (exitCode, stdout) = EmitNativeAndRun(ForeachProgram, "generic_foreach_native", (TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("60\na\nb\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_MemberGenericMethod_WritesValues(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(MemberGenericProgram, "generic_member_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("11\nwin\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_StaticGenericMethod_WritesValues(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(StaticGenericMethodProgram, "generic_static_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("2\ny\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_NamespaceGenericFunction_WritesValues(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(NamespaceGenericFunctionProgram, "generic_ns_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("3\nm\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void Native_GenericClassMemberTemplate_WritesValues(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(GenericClassMemberTemplateProgram, "generic_cls_member_native", (TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("payload\n77\n", stdout);
         }
 
         private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, TargetPlatform platform)

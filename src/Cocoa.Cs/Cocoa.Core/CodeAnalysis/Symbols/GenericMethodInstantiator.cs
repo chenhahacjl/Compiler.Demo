@@ -11,6 +11,25 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         private static readonly ConcurrentDictionary<string, FunctionSymbol> _cache = new();
 
+        // 溯源表（6e-M22 C1）：实例化方法 → (定义, 实参)。Monomorphizer 走查绑定树时经此取重绑所需映射，
+        // 免去语法层接收者复解析（局部变量类型在辅助 Binder 中不可见）
+        private static readonly ConcurrentDictionary<FunctionSymbol, (FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)> _provenance = new();
+
+        /// <summary>实例化方法是否可溯源；成功输出定义符号与类型实参。</summary>
+        internal static bool TryGetProvenance(FunctionSymbol instantiated, out FunctionSymbol definition, out ImmutableArray<TypeSymbol> arguments)
+        {
+            if (_provenance.TryGetValue(instantiated, out var entry))
+            {
+                definition = entry.Definition;
+                arguments = entry.Arguments;
+                return true;
+            }
+
+            definition = null!;
+            arguments = default;
+            return false;
+        }
+
         public static FunctionSymbol Instantiate(FunctionSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {
             if (!definition.IsGenericMethod)
@@ -78,6 +97,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             };
 
             _cache[key] = instantiated;
+            _provenance[instantiated] = (definition, arguments);
 
             return instantiated;
         }

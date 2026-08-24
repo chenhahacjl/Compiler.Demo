@@ -31,5 +31,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>`class` 引用类型约束。</summary>
         public bool HasReferenceTypeConstraint { get; internal set; }
+
+        /// <summary>`struct` 值类型约束（6e-M22 C1）：基元数值/bool/char + enum（语言暂无用户 struct）。</summary>
+        public bool HasValueTypeConstraint { get; internal set; }
     }
 }

@@ -1,11 +1,11 @@
-﻿using Cocoa.CodeAnalysis.Cod;
+﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
-{
-    /// <summary>
+{    /// <summary>
     /// 单态化展开器（6e-M20 G2）：
     /// <list type="number">
     /// <item><b>活实例化收集</b>：扫描本编译全部声明语法（类/接口/函数/全局语句）中的 GenericTypeClauseSyntax，
@@ -42,36 +42,72 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            foreach (var (identifier, argumentClauses) in CollectGenericMethodUsages(globalScope))
+            // 2. 泛型方法种子（6e-M22 C1）：主绑定已把 `Swap<i32>(…)`/`list.Pick<T>(…)` 落成具体方法符号
+            //    （顶层调用 / 类静态 / 实例接收者三路同构），走查已绑定函数体经实例化溯源表取 (定义, 实参)。
+            //    重绑产出的新函数体可能再引用其他泛型方法——工作表循环至不动点。
+            var pendingBodies = new Queue<BoundNode>();
+            foreach (var statement in globalScope.Statements)
             {
-                var definition = helperBinder.ResolveGenericMethodDefinitionForExpansion(identifier.Text, argumentClauses.Length);
-                if (definition == null)
+                pendingBodies.Enqueue(statement);
+            }
+
+            foreach (var fn in functionBodies.Keys)
+            {
+                pendingBodies.Enqueue(functionBodies[fn]);
+            }
+
+            var processedMethodSeeds = new HashSet<FunctionSymbol>();
+
+            while (true)
+            {
+                var discovered = false;
+
+                while (pendingBodies.Count > 0)
                 {
-                    continue;
+                    foreach (var node in WalkBoundNodes(pendingBodies.Dequeue()))
+                    {
+                        var instantiated = node switch
+                        {
+                            BoundCallExpression call => call.Function,
+                            BoundMemberCallExpression memberCall => memberCall.Method,
+                            _ => null,
+                        };
+
+                        if (instantiated != null && seenMethods.Add(instantiated) &&
+                            GenericMethodInstantiator.TryGetProvenance(instantiated, out var seedDefinition, out var seedArguments))
+                        {
+                            methodSeeds.Add((instantiated, seedDefinition, seedArguments));
+                            discovered = true;
+                        }
+                    }
                 }
 
-                var arguments = ImmutableArray.CreateBuilder<TypeSymbol>();
-                var valid = true;
-                foreach (var clause in argumentClauses)
+                if (!discovered)
                 {
-                    if (helperBinder.BindTypeClauseForExpansion(clause) is not TypeSymbol argument)
+                    break;
+                }
+
+                for (var i = 0; i < methodSeeds.Count; i++)
+                {
+                    var (instantiatedMethod, methodDefinition, methodArguments) = methodSeeds[i];
+                    if (!processedMethodSeeds.Add(instantiatedMethod))
                     {
-                        valid = false;
-                        break;
+                        continue;
                     }
 
-                    arguments.Add(argument);
-                }
+                    var typeArgumentsByName = BuildNameMap(methodDefinition.TypeParameters, methodArguments, methodDefinition.Declaration, diagnostics);
+                    if (typeArgumentsByName == null)
+                    {
+                        continue;
+                    }
 
-                if (!valid)
-                {
-                    continue;
-                }
+                    var (methodBody, methodBodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
+                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, dialect, typeArgumentsByName);
 
-                var instantiated = GenericMethodInstantiator.Instantiate(definition, arguments.ToImmutable());
-                if (seenMethods.Add(instantiated))
-                {
-                    methodSeeds.Add((instantiated, definition, arguments.ToImmutable()));
+                    functionBodies[instantiatedMethod] = methodBody;
+                    diagnostics.AddRange(methodBodyDiagnostics);
+
+                    pendingBodies.Enqueue(methodBody);
                 }
             }
 
@@ -119,6 +155,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     var instantiatedMethod = instantiated.Methods[i];
 
+                    // 方法级泛型模板（6e-M22 C1）：类实例化携带的 <U> 模板不重绑不发射——
+                    // 开放类型参数签名无法编码，调用点经 GenericMethodInstantiator 产出具体副本走溯源不动点
+                    if (instantiatedMethod.IsGenericMethod)
+                    {
+                        continue;
+                    }
+
                     if (instantiatedMethod.IsExtern || instantiatedMethod.IsAbstract || instantiatedMethod.BuiltinKind != null)
                     {
                         functionBodies[instantiatedMethod] = new BoundBlockStatement(instantiatedMethod.Declaration!, ImmutableArray<BoundStatement>.Empty);
@@ -158,22 +201,6 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 3.5 泛型方法体重绑（6e-M20）：Swap<int> → Swap$int，定义语法 + 方法类型参数名→实参映射
-            foreach (var (instantiatedMethod, definition, arguments) in methodSeeds)
-            {
-                var typeArgumentsByName = BuildNameMap(definition.TypeParameters, arguments, definition.Declaration, diagnostics);
-                if (typeArgumentsByName == null)
-                {
-                    continue;
-                }
-
-                var (body, bodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                    isScript, parentScope, instantiatedMethod, globalScope, codLibraries, dialect, typeArgumentsByName);
-
-                functionBodies[instantiatedMethod] = body;
-                diagnostics.AddRange(bodyDiagnostics);
-            }
-
             // 4. 发射清单：过滤泛型定义（模板）+ 并入活实例化
             var builder = FilterDeclaredClasses(globalScope).ToBuilder();
             builder.AddRange(live);
@@ -206,20 +233,16 @@ namespace Cocoa.CodeAnalysis.Binding
             return map;
         }
 
-        /// <summary>
-        /// 扫描泛型方法调用站点（6e-M20）：`Swap&lt;int&gt;(…)`——CallExpressionSyntax 的显式实参。
-        /// 返回 (方法名 token, 实参子句列表) 对。
-        /// </summary>
-        private static IEnumerable<(SyntaxToken Identifier, ImmutableArray<TypeClauseSyntax> Arguments)> CollectGenericMethodUsages(BoundGlobalScope globalScope)
+        /// <summary>绑定树先序走查（6e-M22 C1）：泛型方法种子收集用；子节点经 Compilation.BoundChildren。</summary>
+        private static IEnumerable<BoundNode> WalkBoundNodes(BoundNode root)
         {
-            foreach (var root in CollectDeclarationRoots(globalScope))
+            yield return root;
+
+            foreach (var child in Compilation.BoundChildren(root))
             {
-                foreach (var node in Walk(root))
+                foreach (var descendant in WalkBoundNodes(child))
                 {
-                    if (node is CallExpressionSyntax call && call.TypeArguments != null)
-                    {
-                        yield return (call.Identifier, call.TypeArguments.Arguments);
-                    }
+                    yield return descendant;
                 }
             }
         }

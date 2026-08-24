@@ -1041,7 +1041,26 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     if (text == "class")
                     {
+                        if (target.HasValueTypeConstraint)
+                        {
+                            _diagnostics.ReportError(constraintSyntax.Location, $"类型参数 '{parameterName}' 不能同时具有 'struct' 与 'class' 约束。");
+                            continue;
+                        }
+
                         target.HasReferenceTypeConstraint = true;
+                        continue;
+                    }
+
+                    // struct 值类型约束（6e-M22 C1）：非关键字，按约束文本特判（与 C# 一致保留字面）
+                    if (text == "struct")
+                    {
+                        if (target.HasReferenceTypeConstraint)
+                        {
+                            _diagnostics.ReportError(constraintSyntax.Location, $"类型参数 '{parameterName}' 不能同时具有 'class' 与 'struct' 约束。");
+                            continue;
+                        }
+
+                        target.HasValueTypeConstraint = true;
                         continue;
                     }
 
@@ -2891,36 +2910,184 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            var arguments = ImmutableArray.CreateBuilder<TypeSymbol>();
-            foreach (var argumentSyntax in syntax.TypeArguments.Arguments)
+            var instantiated = InstantiateGenericMethod(errorLocation, identifier, definition, syntax.TypeArguments.Arguments, syntax.Arguments.Count);
+            if (instantiated == null)
             {
-                var argument = BindTypeClause(argumentSyntax);
-                if (argument == null)
+                return new BoundErrorExpression(syntax);
+            }
+
+            return new BoundCallExpression(syntax, instantiated, BindGenericMethodArguments(syntax.Arguments, instantiated));
+        }
+
+        /// <summary>
+        /// 成员/类静态泛型方法显式实参调用（6e-M22 C1）：list.Pick&lt;T&gt;(…) / Json.Swap&lt;T&gt;(…) / MyNs.Swap&lt;T&gt;(…)。
+        /// 三路与 <see cref="BindMemberCallExpression"/> 同优先级：命名空间/别名限定函数 → 类静态泛型 → 实例接收者泛型；
+        /// 恰一候选规则与顶层路径一致。
+        /// </summary>
+        private BoundExpression BindGenericMemberMethodCall(MemberCallExpressionSyntax syntax)
+        {
+            var identifier = syntax.IdentifierToken.Text;
+            var errorLocation = syntax.TypeArguments!.Location;
+            var arity = syntax.TypeArguments.Arguments.Length;
+
+            // 路径一：命名空间/using 别名限定函数（先于类型名，避免 .NET 真实类型劫持——与普通成员调用同序）
+            var prefix = ResolveDottedTypeName(syntax.Expression);
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                var candidates = ResolveDottedFunctionCandidates(prefix!, identifier);
+                if (candidates != null)
+                {
+                    var matches = candidates.Value
+                        .Where(f => f.IsGenericMethod && f.TypeParameters.Length == arity)
+                        .ToImmutableArray();
+
+                    if (matches.Length == 0)
+                    {
+                        _diagnostics.ReportError(errorLocation, $"找不到接受 {arity} 个类型实参的泛型函数 '{prefix}.{identifier}'。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    if (matches.Length > 1)
+                    {
+                        _diagnostics.ReportError(errorLocation, $"泛型函数 '{prefix}.{identifier}' 调用歧义。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    var nsInstantiated = InstantiateGenericMethod(errorLocation, identifier, matches[0], syntax.TypeArguments.Arguments, syntax.Arguments.Count);
+                    if (nsInstantiated == null)
+                    {
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    return new BoundCallExpression(syntax, nsInstantiated, BindGenericMethodArguments(syntax.Arguments, nsInstantiated));
+                }
+            }
+
+            // 路径二：类静态泛型方法（点号目标解析为类型名）
+            if (!string.IsNullOrEmpty(prefix) && LookupType(prefix!) is ClassTypeSymbol staticType)
+            {
+                if (staticType.IsGenericDefinition)
+                {
+                    _diagnostics.ReportError(errorLocation, $"泛型定义 '{staticType.FullName}' 的静态成员须经实例化访问，如 '{staticType.Name}<int>.{identifier}<…>(…)'。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var staticMatches = staticType.GetMethods(identifier)
+                    .Where(m => m.IsStatic && m.IsGenericMethod && m.TypeParameters.Length == arity && IsAccessibleMember(m.Visibility, staticType))
+                    .ToImmutableArray();
+
+                if (staticMatches.Length == 0)
+                {
+                    _diagnostics.ReportError(errorLocation, $"类型 '{staticType.FullName}' 上找不到接受 {arity} 个类型实参的静态泛型方法 '{identifier}'。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                if (staticMatches.Length > 1)
+                {
+                    _diagnostics.ReportError(errorLocation, $"静态泛型方法 '{staticType.FullName}.{identifier}' 调用歧义。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var staticInstantiated = InstantiateGenericMethod(errorLocation, identifier, staticMatches[0], syntax.TypeArguments.Arguments, syntax.Arguments.Count);
+                if (staticInstantiated == null)
                 {
                     return new BoundErrorExpression(syntax);
+                }
+
+                return new BoundMemberCallExpression(
+                    syntax,
+                    new BoundStaticTypeExpression(syntax.Expression, staticType),
+                    identifier,
+                    BindGenericMethodArguments(syntax.Arguments, staticInstantiated),
+                    staticInstantiated.ReturnType,
+                    staticInstantiated);
+            }
+
+            // 路径三：实例接收者泛型方法（receiver 类型上的模板；泛型类经实例化携带，见 SubstituteMethod）
+            var boundReceiver = BindExpression(syntax.Expression);
+            if (boundReceiver.Type == TypeSymbol.Error)
+            {
+                return new BoundErrorExpression(syntax);
+            }
+
+            if (boundReceiver.Type is ClassTypeSymbol receiverClass)
+            {
+                var instanceMatches = receiverClass.GetMethods(identifier)
+                    .Where(m => !m.IsStatic && m.IsGenericMethod && m.TypeParameters.Length == arity && IsAccessibleMember(m.Visibility, receiverClass))
+                    .ToImmutableArray();
+
+                if (instanceMatches.Length == 0)
+                {
+                    _diagnostics.ReportError(errorLocation, $"类型 '{receiverClass}' 上找不到接受 {arity} 个类型实参的实例泛型方法 '{identifier}'。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                if (instanceMatches.Length > 1)
+                {
+                    _diagnostics.ReportError(errorLocation, $"实例泛型方法 '{receiverClass}.{identifier}' 调用歧义。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var instanceInstantiated = InstantiateGenericMethod(errorLocation, identifier, instanceMatches[0], syntax.TypeArguments.Arguments, syntax.Arguments.Count);
+                if (instanceInstantiated == null)
+                {
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var isBase = boundReceiver is BoundBaseExpression;
+
+                return new BoundMemberCallExpression(
+                    syntax,
+                    boundReceiver,
+                    identifier,
+                    BindGenericMethodArguments(syntax.Arguments, instanceInstantiated),
+                    instanceInstantiated.ReturnType,
+                    instanceInstantiated,
+                    isBase);
+            }
+
+            _diagnostics.ReportNotAFunction(syntax.IdentifierToken.Location, identifier);
+            return new BoundErrorExpression(syntax);
+        }
+
+        /// <summary>泛型方法调用共享核心：类型实参绑定 → 实例化期约束校验 → 缓存实例化 → 元数校验。失败返回 null（诊断已报）。</summary>
+        private FunctionSymbol? InstantiateGenericMethod(TextLocation errorLocation, string displayName, FunctionSymbol definition, ImmutableArray<TypeClauseSyntax> typeArgumentClauses, int argumentCount)
+        {
+            var arguments = ImmutableArray.CreateBuilder<TypeSymbol>();
+            foreach (var clause in typeArgumentClauses)
+            {
+                var argument = BindTypeClause(clause);
+                if (argument == null)
+                {
+                    return null;
                 }
 
                 arguments.Add(argument);
             }
 
-            ValidateTypeArgumentConstraints(errorLocation, definition.TypeParameters, arguments.ToImmutable(), definition.Name);
+            ValidateTypeArgumentConstraints(errorLocation, definition.TypeParameters, arguments.ToImmutable(), displayName);
 
             var instantiated = GenericMethodInstantiator.Instantiate(definition, arguments.ToImmutable());
 
-            if (instantiated.Parameters.Length != syntax.Arguments.Count)
+            if (instantiated.Parameters.Length != argumentCount)
             {
-                _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, identifier, instantiated.Parameters.Length, syntax.Arguments.Count);
-                return new BoundErrorExpression(syntax);
+                _diagnostics.ReportWrongArgumentCount(errorLocation, displayName, instantiated.Parameters.Length, argumentCount);
+                return null;
             }
 
+            return instantiated;
+        }
+
+        /// <summary>泛型方法实参转换绑定（元数已由共享核心校验）。</summary>
+        private ImmutableArray<BoundExpression> BindGenericMethodArguments(SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, FunctionSymbol instantiated)
+        {
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
-            for (var i = 0; i < syntax.Arguments.Count; i++)
+            for (var i = 0; i < argumentSyntaxes.Count; i++)
             {
-                var boundArgument = BindConversion(syntax.Arguments[i].Location, BindExpression(syntax.Arguments[i]), instantiated.Parameters[i].Type);
-                boundArguments.Add(boundArgument);
+                boundArguments.Add(BindConversion(argumentSyntaxes[i].Location, BindExpression(argumentSyntaxes[i]), instantiated.Parameters[i].Type));
             }
 
-            return new BoundCallExpression(syntax, instantiated, boundArguments.ToImmutable());
+            return boundArguments.ToImmutable();
         }
 
         /// <summary>泛型方法定义解析：裸函数 → using 命名空间函数；元数须恰一候选。</summary>
@@ -3018,6 +3185,13 @@ namespace Cocoa.CodeAnalysis.Binding
                     continue;
                 }
 
+                // struct 值类型约束（6e-M22 C1）：基元数值/bool/char + enum
+                if (parameter.HasValueTypeConstraint && !IsValueType(argument))
+                {
+                    _diagnostics.ReportError(errorLocation, $"泛型 '{definitionName}' 的类型参数 '{parameter.Name}' 要求值类型（where {parameter.Name}: struct），但实参 '{argument.Name}' 不是值类型。");
+                    continue;
+                }
+
                 foreach (var constraint in parameter.ConstraintTypes)
                 {
                     if (constraint is not ClassTypeSymbol constraintClass)
@@ -3060,6 +3234,22 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return type == TypeSymbol.String || type == TypeSymbol.Any;
+        }
+
+        /// <summary>值类型判定（where T: struct，6e-M22 C1）：基元数值全集 + bool + char + enum；语言暂无用户 struct。</summary>
+        private static bool IsValueType(TypeSymbol type)
+        {
+            if (type is EnumTypeSymbol)
+            {
+                return true;
+            }
+
+            return type == TypeSymbol.Int8 || type == TypeSymbol.UInt8
+                || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16
+                || type == TypeSymbol.Int32 || type == TypeSymbol.UInt32
+                || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64
+                || type == TypeSymbol.Float || type == TypeSymbol.Double
+                || type == TypeSymbol.Boolean || type == TypeSymbol.Char;
         }
 
         private BoundStatement BindIfStatement(IfStatementSyntax syntax)
@@ -4278,11 +4468,10 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var identifier = syntax.IdentifierToken.Text;
 
-            // 泛型显式实参（6e-M20 G0）：单态化在 G2 接管——先行明确诊断
+            // 泛型显式实参（6e-M22 C1）：成员/类静态/命名空间限定三路实例化调用
             if (syntax.TypeArguments != null)
             {
-                _diagnostics.ReportGenericTypeArgumentsNotYetSupported(syntax.TypeArguments.Location, identifier);
-                return new BoundErrorExpression(syntax);
+                return BindGenericMemberMethodCall(syntax);
             }
 
             // 命名空间限定函数调用：System.Math.Max(...) / using System; + Math.Max(...)
@@ -4546,6 +4735,41 @@ namespace Cocoa.CodeAnalysis.Binding
                 return false;
             }
 
+            var candidates = ResolveDottedFunctionCandidates(prefix, identifier);
+
+            if (candidates == null)
+            {
+                return false;
+            }
+
+            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var argument in syntax.Arguments)
+            {
+                boundArguments.Add(BindExpression(argument));
+            }
+
+            var function = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, candidates.Value, boundArguments.ToImmutable());
+            if (function == null)
+            {
+                result = new BoundErrorExpression(syntax);
+                return true;
+            }
+
+            for (var i = 0; i < syntax.Arguments.Count; i++)
+            {
+                boundArguments[i] = BindConversion(syntax.Arguments[i].Location, boundArguments[i], function.Parameters[i].Type);
+            }
+
+            result = new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
+            return true;
+        }
+
+        /// <summary>
+        /// 点号前缀 → 函数候选解析（6e-M22 C1 自 TryBindNamespaceFunctionCall 抽取共用）：
+        /// using 别名目标（类静态/命名空间函数）→ 直接命名空间 → using 命名空间扩展。null = 前缀非函数形态。
+        /// </summary>
+        private ImmutableArray<FunctionSymbol>? ResolveDottedFunctionCandidates(string prefix, string identifier)
+        {
             ImmutableArray<FunctionSymbol>? candidates;
 
             // 别名前缀（6e-M18）：`using Con = System.Console;` + `Con.WriteLine(...)` → 类静态方法 / 命名空间函数
@@ -4573,31 +4797,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            if (candidates == null)
-            {
-                return false;
-            }
-
-            var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
-            foreach (var argument in syntax.Arguments)
-            {
-                boundArguments.Add(BindExpression(argument));
-            }
-
-            var function = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, candidates.Value, boundArguments.ToImmutable());
-            if (function == null)
-            {
-                result = new BoundErrorExpression(syntax);
-                return true;
-            }
-
-            for (var i = 0; i < syntax.Arguments.Count; i++)
-            {
-                boundArguments[i] = BindConversion(syntax.Arguments[i].Location, boundArguments[i], function.Parameters[i].Type);
-            }
-
-            result = new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
-            return true;
+            return candidates;
         }
 
         /// <summary>`using static <类>`：取目标类的静态方法候选（含访问性；目标非类返回 null）。</summary>
