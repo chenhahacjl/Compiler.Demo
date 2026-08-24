@@ -2811,6 +2811,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.ArrayOf(elementType);
             }
 
+            // 函数类型（6e-M22 C2）：语法已解析，符号层 FunctionTypeSymbol 于 C3 接入
+            if (syntax.Kind == SyntaxKind.FunctionType)
+            {
+                _diagnostics.ReportError(syntax.Location, "函数类型 '(A, B) -> R' 的绑定将于 6e-M22 C3 接入（当前为语法层预览）。");
+                return null;
+            }
+
             // 泛型类型实参（6e-M20）：解析定义 → 绑定实参 → 实例化去重（约束校验在实例化期，G2）
             if (syntax is GenericTypeClauseSyntax genericTypeClause)
             {
@@ -3914,6 +3921,15 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
                 case SyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case SyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
+
+                // Lambda（6e-M22 C2）：语法已解析，提升/函数值于 C4 接入
+                case SyntaxKind.LambdaExpression:
+                    {
+                        var lambda = (LambdaExpressionSyntax)syntax;
+                        _diagnostics.ReportError(lambda.Location, "lambda 表达式的绑定将于 6e-M22 C4 接入（当前为语法层预览）。");
+                        return new BoundErrorExpression(syntax);
+                    }
+
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }

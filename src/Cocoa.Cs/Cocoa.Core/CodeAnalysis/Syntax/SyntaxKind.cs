@@ -68,6 +68,7 @@ ColonToken,               // :
         MinusMinusToken,          // --
         QuestionToken,            // ?
         FatArrowToken,            // =>
+        ArrowToken,               // ->（6e-M22 C2 函数类型，仅 .co）
         IdentifierToken,         // 标识符
 
         // Keywords
@@ -148,6 +149,7 @@ ColonToken,               // :
         TypeClause,               // 类型 语句
         ArrayTypeClause,          // 数组类型
         GenericTypeClause,        // 泛型类型 List<int>（6e-M20）
+        FunctionType,             // 函数类型 (A,B) -> R（6e-M22 C2）
         TypeParameterList,        // 泛型类型参数列表 <T, U>（6e-M20）
         TypeArgumentList,         // 泛型类型实参列表 <int, string>（6e-M20）
         WhereClause,              // 泛型约束子句 where T: ...（6e-M20）
@@ -179,6 +181,7 @@ ColonToken,               // :
         BinaryExpression,         // 二元表达式
         CompoundAssignmentExpression, // 复合赋值表达式
         ParenthesizedExpression,  // 括号表达式
+        LambdaExpression,         // lambda (x: int) => x * 2（6e-M22 C2）
         CastExpression,           // 类型转换表达式
         AssignmentExpression,     // 赋值表达式
         PostfixIncrementExpression, // 后缀自增/自减表达式 i++/i--

@@ -319,6 +319,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                         _kind = SyntaxKind.MinusMinusToken;
                         _position++;
                     }
+                    else if (Current == '>')
+                    {
+                        // 函数类型箭头（6e-M22 C2）：`(int) -> int`；.cs 方言在解析层拒绝
+                        _position++;
+                        _kind = SyntaxKind.ArrowToken;
+                    }
                     else if (Current != '=')
                     {
                         _kind = SyntaxKind.MinusToken;

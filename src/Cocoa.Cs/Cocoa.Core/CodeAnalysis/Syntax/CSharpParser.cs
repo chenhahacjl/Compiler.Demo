@@ -32,6 +32,15 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override bool AllowCocoaInterfaceKeywords() => false;
 
+        /// <summary>6e-M22 C2：`.cs` 无箭头函数类型——回调类型走 Func/Action/Predicate 家族（C3 接入）。</summary>
+        protected override bool AllowArrowFunctionTypes() => false;
+
+        /// <summary>6e-M22 C2：`.cs` 支持免括号单参 lambda `x =&gt; expr`。</summary>
+        protected override bool AllowParenlessLambda() => true;
+
+        /// <summary>6e-M22 C2：`.cs` 支持隐式类型 lambda 参数 `(x, y) =&gt; …`。</summary>
+        protected override bool AllowImplicitLambdaParameters() => true;
+
         protected override void ConsumeStatementTerminator(StatementSyntax statement)
         {
             switch (statement)

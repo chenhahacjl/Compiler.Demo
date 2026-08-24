@@ -580,6 +580,17 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            // 6e-M22 C2：`-` 后跟 `>` 开头 token 会合并出箭头（`->` / `-->`）：须分隔
+            if (t1Kind == SyntaxKind.MinusToken && (
+                    t2Kind == SyntaxKind.ArrowToken ||
+                    t2Kind == SyntaxKind.GreaterToken ||
+                    t2Kind == SyntaxKind.GreaterOrEqualsToken ||
+                    t2Kind == SyntaxKind.ShiftRightToken ||
+                    t2Kind == SyntaxKind.ShiftRightEqualsToken))
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.StarToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;

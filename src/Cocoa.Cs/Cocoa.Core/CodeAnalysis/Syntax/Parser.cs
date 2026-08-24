@@ -289,6 +289,15 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>方言是否允许冒号 `:` 基类型/基接口（Cocoa 为 false，须用 extends；C# 为 true）。</summary>
         protected virtual bool AllowColonInheritance() => true;
 
+        /// <summary>函数类型 `(A,B) -&gt; R`（6e-M22 C2）：仅 .co；.cs 走 Func/Action/Predicate 家族拼写。</summary>
+        protected virtual bool AllowArrowFunctionTypes() => true;
+
+        /// <summary>免括号单参 lambda `x =&gt; expr`（6e-M22 C2）：仅 .cs。</summary>
+        protected virtual bool AllowParenlessLambda() => false;
+
+        /// <summary>lambda 隐式类型参数 `(x, y) =&gt; …`（6e-M22 C2）：仅 .cs；.co 要求显式标注。</summary>
+        protected virtual bool AllowImplicitLambdaParameters() => false;
+
         /// <summary>C# 式顶层函数判定：`type name(` / `type[] name(` / `List&lt;int&gt; name&lt;T&gt;(`（返回类型/函数名均可带泛型后缀）。</summary>
         private bool IsCSharpStyleTopLevelFunction()
         {
@@ -1604,6 +1613,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         protected TypeClauseSyntax ParseTypeClause()
         {
             var colonToken = MatchToken(SyntaxKind.ColonToken);
+
+            // 函数类型（6e-M22 C2）：`f: (A, B) -> R`——冒号属类型子句前缀，其后才是类型本体
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsFunctionTypeStart())
+            {
+                return ParseFunctionTypeClause();
+            }
+
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             TypeClauseSyntax type = ParseGenericTypeSuffix(colonToken, identifier);
             type = WrapArrayTypeClause(colonToken, type);
@@ -1680,6 +1696,102 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return arg;
+        }
+
+        /// <summary>
+        /// 函数类型（6e-M22 C2）：`(A, B) -> R`。参数与返回类型均支持嵌套函数类型/泛型/数组；
+        /// 返回类型无冒号前缀（区别于常规 TypeClause）。
+        /// </summary>
+        private TypeClauseSyntax ParseFunctionTypeClause()
+        {
+            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ImmutableArray.CreateBuilder<SyntaxNode>();
+
+            if (Current.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                while (true)
+                {
+                    parameters.Add(
+                        Current.Kind == SyntaxKind.OpenParenthesisToken && IsFunctionTypeStart()
+                            ? ParseFunctionTypeClause()
+                            : ParseSingleTypeArgument());
+
+                    if (Current.Kind == SyntaxKind.CommaToken)
+                    {
+                        NextToken();
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+
+            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var arrowToken = MatchToken(SyntaxKind.ArrowToken);
+
+            var returnType = Current.Kind == SyntaxKind.OpenParenthesisToken && IsFunctionTypeStart()
+                ? ParseFunctionTypeClause()
+                : ParseSingleTypeArgument();
+
+            return new FunctionTypeSyntax(
+                _syntaxTree,
+                openParenthesisToken,
+                new SeparatedSyntaxList<TypeClauseSyntax>(parameters.ToImmutable()),
+                closeParenthesisToken,
+                arrowToken,
+                returnType);
+        }
+
+        /// <summary>
+        /// 函数类型前瞻（6e-M22 C2）：从当前 `(` 起扫描平衡括号，内容仅允许类型形态 token
+        /// （标识符/逗号/泛型角/数组方括号），闭合后须紧跟 `-&gt;`。
+        /// </summary>
+        private bool IsFunctionTypeStart()
+        {
+            if (!AllowArrowFunctionTypes() || Peek(0).Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                return false;
+            }
+
+            var depth = 0;
+            var i = 0;
+
+            while (i < 128)
+            {
+                switch (Peek(i).Kind)
+                {
+                    case SyntaxKind.OpenParenthesisToken:
+                        depth++;
+                        i++;
+                        break;
+
+                    case SyntaxKind.CloseParenthesisToken:
+                        depth--;
+                        i++;
+                        if (depth == 0)
+                        {
+                            return Peek(i).Kind == SyntaxKind.ArrowToken;
+                        }
+
+                        break;
+
+                    case SyntaxKind.IdentifierToken:
+                    case SyntaxKind.CommaToken:
+                    case SyntaxKind.LessToken:
+                    case SyntaxKind.GreaterToken:
+                    case SyntaxKind.ShiftRightToken:
+                    case SyntaxKind.OpenBracketToken:
+                    case SyntaxKind.CloseBracketToken:
+                    case SyntaxKind.ArrowToken: // 嵌套函数类型内层箭头：((int) -> int) -> int
+                        i++;
+                        break;
+
+                    default:
+                        return false;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -2471,6 +2583,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             switch (Current.Kind)
             {
                 case SyntaxKind.OpenParenthesisToken:
+                    if (IsLambdaParenStart())
+                    {
+                        return ParseLambdaExpression();
+                    }
+
                     if (IsCastStart())
                     {
                         return ParseCastExpression();
@@ -2511,8 +2628,157 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 case SyntaxKind.IdentifierToken:
                 default:
+                    // 免括号单参 lambda `x => …`（6e-M22 C2，仅 .cs）
+                    if (AllowParenlessLambda() &&
+                        Current.Kind == SyntaxKind.IdentifierToken &&
+                        Peek(1).Kind == SyntaxKind.FatArrowToken)
+                    {
+                        return ParseLambdaExpression();
+                    }
+
                     return ParseNameOrCallExpression();
             }
+        }
+
+        /// <summary>lambda 前瞻（6e-M22 C2）：平衡括号参数表 + 显式类型/隐式标识符/空参，闭合后紧跟 `=&gt;`。</summary>
+        private bool IsLambdaParenStart()
+        {
+            if (Peek(0).Kind != SyntaxKind.OpenParenthesisToken)
+            {
+                return false;
+            }
+
+            var depth = 0;
+            var i = 0;
+
+            while (i < 128)
+            {
+                switch (Peek(i).Kind)
+                {
+                    case SyntaxKind.OpenParenthesisToken:
+                        depth++;
+                        i++;
+                        break;
+
+                    case SyntaxKind.CloseParenthesisToken:
+                        depth--;
+                        i++;
+                        if (depth == 0)
+                        {
+                            return Peek(i).Kind == SyntaxKind.FatArrowToken;
+                        }
+
+                        break;
+
+                    case SyntaxKind.IdentifierToken:
+                    case SyntaxKind.CommaToken:
+                    case SyntaxKind.ColonToken:
+                    case SyntaxKind.LessToken:
+                    case SyntaxKind.GreaterToken:
+                    case SyntaxKind.ShiftRightToken:
+                    case SyntaxKind.OpenBracketToken:
+                    case SyntaxKind.CloseBracketToken:
+                        i++;
+                        break;
+
+                    default:
+                        return false;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Lambda 解析（6e-M22 C2）：`(x: int, y) =&gt; expr|block`、`() =&gt; expr`、免括号 `x =&gt; expr`（.cs）。
+        /// 参数复用 ParseParameter（双语法形态）；隐式参数仅 .cs 且不可与显式混用。
+        /// </summary>
+        private ExpressionSyntax ParseLambdaExpression()
+        {
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            SyntaxToken? openParenthesisToken = null;
+            SyntaxToken? closeParenthesisToken = null;
+            var hasExplicitParameterTypes = true;
+
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesisToken = NextToken();
+                var sawExplicit = false;
+                var sawImplicit = false;
+
+                if (Current.Kind != SyntaxKind.CloseParenthesisToken)
+                {
+                    while (true)
+                    {
+                        if (Current.Kind == SyntaxKind.IdentifierToken &&
+                            (Peek(1).Kind == SyntaxKind.CommaToken ||
+                             Peek(1).Kind == SyntaxKind.CloseParenthesisToken))
+                        {
+                            // 隐式类型参数：裸标识符（6e-M22 C2，仅 .cs）
+                            if (!AllowImplicitLambdaParameters())
+                            {
+                                ReportError(Current.Location, "lambda 参数须显式标注类型，如 '(x: int) => …'。");
+                            }
+
+                            sawImplicit = true;
+                            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                            var missingType = new TypeClauseSyntax(
+                                _syntaxTree,
+                                null,
+                                new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, Current.Position, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
+                            nodesAndSeparators.Add(new ParameterSyntax(_syntaxTree, identifier, missingType));
+                        }
+                        else
+                        {
+                            // 显式参数：Cocoa `name: Type` / C# `Type name`（ParseParameter 双形态）
+                            sawExplicit = true;
+                            nodesAndSeparators.Add(ParseParameter());
+                        }
+
+                        if (Current.Kind == SyntaxKind.CommaToken)
+                        {
+                            nodesAndSeparators.Add(NextToken());
+                            continue;
+                        }
+
+                        break;
+                    }
+                }
+
+                if (sawExplicit && sawImplicit)
+                {
+                    ReportError(openParenthesisToken.Location, "lambda 参数须全部显式标注或全部隐式，不可混用。");
+                }
+
+                hasExplicitParameterTypes = !sawImplicit;
+                closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+            else
+            {
+                // 免括号单参：恒为隐式类型（仅 .cs）
+                hasExplicitParameterTypes = false;
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                var missingType = new TypeClauseSyntax(
+                    _syntaxTree,
+                    null,
+                    new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, Current.Position, null, null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
+                nodesAndSeparators.Add(new ParameterSyntax(_syntaxTree, identifier, missingType));
+            }
+
+            var arrowToken = MatchToken(SyntaxKind.FatArrowToken);
+
+            SyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
+                ? ParseBlockStatement()
+                : ParseExpression();
+
+            return new LambdaExpressionSyntax(
+                _syntaxTree,
+                openParenthesisToken,
+                new SeparatedSyntaxList<ParameterSyntax>(nodesAndSeparators.ToImmutable()),
+                closeParenthesisToken,
+                hasExplicitParameterTypes,
+                arrowToken,
+                body);
         }
 
         private bool IsCastStart()
