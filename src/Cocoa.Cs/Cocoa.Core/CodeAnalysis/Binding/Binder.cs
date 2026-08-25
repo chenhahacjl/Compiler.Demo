@@ -1407,6 +1407,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     BindEventDeclaration(eventDeclaration, classType);
                 }
+                else if (member is DelegateDeclarationSyntax delegateDeclaration)
+                {
+                    BindDelegateDeclaration(delegateDeclaration, classType, classFunctions);
+                }
             }
         }
 
@@ -1424,6 +1428,43 @@ namespace Cocoa.CodeAnalysis.Binding
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var eventSymbol = new EventSymbol(syntax.Identifier.Text, (FunctionTypeSymbol)handlerType, visibility, classType) { IsStatic = isStatic };
             classType.AddEvent(eventSymbol);
+        }
+
+        /// <summary>
+        /// delegate 声明绑定（6e-M22 D-A）：合成为 sealed class extends MulticastDelegate + Invoke 方法。
+        /// 复用全部类机制（类型查找/is-as/继承链/三后端发射）。
+        /// </summary>
+        private void BindDelegateDeclaration(DelegateDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
+        {
+            var returnType = BindTypeClause(syntax.ReturnType);
+            if (returnType == null)
+                return;
+
+            var parameters = BindParameters(syntax.Parameters);
+
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
+            var delegateName = syntax.Identifier.Text;
+
+            // 合成 sealed class extends MulticastDelegate
+            var delegateClass = new ClassTypeSymbol(delegateName, classType.Namespace, visibility, declaration: null)
+            {
+                BaseType = ClassTypeSymbol.SystemMulticastDelegate,
+                IsSealed = true,
+            };
+
+            // Invoke 方法签名匹配 delegate 声明
+            var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
+            var invokeFn = new FunctionSymbol("Invoke", invokeParams, returnType, null, containingClass: delegateClass, visibility: Visibility.Public)
+            {
+                IsStatic = false,
+            };
+            delegateClass.AddMethod(invokeFn);
+
+            // 注册到作用域（类型位置可引用）
+            if (!_scope.TryDeclareClass(delegateClass))
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"delegate '{delegateName}' 已声明。");
+            }
         }
 
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>

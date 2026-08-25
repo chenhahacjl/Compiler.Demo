@@ -245,6 +245,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseInterfaceDeclaration(modifiers);
             }
 
+            // delegate 声明（6e-M22）：`delegate Ret Name(params)` — 命名空间级
+            if (Current.Kind == SyntaxKind.DelegateKeyword)
+            {
+                return ParseDelegateDeclaration(modifiers);
+            }
+
             // P1（6e-M11）：C# 式顶层函数 `type name(params)`（类型前置，可带 `[]` 返回类型）
             if (IsCSharpStyleTopLevelFunction())
             {
@@ -850,6 +856,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseEventDeclaration(modifiers);
             }
 
+            // delegate 声明（6e-M22）：`delegate Ret Name(params)` / `.cs` `delegate Ret Name(params);`
+            if (Current.Kind == SyntaxKind.DelegateKeyword)
+            {
+                return ParseDelegateDeclaration(modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.PropertyKeyword)
             {
                 if (!AllowCocoaClassMemberKeywords())
@@ -1307,6 +1319,25 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new EventDeclarationSyntax(_syntaxTree, modifiers, eventKeyword, identifier, handlerType);
+        }
+
+        /// <summary>
+        /// delegate 声明（6e-M22）：两方言同形——返回类型前置，参数列表复用 ParseParameterList。
+        /// `.co` `delegate void H(Object,string)` / `.cs` `public delegate void H(object,string);`
+        /// </summary>
+        private MemberSyntax ParseDelegateDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var delegateKeyword = MatchToken(SyntaxKind.DelegateKeyword);
+            var returnType = ParsePrefixTypeClause();
+            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ParseParameterList();
+            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            if (Current.Kind == SyntaxKind.SemicolonToken)
+                NextToken();
+
+            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, parameters);
         }
 
         private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)
