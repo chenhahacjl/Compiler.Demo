@@ -1482,7 +1482,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         {
             var instructions = _currentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
-            var functionType = (FunctionTypeSymbol)node.Callee.Type;
+            var functionType = node.Callee.Type switch
+            {
+                FunctionTypeSymbol ft => ft,
+                ClassTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
+                _ => throw new Exception($"Unexpected callee type {node.Callee.Type}"),
+            };
 
             var callee = EmitExpression(node.Callee);
 

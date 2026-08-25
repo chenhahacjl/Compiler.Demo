@@ -487,7 +487,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                 }
 
-                emittedClasses = emittedClasses.Concat(environmentClasses).ToImmutableArray();
+                // 6e-M22 D-B：delegate 合成类不进发射（运行期表示 = Func/Action 对象，非自定义类）
+                emittedClasses = emittedClasses
+                    .Where(c => !c.IsDelegateClass)
+                    .Concat(environmentClasses)
+                    .ToImmutableArray();
             }
 
             var compilationUnit = globalScope.Statements.Any()
@@ -4508,6 +4512,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // 6e-M22：void lambda 体尾部补隐式 return（与 BuildFunctionBody 的 Lowerer 行为对齐）
+            if (returnType == TypeSymbol.Void)
+            {
+                var voidReturn = new BoundReturnStatement(syntax.Body, null);
+                body = new BoundBlockStatement(body.Syntax, body.Statements.Add(voidReturn));
+            }
 
             var sequence = System.Threading.Interlocked.Increment(ref _lambdaGlobalSequence);
             var functionName = $"__Lambda${sequence}";

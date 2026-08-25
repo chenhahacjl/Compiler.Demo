@@ -437,6 +437,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 EmitStatement(assembler, statement);
             }
 
+            // 6e-M22：方法体末尾补隐式 ret（若无显式 return 终结）
+            var needsImplicitRet = body.Statements.Length == 0 ||
+                                   body.Statements[^1].Kind != BoundNodeKind.ReturnStatement;
+            if (needsImplicitRet)
+            {
+                assembler.Emit(IlOpCodeTable.Get("Ret"));
+            }
+
             var code = assembler.Assemble();
             var maxStack = assembler.ComputeMaxStack(assembler.Instructions);
 
@@ -585,6 +593,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (type is EnumTypeSymbol)
             {
                 return IlType.Int32;
+            }
+
+            // 6e-M22 D-B：delegate 类 → Func`N 等价类型（运行期表示与函数值一致）
+            if (type is ClassTypeSymbol { IsDelegateClass: true } delegateClassType)
+            {
+                var sig = delegateClassType.GetDelegateSignature();
+                if (sig != null)
+                {
+                    return _delegateShapes.Resolve(sig, ToIlType).Type;
+                }
             }
 
             if (type is ClassTypeSymbol classType)
@@ -757,10 +775,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             il.Emit(IlOpCodeTable.Get("Newobj"), shape.Ctor);
         }
 
-        /// <summary>间接调用（6e-M22 C4-b）：callee + args → callvirt Func`N::Invoke。</summary>
+        /// <summary>间接调用（6e-M22 C4-b/D-B）：callee + args → callvirt Func\`N/委托类::Invoke。</summary>
         private void EmitInvocationExpression(IlAssembler il, BoundInvocationExpression node)
         {
-            var shape = _delegateShapes.Resolve((FunctionTypeSymbol)node.Callee.Type, ToIlType);
+            var functionType = node.Callee.Type switch
+            {
+                FunctionTypeSymbol ft => ft,
+                ClassTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
+                _ => throw new System.Exception($"Unexpected callee type {node.Callee.Type}"),
+            };
+            var shape = _delegateShapes.Resolve(functionType, ToIlType);
 
             EmitExpression(il, node.Callee);
             foreach (var argument in node.Arguments)

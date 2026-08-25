@@ -383,6 +383,40 @@ function Main(): i32
             Assert.Equal(0, result.Value);
         }
 
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_DeclareDelegate_AssignInvoke(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateDeclareProgram, "c5d_declare_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("created\nhello\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Delegate_MethodGroup_AssignAndInvoke(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateMethodGroupProgram, "c5d_mg_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("16\n", stdout);
+        }
+
+        [Fact]
+        public void Il_DelegateVariable_AssignAndInvoke()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(DelegateDeclareProgram, "c5d_lambda_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("created\nhello\n", stdout);
+        }
+
+        [Fact]
+        public void Il_Delegate_MethodGroup_AssignAndInvoke()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(DelegateMethodGroupProgram, "c5d_mg_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("16\n", stdout);
+        }
+
         private static (int ExitCode, string Stdout) EmitIlAndRun(string source, string name)
         {
             var syntaxTree = SyntaxTree.Parse(source);
