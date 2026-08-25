@@ -99,6 +99,11 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var parentScope = CreateParentScope(previous);
             InjectCodSymbols(parentScope, codLibraries);
+
+            // 6e-M22 C5+：内建 Delegate/MulticastDelegate 注册进根作用域（类型位置可用）
+            parentScope.TryDeclareClass(ClassTypeSymbol.SystemDelegate);
+            parentScope.TryDeclareClass(ClassTypeSymbol.SystemMulticastDelegate);
+
             var dialect = syntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : syntaxTrees[0].Dialect;
             var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, dialect, codLibraries: codLibraries);
 

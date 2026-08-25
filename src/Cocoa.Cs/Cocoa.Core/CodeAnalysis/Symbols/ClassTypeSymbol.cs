@@ -16,6 +16,25 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>System.Type 内建单例（6e-M19 M2-a）：GetType() 的返回类型。</summary>
         public static readonly ClassTypeSymbol SystemType = new ClassTypeSymbol("Type", "System", Visibility.Public, declaration: null);
 
+        /// <summary>System.Delegate 内建单例（6e-M22 C5+）：所有委托声明的间接基类。</summary>
+        public static readonly ClassTypeSymbol SystemDelegate = new ClassTypeSymbol("Delegate", "System", Visibility.Public, declaration: null);
+
+        /// <summary>System.MulticastDelegate 内建单例（6e-M22 C5+）：多播委托基类。</summary>
+        public static readonly ClassTypeSymbol SystemMulticastDelegate = new ClassTypeSymbol("MulticastDelegate", "System", Visibility.Public, declaration: null);
+
+        /// <summary>是否为内建 Delegate 根单例。</summary>
+        public bool IsSystemDelegate => this == SystemDelegate;
+
+        /// <summary>是否为内建 MulticastDelegate 单例。</summary>
+        public bool IsSystemMulticastDelegate => this == SystemMulticastDelegate;
+
+        /// <summary>6e-M22 C5+：内建 Delegate/MulticastDelegate 继承链初始化。</summary>
+        static ClassTypeSymbol()
+        {
+            SystemDelegate.BaseType = SystemObject;
+            SystemMulticastDelegate.BaseType = SystemDelegate;
+        }
+
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
         private readonly ImmutableArray<PropertySymbol>.Builder _properties;
