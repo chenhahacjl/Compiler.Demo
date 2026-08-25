@@ -315,6 +315,74 @@ function Main(): i32
             Assert.Equal("42\n10\n", stdout);
         }
 
+        // ------------------------------------------------------------------
+        // delegate 声明 + 使用（6e-M22 D-B）
+        // ------------------------------------------------------------------
+
+        private const string DelegateDeclareProgram = @"using System
+
+delegate void PrintHandler(msg: string)
+
+function Main(): i32
+{
+    var h: PrintHandler = (m: string) =>
+    {
+        Console.WriteLine(m)
+    }
+    Console.WriteLine(""created"")
+    h(""hello"")
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_DelegateVariable_AssignAndInvoke()
+        {
+            var result = Evaluate(DelegateDeclareProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Evaluator_Delegate_TypeResolves()
+        {
+            var code = @"using System
+delegate void Handler(a: Object)
+function Test(d: Handler): void { }
+function Main(): i32 { return 0 }";
+            var result = Evaluate(code);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+        }
+
+        private const string DelegateMethodGroupProgram = @"using System
+
+delegate IntTransform(x: i32): i32
+
+function Double(x: i32): i32
+{
+    return x * 2
+}
+
+function Main(): i32
+{
+    var t: IntTransform = Double
+    Console.WriteLine(t(8))
+
+    if t(3) != 6
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Delegate_MethodGroup_AssignAndInvoke()
+        {
+            var result = Evaluate(DelegateMethodGroupProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
         private static (int ExitCode, string Stdout) EmitIlAndRun(string source, string name)
         {
             var syntaxTree = SyntaxTree.Parse(source);

@@ -1322,20 +1322,50 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>
-        /// delegate 声明（6e-M22）：两方言同形——返回类型前置，参数列表复用 ParseParameterList。
-        /// `.co` `delegate void H(Object,string)` / `.cs` `public delegate void H(object,string);`
+        /// delegate 声明（6e-M22）：双方言同形——名称在前，参数列表，返回类型冒号后置。
+        /// `.co` `delegate H(x: i32): i32` / `.cs` `public delegate int H(int x);`
         /// </summary>
         private MemberSyntax ParseDelegateDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
             var delegateKeyword = MatchToken(SyntaxKind.DelegateKeyword);
-            var returnType = ParsePrefixTypeClause();
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
-            var parameters = ParseParameterList();
-            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
 
-            if (Current.Kind == SyntaxKind.SemicolonToken)
-                NextToken();
+            // 形态判别：标识符后跟 `(` → .co（无返回类型前置）；否则 → .cs（类型前置）
+            var isCoForm = Current.Kind == SyntaxKind.IdentifierToken &&
+                           Peek(1).Kind == SyntaxKind.OpenParenthesisToken;
+
+            SyntaxToken identifier;
+            SeparatedSyntaxList<ParameterSyntax> parameters;
+            TypeClauseSyntax? returnType = null;
+
+            if (isCoForm)
+            {
+                // .co：`delegate Name(params) [: RetType]`
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+                MatchToken(SyntaxKind.OpenParenthesisToken);
+                parameters = ParseParameterList();
+                MatchToken(SyntaxKind.CloseParenthesisToken);
+
+                if (Current.Kind == SyntaxKind.ColonToken)
+                    returnType = ParseTypeClause();
+            }
+            else
+            {
+                // .cs：`delegate [RetType] Name(params)`
+                if (!(Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.OpenParenthesisToken))
+                    returnType = ParsePrefixTypeClause();
+
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+                MatchToken(SyntaxKind.OpenParenthesisToken);
+                parameters = ParseParameterList();
+                MatchToken(SyntaxKind.CloseParenthesisToken);
+
+                if (Current.Kind == SyntaxKind.SemicolonToken)
+                    NextToken();
+            }
+
+            returnType ??= new TypeClauseSyntax(_syntaxTree, null,
+                new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, Current.Position, "void", "void",
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
 
             return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, parameters);
         }
