@@ -375,6 +375,49 @@ function Main(): i32
     return 0
 }";
 
+        // ── C5+ event ──────────────────────────────────────────
+
+        private const string EventBasicProgram = @"using System
+
+class Greeter
+{
+    public event onGreet: (string) -> void
+
+    public function Fire(msg: string): void
+    {
+        Console.WriteLine(""firing"")
+        onGreet(""hello"")
+    }
+}
+
+function Main(): i32
+{
+    var g = new Greeter()
+    g.onGreet = (m: string) =>
+    {
+        Console.WriteLine(m)
+    }
+    Console.WriteLine(""subscribed"")
+    g.Fire(""hello"")
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Event_BasicSubscription()
+        {
+            var result = Evaluate(EventBasicProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Il_Event_BasicSubscription()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(EventBasicProgram, "c5e_event_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("subscribed\nfiring\nhello\n", stdout);
+        }
+
         [Fact]
         public void Evaluator_Delegate_MethodGroup_AssignAndInvoke()
         {

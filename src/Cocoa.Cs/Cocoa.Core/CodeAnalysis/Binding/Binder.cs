@@ -1445,8 +1445,8 @@ namespace Cocoa.CodeAnalysis.Binding
             var eventSymbol = new EventSymbol(eventName, (FunctionTypeSymbol)handlerType, visibility, classType) { IsStatic = isStatic };
             classType.AddEvent(eventSymbol);
 
-            // 6e-M22 C5+：合成隐藏字段 `_<eventName>`（单播存储，类型 = 处理器函数类型）
-            classType.AddField(new FieldSymbol("_" + eventName, handlerType, Visibility.Private, classType));
+            // 6e-M22 C5+：合成后备字段 `_<eventName>`（单播存储，可见性与事件一致以便外部订阅）
+            classType.AddField(new FieldSymbol("_" + eventName, handlerType, visibility, classType));
         }
 
         /// <summary>
@@ -4744,12 +4744,30 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundElementAssignmentExpression(syntax, arrayElementTarget.Type, arrayElementTarget, convertedExpression);
             }
 
-            if (boundTarget is BoundMemberAccessExpression memberTarget && memberTarget.Field != null && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+            if (boundTarget is BoundMemberAccessExpression memberTarget && memberTarget.Field != null &&
+                (syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken ||
+                 syntax.AssignmentToken.Kind == SyntaxKind.PlusEqualsToken ||
+                 syntax.AssignmentToken.Kind == SyntaxKind.MinusEqualsToken))
             {
                 if (!IsAccessibleMember(memberTarget.Field.Visibility, memberTarget.Field.ContainingClass))
                 {
                     _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, memberTarget.Field.Name, memberTarget.Field.Visibility);
                     return new BoundErrorExpression(syntax);
+                }
+
+                // 6e-M22 C5+：函数类型字段的 += / -= 事件订阅语义（单播 v1）
+                if (memberTarget.Field.Type is FunctionTypeSymbol &&
+                    syntax.AssignmentToken.Kind != SyntaxKind.EqualsToken)
+                {
+                    if (syntax.AssignmentToken.Kind == SyntaxKind.MinusEqualsToken)
+                    {
+                        // -= 置空（首版简化，引用相等移除后续实现）
+                        var nullValue = new BoundLiteralExpression(syntax.Expression, null, TypeSymbol.Null);
+                        return new BoundMemberAssignmentExpression(syntax, memberTarget.Target, memberTarget.Field, nullValue);
+                    }
+                    // += 等同于简单赋值（覆写）
+                    var assignedValue = BindConversion(syntax.Expression.Location, boundExpression, memberTarget.Field.Type);
+                    return new BoundMemberAssignmentExpression(syntax, memberTarget.Target, memberTarget.Field, assignedValue);
                 }
 
                 if (memberTarget.Field.IsReadonly && _function?.IsConstructor != true)
@@ -5020,6 +5038,16 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     return new BoundMemberAccessExpression(syntax, field.Type, boundTarget, identifier, field);
+                }
+
+                // 6e-M22 C5+：事件成员访问 → 重定向到隐藏后备字段 `_<eventName>`
+                if (classType.GetEvent(identifier) is EventSymbol eventSymbol)
+                {
+                    var backingField = classType.GetField("_" + identifier);
+                    if (backingField != null)
+                    {
+                        return new BoundMemberAccessExpression(syntax, backingField.Type, boundTarget, "_" + identifier, backingField);
+                    }
                 }
 
                 // 属性读：obj.Name → get_Name()
@@ -5665,6 +5693,22 @@ namespace Cocoa.CodeAnalysis.Binding
                         new BoundVariableExpression(syntax, calleeVariable),
                         calleeFnType);
                 }
+            }
+
+            // 6e-M22 C5+：事件内部触发——`onGreet(msg)` → 后备字段函数值间接调用
+            if (_currentClass != null && _currentClass.GetEvent(syntax.Identifier.Text) is EventSymbol &&
+                _currentClass.GetField("_" + syntax.Identifier.Text) is FieldSymbol evtBacking &&
+                evtBacking.Type is FunctionTypeSymbol evtFnType)
+            {
+                var thisExpr = new BoundThisExpression(syntax, _currentClass);
+                var fieldAccess = new BoundMemberAccessExpression(syntax, evtBacking.Type, thisExpr, "_" + syntax.Identifier.Text, evtBacking);
+
+                return BindFunctionValueInvocation(
+                    syntax.Identifier.Location,
+                    syntax.Identifier.Text,
+                    syntax.Arguments,
+                    fieldAccess,
+                    evtFnType);
             }
 
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();

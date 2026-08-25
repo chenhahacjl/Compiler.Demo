@@ -707,6 +707,8 @@ namespace Cocoa.CodeAnalysis
                         var n = (BoundMemberCallExpression)node;
                         return new BoundNode[] { n.Expression }.Concat(n.Arguments);
                     }
+                case BoundNodeKind.MemberAssignmentExpression:
+                    return new[] { ((BoundMemberAssignmentExpression)node).Expression };
                 case BoundNodeKind.FormatExpression:
                     return new[] { ((BoundFormatExpression)node).Value };
                 case BoundNodeKind.IsExpression:
