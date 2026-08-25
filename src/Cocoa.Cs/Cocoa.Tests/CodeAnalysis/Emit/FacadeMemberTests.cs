@@ -29,7 +29,7 @@ function Main()
         [Fact]
         public void Facade_ToString_AllPrimitiveTypes_Il()
         {
-            // native 路径由 CLI e2e（tools/build-stdlib 后手动/冒烟）覆盖；此处锁 IL 后端回归
+            // native 路径由 CLI e2e（tools/build-sdk 后手动/冒烟）覆盖；此处锁 IL 后端回归
             var (exitCode, stdout) = CodeAnalysis.Emit.IL.IlE2eTests.EmitAndRun(Source, "FacadeToString");
             Assert.Equal(0, exitCode);
             Assert.Contains("42", stdout);

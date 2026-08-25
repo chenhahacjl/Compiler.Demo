@@ -47,7 +47,7 @@ namespace Cocoa.CodeAnalysis
                     if (reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                     {
                         var library = CodSerializer.Load(reference);
-                        library.Name = Path.GetFileNameWithoutExtension(reference);
+                        library.Name = Cod.CodAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference));
                         library.SourcePath = Path.GetFullPath(reference);
                         builder.Add(library);
                     }

@@ -87,6 +87,10 @@ namespace Cocoa.Projects
                 $"dotnetRuntime={dotnetRuntime}",
             };
 
+            // 动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时以外部 dll 依赖接入（产物不内联库体）；
+            // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
+            var linkCodDynamically = backend == ProjectBackend.DotNet && format != ProjectOutputFormat.Cod;
+
             var fingerprint = BuildCache.ComputeFingerprint(
                 expansion.Files,
                 references.ToImmutableArray(),
@@ -95,15 +99,17 @@ namespace Cocoa.Projects
 
             if (useIncremental && BuildCache.IsUpToDate(cachePath, fingerprint))
             {
+                // 动态链接自愈：增量命中也检查被消费库的托管 dll 是否缺失/过期——被误删时现场再生
+                if (linkCodDynamically)
+                {
+                    EnsureManagedDlls(CollectReferencedCodLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
+                }
+
                 messageWriter.WriteLine($"'{project.Name}' is up to date ({backend.ToString().ToLowerInvariant()})");
                 return new ProjectBuildResult(success: true, upToDate: true);
             }
 
             ImmutableArray<Diagnostic> diagnostics;
-
-            // 动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时以外部 dll 依赖接入（产物不内联库体）；
-            // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            var linkCodDynamically = backend == ProjectBackend.DotNet && format != ProjectOutputFormat.Cod;
             Compilation compilation;
             try
             {
@@ -114,26 +120,9 @@ namespace Cocoa.Projects
 
                 if (format == ProjectOutputFormat.Cod)
                 {
-                    // `.cod` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关
+                    // `.cod` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关。
+                    // 托管 dll 不在此预生成——由消费方构建时按需生成（lazy，防派生产物被删后断链）
                     diagnostics = compilation.EmitCocoa(project.Name, outputFile);
-
-                    if (!diagnostics.HasErrors())
-                    {
-                        // 动态链接 A1：双产物——同口径发射托管库 dll（消费方 exe 运行期依赖 + C# 互操作）。
-                        // 程序集名走托管命名映射（System.*→Cocoa.*，避开框架门面同名冲突）
-                        var managedName = CodAssemblyNaming.ManagedAssemblyName(project.Name);
-                        var libraryDllPath = Path.Combine(Path.GetDirectoryName(outputFile)!, managedName + ".dll");
-                        var libraryTarget = IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default;
-                        var dllDiagnostics = CodLibraryCompiler.EmitManagedDll(outputFile, libraryDllPath, libraryTarget);
-                        if (dllDiagnostics.Length > 0)
-                        {
-                            messageWriter.WriteDiagnostics(dllDiagnostics);
-                            if (dllDiagnostics.HasErrors())
-                            {
-                                return new ProjectBuildResult(success: false, upToDate: false);
-                            }
-                        }
-                    }
                 }
                 else if (backend == ProjectBackend.Native)
                 {
@@ -209,34 +198,13 @@ namespace Cocoa.Projects
             {
                 CopyReferencesToOutput(references, outputDirectory);
 
-                // 动态链接（阶段 A2/A4）：被消费的 `.cod` 库以托管 dll 形态随产物部署——
-                // 含系统库（SystemLibrary 自动发现，不在项目引用清单内）。
-                // dll 探测顺序：托管命名（Cocoa.Core.dll）优先，兼容旧式同名（MyLib.dll）
+                // 动态链接（阶段 A）：被消费的 `.cod` 库按需生成托管 dll 并部署——
+                // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（cod sha256）过期 → 现场再生，自愈误删
                 if (linkCodDynamically)
                 {
-                    foreach (var library in compilation.CodLibraries)
+                    if (!EnsureManagedDlls(compilation.CodLibraries.Select(l => (l.Name, l.SourcePath)), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
                     {
-                        if (library.SourcePath.Length == 0 || library.Name.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        var sourceDirectory = Path.GetDirectoryName(library.SourcePath)!;
-                        var managedDll = Path.Combine(sourceDirectory, library.Name + ".dll");
-                        var legacyDll = Path.ChangeExtension(library.SourcePath, ".dll");
-                        var libraryDll = File.Exists(managedDll) ? managedDll : File.Exists(legacyDll) ? legacyDll : null;
-
-                        if (libraryDll == null)
-                        {
-                            messageWriter.WriteLine($"warning: dynamic-linked library '{library.Name}' has no managed dll next to '{library.SourcePath}'; the output may fail to run");
-                            continue;
-                        }
-
-                        var destination = Path.Combine(outputDirectory, Path.GetFileName(libraryDll));
-                        if (NeedsCopy(libraryDll, destination))
-                        {
-                            File.Copy(libraryDll, destination, overwrite: true);
-                        }
+                        return new ProjectBuildResult(success: false, upToDate: false);
                     }
                 }
             }
@@ -275,16 +243,66 @@ namespace Cocoa.Projects
                 {
                     File.Copy(reference, destination, overwrite: true);
                 }
+            }
+        }
 
-                // 动态链接 A4：`.cod` 引用连带其托管库 dll（库项目双产物；缺失则跳过，exe 仍自含可运行）
-                if (extension.Equals(".cod", StringComparison.OrdinalIgnoreCase))
+        /// <summary>
+        /// 动态链接（阶段 A）：确保被消费 `.cod` 库的托管 dll（X.Managed.dll）在输出目录就绪——
+        /// 缺失或 stamp（cod 文件 sha256）过期 → 从 cod 现场再生。误删/清缓存后下次构建自动自愈。
+        /// 返回 false 表示有生成错误（已写诊断，调用方判构建失败）。
+        /// </summary>
+        private static bool EnsureManagedDlls(IEnumerable<(string Name, string SourcePath)> libraries, string outputDirectory, IlTarget target, TextWriter messageWriter)
+        {
+            Directory.CreateDirectory(outputDirectory);
+
+            var ok = true;
+            foreach (var (name, sourcePath) in libraries)
+            {
+                if (name.Length == 0 || sourcePath.Length == 0 || !File.Exists(sourcePath))
                 {
-                    var siblingDll = Path.ChangeExtension(reference, ".dll");
-                    if (File.Exists(siblingDll) && NeedsCopy(siblingDll, Path.Combine(outputDirectory, Path.GetFileName(siblingDll))))
-                    {
-                        File.Copy(siblingDll, Path.Combine(outputDirectory, Path.GetFileName(siblingDll)), overwrite: true);
-                    }
+                    continue;
                 }
+
+                var managedDll = Path.Combine(outputDirectory, name + ".dll");
+                var stampPath = managedDll + ".stamp";
+                var codHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sourcePath))).ToLowerInvariant();
+                var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
+
+                if (File.Exists(managedDll) && stamped == codHash)
+                {
+                    continue;
+                }
+
+                var diagnostics = CodLibraryCompiler.EmitManagedDll(sourcePath, managedDll, target);
+                if (diagnostics.HasErrors())
+                {
+                    messageWriter.WriteDiagnostics(diagnostics);
+                    ok = false;
+                    continue;
+                }
+
+                File.WriteAllText(stampPath, codHash);
+            }
+
+            return ok;
+        }
+
+        /// <summary>增量命中路径的轻量库清单：项目引用的 .cod + 系统库（不做完整绑定）。</summary>
+        private static IEnumerable<(string Name, string SourcePath)> CollectReferencedCodLibraries(IReadOnlyList<string> references)
+        {
+            foreach (var reference in references)
+            {
+                if (!reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase) || !File.Exists(reference))
+                {
+                    continue;
+                }
+
+                yield return (CodAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference)), reference);
+            }
+
+            foreach (var library in SystemLibrary.Load())
+            {
+                yield return (library.Name, library.SourcePath);
             }
         }
 
