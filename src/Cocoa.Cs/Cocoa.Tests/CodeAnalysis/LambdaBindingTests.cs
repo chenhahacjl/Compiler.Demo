@@ -375,7 +375,7 @@ function Main(): i32
     return 0
 }";
 
-        // ── C5+ event ──────────────────────────────────────────
+        // ── C5+ 多播事件（升级自单播 v1：+= 尾插 / -= 引用相等移除首匹配 / 触发快照遍历）──
 
         private const string EventBasicProgram = @"using System
 
@@ -386,14 +386,14 @@ class Greeter
     public function Fire(msg: string): void
     {
         Console.WriteLine(""firing"")
-        onGreet(""hello"")
+        onGreet(msg)
     }
 }
 
 function Main(): i32
 {
     var g = new Greeter()
-    g.onGreet = (m: string) =>
+    g.onGreet += (m: string) =>
     {
         Console.WriteLine(m)
     }
@@ -416,6 +416,287 @@ function Main(): i32
             var (exitCode, stdout) = EmitIlAndRun(EventBasicProgram, "c5e_event_il");
             Assert.Equal(0, exitCode);
             Assert.Equal("subscribed\nfiring\nhello\n", stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Event_BasicSubscription(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(EventBasicProgram, "c5e_event_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("subscribed\nfiring\nhello\n", stdout);
+        }
+
+        private const string EventMulticastProgram = @"using System
+
+class Greeter
+{
+    public event onGreet: (string) -> void
+
+    public function Fire(msg: string): void
+    {
+        onGreet(msg)
+    }
+}
+
+function HandleA(msg: string): void
+{
+    Console.WriteLine(""A:"" + msg)
+}
+
+function HandleB(msg: string): void
+{
+    Console.WriteLine(""B:"" + msg)
+}
+
+function Main(): i32
+{
+    var g = new Greeter()
+    var hA: (string) -> void = HandleA
+    g.onGreet += hA
+    g.onGreet += HandleB
+    g.Fire(""x"")
+
+    g.onGreet -= hA
+    g.Fire(""y"")
+
+    return 0
+}";
+
+        private const string ExpectedMulticastOutput = "A:x\nB:x\nB:y\n";
+
+        [Fact]
+        public void Evaluator_Event_Multicast_SubscribeOrderAndRemove()
+        {
+            var (result, output) = EvaluateWithOutput(EventMulticastProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+            Assert.Equal(ExpectedMulticastOutput, output);
+        }
+
+        [Fact]
+        public void Il_Event_Multicast_SubscribeOrderAndRemove()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(EventMulticastProgram, "c5e_multi_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal(ExpectedMulticastOutput, stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Event_Multicast_SubscribeOrderAndRemove(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(EventMulticastProgram, "c5e_multi_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal(ExpectedMulticastOutput, stdout);
+        }
+
+        private const string EventEdgeProgram = @"using System
+
+class Bell
+{
+    public event Ring: () -> void
+
+    public function Chime(): void
+    {
+        Console.WriteLine(""ring:"")
+        Ring()
+    }
+}
+
+function Loud(): void
+{
+    Console.WriteLine(""boom"")
+}
+
+function Main(): i32
+{
+    var b = new Bell()
+
+    // 空事件触发 no-op
+    b.Chime()
+
+    var h: () -> void = Loud
+
+    // 重复订阅同一引用 + 单次移除仅去首个匹配
+    b.Ring += h
+    b.Ring += h
+    b.Chime()
+    b.Ring -= h
+    b.Chime()
+
+    // 清空后重订阅（清空回 null）
+    b.Ring -= h
+    b.Chime()
+    b.Ring += h
+    b.Chime()
+
+    return 0
+}";
+
+        private const string ExpectedEdgeOutput =
+            "ring:\n" +
+            "ring:\nboom\nboom\n" +
+            "ring:\nboom\n" +
+            "ring:\n" +
+            "ring:\nboom\n";
+
+        [Fact]
+        public void Evaluator_Event_EdgeCases_NoopDuplicateResubscribe()
+        {
+            var (result, output) = EvaluateWithOutput(EventEdgeProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+            Assert.Equal(ExpectedEdgeOutput, output);
+        }
+
+        [Fact]
+        public void Il_Event_EdgeCases_NoopDuplicateResubscribe()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(EventEdgeProgram, "c5e_edge_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal(ExpectedEdgeOutput, stdout);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Event_EdgeCases_NoopDuplicateResubscribe(object platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(EventEdgeProgram, "c5e_edge_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal(ExpectedEdgeOutput, stdout);
+        }
+
+        [Fact]
+        public void Binder_Event_ExternalRead_Diagnosed()
+        {
+            var code = @"using System
+
+class Box
+{
+    public event Pop: () -> void
+}
+
+function Main(): i32
+{
+    var b = new Box()
+    var h = b.Pop
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("不能作为值"));
+        }
+
+        [Fact]
+        public void Binder_Event_ExternalCall_Diagnosed()
+        {
+            var code = @"using System
+
+class Box
+{
+    public event Pop: () -> void
+}
+
+function Main(): i32
+{
+    var b = new Box()
+    b.Pop()
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("不能作为值"));
+        }
+
+        [Fact]
+        public void Binder_Event_StaticEvent_Diagnosed()
+        {
+            var code = @"using System
+
+class Box
+{
+    public static event Pop: () -> void
+}
+
+function Main(): i32
+{
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.IsError && d.Message.Contains("静态事件"));
+        }
+
+        [Fact]
+        public void Binder_Event_DirectAssignOutsideClass_Diagnosed()
+        {
+            var code = @"using System
+
+class Box
+{
+    public event Pop: () -> void
+}
+
+function Main(): i32
+{
+    var b = new Box()
+    b.Pop = () => { }
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.IsError);
+        }
+
+        private const string DelegateEventProgram = @"using System
+
+delegate Handler(msg: string): void
+
+class Notifier
+{
+    public event onMsg: Handler
+
+    public function Send(msg: string): void
+    {
+        onMsg(msg)
+    }
+}
+
+function PrintIt(msg: string): void
+{
+    Console.WriteLine(""got:"" + msg)
+}
+
+function Main(): i32
+{
+    var n = new Notifier()
+    var h: Handler = PrintIt
+    n.onMsg += h
+    n.Send(""ping"")
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Event_DelegateTyped_RoundTrip()
+        {
+            var (result, output) = EvaluateWithOutput(DelegateEventProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+            Assert.Equal("got:ping\n", output);
+        }
+
+        /// <summary>求值并捕获 Console 输出（Evaluator 走 Console.WriteLine）。</summary>
+        private static (EvaluationResult Result, string Output) EvaluateWithOutput(string code)
+        {
+            var original = System.Console.Out;
+            try
+            {
+                using var writer = new System.IO.StringWriter();
+                System.Console.SetOut(writer);
+                var result = Evaluate(code);
+                return (result, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                System.Console.SetOut(original);
+            }
         }
 
         [Fact]

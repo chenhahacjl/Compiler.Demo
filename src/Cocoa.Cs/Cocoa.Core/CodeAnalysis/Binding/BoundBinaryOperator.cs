@@ -154,6 +154,23 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 6e-M22 C5+ 多播事件：函数值 == / != → 引用相等（-= 按引用移除首个匹配订阅者）。
+            // FunctionTypeSymbol 工厂缓存 ⇒ 结构同形即同一实例，符号引用比较即可判同形；发射层复用既有 ReferenceEquals 三后端路径。
+            if (leftType is FunctionTypeSymbol leftFn && rightType is FunctionTypeSymbol rightFn && leftFn == rightFn)
+            {
+                var functionValueKind = syntaxKind switch
+                {
+                    SyntaxKind.EqualsEqualsToken => BoundBinaryOperatorKind.ReferenceEquals,
+                    SyntaxKind.BangEqualsToken => BoundBinaryOperatorKind.ReferenceNotEquals,
+                    _ => (BoundBinaryOperatorKind?)null,
+                };
+
+                if (functionValueKind != null)
+                {
+                    return new BoundBinaryOperator(syntaxKind, functionValueKind.Value, leftFn, rightFn, TypeSymbol.Boolean);
+                }
+            }
+
             // 6e-M19 M5-a：null 字面量与可空引用型（类/接口/string/数组/any）== / != → 引用相等。
             // 不经值语义路径（string 值比较/native StrEquals 对单侧 null 会解引用崩溃），指针比较三后端天然一致。
             if (syntaxKind == SyntaxKind.EqualsEqualsToken || syntaxKind == SyntaxKind.BangEqualsToken)

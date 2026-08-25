@@ -1430,8 +1430,9 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 事件声明绑定（6e-M22 C5+）：解析处理器类型为 FunctionTypeSymbol → 创建 EventSymbol 挂到类。
-        /// 发射器负责合成隐藏函数值数组 + add/remove 语义。
+        /// 事件声明绑定（6e-M22 C5+ 多播）：解析处理器类型为 FunctionTypeSymbol → 创建 EventSymbol 挂到类，
+        /// 合成隐藏后备字段 `_<eventName>`（类型 = 处理器签名的数组，初值 null）。
+        /// 订阅/触发的多播语义在语句级脱糖（TryBindEventSubscription / BindEventRaise），三后端零改动。
         /// </summary>
         private void BindEventDeclaration(EventDeclarationSyntax syntax, ClassTypeSymbol classType)
         {
@@ -1462,14 +1463,425 @@ namespace Cocoa.CodeAnalysis.Binding
                 return;
             }
 
-            var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
-            var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var eventName = syntax.Identifier.Text;
-            var eventSymbol = new EventSymbol(eventName, resolvedHandler, visibility, classType) { IsStatic = isStatic };
+
+            // 静态事件后置（设计 §7.3）：当前多播存储为实例字段，明确拒绝
+            if (syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword))
+            {
+                _diagnostics.ReportStaticEventNotSupported(syntax.Identifier.Location, eventName);
+                return;
+            }
+
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
+            var eventSymbol = new EventSymbol(eventName, resolvedHandler, visibility, classType);
             classType.AddEvent(eventSymbol);
 
-            // 6e-M22 C5+：合成后备字段 `_<eventName>`（单播存储，可见性与事件一致以便外部订阅）
-            classType.AddField(new FieldSymbol("_" + eventName, resolvedHandler, visibility, classType));
+            // 多播存储：函数值数组字段（初值 null；+= 尾插 / -= 引用相等移除首匹配 / 触发判空快照遍历）
+            classType.AddField(new FieldSymbol("_" + eventName, TypeSymbol.ArrayOf(resolvedHandler), visibility, classType));
+        }
+
+        /// <summary>
+        /// 事件订阅脱糖（6e-M22 C5+ 多播）：`e += f` / `e -= f` → 语句块。
+        /// += 尾插（null → 单元素数组；否则复制扩容）；-= 按引用相等移除首个匹配（清空后回置 null）。
+        /// 处理器表达式只求值一次（提升隐藏局部）。返回 null 表示目标不是事件（走通用绑定）。
+        /// </summary>
+        private BoundStatement? TryBindEventSubscription(AssignmentExpressionSyntax syntax)
+        {
+            var operatorKind = syntax.AssignmentToken.Kind;
+            if (operatorKind != SyntaxKind.PlusEqualsToken && operatorKind != SyntaxKind.MinusEqualsToken)
+            {
+                return null;
+            }
+
+            // 目标形态：`obj.e` / `this.e` / 类内裸名 `e`
+            string? eventName = null;
+            ClassTypeSymbol? ownerClass = null;
+            BoundExpression? receiver = null;
+
+            if (syntax.Target.Kind == SyntaxKind.MemberAccessExpression)
+            {
+                var memberAccess = (MemberAccessExpressionSyntax)syntax.Target;
+                var boundReceiver = BindExpression(memberAccess.Expression);
+
+                if (boundReceiver.Type is ClassTypeSymbol candidate &&
+                    candidate.GetEvent(memberAccess.IdentifierToken.Text) is EventSymbol)
+                {
+                    receiver = boundReceiver;
+                    eventName = memberAccess.IdentifierToken.Text;
+                    ownerClass = candidate;
+                }
+            }
+            else if (syntax.Target.Kind == SyntaxKind.NameExpression && _currentClass != null)
+            {
+                var nameIdentifier = ((NameExpressionSyntax)syntax.Target).IdentifierToken.Text;
+
+                if (_currentClass.GetEvent(nameIdentifier) is EventSymbol)
+                {
+                    receiver = new BoundThisExpression(syntax.Target, _currentClass);
+                    eventName = nameIdentifier;
+                    ownerClass = _currentClass;
+                }
+            }
+
+            if (ownerClass == null || receiver == null || eventName == null)
+            {
+                return null;
+            }
+
+            var eventSymbol = ownerClass.GetEvent(eventName)!;
+
+            if (!IsAccessibleMember(eventSymbol.Visibility, ownerClass))
+            {
+                _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, eventName, eventSymbol.Visibility);
+                return new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
+            }
+
+            var signature = eventSymbol.HandlerType;
+            var backingField = ownerClass.GetField("_" + eventName)!;
+            var handlerArray = TypeSymbol.ArrayOf(signature);
+
+            _labelCounter++;
+            var sequence = _labelCounter;
+            var handlerLocal = new LocalVariableSymbol($"__evt{sequence}_h", isReadOnly: true, signature, null);
+            var oldListLocal = new LocalVariableSymbol($"__evt{sequence}_old", isReadOnly: true, handlerArray, null);
+
+            var fieldAccess = new BoundMemberAccessExpression(syntax, handlerArray, receiver, backingField.Name, backingField);
+
+            // 处理器绑定：先常规绑定（裸函数名已是函数值），再归一化类型——
+            // delegate 类变量/表达式提取 Invoke 签名核对；不匹配时回退语法级转换（方法组/期望类型下推）。
+            var boundHandler = BindExpression(syntax.Expression);
+            var handlerType = boundHandler.Type switch
+            {
+                ClassTypeSymbol { IsDelegateClass: true } delegateClass => delegateClass.GetDelegateSignature(),
+                var other => other,
+            };
+
+            if (handlerType != TypeSymbol.Error && handlerType != signature)
+            {
+                boundHandler = BindConversion(syntax.Expression, signature);
+            }
+
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            statements.Add(new BoundVariableDeclaration(syntax, handlerLocal, boundHandler));
+            statements.Add(new BoundVariableDeclaration(syntax, oldListLocal, fieldAccess));
+
+            var nullLiteral = new BoundLiteralExpression(syntax, null, TypeSymbol.Null);
+
+            if (operatorKind == SyntaxKind.PlusEqualsToken)
+            {
+                // += 尾插：
+                // if __old == null { _<e> = new Fn[1] { __h } }
+                // else {
+                //     __n = new Fn[__old.Length + 1]
+                //     while __i < __old.Length { __n[__i] = __old[__i]; __i++ }
+                //     __n[__old.Length] = __h
+                //     _<e> = __n
+                // }
+                var isNullCondition = BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, oldListLocal),
+                    SyntaxKind.EqualsEqualsToken,
+                    nullLiteral);
+
+                var singleItem = new BoundArrayCreationExpression(
+                    syntax, handlerArray,
+                    BoundNodeFactory.Literal(syntax, 1),
+                    ImmutableArray.Create<BoundExpression>(BoundNodeFactory.Variable(syntax, handlerLocal)));
+                var storeSingle = new BoundExpressionStatement(
+                    syntax,
+                    new BoundMemberAssignmentExpression(syntax, receiver, backingField, singleItem));
+
+                var growStatements = new List<BoundStatement>();
+                var newListLocal = new LocalVariableSymbol($"__evt{sequence}_new", isReadOnly: false, handlerArray, null);
+                var indexLocal = new LocalVariableSymbol($"__evt{sequence}_i", isReadOnly: false, TypeSymbol.Int32, null);
+
+                growStatements.Add(new BoundVariableDeclaration(
+                    syntax, newListLocal,
+                    new BoundArrayCreationExpression(
+                        syntax, handlerArray,
+                        BoundNodeFactory.Add(syntax,
+                            LengthOf(syntax, oldListLocal),
+                            BoundNodeFactory.Literal(syntax, 1)),
+                        ImmutableArray<BoundExpression>.Empty)));
+                growStatements.Add(new BoundVariableDeclaration(syntax, indexLocal, BoundNodeFactory.Literal(syntax, 0)));
+
+                var copyLoop = BuildElementCopyLoop(syntax, newListLocal, indexLocal, oldListLocal, $"__evt{sequence}_br");
+                foreach (var statement in copyLoop)
+                {
+                    growStatements.Add(statement);
+                }
+
+                growStatements.Add(new BoundExpressionStatement(syntax, new BoundElementAssignmentExpression(
+                    syntax, signature,
+                    ElementOf(syntax, newListLocal, LengthOf(syntax, oldListLocal)),
+                    BoundNodeFactory.Variable(syntax, handlerLocal))));
+
+                growStatements.Add(new BoundExpressionStatement(syntax, new BoundMemberAssignmentExpression(
+                    syntax, receiver, backingField, BoundNodeFactory.Variable(syntax, newListLocal))));
+
+                var ifStatement = new BoundIfStatement(
+                    syntax, isNullCondition,
+                    storeSingle,
+                    BoundNodeFactory.Block(syntax, growStatements.ToArray()));
+
+                statements.Add(ifStatement);
+            }
+            else
+            {
+                // -= 移除首个引用相等匹配：
+                // if __old != null {
+                //     __idx = -1; __i = 0
+                //     while __i < __old.Length { if __idx == -1 && __old[__i] == __h { __idx = __i }; __i++ }
+                //     if __idx >= 0 {
+                //         if __old.Length == 1 { _<e> = null }
+                //         else { 双游标复制跳过 __idx → _<e> = __n }
+                //     }
+                // }
+                var notNullCondition = BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, oldListLocal),
+                    SyntaxKind.BangEqualsToken,
+                    nullLiteral);
+
+                var scanStatements = new List<BoundStatement>();
+                var matchIndexLocal = new LocalVariableSymbol($"__evt{sequence}_idx", isReadOnly: false, TypeSymbol.Int32, null);
+                var scanIndexLocal = new LocalVariableSymbol($"__evt{sequence}_j", isReadOnly: false, TypeSymbol.Int32, null);
+
+                scanStatements.Add(new BoundVariableDeclaration(syntax, matchIndexLocal, BoundNodeFactory.Literal(syntax, -1)));
+                scanStatements.Add(new BoundVariableDeclaration(syntax, scanIndexLocal, BoundNodeFactory.Literal(syntax, 0)));
+
+                _labelCounter++;
+                var scanBreak = new BoundLabel($"__evt{sequence}_scan_br");
+                var scanContinue = new BoundLabel($"__evt{sequence}_scan_ct");
+
+                var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
+                var elementEqualsHandler = BoundNodeFactory.Binary(syntax,
+                    ElementOf(syntax, oldListLocal, BoundNodeFactory.Variable(syntax, scanIndexLocal)),
+                    SyntaxKind.EqualsEqualsToken,
+                    BoundNodeFactory.Variable(syntax, handlerLocal));
+                var notYetFound = BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, matchIndexLocal),
+                    SyntaxKind.EqualsEqualsToken,
+                    BoundNodeFactory.Literal(syntax, -1));
+
+                loopBody.Add(new BoundIfStatement(
+                    syntax, notYetFound,
+                    BoundNodeFactory.Block(syntax, new BoundIfStatement(
+                        syntax, elementEqualsHandler,
+                        new BoundExpressionStatement(syntax,
+                            BoundNodeFactory.Assignment(syntax, matchIndexLocal, BoundNodeFactory.Variable(syntax, scanIndexLocal))),
+                        elseStatement: null)),
+                    elseStatement: null));
+                loopBody.Add(BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, scanIndexLocal)));
+
+                var scanLoop = BoundNodeFactory.While(
+                    syntax,
+                    BoundNodeFactory.Binary(syntax,
+                        BoundNodeFactory.Variable(syntax, scanIndexLocal),
+                        SyntaxKind.LessToken,
+                        LengthOf(syntax, oldListLocal)),
+                    new BoundBlockStatement(syntax, loopBody.ToImmutable()),
+                    scanBreak, scanContinue);
+
+                scanStatements.Add(scanLoop);
+
+                // 命中后重建
+                var rebuildStatements = new List<BoundStatement>();
+
+                var lengthIsOne = BoundNodeFactory.Binary(syntax,
+                    LengthOf(syntax, oldListLocal),
+                    SyntaxKind.EqualsEqualsToken,
+                    BoundNodeFactory.Literal(syntax, 1));
+                var storeNull = new BoundExpressionStatement(
+                    syntax,
+                    new BoundMemberAssignmentExpression(syntax, receiver, backingField, nullLiteral));
+
+                var compactStatements = new List<BoundStatement>();
+                var compactedListLocal = new LocalVariableSymbol($"__evt{sequence}_new", isReadOnly: false, handlerArray, null);
+                var targetIndexLocal = new LocalVariableSymbol($"__evt{sequence}_k", isReadOnly: false, TypeSymbol.Int32, null);
+                var sourceIndexLocal = new LocalVariableSymbol($"__evt{sequence}_m", isReadOnly: false, TypeSymbol.Int32, null);
+
+                compactStatements.Add(new BoundVariableDeclaration(
+                    syntax, compactedListLocal,
+                    new BoundArrayCreationExpression(
+                        syntax, handlerArray,
+                        BoundNodeFactory.Binary(syntax,
+                            LengthOf(syntax, oldListLocal),
+                            SyntaxKind.MinusToken,
+                            BoundNodeFactory.Literal(syntax, 1)),
+                        ImmutableArray<BoundExpression>.Empty)));
+                compactStatements.Add(new BoundVariableDeclaration(syntax, targetIndexLocal, BoundNodeFactory.Literal(syntax, 0)));
+                compactStatements.Add(new BoundVariableDeclaration(syntax, sourceIndexLocal, BoundNodeFactory.Literal(syntax, 0)));
+
+                _labelCounter++;
+                var compactBreak = new BoundLabel($"__evt{sequence}_cp_br");
+                var compactContinue = new BoundLabel($"__evt{sequence}_cp_ct");
+
+                var copyBody = ImmutableArray.CreateBuilder<BoundStatement>();
+                var sourceIsMatch = BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, sourceIndexLocal),
+                    SyntaxKind.EqualsEqualsToken,
+                    BoundNodeFactory.Variable(syntax, matchIndexLocal));
+                var advanceTarget = ImmutableArray.Create<BoundStatement>(
+                    new BoundExpressionStatement(syntax, new BoundElementAssignmentExpression(
+                        syntax, signature,
+                        ElementOf(syntax, compactedListLocal, BoundNodeFactory.Variable(syntax, targetIndexLocal)),
+                        ElementOf(syntax, oldListLocal, BoundNodeFactory.Variable(syntax, sourceIndexLocal)))),
+                    BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, targetIndexLocal)));
+
+                copyBody.Add(new BoundIfStatement(
+                    syntax, sourceIsMatch,
+                    BoundNodeFactory.Nop(syntax),
+                    BoundNodeFactory.Block(syntax, advanceTarget.ToArray())));
+                copyBody.Add(BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, sourceIndexLocal)));
+
+            var compactLoop = BoundNodeFactory.While(
+                syntax,
+                BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, sourceIndexLocal),
+                    SyntaxKind.LessToken,
+                    LengthOf(syntax, oldListLocal)),
+                new BoundBlockStatement(syntax, copyBody.ToImmutable()),
+                compactBreak, compactContinue);
+
+                compactStatements.Add(compactLoop);
+                compactStatements.Add(new BoundExpressionStatement(syntax, new BoundMemberAssignmentExpression(
+                    syntax, receiver, backingField, BoundNodeFactory.Variable(syntax, compactedListLocal))));                var hitCondition = BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, matchIndexLocal),
+                    SyntaxKind.GreaterOrEqualsToken,
+                    BoundNodeFactory.Literal(syntax, 0));
+
+                rebuildStatements.Add(new BoundIfStatement(
+                    syntax, hitCondition,
+                    BoundNodeFactory.Block(syntax,
+                        new BoundIfStatement(syntax, lengthIsOne, storeNull, BoundNodeFactory.Block(syntax, compactStatements.ToArray()))),
+                    elseStatement: null));
+
+                scanStatements.AddRange(rebuildStatements);
+
+                statements.Add(new BoundIfStatement(
+                    syntax, notNullCondition,
+                    BoundNodeFactory.Block(syntax, scanStatements.ToArray()),
+                    elseStatement: null));
+            }
+
+            return BoundNodeFactory.Block(syntax, statements.ToArray());
+        }
+
+        /// <summary>
+        /// 类内触发脱糖（6e-M22 C5+ 多播）：`e(args)` → 判空 + 快照遍历逐个调用。
+        /// 实参只求值一次（提升隐藏局部，防遍历期间重复执行副作用）。
+        /// </summary>
+        private BoundStatement BindEventRaise(ExpressionStatementSyntax syntax, TextLocation errorLocation, string eventName, SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes)
+        {
+            var eventSymbol = _currentClass!.GetEvent(eventName)!;
+            var signature = eventSymbol.HandlerType;
+
+            if (signature.ParameterTypes.Length != argumentSyntaxes.Count)
+            {
+                _diagnostics.ReportWrongArgumentCount(errorLocation, eventName, signature.ParameterTypes.Length, argumentSyntaxes.Count);
+                return new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
+            }
+
+            _labelCounter++;
+            var sequence = _labelCounter;
+            var snapshotLocal = new LocalVariableSymbol($"__evt{sequence}_snap", isReadOnly: true, TypeSymbol.ArrayOf(signature), null);
+            var indexLocal = new LocalVariableSymbol($"__evt{sequence}_i", isReadOnly: false, TypeSymbol.Int32, null);
+
+            var backingField = _currentClass.GetField("_" + eventName)!;
+            var thisReceiver = new BoundThisExpression(syntax.Expression, _currentClass);
+            var fieldAccess = new BoundMemberAccessExpression(syntax, snapshotLocal.Type, thisReceiver, backingField.Name, backingField);
+
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            statements.Add(new BoundVariableDeclaration(syntax, snapshotLocal, fieldAccess));
+
+            // 实参求值提升
+            var argumentLocals = new LocalVariableSymbol[argumentSyntaxes.Count];
+            for (var i = 0; i < argumentSyntaxes.Count; i++)
+            {
+                argumentLocals[i] = new LocalVariableSymbol($"__evt{sequence}_a{i}", isReadOnly: true, signature.ParameterTypes[i], null);
+                statements.Add(new BoundVariableDeclaration(
+                    syntax, argumentLocals[i],
+                    BindConversion(argumentSyntaxes[i], signature.ParameterTypes[i])));
+            }
+
+            // 快照遍历计数器（判空通过后才进入循环，声明置于其前保证线性执行序）
+            statements.Add(new BoundVariableDeclaration(syntax, indexLocal, BoundNodeFactory.Literal(syntax, 0)));
+
+            var notNullCondition = BoundNodeFactory.Binary(syntax,
+                BoundNodeFactory.Variable(syntax, snapshotLocal),
+                SyntaxKind.BangEqualsToken,
+                new BoundLiteralExpression(syntax, null, TypeSymbol.Null));
+
+            _labelCounter++;
+            var breakLabel = new BoundLabel($"__evt{sequence}_raise_br");
+            var continueLabel = new BoundLabel($"__evt{sequence}_raise_ct");
+
+            var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            var elementAccess = ElementOf(syntax, snapshotLocal, BoundNodeFactory.Variable(syntax, indexLocal));
+            var invocationArguments = argumentLocals
+                .Select(local => (BoundExpression)BoundNodeFactory.Variable(syntax, local))
+                .ToImmutableArray();
+            var invocation = new BoundInvocationExpression(syntax.Expression, elementAccess, invocationArguments, signature.ReturnType);
+            loopBody.Add(new BoundExpressionStatement(syntax, invocation));
+            loopBody.Add(BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, indexLocal)));
+
+            var raiseLoop = BoundNodeFactory.While(
+                syntax,
+                BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, indexLocal),
+                    SyntaxKind.LessToken,
+                    LengthOf(syntax, snapshotLocal)),
+                new BoundBlockStatement(syntax, loopBody.ToImmutable()),
+                breakLabel, continueLabel);
+
+            statements.Add(new BoundIfStatement(syntax, notNullCondition, raiseLoop, elseStatement: null));
+
+            return BoundNodeFactory.Block(syntax, statements.ToArray());
+        }
+
+        /// <summary>`__local.Length` 成员访问合成。</summary>
+        private static BoundMemberAccessExpression LengthOf(SyntaxNode syntax, LocalVariableSymbol arrayLocal)
+        {
+            return new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, BoundNodeFactory.Variable(syntax, arrayLocal), "Length");
+        }
+
+        /// <summary>`__local[index]` 元素访问合成。</summary>
+        private static BoundElementAccessExpression ElementOf(SyntaxNode syntax, LocalVariableSymbol arrayLocal, BoundExpression index)
+        {
+            return new BoundElementAccessExpression(syntax, arrayLocal.Type.ElementType!, BoundNodeFactory.Variable(syntax, arrayLocal), index);
+        }
+
+        /// <summary>判断字段是否为事件合成后备字段（`_<eventName>`，多播存储）——禁止直接赋值/读取。</summary>
+        private static bool IsEventBackingField(FieldSymbol field)
+        {
+            return field.Name.StartsWith("_", StringComparison.Ordinal) &&
+                   field.ContainingClass != null &&
+                   field.ContainingClass.GetEvent(field.Name[1..]) != null;
+        }
+
+        /// <summary>数组复制循环合成：`while i < source.Length { target[i] = source[i]; i++ }`（target 与 source 等长或更长）。</summary>
+        private IEnumerable<BoundStatement> BuildElementCopyLoop(SyntaxNode syntax, LocalVariableSymbol targetLocal, LocalVariableSymbol indexLocal, LocalVariableSymbol sourceLocal, string labelSuffix)
+        {
+            _labelCounter++;
+            var breakLabel = new BoundLabel($"{labelSuffix}{_labelCounter}");
+            var continueLabel = new BoundLabel($"{labelSuffix}ct{_labelCounter}");
+
+            var elementType = targetLocal.Type.ElementType!;
+            var loopBody = ImmutableArray.Create<BoundStatement>(
+                new BoundExpressionStatement(syntax, new BoundElementAssignmentExpression(
+                    syntax, elementType,
+                    ElementOf(syntax, targetLocal, BoundNodeFactory.Variable(syntax, indexLocal)),
+                    ElementOf(syntax, sourceLocal, BoundNodeFactory.Variable(syntax, indexLocal)))),
+                BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, indexLocal)));
+
+            yield return BoundNodeFactory.While(
+                syntax,
+                BoundNodeFactory.Binary(syntax,
+                    BoundNodeFactory.Variable(syntax, indexLocal),
+                    SyntaxKind.LessToken,
+                    LengthOf(syntax, sourceLocal)),
+                new BoundBlockStatement(syntax, loopBody),
+                breakLabel, continueLabel);
         }
 
         /// <summary>
@@ -4202,6 +4614,27 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)
         {
+            // 6e-M22 C5+ 多播事件：订阅（+=/-=）与类内触发（裸名调用）语句级拦截，
+            // 脱糖为既有 Bound 节点块（foreach 先例），三后端 + Evaluator 零改动。
+            if (syntax.Expression.Kind == SyntaxKind.AssignmentExpression)
+            {
+                var subscription = TryBindEventSubscription((AssignmentExpressionSyntax)syntax.Expression);
+                if (subscription != null)
+                {
+                    return subscription;
+                }
+            }
+
+            if (syntax.Expression.Kind == SyntaxKind.CallExpression && _currentClass != null)
+            {
+                var raiseCall = (CallExpressionSyntax)syntax.Expression;
+
+                if (_currentClass.GetEvent(raiseCall.Identifier.Text) is EventSymbol)
+                {
+                    return BindEventRaise(syntax, raiseCall.Identifier.Location, raiseCall.Identifier.Text, raiseCall.Arguments);
+                }
+            }
+
             var expression = BindExpression(syntax.Expression, canBeVoid: true);
 
             return new BoundExpressionStatement(syntax, expression);
@@ -4772,27 +5205,18 @@ namespace Cocoa.CodeAnalysis.Binding
                  syntax.AssignmentToken.Kind == SyntaxKind.PlusEqualsToken ||
                  syntax.AssignmentToken.Kind == SyntaxKind.MinusEqualsToken))
             {
+                // 6e-M22 C5+ 多播：事件后备字段的 += / -= 已在语句级拦截（TryBindEventSubscription）；
+                // 事件不能直接赋值（含 `=`），只能经订阅语法或类内触发。
+                if (IsEventBackingField(memberTarget.Field))
+                {
+                    _diagnostics.ReportEventNotAValue(syntax.AssignmentToken.Location, memberTarget.Field.Name);
+                    return new BoundErrorExpression(syntax);
+                }
+
                 if (!IsAccessibleMember(memberTarget.Field.Visibility, memberTarget.Field.ContainingClass))
                 {
                     _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, memberTarget.Field.Name, memberTarget.Field.Visibility);
                     return new BoundErrorExpression(syntax);
-                }
-
-                // 6e-M22 C5+：函数类型或 delegate 类字段的 += / -= 事件订阅语义（单播 v1）
-                var isEventField = memberTarget.Field.Type is FunctionTypeSymbol ||
-                                   (memberTarget.Field.Type is ClassTypeSymbol { IsDelegateClass: true });
-                if (isEventField &&
-                    syntax.AssignmentToken.Kind != SyntaxKind.EqualsToken)
-                {
-                    if (syntax.AssignmentToken.Kind == SyntaxKind.MinusEqualsToken)
-                    {
-                        // -= 置空（首版简化，引用相等移除后续实现）
-                        var nullValue = new BoundLiteralExpression(syntax.Expression, null, TypeSymbol.Null);
-                        return new BoundMemberAssignmentExpression(syntax, memberTarget.Target, memberTarget.Field, nullValue);
-                    }
-                    // += 等同于简单赋值（覆写）
-                    var assignedValue = BindConversion(syntax.Expression.Location, boundExpression, memberTarget.Field.Type);
-                    return new BoundMemberAssignmentExpression(syntax, memberTarget.Target, memberTarget.Field, assignedValue);
                 }
 
                 if (memberTarget.Field.IsReadonly && _function?.IsConstructor != true)
@@ -5065,14 +5489,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     return new BoundMemberAccessExpression(syntax, field.Type, boundTarget, identifier, field);
                 }
 
-                // 6e-M22 C5+：事件成员访问 → 重定向到隐藏后备字段 `_<eventName>`
-                if (classType.GetEvent(identifier) is EventSymbol eventSymbol)
+                // 6e-M22 C5+ 多播：事件不能作为值读取（CS0070 对齐）——仅允许语句级 +=/-= 与类内裸名触发。
+                if (classType.GetEvent(identifier) is EventSymbol)
                 {
-                    var backingField = classType.GetField("_" + identifier);
-                    if (backingField != null)
-                    {
-                        return new BoundMemberAccessExpression(syntax, backingField.Type, boundTarget, "_" + identifier, backingField);
-                    }
+                    _diagnostics.ReportEventNotAValue(syntax.IdentifierToken.Location, identifier);
+                    return new BoundErrorExpression(syntax);
                 }
 
                 // 属性读：obj.Name → get_Name()
@@ -5196,6 +5617,13 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method, isBase);
+                }
+
+                // 6e-M22 C5+ 多播：事件不可作为值调用（CS0070 对齐）——触发仅限声明类内裸名。
+                if (classType.GetEvent(identifier) is EventSymbol)
+                {
+                    _diagnostics.ReportEventNotAValue(syntax.IdentifierToken.Location, identifier);
+                    return new BoundErrorExpression(syntax);
                 }
 
                 // 函数值字段间接调用（6e-M22 C4）：`obj.handler(x)` —— 实例字段持有函数值
@@ -5720,21 +6148,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 6e-M22 C5+：事件内部触发——`onGreet(msg)` → 后备字段函数值间接调用
-            if (_currentClass != null && _currentClass.GetEvent(syntax.Identifier.Text) is EventSymbol &&
-                _currentClass.GetField("_" + syntax.Identifier.Text) is FieldSymbol evtBacking &&
-                evtBacking.Type is FunctionTypeSymbol evtFnType)
-            {
-                var thisExpr = new BoundThisExpression(syntax, _currentClass);
-                var fieldAccess = new BoundMemberAccessExpression(syntax, evtBacking.Type, thisExpr, "_" + syntax.Identifier.Text, evtBacking);
-
-                return BindFunctionValueInvocation(
-                    syntax.Identifier.Location,
-                    syntax.Identifier.Text,
-                    syntax.Arguments,
-                    fieldAccess,
-                    evtFnType);
-            }
+            // 6e-M22 C5+ 多播：类内触发 `e(args)` 已在语句级拦截（BindEventRaise）。
+            // 非语句位置的事件名调用走通用查找，报 not-a-function（事件不可作值）。
 
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
 

@@ -564,6 +564,20 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        /// <summary>C5+ 多播事件：事件只能作为 +=/-= 的目标或类内裸名触发，不能作为值读取/调用/赋值（CS0070 对齐）。</summary>
+        public void ReportEventNotAValue(TextLocation location, string eventName)
+        {
+            var message = $"事件 '{eventName}' 不能作为值使用：外部仅允许 '+=' / '-=' 订阅与退订，类内允许裸名触发。";
+            ReportError(location, message);
+        }
+
+        /// <summary>C5+ 多播事件：静态事件暂不支持（设计 §7.3 后置项）。</summary>
+        public void ReportStaticEventNotSupported(TextLocation location, string eventName)
+        {
+            var message = $"静态事件 '{eventName}' 暂不支持：多播存储当前为实例字段，静态事件留后续里程碑。";
+            ReportError(location, message);
+        }
+
         public void ReportCircularInheritance(TextLocation location, string baseName)
         {
             var message = $"循环继承：'{baseName}' 形成继承环。";

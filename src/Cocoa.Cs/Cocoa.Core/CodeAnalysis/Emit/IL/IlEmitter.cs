@@ -1793,60 +1793,84 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private void EmitArrayCreationExpression(IlAssembler il, BoundArrayCreationExpression node)
         {
             EmitExpression(il, node.Length);
-            il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(RequireArrayElementTypeName(node.Type)));
+
+            var elementType = node.Type.ElementType!;
+            if (IsReferenceElement(elementType))
+            {
+                // 6e-M22 C5+ 多播事件：类/delegate/函数类型元素数组 —— 类走 TypeDef/TypeRef，
+                // 泛型实例化（Func\`N）经 TypeSpec 表注册后回填 token。
+                il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(elementType)));
+            }
+            else
+            {
+                il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(PrimitiveArrayElementTypeName(elementType)));
+            }
 
             for (var i = 0; i < node.Initializers.Length; i++)
             {
                 il.Emit(IlOpCodeTable.Get("Dup"));
                 il.Emit(IlOpCodeTable.Get("Ldc_I4"), i);
                 EmitExpression(il, node.Initializers[i]);
-                EmitElementStore(il, node.Type.ElementType!);
+                EmitElementStore(il, elementType);
             }
         }
 
-        private static string RequireArrayElementTypeName(TypeSymbol arrayType)
+        /// <summary>InlineType 操作数（Newarr 等）：泛型实例化必须注册为 TypeSpec（其 .Reference 指向的是
+        /// 泛型定义 TypeRef，直接回填会得到错误 token）；TypeDef/TypeRef 直用；String 标记型映射框架 TypeRef。</summary>
+        private object OperandForTypeToken(IlType type)
         {
-            if (arrayType.ElementType == TypeSymbol.Int32)
+            if (type.Kind == IlTypeKind.GenericInst)
             {
-                return "System.Int32";
+                return _metadata.DefineTypeSpec(type);
             }
 
-            if (arrayType.ElementType == TypeSymbol.Int64)
+            if (type.TypeDef != null || type.Reference != null)
             {
-                return "System.Int64";
+                return type;
             }
 
-            if (arrayType.ElementType == TypeSymbol.Char)
+            if (type.Kind == IlTypeKind.String)
             {
-                return "System.Char";
+                return _framework.RequireType("System.String");
             }
 
-            if (arrayType.ElementType == TypeSymbol.UInt8)
+            return _metadata.DefineTypeSpec(type);
+        }
+
+        /// <summary>基元值类型元素的 Newarr 框架类型名（enum 按 int32 表示）。</summary>
+        private string PrimitiveArrayElementTypeName(TypeSymbol elementType)
+        {
+            return elementType switch
             {
-                return "System.Byte";
+                _ when elementType == TypeSymbol.Int32 => "System.Int32",
+                _ when elementType == TypeSymbol.Int64 => "System.Int64",
+                _ when elementType == TypeSymbol.Char => "System.Char",
+                _ when elementType == TypeSymbol.UInt8 => "System.Byte",
+                _ when elementType == TypeSymbol.Double => "System.Double",
+                _ when elementType == TypeSymbol.Boolean => "System.Boolean",
+                _ when elementType is EnumTypeSymbol => "System.Int32",
+                _ => throw new System.NotSupportedException($"Array of '{elementType}' is not yet supported by the IL emitter."),
+            };
+        }
+
+        /// <summary>引用型元素判定：非基元值类型（含函数类型 / delegate 类 / 用户类 / string / 数组 / Object/any）一律按 ref 存取。</summary>
+        private static bool IsReferenceElement(TypeSymbol elementType)
+        {
+            if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.UInt8 || elementType == TypeSymbol.Int8 ||
+                elementType == TypeSymbol.Int16 || elementType == TypeSymbol.UInt16 ||
+                elementType == TypeSymbol.Int32 || elementType == TypeSymbol.UInt32 ||
+                elementType == TypeSymbol.Int64 || elementType == TypeSymbol.UInt64 ||
+                elementType == TypeSymbol.Char || elementType == TypeSymbol.Float || elementType == TypeSymbol.Double)
+            {
+                return false;
             }
 
-            if (arrayType.ElementType == TypeSymbol.Double)
+            if (elementType is EnumTypeSymbol)
             {
-                return "System.Double";
+                return false;
             }
 
-            if (arrayType.ElementType is EnumTypeSymbol)
-            {
-                return "System.Int32";
-            }
-
-            if (arrayType.ElementType == TypeSymbol.Boolean)
-            {
-                return "System.Boolean";
-            }
-
-            if (arrayType.ElementType == TypeSymbol.String)
-            {
-                return "System.String";
-            }
-
-            throw new System.NotSupportedException($"Array of '{arrayType.ElementType}' is not yet supported by the IL emitter.");
+            return true;
         }
 
         private void EmitElementAccessExpression(IlAssembler il, BoundElementAccessExpression node)
@@ -1860,7 +1884,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
-            if (node.Type == TypeSymbol.Char)
+            if (IsReferenceElement(node.Type))
+            {
+                // 6e-M22 C5+ 多播事件：函数值/delegate/类元素数组按引用加载
+                il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
+            }
+            else if (node.Type == TypeSymbol.Char)
             {
                 il.Emit(IlOpCodeTable.Get("Ldelem_U2"));
             }
@@ -1875,10 +1904,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             else if (node.Type == TypeSymbol.Boolean || node.Type == TypeSymbol.UInt8)
             {
                 il.Emit(IlOpCodeTable.Get("Ldelem_U1"));
-            }
-            else if (node.Type == TypeSymbol.String)
-            {
-                il.Emit(IlOpCodeTable.Get("Ldelem_Ref"));
             }
             else if (node.Type.ElementType != null)
             {
@@ -1903,13 +1928,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
         }
 
-        private int AllocateTemporaryLocal(BoundExpression node)
+        private int AllocateTemporaryLocal(BoundExpression node, TypeSymbol? typeOverride = null)
         {
             if (!_temporaryLocalIndices.TryGetValue(node, out var index))
             {
                 index = _currentFunctionLocals!.Count;
                 _temporaryLocalIndices.Add(node, index);
-                _currentFunctionLocals.Add(ToIlType(node.Type));
+                _currentFunctionLocals.Add(ToIlType(typeOverride ?? node.Type));
             }
 
             return index;
@@ -1917,7 +1942,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private static void EmitElementStore(IlAssembler il, TypeSymbol elementType)
         {
-            if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.UInt8)
+            if (IsReferenceElement(elementType))
+            {
+                // 6e-M22 C5+ 多播事件：函数值/delegate/类元素数组按引用存储
+                il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
+            }
+            else if (elementType == TypeSymbol.Boolean || elementType == TypeSymbol.UInt8)
             {
                 il.Emit(IlOpCodeTable.Get("Stelem_I1"));
             }
@@ -1932,10 +1962,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             else if (elementType == TypeSymbol.Int64)
             {
                 il.Emit(IlOpCodeTable.Get("Stelem_I8"));
-            }
-            else if (elementType == TypeSymbol.String)
-            {
-                il.Emit(IlOpCodeTable.Get("Stelem_Ref"));
             }
             else if (elementType.ElementType != null)
             {
@@ -2080,7 +2106,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitMemberAssignmentExpression(IlAssembler il, BoundMemberAssignmentExpression node)
         {
-            var temporaryLocal = AllocateTemporaryLocal(node);
+            // 临时局部按字段类型分配（表达式可为 null 字面量——TypeSymbol.Null 无 IL 映射；槽语义 = 存入字段的值）
+            var temporaryLocal = AllocateTemporaryLocal(node, node.Field.Type);
 
             if (node.Field.IsStatic)
             {
