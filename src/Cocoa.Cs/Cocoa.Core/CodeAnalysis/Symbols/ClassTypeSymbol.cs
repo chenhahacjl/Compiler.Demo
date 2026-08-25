@@ -28,6 +28,23 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>是否为内建 MulticastDelegate 单例。</summary>
         public bool IsSystemMulticastDelegate => this == SystemMulticastDelegate;
 
+        /// <summary>是否为 delegate 声明合成的类（BaseType = MulticastDelegate）。</summary>
+        public bool IsDelegateClass => BaseType == SystemMulticastDelegate;
+
+        /// <summary>提取 delegate 类的 Invoke 方法签名对应的函数类型（非 delegate 类返回 null）。</summary>
+        public FunctionTypeSymbol? GetDelegateSignature()
+        {
+            if (!IsDelegateClass)
+                return null;
+
+            var invoke = GetMethod("Invoke");
+            if (invoke == null)
+                return null;
+
+            var paramTypes = invoke.Parameters.Select(p => p.Type).ToImmutableArray();
+            return FunctionTypeSymbol.Get(paramTypes, invoke.ReturnType);
+        }
+
         /// <summary>6e-M22 C5+：内建 Delegate/MulticastDelegate 继承链初始化。</summary>
         static ClassTypeSymbol()
         {

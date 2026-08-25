@@ -120,6 +120,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var classFunctions = new List<FunctionSymbol>();
             var allClasses = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();
+            var pendingDelegates = new List<(DelegateDeclarationSyntax Syntax, string Namespace)>();
             var allInterfaces = new List<(InterfaceDeclarationSyntax Syntax, string Namespace)>();
             var allEnums = new List<(EnumDeclarationSyntax Syntax, string Namespace)>();
             var pendingFunctions = new List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)>();
@@ -145,6 +146,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 else if (member is ClassDeclarationSyntax classDeclaration)
                 {
                     allClasses.Add((classDeclaration, ""));
+                }
+                else if (member is DelegateDeclarationSyntax delegateDeclaration)
+                {
+                    pendingDelegates.Add((delegateDeclaration, ""));
                 }
                 else if (member is InterfaceDeclarationSyntax interfaceDeclaration)
                 {
@@ -211,6 +216,12 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             binder.SetBindingClass(null);
+
+            // 阶段 3.1：绑定 delegate 声明（6e-M22 D-A）——合成 sealed class extends MulticastDelegate
+            foreach (var (delegateSyntax, delegateNs) in pendingDelegates)
+            {
+                binder.BindTopLevelDelegateDeclaration(delegateSyntax, delegateNs);
+            }
 
             // 阶段 3.2：类泛型 where 约束解析（6e-M20；接口/类符号均已声明）
             foreach (var (classType, parts) in classGroups)
@@ -1460,11 +1471,40 @@ namespace Cocoa.CodeAnalysis.Binding
             };
             delegateClass.AddMethod(invokeFn);
 
-            // 注册到作用域（类型位置可引用）
+            // 注册到类的事件/委托集合（类内 delegate）
             if (!_scope.TryDeclareClass(delegateClass))
             {
                 _diagnostics.ReportError(syntax.Identifier.Location, $"delegate '{delegateName}' 已声明。");
             }
+        }
+
+        /// <summary>顶层（命名空间级）delegate 声明：同 BindDelegateDeclaration 但注册到全局作用域。</summary>
+        internal void BindTopLevelDelegateDeclaration(DelegateDeclarationSyntax syntax, string ns)
+        {
+            var returnType = BindTypeClause(syntax.ReturnType);
+            if (returnType == null)
+                return;
+
+            var parameters = BindParameters(syntax.Parameters);
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
+            var delegateName = syntax.Identifier.Text;
+            var fullName = ns.Length == 0 ? delegateName : ns + "." + delegateName;
+
+            var delegateClass = new ClassTypeSymbol(delegateName, ns, visibility, declaration: null)
+            {
+                BaseType = ClassTypeSymbol.SystemMulticastDelegate,
+                IsSealed = true,
+            };
+
+            var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
+            var invokeFn = new FunctionSymbol("Invoke", invokeParams, returnType, null, containingClass: delegateClass, visibility: Visibility.Public)
+            {
+                IsStatic = false,
+            };
+            delegateClass.AddMethod(invokeFn);
+
+            // 命名空间级 delegate 直接注册进当前作用域（Namespace 属性承载限定）
+            _scope.TryDeclareClass(delegateClass);
         }
 
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>
@@ -5839,6 +5879,45 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 return lambdaValue;
+            }
+
+            // 6e-M22 D-A：目标为 delegate 类时提取 Invoke 签名作为函数类型（复用函数值管道）
+            if (type is ClassTypeSymbol { IsDelegateClass: true } delegateClass)
+            {
+                var delegateSignature = delegateClass.GetDelegateSignature();
+                if (delegateSignature == null)
+                {
+                    _diagnostics.ReportError(syntax.Location, $"delegate 类 '{delegateClass.Name}' 缺少 Invoke 方法。");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                if (syntax.Kind == SyntaxKind.LambdaExpression)
+                {
+                    var lambdaValue = BindLambdaExpression((LambdaExpressionSyntax)syntax, delegateSignature);
+                    if (lambdaValue.Type != delegateSignature && lambdaValue.Type != TypeSymbol.Error)
+                    {
+                        _diagnostics.ReportCannotConvert(syntax.Location, lambdaValue.Type, delegateSignature);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    return lambdaValue;
+                }
+
+                // 方法组/命名函数 → delegate 类型
+                if (syntax.Kind == SyntaxKind.NameExpression)
+                {
+                    var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
+                    if (asValue != null)
+                    {
+                        if (asValue.Type != delegateSignature)
+                        {
+                            _diagnostics.ReportCannotConvert(syntax.Location, asValue.Type, delegateSignature);
+                            return new BoundErrorExpression(syntax);
+                        }
+
+                        return asValue;
+                    }
+                }
             }
 
             // 方法组到函数类型的转换（6e-M22 C4）：命名方法/实例方法引用 → 一等函数值
