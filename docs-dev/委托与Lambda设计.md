@@ -175,6 +175,14 @@ let f: (int) -> int = Math.Abs // 静态方法 → 函数值（env = null）
 
 ## 7. 事件 event（C5+）
 
+> 状态：**✅ 已落地（2026-08-25，多播语义完整版）**。实现采用"纯 Binder 语句级脱糖"（foreach 先例），零新增 Bound 节点，三后端发射器主体零改动。
+> **落地差异（相对本节原始设计）**：
+> - 存储为隐藏数组字段 `_<事件名>`（初值 null），订阅/触发在 `BindExpressionStatement` 拦截脱糖为既有 Bound 节点块：`+=` 尾插（判空→单元素初始化列表 / 复制扩容循环）、`-=` 首个引用相等匹配扫描 + 双游标复制压缩、类内裸名触发 = 判空 + 快照遍历逐元素间接调用；实参与处理器表达式均提升隐藏局部只求值一次
+> - 函数值引用相等：`BoundBinaryOperator.Bind` 增双侧同形 FunctionTypeSymbol → ReferenceEquals 动态合成（发射层复用 M2-c 三后端通用路径）
+> - CS0070 对齐：删除单播版成员访问重定向；外部读/调用/直接赋值均报 `ReportEventNotAValue`；`static` 事件报明确拒绝诊断（§7.3 后置项兑现）
+> - IL 后端配套补齐三处既有缺口：`Newarr` 操作数 TypeSpec 化（泛型实例化必须经 DefineTypeSpec——`.Reference` 直填会错回填泛型定义 TypeRef token）、引用型元素 `Ldelem_Ref`/`Stelem_Ref` 分支、成员赋值临时局部改按字段类型分配（null 字面量存入无 Null 映射）；native/Evaluator 零改动验证通过
+> - 测试：LambdaBindingTests 事件区块 ×15（Evaluator 多播/边界/delegate 类型往返/4 诊断 + IL e2e ×3 + native x64/x86 e2e ×3）；全量 35262 绿
+
 ### 7.1 语法
 
 ```
