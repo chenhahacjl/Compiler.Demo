@@ -484,6 +484,87 @@ function Main(): i32
             return (process.ExitCode, stdout.Replace("\r\n", "\n"));
         }
 
+        // ── C8: stdlib Collections（源码方式集成，.cod 序列化待 G7）──
+
+        private const string CollectionsProgram = @"using System
+
+namespace System.Collections.Generic
+{
+    public class List<T>
+    {
+        private _items: T[]
+        private _count: i32
+
+        public constructor()
+        {
+            _items = new T[4]
+            _count = 0
+        }
+
+        public function Add(item: T): void
+        {
+            if _count >= _items.Length
+            {
+                var old = _items
+                var grown = new T[old.Length * 2]
+                var i = 0
+                while i < old.Length
+                {
+                    grown[i] = old[i]
+                    i = i + 1
+                }
+                _items = grown
+            }
+            _items[_count] = item
+            _count = _count + 1
+        }
+
+        public function Get(index: i32): T
+        {
+            return _items[index]
+        }
+
+        public function Count(): i32
+        {
+            return _count
+        }
+    }
+}
+
+function Main(): i32
+{
+    var list = new List<i32>()
+    list.Add(10)
+    list.Add(20)
+    list.Add(30)
+    Console.WriteLine(list.Get(0))
+    Console.WriteLine(list.Count())
+
+    if list.Get(1) != 20 || list.Count() != 3
+    {
+        return 1
+    }
+
+    var strs = new List<string>()
+    strs.Add(""hello"")
+    Console.WriteLine(strs.Get(0))
+
+    if strs.Count() != 1
+    {
+        return 1
+    }
+
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Collections_List_BasicOperations()
+        {
+            var result = Evaluate(CollectionsProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
         private static EvaluationResult Evaluate(string code)
         {
             var tree = SyntaxTree.Parse(code);

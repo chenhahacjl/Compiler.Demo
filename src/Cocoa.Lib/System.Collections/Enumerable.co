@@ -1,0 +1,17 @@
+// Cocoa 系统标准库 · System.Collections 模块
+// IEnumerable<T> / IEnumerator<T> 接口（6e-M22 C8）
+// foreach 枚举器模式的编译期能力标记接口
+
+namespace System.Collections.Generic
+{
+    public interface IEnumerator<T>
+    {
+        function MoveNext(): Boolean
+        function Current(): T
+    }
+
+    public interface IEnumerable<T>
+    {
+        function GetEnumerator(): IEnumerator<T>
+    }
+}
