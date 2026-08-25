@@ -1439,14 +1439,37 @@ namespace Cocoa.CodeAnalysis.Binding
             if (handlerType == null)
                 return;
 
+            // 6e-M22 D-B：delegate 类处理器 → 提取 Invoke 签名作为 FunctionTypeSymbol
+            FunctionTypeSymbol resolvedHandler;
+            if (handlerType is FunctionTypeSymbol fts)
+            {
+                resolvedHandler = fts;
+            }
+            else if (handlerType is ClassTypeSymbol { IsDelegateClass: true } dc)
+            {
+                var sig = dc.GetDelegateSignature();
+                if (sig == null)
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"delegate 类 '{dc.Name}' 缺少 Invoke 方法。");
+                    return;
+                }
+
+                resolvedHandler = sig;
+            }
+            else
+            {
+                _diagnostics.ReportError(syntax.Identifier.Location, $"事件处理器类型 '{handlerType.Name}' 不是函数类型或 delegate。");
+                return;
+            }
+
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var eventName = syntax.Identifier.Text;
-            var eventSymbol = new EventSymbol(eventName, (FunctionTypeSymbol)handlerType, visibility, classType) { IsStatic = isStatic };
+            var eventSymbol = new EventSymbol(eventName, resolvedHandler, visibility, classType) { IsStatic = isStatic };
             classType.AddEvent(eventSymbol);
 
             // 6e-M22 C5+：合成后备字段 `_<eventName>`（单播存储，可见性与事件一致以便外部订阅）
-            classType.AddField(new FieldSymbol("_" + eventName, handlerType, visibility, classType));
+            classType.AddField(new FieldSymbol("_" + eventName, resolvedHandler, visibility, classType));
         }
 
         /// <summary>
@@ -4755,8 +4778,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     return new BoundErrorExpression(syntax);
                 }
 
-                // 6e-M22 C5+：函数类型字段的 += / -= 事件订阅语义（单播 v1）
-                if (memberTarget.Field.Type is FunctionTypeSymbol &&
+                // 6e-M22 C5+：函数类型或 delegate 类字段的 += / -= 事件订阅语义（单播 v1）
+                var isEventField = memberTarget.Field.Type is FunctionTypeSymbol ||
+                                   (memberTarget.Field.Type is ClassTypeSymbol { IsDelegateClass: true });
+                if (isEventField &&
                     syntax.AssignmentToken.Kind != SyntaxKind.EqualsToken)
                 {
                     if (syntax.AssignmentToken.Kind == SyntaxKind.MinusEqualsToken)
