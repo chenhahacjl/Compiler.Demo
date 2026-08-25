@@ -112,10 +112,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 emitted.Add(classType);
             }
 
+            // 注册内建 Delegate/MulticastDelegate TypeRef（供 delegate 子类 Extends 引用）
+            var multicastDelegateRef = _framework.RequireType("System.MulticastDelegate");
+
             // 1b：填充 Extends + 字段（全部 TypeDef 已在表内，任意顺序安全）
             foreach (var classType in classes)
             {
-                EmitClassDeclaration(classType);
+                EmitClassDeclaration(classType, multicastDelegateRef);
             }
 
             // 6e-M22 C5-c：合成环境类的默认 .ctor（ldarg.0 → Object::.ctor → ret），
@@ -320,16 +323,43 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _metadata.AddMethodDef(declaringType, method);
         }
 
-        private void EmitClassDeclaration(ClassTypeSymbol classType)
+        private void EmitClassDeclaration(ClassTypeSymbol classType, IlTypeRef multicastDelegateRef)
         {
-            // 6e-M19 M2-a：内建 Object 根不产生 TypeDef——Extends 走框架 [mscorlib]System.Object TypeRef
-            // 6e-M20：壳已在 1a 阶段注册，此处填充 Extends 与字段
             var typeDef = _classTypeDefs[classType];
             var hasUserBase = classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot;
-            var baseTypeDef = hasUserBase ? _classTypeDefs[classType.BaseType!] : null;
-            // 接口在元数据中不能有基类（Extends = 0），否则 CoreCLR 加载时报 TypeLoadException；
-            // 仅继承内建 Object 的类 Extends = 框架 TypeRef，有用户基类的 Extends = 该基类 TypeDef
-            typeDef.SetBase(!classType.IsInterface && !hasUserBase ? _framework.ObjectType : null, baseTypeDef);
+            IlTypeDef? baseTypeDef = null;
+            IlTypeRef? baseTypeRef = null;
+
+            if (hasUserBase)
+            {
+                if (classType.BaseType == ClassTypeSymbol.SystemMulticastDelegate)
+                {
+                    // delegate 子类 extends System.MulticastDelegate → 框架 TypeRef
+                    baseTypeRef = multicastDelegateRef;
+                }
+                else if (_classTypeDefs.TryGetValue(classType.BaseType!, out var bt))
+                {
+                    baseTypeDef = bt;
+                }
+            }
+
+            // Extends 决策：接口无基类；无显式基类走 Object；用户基类走 TypeDef；MulticastDelegate 走 TypeRef
+            if (classType.IsInterface)
+            {
+                typeDef.SetBase(null, null);
+            }
+            else if (baseTypeRef != null)
+            {
+                typeDef.SetBase(baseTypeRef, null);
+            }
+            else if (baseTypeDef != null)
+            {
+                typeDef.SetBase(null, baseTypeDef);
+            }
+            else
+            {
+                typeDef.SetBase(_framework.ObjectType, null);
+            }
 
             foreach (var field in classType.Fields)
             {

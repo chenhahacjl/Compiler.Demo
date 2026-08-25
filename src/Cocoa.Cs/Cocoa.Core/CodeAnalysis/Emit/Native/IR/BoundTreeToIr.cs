@@ -419,7 +419,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
             type.ElementType != null || type is ClassTypeSymbol || type is FunctionTypeSymbol;
-
         /// <summary>M4：实例方法/实例构造含隐藏 this 首参（静态成员与顶层函数无）。</summary>
         private static bool HasThisParameter(FunctionSymbol function)
             => function.ContainingClass != null && !function.IsStatic;

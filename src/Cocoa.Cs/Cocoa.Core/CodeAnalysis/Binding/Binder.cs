@@ -5632,16 +5632,25 @@ namespace Cocoa.CodeAnalysis.Binding
                 return BindConversion(syntax.Arguments[0], type, allowExplicit: true);
             }
 
-            // 函数值间接调用（6e-M22 C4）：`f(x)` —— 标识符解析为函数类型的变量/参数
-            if (_scope.TryLookupSymbol(syntax.Identifier.Text) is VariableSymbol calleeVariable &&
-                calleeVariable.Type is FunctionTypeSymbol variableFunction)
+            // 函数值间接调用（6e-M22 C4/D-B）：`f(x)` —— 标识符解析为函数类型或 delegate 类型的变量/参数
+            if (_scope.TryLookupSymbol(syntax.Identifier.Text) is VariableSymbol calleeVariable)
             {
-                return BindFunctionValueInvocation(
-                    syntax.Identifier.Location,
-                    syntax.Identifier.Text,
-                    syntax.Arguments,
-                    new BoundVariableExpression(syntax, calleeVariable),
-                    variableFunction);
+                FunctionTypeSymbol? calleeFnType = calleeVariable.Type switch
+                {
+                    FunctionTypeSymbol ft => ft,
+                    ClassTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature(),
+                    _ => null,
+                };
+
+                if (calleeFnType != null)
+                {
+                    return BindFunctionValueInvocation(
+                        syntax.Identifier.Location,
+                        syntax.Identifier.Text,
+                        syntax.Arguments,
+                        new BoundVariableExpression(syntax, calleeVariable),
+                        calleeFnType);
+                }
             }
 
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
@@ -5975,6 +5984,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private BoundExpression BindConversion(TextLocation diagnosticLocation, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)
         {
+            // 6e-M22 D-A：delegate 类目标——函数值与 delegate 类型的结构兼容（同表示，类型身份编译期）
+            if (type is ClassTypeSymbol { IsDelegateClass: true } delegateTarget &&
+                expression.Type == delegateTarget.GetDelegateSignature())
+            {
+                return expression;
+            }
+
             var conversion = Conversion.Classify(expression.Type, type);
             if (!conversion.Exists)
             {
