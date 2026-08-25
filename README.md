@@ -3,7 +3,7 @@
 用 C# 编写的 C 系方言编译器，同时具备 **Native 代码生成**（x86 / x64，零依赖、纯自研 PE 输出）与 **IL 代码生成**（ECMA-335）两条后端路径，最终目标是用 Cocoa 语言自身重写编译器（自举）。
 
 > 当前阶段：阶段 6 — 语言扩展 + 互操作 + 输出格式 + 项目系统（见 [`docs-dev/开发计划.md`](docs-dev/开发计划.md)）
-> 最新：**6e-M20 泛型 G0 语法（2026-08-24）已落地：`<T>` 类型参数/实参、`where` 约束子句、泛型类/接口/方法声明、`List<int>` 实例化类型与 `Swap<int>(…)` 显式实参调用全解析（嵌套泛型 `>>` 拆分），绑定层单态化（G1/G2）进行中**；6h 对象模型 M5（2026-08-24）已收官：null 字面量 / is-as / any== 收尾——System.Object 基类成员面、用户类 override 虚分派（IL 槽复用 / REPL 运行时链分派 / native vtable）、System.Type 三后端一致；6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；6e-M15 双前端拆分：`.co` 宽松主方言 / `.cs` 严格 C# 方言（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）
+> 最新：**6e-M22 §6j 委托/Lambda/闭包/event/delegate（2026-08-24）已落地：函数类型 `(A,B)->R` + Func/Action/Predicate 家族 + Lambda 提升/方法组转换/闭包捕获 ×三后端 + delegate 声明(sealed class extends MulticastDelegate) + event 订阅/触发(单播v1) + List<T> 泛型动态数组；详见 [`docs-dev/委托与Lambda设计.md`](docs-dev/委托与Lambda设计.md) 与 [`docs-dev/开发计划.md`](docs-dev/开发计划.md) §6j**；6e-M20 泛型 G0-G6（2026-08-24）已收官：`<T>` 类型参数/实参、where 约束子句、泛型方法调用、Monomorphizer 单态化、List<T> 实例化类型与 `Swap<int>(…)` 显式实参调用全解析（嵌套泛型 `>>` 拆分），绑定层单态化（G1/G2）进行中**；6h 对象模型 M5（2026-08-24）已收官：null 字面量 / is-as / any== 收尾——System.Object 基类成员面、用户类 override 虚分派（IL 槽复用 / REPL 运行时链分派 / native vtable）、System.Type 三后端一致；6e-M13（2026-08-20）：`coc` / `coi` 合并为单一 `cocoa` 命令（`-i` 进入 REPL）+ dotnet 式子命令（`new` / `list` / `add reference` / `remove reference` / `run` / `clean`）；核心库更名 `Cocoa.Core`，缓存目录 `.cocoa/`（详见 [`docs/编译手册.md`](docs/编译手册.md) §3）；6e-M15 双前端拆分：`.co` 宽松主方言 / `.cs` 严格 C# 方言（详见 [`docs/语法手册.md`](docs/语法手册.md) §46）
 
 ## 路线图（摘要）
 
