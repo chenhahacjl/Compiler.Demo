@@ -150,6 +150,8 @@ ColonToken,               // :
         ArrayTypeClause,          // 数组类型
         GenericTypeClause,        // 泛型类型 List<int>（6e-M20）
         FunctionType,             // 函数类型 (A,B) -> R（6e-M22 C2）
+        EventDeclaration,         // 事件声明 event Click: Handler（6e-M22 C5+）
+        EventKeyword,             // event 关键字
         TypeParameterList,        // 泛型类型参数列表 <T, U>（6e-M20）
         TypeArgumentList,         // 泛型类型实参列表 <int, string>（6e-M20）
         WhereClause,              // 泛型约束子句 where T: ...（6e-M20）

@@ -19,6 +19,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         private readonly ImmutableArray<FieldSymbol>.Builder _fields;
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
         private readonly ImmutableArray<PropertySymbol>.Builder _properties;
+        private readonly List<EventSymbol> _events = new List<EventSymbol>();
         private readonly List<ClassTypeSymbol> _interfaces = new List<ClassTypeSymbol>();
         private readonly List<ClassTypeSymbol> _baseInterfaces = new List<ClassTypeSymbol>();
 
@@ -104,6 +105,26 @@ namespace Cocoa.CodeAnalysis.Symbols
         internal void AddMethod(FunctionSymbol method) => _methods.Add(method);
 
         internal void AddProperty(PropertySymbol property) => _properties.Add(property);
+
+        /// <summary>6e-M22 C5+：事件集合。</summary>
+        internal void AddEvent(EventSymbol eventSymbol) => _events.Add(eventSymbol);
+
+        /// <summary>类声明的事件（含继承链查找由调用方处理）。</summary>
+        public ImmutableArray<EventSymbol> Events => _events.ToImmutableArray();
+
+        public EventSymbol? GetEvent(string name)
+        {
+            EnsureMembersMaterialized();
+            for (var type = (ClassTypeSymbol?)this; type != null; type = type.BaseType)
+            {
+                type.EnsureMembersMaterialized();
+                foreach (var e in type._events)
+                {
+                    if (e.Name == name) return e;
+                }
+            }
+            return null;
+        }
 
         /// <summary>类直接实现的接口（`class C: I` 的基类型列表中的接口）。</summary>
         internal void AddInterface(ClassTypeSymbol interfaceType) => _interfaces.Add(interfaceType);

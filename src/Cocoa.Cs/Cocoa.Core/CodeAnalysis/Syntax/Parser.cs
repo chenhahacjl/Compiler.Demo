@@ -844,6 +844,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseFunctionDeclaration(modifiers);
             }
 
+            // 事件声明（6e-M22 C5+）：`event Name: HandlerType`（.co）/ `event HandlerType Name;`（.cs）
+            if (Current.Kind == SyntaxKind.EventKeyword)
+            {
+                return ParseEventDeclaration(modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.PropertyKeyword)
             {
                 if (!AllowCocoaClassMemberKeywords())
@@ -1267,6 +1273,40 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new ClassFieldDeclarationSyntax(_syntaxTree, modifiers, identifier, type, equalsToken, initializer);
+        }
+
+        /// <summary>
+        /// 事件声明（6e-M22 C5+）：`.co` `event Click: HandlerType` / `.cs` `event HandlerType Name;`
+        /// 双方言统一产出 EventDeclarationSyntax；处理器类型可为函数类型/Func 家族/delegate 别名。
+        /// </summary>
+        private MemberSyntax ParseEventDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var eventKeyword = MatchToken(SyntaxKind.EventKeyword);
+
+            // 形态判别：标识符后跟冒号 → .co（类型后置）；否则 → .cs（类型前置）
+            var isCocoaForm = Current.Kind == SyntaxKind.IdentifierToken &&
+                              Peek(1).Kind == SyntaxKind.ColonToken;
+
+            SyntaxToken identifier;
+            TypeClauseSyntax handlerType;
+
+            if (isCocoaForm)
+            {
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+                handlerType = ParseTypeClause();
+            }
+            else
+            {
+                handlerType = ParsePrefixTypeClause();
+                identifier = MatchToken(SyntaxKind.IdentifierToken);
+            }
+
+            if (Current.Kind == SyntaxKind.SemicolonToken)
+            {
+                NextToken();
+            }
+
+            return new EventDeclarationSyntax(_syntaxTree, modifiers, eventKeyword, identifier, handlerType);
         }
 
         private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)

@@ -12,5 +12,6 @@ namespace Cocoa.CodeAnalysis.Symbols
         Class,
         Field,
         Property,
+        Event,
     }
 }

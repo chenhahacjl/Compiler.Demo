@@ -1398,15 +1398,34 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     BindPropertyDeclaration(propertyDeclaration, classType, classFunctions);
                 }
+                else if (member is EventDeclarationSyntax eventDeclaration)
+                {
+                    BindEventDeclaration(eventDeclaration, classType);
+                }
             }
+        }
+
+        /// <summary>
+        /// 事件声明绑定（6e-M22 C5+）：解析处理器类型为 FunctionTypeSymbol → 创建 EventSymbol 挂到类。
+        /// 发射器负责合成隐藏函数值数组 + add/remove 语义。
+        /// </summary>
+        private void BindEventDeclaration(EventDeclarationSyntax syntax, ClassTypeSymbol classType)
+        {
+            var handlerType = BindTypeClause(syntax.HandlerType);
+            if (handlerType == null)
+                return;
+
+            var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
+            var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
+            var eventSymbol = new EventSymbol(syntax.Identifier.Text, (FunctionTypeSymbol)handlerType, visibility, classType) { IsStatic = isStatic };
+            classType.AddEvent(eventSymbol);
         }
 
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>
         private void DeclareImplicitConstructor(ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
         {
             if (classType.GetDeclaredMethod(classType.Name) == null)
-            {
-                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, visibility: Visibility.Public) { IsConstructor = true };
+            {                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, visibility: Visibility.Public) { IsConstructor = true };
                 classType.AddMethod(ctor);
                 classFunctions.Add(ctor);
             }
