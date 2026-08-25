@@ -67,5 +67,14 @@ namespace Cocoa.CodeAnalysis.Cod
 
         /// <summary>库声明的命名空间。</summary>
         public ImmutableArray<string> Namespaces { get; }
+
+        /// <summary>
+        /// 库的程序集名（文件基名，如 "MyLib"）。Load 时由文件名回填、EmitCocoa 构造时为模块名；
+        /// 动态链接（阶段 A2/A3）据此合成 AssemblyRef/TypeRef/MemberRef 指向同名托管 dll。
+        /// </summary>
+        public string Name { get; internal set; } = "";
+
+        /// <summary>库文件位置（动态链接 CopyLocal：定位同名 dll 随消费方产物部署）。</summary>
+        public string SourcePath { get; internal set; } = "";
     }
 }

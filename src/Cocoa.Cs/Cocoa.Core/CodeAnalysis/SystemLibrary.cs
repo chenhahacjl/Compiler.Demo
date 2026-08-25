@@ -77,6 +77,11 @@ namespace Cocoa.CodeAnalysis
             {
                 if (TryLoad(file, out var program))
                 {
+                    // 程序集名走托管命名映射（System.Core→Cocoa.Core，避开框架门面同名）：
+                    // 动态链接 AssemblyRef 与 CopyLocal 部署依据（阶段 A2）
+                    var baseName = Path.GetFileNameWithoutExtension(file);
+                    program.Name = Cod.CodAssemblyNaming.ManagedAssemblyName(baseName);
+                    program.SourcePath = Path.GetFullPath(file);
                     builder.Add(program);
                 }
             }

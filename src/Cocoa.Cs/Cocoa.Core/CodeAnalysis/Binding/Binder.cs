@@ -409,7 +409,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, usingStatics, usingAliases, (references ?? Array.Empty<string>()).ToImmutableArray());
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default, LanguageDialect dialect = LanguageDialect.Cocoa)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default, LanguageDialect dialect = LanguageDialect.Cocoa, bool linkCodDynamically = false)
         {
             var parentScope = CreateParentScope(globalScope);
             InjectCodSymbols(parentScope, codLibraries);
@@ -526,22 +526,62 @@ namespace Cocoa.CodeAnalysis.Binding
                 functionBodies.Add(globalScope.ScriptFunction, body);
             }
 
-            // 合并 `.cod` 库函数体（语义层 BoundProgram 合并）；消费方同名函数优先
+            // `.cod` 库接入（语义层）：
+            // 内联模式（默认/native/Evaluator）：库函数体合并进消费方 functionBodies，消费方同名优先；
+            // 动态链接模式（dotnet 后端，阶段 A2）：不合并——符号经 AssemblyRef/MemberRef 指向各库 dll。
+            // 两种模式下符号注入（BindGlobalScope→InjectCodSymbols）一致，绑定期无差别。
+            var codAssemblies = ImmutableDictionary<object, string>.Empty;
             if (!codLibraries.IsDefaultOrEmpty)
             {
-                foreach (var library in codLibraries)
+                if (!linkCodDynamically)
                 {
-                    foreach (var (fn, body) in library.Bodies)
+                    foreach (var library in codLibraries)
                     {
-                        if (!functionBodies.ContainsKey(fn))
+                        foreach (var (fn, body) in library.Bodies)
                         {
-                            functionBodies.Add(fn, body);
+                            if (!functionBodies.ContainsKey(fn))
+                            {
+                                functionBodies.Add(fn, body);
+                            }
                         }
                     }
                 }
+                else
+                {
+                    // 溯源表：cod 符号 → 库程序集名。extern(P/Invoke) 本地声明；内建单例走消费方
+                    // 本地运行时分发（BuiltinKind 分派），二者均不外链。
+                    var provenance = ImmutableDictionary.CreateBuilder<object, string>(ReferenceEqualityComparer.Instance);
+                    foreach (var library in codLibraries)
+                    {
+                        foreach (var fn in library.Functions)
+                        {
+                            if (fn.IsExtern || fn.BuiltinKind != null)
+                            {
+                                continue;
+                            }
+
+                            provenance[fn] = library.Name;
+                            var containingClass = fn.ContainingClass;
+                            if (containingClass != null && !SystemObjectMembers.IsBuiltinSystemClass(containingClass))
+                            {
+                                provenance[containingClass] = library.Name;
+                            }
+                        }
+
+                        foreach (var containerClass in library.Classes)
+                        {
+                            if (!SystemObjectMembers.IsBuiltinSystemClass(containerClass))
+                            {
+                                provenance[containerClass] = library.Name;
+                            }
+                        }
+                    }
+
+                    codAssemblies = provenance.ToImmutable();
+                }
             }
 
-            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses);
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies);
         }
 
         /// <summary>绑定树先序递归枚举（6e-M22 C4）：lambda 后处理走查用。</summary>

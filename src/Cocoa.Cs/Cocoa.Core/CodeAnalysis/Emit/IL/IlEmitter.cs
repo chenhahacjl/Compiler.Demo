@@ -17,6 +17,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly MetadataBuilder _metadata;
         private readonly IlFramework _framework;
         private readonly string _moduleName;
+
+        // 动态链接（阶段 A3）：cod 来源符号 → 库程序集名；据此合成 AssemblyRef/TypeRef/MemberRef 指向各库 dll
+        private readonly ImmutableDictionary<object, string> _codAssemblies;
+        private readonly Dictionary<string, IlAssemblyRef> _codAssemblyRefs = new Dictionary<string, IlAssemblyRef>();
+
+        /// <summary>cod 顶层函数重载组（同库内同 (ns,name) 的函数 >1）：方法名追加参数类型后缀，与库侧发射规则一致。</summary>
+        private readonly HashSet<(string asm, string ns, string name)> _codOverloadedGroups = new();
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
         private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
         private readonly Dictionary<BoundExpression, int> _temporaryLocalIndices = new Dictionary<BoundExpression, int>();
@@ -27,6 +34,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private bool _entryVoidMain;
 
         private readonly IlTypeDef _typeDefinition;
+        /// <summary>库产物（emitLibrary）：类型/方法统一按 public 发布（分发面即公共契约）。</summary>
+        private bool _publishPublicSurface;
+
         private readonly Dictionary<ClassTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<ClassTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
     private readonly DelegateShapeCache _delegateShapes;
@@ -43,9 +53,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private static bool IsClosureEnvironmentClass(ClassTypeSymbol classType)
             => classType.Name.StartsWith("__Env_", StringComparison.Ordinal);
 
-        private IlEmitter(string moduleName, string[] references)
+        private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? codAssemblies = null)
         {
             _moduleName = moduleName;
+            _codAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
+            BuildCodOverloadGroups();
             _metadata = new MetadataBuilder(moduleName, moduleName);
             _framework = new IlFramework(_metadata, references);
             _delegateShapes = new DelegateShapeCache(_metadata, _framework);
@@ -64,14 +76,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
         {
+            return Emit(program, moduleName, references, outputPath, target, emitLibrary, program.CodAssemblies);
+        }
+
+        public static ImmutableArray<Diagnostic> Emit(BoundProgram program, string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary, ImmutableDictionary<object, string>? codAssemblies, bool publishPublicSurface = false)
+        {
             if (program.Diagnostics.HasErrors())
             {
                 return program.Diagnostics;
             }
 
-            var emitter = new IlEmitter(moduleName, references);
+            var emitter = new IlEmitter(moduleName, references, codAssemblies);
 
-            return emitter.Emit(program, outputPath, target, emitLibrary);
+            return emitter.Emit(program, outputPath, target, emitLibrary, publishPublicSurface);
         }
 
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath)
@@ -80,9 +97,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target)
             => Emit(program, outputPath, target, emitLibrary: false);
 
-        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target, bool emitLibrary)
-        {
-            _entryFunction = emitLibrary ? null : program.MainFunction;
+    public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target, bool emitLibrary, bool publishPublicSurface = false)
+    {
+        // 库产物的分发面即其公共契约：internal 门面类/方法在 dll 形态下发布为 public。
+        // 仅 `.cod` 动态链接库启用（CodLibraryCompiler）——消费方跨程序集访问需要；
+        // `-f library`（C# 互操作）保持符号原可见性：internal 隐藏是既定访问控制语义
+        _publishPublicSurface = publishPublicSurface;
+        _entryFunction = emitLibrary ? null : program.MainFunction;
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.cod 的 Console/Math 等，不在 program.Classes 的源码声明集内）
@@ -101,7 +122,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 依赖序无法仅按基类链排序——壳先行入表，Extends/字段随后填充）
             foreach (var classType in classes)
             {
-                var typeDef = new IlTypeDef(classType.Name, classType.Namespace, null, isPublic: classType.Visibility == Visibility.Public, baseTypeDef: null)
+                var typeDef = new IlTypeDef(classType.Name, classType.Namespace, null, isPublic: _publishPublicSurface || classType.Visibility == Visibility.Public, baseTypeDef: null)
                 {
                     IsAbstract = classType.IsAbstract,
                     IsSealed = classType.IsSealed,
@@ -304,7 +325,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, function.EntryPoint, callingConvention, isStatic: !isInstance, charSet: function.CharSet ?? CharSet.Unicode)
             {
-                Visibility = function.Visibility,
+                Visibility = _publishPublicSurface ? Visibility.Public : function.Visibility,
                 IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember,
                 IsAbstract = function.IsAbstract,
                 IsSealed = function.IsSealed,
@@ -607,6 +628,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             if (type is ClassTypeSymbol classType)
             {
+                // 动态链接：cod 容器类 → 指向其库 dll 的 TypeRef
+                if (_codAssemblies.TryGetValue(classType, out var codAssembly))
+                {
+                    return IlType.Class(CodClassRef(classType, codAssembly));
+                }
+
                 if (classType.IsExternal)
                 {
                     return IlType.Class(ResolveExternalTypeRef(classType));
@@ -644,6 +671,98 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private static string EncodeTypeNameForMethodName(TypeSymbol type)
         {
             return type.Name.Replace("[", "_").Replace("]", "_");
+        }
+
+        private readonly Dictionary<(string asm, string ns, string name), IlTypeRef> _codTypeRefs = new Dictionary<(string asm, string ns, string name), IlTypeRef>();
+
+        /// <summary>复制库侧顶层函数重载分组规则（同 (asm, ns, name) 计数 >1 即成组）。</summary>
+        private void BuildCodOverloadGroups()
+        {
+            if (_codAssemblies.IsEmpty)
+            {
+                return;
+            }
+
+            var counts = new Dictionary<(string asm, string ns, string name), int>();
+            foreach (var pair in _codAssemblies)
+            {
+                if (pair.Key is FunctionSymbol fn && fn.ContainingClass == null && !fn.IsConstructor)
+                {
+                    var key = (pair.Value, fn.Namespace, fn.Name);
+                    counts[key] = counts.GetValueOrDefault(key) + 1;
+                }
+            }
+
+            foreach (var group in counts)
+            {
+                if (group.Value > 1)
+                {
+                    _codOverloadedGroups.Add(group.Key);
+                }
+            }
+        }
+
+        private IlAssemblyRef CodAssemblyRef(string assemblyName)
+        {
+            if (!_codAssemblyRefs.TryGetValue(assemblyName, out var reference))
+            {
+                reference = _metadata.DefineAssemblyRef(assemblyName, new Version(0, 0, 0, 0), Array.Empty<byte>(), null, flags: 0);
+                _codAssemblyRefs[assemblyName] = reference;
+            }
+
+            return reference;
+        }
+
+        /// <summary>库侧顶层函数容器 TypeRef（名字含尖括号，非法标识符故不与用户类型冲突）。</summary>
+        private IlTypeRef CodTopLevelTypeRef(string assemblyName)
+        {
+            return CodTypeRef(assemblyName, "", "<CocoaTopLevel>");
+        }
+
+        private IlTypeRef CodClassRef(ClassTypeSymbol classType, string assemblyName)
+        {
+            // 与库侧 TypeDef 命名同构：Namespace/Name 原样拆分
+            return CodTypeRef(assemblyName, classType.Namespace, classType.Name);
+        }
+
+        private IlTypeRef CodTypeRef(string assemblyName, string namespaceName, string name)
+        {
+            var key = (assemblyName, namespaceName, name);
+            if (!_codTypeRefs.TryGetValue(key, out var reference))
+            {
+                reference = _metadata.DefineTypeRef(CodAssemblyRef(assemblyName), namespaceName, name);
+                _codTypeRefs[key] = reference;
+            }
+
+            return reference;
+        }
+
+        /// <summary>
+        /// cod 函数的 MemberRef 合成：类方法挂宿主类 TypeRef（方法名 EmitName 原样）；顶层函数挂
+        /// &lt;CocoaTopLevel&gt; TypeRef（EmitName 全名 + 重载后缀，规则与库侧发射一致）。
+        /// </summary>
+        private IlMethodRef CodMethodRef(FunctionSymbol function, string assemblyName)
+        {
+            IlTypeRef declaringType;
+            string methodName;
+            if (function.ContainingClass != null)
+            {
+                declaringType = CodClassRef(function.ContainingClass, assemblyName);
+                methodName = function.EmitName;
+            }
+            else
+            {
+                declaringType = CodTopLevelTypeRef(assemblyName);
+                methodName = function.EmitName;
+                if (_codOverloadedGroups.Contains((assemblyName, function.Namespace, function.Name)))
+                {
+                    methodName += "$" + string.Join("$", function.Parameters.Select(p => EncodeTypeNameForMethodName(p.Type)));
+                }
+            }
+
+            var returnType = ToIlType(function.ReturnType);
+            var parameterTypes = function.Parameters.Select(p => ToIlType(p.Type)).ToArray();
+            return _metadata.DefineMethodRef(declaringType, methodName, returnType, parameterTypes, isStatic: true);
         }
 
         private IlTypeRef ResolveExternalTypeRef(ClassTypeSymbol classType)
@@ -1423,6 +1542,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            // 动态链接（阶段 A3）：cod 顶层函数 → <CocoaTopLevel>.MemberRef 外部调用
+            if (_codAssemblies.TryGetValue(node.Function, out var codAssembly))
+            {
+                foreach (var argument in node.Arguments)
+                {
+                    EmitExpression(il, argument);
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Function, codAssembly));
+                return;
+            }
+
             foreach (var argument in node.Arguments)
             {
                 EmitExpression(il, argument);
@@ -2071,6 +2202,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             if (node.Method != null)
             {
+                // 动态链接（阶段 A3）：cod 容器类静态方法 → MemberRef 外部调用
+                if (_codAssemblies.TryGetValue(node.Method, out var codAssembly))
+                {
+                    il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Method, codAssembly));
+                    return;
+                }
+
                 if (node.Method.ContainingClass!.IsExternal)
                 {
                     var parameterNames = new string[node.Arguments.Length];

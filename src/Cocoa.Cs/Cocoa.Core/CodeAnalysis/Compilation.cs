@@ -17,11 +17,15 @@ namespace Cocoa.CodeAnalysis
         private readonly string[] _references;
         private readonly ImmutableArray<CodProgram> _codLibraries;
 
-        private Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, params SyntaxTree[] syntaxTrees)
+        /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
+        private readonly bool _linkCodDynamically;
+
+        private Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
             Previous = previous;
             _entryPointName = entryPointName;
+            _linkCodDynamically = linkCodDynamically;
             _references = (references ?? Array.Empty<string>())
                 .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
@@ -42,7 +46,10 @@ namespace Cocoa.CodeAnalysis
                 {
                     if (reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                     {
-                        builder.Add(CodSerializer.Load(reference));
+                        var library = CodSerializer.Load(reference);
+                        library.Name = Path.GetFileNameWithoutExtension(reference);
+                        library.SourcePath = Path.GetFullPath(reference);
+                        builder.Add(library);
                     }
                 }
             }
@@ -52,27 +59,39 @@ namespace Cocoa.CodeAnalysis
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references: null, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references: null, syntaxTrees: syntaxTrees);
         }
 
         public static Compilation Create(string[] references, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references, syntaxTrees: syntaxTrees);
+        }
+
+        /// <summary>动态链接变体（阶段 A2）：dotnet 后端消费 `.cod` 时不内联，运行期依赖各库 dll。</summary>
+        public static Compilation Create(string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically, syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName, references: null, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName, references: null, syntaxTrees: syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, string[] references, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName, references, syntaxTrees);
+            return new Compilation(isScript: false, previous: null, entryPointName, references, syntaxTrees: syntaxTrees);
+        }
+
+        /// <summary>动态链接变体（阶段 A2）：带入口名的 dotnet 消费方，`.cod` 库以外部 dll 依赖接入。</summary>
+        public static Compilation Create(string entryPointName, string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
+        {
+            return new Compilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically, syntaxTrees);
         }
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: true, previous, entryPointName: "Main", references: null, syntaxTrees);
+            return new Compilation(isScript: true, previous, entryPointName: "Main", references: null, syntaxTrees: syntaxTrees);
         }
 
         public bool IsScript { get; }
@@ -81,6 +100,9 @@ namespace Cocoa.CodeAnalysis
         public FunctionSymbol? MainFunction => GlobalScope.MainFunction;
         public ImmutableArray<FunctionSymbol> Functions => GlobalScope.Functions;
         public ImmutableArray<VariableSymbol> Variables => GlobalScope.Variables;
+
+        /// <summary>已加载的 `.cod` 库（含系统库；动态链接 CopyLocal 依据）。</summary>
+        internal ImmutableArray<CodProgram> CodLibraries => _codLibraries;
 
         internal BoundGlobalScope GlobalScope
         {
@@ -125,7 +147,7 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : SyntaxTrees[0].Dialect);
+            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : SyntaxTrees[0].Dialect, _linkCodDynamically);
         }
 
         /// <summary>
@@ -469,7 +491,11 @@ namespace Cocoa.CodeAnalysis
                 ImmutableArray<string>.Empty,
                 imports,
                 ImmutableArray<string>.Empty,
-                namespaces);
+                namespaces)
+            {
+                // 程序集名 = 模块名：动态链接时消费方据此合成 AssemblyRef 指向同名 dll（阶段 A2）
+                Name = moduleName,
+            };
 
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
             using (var writer = new StreamWriter(outputPath))
