@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using Cocoa.IO;
 using System.CodeDom.Compiler;
+using System.Globalization;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
@@ -116,6 +117,12 @@ namespace Cocoa.CodeAnalysis.Binding
                     break;
                 case BoundNodeKind.MemberCallExpression:
                     WriteMemberCallExpression((BoundMemberCallExpression)node, writer);
+                    break;
+                case BoundNodeKind.StaticTypeExpression:
+                    WriteStaticTypeExpression((BoundStaticTypeExpression)node, writer);
+                    break;
+                case BoundNodeKind.ThisExpression:
+                    WriteThisExpression((BoundThisExpression)node, writer);
                     break;
                 default:
                     throw new Exception($"Unexpected node {node.Kind}");
@@ -369,9 +376,13 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 writer.WriteKeyword((bool)node.Value ? SyntaxKind.TrueKeyword : SyntaxKind.FalseKeyword);
             }
-            else if (node.Type == TypeSymbol.Int32)
+            else if (node.Type == TypeSymbol.Int32 || node.Type == TypeSymbol.UInt8)
             {
                 writer.WriteNumber(value);
+            }
+            else if (node.Type == TypeSymbol.Double)
+            {
+                writer.WriteNumber(((double)node.Value).ToString("R", CultureInfo.InvariantCulture));
             }
             else if (node.Type == TypeSymbol.String)
             {
@@ -386,7 +397,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
             else
             {
-                throw new Exception($"Unexpected type {node.Type}");
+                // 枚举字面量（常量折叠后为整型值）及其余数值类型按数值打印
+                writer.WriteNumber(value);
             }
         }
 
@@ -553,6 +565,16 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WritePunctuation(SyntaxKind.EqualsToken);
             writer.WriteSpace();
             node.Expression.WriteTo(writer);
+        }
+
+        private static void WriteStaticTypeExpression(BoundStaticTypeExpression node, IndentedTextWriter writer)
+        {
+            writer.WriteIdentifier(node.Type.Name);
+        }
+
+        private static void WriteThisExpression(BoundThisExpression node, IndentedTextWriter writer)
+        {
+            writer.WriteKeyword("this");
         }
 
         private static void WriteMemberAccessExpression(BoundMemberAccessExpression node, IndentedTextWriter writer)

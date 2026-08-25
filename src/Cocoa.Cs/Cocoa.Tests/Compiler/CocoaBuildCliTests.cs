@@ -147,7 +147,11 @@ outputPath = out
             var codPath = Path.Combine(libDir, "out", "MyLib.cod");
             Assert.True(File.Exists(codPath), $"cod not emitted: {libBuild.Stdout}{libBuild.Stderr}");
 
-            File.WriteAllText(codPath, "(cod COCOD 99)");
+            // 校验和强制后：构造带合法校验和的版本错误文档，保证到达版本检查层
+            var bogusCod = "(cod COCOD 99)\n";
+            var bogusHash = Convert.ToHexString(
+                System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(bogusCod))).ToLowerInvariant();
+            File.WriteAllText(codPath, bogusCod + "(checksum sha256:" + bogusHash + ")");
 
             File.WriteAllText(
                 Path.Combine(appDir, "App.co"),

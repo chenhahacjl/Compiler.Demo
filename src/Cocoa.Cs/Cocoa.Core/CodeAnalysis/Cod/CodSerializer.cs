@@ -4,6 +4,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace Cocoa.CodeAnalysis.Cod
@@ -16,7 +17,7 @@ namespace Cocoa.CodeAnalysis.Cod
     ///   (type)     内建/数组类型内联为名字引用：int / int[] / int[][]；类/枚举用全名 System.Console
     ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
     ///   (systype)  (systype System.Object)——内建单例按全名映射
-    ///   (cls)      (cls System.Console public methods:2 WriteLine Write)
+    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)——方法列 Name[参数类型] 签名
     ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
     ///               params:2 (par MyLib.Add/a a i32 0) ...)
     ///              函数键 = [命名空间或宿主类.]函数名(参数类型列表)，重载靠参数类型区分
@@ -29,6 +30,9 @@ namespace Cocoa.CodeAnalysis.Cod
     {
         public const string Magic = "COCOD";
         public const int Version = 1;
+
+        /// <summary>完整性校验：文件末行 `(checksum sha256:&lt;hex&gt;)` 覆盖其前全部字节（UTF-8）；读侧强制校验。</summary>
+        private const string ChecksumTag = "sha256:";
 
         // ---------------------------------------------------------------- write
 
@@ -69,7 +73,8 @@ namespace Cocoa.CodeAnalysis.Cod
             // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）
             registry.Seal();
 
-            var w = new Writer(writer);
+            var buffer = new StringWriter();
+            var w = new Writer(buffer);
             w.Open("cod");
             w.Field(Magic);
             w.Field(Version);
@@ -142,6 +147,17 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End(); // manifest
 
             w.End(); // cod
+            buffer.WriteLine();
+
+            // 完整性校验：对正文全部字节（UTF-8）取 SHA256，追加为文件末行（读侧强制校验，缺失/不符拒载）
+            var payload = buffer.ToString();
+            writer.Write(payload);
+            writer.WriteLine("(checksum " + ChecksumTag + ComputeChecksum(payload) + ")");
+        }
+
+        private static string ComputeChecksum(string payload)
+        {
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
         }
 
         private static string RequirementName(CodRequirement r)
@@ -775,15 +791,23 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("cls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
-            // 序列化全部静态方法名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
-            // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里仅列名供阅读。
+            // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
+            // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
             var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
-                w.Field(method.Name);
+                w.Field(MethodSignature(method));
             }
             w.End();
+        }
+
+        /// <summary>方法签名短键：Name 或 Name[参数类型列表]（重载靠参数类型区分）。</summary>
+        private static string MethodSignature(FunctionSymbol method)
+        {
+            return method.Parameters.Length == 0
+                ? method.Name
+                : method.Name + "[" + string.Join(",", method.Parameters.Select(p => TypeRef(p.Type))) + "]";
         }
 
         private static void EmitFunctionSymbol(Writer w, Registry registry, FunctionSymbol fn)
@@ -1054,7 +1078,9 @@ namespace Cocoa.CodeAnalysis.Cod
         private sealed class Writer
         {
             private readonly TextWriter _w;
+            private readonly List<bool> _hasChild = new();
             private int _depth;
+            private bool _lineStart = true;
 
             public Writer(TextWriter writer)
             {
@@ -1063,9 +1089,17 @@ namespace Cocoa.CodeAnalysis.Cod
 
             public void Open(string kind)
             {
+                if (_hasChild.Count > 0)
+                {
+                    // 标记父节点含子节点：其闭括号换行缩进，而非行内闭合
+                    _hasChild[_hasChild.Count - 1] = true;
+                }
+
                 Indent();
                 _w.Write('(');
                 _w.Write(kind);
+                _lineStart = false;
+                _hasChild.Add(false);
                 _depth++;
             }
 
@@ -1073,21 +1107,42 @@ namespace Cocoa.CodeAnalysis.Cod
             {
                 _w.Write(' ');
                 _w.Write(value);
+                _lineStart = false;
             }
 
             public void End()
             {
+                var hasChild = _hasChild[_hasChild.Count - 1];
+                _hasChild.RemoveAt(_hasChild.Count - 1);
                 _depth--;
-                _w.WriteLine(')');
-            }
 
-            private void Indent()
-            {
-                if (_depth > 0)
+                if (hasChild && !_lineStart)
                 {
+                    // 多行节点：先回到行首，闭括号与开括号同列
                     _w.WriteLine();
                     _w.Write(new string(' ', _depth * 2));
                 }
+
+                // 行内闭合（无子节点）或定位后闭合均不主动换行——由下一次 Open/Field/End 按需定位
+                _w.Write(')');
+                _lineStart = false;
+            }
+
+            /// <summary>子节点开括号前定位到下一行缩进列（已在行首则不再换行）。</summary>
+            private void Indent()
+            {
+                if (_depth == 0)
+                {
+                    return;
+                }
+
+                if (!_lineStart)
+                {
+                    _w.WriteLine();
+                }
+
+                _w.Write(new string(' ', _depth * 2));
+                _lineStart = true;
             }
         }
 
@@ -1227,7 +1282,29 @@ namespace Cocoa.CodeAnalysis.Cod
 
         public static CodProgram Read(string text)
         {
-            var tokens = Tokenize(text).ToArray();
+            // 完整性校验前置：缺失或不匹配即拒载（防误改/损坏；蓄意伪造需签名机制，不在 v1 范围）
+            var marker = "(checksum " + ChecksumTag;
+            var markerIndex = text.LastIndexOf(marker, StringComparison.Ordinal);
+            if (markerIndex < 0)
+            {
+                throw new InvalidDataException(".cod checksum missing (expected '(checksum sha256:<hex>)' as the last line); rebuild the library");
+            }
+
+            var payload = text.Substring(0, markerIndex);
+            var provided = text.Substring(markerIndex + marker.Length).TrimEnd();
+            if (!provided.EndsWith(")"))
+            {
+                throw new InvalidDataException(".cod checksum malformed (expected '(checksum sha256:<hex>)' as the last line)");
+            }
+
+            provided = provided.Substring(0, provided.Length - 1);
+            var actual = ComputeChecksum(payload);
+            if (!string.Equals(provided, actual, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException($".cod checksum mismatch: library corrupted or modified (expected {actual}, got {provided})");
+            }
+
+            var tokens = Tokenize(payload).ToArray();
             var reader = new Reader(tokens);
             reader.Expect("cod");
 

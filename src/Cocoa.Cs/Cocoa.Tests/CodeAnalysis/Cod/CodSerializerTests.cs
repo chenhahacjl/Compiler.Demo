@@ -98,9 +98,54 @@ namespace MyLib
         [Fact]
         public void Cod_Read_Rejects_UnknownVersion()
         {
-            var exception = Assert.Throws<InvalidDataException>(() => CodSerializer.Read("(cod COCOD 99)"));
+            var source = "(cod COCOD 99)\n";
+            var exception = Assert.Throws<InvalidDataException>(() => CodSerializer.Read(source + ChecksumLine(source)));
             Assert.Contains("version 99", exception.Message);
             Assert.Contains("rebuild", exception.Message);
+        }
+
+        private static string ChecksumLine(string payload)
+        {
+            var hex = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
+            return "(checksum sha256:" + hex + ")";
+        }
+
+        [Fact]
+        public void Cod_Checksum_Emitted_And_Accepted()
+        {
+            var output = EmitLibrary(NewDir(), LibrarySource);
+            var text = File.ReadAllText(output);
+
+            Assert.Contains("(checksum sha256:", text);
+            CodSerializer.Read(text);
+        }
+
+        [Fact]
+        public void Cod_Checksum_Tamper_Rejected()
+        {
+            var output = EmitLibrary(NewDir(), LibrarySource);
+            var text = File.ReadAllText(output);
+
+            // 改动正文任意字节（此处改函数名一个字符）→ 校验和不再匹配
+            var tampered = text.Replace("name:Add", "name:Adx");
+            Assert.NotEqual(text, tampered);
+
+            var exception = Assert.Throws<InvalidDataException>(() => CodSerializer.Read(tampered));
+            Assert.Contains("checksum mismatch", exception.Message);
+        }
+
+        [Fact]
+        public void Cod_Checksum_Missing_Rejected()
+        {
+            var output = EmitLibrary(NewDir(), LibrarySource);
+            var text = File.ReadAllText(output);
+
+            var markerIndex = text.LastIndexOf("(checksum ", StringComparison.Ordinal);
+            Assert.True(markerIndex >= 0);
+            var withoutChecksum = text.Substring(0, markerIndex);
+
+            var exception = Assert.Throws<InvalidDataException>(() => CodSerializer.Read(withoutChecksum));
+            Assert.Contains("checksum missing", exception.Message);
         }
 
         [Fact]

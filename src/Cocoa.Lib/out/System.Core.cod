@@ -1,6227 +1,4567 @@
 (cod COCOD 1
   (symbols
-    (cls System.Array internal methods:16 Sum Sum Min Min Max Max Average Average Contains Contains IndexOf IndexOf Reverse Reverse Sort Sort)
-
-    (cls System.Boolean public methods:3 ToString Parse Parse)
-
-    (cls System.Byte public methods:3 ToString CompareTo Parse)
-
-    (cls System.Char public methods:8 ToString Parse CompareTo IsDigit IsLetter IsWhiteSpace ToUpper ToLower)
-
-    (cls System.Console internal methods:30 WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine WriteLine Write Write Write Write Write Write Write Write Write Write Write Write Write ReadLine ReadKey Beep)
-
-    (cls System.Double public methods:2 ToString CompareTo)
-
-    (cls System.Int16 public methods:3 ToString CompareTo Parse)
-
-    (cls System.Int32 public methods:3 ToString CompareTo Parse)
-
-    (cls System.Int64 public methods:3 ToString CompareTo Parse)
-
-    (cls System.Math internal methods:21 Max Max Min Min Abs Abs Clamp Clamp Sign Sign IsEven IsOdd Pow Factorial Gcd Lcm Sqrt Floor Ceiling Truncate Round)
-
-    (cls System.Runtime internal methods:21 WriteLine Write ReadLine ReadKey Random Sleep TickCount Exit Sqrt Floor Ceiling Truncate Round Beep Int32ToString Int64ToString DoubleToString BooleanToString CharToString ParseInt64 UInt64ToString)
-
-    (cls System.SByte public methods:3 ToString CompareTo Parse)
-
-    (cls System.Single public methods:1 ToString)
-
-    (cls System.String public methods:19 IsNullOrEmpty ToUpper ToLower StartsWith EndsWith Contains IndexOf Reverse Replicate CountChar IsPalindrome Trim Replace CountSubstring PadLeft PadLeft PadRight PadRight Split)
-
-    (cls System.UInt16 public methods:3 ToString CompareTo Parse)
-
-    (cls System.UInt32 public methods:3 ToString CompareTo Parse)
-
-    (cls System.UInt64 public methods:2 ToString CompareTo)
-
+    (cls System.Array internal methods:16 Sum[int[]] Sum[double[]] Min[int[]] Min[double[]] Max[int[]] Max[double[]] Average[int[]] Average[double[]] Contains[int[],int] Contains[double[],double] IndexOf[int[],int] IndexOf[double[],double] Reverse[int[]] Reverse[double[]] Sort[int[]] Sort[double[]])
+    (cls System.Boolean public methods:3 ToString[bool] Parse[string] Parse[string,bool])
+    (cls System.Byte public methods:3 ToString[byte] CompareTo[byte,byte] Parse[string])
+    (cls System.Char public methods:8 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char])
+    (cls System.Console internal methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
+    (cls System.Double public methods:2 ToString[double] CompareTo[double,double])
+    (cls System.Int16 public methods:3 ToString[short] CompareTo[short,short] Parse[string])
+    (cls System.Int32 public methods:3 ToString[int] CompareTo[int,int] Parse[string])
+    (cls System.Int64 public methods:3 ToString[long] CompareTo[long,long] Parse[string])
+    (cls System.Math internal methods:21 Max[int,int] Max[double,double] Min[int,int] Min[double,double] Abs[int] Abs[double] Clamp[int,int,int] Clamp[double,double,double] Sign[int] Sign[double] IsEven[int] IsOdd[int] Pow[int,int] Factorial[int] Gcd[int,int] Lcm[int,int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double])
+    (cls System.Runtime internal methods:21 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong])
+    (cls System.SByte public methods:3 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string])
+    (cls System.Single public methods:1 ToString[float])
+    (cls System.String public methods:19 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Reverse[string] Replicate[string,int] CountChar[string,char] IsPalindrome[string] Trim[string] Replace[string,string,string] CountSubstring[string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char])
+    (cls System.UInt16 public methods:3 ToString[ushort] CompareTo[ushort,ushort] Parse[string])
+    (cls System.UInt32 public methods:3 ToString[uint] CompareTo[uint,uint] Parse[string])
+    (cls System.UInt64 public methods:2 ToString[ulong] CompareTo[ulong,ulong])
     (fn System.Array.Sum[int[]] name:Sum ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Sum[int[]]/a a int[] 0)
-)
-
+    )
     (fn System.Array.Sum[double[]] name:Sum ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Sum[double[]]/a a double[] 0)
-)
-
+    )
     (fn System.Array.Min[int[]] name:Min ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Min[int[]]/a a int[] 0)
-)
-
+    )
     (fn System.Array.Min[double[]] name:Min ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Min[double[]]/a a double[] 0)
-)
-
+    )
     (fn System.Array.Max[int[]] name:Max ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Max[int[]]/a a int[] 0)
-)
-
+    )
     (fn System.Array.Max[double[]] name:Max ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Max[double[]]/a a double[] 0)
-)
-
+    )
     (fn System.Array.Average[int[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Average[int[]]/a a int[] 0)
-)
-
+    )
     (fn System.Array.Average[double[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Average[double[]]/a a double[] 0)
-)
-
+    )
     (fn System.Array.Contains[int[],int] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Array.Contains[int[],int]/a a int[] 0)
-
       (par System.Array.Contains[int[],int]/v v int 1)
-)
-
+    )
     (fn System.Array.Contains[double[],double] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Array.Contains[double[],double]/a a double[] 0)
-
       (par System.Array.Contains[double[],double]/v v double 1)
-)
-
+    )
     (fn System.Array.IndexOf[int[],int] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Array.IndexOf[int[],int]/a a int[] 0)
-
       (par System.Array.IndexOf[int[],int]/v v int 1)
-)
-
+    )
     (fn System.Array.IndexOf[double[],double] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Array.IndexOf[double[],double]/a a double[] 0)
-
       (par System.Array.IndexOf[double[],double]/v v double 1)
-)
-
+    )
     (fn System.Array.Reverse[int[]] name:Reverse ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Reverse[int[]]/a a int[] 0)
-)
-
+    )
     (fn System.Array.Reverse[double[]] name:Reverse ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Reverse[double[]]/a a double[] 0)
-)
-
+    )
     (fn System.Array.Sort[int[]] name:Sort ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Sort[int[]]/a a int[] 0)
-)
-
+    )
     (fn System.Array.Sort[double[]] name:Sort ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Sort[double[]]/a a double[] 0)
-)
-
+    )
     (fn System.Boolean.ToString[bool] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Boolean.ToString[bool]/this this bool 0)
-)
-
+    )
     (fn System.Boolean.Parse[string] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Boolean.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Boolean.Parse[string,bool] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Boolean.Parse[string,bool]/s s string 0)
-
       (par System.Boolean.Parse[string,bool]/ignoreCase ignoreCase bool 1)
-)
-
+    )
     (fn System.Byte.ToString[byte] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Byte.ToString[byte]/this this byte 0)
-)
-
+    )
     (fn System.Byte.CompareTo[byte,byte] name:CompareTo ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Byte.CompareTo[byte,byte]/this this byte 0)
-
       (par System.Byte.CompareTo[byte,byte]/value value byte 1)
-)
-
+    )
     (fn System.Byte.Parse[string] name:Parse ret:byte ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Byte.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Char.ToString[char] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.ToString[char]/this this char 0)
-)
-
+    )
     (fn System.Char.Parse[string] name:Parse ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Char.CompareTo[char,char] name:CompareTo ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Char.CompareTo[char,char]/this this char 0)
-
       (par System.Char.CompareTo[char,char]/value value char 1)
-)
-
+    )
     (fn System.Char.IsDigit[char] name:IsDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.IsDigit[char]/c c char 0)
-)
-
+    )
     (fn System.Char.IsLetter[char] name:IsLetter ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.IsLetter[char]/c c char 0)
-)
-
+    )
     (fn System.Char.IsWhiteSpace[char] name:IsWhiteSpace ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.IsWhiteSpace[char]/c c char 0)
-)
-
+    )
     (fn System.Char.ToUpper[char] name:ToUpper ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.ToUpper[char]/c c char 0)
-)
-
+    )
     (fn System.Char.ToLower[char] name:ToLower ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.ToLower[char]/c c char 0)
-)
-
+    )
     (fn System.Console.WriteLine[] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
-
     (fn System.Console.WriteLine[string] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[string]/text text string 0)
-)
-
+    )
     (fn System.Console.WriteLine[int] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[int]/text text int 0)
-)
-
+    )
     (fn System.Console.WriteLine[double] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[double]/text text double 0)
-)
-
+    )
     (fn System.Console.WriteLine[bool] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[bool]/text text bool 0)
-)
-
+    )
     (fn System.Console.WriteLine[char] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[char]/text text char 0)
-)
-
+    )
     (fn System.Console.WriteLine[byte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[byte]/text text byte 0)
-)
-
+    )
     (fn System.Console.WriteLine[long] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[long]/text text long 0)
-)
-
+    )
     (fn System.Console.WriteLine[sbyte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[sbyte]/text text sbyte 0)
-)
-
+    )
     (fn System.Console.WriteLine[short] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[short]/text text short 0)
-)
-
+    )
     (fn System.Console.WriteLine[ushort] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[ushort]/text text ushort 0)
-)
-
+    )
     (fn System.Console.WriteLine[uint] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[uint]/text text uint 0)
-)
-
+    )
     (fn System.Console.WriteLine[ulong] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[ulong]/text text ulong 0)
-)
-
+    )
     (fn System.Console.WriteLine[float] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.WriteLine[float]/text text float 0)
-)
-
+    )
     (fn System.Console.Write[string] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[string]/text text string 0)
-)
-
+    )
     (fn System.Console.Write[int] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[int]/text text int 0)
-)
-
+    )
     (fn System.Console.Write[double] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[double]/text text double 0)
-)
-
+    )
     (fn System.Console.Write[bool] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[bool]/text text bool 0)
-)
-
+    )
     (fn System.Console.Write[char] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[char]/text text char 0)
-)
-
+    )
     (fn System.Console.Write[byte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[byte]/text text byte 0)
-)
-
+    )
     (fn System.Console.Write[long] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[long]/text text long 0)
-)
-
+    )
     (fn System.Console.Write[sbyte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[sbyte]/text text sbyte 0)
-)
-
+    )
     (fn System.Console.Write[short] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[short]/text text short 0)
-)
-
+    )
     (fn System.Console.Write[ushort] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[ushort]/text text ushort 0)
-)
-
+    )
     (fn System.Console.Write[uint] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[uint]/text text uint 0)
-)
-
+    )
     (fn System.Console.Write[ulong] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[ulong]/text text ulong 0)
-)
-
+    )
     (fn System.Console.Write[float] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.Write[float]/text text float 0)
-)
-
+    )
     (fn System.Console.ReadLine[] name:ReadLine ret:string ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
-
     (fn System.Console.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Console.ReadKey[bool]/intercept intercept bool 0)
-)
-
+    )
     (fn System.Console.Beep[int,int] name:Beep ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Console.Beep[int,int]/frequency frequency int 0)
-
       (par System.Console.Beep[int,int]/duration duration int 1)
-)
-
+    )
     (fn System.Double.ToString[double] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Double.ToString[double]/this this double 0)
-)
-
+    )
     (fn System.Double.CompareTo[double,double] name:CompareTo ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Double.CompareTo[double,double]/this this double 0)
-
       (par System.Double.CompareTo[double,double]/value value double 1)
-)
-
+    )
     (fn System.Int16.ToString[short] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int16.ToString[short]/this this short 0)
-)
-
+    )
     (fn System.Int16.CompareTo[short,short] name:CompareTo ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Int16.CompareTo[short,short]/this this short 0)
-
       (par System.Int16.CompareTo[short,short]/value value short 1)
-)
-
+    )
     (fn System.Int16.Parse[string] name:Parse ret:short ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int16.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Int32.ToString[int] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int32.ToString[int]/this this int 0)
-)
-
+    )
     (fn System.Int32.CompareTo[int,int] name:CompareTo ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Int32.CompareTo[int,int]/this this int 0)
-
       (par System.Int32.CompareTo[int,int]/value value int 1)
-)
-
+    )
     (fn System.Int32.Parse[string] name:Parse ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int32.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Int64.ToString[long] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int64.ToString[long]/this this long 0)
-)
-
+    )
     (fn System.Int64.CompareTo[long,long] name:CompareTo ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Int64.CompareTo[long,long]/this this long 0)
-
       (par System.Int64.CompareTo[long,long]/value value long 1)
-)
-
+    )
     (fn System.Int64.Parse[string] name:Parse ret:long ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int64.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Math.Max[int,int] name:Max ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Max[int,int]/a a int 0)
-
       (par System.Math.Max[int,int]/b b int 1)
-)
-
+    )
     (fn System.Math.Max[double,double] name:Max ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Max[double,double]/a a double 0)
-
       (par System.Math.Max[double,double]/b b double 1)
-)
-
+    )
     (fn System.Math.Min[int,int] name:Min ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Min[int,int]/a a int 0)
-
       (par System.Math.Min[int,int]/b b int 1)
-)
-
+    )
     (fn System.Math.Min[double,double] name:Min ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Min[double,double]/a a double 0)
-
       (par System.Math.Min[double,double]/b b double 1)
-)
-
+    )
     (fn System.Math.Abs[int] name:Abs ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Abs[int]/x x int 0)
-)
-
+    )
     (fn System.Math.Abs[double] name:Abs ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Abs[double]/x x double 0)
-)
-
+    )
     (fn System.Math.Clamp[int,int,int] name:Clamp ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
       (par System.Math.Clamp[int,int,int]/v v int 0)
-
       (par System.Math.Clamp[int,int,int]/lo lo int 1)
-
       (par System.Math.Clamp[int,int,int]/hi hi int 2)
-)
-
+    )
     (fn System.Math.Clamp[double,double,double] name:Clamp ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
       (par System.Math.Clamp[double,double,double]/v v double 0)
-
       (par System.Math.Clamp[double,double,double]/lo lo double 1)
-
       (par System.Math.Clamp[double,double,double]/hi hi double 2)
-)
-
+    )
     (fn System.Math.Sign[int] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Sign[int]/x x int 0)
-)
-
+    )
     (fn System.Math.Sign[double] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Sign[double]/x x double 0)
-)
-
+    )
     (fn System.Math.IsEven[int] name:IsEven ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.IsEven[int]/n n int 0)
-)
-
+    )
     (fn System.Math.IsOdd[int] name:IsOdd ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.IsOdd[int]/n n int 0)
-)
-
+    )
     (fn System.Math.Pow[int,int] name:Pow ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Pow[int,int]/x x int 0)
-
       (par System.Math.Pow[int,int]/exp exp int 1)
-)
-
+    )
     (fn System.Math.Factorial[int] name:Factorial ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Factorial[int]/n n int 0)
-)
-
+    )
     (fn System.Math.Gcd[int,int] name:Gcd ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Gcd[int,int]/a a int 0)
-
       (par System.Math.Gcd[int,int]/b b int 1)
-)
-
+    )
     (fn System.Math.Lcm[int,int] name:Lcm ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Lcm[int,int]/a a int 0)
-
       (par System.Math.Lcm[int,int]/b b int 1)
-)
-
+    )
     (fn System.Math.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Sqrt[double]/x x double 0)
-)
-
+    )
     (fn System.Math.Floor[double] name:Floor ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Floor[double]/x x double 0)
-)
-
+    )
     (fn System.Math.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Ceiling[double]/x x double 0)
-)
-
+    )
     (fn System.Math.Truncate[double] name:Truncate ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Truncate[double]/x x double 0)
-)
-
+    )
     (fn System.Math.Round[double] name:Round ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Math.Round[double]/x x double 0)
-)
-
+    )
     (fn System.Runtime.WriteLine[any] name:WriteLine ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:WriteLine entry:- charset:- params:1
       (par System.Runtime.WriteLine[any]/text text any 0)
-)
-
+    )
     (fn System.Runtime.Write[any] name:Write ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Write entry:- charset:- params:1
       (par System.Runtime.Write[any]/text text any 0)
-)
-
+    )
     (fn System.Runtime.ReadLine[] name:ReadLine ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadLine entry:- charset:- params:0)
-
     (fn System.Runtime.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadKey entry:- charset:- params:1
       (par System.Runtime.ReadKey[bool]/intercept intercept bool 0)
-)
-
+    )
     (fn System.Runtime.Random[int] name:Random ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Random entry:- charset:- params:1
       (par System.Runtime.Random[int]/max max int 0)
-)
-
+    )
     (fn System.Runtime.Sleep[int] name:Sleep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sleep entry:- charset:- params:1
       (par System.Runtime.Sleep[int]/ms ms int 0)
-)
-
+    )
     (fn System.Runtime.TickCount[] name:TickCount ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:TickCount entry:- charset:- params:0)
-
     (fn System.Runtime.Exit[int] name:Exit ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Exit entry:- charset:- params:1
       (par System.Runtime.Exit[int]/code code int 0)
-)
-
+    )
     (fn System.Runtime.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- params:1
       (par System.Runtime.Sqrt[double]/x x double 0)
-)
-
+    )
     (fn System.Runtime.Floor[double] name:Floor ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Floor entry:- charset:- params:1
       (par System.Runtime.Floor[double]/x x double 0)
-)
-
+    )
     (fn System.Runtime.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Ceiling entry:- charset:- params:1
       (par System.Runtime.Ceiling[double]/x x double 0)
-)
-
+    )
     (fn System.Runtime.Truncate[double] name:Truncate ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Truncate entry:- charset:- params:1
       (par System.Runtime.Truncate[double]/x x double 0)
-)
-
+    )
     (fn System.Runtime.Round[double] name:Round ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Round entry:- charset:- params:1
       (par System.Runtime.Round[double]/x x double 0)
-)
-
+    )
     (fn System.Runtime.Beep[int,int] name:Beep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Beep entry:- charset:- params:2
       (par System.Runtime.Beep[int,int]/frequency frequency int 0)
-
       (par System.Runtime.Beep[int,int]/duration duration int 1)
-)
-
+    )
     (fn System.Runtime.Int32ToString[int] name:Int32ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int32ToString entry:- charset:- params:1
       (par System.Runtime.Int32ToString[int]/value value int 0)
-)
-
+    )
     (fn System.Runtime.Int64ToString[long] name:Int64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int64ToString entry:- charset:- params:1
       (par System.Runtime.Int64ToString[long]/value value long 0)
-)
-
+    )
     (fn System.Runtime.DoubleToString[double] name:DoubleToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- params:1
       (par System.Runtime.DoubleToString[double]/value value double 0)
-)
-
+    )
     (fn System.Runtime.BooleanToString[bool] name:BooleanToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:BooleanToString entry:- charset:- params:1
       (par System.Runtime.BooleanToString[bool]/value value bool 0)
-)
-
+    )
     (fn System.Runtime.CharToString[char] name:CharToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:CharToString entry:- charset:- params:1
       (par System.Runtime.CharToString[char]/value value char 0)
-)
-
+    )
     (fn System.Runtime.ParseInt64[string] name:ParseInt64 ret:long ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ParseInt64 entry:- charset:- params:1
       (par System.Runtime.ParseInt64[string]/s s string 0)
-)
-
+    )
     (fn System.Runtime.UInt64ToString[ulong] name:UInt64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:UInt64ToString entry:- charset:- params:1
       (par System.Runtime.UInt64ToString[ulong]/value value ulong 0)
-)
-
+    )
     (fn System.SByte.ToString[sbyte] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.SByte.ToString[sbyte]/this this sbyte 0)
-)
-
+    )
     (fn System.SByte.CompareTo[sbyte,sbyte] name:CompareTo ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.SByte.CompareTo[sbyte,sbyte]/this this sbyte 0)
-
       (par System.SByte.CompareTo[sbyte,sbyte]/value value sbyte 1)
-)
-
+    )
     (fn System.SByte.Parse[string] name:Parse ret:sbyte ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.SByte.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.Single.ToString[float] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Single.ToString[float]/this this float 0)
-)
-
+    )
     (fn System.String.IsNullOrEmpty[string] name:IsNullOrEmpty ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.IsNullOrEmpty[string]/s s string 0)
-)
-
+    )
     (fn System.String.ToUpper[string] name:ToUpper ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.ToUpper[string]/this this string 0)
-)
-
+    )
     (fn System.String.ToLower[string] name:ToLower ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.ToLower[string]/this this string 0)
-)
-
+    )
     (fn System.String.StartsWith[string,string] name:StartsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.StartsWith[string,string]/this this string 0)
-
       (par System.String.StartsWith[string,string]/prefix prefix string 1)
-)
-
+    )
     (fn System.String.EndsWith[string,string] name:EndsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.EndsWith[string,string]/this this string 0)
-
       (par System.String.EndsWith[string,string]/suffix suffix string 1)
-)
-
+    )
     (fn System.String.Contains[string,string] name:Contains ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.Contains[string,string]/this this string 0)
-
       (par System.String.Contains[string,string]/sub sub string 1)
-)
-
+    )
     (fn System.String.IndexOf[string,string] name:IndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.IndexOf[string,string]/this this string 0)
-
       (par System.String.IndexOf[string,string]/sub sub string 1)
-)
-
+    )
     (fn System.String.Reverse[string] name:Reverse ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.Reverse[string]/this this string 0)
-)
-
+    )
     (fn System.String.Replicate[string,int] name:Replicate ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.Replicate[string,int]/this this string 0)
-
       (par System.String.Replicate[string,int]/n n int 1)
-)
-
+    )
     (fn System.String.CountChar[string,char] name:CountChar ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.CountChar[string,char]/this this string 0)
-
       (par System.String.CountChar[string,char]/c c char 1)
-)
-
+    )
     (fn System.String.IsPalindrome[string] name:IsPalindrome ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.IsPalindrome[string]/this this string 0)
-)
-
+    )
     (fn System.String.Trim[string] name:Trim ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.Trim[string]/this this string 0)
-)
-
+    )
     (fn System.String.Replace[string,string,string] name:Replace ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
       (par System.String.Replace[string,string,string]/this this string 0)
-
       (par System.String.Replace[string,string,string]/old old string 1)
-
       (par System.String.Replace[string,string,string]/replacement replacement string 2)
-)
-
+    )
     (fn System.String.CountSubstring[string,string] name:CountSubstring ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.CountSubstring[string,string]/this this string 0)
-
       (par System.String.CountSubstring[string,string]/sub sub string 1)
-)
-
+    )
     (fn System.String.PadLeft[string,int,char] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
       (par System.String.PadLeft[string,int,char]/this this string 0)
-
       (par System.String.PadLeft[string,int,char]/totalWidth totalWidth int 1)
-
       (par System.String.PadLeft[string,int,char]/padChar padChar char 2)
-)
-
+    )
     (fn System.String.PadLeft[string,int] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.PadLeft[string,int]/this this string 0)
-
       (par System.String.PadLeft[string,int]/totalWidth totalWidth int 1)
-)
-
+    )
     (fn System.String.PadRight[string,int,char] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
       (par System.String.PadRight[string,int,char]/this this string 0)
-
       (par System.String.PadRight[string,int,char]/totalWidth totalWidth int 1)
-
       (par System.String.PadRight[string,int,char]/padChar padChar char 2)
-)
-
+    )
     (fn System.String.PadRight[string,int] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.PadRight[string,int]/this this string 0)
-
       (par System.String.PadRight[string,int]/totalWidth totalWidth int 1)
-)
-
+    )
     (fn System.String.Split[string,char] name:Split ret:string[] ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.String.Split[string,char]/this this string 0)
-
       (par System.String.Split[string,char]/sep sep char 1)
-)
-
+    )
     (fn System.UInt16.ToString[ushort] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt16.ToString[ushort]/this this ushort 0)
-)
-
+    )
     (fn System.UInt16.CompareTo[ushort,ushort] name:CompareTo ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.UInt16.CompareTo[ushort,ushort]/this this ushort 0)
-
       (par System.UInt16.CompareTo[ushort,ushort]/value value ushort 1)
-)
-
+    )
     (fn System.UInt16.Parse[string] name:Parse ret:ushort ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt16.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.UInt32.ToString[uint] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt32.ToString[uint]/this this uint 0)
-)
-
+    )
     (fn System.UInt32.CompareTo[uint,uint] name:CompareTo ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.UInt32.CompareTo[uint,uint]/this this uint 0)
-
       (par System.UInt32.CompareTo[uint,uint]/value value uint 1)
-)
-
+    )
     (fn System.UInt32.Parse[string] name:Parse ret:uint ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt32.Parse[string]/s s string 0)
-)
-
+    )
     (fn System.UInt64.ToString[ulong] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt64.ToString[ulong]/this this ulong 0)
-)
-
+    )
     (fn System.UInt64.CompareTo[ulong,ulong] name:CompareTo ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.UInt64.CompareTo[ulong,ulong]/this this ulong 0)
-
       (par System.UInt64.CompareTo[ulong,ulong]/value value ulong 1)
-)
-
+    )
     (loc System.Array.Sum[int[]]/sum false int)
-
     (loc System.Array.Sum[int[]]/i false int)
-
     (loc System.Array.Sum[double[]]/sum false double)
-
     (loc System.Array.Sum[double[]]/i false int)
-
     (loc System.Array.Min[int[]]/m false int)
-
     (loc System.Array.Min[int[]]/i false int)
-
     (loc System.Array.Min[double[]]/m false double)
-
     (loc System.Array.Min[double[]]/i false int)
-
     (loc System.Array.Max[int[]]/m false int)
-
     (loc System.Array.Max[int[]]/i false int)
-
     (loc System.Array.Max[double[]]/m false double)
-
     (loc System.Array.Max[double[]]/i false int)
-
     (loc System.Array.Contains[int[],int]/i false int)
-
     (loc System.Array.Contains[double[],double]/i false int)
-
     (loc System.Array.IndexOf[int[],int]/i false int)
-
     (loc System.Array.IndexOf[double[],double]/i false int)
-
     (loc System.Array.Reverse[int[]]/n false int)
-
     (loc System.Array.Reverse[int[]]/result false int[])
-
     (loc System.Array.Reverse[int[]]/i false int)
-
     (loc System.Array.Reverse[double[]]/n false int)
-
     (loc System.Array.Reverse[double[]]/result false double[])
-
     (loc System.Array.Reverse[double[]]/i false int)
-
     (loc System.Array.Sort[int[]]/n false int)
-
     (loc System.Array.Sort[int[]]/result false int[])
-
     (loc System.Array.Sort[int[]]/i false int)
-
     (loc System.Array.Sort[int[]]/j false int)
-
     (loc System.Array.Sort[int[]]/k false int)
-
     (loc System.Array.Sort[int[]]/t false int)
-
     (loc System.Array.Sort[double[]]/n false int)
-
     (loc System.Array.Sort[double[]]/result false double[])
-
     (loc System.Array.Sort[double[]]/i false int)
-
     (loc System.Array.Sort[double[]]/j false int)
-
     (loc System.Array.Sort[double[]]/k false int)
-
     (loc System.Array.Sort[double[]]/t false double)
-
     (loc System.Byte.CompareTo[byte,byte]/a false int)
-
     (loc System.Byte.CompareTo[byte,byte]/b false int)
-
     (loc System.Char.CompareTo[char,char]/a false int)
-
     (loc System.Char.CompareTo[char,char]/b false int)
-
     (loc System.Char.IsDigit[char]/v false int)
-
     (loc System.Char.IsLetter[char]/v false int)
-
     (loc System.Char.ToUpper[char]/v false int)
-
     (loc System.Char.ToLower[char]/v false int)
-
     (loc System.Math.Pow[int,int]/result false int)
-
     (loc System.Math.Pow[int,int]/i false int)
-
     (loc System.Math.Factorial[int]/result false int)
-
     (loc System.Math.Factorial[int]/i false int)
-
     (loc System.Math.Gcd[int,int]/x false int)
-
     (loc System.Math.Gcd[int,int]/y false int)
-
     (loc System.Math.Gcd[int,int]/t false int)
-
     (loc System.String.ToUpper[string]/result false string)
-
     (loc System.String.ToUpper[string]/i false int)
-
     (loc System.String.ToUpper[string]/v false int)
-
     (loc System.String.ToLower[string]/result false string)
-
     (loc System.String.ToLower[string]/i false int)
-
     (loc System.String.ToLower[string]/v false int)
-
     (loc System.String.Contains[string,string]/i false int)
-
     (loc System.String.IndexOf[string,string]/i false int)
-
     (loc System.String.Reverse[string]/result false string)
-
     (loc System.String.Reverse[string]/i false int)
-
     (loc System.String.Replicate[string,int]/result false string)
-
     (loc System.String.Replicate[string,int]/i false int)
-
     (loc System.String.CountChar[string,char]/count false int)
-
     (loc System.String.CountChar[string,char]/i false int)
-
     (loc System.String.IsPalindrome[string]/lo false int)
-
     (loc System.String.IsPalindrome[string]/hi false int)
-
     (loc System.String.Trim[string]/start false int)
-
     (loc System.String.Trim[string]/end false int)
-
     (loc System.String.Trim[string]/first false char)
-
     (loc System.String.Trim[string]/last false char)
-
     (loc System.String.Replace[string,string,string]/result false string)
-
     (loc System.String.Replace[string,string,string]/i false int)
-
     (loc System.String.CountSubstring[string,string]/count false int)
-
     (loc System.String.CountSubstring[string,string]/i false int)
-
     (loc System.String.PadLeft[string,int,char]/result false string)
-
     (loc System.String.PadRight[string,int,char]/result false string)
-
     (loc System.String.Split[string,char]/count false int)
-
     (loc System.String.Split[string,char]/result false string[])
-
     (loc System.String.Split[string,char]/start false int)
-
     (loc System.String.Split[string,char]/index false int)
-
     (loc System.String.Split[string,char]/i false int)
-
     (loc System.UInt16.CompareTo[ushort,ushort]/a false int)
-
     (loc System.UInt16.CompareTo[ushort,ushort]/b false int)
-
     (loc System.UInt32.CompareTo[uint,uint]/a false long)
-
     (loc System.UInt32.CompareTo[uint,uint]/b false long)
-)
-
+  )
   (bodies
     (body System.Array.Sum[int[]]
       (block 10
         (vardecl System.Array.Sum[int[]]/sum
           (lit int i:0)
-)
-
+        )
         (vardecl System.Array.Sum[int[]]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.Array.Sum[int[]]/sum
             (binary
               (bop + int int)
-
               (var System.Array.Sum[int[]]/sum)
-
               (elem int
                 (var System.Array.Sum[int[]]/a)
-
                 (var System.Array.Sum[int[]]/i)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.Array.Sum[int[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Sum[int[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Sum[int[]]/i)
-
             (memberacc int Length
               (var System.Array.Sum[int[]]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Sum[int[]]/sum)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Sum[double[]]
       (block 10
         (vardecl System.Array.Sum[double[]]/sum
           (lit double d:0)
-)
-
+        )
         (vardecl System.Array.Sum[double[]]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.Array.Sum[double[]]/sum
             (binary
               (bop + double double)
-
               (var System.Array.Sum[double[]]/sum)
-
               (elem double
                 (var System.Array.Sum[double[]]/a)
-
                 (var System.Array.Sum[double[]]/i)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.Array.Sum[double[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Sum[double[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Sum[double[]]/i)
-
             (memberacc int Length
               (var System.Array.Sum[double[]]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Sum[double[]]/sum)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Min[int[]]
       (block 15
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.Array.Min[int[]]/a)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:0)
-)
-
+        )
         (label Label1)
-
         (vardecl System.Array.Min[int[]]/m
           (elem int
             (var System.Array.Min[int[]]/a)
-
             (lit int i:0)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Min[int[]]/i
           (lit int i:1)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop < int int)
-
             (elem int
               (var System.Array.Min[int[]]/a)
-
               (var System.Array.Min[int[]]/i)
-)
-
+            )
             (var System.Array.Min[int[]]/m)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.Array.Min[int[]]/m
             (elem int
               (var System.Array.Min[int[]]/a)
-
               (var System.Array.Min[int[]]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label3)
-
         (exprstmt
           (assign System.Array.Min[int[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Min[int[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.Array.Min[int[]]/i)
-
             (memberacc int Length
               (var System.Array.Min[int[]]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Min[int[]]/m)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Min[double[]]
       (block 15
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.Array.Min[double[]]/a)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit double d:0)
-)
-
+        )
         (label Label1)
-
         (vardecl System.Array.Min[double[]]/m
           (elem double
             (var System.Array.Min[double[]]/a)
-
             (lit int i:0)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Min[double[]]/i
           (lit int i:1)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop < double double)
-
             (elem double
               (var System.Array.Min[double[]]/a)
-
               (var System.Array.Min[double[]]/i)
-)
-
+            )
             (var System.Array.Min[double[]]/m)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.Array.Min[double[]]/m
             (elem double
               (var System.Array.Min[double[]]/a)
-
               (var System.Array.Min[double[]]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label3)
-
         (exprstmt
           (assign System.Array.Min[double[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Min[double[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.Array.Min[double[]]/i)
-
             (memberacc int Length
               (var System.Array.Min[double[]]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Min[double[]]/m)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Max[int[]]
       (block 15
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.Array.Max[int[]]/a)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:0)
-)
-
+        )
         (label Label1)
-
         (vardecl System.Array.Max[int[]]/m
           (elem int
             (var System.Array.Max[int[]]/a)
-
             (lit int i:0)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Max[int[]]/i
           (lit int i:1)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop > int int)
-
             (elem int
               (var System.Array.Max[int[]]/a)
-
               (var System.Array.Max[int[]]/i)
-)
-
+            )
             (var System.Array.Max[int[]]/m)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.Array.Max[int[]]/m
             (elem int
               (var System.Array.Max[int[]]/a)
-
               (var System.Array.Max[int[]]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label3)
-
         (exprstmt
           (assign System.Array.Max[int[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Max[int[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.Array.Max[int[]]/i)
-
             (memberacc int Length
               (var System.Array.Max[int[]]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Max[int[]]/m)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Max[double[]]
       (block 15
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.Array.Max[double[]]/a)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit double d:0)
-)
-
+        )
         (label Label1)
-
         (vardecl System.Array.Max[double[]]/m
           (elem double
             (var System.Array.Max[double[]]/a)
-
             (lit int i:0)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Max[double[]]/i
           (lit int i:1)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop > double double)
-
             (elem double
               (var System.Array.Max[double[]]/a)
-
               (var System.Array.Max[double[]]/i)
-)
-
+            )
             (var System.Array.Max[double[]]/m)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.Array.Max[double[]]/m
             (elem double
               (var System.Array.Max[double[]]/a)
-
               (var System.Array.Max[double[]]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label3)
-
         (exprstmt
           (assign System.Array.Max[double[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Max[double[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.Array.Max[double[]]/i)
-
             (memberacc int Length
               (var System.Array.Max[double[]]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Max[double[]]/m)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Average[int[]]
       (block 4
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.Array.Average[int[]]/a)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit double d:0)
-)
-
+        )
         (label Label1)
-
         (return
           (conv double
             (binary
               (bop / int int)
-
               (membercall int Sum System.Array.Sum[int[]] 1
                 (this System.Array)
-
                 (var System.Array.Average[int[]]/a)
-)
-
+              )
               (memberacc int Length
                 (var System.Array.Average[int[]]/a)
-)
-)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
+      )
+    )
     (body System.Array.Average[double[]]
       (block 4
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.Array.Average[double[]]/a)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit double d:0)
-)
-
+        )
         (label Label1)
-
         (return
           (binary
             (bop / double double)
-
             (membercall double Sum System.Array.Sum[double[]] 1
               (this System.Array)
-
               (var System.Array.Average[double[]]/a)
-)
-
+            )
             (conv double
               (memberacc int Length
                 (var System.Array.Average[double[]]/a)
-)
-)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
+      )
+    )
     (body System.Array.Contains[int[],int]
       (block 11
         (vardecl System.Array.Contains[int[],int]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop == int int)
-
             (elem int
               (var System.Array.Contains[int[],int]/a)
-
               (var System.Array.Contains[int[],int]/i)
-)
-
+            )
             (var System.Array.Contains[int[],int]/v)
-)
- false)
-
+          ) false
+        )
         (return
           (lit bool b:1)
-)
-
+        )
         (label Label2)
-
         (exprstmt
           (assign System.Array.Contains[int[],int]/i
             (binary
               (bop + int int)
-
               (var System.Array.Contains[int[],int]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Contains[int[],int]/i)
-
             (memberacc int Length
               (var System.Array.Contains[int[],int]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (lit bool b:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Contains[double[],double]
       (block 11
         (vardecl System.Array.Contains[double[],double]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop == double double)
-
             (elem double
               (var System.Array.Contains[double[],double]/a)
-
               (var System.Array.Contains[double[],double]/i)
-)
-
+            )
             (var System.Array.Contains[double[],double]/v)
-)
- false)
-
+          ) false
+        )
         (return
           (lit bool b:1)
-)
-
+        )
         (label Label2)
-
         (exprstmt
           (assign System.Array.Contains[double[],double]/i
             (binary
               (bop + int int)
-
               (var System.Array.Contains[double[],double]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Contains[double[],double]/i)
-
             (memberacc int Length
               (var System.Array.Contains[double[],double]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (lit bool b:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.IndexOf[int[],int]
       (block 11
         (vardecl System.Array.IndexOf[int[],int]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop == int int)
-
             (elem int
               (var System.Array.IndexOf[int[],int]/a)
-
               (var System.Array.IndexOf[int[],int]/i)
-)
-
+            )
             (var System.Array.IndexOf[int[],int]/v)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Array.IndexOf[int[],int]/i)
-)
-
+        )
         (label Label2)
-
         (exprstmt
           (assign System.Array.IndexOf[int[],int]/i
             (binary
               (bop + int int)
-
               (var System.Array.IndexOf[int[],int]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.IndexOf[int[],int]/i)
-
             (memberacc int Length
               (var System.Array.IndexOf[int[],int]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Array.IndexOf[double[],double]
       (block 11
         (vardecl System.Array.IndexOf[double[],double]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop == double double)
-
             (elem double
               (var System.Array.IndexOf[double[],double]/a)
-
               (var System.Array.IndexOf[double[],double]/i)
-)
-
+            )
             (var System.Array.IndexOf[double[],double]/v)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Array.IndexOf[double[],double]/i)
-)
-
+        )
         (label Label2)
-
         (exprstmt
           (assign System.Array.IndexOf[double[],double]/i
             (binary
               (bop + int int)
-
               (var System.Array.IndexOf[double[],double]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.IndexOf[double[],double]/i)
-
             (memberacc int Length
               (var System.Array.IndexOf[double[],double]/a)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Array.Reverse[int[]]
       (block 11
         (vardecl System.Array.Reverse[int[]]/n
           (memberacc int Length
             (var System.Array.Reverse[int[]]/a)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Reverse[int[]]/result
           (arrnew int[]
-            (var System.Array.Reverse[int[]]/n)
- 0)
-)
-
+            (var System.Array.Reverse[int[]]/n) 0
+          )
+        )
         (vardecl System.Array.Reverse[int[]]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (elemassign int
             (elem int
               (var System.Array.Reverse[int[]]/result)
-
               (var System.Array.Reverse[int[]]/i)
-)
-
+            )
             (elem int
               (var System.Array.Reverse[int[]]/a)
-
               (binary
                 (bop - int int)
-
                 (binary
                   (bop - int int)
-
                   (var System.Array.Reverse[int[]]/n)
-
                   (lit int i:1)
-)
-
+                )
                 (var System.Array.Reverse[int[]]/i)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.Array.Reverse[int[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Reverse[int[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Reverse[int[]]/i)
-
             (var System.Array.Reverse[int[]]/n)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Reverse[int[]]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Reverse[double[]]
       (block 11
         (vardecl System.Array.Reverse[double[]]/n
           (memberacc int Length
             (var System.Array.Reverse[double[]]/a)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Reverse[double[]]/result
           (arrnew double[]
-            (var System.Array.Reverse[double[]]/n)
- 0)
-)
-
+            (var System.Array.Reverse[double[]]/n) 0
+          )
+        )
         (vardecl System.Array.Reverse[double[]]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (elemassign double
             (elem double
               (var System.Array.Reverse[double[]]/result)
-
               (var System.Array.Reverse[double[]]/i)
-)
-
+            )
             (elem double
               (var System.Array.Reverse[double[]]/a)
-
               (binary
                 (bop - int int)
-
                 (binary
                   (bop - int int)
-
                   (var System.Array.Reverse[double[]]/n)
-
                   (lit int i:1)
-)
-
+                )
                 (var System.Array.Reverse[double[]]/i)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.Array.Reverse[double[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Reverse[double[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Reverse[double[]]/i)
-
             (var System.Array.Reverse[double[]]/n)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Array.Reverse[double[]]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Sort[int[]]
       (block 30
         (vardecl System.Array.Sort[int[]]/n
           (memberacc int Length
             (var System.Array.Sort[int[]]/a)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Sort[int[]]/result
           (arrnew int[]
-            (var System.Array.Sort[int[]]/n)
- 0)
-)
-
+            (var System.Array.Sort[int[]]/n) 0
+          )
+        )
         (vardecl System.Array.Sort[int[]]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (elemassign int
             (elem int
               (var System.Array.Sort[int[]]/result)
-
               (var System.Array.Sort[int[]]/i)
-)
-
+            )
             (elem int
               (var System.Array.Sort[int[]]/a)
-
               (var System.Array.Sort[int[]]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.Array.Sort[int[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Sort[int[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Sort[int[]]/i)
-
             (var System.Array.Sort[int[]]/n)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (vardecl System.Array.Sort[int[]]/j
           (lit int i:0)
-)
-
+        )
         (goto continue2)
-
         (label Label2)
-
         (vardecl System.Array.Sort[int[]]/k
           (lit int i:0)
-)
-
+        )
         (goto continue3)
-
         (label Label3)
-
         (cgoto Label4
           (binary
             (bop > int int)
-
             (elem int
               (var System.Array.Sort[int[]]/result)
-
               (var System.Array.Sort[int[]]/k)
-)
-
+            )
             (elem int
               (var System.Array.Sort[int[]]/result)
-
               (binary
                 (bop + int int)
-
                 (var System.Array.Sort[int[]]/k)
-
                 (lit int i:1)
-)
-)
-)
- false)
-
+              )
+            )
+          ) false
+        )
         (vardecl System.Array.Sort[int[]]/t
           (elem int
             (var System.Array.Sort[int[]]/result)
-
             (var System.Array.Sort[int[]]/k)
-)
-)
-
+          )
+        )
         (exprstmt
           (elemassign int
             (elem int
               (var System.Array.Sort[int[]]/result)
-
               (var System.Array.Sort[int[]]/k)
-)
-
+            )
             (elem int
               (var System.Array.Sort[int[]]/result)
-
               (binary
                 (bop + int int)
-
                 (var System.Array.Sort[int[]]/k)
-
                 (lit int i:1)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (elemassign int
             (elem int
               (var System.Array.Sort[int[]]/result)
-
               (binary
                 (bop + int int)
-
                 (var System.Array.Sort[int[]]/k)
-
                 (lit int i:1)
-)
-)
-
+              )
+            )
             (var System.Array.Sort[int[]]/t)
-)
-)
-
+          )
+        )
         (label Label4)
-
         (exprstmt
           (assign System.Array.Sort[int[]]/k
             (binary
               (bop + int int)
-
               (var System.Array.Sort[int[]]/k)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue3)
-
         (cgoto Label3
           (binary
             (bop < int int)
-
             (var System.Array.Sort[int[]]/k)
-
             (binary
               (bop - int int)
-
               (binary
                 (bop - int int)
-
                 (var System.Array.Sort[int[]]/n)
-
                 (lit int i:1)
-)
-
+              )
               (var System.Array.Sort[int[]]/j)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break3)
-
         (exprstmt
           (assign System.Array.Sort[int[]]/j
             (binary
               (bop + int int)
-
               (var System.Array.Sort[int[]]/j)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue2)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.Array.Sort[int[]]/j)
-
             (binary
               (bop - int int)
-
               (var System.Array.Sort[int[]]/n)
-
               (lit int i:1)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break2)
-
         (return
           (var System.Array.Sort[int[]]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Array.Sort[double[]]
       (block 30
         (vardecl System.Array.Sort[double[]]/n
           (memberacc int Length
             (var System.Array.Sort[double[]]/a)
-)
-)
-
+          )
+        )
         (vardecl System.Array.Sort[double[]]/result
           (arrnew double[]
-            (var System.Array.Sort[double[]]/n)
- 0)
-)
-
+            (var System.Array.Sort[double[]]/n) 0
+          )
+        )
         (vardecl System.Array.Sort[double[]]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (elemassign double
             (elem double
               (var System.Array.Sort[double[]]/result)
-
               (var System.Array.Sort[double[]]/i)
-)
-
+            )
             (elem double
               (var System.Array.Sort[double[]]/a)
-
               (var System.Array.Sort[double[]]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.Array.Sort[double[]]/i
             (binary
               (bop + int int)
-
               (var System.Array.Sort[double[]]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Array.Sort[double[]]/i)
-
             (var System.Array.Sort[double[]]/n)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (vardecl System.Array.Sort[double[]]/j
           (lit int i:0)
-)
-
+        )
         (goto continue2)
-
         (label Label2)
-
         (vardecl System.Array.Sort[double[]]/k
           (lit int i:0)
-)
-
+        )
         (goto continue3)
-
         (label Label3)
-
         (cgoto Label4
           (binary
             (bop > double double)
-
             (elem double
               (var System.Array.Sort[double[]]/result)
-
               (var System.Array.Sort[double[]]/k)
-)
-
+            )
             (elem double
               (var System.Array.Sort[double[]]/result)
-
               (binary
                 (bop + int int)
-
                 (var System.Array.Sort[double[]]/k)
-
                 (lit int i:1)
-)
-)
-)
- false)
-
+              )
+            )
+          ) false
+        )
         (vardecl System.Array.Sort[double[]]/t
           (elem double
             (var System.Array.Sort[double[]]/result)
-
             (var System.Array.Sort[double[]]/k)
-)
-)
-
+          )
+        )
         (exprstmt
           (elemassign double
             (elem double
               (var System.Array.Sort[double[]]/result)
-
               (var System.Array.Sort[double[]]/k)
-)
-
+            )
             (elem double
               (var System.Array.Sort[double[]]/result)
-
               (binary
                 (bop + int int)
-
                 (var System.Array.Sort[double[]]/k)
-
                 (lit int i:1)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (elemassign double
             (elem double
               (var System.Array.Sort[double[]]/result)
-
               (binary
                 (bop + int int)
-
                 (var System.Array.Sort[double[]]/k)
-
                 (lit int i:1)
-)
-)
-
+              )
+            )
             (var System.Array.Sort[double[]]/t)
-)
-)
-
+          )
+        )
         (label Label4)
-
         (exprstmt
           (assign System.Array.Sort[double[]]/k
             (binary
               (bop + int int)
-
               (var System.Array.Sort[double[]]/k)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue3)
-
         (cgoto Label3
           (binary
             (bop < int int)
-
             (var System.Array.Sort[double[]]/k)
-
             (binary
               (bop - int int)
-
               (binary
                 (bop - int int)
-
                 (var System.Array.Sort[double[]]/n)
-
                 (lit int i:1)
-)
-
+              )
               (var System.Array.Sort[double[]]/j)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break3)
-
         (exprstmt
           (assign System.Array.Sort[double[]]/j
             (binary
               (bop + int int)
-
               (var System.Array.Sort[double[]]/j)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue2)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.Array.Sort[double[]]/j)
-
             (binary
               (bop - int int)
-
               (var System.Array.Sort[double[]]/n)
-
               (lit int i:1)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break2)
-
         (return
           (var System.Array.Sort[double[]]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Boolean.ToString[bool]
       (block 1
         (return
           (membercall string BooleanToString System.Runtime.BooleanToString[bool] 1
             (statictype System.Runtime)
-
             (var System.Boolean.ToString[bool]/this)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Boolean.Parse[string]
       (block 1
         (return
           (binary
             (bop == string string)
-
             (var System.Boolean.Parse[string]/s)
-
             (lit string s:True)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Boolean.Parse[string,bool]
       (block 4
         (cgoto Label1
-          (var System.Boolean.Parse[string,bool]/ignoreCase)
- false)
-
+          (var System.Boolean.Parse[string,bool]/ignoreCase) false
+        )
         (return
           (binary
             (bop == string string)
-
             (call System.String.ToLower[string] 1
               (var System.Boolean.Parse[string,bool]/s)
-)
-
+            )
             (lit string s:true)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (return
           (binary
             (bop == string string)
-
             (var System.Boolean.Parse[string,bool]/s)
-
             (lit string s:True)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Byte.ToString[byte]
       (block 1
         (return
           (membercall string Int32ToString System.Runtime.Int32ToString[int] 1
             (statictype System.Runtime)
-
             (conv int
               (var System.Byte.ToString[byte]/this)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Byte.CompareTo[byte,byte]
       (block 9
         (vardecl System.Byte.CompareTo[byte,byte]/a
           (conv int
             (var System.Byte.CompareTo[byte,byte]/this)
-)
-)
-
+          )
+        )
         (vardecl System.Byte.CompareTo[byte,byte]/b
           (conv int
             (var System.Byte.CompareTo[byte,byte]/value)
-)
-)
-
+          )
+        )
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Byte.CompareTo[byte,byte]/a)
-
             (var System.Byte.CompareTo[byte,byte]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > int int)
-
             (var System.Byte.CompareTo[byte,byte]/a)
-
             (var System.Byte.CompareTo[byte,byte]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Byte.Parse[string]
       (block 1
         (return
           (conv byte
             (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
               (statictype System.Runtime)
-
               (var System.Byte.Parse[string]/s)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Char.ToString[char]
       (block 1
         (return
           (membercall string CharToString System.Runtime.CharToString[char] 1
             (statictype System.Runtime)
-
             (var System.Char.ToString[char]/this)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Char.Parse[string]
       (block 1
         (return
           (elem char
             (var System.Char.Parse[string]/s)
-
             (lit int i:0)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Char.CompareTo[char,char]
       (block 9
         (vardecl System.Char.CompareTo[char,char]/a
           (conv int
             (var System.Char.CompareTo[char,char]/this)
-)
-)
-
+          )
+        )
         (vardecl System.Char.CompareTo[char,char]/b
           (conv int
             (var System.Char.CompareTo[char,char]/value)
-)
-)
-
+          )
+        )
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Char.CompareTo[char,char]/a)
-
             (var System.Char.CompareTo[char,char]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > int int)
-
             (var System.Char.CompareTo[char,char]/a)
-
             (var System.Char.CompareTo[char,char]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Char.IsDigit[char]
       (block 2
         (vardecl System.Char.IsDigit[char]/v
           (conv int
             (var System.Char.IsDigit[char]/c)
-)
-)
-
+          )
+        )
         (return
           (binary
             (bop && bool bool)
-
             (binary
               (bop >= int int)
-
               (var System.Char.IsDigit[char]/v)
-
               (lit int i:48)
-)
-
+            )
             (binary
               (bop <= int int)
-
               (var System.Char.IsDigit[char]/v)
-
               (lit int i:57)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Char.IsLetter[char]
       (block 2
         (vardecl System.Char.IsLetter[char]/v
           (conv int
             (var System.Char.IsLetter[char]/c)
-)
-)
-
+          )
+        )
         (return
           (binary
             (bop || bool bool)
-
             (binary
               (bop && bool bool)
-
               (binary
                 (bop >= int int)
-
                 (var System.Char.IsLetter[char]/v)
-
                 (lit int i:97)
-)
-
+              )
               (binary
                 (bop <= int int)
-
                 (var System.Char.IsLetter[char]/v)
-
                 (lit int i:122)
-)
-)
-
+              )
+            )
             (binary
               (bop && bool bool)
-
               (binary
                 (bop >= int int)
-
                 (var System.Char.IsLetter[char]/v)
-
                 (lit int i:65)
-)
-
+              )
               (binary
                 (bop <= int int)
-
                 (var System.Char.IsLetter[char]/v)
-
                 (lit int i:90)
-)
-)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
+      )
+    )
     (body System.Char.IsWhiteSpace[char]
       (block 1
         (return
           (binary
             (bop || bool bool)
-
             (binary
               (bop || bool bool)
-
               (binary
                 (bop || bool bool)
-
                 (binary
                   (bop == char char)
-
                   (var System.Char.IsWhiteSpace[char]/c)
-
                   (lit char c:32)
-)
-
+                )
                 (binary
                   (bop == char char)
-
                   (var System.Char.IsWhiteSpace[char]/c)
-
                   (lit char c:9)
-)
-)
-
+                )
+              )
               (binary
                 (bop == char char)
-
                 (var System.Char.IsWhiteSpace[char]/c)
-
                 (lit char c:10)
-)
-)
-
+              )
+            )
             (binary
               (bop == char char)
-
               (var System.Char.IsWhiteSpace[char]/c)
-
               (lit char c:13)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Char.ToUpper[char]
       (block 5
         (vardecl System.Char.ToUpper[char]/v
           (conv int
             (var System.Char.ToUpper[char]/c)
-)
-)
-
+          )
+        )
         (cgoto Label1
           (binary
             (bop && bool bool)
-
             (binary
               (bop >= int int)
-
               (var System.Char.ToUpper[char]/v)
-
               (lit int i:97)
-)
-
+            )
             (binary
               (bop <= int int)
-
               (var System.Char.ToUpper[char]/v)
-
               (lit int i:122)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (conv char
             (binary
               (bop - int int)
-
               (var System.Char.ToUpper[char]/v)
-
               (lit int i:32)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label1)
-
         (return
           (var System.Char.ToUpper[char]/c)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Char.ToLower[char]
       (block 5
         (vardecl System.Char.ToLower[char]/v
           (conv int
             (var System.Char.ToLower[char]/c)
-)
-)
-
+          )
+        )
         (cgoto Label1
           (binary
             (bop && bool bool)
-
             (binary
               (bop >= int int)
-
               (var System.Char.ToLower[char]/v)
-
               (lit int i:65)
-)
-
+            )
             (binary
               (bop <= int int)
-
               (var System.Char.ToLower[char]/v)
-
               (lit int i:90)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (conv char
             (binary
               (bop + int int)
-
               (var System.Char.ToLower[char]/v)
-
               (lit int i:32)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label1)
-
         (return
           (var System.Char.ToLower[char]/c)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Console.WriteLine[]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (lit string s:)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[string]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[string]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[int]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[int]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[double]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[double]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[bool]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[bool]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[char]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[char]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[byte]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[byte]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[long]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[long]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[sbyte]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[sbyte]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[short]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[short]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[ushort]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[ushort]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[uint]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[uint]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[ulong]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[ulong]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.WriteLine[float]
       (block 2
         (exprstmt
           (membercall void WriteLine System.Runtime.WriteLine[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.WriteLine[float]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[string]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[string]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[int]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[int]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[double]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[double]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[bool]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[bool]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[char]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[char]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[byte]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[byte]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[long]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[long]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[sbyte]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[sbyte]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[short]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[short]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[ushort]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[ushort]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[uint]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[uint]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[ulong]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[ulong]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.Write[float]
       (block 2
         (exprstmt
           (membercall void Write System.Runtime.Write[any] 1
             (statictype System.Runtime)
-
             (conv any
               (var System.Console.Write[float]/text)
-)
-)
-)
-
+            )
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Console.ReadLine[]
       (block 1
         (return
           (membercall string ReadLine System.Runtime.ReadLine[] 0
             (statictype System.Runtime)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Console.ReadKey[bool]
       (block 1
         (return
           (membercall char ReadKey System.Runtime.ReadKey[bool] 1
             (statictype System.Runtime)
-
             (var System.Console.ReadKey[bool]/intercept)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Console.Beep[int,int]
       (block 2
         (exprstmt
           (membercall void Beep System.Runtime.Beep[int,int] 2
             (statictype System.Runtime)
-
             (var System.Console.Beep[int,int]/frequency)
-
             (var System.Console.Beep[int,int]/duration)
-)
-)
-
+          )
+        )
         (return -)
-)
-)
-
+      )
+    )
     (body System.Double.ToString[double]
       (block 1
         (return
           (membercall string DoubleToString System.Runtime.DoubleToString[double] 1
             (statictype System.Runtime)
-
             (var System.Double.ToString[double]/this)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Double.CompareTo[double,double]
       (block 7
         (cgoto Label1
           (binary
             (bop < double double)
-
             (var System.Double.CompareTo[double,double]/this)
-
             (var System.Double.CompareTo[double,double]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > double double)
-
             (var System.Double.CompareTo[double,double]/this)
-
             (var System.Double.CompareTo[double,double]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Int16.ToString[short]
       (block 1
         (return
           (membercall string Int32ToString System.Runtime.Int32ToString[int] 1
             (statictype System.Runtime)
-
             (conv int
               (var System.Int16.ToString[short]/this)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Int16.CompareTo[short,short]
       (block 7
         (cgoto Label1
           (binary
             (bop < short short)
-
             (var System.Int16.CompareTo[short,short]/this)
-
             (var System.Int16.CompareTo[short,short]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > short short)
-
             (var System.Int16.CompareTo[short,short]/this)
-
             (var System.Int16.CompareTo[short,short]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Int16.Parse[string]
       (block 1
         (return
           (conv short
             (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
               (statictype System.Runtime)
-
               (var System.Int16.Parse[string]/s)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Int32.ToString[int]
       (block 1
         (return
           (membercall string Int32ToString System.Runtime.Int32ToString[int] 1
             (statictype System.Runtime)
-
             (var System.Int32.ToString[int]/this)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Int32.CompareTo[int,int]
       (block 7
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Int32.CompareTo[int,int]/this)
-
             (var System.Int32.CompareTo[int,int]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > int int)
-
             (var System.Int32.CompareTo[int,int]/this)
-
             (var System.Int32.CompareTo[int,int]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Int32.Parse[string]
       (block 1
         (return
           (conv int
             (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
               (statictype System.Runtime)
-
               (var System.Int32.Parse[string]/s)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Int64.ToString[long]
       (block 1
         (return
           (membercall string Int64ToString System.Runtime.Int64ToString[long] 1
             (statictype System.Runtime)
-
             (var System.Int64.ToString[long]/this)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Int64.CompareTo[long,long]
       (block 7
         (cgoto Label1
           (binary
             (bop < long long)
-
             (var System.Int64.CompareTo[long,long]/this)
-
             (var System.Int64.CompareTo[long,long]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > long long)
-
             (var System.Int64.CompareTo[long,long]/this)
-
             (var System.Int64.CompareTo[long,long]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Int64.Parse[string]
       (block 1
         (return
           (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
             (statictype System.Runtime)
-
             (var System.Int64.Parse[string]/s)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.Max[int,int]
       (block 4
         (cgoto Label1
           (binary
             (bop > int int)
-
             (var System.Math.Max[int,int]/a)
-
             (var System.Math.Max[int,int]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Max[int,int]/a)
-)
-
+        )
         (label Label1)
-
         (return
           (var System.Math.Max[int,int]/b)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Max[double,double]
       (block 4
         (cgoto Label1
           (binary
             (bop > double double)
-
             (var System.Math.Max[double,double]/a)
-
             (var System.Math.Max[double,double]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Max[double,double]/a)
-)
-
+        )
         (label Label1)
-
         (return
           (var System.Math.Max[double,double]/b)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Min[int,int]
       (block 4
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Math.Min[int,int]/a)
-
             (var System.Math.Min[int,int]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Min[int,int]/a)
-)
-
+        )
         (label Label1)
-
         (return
           (var System.Math.Min[int,int]/b)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Min[double,double]
       (block 4
         (cgoto Label1
           (binary
             (bop < double double)
-
             (var System.Math.Min[double,double]/a)
-
             (var System.Math.Min[double,double]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Min[double,double]/a)
-)
-
+        )
         (label Label1)
-
         (return
           (var System.Math.Min[double,double]/b)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Abs[int]
       (block 4
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Math.Abs[int]/x)
-
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (var System.Math.Abs[int]/x)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (return
           (var System.Math.Abs[int]/x)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Abs[double]
       (block 4
         (cgoto Label1
           (binary
             (bop < double double)
-
             (var System.Math.Abs[double]/x)
-
             (conv double
               (lit int i:0)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (unary
             (uop - double)
-
             (var System.Math.Abs[double]/x)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (return
           (var System.Math.Abs[double]/x)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Clamp[int,int,int]
       (block 7
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Math.Clamp[int,int,int]/v)
-
             (var System.Math.Clamp[int,int,int]/lo)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Clamp[int,int,int]/lo)
-)
-
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > int int)
-
             (var System.Math.Clamp[int,int,int]/v)
-
             (var System.Math.Clamp[int,int,int]/hi)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Clamp[int,int,int]/hi)
-)
-
+        )
         (label Label2)
-
         (return
           (var System.Math.Clamp[int,int,int]/v)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Clamp[double,double,double]
       (block 7
         (cgoto Label1
           (binary
             (bop < double double)
-
             (var System.Math.Clamp[double,double,double]/v)
-
             (var System.Math.Clamp[double,double,double]/lo)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Clamp[double,double,double]/lo)
-)
-
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > double double)
-
             (var System.Math.Clamp[double,double,double]/v)
-
             (var System.Math.Clamp[double,double,double]/hi)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.Math.Clamp[double,double,double]/hi)
-)
-
+        )
         (label Label2)
-
         (return
           (var System.Math.Clamp[double,double,double]/v)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Sign[int]
       (block 7
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Math.Sign[int]/x)
-
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > int int)
-
             (var System.Math.Sign[int]/x)
-
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Sign[double]
       (block 7
         (cgoto Label1
           (binary
             (bop < double double)
-
             (var System.Math.Sign[double]/x)
-
             (conv double
               (lit int i:0)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > double double)
-
             (var System.Math.Sign[double]/x)
-
             (conv double
               (lit int i:0)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.IsEven[int]
       (block 1
         (return
           (binary
             (bop == int int)
-
             (binary
               (bop % int int)
-
               (var System.Math.IsEven[int]/n)
-
               (lit int i:2)
-)
-
+            )
             (lit int i:0)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.IsOdd[int]
       (block 1
         (return
           (binary
             (bop == int int)
-
             (binary
               (bop % int int)
-
               (var System.Math.IsOdd[int]/n)
-
               (lit int i:2)
-)
-
+            )
             (lit int i:1)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.Pow[int,int]
       (block 10
         (vardecl System.Math.Pow[int,int]/result
           (lit int i:1)
-)
-
+        )
         (vardecl System.Math.Pow[int,int]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.Math.Pow[int,int]/result
             (binary
               (bop * int int)
-
               (var System.Math.Pow[int,int]/result)
-
               (var System.Math.Pow[int,int]/x)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.Math.Pow[int,int]/i
             (binary
               (bop + int int)
-
               (var System.Math.Pow[int,int]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.Math.Pow[int,int]/i)
-
             (var System.Math.Pow[int,int]/exp)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Math.Pow[int,int]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Factorial[int]
       (block 10
         (vardecl System.Math.Factorial[int]/result
           (lit int i:1)
-)
-
+        )
         (vardecl System.Math.Factorial[int]/i
           (lit int i:1)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.Math.Factorial[int]/result
             (binary
               (bop * int int)
-
               (var System.Math.Factorial[int]/result)
-
               (var System.Math.Factorial[int]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.Math.Factorial[int]/i
             (binary
               (bop + int int)
-
               (var System.Math.Factorial[int]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop <= int int)
-
             (var System.Math.Factorial[int]/i)
-
             (var System.Math.Factorial[int]/n)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Math.Factorial[int]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Gcd[int,int]
       (block 11
         (vardecl System.Math.Gcd[int,int]/x
           (membercall int Abs System.Math.Abs[int] 1
             (this System.Math)
-
             (var System.Math.Gcd[int,int]/a)
-)
-)
-
+          )
+        )
         (vardecl System.Math.Gcd[int,int]/y
           (membercall int Abs System.Math.Abs[int] 1
             (this System.Math)
-
             (var System.Math.Gcd[int,int]/b)
-)
-)
-
+          )
+        )
         (goto continue1)
-
         (label Label1)
-
         (vardecl System.Math.Gcd[int,int]/t
           (binary
             (bop % int int)
-
             (var System.Math.Gcd[int,int]/x)
-
             (var System.Math.Gcd[int,int]/y)
-)
-)
-
+          )
+        )
         (exprstmt
           (assign System.Math.Gcd[int,int]/x
             (var System.Math.Gcd[int,int]/y)
-)
-)
-
+          )
+        )
         (exprstmt
           (assign System.Math.Gcd[int,int]/y
             (var System.Math.Gcd[int,int]/t)
-)
-)
-
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop > int int)
-
             (var System.Math.Gcd[int,int]/y)
-
             (lit int i:0)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.Math.Gcd[int,int]/x)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.Math.Lcm[int,int]
       (block 4
         (cgoto Label1
           (binary
             (bop || bool bool)
-
             (binary
               (bop == int int)
-
               (var System.Math.Lcm[int,int]/a)
-
               (lit int i:0)
-)
-
+            )
             (binary
               (bop == int int)
-
               (var System.Math.Lcm[int,int]/b)
-
               (lit int i:0)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (lit int i:0)
-)
-
+        )
         (label Label1)
-
         (return
           (binary
             (bop / int int)
-
             (membercall int Abs System.Math.Abs[int] 1
               (this System.Math)
-
               (binary
                 (bop * int int)
-
                 (var System.Math.Lcm[int,int]/a)
-
                 (var System.Math.Lcm[int,int]/b)
-)
-)
-
+              )
+            )
             (membercall int Gcd System.Math.Gcd[int,int] 2
               (this System.Math)
-
               (var System.Math.Lcm[int,int]/a)
-
               (var System.Math.Lcm[int,int]/b)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Math.Sqrt[double]
       (block 1
         (return
           (membercall double Sqrt System.Runtime.Sqrt[double] 1
             (statictype System.Runtime)
-
             (var System.Math.Sqrt[double]/x)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.Floor[double]
       (block 1
         (return
           (membercall double Floor System.Runtime.Floor[double] 1
             (statictype System.Runtime)
-
             (var System.Math.Floor[double]/x)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.Ceiling[double]
       (block 1
         (return
           (membercall double Ceiling System.Runtime.Ceiling[double] 1
             (statictype System.Runtime)
-
             (var System.Math.Ceiling[double]/x)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.Truncate[double]
       (block 1
         (return
           (membercall double Truncate System.Runtime.Truncate[double] 1
             (statictype System.Runtime)
-
             (var System.Math.Truncate[double]/x)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Math.Round[double]
       (block 1
         (return
           (membercall double Round System.Runtime.Round[double] 1
             (statictype System.Runtime)
-
             (var System.Math.Round[double]/x)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.Runtime.WriteLine[any]
       (block 0)
-)
-
+    )
     (body System.Runtime.Write[any]
       (block 0)
-)
-
+    )
     (body System.Runtime.ReadLine[]
       (block 0)
-)
-
+    )
     (body System.Runtime.ReadKey[bool]
       (block 0)
-)
-
+    )
     (body System.Runtime.Random[int]
       (block 0)
-)
-
+    )
     (body System.Runtime.Sleep[int]
       (block 0)
-)
-
+    )
     (body System.Runtime.TickCount[]
       (block 0)
-)
-
+    )
     (body System.Runtime.Exit[int]
       (block 0)
-)
-
+    )
     (body System.Runtime.Sqrt[double]
       (block 0)
-)
-
+    )
     (body System.Runtime.Floor[double]
       (block 0)
-)
-
+    )
     (body System.Runtime.Ceiling[double]
       (block 0)
-)
-
+    )
     (body System.Runtime.Truncate[double]
       (block 0)
-)
-
+    )
     (body System.Runtime.Round[double]
       (block 0)
-)
-
+    )
     (body System.Runtime.Beep[int,int]
       (block 0)
-)
-
+    )
     (body System.Runtime.Int32ToString[int]
       (block 0)
-)
-
+    )
     (body System.Runtime.Int64ToString[long]
       (block 0)
-)
-
+    )
     (body System.Runtime.DoubleToString[double]
       (block 0)
-)
-
+    )
     (body System.Runtime.BooleanToString[bool]
       (block 0)
-)
-
+    )
     (body System.Runtime.CharToString[char]
       (block 0)
-)
-
+    )
     (body System.Runtime.ParseInt64[string]
       (block 0)
-)
-
+    )
     (body System.Runtime.UInt64ToString[ulong]
       (block 0)
-)
-
+    )
     (body System.SByte.ToString[sbyte]
       (block 1
         (return
           (membercall string Int32ToString System.Runtime.Int32ToString[int] 1
             (statictype System.Runtime)
-
             (conv int
               (var System.SByte.ToString[sbyte]/this)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.SByte.CompareTo[sbyte,sbyte]
       (block 7
         (cgoto Label1
           (binary
             (bop < sbyte sbyte)
-
             (var System.SByte.CompareTo[sbyte,sbyte]/this)
-
             (var System.SByte.CompareTo[sbyte,sbyte]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > sbyte sbyte)
-
             (var System.SByte.CompareTo[sbyte,sbyte]/this)
-
             (var System.SByte.CompareTo[sbyte,sbyte]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.SByte.Parse[string]
       (block 1
         (return
           (conv sbyte
             (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
               (statictype System.Runtime)
-
               (var System.SByte.Parse[string]/s)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.Single.ToString[float]
       (block 1
         (return
           (membercall string DoubleToString System.Runtime.DoubleToString[double] 1
             (statictype System.Runtime)
-
             (conv double
               (var System.Single.ToString[float]/this)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.String.IsNullOrEmpty[string]
       (block 1
         (return
           (binary
             (bop == string string)
-
             (var System.String.IsNullOrEmpty[string]/s)
-
             (lit string s:)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.String.ToUpper[string]
       (block 16
         (vardecl System.String.ToUpper[string]/result
           (lit string s:)
-)
-
+        )
         (vardecl System.String.ToUpper[string]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (vardecl System.String.ToUpper[string]/v
           (conv int
             (elem char
               (var System.String.ToUpper[string]/this)
-
               (var System.String.ToUpper[string]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (cgoto Label2
           (binary
             (bop && bool bool)
-
             (binary
               (bop >= int int)
-
               (var System.String.ToUpper[string]/v)
-
               (lit int i:97)
-)
-
+            )
             (binary
               (bop <= int int)
-
               (var System.String.ToUpper[string]/v)
-
               (lit int i:122)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (exprstmt
           (assign System.String.ToUpper[string]/result
             (binary
               (bop + string string)
-
               (var System.String.ToUpper[string]/result)
-
               (conv string
                 (conv char
                   (binary
                     (bop - int int)
-
                     (var System.String.ToUpper[string]/v)
-
                     (lit int i:32)
-)
-)
-)
-)
-)
-)
-
+                  )
+                )
+              )
+            )
+          )
+        )
         (goto Label3)
-
         (label Label2)
-
         (exprstmt
           (assign System.String.ToUpper[string]/result
             (binary
               (bop + string string)
-
               (var System.String.ToUpper[string]/result)
-
               (conv string
                 (elem char
                   (var System.String.ToUpper[string]/this)
-
                   (var System.String.ToUpper[string]/i)
-)
-)
-)
-)
-)
-
+                )
+              )
+            )
+          )
+        )
         (label Label3)
-
         (exprstmt
           (assign System.String.ToUpper[string]/i
             (binary
               (bop + int int)
-
               (var System.String.ToUpper[string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.ToUpper[string]/i)
-
             (memberacc int Length
               (var System.String.ToUpper[string]/this)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.ToUpper[string]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.ToLower[string]
       (block 16
         (vardecl System.String.ToLower[string]/result
           (lit string s:)
-)
-
+        )
         (vardecl System.String.ToLower[string]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (vardecl System.String.ToLower[string]/v
           (conv int
             (elem char
               (var System.String.ToLower[string]/this)
-
               (var System.String.ToLower[string]/i)
-)
-)
-)
-
+            )
+          )
+        )
         (cgoto Label2
           (binary
             (bop && bool bool)
-
             (binary
               (bop >= int int)
-
               (var System.String.ToLower[string]/v)
-
               (lit int i:65)
-)
-
+            )
             (binary
               (bop <= int int)
-
               (var System.String.ToLower[string]/v)
-
               (lit int i:90)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (exprstmt
           (assign System.String.ToLower[string]/result
             (binary
               (bop + string string)
-
               (var System.String.ToLower[string]/result)
-
               (conv string
                 (conv char
                   (binary
                     (bop + int int)
-
                     (var System.String.ToLower[string]/v)
-
                     (lit int i:32)
-)
-)
-)
-)
-)
-)
-
+                  )
+                )
+              )
+            )
+          )
+        )
         (goto Label3)
-
         (label Label2)
-
         (exprstmt
           (assign System.String.ToLower[string]/result
             (binary
               (bop + string string)
-
               (var System.String.ToLower[string]/result)
-
               (conv string
                 (elem char
                   (var System.String.ToLower[string]/this)
-
                   (var System.String.ToLower[string]/i)
-)
-)
-)
-)
-)
-
+                )
+              )
+            )
+          )
+        )
         (label Label3)
-
         (exprstmt
           (assign System.String.ToLower[string]/i
             (binary
               (bop + int int)
-
               (var System.String.ToLower[string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.ToLower[string]/i)
-
             (memberacc int Length
               (var System.String.ToLower[string]/this)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.ToLower[string]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.StartsWith[string,string]
       (block 4
         (cgoto Label1
           (binary
             (bop > int int)
-
             (memberacc int Length
               (var System.String.StartsWith[string,string]/prefix)
-)
-
+            )
             (memberacc int Length
               (var System.String.StartsWith[string,string]/this)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (lit bool b:0)
-)
-
+        )
         (label Label1)
-
         (return
           (binary
             (bop == string string)
-
             (membercall string substring - 2
               (var System.String.StartsWith[string,string]/this)
-
               (lit int i:0)
-
               (memberacc int Length
                 (var System.String.StartsWith[string,string]/prefix)
-)
-)
-
+              )
+            )
             (var System.String.StartsWith[string,string]/prefix)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.String.EndsWith[string,string]
       (block 4
         (cgoto Label1
           (binary
             (bop > int int)
-
             (memberacc int Length
               (var System.String.EndsWith[string,string]/suffix)
-)
-
+            )
             (memberacc int Length
               (var System.String.EndsWith[string,string]/this)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (lit bool b:0)
-)
-
+        )
         (label Label1)
-
         (return
           (binary
             (bop == string string)
-
             (membercall string substring - 2
               (var System.String.EndsWith[string,string]/this)
-
               (binary
                 (bop - int int)
-
                 (memberacc int Length
                   (var System.String.EndsWith[string,string]/this)
-)
-
+                )
                 (memberacc int Length
                   (var System.String.EndsWith[string,string]/suffix)
-)
-)
-
+                )
+              )
               (memberacc int Length
                 (var System.String.EndsWith[string,string]/suffix)
-)
-)
-
+              )
+            )
             (var System.String.EndsWith[string,string]/suffix)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.String.Contains[string,string]
       (block 14
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.String.Contains[string,string]/sub)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit bool b:1)
-)
-
+        )
         (label Label1)
-
         (vardecl System.String.Contains[string,string]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop == string string)
-
             (membercall string substring - 2
               (var System.String.Contains[string,string]/this)
-
               (var System.String.Contains[string,string]/i)
-
               (memberacc int Length
                 (var System.String.Contains[string,string]/sub)
-)
-)
-
+              )
+            )
             (var System.String.Contains[string,string]/sub)
-)
- false)
-
+          ) false
+        )
         (return
           (lit bool b:1)
-)
-
+        )
         (label Label3)
-
         (exprstmt
           (assign System.String.Contains[string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.Contains[string,string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop <= int int)
-
             (var System.String.Contains[string,string]/i)
-
             (binary
               (bop - int int)
-
               (memberacc int Length
                 (var System.String.Contains[string,string]/this)
-)
-
+              )
               (memberacc int Length
                 (var System.String.Contains[string,string]/sub)
-)
-)
-)
- true)
-
+              )
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (lit bool b:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.IndexOf[string,string]
       (block 14
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.String.IndexOf[string,string]/sub)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:0)
-)
-
+        )
         (label Label1)
-
         (vardecl System.String.IndexOf[string,string]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop == string string)
-
             (membercall string substring - 2
               (var System.String.IndexOf[string,string]/this)
-
               (var System.String.IndexOf[string,string]/i)
-
               (memberacc int Length
                 (var System.String.IndexOf[string,string]/sub)
-)
-)
-
+              )
+            )
             (var System.String.IndexOf[string,string]/sub)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.String.IndexOf[string,string]/i)
-)
-
+        )
         (label Label3)
-
         (exprstmt
           (assign System.String.IndexOf[string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.IndexOf[string,string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop <= int int)
-
             (var System.String.IndexOf[string,string]/i)
-
             (binary
               (bop - int int)
-
               (memberacc int Length
                 (var System.String.IndexOf[string,string]/this)
-)
-
+              )
               (memberacc int Length
                 (var System.String.IndexOf[string,string]/sub)
-)
-)
-)
- true)
-
+              )
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.String.Reverse[string]
       (block 10
         (vardecl System.String.Reverse[string]/result
           (lit string s:)
-)
-
+        )
         (vardecl System.String.Reverse[string]/i
           (binary
             (bop - int int)
-
             (memberacc int Length
               (var System.String.Reverse[string]/this)
-)
-
+            )
             (lit int i:1)
-)
-)
-
+          )
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.String.Reverse[string]/result
             (binary
               (bop + string string)
-
               (var System.String.Reverse[string]/result)
-
               (conv string
                 (elem char
                   (var System.String.Reverse[string]/this)
-
                   (var System.String.Reverse[string]/i)
-)
-)
-)
-)
-)
-
+                )
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Reverse[string]/i
             (binary
               (bop - int int)
-
               (var System.String.Reverse[string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop >= int int)
-
             (var System.String.Reverse[string]/i)
-
             (lit int i:0)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.Reverse[string]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.Replicate[string,int]
       (block 10
         (vardecl System.String.Replicate[string,int]/result
           (lit string s:)
-)
-
+        )
         (vardecl System.String.Replicate[string,int]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.String.Replicate[string,int]/result
             (binary
               (bop + string string)
-
               (var System.String.Replicate[string,int]/result)
-
               (var System.String.Replicate[string,int]/this)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Replicate[string,int]/i
             (binary
               (bop + int int)
-
               (var System.String.Replicate[string,int]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.Replicate[string,int]/i)
-
             (var System.String.Replicate[string,int]/n)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.Replicate[string,int]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.CountChar[string,char]
       (block 12
         (vardecl System.String.CountChar[string,char]/count
           (lit int i:0)
-)
-
+        )
         (vardecl System.String.CountChar[string,char]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop == char char)
-
             (elem char
               (var System.String.CountChar[string,char]/this)
-
               (var System.String.CountChar[string,char]/i)
-)
-
+            )
             (var System.String.CountChar[string,char]/c)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.String.CountChar[string,char]/count
             (binary
               (bop + int int)
-
               (var System.String.CountChar[string,char]/count)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label2)
-
         (exprstmt
           (assign System.String.CountChar[string,char]/i
             (binary
               (bop + int int)
-
               (var System.String.CountChar[string,char]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.CountChar[string,char]/i)
-
             (memberacc int Length
               (var System.String.CountChar[string,char]/this)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.CountChar[string,char]/count)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.IsPalindrome[string]
       (block 13
         (vardecl System.String.IsPalindrome[string]/lo
           (lit int i:0)
-)
-
+        )
         (vardecl System.String.IsPalindrome[string]/hi
           (binary
             (bop - int int)
-
             (memberacc int Length
               (var System.String.IsPalindrome[string]/this)
-)
-
+            )
             (lit int i:1)
-)
-)
-
+          )
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop != char char)
-
             (elem char
               (var System.String.IsPalindrome[string]/this)
-
               (var System.String.IsPalindrome[string]/lo)
-)
-
+            )
             (elem char
               (var System.String.IsPalindrome[string]/this)
-
               (var System.String.IsPalindrome[string]/hi)
-)
-)
- false)
-
+            )
+          ) false
+        )
         (return
           (lit bool b:0)
-)
-
+        )
         (label Label2)
-
         (exprstmt
           (assign System.String.IsPalindrome[string]/lo
             (binary
               (bop + int int)
-
               (var System.String.IsPalindrome[string]/lo)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.String.IsPalindrome[string]/hi
             (binary
               (bop - int int)
-
               (var System.String.IsPalindrome[string]/hi)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.IsPalindrome[string]/lo)
-
             (var System.String.IsPalindrome[string]/hi)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (lit bool b:1)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.Trim[string]
       (block 32
         (vardecl System.String.Trim[string]/start
           (lit int i:0)
-)
-
+        )
         (vardecl System.String.Trim[string]/end
           (memberacc int Length
             (var System.String.Trim[string]/this)
-)
-)
-
+          )
+        )
         (vardecl System.String.Trim[string]/first
           (conv char
             (lit int i:0)
-)
-)
-
+          )
+        )
         (vardecl System.String.Trim[string]/last
           (conv char
             (lit int i:0)
-)
-)
-
+          )
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.String.Trim[string]/first
             (elem char
               (var System.String.Trim[string]/this)
-
               (var System.String.Trim[string]/start)
-)
-)
-)
-
+            )
+          )
+        )
         (cgoto Label2
           (binary
             (bop == char char)
-
             (var System.String.Trim[string]/first)
-
             (lit char c:32)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.String.Trim[string]/start
             (binary
               (bop + int int)
-
               (var System.String.Trim[string]/start)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (goto Label3)
-
         (label Label2)
-
         (goto break1)
-
         (label Label3)
-
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.Trim[string]/start)
-
             (var System.String.Trim[string]/end)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (goto continue2)
-
         (label Label4)
-
         (exprstmt
           (assign System.String.Trim[string]/last
             (elem char
               (var System.String.Trim[string]/this)
-
               (binary
                 (bop - int int)
-
                 (var System.String.Trim[string]/end)
-
                 (lit int i:1)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (cgoto Label5
           (binary
             (bop == char char)
-
             (var System.String.Trim[string]/last)
-
             (lit char c:32)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.String.Trim[string]/end
             (binary
               (bop - int int)
-
               (var System.String.Trim[string]/end)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (goto Label6)
-
         (label Label5)
-
         (goto break2)
-
         (label Label6)
-
         (label continue2)
-
         (cgoto Label4
           (binary
             (bop > int int)
-
             (var System.String.Trim[string]/end)
-
             (var System.String.Trim[string]/start)
-)
- true)
-
+          ) true
+        )
         (label break2)
-
         (cgoto Label7
           (binary
             (bop >= int int)
-
             (var System.String.Trim[string]/start)
-
             (var System.String.Trim[string]/end)
-)
- false)
-
+          ) false
+        )
         (return
           (lit string s:)
-)
-
+        )
         (label Label7)
-
         (return
           (membercall string substring - 2
             (var System.String.Trim[string]/this)
-
             (var System.String.Trim[string]/start)
-
             (binary
               (bop - int int)
-
               (var System.String.Trim[string]/end)
-
               (var System.String.Trim[string]/start)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.String.Replace[string,string,string]
       (block 25
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.String.Replace[string,string,string]/old)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (var System.String.Replace[string,string,string]/this)
-)
-
+        )
         (label Label1)
-
         (vardecl System.String.Replace[string,string,string]/result
           (lit string s:)
-)
-
+        )
         (vardecl System.String.Replace[string,string,string]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop > int int)
-
             (var System.String.Replace[string,string,string]/i)
-
             (binary
               (bop - int int)
-
               (memberacc int Length
                 (var System.String.Replace[string,string,string]/this)
-)
-
+              )
               (memberacc int Length
                 (var System.String.Replace[string,string,string]/old)
-)
-)
-)
- false)
-
+              )
+            )
+          ) false
+        )
         (exprstmt
           (assign System.String.Replace[string,string,string]/result
             (binary
               (bop + string string)
-
               (var System.String.Replace[string,string,string]/result)
-
               (conv string
                 (elem char
                   (var System.String.Replace[string,string,string]/this)
-
                   (var System.String.Replace[string,string,string]/i)
-)
-)
-)
-)
-)
-
+                )
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Replace[string,string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.Replace[string,string,string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (goto Label4)
-
         (label Label3)
-
         (cgoto Label5
           (binary
             (bop == string string)
-
             (membercall string substring - 2
               (var System.String.Replace[string,string,string]/this)
-
               (var System.String.Replace[string,string,string]/i)
-
               (memberacc int Length
                 (var System.String.Replace[string,string,string]/old)
-)
-)
-
+              )
+            )
             (var System.String.Replace[string,string,string]/old)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.String.Replace[string,string,string]/result
             (binary
               (bop + string string)
-
               (var System.String.Replace[string,string,string]/result)
-
               (var System.String.Replace[string,string,string]/replacement)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Replace[string,string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.Replace[string,string,string]/i)
-
               (memberacc int Length
                 (var System.String.Replace[string,string,string]/old)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (goto Label6)
-
         (label Label5)
-
         (exprstmt
           (assign System.String.Replace[string,string,string]/result
             (binary
               (bop + string string)
-
               (var System.String.Replace[string,string,string]/result)
-
               (conv string
                 (elem char
                   (var System.String.Replace[string,string,string]/this)
-
                   (var System.String.Replace[string,string,string]/i)
-)
-)
-)
-)
-)
-
+                )
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Replace[string,string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.Replace[string,string,string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label6)
-
         (label Label4)
-
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop < int int)
-
             (var System.String.Replace[string,string,string]/i)
-
             (memberacc int Length
               (var System.String.Replace[string,string,string]/this)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.Replace[string,string,string]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.CountSubstring[string,string]
       (block 18
         (cgoto Label1
           (binary
             (bop == int int)
-
             (memberacc int Length
               (var System.String.CountSubstring[string,string]/sub)
-)
-
+            )
             (lit int i:0)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:0)
-)
-
+        )
         (label Label1)
-
         (vardecl System.String.CountSubstring[string,string]/count
           (lit int i:0)
-)
-
+        )
         (vardecl System.String.CountSubstring[string,string]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label2)
-
         (cgoto Label3
           (binary
             (bop == string string)
-
             (membercall string substring - 2
               (var System.String.CountSubstring[string,string]/this)
-
               (var System.String.CountSubstring[string,string]/i)
-
               (memberacc int Length
                 (var System.String.CountSubstring[string,string]/sub)
-)
-)
-
+              )
+            )
             (var System.String.CountSubstring[string,string]/sub)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (assign System.String.CountSubstring[string,string]/count
             (binary
               (bop + int int)
-
               (var System.String.CountSubstring[string,string]/count)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.String.CountSubstring[string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.CountSubstring[string,string]/i)
-
               (memberacc int Length
                 (var System.String.CountSubstring[string,string]/sub)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (goto Label4)
-
         (label Label3)
-
         (exprstmt
           (assign System.String.CountSubstring[string,string]/i
             (binary
               (bop + int int)
-
               (var System.String.CountSubstring[string,string]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label4)
-
         (label continue1)
-
         (cgoto Label2
           (binary
             (bop <= int int)
-
             (var System.String.CountSubstring[string,string]/i)
-
             (binary
               (bop - int int)
-
               (memberacc int Length
                 (var System.String.CountSubstring[string,string]/this)
-)
-
+              )
               (memberacc int Length
                 (var System.String.CountSubstring[string,string]/sub)
-)
-)
-)
- true)
-
+              )
+            )
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.CountSubstring[string,string]/count)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.PadLeft[string,int,char]
       (block 8
         (vardecl System.String.PadLeft[string,int,char]/result
           (var System.String.PadLeft[string,int,char]/this)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.String.PadLeft[string,int,char]/result
             (binary
               (bop + string string)
-
               (conv string
                 (var System.String.PadLeft[string,int,char]/padChar)
-)
-
+              )
               (var System.String.PadLeft[string,int,char]/result)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (memberacc int Length
               (var System.String.PadLeft[string,int,char]/result)
-)
-
+            )
             (var System.String.PadLeft[string,int,char]/totalWidth)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.PadLeft[string,int,char]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.PadLeft[string,int]
       (block 1
         (return
           (call System.String.PadLeft[string,int,char] 3
             (var System.String.PadLeft[string,int]/this)
-
             (var System.String.PadLeft[string,int]/totalWidth)
-
             (lit char c:32)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.String.PadRight[string,int,char]
       (block 8
         (vardecl System.String.PadRight[string,int,char]/result
           (var System.String.PadRight[string,int,char]/this)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (exprstmt
           (assign System.String.PadRight[string,int,char]/result
             (binary
               (bop + string string)
-
               (var System.String.PadRight[string,int,char]/result)
-
               (conv string
                 (var System.String.PadRight[string,int,char]/padChar)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (memberacc int Length
               (var System.String.PadRight[string,int,char]/result)
-)
-
+            )
             (var System.String.PadRight[string,int,char]/totalWidth)
-)
- true)
-
+          ) true
+        )
         (label break1)
-
         (return
           (var System.String.PadRight[string,int,char]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.String.PadRight[string,int]
       (block 1
         (return
           (call System.String.PadRight[string,int,char] 3
             (var System.String.PadRight[string,int]/this)
-
             (var System.String.PadRight[string,int]/totalWidth)
-
             (lit char c:32)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.String.Split[string,char]
       (block 18
         (vardecl System.String.Split[string,char]/count
           (binary
             (bop + int int)
-
             (call System.String.CountChar[string,char] 2
               (var System.String.Split[string,char]/this)
-
               (var System.String.Split[string,char]/sep)
-)
-
+            )
             (lit int i:1)
-)
-)
-
+          )
+        )
         (vardecl System.String.Split[string,char]/result
           (arrnew string[]
-            (var System.String.Split[string,char]/count)
- 0)
-)
-
+            (var System.String.Split[string,char]/count) 0
+          )
+        )
         (vardecl System.String.Split[string,char]/start
           (lit int i:0)
-)
-
+        )
         (vardecl System.String.Split[string,char]/index
           (lit int i:0)
-)
-
+        )
         (vardecl System.String.Split[string,char]/i
           (lit int i:0)
-)
-
+        )
         (goto continue1)
-
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop == char char)
-
             (elem char
               (var System.String.Split[string,char]/this)
-
               (var System.String.Split[string,char]/i)
-)
-
+            )
             (var System.String.Split[string,char]/sep)
-)
- false)
-
+          ) false
+        )
         (exprstmt
           (elemassign string
             (elem string
               (var System.String.Split[string,char]/result)
-
               (var System.String.Split[string,char]/index)
-)
-
+            )
             (membercall string substring - 2
               (var System.String.Split[string,char]/this)
-
               (var System.String.Split[string,char]/start)
-
               (binary
                 (bop - int int)
-
                 (var System.String.Split[string,char]/i)
-
                 (var System.String.Split[string,char]/start)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Split[string,char]/index
             (binary
               (bop + int int)
-
               (var System.String.Split[string,char]/index)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (exprstmt
           (assign System.String.Split[string,char]/start
             (binary
               (bop + int int)
-
               (var System.String.Split[string,char]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label Label2)
-
         (exprstmt
           (assign System.String.Split[string,char]/i
             (binary
               (bop + int int)
-
               (var System.String.Split[string,char]/i)
-
               (lit int i:1)
-)
-)
-)
-
+            )
+          )
+        )
         (label continue1)
-
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.String.Split[string,char]/i)
-
             (memberacc int Length
               (var System.String.Split[string,char]/this)
-)
-)
- true)
-
+            )
+          ) true
+        )
         (label break1)
-
         (exprstmt
           (elemassign string
             (elem string
               (var System.String.Split[string,char]/result)
-
               (var System.String.Split[string,char]/index)
-)
-
+            )
             (membercall string substring - 2
               (var System.String.Split[string,char]/this)
-
               (var System.String.Split[string,char]/start)
-
               (binary
                 (bop - int int)
-
                 (memberacc int Length
                   (var System.String.Split[string,char]/this)
-)
-
+                )
                 (var System.String.Split[string,char]/start)
-)
-)
-)
-)
-
+              )
+            )
+          )
+        )
         (return
           (var System.String.Split[string,char]/result)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.UInt16.ToString[ushort]
       (block 1
         (return
           (membercall string Int32ToString System.Runtime.Int32ToString[int] 1
             (statictype System.Runtime)
-
             (conv int
               (var System.UInt16.ToString[ushort]/this)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.UInt16.CompareTo[ushort,ushort]
       (block 9
         (vardecl System.UInt16.CompareTo[ushort,ushort]/a
           (conv int
             (var System.UInt16.CompareTo[ushort,ushort]/this)
-)
-)
-
+          )
+        )
         (vardecl System.UInt16.CompareTo[ushort,ushort]/b
           (conv int
             (var System.UInt16.CompareTo[ushort,ushort]/value)
-)
-)
-
+          )
+        )
         (cgoto Label1
           (binary
             (bop < int int)
-
             (var System.UInt16.CompareTo[ushort,ushort]/a)
-
             (var System.UInt16.CompareTo[ushort,ushort]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > int int)
-
             (var System.UInt16.CompareTo[ushort,ushort]/a)
-
             (var System.UInt16.CompareTo[ushort,ushort]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.UInt16.Parse[string]
       (block 1
         (return
           (conv ushort
             (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
               (statictype System.Runtime)
-
               (var System.UInt16.Parse[string]/s)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.UInt32.ToString[uint]
       (block 1
         (return
           (membercall string UInt64ToString System.Runtime.UInt64ToString[ulong] 1
             (statictype System.Runtime)
-
             (conv ulong
               (var System.UInt32.ToString[uint]/this)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.UInt32.CompareTo[uint,uint]
       (block 9
         (vardecl System.UInt32.CompareTo[uint,uint]/a
           (conv long
             (var System.UInt32.CompareTo[uint,uint]/this)
-)
-)
-
+          )
+        )
         (vardecl System.UInt32.CompareTo[uint,uint]/b
           (conv long
             (var System.UInt32.CompareTo[uint,uint]/value)
-)
-)
-
+          )
+        )
         (cgoto Label1
           (binary
             (bop < long long)
-
             (var System.UInt32.CompareTo[uint,uint]/a)
-
             (var System.UInt32.CompareTo[uint,uint]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > long long)
-
             (var System.UInt32.CompareTo[uint,uint]/a)
-
             (var System.UInt32.CompareTo[uint,uint]/b)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-
+        )
+      )
+    )
     (body System.UInt32.Parse[string]
       (block 1
         (return
           (conv uint
             (membercall long ParseInt64 System.Runtime.ParseInt64[string] 1
               (statictype System.Runtime)
-
               (var System.UInt32.Parse[string]/s)
-)
-)
-)
-)
-)
-
+            )
+          )
+        )
+      )
+    )
     (body System.UInt64.ToString[ulong]
       (block 1
         (return
           (membercall string UInt64ToString System.Runtime.UInt64ToString[ulong] 1
             (statictype System.Runtime)
-
             (var System.UInt64.ToString[ulong]/this)
-)
-)
-)
-)
-
+          )
+        )
+      )
+    )
     (body System.UInt64.CompareTo[ulong,ulong]
       (block 7
         (cgoto Label1
           (binary
             (bop < ulong ulong)
-
             (var System.UInt64.CompareTo[ulong,ulong]/this)
-
             (var System.UInt64.CompareTo[ulong,ulong]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (unary
             (uop - int)
-
             (lit int i:1)
-)
-)
-
+          )
+        )
         (label Label1)
-
         (cgoto Label2
           (binary
             (bop > ulong ulong)
-
             (var System.UInt64.CompareTo[ulong,ulong]/this)
-
             (var System.UInt64.CompareTo[ulong,ulong]/value)
-)
- false)
-
+          ) false
+        )
         (return
           (lit int i:1)
-)
-
+        )
         (label Label2)
-
         (return
           (lit int i:0)
-)
-)
-)
-)
-
+        )
+      )
+    )
+  )
   (manifest
     (requires any)
-
     (ns System)
+  )
 )
-)
+(checksum sha256:cbebfe40135430c755ab65a3cfd2c556624d3d91b64cdb876a77e74a48ddba5f)
