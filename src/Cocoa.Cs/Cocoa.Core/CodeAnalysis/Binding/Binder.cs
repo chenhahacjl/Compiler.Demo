@@ -1441,8 +1441,12 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
-            var eventSymbol = new EventSymbol(syntax.Identifier.Text, (FunctionTypeSymbol)handlerType, visibility, classType) { IsStatic = isStatic };
+            var eventName = syntax.Identifier.Text;
+            var eventSymbol = new EventSymbol(eventName, (FunctionTypeSymbol)handlerType, visibility, classType) { IsStatic = isStatic };
             classType.AddEvent(eventSymbol);
+
+            // 6e-M22 C5+：合成隐藏字段 `_<eventName>`（单播存储，类型 = 处理器函数类型）
+            classType.AddField(new FieldSymbol("_" + eventName, handlerType, Visibility.Private, classType));
         }
 
         /// <summary>
