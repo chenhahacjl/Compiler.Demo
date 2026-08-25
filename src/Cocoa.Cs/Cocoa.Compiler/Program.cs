@@ -39,6 +39,8 @@ namespace Cocoa.Compiler
                     return RunCommand.Run(args.Skip(1).ToArray());
                 case "clean":
                     return CleanCommand.Run(args.Skip(1).ToArray());
+                case "dump":
+                    return DumpCommand.Run(args.Skip(1).ToArray());
                 case "-i":
                 case "--interactive":
                     new CocoaRepl().Run();
@@ -357,6 +359,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("  add reference          Adds a reference to a project");
             Console.WriteLine("  remove reference       Removes a reference from a project");
             Console.WriteLine("  clean                  Cleans build caches (.cocoa/) and outputs");
+            Console.WriteLine("  dump <file.cod>        Prints a readable outline of a .cod assembly");
             Console.WriteLine("  -i, --interactive      Launches the interactive REPL");
             Console.WriteLine();
             Console.WriteLine("direct compile options:");
