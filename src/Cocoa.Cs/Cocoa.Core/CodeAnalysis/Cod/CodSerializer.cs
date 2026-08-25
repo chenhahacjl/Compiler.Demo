@@ -11,6 +11,19 @@ namespace Cocoa.CodeAnalysis.Cod
     /// <summary>
     /// `.cod` 语义层序列化器：符号表 + 降级 BoundProgram（函数体）文本 round-trip。
     /// 双后端共用（native → BoundTreeToIr，IL → IlEmitter）；语法节点（Syntax）不序列化（置 null）。
+    ///
+    /// 文本格式（可读优先，类型/函数/变量一律按名字引用，不用数字 id）：
+    ///   (type)     内建/数组类型内联为名字引用：int / int[] / int[][]；类/枚举用全名 System.Console
+    ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
+    ///   (systype)  (systype System.Object)——内建单例按全名映射
+    ///   (cls)      (cls System.Console public methods:2 WriteLine Write)
+    ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
+    ///               params:2 (par MyLib.Add/a a i32 0) ...)
+    ///              函数键 = [命名空间或宿主类.]函数名(参数类型列表)，重载靠参数类型区分
+    ///   (glb/loc)  (glb global:version true i32 (const i:1)) / (loc MyLib.Factorial/result false i32)
+    ///              变量键：全局 global:名字；局部/参数 函数键/名字（同名冲突加 #2、#3 后缀）
+    ///   运算符      文本记号 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
+    ///   布尔/枚举词  true false；public internal protected private；winapi cdecl stdcall；unicode ansi auto
     /// </summary>
     internal static class CodSerializer
     {
@@ -24,14 +37,14 @@ namespace Cocoa.CodeAnalysis.Cod
             var registry = new Registry();
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
 
-            // 收集符号（分配 id）——函数体按 Functions（声明序）遍历，保证确定性（ImmutableDictionary 迭代序不稳定）
+            // 收集符号——函数体按 Functions（声明序）遍历，保证确定性（ImmutableDictionary 迭代序不稳定）
             foreach (var e in program.Enums)
             {
                 registry.RegisterType(e);
             }
             foreach (var c in program.Classes)
             {
-                registry.RegisterClass(c);
+                registry.RegisterType(c);
             }
             foreach (var f in program.Functions)
             {
@@ -49,16 +62,19 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
 
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
-                CollectBody(registry, body, labels);
+                CollectBody(registry, fn, body, labels);
                 labelsByFunction[fn] = labels;
             }
+
+            // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）
+            registry.Seal();
 
             var w = new Writer(writer);
             w.Open("cod");
             w.Field(Magic);
             w.Field(Version);
 
-            // 符号表（按 id 顺序）
+            // 符号表（按注册序）
             w.Open("symbols");
             foreach (var emitter in registry.Emitters)
             {
@@ -82,7 +98,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
 
                 w.Open("body");
-                w.Field(registry.Get(fn));
+                w.Field(registry.FnKey(fn));
                 WriteStatement(w, registry, labelsByFunction[fn], body);
                 w.End();
             }
@@ -147,60 +163,60 @@ namespace Cocoa.CodeAnalysis.Cod
             };
         }
 
-        private static void CollectBody(Registry registry, BoundStatement statement, Dictionary<string, BoundLabel> labels)
+        private static void CollectBody(Registry registry, FunctionSymbol owner, BoundStatement statement, Dictionary<string, BoundLabel> labels)
         {
             switch (statement.Kind)
             {
                 case BoundNodeKind.BlockStatement:
                     foreach (var s in ((BoundBlockStatement)statement).Statements)
                     {
-                        CollectBody(registry, s, labels);
+                        CollectBody(registry, owner, s, labels);
                     }
                     break;
                 case BoundNodeKind.VariableDeclaration:
                     {
                         var d = (BoundVariableDeclaration)statement;
-                        registry.RegisterVariable(d.Variable);
-                        CollectExpression(registry, d.Initializer, labels);
+                        registry.RegisterVariable(d.Variable, owner);
+                        CollectExpression(registry, owner, d.Initializer, labels);
                         break;
                     }
                 case BoundNodeKind.IfStatement:
                     {
                         var n = (BoundIfStatement)statement;
-                        CollectExpression(registry, n.Condition, labels);
-                        CollectBody(registry, n.ThenStatement, labels);
+                        CollectExpression(registry, owner, n.Condition, labels);
+                        CollectBody(registry, owner, n.ThenStatement, labels);
                         if (n.ElseStatement != null)
                         {
-                            CollectBody(registry, n.ElseStatement, labels);
+                            CollectBody(registry, owner, n.ElseStatement, labels);
                         }
                         break;
                     }
                 case BoundNodeKind.WhileStatement:
                     {
                         var n = (BoundWhileStatement)statement;
-                        CollectExpression(registry, n.Condition, labels);
-                        CollectBody(registry, n.Body, labels);
+                        CollectExpression(registry, owner, n.Condition, labels);
+                        CollectBody(registry, owner, n.Body, labels);
                         break;
                     }
                 case BoundNodeKind.DoWhileStatement:
                     {
                         var n = (BoundDoWhileStatement)statement;
-                        CollectBody(registry, n.Body, labels);
-                        CollectExpression(registry, n.Condition, labels);
+                        CollectBody(registry, owner, n.Body, labels);
+                        CollectExpression(registry, owner, n.Condition, labels);
                         break;
                     }
                 case BoundNodeKind.ForStatement:
                     {
                         var n = (BoundForStatement)statement;
-                        registry.RegisterVariable(n.Variable);
-                        CollectExpression(registry, n.LowerBound, labels);
-                        CollectExpression(registry, n.UpperBound, labels);
+                        registry.RegisterVariable(n.Variable, owner);
+                        CollectExpression(registry, owner, n.LowerBound, labels);
+                        CollectExpression(registry, owner, n.UpperBound, labels);
                         if (n.Step != null)
                         {
-                            CollectExpression(registry, n.Step, labels);
+                            CollectExpression(registry, owner, n.Step, labels);
                         }
 
-                        CollectBody(registry, n.Body, labels);
+                        CollectBody(registry, owner, n.Body, labels);
                         break;
                     }
                 case BoundNodeKind.LabelStatement:
@@ -210,27 +226,27 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     }
                 case BoundNodeKind.ConditionalGotoStatement:
-                    CollectExpression(registry, ((BoundConditionalGotoStatement)statement).Condition, labels);
+                    CollectExpression(registry, owner, ((BoundConditionalGotoStatement)statement).Condition, labels);
                     break;
                 case BoundNodeKind.ReturnStatement:
                     {
                         var n = (BoundReturnStatement)statement;
                         if (n.Expression != null)
                         {
-                            CollectExpression(registry, n.Expression, labels);
+                            CollectExpression(registry, owner, n.Expression, labels);
                         }
                         break;
                     }
                 case BoundNodeKind.ExpressionStatement:
-                    CollectExpression(registry, ((BoundExpressionStatement)statement).Expression, labels);
+                    CollectExpression(registry, owner, ((BoundExpressionStatement)statement).Expression, labels);
                     break;
                 case BoundNodeKind.SequencePointStatement:
-                    CollectBody(registry, ((BoundSequencePointStatement)statement).Statement, labels);
+                    CollectBody(registry, owner, ((BoundSequencePointStatement)statement).Statement, labels);
                     break;
             }
         }
 
-        private static void CollectExpression(Registry registry, BoundExpression expression, Dictionary<string, BoundLabel> labels)
+        private static void CollectExpression(Registry registry, FunctionSymbol owner, BoundExpression expression, Dictionary<string, BoundLabel> labels)
         {
             switch (expression.Kind)
             {
@@ -238,23 +254,23 @@ namespace Cocoa.CodeAnalysis.Cod
                     registry.RegisterType(expression.Type);
                     break;
                 case BoundNodeKind.VariableExpression:
-                    registry.RegisterVariable(((BoundVariableExpression)expression).Variable);
+                    registry.RegisterVariable(((BoundVariableExpression)expression).Variable, owner);
                     break;
                 case BoundNodeKind.AssignmentExpression:
                     {
                         var n = (BoundAssignmentExpression)expression;
-                        registry.RegisterVariable(n.Variable);
-                        CollectExpression(registry, n.Expression, labels);
+                        registry.RegisterVariable(n.Variable, owner);
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
                 case BoundNodeKind.CompoundAssignmentExpression:
                     {
                         var n = (BoundCompoundAssignmentExpression)expression;
-                        registry.RegisterVariable(n.Variable);
+                        registry.RegisterVariable(n.Variable, owner);
                         registry.RegisterType(n.Op.LeftType);
                         registry.RegisterType(n.Op.RightType);
                         registry.RegisterType(n.Op.ResultType);
-                        CollectExpression(registry, n.Expression, labels);
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
                 case BoundNodeKind.UnaryExpression:
@@ -262,7 +278,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         var n = (BoundUnaryExpression)expression;
                         registry.RegisterType(n.Op.OperandType);
                         registry.RegisterType(n.Op.ResultType);
-                        CollectExpression(registry, n.Operand, labels);
+                        CollectExpression(registry, owner, n.Operand, labels);
                         break;
                     }
                 case BoundNodeKind.BinaryExpression:
@@ -271,16 +287,16 @@ namespace Cocoa.CodeAnalysis.Cod
                         registry.RegisterType(n.Op.LeftType);
                         registry.RegisterType(n.Op.RightType);
                         registry.RegisterType(n.Op.ResultType);
-                        CollectExpression(registry, n.Left, labels);
-                        CollectExpression(registry, n.Right, labels);
+                        CollectExpression(registry, owner, n.Left, labels);
+                        CollectExpression(registry, owner, n.Right, labels);
                         break;
                     }
                 case BoundNodeKind.ConditionalExpression:
                     {
                         var n = (BoundConditionalExpression)expression;
-                        CollectExpression(registry, n.Condition, labels);
-                        CollectExpression(registry, n.WhenTrue, labels);
-                        CollectExpression(registry, n.WhenFalse, labels);
+                        CollectExpression(registry, owner, n.Condition, labels);
+                        CollectExpression(registry, owner, n.WhenTrue, labels);
+                        CollectExpression(registry, owner, n.WhenFalse, labels);
                         break;
                     }
                 case BoundNodeKind.CallExpression:
@@ -289,7 +305,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         registry.RegisterFunction(n.Function);
                         foreach (var a in n.Arguments)
                         {
-                            CollectExpression(registry, a, labels);
+                            CollectExpression(registry, owner, a, labels);
                         }
                         break;
                     }
@@ -297,17 +313,17 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundConversionExpression)expression;
                         registry.RegisterType(n.Type);
-                        CollectExpression(registry, n.Expression, labels);
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
                 case BoundNodeKind.ArrayCreationExpression:
                     {
                         var n = (BoundArrayCreationExpression)expression;
                         registry.RegisterType(n.Type);
-                        CollectExpression(registry, n.Length, labels);
+                        CollectExpression(registry, owner, n.Length, labels);
                         foreach (var i in n.Initializers)
                         {
-                            CollectExpression(registry, i, labels);
+                            CollectExpression(registry, owner, i, labels);
                         }
                         break;
                     }
@@ -315,33 +331,37 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundElementAccessExpression)expression;
                         registry.RegisterType(n.Type);
-                        CollectExpression(registry, n.Target, labels);
-                        CollectExpression(registry, n.Index, labels);
+                        CollectExpression(registry, owner, n.Target, labels);
+                        CollectExpression(registry, owner, n.Index, labels);
                         break;
                     }
                 case BoundNodeKind.ElementAssignmentExpression:
                     {
                         var n = (BoundElementAssignmentExpression)expression;
                         registry.RegisterType(n.Type);
-                        CollectExpression(registry, n.Target, labels);
-                        CollectExpression(registry, n.Expression, labels);
+                        CollectExpression(registry, owner, n.Target, labels);
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
                 case BoundNodeKind.MemberAccessExpression:
                     {
                         var n = (BoundMemberAccessExpression)expression;
                         registry.RegisterType(n.Type);
-                        CollectExpression(registry, n.Target, labels);
+                        CollectExpression(registry, owner, n.Target, labels);
                         break;
                     }
                 case BoundNodeKind.MemberCallExpression:
                     {
                         var n = (BoundMemberCallExpression)expression;
                         registry.RegisterType(n.Type);
-                        CollectExpression(registry, n.Expression, labels);
+                        if (n.Method != null)
+                        {
+                            registry.RegisterFunction(n.Method);
+                        }
+                        CollectExpression(registry, owner, n.Expression, labels);
                         foreach (var a in n.Arguments)
                         {
-                            CollectExpression(registry, a, labels);
+                            CollectExpression(registry, owner, a, labels);
                         }
                         break;
                     }
@@ -355,14 +375,14 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundIsExpression)expression;
                         registry.RegisterType(n.TargetType);
-                        CollectExpression(registry, n.Expression, labels);
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
                 case BoundNodeKind.AsExpression:
                     {
                         var n = (BoundAsExpression)expression;
                         registry.RegisterType(n.TargetType);
-                        CollectExpression(registry, n.Expression, labels);
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
             }
@@ -394,7 +414,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundVariableDeclaration)statement;
                         w.Open("vardecl");
-                        w.Field(registry.Get(n.Variable));
+                        w.Field(registry.VarKey(n.Variable));
                         WriteExpression(w, registry, labels, n.Initializer);
                         w.End();
                         break;
@@ -435,7 +455,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundForStatement)statement;
                         w.Open("for");
-                        w.Field(registry.Get(n.Variable));
+                        w.Field(registry.VarKey(n.Variable));
                         WriteExpression(w, registry, labels, n.LowerBound);
                         WriteExpression(w, registry, labels, n.UpperBound);
                         WriteNullableExpression(w, registry, labels, n.Step);
@@ -467,7 +487,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         w.Open("cgoto");
                         w.Field(Str(n.Label.Name));
                         WriteExpression(w, registry, labels, n.Condition);
-                        w.Field(n.JumpIfTrue ? 1 : 0);
+                        w.Field(BoolWord(n.JumpIfTrue));
                         w.End();
                         break;
                     }
@@ -526,7 +546,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundLiteralExpression)expression;
                         w.Open("lit");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         w.Field(EncodeValue(n.Value));
                         w.End();
                         break;
@@ -535,7 +555,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundVariableExpression)expression;
                         w.Open("var");
-                        w.Field(registry.Get(n.Variable));
+                        w.Field(registry.VarKey(n.Variable));
                         w.End();
                         break;
                     }
@@ -543,7 +563,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundAssignmentExpression)expression;
                         w.Open("assign");
-                        w.Field(registry.Get(n.Variable));
+                        w.Field(registry.VarKey(n.Variable));
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
                         break;
@@ -552,7 +572,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundCompoundAssignmentExpression)expression;
                         w.Open("cassign");
-                        w.Field(registry.Get(n.Variable));
+                        w.Field(registry.VarKey(n.Variable));
                         WriteBinaryOperator(w, registry, n.Op);
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
@@ -591,7 +611,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundCallExpression)expression;
                         w.Open("call");
-                        w.Field(registry.Get(n.Function));
+                        w.Field(registry.FnKey(n.Function));
                         w.Field(n.Arguments.Length);
                         foreach (var a in n.Arguments)
                         {
@@ -604,7 +624,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundConversionExpression)expression;
                         w.Open("conv");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
                         break;
@@ -613,7 +633,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundIsExpression)expression;
                         w.Open("istype");
-                        w.Field(registry.Get(n.TargetType));
+                        w.Field(TypeRef(n.TargetType));
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
                         break;
@@ -622,7 +642,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundAsExpression)expression;
                         w.Open("astype");
-                        w.Field(registry.Get(n.TargetType));
+                        w.Field(TypeRef(n.TargetType));
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
                         break;
@@ -631,7 +651,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundArrayCreationExpression)expression;
                         w.Open("arrnew");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         WriteExpression(w, registry, labels, n.Length);
                         w.Field(n.Initializers.Length);
                         foreach (var i in n.Initializers)
@@ -645,7 +665,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundElementAccessExpression)expression;
                         w.Open("elem");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         WriteExpression(w, registry, labels, n.Target);
                         WriteExpression(w, registry, labels, n.Index);
                         w.End();
@@ -655,7 +675,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundElementAssignmentExpression)expression;
                         w.Open("elemassign");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         WriteExpression(w, registry, labels, n.Target);
                         WriteExpression(w, registry, labels, n.Expression);
                         w.End();
@@ -666,7 +686,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         // 仅数组/字符串 `.Length`（Field == null）；类字段访问 OOP，v1 拒绝
                         var n = (BoundMemberAccessExpression)expression;
                         w.Open("memberacc");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         w.Field(Str(n.Identifier));
                         WriteExpression(w, registry, labels, n.Target);
                         w.End();
@@ -676,9 +696,9 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundMemberCallExpression)expression;
                         w.Open("membercall");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         w.Field(Str(n.Identifier));
-                        w.Field(n.Method != null ? registry.Get(n.Method) : -1);
+                        w.Field(n.Method != null ? registry.FnKey(n.Method) : "-");
                         w.Field(n.Arguments.Length);
                         WriteExpression(w, registry, labels, n.Expression);
                         foreach (var a in n.Arguments)
@@ -692,7 +712,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundStaticTypeExpression)expression;
                         w.Open("statictype");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         w.End();
                         break;
                     }
@@ -700,7 +720,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var n = (BoundThisExpression)expression;
                         w.Open("this");
-                        w.Field(registry.Get(n.Type));
+                        w.Field(TypeRef(n.Type));
                         w.End();
                         break;
                     }
@@ -710,78 +730,58 @@ namespace Cocoa.CodeAnalysis.Cod
         private static void WriteUnaryOperator(Writer w, Registry registry, BoundUnaryOperator op)
         {
             w.Open("uop");
-            w.Field((int)op.SyntaxKind);
-            w.Field(registry.Get(op.OperandType));
+            w.Field(UnaryOpText(op.SyntaxKind));
+            w.Field(TypeRef(op.OperandType));
             w.End();
         }
 
         private static void WriteBinaryOperator(Writer w, Registry registry, BoundBinaryOperator op)
         {
             w.Open("bop");
-            w.Field((int)op.SyntaxKind);
-            w.Field(registry.Get(op.LeftType));
-            w.Field(registry.Get(op.RightType));
+            w.Field(BinaryOpText(op.SyntaxKind));
+            w.Field(TypeRef(op.LeftType));
+            w.Field(TypeRef(op.RightType));
             w.End();
         }
 
         // ---------------------------------------------------------------- write: symbols
 
-        private static void EmitTypeSymbol(Writer w, Registry registry, TypeSymbol type)
+        private static void EmitEnumSymbol(Writer w, Registry registry, EnumTypeSymbol e)
         {
-            if (type is EnumTypeSymbol e)
+            w.Open("enum");
+            w.Field(e.FullName);
+            var members = e.MemberNames.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+            w.Field("members:" + members.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var name in members)
             {
-                w.Open("enum");
-                w.Field(registry.Get(e));
-                w.Field(Str(e.Namespace));
-                w.Field(Str(e.Name));
-                var members = e.MemberNames.OrderBy(x => x, StringComparer.Ordinal).ToArray();
-                w.Field(members.Length);
-                foreach (var name in members)
-                {
-                    e.TryGetMember(name, out var value);
-                    w.Open("m");
-                    w.Field(Str(name));
-                    w.Field(value);
-                    w.End();
-                }
+                e.TryGetMember(name, out var value);
+                w.Open(name);
+                w.Field(value);
                 w.End();
             }
-            else if (type.ElementType != null)
-            {
-                w.Open("arr");
-                w.Field(registry.Get(type.ElementType));
-                w.End();
-            }
-            else
-            {
-                w.Open("type");
-                w.Field(Str(type.Name));
-                w.End();
-            }
+            w.End();
         }
 
         /// <summary>6e-M19 M2-c：内建单例（System.Object/System.Type）按全名序列化，读侧映射回单例。</summary>
         private static void EmitBuiltinSystemClass(Writer w, Registry registry, ClassTypeSymbol classType)
         {
             w.Open("systype");
-            w.Field(registry.Get(classType));
-            w.Field(Str(classType.FullName));
+            w.Field(classType.FullName);
             w.End();
         }
 
         private static void EmitClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
         {
             w.Open("cls");
-            w.Field(registry.Get(classType));
-            w.Field(Str(classType.Namespace));
-            w.Field(Str(classType.Name));
-            w.Field((int)classType.Visibility);
-            // 序列化全部静态方法（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）
+            w.Field(classType.FullName);
+            w.Field(classType.Visibility.ToString().ToLowerInvariant());
+            // 序列化全部静态方法名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
+            // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里仅列名供阅读。
             var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
-            w.Field(methods.Length);
+            w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
-                w.Field(registry.Get(method));
+                w.Field(method.Name);
             }
             w.End();
         }
@@ -789,24 +789,24 @@ namespace Cocoa.CodeAnalysis.Cod
         private static void EmitFunctionSymbol(Writer w, Registry registry, FunctionSymbol fn)
         {
             w.Open("fn");
-            w.Field(registry.Get(fn));
-            w.Field(Str(fn.Name));
-            w.Field(registry.Get(fn.ReturnType));
-            w.Field(fn.IsExtern ? 1 : 0);
-            w.Field(fn.DllName != null ? Str(fn.DllName) : "-");
-            w.Field((int)fn.CallingConvention);
-            w.Field(fn.Namespace.Length > 0 ? Str(fn.Namespace) : "-");
-            w.Field(fn.ContainingClass != null ? registry.Get(fn.ContainingClass) : -1);
-            w.Field(fn.BuiltinKind != null ? Str(fn.BuiltinKind.Value.ToString()) : "-");
-            w.Field(fn.EntryPoint != null ? Str(fn.EntryPoint) : "-");
-            w.Field(fn.CharSet != null ? (int)fn.CharSet.Value : -1);
-            w.Field(fn.Parameters.Length);
+            w.Field(registry.FnKey(fn));
+            w.Field("name:" + Str(fn.Name));
+            w.Field("ret:" + TypeRef(fn.ReturnType));
+            w.Field("ns:" + (fn.Namespace.Length > 0 ? Str(fn.Namespace) : "-"));
+            w.Field("owner:" + (fn.ContainingClass != null ? fn.ContainingClass.FullName : "-"));
+            w.Field("extern:" + BoolWord(fn.IsExtern));
+            w.Field("dll:" + (fn.DllName != null ? Str(fn.DllName) : "-"));
+            w.Field("cc:" + fn.CallingConvention.ToString().ToLowerInvariant());
+            w.Field("builtin:" + (fn.BuiltinKind != null ? fn.BuiltinKind.Value.ToString() : "-"));
+            w.Field("entry:" + (fn.EntryPoint != null ? Str(fn.EntryPoint) : "-"));
+            w.Field("charset:" + (fn.CharSet != null ? fn.CharSet.Value.ToString().ToLowerInvariant() : "-"));
+            w.Field("params:" + fn.Parameters.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var p in fn.Parameters)
             {
                 w.Open("par");
-                w.Field(registry.Get(p));
+                w.Field(registry.VarKey(p));
                 w.Field(Str(p.Name));
-                w.Field(registry.Get(p.Type));
+                w.Field(TypeRef(p.Type));
                 w.Field(p.Ordinal);
                 w.End();
             }
@@ -815,32 +815,117 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static void EmitVariableSymbol(Writer w, Registry registry, VariableSymbol v)
         {
-            if (v is GlobalVariableSymbol)
-            {
-                w.Open("glb");
-            }
-            else
-            {
-                w.Open("loc");
-            }
-
-            w.Field(registry.Get(v));
-            w.Field(Str(v.Name));
-            w.Field(v.IsReadOnly ? 1 : 0);
-            w.Field(registry.Get(v.Type));
+            w.Open(v is GlobalVariableSymbol ? "glb" : "loc");
+            w.Field(registry.VarKey(v));
+            w.Field(BoolWord(v.IsReadOnly));
+            w.Field(TypeRef(v.Type));
             if (v.Constant != null)
             {
                 w.Open("const");
-                w.Field(registry.Get(v.Type));
                 w.Field(EncodeValue(v.Constant.Value));
                 w.End();
             }
-            else
-            {
-                w.Field("-");
-            }
 
             w.End();
+        }
+
+        // ---------------------------------------------------------------- write: naming
+
+        /// <summary>类型的文本引用：内建/数组用短名（int / int[][]），类/枚举用全名。</summary>
+        private static string TypeRef(TypeSymbol type)
+        {
+            if (type is EnumTypeSymbol enumType)
+            {
+                return enumType.FullName;
+            }
+
+            if (type is ClassTypeSymbol classType)
+            {
+                return classType.FullName;
+            }
+
+            return type.Name;
+        }
+
+        private static string BoolWord(bool value)
+        {
+            return value ? "true" : "false";
+        }
+
+        private static string UnaryOpText(SyntaxKind kind)
+        {
+            return kind switch
+            {
+                SyntaxKind.PlusToken => "+",
+                SyntaxKind.MinusToken => "-",
+                SyntaxKind.BangToken => "!",
+                SyntaxKind.TildeToken => "~",
+                _ => throw new NotSupportedException($"Unsupported unary operator '{kind}'"),
+            };
+        }
+
+        private static string BinaryOpText(SyntaxKind kind)
+        {
+            return kind switch
+            {
+                SyntaxKind.PlusToken => "+",
+                SyntaxKind.MinusToken => "-",
+                SyntaxKind.StarToken => "*",
+                SyntaxKind.SlashToken => "/",
+                SyntaxKind.PercentToken => "%",
+                SyntaxKind.ShiftLeftToken => "<<",
+                SyntaxKind.ShiftRightToken => ">>",
+                SyntaxKind.AmpersandToken => "&",
+                SyntaxKind.PipeToken => "|",
+                SyntaxKind.HatToken => "^",
+                SyntaxKind.EqualsEqualsToken => "==",
+                SyntaxKind.BangEqualsToken => "!=",
+                SyntaxKind.LessToken => "<",
+                SyntaxKind.LessOrEqualsToken => "<=",
+                SyntaxKind.GreaterToken => ">",
+                SyntaxKind.GreaterOrEqualsToken => ">=",
+                SyntaxKind.AmpersandAmpersandToken => "&&",
+                SyntaxKind.PipePipeToken => "||",
+                _ => throw new NotSupportedException($"Unsupported binary operator '{kind}'"),
+            };
+        }
+
+        private static SyntaxKind ParseUnaryOpText(string text)
+        {
+            return text switch
+            {
+                "+" => SyntaxKind.PlusToken,
+                "-" => SyntaxKind.MinusToken,
+                "!" => SyntaxKind.BangToken,
+                "~" => SyntaxKind.TildeToken,
+                _ => throw new InvalidDataException($"Unknown unary operator '{text}'"),
+            };
+        }
+
+        private static SyntaxKind ParseBinaryOpText(string text)
+        {
+            return text switch
+            {
+                "+" => SyntaxKind.PlusToken,
+                "-" => SyntaxKind.MinusToken,
+                "*" => SyntaxKind.StarToken,
+                "/" => SyntaxKind.SlashToken,
+                "%" => SyntaxKind.PercentToken,
+                "<<" => SyntaxKind.ShiftLeftToken,
+                ">>" => SyntaxKind.ShiftRightToken,
+                "&" => SyntaxKind.AmpersandToken,
+                "|" => SyntaxKind.PipeToken,
+                "^" => SyntaxKind.HatToken,
+                "==" => SyntaxKind.EqualsEqualsToken,
+                "!=" => SyntaxKind.BangEqualsToken,
+                "<" => SyntaxKind.LessToken,
+                "<=" => SyntaxKind.LessOrEqualsToken,
+                ">" => SyntaxKind.GreaterToken,
+                ">=" => SyntaxKind.GreaterOrEqualsToken,
+                "&&" => SyntaxKind.AmpersandAmpersandToken,
+                "||" => SyntaxKind.PipePipeToken,
+                _ => throw new InvalidDataException($"Unknown binary operator '{text}'"),
+            };
         }
 
         // ---------------------------------------------------------------- write: value encoding
@@ -1006,111 +1091,129 @@ namespace Cocoa.CodeAnalysis.Cod
             }
         }
 
-        /// <summary>写侧符号注册表：id 分配 + 发射器（id 顺序 = 分配顺序）。</summary>
+        /// <summary>写侧符号注册表：去重 + 发射顺序（id 仅用于排序，不写入文件）。</summary>
         private sealed class Registry
         {
             private readonly Dictionary<object, int> _ids = new(ReferenceEqualityComparer.Instance);
+            private readonly List<FunctionSymbol> _functions = new();
+            private readonly List<(VariableSymbol Symbol, FunctionSymbol? Owner)> _variables = new();
+            private readonly Dictionary<FunctionSymbol, string> _fnKeys = new(ReferenceEqualityComparer.Instance);
+            private readonly Dictionary<object, string> _varKeys = new(ReferenceEqualityComparer.Instance);
 
             public List<Action<Writer, Registry>> Emitters { get; } = new();
 
-            public int Get(object symbol) => _ids[symbol];
+            public string FnKey(FunctionSymbol fn) => _fnKeys[fn];
 
-            public int RegisterType(TypeSymbol type)
+            public string VarKey(VariableSymbol v) => _varKeys[v];
+
+            public void RegisterType(TypeSymbol type)
             {
-                if (_ids.TryGetValue(type, out var id))
+                if (_ids.ContainsKey(type))
                 {
-                    return id;
+                    return;
                 }
 
-                // 类类型：注册为独立符号（cls）——id 先于引用它的函数
+                _ids[type] = _ids.Count;
+
                 if (type is ClassTypeSymbol classType)
                 {
-                    return RegisterClass(classType);
+                    RegisterClassCore(classType);
                 }
-
-                // 数组元素类型先注册（元素 id < 数组 id），保证读侧按 id 序可解析
-                if (type.ElementType != null)
+                else if (type is EnumTypeSymbol enumType)
                 {
-                    RegisterType(type.ElementType);
+                    Emitters.Add((w, r) => EmitEnumSymbol(w, r, enumType));
                 }
-
-                id = _ids.Count;
-                _ids[type] = id;
-                Emitters.Add((w, r) => EmitTypeSymbol(w, r, type));
-                return id;
+                // 其余（内建/数组）自描述，无需独立条目
             }
 
-            public int RegisterClass(ClassTypeSymbol classType)
+            private void RegisterClassCore(ClassTypeSymbol classType)
             {
-                if (_ids.TryGetValue(classType, out var id))
-                {
-                    return id;
-                }
-
                 // 6e-M19 M2-c：内建单例（System.Object/System.Type）不发 cls——读侧会造出新类破坏单例同一性；
                 // 发 systype 按全名映射回单例（成员面由 Ensure 内建注入，不序列化）
                 if (SystemObjectMembers.IsBuiltinSystemClass(classType))
                 {
-                    id = _ids.Count;
-                    _ids[classType] = id;
                     Emitters.Add((w, r) => EmitBuiltinSystemClass(w, r, classType));
-                    return id;
+                    return;
                 }
 
-                // 纯容器类（仅 syscall/extern 静态方法）：方法符号已在 Functions 注册，这里只发壳
-                id = _ids.Count;
-                _ids[classType] = id;
                 Emitters.Add((w, r) => EmitClassSymbol(w, r, classType));
-                return id;
             }
 
-            public int RegisterFunction(FunctionSymbol fn)
+            public void RegisterFunction(FunctionSymbol fn)
             {
-                if (_ids.TryGetValue(fn, out var id))
+                if (_ids.ContainsKey(fn))
                 {
-                    return id;
+                    return;
                 }
 
                 // 类方法：容器类全静态（syscall/extern 及带体静态方法，6e-M18）作为独立 fn 序列化；实例方法/构造由类壳过滤。
                 // 例外：Object 内建方法（M2-c）带 BuiltinKind，读侧经单例复用重建，须随引用序列化
                 if (fn.ContainingClass != null && !fn.IsStatic && !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass))
                 {
-                    return -1;
+                    return;
                 }
 
-                // 先注册返回类型/参数类型（id 序在 fn 之前），保证读侧按 id 序可解析
+                _ids[fn] = _ids.Count;
+                _functions.Add(fn);
+
                 RegisterType(fn.ReturnType);
                 foreach (var p in fn.Parameters)
                 {
                     RegisterType(p.Type);
                 }
 
-                id = _ids.Count;
-                _ids[fn] = id;
+                Emitters.Add((w, r) => EmitFunctionSymbol(w, r, fn));
+
                 foreach (var p in fn.Parameters)
                 {
                     _ids[p] = _ids.Count;
+                    _variables.Add((p, fn));
                 }
-
-                Emitters.Add((w, r) => EmitFunctionSymbol(w, r, fn));
-                return id;
             }
 
-            public int RegisterVariable(VariableSymbol v)
+            public void RegisterVariable(VariableSymbol v, FunctionSymbol? owner = null)
             {
-                if (_ids.TryGetValue(v, out var id))
+                if (_ids.ContainsKey(v))
                 {
-                    return id;
+                    return;
                 }
 
-                // 先注册类型（id 序在变量之前）
                 RegisterType(v.Type);
 
-                id = _ids.Count;
-                _ids[v] = id;
-
+                _ids[v] = _ids.Count;
+                _variables.Add((v, owner));
                 Emitters.Add((w, r) => EmitVariableSymbol(w, r, v));
-                return id;
+            }
+
+            /// <summary>收集完成后统一命名：函数键与变量键（全局 global:名字；局部/参数 函数键/名字；冲突加 #2/#3）。</summary>
+            public void Seal()
+            {
+                foreach (var fn in _functions)
+                {
+                    var paramTypes = string.Join(",", fn.Parameters.Select(p => TypeRef(p.Type)));
+                    var head = fn.ContainingClass != null
+                        ? fn.ContainingClass.FullName + "." + fn.Name
+                        : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;
+                    // 方括号包裹参数类型（圆括号会被 .cod 分词器当结构符拆开）
+                    _fnKeys[fn] = head + "[" + paramTypes + "]";
+                }
+
+                var used = new HashSet<string>(StringComparer.Ordinal);
+                foreach (var (symbol, owner) in _variables)
+                {
+                    var baseKey = owner == null
+                        ? "global:" + symbol.Name
+                        : _fnKeys[owner] + "/" + symbol.Name;
+                    var key = baseKey;
+                    var suffix = 2;
+                    while (!used.Add(key))
+                    {
+                        key = baseKey + "#" + suffix;
+                        suffix++;
+                    }
+
+                    _varKeys[symbol] = key;
+                }
             }
         }
 
@@ -1140,7 +1243,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 throw new InvalidDataException($".cod version {version} is not supported (expected {Version}); rebuild the library");
             }
 
-            var symbolsById = new List<object>();
+            var context = new ReadContext();
             var bodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var requires = CodRequirement.Any;
             var platforms = ImmutableArray.CreateBuilder<string>();
@@ -1154,10 +1257,10 @@ namespace Cocoa.CodeAnalysis.Cod
                 switch (child)
                 {
                     case "symbols":
-                        ReadSymbols(reader, symbolsById);
+                        ReadSymbols(reader, context);
                         break;
                     case "bodies":
-                        ReadBodies(reader, symbolsById, bodies);
+                        ReadBodies(reader, context, bodies);
                         break;
                     case "manifest":
                         while (reader.TryExpect(out var item))
@@ -1168,19 +1271,19 @@ namespace Cocoa.CodeAnalysis.Cod
                                     requires = ParseRequirement(reader.ExpectString());
                                     break;
                                 case "platform":
-                                    platforms.Add(reader.ExpectString());
+                                    platforms.Add(Unescape(reader.ExpectString()));
                                     break;
                                 case "refdll":
-                                    dotnetRefs.Add(reader.ExpectString());
+                                    dotnetRefs.Add(Unescape(reader.ExpectString()));
                                     break;
                                 case "refcod":
-                                    codRefs.Add(reader.ExpectString());
+                                    codRefs.Add(Unescape(reader.ExpectString()));
                                     break;
                                 case "import":
-                                    imports.Add(reader.ExpectString());
+                                    imports.Add(Unescape(reader.ExpectString()));
                                     break;
                                 case "ns":
-                                    namespaces.Add(reader.ExpectString());
+                                    namespaces.Add(Unescape(reader.ExpectString()));
                                     break;
                             }
 
@@ -1192,47 +1295,11 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
             }
 
-            var functions = ImmutableArray.CreateBuilder<FunctionSymbol>();
-            foreach (var symbol in symbolsById)
-            {
-                if (symbol is FunctionSymbol fn)
-                {
-                    functions.Add(fn);
-                }
-            }
-
-            var globals = ImmutableArray.CreateBuilder<GlobalVariableSymbol>();
-            foreach (var symbol in symbolsById)
-            {
-                if (symbol is GlobalVariableSymbol g)
-                {
-                    globals.Add(g);
-                }
-            }
-
-            var enums = ImmutableArray.CreateBuilder<EnumTypeSymbol>();
-            foreach (var symbol in symbolsById)
-            {
-                if (symbol is EnumTypeSymbol e)
-                {
-                    enums.Add(e);
-                }
-            }
-
-            var classes = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
-            foreach (var symbol in symbolsById)
-            {
-                if (symbol is ClassTypeSymbol c)
-                {
-                    classes.Add(c);
-                }
-            }
-
             return new CodProgram(
-                functions.ToImmutable(),
-                globals.ToImmutable(),
-                enums.ToImmutable(),
-                classes.ToImmutable(),
+                context.Functions.ToImmutable(),
+                context.Globals.ToImmutable(),
+                context.Enums.ToImmutable(),
+                context.Classes.ToImmutable(),
                 bodies.ToImmutable(),
                 requires,
                 platforms.ToImmutable(),
@@ -1242,137 +1309,187 @@ namespace Cocoa.CodeAnalysis.Cod
                 namespaces.ToImmutable());
         }
 
-        private static void ReadSymbols(Reader reader, List<object> symbolsById)
+        /// <summary>读侧共享状态：按名字/键索引的符号表 + 程序集符号清单。</summary>
+        private sealed class ReadContext
+        {
+            /// <summary>类/枚举全名 → 类型符号（内建类型不经此表，直接解析）。</summary>
+            public Dictionary<string, TypeSymbol> TypesByName { get; } = new(StringComparer.Ordinal);
+
+            /// <summary>函数键 → 函数符号。</summary>
+            public Dictionary<string, FunctionSymbol> FunctionsByKey { get; } = new(StringComparer.Ordinal);
+
+            /// <summary>变量键 → 变量/参数符号。</summary>
+            public Dictionary<string, VariableSymbol> VariablesByKey { get; } = new(StringComparer.Ordinal);
+
+            public ImmutableArray<FunctionSymbol>.Builder Functions { get; } = ImmutableArray.CreateBuilder<FunctionSymbol>();
+
+            public ImmutableArray<GlobalVariableSymbol>.Builder Globals { get; } = ImmutableArray.CreateBuilder<GlobalVariableSymbol>();
+
+            public ImmutableArray<EnumTypeSymbol>.Builder Enums { get; } = ImmutableArray.CreateBuilder<EnumTypeSymbol>();
+
+            public ImmutableArray<ClassTypeSymbol>.Builder Classes { get; } = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
+
+            public void AddNamedType(string fullName, TypeSymbol type)
+            {
+                TypesByName[fullName] = type;
+            }
+        }
+
+        private static void ReadSymbols(Reader reader, ReadContext context)
         {
             while (reader.TryExpect(out var kind))
             {
                 switch (kind)
                 {
-                    case "type":
-                        {
-                            var name = reader.ExpectString();
-                            symbolsById.Add(ResolveBuiltinType(name));
-                            reader.End();
-                            break;
-                        }
-                    case "systype":
-                        {
-                            // 6e-M19 M2-c：内建单例按全名映射（成员面已由 Ensure 内建注入）
-                            var id = reader.ExpectInt();
-                            var fullName = reader.ExpectString();
-                            var singleton = fullName switch
-                            {
-                                "System.Object" => (object)ClassTypeSymbol.SystemObject,
-                                "System.Type" => ClassTypeSymbol.SystemType,
-                                _ => throw new InvalidDataException($"Unknown builtin system class '{fullName}'"),
-                            };
-                            SetAt(symbolsById, id, singleton);
-                            reader.End();
-                            break;
-                        }
-                    case "arr":
-                        {
-                            var elementId = reader.ExpectInt();
-                            // 元素类型 id 已先注册（数组 id > 元素 id），直接构建
-                            var elementType = (TypeSymbol)symbolsById[elementId];
-                            symbolsById.Add(TypeSymbol.ArrayOf(elementType));
-                            reader.End();
-                            break;
-                        }
                     case "enum":
-                        {
-                            var id = reader.ExpectInt();
-                            var ns = reader.ExpectString();
-                            var name = reader.ExpectString();
-                            var count = reader.ExpectInt();
-                            var members = new Dictionary<string, int>();
-                            for (var i = 0; i < count; i++)
-                            {
-                                reader.Expect("m");
-                                var memberName = reader.ExpectString();
-                                var value = reader.ExpectInt();
-                                members[memberName] = value;
-                                reader.End();
-                            }
-
-                            var enumType = new EnumTypeSymbol(name, members, ns);
-                            SetAt(symbolsById, id, enumType);
-                            reader.End();
-                            break;
-                        }
-                    case "fn":
-                        ReadFunction(reader, symbolsById);
+                        ReadEnum(reader, context);
+                        break;
+                    case "systype":
+                        ReadSystemType(reader, context);
                         break;
                     case "cls":
-                        ReadClass(reader, symbolsById);
+                        ReadClass(reader, context);
+                        break;
+                    case "fn":
+                        ReadFunction(reader, context);
                         break;
                     case "glb":
-                        ReadVariable(reader, symbolsById, isGlobal: true);
+                        ReadVariable(reader, context, isGlobal: true);
                         break;
                     case "loc":
-                        ReadVariable(reader, symbolsById, isGlobal: false);
+                        ReadVariable(reader, context, isGlobal: false);
                         break;
+                    default:
+                        throw new InvalidDataException($"Unknown symbol kind '{kind}'");
                 }
             }
 
             reader.End();
         }
 
-        private static void ReadClass(Reader reader, List<object> symbolsById)
+        private static void ReadEnum(Reader reader, ReadContext context)
         {
-            var id = reader.ExpectInt();
-            var ns = reader.ExpectString();
-            var name = reader.ExpectString();
-            var visibility = (Visibility)reader.ExpectInt();
-            var methodCount = reader.ExpectInt();
-            // 方法函数符号按 id 序在 cls 之后读，这里只消费 id（方法回填由 ReadFunction 的 containingClassId 完成）
+            var fullName = reader.ExpectString();
+            var (ns, name) = SplitFullName(fullName);
+            var count = ReadCountField(reader, "members:");
+            var members = new Dictionary<string, int>();
+            for (var i = 0; i < count; i++)
+            {
+                var memberName = reader.ExpectKind();
+                var value = reader.ExpectInt();
+                members[Unescape(memberName)] = value;
+                reader.End();
+            }
+
+            var enumType = new EnumTypeSymbol(name, members, ns);
+            context.Enums.Add(enumType);
+            context.AddNamedType(fullName, enumType);
+            reader.End();
+        }
+
+        private static void ReadSystemType(Reader reader, ReadContext context)
+        {
+            // 6e-M19 M2-c：内建单例按全名映射（成员面已由 Ensure 内建注入）
+            var fullName = reader.ExpectString();
+            var singleton = fullName switch
+            {
+                "System.Object" => ClassTypeSymbol.SystemObject,
+                "System.Type" => ClassTypeSymbol.SystemType,
+                _ => throw new InvalidDataException($"Unknown builtin system class '{fullName}'"),
+            };
+            context.Classes.Add(singleton);
+            context.AddNamedType(fullName, singleton);
+            reader.End();
+        }
+
+        private static void ReadClass(Reader reader, ReadContext context)
+        {
+            var fullName = reader.ExpectString();
+            var (ns, name) = SplitFullName(fullName);
+            var visibilityText = reader.ExpectString();
+            if (!Enum.TryParse<Visibility>(visibilityText, ignoreCase: true, out var visibility))
+            {
+                throw new InvalidDataException($"Unknown visibility '{visibilityText}' on class '{fullName}'");
+            }
+
+            var methodCount = ReadCountField(reader, "methods:");
+            // 方法名仅供阅读，方法符号由各 fn 条目的 owner 字段回填
             for (var i = 0; i < methodCount; i++)
             {
-                reader.ExpectInt();
+                reader.ExpectString();
             }
 
             var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
             // 6e-M19 M2-c：.cod 类默认继承 System.Object（与源码绑定一致；.cod v1 不序列化接口声明）
             classType.BaseType = ClassTypeSymbol.SystemObject;
-            SetAt(symbolsById, id, classType);
+            context.Classes.Add(classType);
+            context.AddNamedType(fullName, classType);
             reader.End();
         }
 
-        private static void ReadFunction(Reader reader, List<object> symbolsById)
+        private static void ReadFunction(Reader reader, ReadContext context)
         {
-            var id = reader.ExpectInt();
-            var name = reader.ExpectString();
-            var returnTypeId = reader.ExpectInt();
-            var isExtern = reader.ExpectInt() == 1;
-            var dllToken = reader.ExpectString();
-            var dllName = dllToken == "-" ? null : dllToken;
-            var cc = (CallingConvention)reader.ExpectInt();
-            var nsToken = reader.ExpectString();
-            var ns = nsToken == "-" ? "" : nsToken;
-            var containingClassId = reader.ExpectInt();
-            var builtinKindToken = reader.ExpectString();
-            var builtinKind = builtinKindToken == "-" ? (BuiltinKind?)null : BuiltinFunctions.GetByKindName(builtinKindToken) ?? SystemObjectMembers.GetByKindName(builtinKindToken);
-            var entryPointToken = reader.ExpectString();
-            var entryPoint = entryPointToken == "-" ? null : entryPointToken;
-            var charSetValue = reader.ExpectInt();
-            var charSet = charSetValue >= 0 ? (CharSet)charSetValue : (CharSet?)null;
-            var paramCount = reader.ExpectInt();
+            var key = reader.ExpectString();
+            var name = ReadLabeledField(reader, "name:");
+            var returnType = ResolveTypeRef(ReadLabeledField(reader, "ret:"), context);
+            var nsText = ReadLabeledField(reader, "ns:");
+            var ownerText = ReadLabeledField(reader, "owner:");
+            var isExtern = ParseBoolWord(ReadLabeledField(reader, "extern:"));
+            var dllText = ReadLabeledField(reader, "dll:");
+            var ccText = ReadLabeledField(reader, "cc:");
+            var builtinText = ReadLabeledField(reader, "builtin:");
+            var entryText = ReadLabeledField(reader, "entry:");
+            var charSetText = ReadLabeledField(reader, "charset:");
+
+            var ns = nsText == "-" ? "" : nsText;
+            var dllName = dllText == "-" ? null : dllText;
+            var entryPoint = entryText == "-" ? null : entryText;
+            var builtinKind = builtinText == "-" ? (BuiltinKind?)null : BuiltinFunctions.GetByKindName(builtinText) ?? SystemObjectMembers.GetByKindName(builtinText);
+            if (builtinKind == null && builtinText != "-")
+            {
+                throw new InvalidDataException($"Unknown builtin kind '{builtinText}' on function '{key}'");
+            }
+
+            CharSet? charSet;
+            if (charSetText == "-")
+            {
+                charSet = null;
+            }
+            else if (Enum.TryParse<CharSet>(charSetText, ignoreCase: true, out var parsedCharSet))
+            {
+                charSet = parsedCharSet;
+            }
+            else
+            {
+                throw new InvalidDataException($"Unknown charset '{charSetText}' on function '{key}'");
+            }
+
+            CallingConvention callingConvention;
+            if (Enum.TryParse<CallingConvention>(ccText, ignoreCase: true, out var parsedCc))
+            {
+                callingConvention = parsedCc;
+            }
+            else
+            {
+                throw new InvalidDataException($"Unknown calling convention '{ccText}' on function '{key}'");
+            }
+
+            var containingClass = ownerText == "-" ? null : ResolveOwnerClass(ownerText, context);
+
+            var paramCount = ReadCountField(reader, "params:");
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
             for (var i = 0; i < paramCount; i++)
             {
                 reader.Expect("par");
-                var pId = reader.ExpectInt();
-                var pName = reader.ExpectString();
-                var pTypeId = reader.ExpectInt();
+                var pKey = reader.ExpectString();
+                var pName = Unescape(reader.ExpectString());
+                var pType = ResolveTypeRef(reader.ExpectString(), context);
                 var ordinal = reader.ExpectInt();
-                var parameter = new ParameterSymbol(pName, (TypeSymbol)symbolsById[pTypeId], ordinal);
+                var parameter = new ParameterSymbol(pName, pType, ordinal);
                 parameters.Add(parameter);
-                SetAt(symbolsById, pId, parameter);
+                context.VariablesByKey[pKey] = parameter;
                 reader.End();
             }
-
-            var returnType = (TypeSymbol)symbolsById[returnTypeId];
-            var containingClass = containingClassId >= 0 ? (ClassTypeSymbol)symbolsById[containingClassId] : null;
 
             // 6e-M19 M2-c：Object 内建方法复用单例（保持符号同一性，发射器按 BuiltinKind 分发）
             if (containingClass != null && builtinKind != null && SystemObjectMembers.IsBuiltinSystemClass(containingClass))
@@ -1380,7 +1497,8 @@ namespace Cocoa.CodeAnalysis.Cod
                 var singleton = SystemObjectMembers.GetByKind(builtinKind.Value);
                 if (singleton != null)
                 {
-                    SetAt(symbolsById, id, singleton);
+                    context.Functions.Add(singleton);
+                    context.FunctionsByKey[key] = singleton;
                     reader.End();
                     return;
                 }
@@ -1396,7 +1514,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     returnType,
                     isExtern: isExtern,
                     dllName: dllName,
-                    callingConvention: cc,
+                    callingConvention: callingConvention,
                     containingClass: containingClass,
                     builtinKind: builtinKind,
                     @namespace: ns,
@@ -1411,13 +1529,14 @@ namespace Cocoa.CodeAnalysis.Cod
                     returnType,
                     isExtern: isExtern,
                     dllName: dllName,
-                    callingConvention: cc,
+                    callingConvention: callingConvention,
                     @namespace: ns,
                     entryPoint: entryPoint,
                     charSet: charSet);
             }
 
-            SetAt(symbolsById, id, function);
+            context.Functions.Add(function);
+            context.FunctionsByKey[key] = function;
 
             // 类方法回填：含类归属的 fn 归入其类（6e-M18：容器类全静态——syscall/extern 及带体静态方法）。
             // 内建单例（System.Object/System.Type，M2-c）成员已由 Ensure 注入，跳过回填防重复/防误标 static
@@ -1430,41 +1549,48 @@ namespace Cocoa.CodeAnalysis.Cod
             reader.End();
         }
 
-        private static void ReadVariable(Reader reader, List<object> symbolsById, bool isGlobal)
+        private static void ReadVariable(Reader reader, ReadContext context, bool isGlobal)
         {
-            var id = reader.ExpectInt();
-            var name = reader.ExpectString();
-            var isReadOnly = reader.ExpectInt() == 1;
-            var typeId = reader.ExpectInt();
-            var type = (TypeSymbol)symbolsById[typeId];
+            var key = reader.ExpectString();
+            var isReadOnly = ParseBoolWord(reader.ExpectString());
+            var type = ResolveTypeRef(reader.ExpectString(), context);
             BoundConstant? constant = null;
 
-            if (reader.TryExpect(out var constToken) && constToken == "const")
+            if (reader.PeekRaw() == "(")
             {
-                var constTypeId = reader.ExpectInt();
+                reader.Expect("const");
                 var encoded = reader.ExpectString();
                 var value = DecodeValue(encoded);
-                var constType = (TypeSymbol)symbolsById[constTypeId];
                 constant = new BoundConstant(value);
                 reader.End();
             }
 
+            var name = KeyToName(key);
             VariableSymbol variable = isGlobal
                 ? new GlobalVariableSymbol(name, isReadOnly, type, constant)
                 : new LocalVariableSymbol(name, isReadOnly, type, constant);
 
-            SetAt(symbolsById, id, variable);
+            if (isGlobal)
+            {
+                context.Globals.Add((GlobalVariableSymbol)variable);
+            }
+
+            context.VariablesByKey[key] = variable;
             reader.End();
         }
 
-        private static void ReadBodies(Reader reader, List<object> symbolsById, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder bodies)
+        private static void ReadBodies(Reader reader, ReadContext context, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder bodies)
         {
             while (reader.TryExpect(out var kind) && kind == "body")
             {
-                var fnId = reader.ExpectInt();
-                var function = (FunctionSymbol)symbolsById[fnId];
+                var fnKey = reader.ExpectString();
+                if (!context.FunctionsByKey.TryGetValue(fnKey, out var function))
+                {
+                    throw new InvalidDataException($"Unknown function '{fnKey}' in bodies");
+                }
+
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
-                var body = (BoundBlockStatement)ReadStatement(reader, symbolsById, labels);
+                var body = (BoundBlockStatement)ReadStatement(reader, context, labels);
 
                 // extern 函数无实现：空 body（与 Binder.BindProgram 一致）
                 if (function.IsExtern)
@@ -1479,327 +1605,34 @@ namespace Cocoa.CodeAnalysis.Cod
             reader.End();
         }
 
-        private static BoundStatement ReadStatement(Reader reader, List<object> symbolsById, Dictionary<string, BoundLabel> labels)
-        {
-            var kind = reader.ExpectKind();
-            var statement = ReadStatementFromToken(reader, kind, symbolsById, labels);
-            reader.End();
-            return statement;
-        }
+        // ---------------------------------------------------------------- read: resolution helpers
 
-        private static BoundStatement ReadStatementFromToken(Reader reader, string kind, List<object> symbolsById, Dictionary<string, BoundLabel> labels)
+        private static TypeSymbol ResolveTypeRef(string reference, ReadContext context)
         {
-            switch (kind)
+            var baseName = reference;
+            var dims = 0;
+            while (baseName.EndsWith("[]", StringComparison.Ordinal))
             {
-                case "block":
-                    {
-                        var count = reader.ExpectInt();
-                        var statements = ImmutableArray.CreateBuilder<BoundStatement>();
-                        for (var i = 0; i < count; i++)
-                        {
-                            statements.Add(ReadStatement(reader, symbolsById, labels));
-                        }
-
-                        return new BoundBlockStatement(null, statements.ToImmutable());
-                    }
-                case "nop":
-                    return new BoundNopStatement(null);
-                case "vardecl":
-                    {
-                        var variableId = reader.ExpectInt();
-                        var variable = (VariableSymbol)symbolsById[variableId];
-                        var initializer = ReadExpression(reader, symbolsById, labels);
-                        return new BoundVariableDeclaration(null, variable, initializer);
-                    }
-                case "if":
-                    {
-                        var condition = ReadExpression(reader, symbolsById, labels);
-                        var then = ReadStatement(reader, symbolsById, labels);
-                        var elseStatement = ReadNullableStatement(reader, symbolsById, labels);
-                        return new BoundIfStatement(null, condition, then, elseStatement);
-                    }
-                case "while":
-                    {
-                        var condition = ReadExpression(reader, symbolsById, labels);
-                        var body = ReadStatement(reader, symbolsById, labels);
-                        var breakLabel = GetLabel(labels, reader.ExpectString());
-                        var continueLabel = GetLabel(labels, reader.ExpectString());
-                        return new BoundWhileStatement(null, condition, body, breakLabel, continueLabel);
-                    }
-                case "dowhile":
-                    {
-                        var body = ReadStatement(reader, symbolsById, labels);
-                        var condition = ReadExpression(reader, symbolsById, labels);
-                        var breakLabel = GetLabel(labels, reader.ExpectString());
-                        var continueLabel = GetLabel(labels, reader.ExpectString());
-                        return new BoundDoWhileStatement(null, body, condition, breakLabel, continueLabel);
-                    }
-                case "for":
-                    {
-                        var variableId = reader.ExpectInt();
-                        var variable = (VariableSymbol)symbolsById[variableId];
-                        var lowerBound = ReadExpression(reader, symbolsById, labels);
-                        var upperBound = ReadExpression(reader, symbolsById, labels);
-                        var step = ReadNullableExpression(reader, symbolsById, labels);
-                        var body = ReadStatement(reader, symbolsById, labels);
-                        var breakLabel = GetLabel(labels, reader.ExpectString());
-                        var continueLabel = GetLabel(labels, reader.ExpectString());
-                        return new BoundForStatement(null, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
-                    }
-                case "label":
-                    return new BoundLabelStatement(null, GetLabel(labels, reader.ExpectString()));
-                case "goto":
-                    return new BoundGotoStatement(null, GetLabel(labels, reader.ExpectString()));
-                case "cgoto":
-                    {
-                        var label = GetLabel(labels, reader.ExpectString());
-                        var condition = ReadExpression(reader, symbolsById, labels);
-                        var jumpIfTrue = reader.ExpectInt() == 1;
-                        return new BoundConditionalGotoStatement(null, label, condition, jumpIfTrue);
-                    }
-                case "return":
-                    {
-                        var expression = ReadNullableExpression(reader, symbolsById, labels);
-                        return new BoundReturnStatement(null, expression);
-                    }
-                case "exprstmt":
-                    {
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundExpressionStatement(null, expression);
-                    }
-                default:
-                    throw new InvalidDataException($"Unknown statement kind '{kind}'");
-            }
-        }
-
-        private static BoundStatement? ReadNullableStatement(Reader reader, List<object> symbolsById, Dictionary<string, BoundLabel> labels)
-        {
-            if (reader.TryExpect(out var token) && token == "-")
-            {
-                return null;
+                baseName = baseName.Substring(0, baseName.Length - 2);
+                dims++;
             }
 
-            var statement = ReadStatementFromToken(reader, token, symbolsById, labels);
-            reader.End();
-            return statement;
-        }
-
-        private static BoundExpression? ReadNullableExpression(Reader reader, List<object> symbolsById, Dictionary<string, BoundLabel> labels)
-        {
-            if (reader.TryExpect(out var token) && token == "-")
+            var core = ResolveNamedType(baseName, context);
+            for (var i = 0; i < dims; i++)
             {
-                return null;
+                core = TypeSymbol.ArrayOf(core);
             }
 
-            var expression = ReadExpressionFromToken(reader, token, symbolsById, labels);
-            reader.End();
-            return expression;
+            return core;
         }
 
-        private static BoundExpression ReadExpression(Reader reader, List<object> symbolsById, Dictionary<string, BoundLabel> labels)
+        private static TypeSymbol ResolveNamedType(string name, ReadContext context)
         {
-            var token = reader.ExpectKind();
-            var expression = ReadExpressionFromToken(reader, token, symbolsById, labels);
-            reader.End();
-            return expression;
-        }
-
-        private static BoundExpression ReadExpressionFromToken(Reader reader, string kind, List<object> symbolsById, Dictionary<string, BoundLabel> labels)
-        {
-            switch (kind)
+            if (context.TypesByName.TryGetValue(name, out var known))
             {
-                case "lit":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var encoded = reader.ExpectString();
-                        var value = DecodeValue(encoded);
-                        return new BoundLiteralExpression(null, value, type);
-                    }
-                case "var":
-                    {
-                        var id = reader.ExpectInt();
-                        var variable = (VariableSymbol)symbolsById[id];
-                        return new BoundVariableExpression(null, variable);
-                    }
-                case "assign":
-                    {
-                        var id = reader.ExpectInt();
-                        var variable = (VariableSymbol)symbolsById[id];
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundAssignmentExpression(null, variable, expression);
-                    }
-                case "cassign":
-                    {
-                        var id = reader.ExpectInt();
-                        var variable = (VariableSymbol)symbolsById[id];
-                        var op = ReadBinaryOperator(reader, symbolsById);
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundCompoundAssignmentExpression(null, variable, op, expression);
-                    }
-                case "unary":
-                    {
-                        var op = ReadUnaryOperator(reader, symbolsById);
-                        var operand = ReadExpression(reader, symbolsById, labels);
-                        return new BoundUnaryExpression(null, op, operand);
-                    }
-                case "binary":
-                    {
-                        var op = ReadBinaryOperator(reader, symbolsById);
-                        var left = ReadExpression(reader, symbolsById, labels);
-                        var right = ReadExpression(reader, symbolsById, labels);
-                        return new BoundBinaryExpression(null, left, op, right);
-                    }
-                case "cond":
-                    {
-                        var condition = ReadExpression(reader, symbolsById, labels);
-                        var whenTrue = ReadExpression(reader, symbolsById, labels);
-                        var whenFalse = ReadExpression(reader, symbolsById, labels);
-                        return new BoundConditionalExpression(null, condition, whenTrue, whenFalse);
-                    }
-                case "call":
-                    {
-                        var fnId = reader.ExpectInt();
-                        var function = (FunctionSymbol)symbolsById[fnId];
-                        var count = reader.ExpectInt();
-                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                        for (var i = 0; i < count; i++)
-                        {
-                            arguments.Add(ReadExpression(reader, symbolsById, labels));
-                        }
-
-                        return new BoundCallExpression(null, function, arguments.ToImmutable());
-                    }
-                case "conv":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundConversionExpression(null, type, expression);
-                    }
-                case "arrnew":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var length = ReadExpression(reader, symbolsById, labels);
-                        var count = reader.ExpectInt();
-                        var initializers = ImmutableArray.CreateBuilder<BoundExpression>();
-                        for (var i = 0; i < count; i++)
-                        {
-                            initializers.Add(ReadExpression(reader, symbolsById, labels));
-                        }
-
-                        return new BoundArrayCreationExpression(null, type, length, initializers.ToImmutable());
-                    }
-                case "elem":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var target = ReadExpression(reader, symbolsById, labels);
-                        var index = ReadExpression(reader, symbolsById, labels);
-                        return new BoundElementAccessExpression(null, type, target, index);
-                    }
-                case "elemassign":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var target = (BoundElementAccessExpression)ReadExpression(reader, symbolsById, labels);
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundElementAssignmentExpression(null, type, target, expression);
-                    }
-                case "memberacc":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var identifier = reader.ExpectString();
-                        var target = ReadExpression(reader, symbolsById, labels);
-                        return new BoundMemberAccessExpression(null, type, target, identifier);
-                    }
-                case "membercall":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        var identifier = reader.ExpectString();
-                        var methodId = reader.ExpectInt();
-                        var method = methodId >= 0 ? (FunctionSymbol)symbolsById[methodId] : null;
-                        var count = reader.ExpectInt();
-                        var target = ReadExpression(reader, symbolsById, labels);
-                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                        for (var i = 0; i < count; i++)
-                        {
-                            arguments.Add(ReadExpression(reader, symbolsById, labels));
-                        }
-
-                        return new BoundMemberCallExpression(null, target, identifier, arguments.ToImmutable(), type, method);
-                    }
-                case "statictype":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (ClassTypeSymbol)symbolsById[typeId];
-                        return new BoundStaticTypeExpression(null, type);
-                    }
-                case "this":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var type = (TypeSymbol)symbolsById[typeId];
-                        return new BoundThisExpression(null, (ClassTypeSymbol)type);
-                    }
-                case "istype":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var targetType = (TypeSymbol)symbolsById[typeId];
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundIsExpression(null, expression, targetType);
-                    }
-                case "astype":
-                    {
-                        var typeId = reader.ExpectInt();
-                        var targetType = (TypeSymbol)symbolsById[typeId];
-                        var expression = ReadExpression(reader, symbolsById, labels);
-                        return new BoundAsExpression(null, expression, targetType);
-                    }
-                default:
-                    throw new InvalidDataException($"Unknown expression kind '{kind}'");
-            }
-        }
-
-        private static BoundUnaryOperator ReadUnaryOperator(Reader reader, List<object> symbolsById)
-        {
-            reader.Expect("uop");
-            var syntaxKind = (SyntaxKind)reader.ExpectInt();
-            var operandTypeId = reader.ExpectInt();
-            var operandType = (TypeSymbol)symbolsById[operandTypeId];
-            var op = BoundUnaryOperator.Bind(syntaxKind, operandType);
-            reader.End();
-            return op ?? throw new InvalidDataException($"Cannot bind unary operator {syntaxKind} on {operandType}");
-        }
-
-        private static BoundBinaryOperator ReadBinaryOperator(Reader reader, List<object> symbolsById)
-        {
-            reader.Expect("bop");
-            var syntaxKind = (SyntaxKind)reader.ExpectInt();
-            var leftTypeId = reader.ExpectInt();
-            var rightTypeId = reader.ExpectInt();
-            var leftType = (TypeSymbol)symbolsById[leftTypeId];
-            var rightType = (TypeSymbol)symbolsById[rightTypeId];
-            var op = BoundBinaryOperator.Bind(syntaxKind, leftType, rightType);
-            reader.End();
-            return op ?? throw new InvalidDataException($"Cannot bind binary operator {syntaxKind} on {leftType} and {rightType}");
-        }
-
-        private static BoundLabel GetLabel(Dictionary<string, BoundLabel> labels, string name)
-        {
-            if (!labels.TryGetValue(name, out var label))
-            {
-                label = new BoundLabel(name);
-                labels[name] = label;
+                return known;
             }
 
-            return label;
-        }
-
-        private static TypeSymbol ResolveBuiltinType(string name)
-        {
             return name switch
             {
                 "any" => TypeSymbol.Any,
@@ -1821,19 +1654,400 @@ namespace Cocoa.CodeAnalysis.Cod
                 "i128" => TypeSymbol.Int128,
                 "u128" => TypeSymbol.UInt128,
                 "f128" => TypeSymbol.Float128,
-                "error" => TypeSymbol.Error,
+                "?" => TypeSymbol.Error,
                 _ => throw new InvalidDataException($"Unknown type '{name}'"),
             };
         }
 
-        private static void SetAt(List<object> symbolsById, int id, object symbol)
+        private static ClassTypeSymbol ResolveOwnerClass(string fullName, ReadContext context)
         {
-            while (symbolsById.Count <= id)
+            if (!context.TypesByName.TryGetValue(fullName, out var type) || type is not ClassTypeSymbol classType)
             {
-                symbolsById.Add(null!);
+                throw new InvalidDataException($"Unknown owner class '{fullName}'");
             }
 
-            symbolsById[id] = symbol;
+            return classType;
+        }
+
+        private static VariableSymbol ResolveVariable(string key, ReadContext context)
+        {
+            if (!context.VariablesByKey.TryGetValue(key, out var variable))
+            {
+                throw new InvalidDataException($"Unknown variable '{key}'");
+            }
+
+            return variable;
+        }
+
+        private static FunctionSymbol ResolveFunction(string key, ReadContext context)
+        {
+            if (!context.FunctionsByKey.TryGetValue(key, out var function))
+            {
+                throw new InvalidDataException($"Unknown function '{key}'");
+            }
+
+            return function;
+        }
+
+        private static bool ParseBoolWord(string text)
+        {
+            return text switch
+            {
+                "true" => true,
+                "false" => false,
+                _ => throw new InvalidDataException($"Expected 'true'/'false' but found '{text}'"),
+            };
+        }
+
+        /// <summary>读取 label:value 形式的字段并校验标签。</summary>
+        private static string ReadLabeledField(Reader reader, string label)
+        {
+            var token = reader.ExpectString();
+            if (!token.StartsWith(label, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException($"Expected field '{label}' but found '{token}'");
+            }
+
+            return Unescape(token.Substring(label.Length));
+        }
+
+        /// <summary>读取 count:N 形式的计数字段。</summary>
+        private static int ReadCountField(Reader reader, string label)
+        {
+            var token = reader.ExpectString();
+            if (!token.StartsWith(label, StringComparison.Ordinal))
+            {
+                throw new InvalidDataException($"Expected field '{label}' but found '{token}'");
+            }
+
+            return int.Parse(token.Substring(label.Length), CultureInfo.InvariantCulture);
+        }
+
+        /// <summary>全名拆分为（命名空间, 名）；无点号时命名空间为空。</summary>
+        private static (string Namespace, string Name) SplitFullName(string fullName)
+        {
+            var lastDot = fullName.LastIndexOf('.');
+            return lastDot < 0 ? ("", fullName) : (fullName.Substring(0, lastDot), fullName.Substring(lastDot + 1));
+        }
+
+        /// <summary>变量键还原真实符号名：去掉 global:/函数键前缀与 #N 冲突后缀。</summary>
+        private static string KeyToName(string key)
+        {
+            var name = key;
+            var slash = name.LastIndexOf('/');
+            if (slash >= 0)
+            {
+                name = name.Substring(slash + 1);
+            }
+
+            var hash = name.LastIndexOf('#');
+            if (hash >= 0 && int.TryParse(name.Substring(hash + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            {
+                name = name.Substring(0, hash);
+            }
+
+            return Unescape(name);
+        }
+
+        // ---------------------------------------------------------------- read: statements
+
+        private static BoundStatement ReadStatement(Reader reader, ReadContext context, Dictionary<string, BoundLabel> labels)
+        {
+            var kind = reader.ExpectKind();
+            var statement = ReadStatementFromToken(reader, kind, context, labels);
+            reader.End();
+            return statement;
+        }
+
+        private static BoundStatement ReadStatementFromToken(Reader reader, string kind, ReadContext context, Dictionary<string, BoundLabel> labels)
+        {
+            switch (kind)
+            {
+                case "block":
+                    {
+                        var count = reader.ExpectInt();
+                        var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+                        for (var i = 0; i < count; i++)
+                        {
+                            statements.Add(ReadStatement(reader, context, labels));
+                        }
+
+                        return new BoundBlockStatement(null, statements.ToImmutable());
+                    }
+                case "nop":
+                    return new BoundNopStatement(null);
+                case "vardecl":
+                    {
+                        var variable = ResolveVariable(reader.ExpectString(), context);
+                        var initializer = ReadExpression(reader, context, labels);
+                        return new BoundVariableDeclaration(null, variable, initializer);
+                    }
+                case "if":
+                    {
+                        var condition = ReadExpression(reader, context, labels);
+                        var then = ReadStatement(reader, context, labels);
+                        var elseStatement = ReadNullableStatement(reader, context, labels);
+                        return new BoundIfStatement(null, condition, then, elseStatement);
+                    }
+                case "while":
+                    {
+                        var condition = ReadExpression(reader, context, labels);
+                        var body = ReadStatement(reader, context, labels);
+                        var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
+                        var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
+                        return new BoundWhileStatement(null, condition, body, breakLabel, continueLabel);
+                    }
+                case "dowhile":
+                    {
+                        var body = ReadStatement(reader, context, labels);
+                        var condition = ReadExpression(reader, context, labels);
+                        var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
+                        var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
+                        return new BoundDoWhileStatement(null, body, condition, breakLabel, continueLabel);
+                    }
+                case "for":
+                    {
+                        var variable = ResolveVariable(reader.ExpectString(), context);
+                        var lowerBound = ReadExpression(reader, context, labels);
+                        var upperBound = ReadExpression(reader, context, labels);
+                        var step = ReadNullableExpression(reader, context, labels);
+                        var body = ReadStatement(reader, context, labels);
+                        var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
+                        var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
+                        return new BoundForStatement(null, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
+                    }
+                case "label":
+                    return new BoundLabelStatement(null, GetLabel(labels, Unescape(reader.ExpectString())));
+                case "goto":
+                    return new BoundGotoStatement(null, GetLabel(labels, Unescape(reader.ExpectString())));
+                case "cgoto":
+                    {
+                        var label = GetLabel(labels, Unescape(reader.ExpectString()));
+                        var condition = ReadExpression(reader, context, labels);
+                        var jumpIfTrue = ParseBoolWord(reader.ExpectString());
+                        return new BoundConditionalGotoStatement(null, label, condition, jumpIfTrue);
+                    }
+                case "return":
+                    {
+                        var expression = ReadNullableExpression(reader, context, labels);
+                        return new BoundReturnStatement(null, expression);
+                    }
+                case "exprstmt":
+                    {
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundExpressionStatement(null, expression);
+                    }
+                default:
+                    throw new InvalidDataException($"Unknown statement kind '{kind}'");
+            }
+        }
+
+        private static BoundStatement? ReadNullableStatement(Reader reader, ReadContext context, Dictionary<string, BoundLabel> labels)
+        {
+            if (reader.TryExpect(out var token) && token == "-")
+            {
+                return null;
+            }
+
+            var statement = ReadStatementFromToken(reader, token, context, labels);
+            reader.End();
+            return statement;
+        }
+
+        private static BoundExpression? ReadNullableExpression(Reader reader, ReadContext context, Dictionary<string, BoundLabel> labels)
+        {
+            if (reader.TryExpect(out var token) && token == "-")
+            {
+                return null;
+            }
+
+            var expression = ReadExpressionFromToken(reader, token, context, labels);
+            reader.End();
+            return expression;
+        }
+
+        private static BoundExpression ReadExpression(Reader reader, ReadContext context, Dictionary<string, BoundLabel> labels)
+        {
+            var token = reader.ExpectKind();
+            var expression = ReadExpressionFromToken(reader, token, context, labels);
+            reader.End();
+            return expression;
+        }
+
+        private static BoundExpression ReadExpressionFromToken(Reader reader, string kind, ReadContext context, Dictionary<string, BoundLabel> labels)
+        {
+            switch (kind)
+            {
+                case "lit":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var encoded = reader.ExpectString();
+                        var value = DecodeValue(encoded);
+                        return new BoundLiteralExpression(null, value, type);
+                    }
+                case "var":
+                    {
+                        var variable = ResolveVariable(reader.ExpectString(), context);
+                        return new BoundVariableExpression(null, variable);
+                    }
+                case "assign":
+                    {
+                        var variable = ResolveVariable(reader.ExpectString(), context);
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundAssignmentExpression(null, variable, expression);
+                    }
+                case "cassign":
+                    {
+                        var variable = ResolveVariable(reader.ExpectString(), context);
+                        var op = ReadBinaryOperator(reader, context);
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundCompoundAssignmentExpression(null, variable, op, expression);
+                    }
+                case "unary":
+                    {
+                        var op = ReadUnaryOperator(reader, context);
+                        var operand = ReadExpression(reader, context, labels);
+                        return new BoundUnaryExpression(null, op, operand);
+                    }
+                case "binary":
+                    {
+                        var op = ReadBinaryOperator(reader, context);
+                        var left = ReadExpression(reader, context, labels);
+                        var right = ReadExpression(reader, context, labels);
+                        return new BoundBinaryExpression(null, left, op, right);
+                    }
+                case "cond":
+                    {
+                        var condition = ReadExpression(reader, context, labels);
+                        var whenTrue = ReadExpression(reader, context, labels);
+                        var whenFalse = ReadExpression(reader, context, labels);
+                        return new BoundConditionalExpression(null, condition, whenTrue, whenFalse);
+                    }
+                case "call":
+                    {
+                        var function = ResolveFunction(reader.ExpectString(), context);
+                        var count = reader.ExpectInt();
+                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                        for (var i = 0; i < count; i++)
+                        {
+                            arguments.Add(ReadExpression(reader, context, labels));
+                        }
+
+                        return new BoundCallExpression(null, function, arguments.ToImmutable());
+                    }
+                case "conv":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundConversionExpression(null, type, expression);
+                    }
+                case "arrnew":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var length = ReadExpression(reader, context, labels);
+                        var count = reader.ExpectInt();
+                        var initializers = ImmutableArray.CreateBuilder<BoundExpression>();
+                        for (var i = 0; i < count; i++)
+                        {
+                            initializers.Add(ReadExpression(reader, context, labels));
+                        }
+
+                        return new BoundArrayCreationExpression(null, type, length, initializers.ToImmutable());
+                    }
+                case "elem":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var target = ReadExpression(reader, context, labels);
+                        var index = ReadExpression(reader, context, labels);
+                        return new BoundElementAccessExpression(null, type, target, index);
+                    }
+                case "elemassign":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var target = (BoundElementAccessExpression)ReadExpression(reader, context, labels);
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundElementAssignmentExpression(null, type, target, expression);
+                    }
+                case "memberacc":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var identifier = Unescape(reader.ExpectString());
+                        var target = ReadExpression(reader, context, labels);
+                        return new BoundMemberAccessExpression(null, type, target, identifier);
+                    }
+                case "membercall":
+                    {
+                        var type = ResolveTypeRef(reader.ExpectString(), context);
+                        var identifier = Unescape(reader.ExpectString());
+                        var methodToken = reader.ExpectString();
+                        var method = methodToken == "-" ? null : ResolveFunction(methodToken, context);
+                        var count = reader.ExpectInt();
+                        var target = ReadExpression(reader, context, labels);
+                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                        for (var i = 0; i < count; i++)
+                        {
+                            arguments.Add(ReadExpression(reader, context, labels));
+                        }
+
+                        return new BoundMemberCallExpression(null, target, identifier, arguments.ToImmutable(), type, method);
+                    }
+                case "statictype":
+                    {
+                        var type = (ClassTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                        return new BoundStaticTypeExpression(null, type);
+                    }
+                case "this":
+                    {
+                        var type = (ClassTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                        return new BoundThisExpression(null, type);
+                    }
+                case "istype":
+                    {
+                        var targetType = ResolveTypeRef(reader.ExpectString(), context);
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundIsExpression(null, expression, targetType);
+                    }
+                case "astype":
+                    {
+                        var targetType = ResolveTypeRef(reader.ExpectString(), context);
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundAsExpression(null, expression, targetType);
+                    }
+                default:
+                    throw new InvalidDataException($"Unknown expression kind '{kind}'");
+            }
+        }
+
+        private static BoundUnaryOperator ReadUnaryOperator(Reader reader, ReadContext context)
+        {
+            reader.Expect("uop");
+            var syntaxKind = ParseUnaryOpText(reader.ExpectString());
+            var operandType = ResolveTypeRef(reader.ExpectString(), context);
+            var op = BoundUnaryOperator.Bind(syntaxKind, operandType);
+            reader.End();
+            return op ?? throw new InvalidDataException($"Cannot bind unary operator {syntaxKind} on {operandType}");
+        }
+
+        private static BoundBinaryOperator ReadBinaryOperator(Reader reader, ReadContext context)
+        {
+            reader.Expect("bop");
+            var syntaxKind = ParseBinaryOpText(reader.ExpectString());
+            var leftType = ResolveTypeRef(reader.ExpectString(), context);
+            var rightType = ResolveTypeRef(reader.ExpectString(), context);
+            var op = BoundBinaryOperator.Bind(syntaxKind, leftType, rightType);
+            reader.End();
+            return op ?? throw new InvalidDataException($"Cannot bind binary operator {syntaxKind} on {leftType} and {rightType}");
+        }
+
+        private static BoundLabel GetLabel(Dictionary<string, BoundLabel> labels, string name)
+        {
+            if (!labels.TryGetValue(name, out var label))
+            {
+                label = new BoundLabel(name);
+                labels[name] = label;
+            }
+
+            return label;
         }
 
         // ---------------------------------------------------------------- read: tokenizer / reader
@@ -1919,12 +2133,24 @@ namespace Cocoa.CodeAnalysis.Cod
                     throw new InvalidDataException($"Expected atom but found '{token}'");
                 }
 
-                return Unescape(token);
+                return token;
             }
 
             public int ExpectInt()
             {
-                return int.Parse(ExpectString(), CultureInfo.InvariantCulture);
+                var token = ExpectString();
+                if (!int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+                {
+                    throw new InvalidDataException($"Expected integer but found '{token}'");
+                }
+
+                return value;
+            }
+
+            /// <summary>窥探当前原始 token（不跳过 `(`）——用于判断子节点是否出现。</summary>
+            public string PeekRaw()
+            {
+                return _pos < _tokens.Length ? _tokens[_pos] : "";
             }
 
             public bool TryExpect(out string token)
