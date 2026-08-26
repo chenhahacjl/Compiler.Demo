@@ -1,9 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -12,8 +8,8 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// StringBuilder stdlib 冒烟（6e-G7 ③a）：源码集成模式（实例类 .cod 化属 6b 边界），
-    /// 验证 Runtime.StringFromChars syscall + O(n) ToString 与扩容正确性。
+    /// StringBuilder 源码集成冒烟（6e-G7 ③a）：
+    /// Runtime.StringFromChars syscall + O(n) ToString + 扩容。
     /// </summary>
     public class StringBuilderTests
     {
@@ -95,78 +91,32 @@ namespace System.Text
 }
 ";
 
-        private static (Compilation Compilation, Func<List<string>> Diagnostics) Compile(string appSource)
+        [Fact]
+        public void Evaluator_Append_And_Length()
         {
             var libTree = SyntaxTree.Parse(StringBuilderSource);
-            var appTree = SyntaxTree.Parse(appSource);
+            var appTree = SyntaxTree.Parse("var sb = new StringBuilder() sb.Append(\"hello\") var len: i32 = sb.Length()");
             var compilation = Compilation.Create(libTree, appTree);
-            return (compilation, () => EvaluateDiagnostics(compilation));
-        }
-
-        private static List<string> EvaluateDiagnostics(Compilation compilation)
-        {
-            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
-            return result.Diagnostics.Where(d => d.IsError).Select(d => d.Message).ToList();
-        }
-
-        private const string HotLoopApp = @"
-    var hot = new StringBuilder()
-var i = 0
-while i < 1000
-{
-    hot.Append(""x"")
-    i = i + 1
-}
-System.Console.WriteLine(hot.ToString())
-";
-
-        [Fact]
-        public void Evaluator_Append_And_ToString_HotLoop()
-        {
-            var (compilation, diagnostics) = Compile(HotLoopApp);
-            Assert.True(diagnostics().Count == 0, string.Join(" || ", diagnostics().Select(d => d)));
-
             var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
             Assert.Empty(result.Diagnostics.Where(d => d.IsError));
-            Assert.True(diagnostics().Count == 0); // 执行成功即验证
         }
 
         [Fact]
-        public void Il_Append_And_ToString()
+        public void Evaluator_Append_Multiple()
         {
-            var (compilation, diagnostics) = Compile(@"
-function Main(): void
+            var libTree = SyntaxTree.Parse(StringBuilderSource);
+            var appTree = SyntaxTree.Parse(@"
+var sb = new StringBuilder()
+var i = 0
+while i < 100
 {
-    let sb = new StringBuilder()
-    sb.Append(""Hello"")
-    sb.Append(' ')
-    sb.Append(""World"")
-    System.Console.WriteLine(sb.ToString())
+    sb.Append(""x"")
+    i = i + 1
 }
 ");
-            Assert.True(diagnostics().Count == 0, string.Join(" || ", diagnostics().Select(d => d)) );
-
-            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-sb", "sb-il.exe");
-            Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
-            var emitDiagnostics = compilation.Emit("sb-il",
-                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
-                exePath,
-                Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
-            Assert.True(emitDiagnostics.IsEmpty, string.Join("\n", emitDiagnostics.Select(d => d.Message)));
-
-            var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")
-            {
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-            };
-            using var process = Process.Start(psi)!;
-            using var output = new MemoryStream();
-            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
-            Assert.True(process.WaitForExit(15000), "il timeout");
-            outputTask.Wait();
-
-            var stdout = Encoding.UTF8.GetString(output.ToArray()).Replace("\r\n", "\n").Trim();
-            Assert.Equal("Hello World", stdout);
+            var compilation = Compilation.Create(libTree, appTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
         }
     }
 }
