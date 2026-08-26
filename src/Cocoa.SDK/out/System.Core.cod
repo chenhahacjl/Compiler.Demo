@@ -15,524 +15,506 @@
     (cls System.Runtime internal methods:22 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]])
     (cls System.SByte public methods:3 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string])
     (cls System.Single public methods:1 ToString[float])
-    (cls System.String public methods:19 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Reverse[string] Replicate[string,int] CountChar[string,char] IsPalindrome[string] Trim[string] Replace[string,string,string] CountSubstring[string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char])
+    (cls System.String public methods:14 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Trim[string] Replace[string,string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char])
     (cls System.UInt16 public methods:3 ToString[ushort] CompareTo[ushort,ushort] Parse[string])
     (cls System.UInt32 public methods:3 ToString[uint] CompareTo[uint,uint] Parse[string])
     (cls System.UInt64 public methods:2 ToString[ulong] CompareTo[ulong,ulong])
     (fn System.Array.Sum[int[]] name:Sum ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Sum[int[]]/a a int[] 0 -)
+      (par System.Array.Sum[int[]]/a a int[] 0 - -)
     )
     (fn System.Array.Sum[double[]] name:Sum ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Sum[double[]]/a a double[] 0 -)
+      (par System.Array.Sum[double[]]/a a double[] 0 - -)
     )
     (fn System.Array.Min[int[]] name:Min ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Min[int[]]/a a int[] 0 -)
+      (par System.Array.Min[int[]]/a a int[] 0 - -)
     )
     (fn System.Array.Min[double[]] name:Min ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Min[double[]]/a a double[] 0 -)
+      (par System.Array.Min[double[]]/a a double[] 0 - -)
     )
     (fn System.Array.Max[int[]] name:Max ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Max[int[]]/a a int[] 0 -)
+      (par System.Array.Max[int[]]/a a int[] 0 - -)
     )
     (fn System.Array.Max[double[]] name:Max ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Max[double[]]/a a double[] 0 -)
+      (par System.Array.Max[double[]]/a a double[] 0 - -)
     )
     (fn System.Array.Average[int[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Average[int[]]/a a int[] 0 -)
+      (par System.Array.Average[int[]]/a a int[] 0 - -)
     )
     (fn System.Array.Average[double[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Average[double[]]/a a double[] 0 -)
+      (par System.Array.Average[double[]]/a a double[] 0 - -)
     )
     (fn System.Array.Contains[int[],int] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Array.Contains[int[],int]/a a int[] 0 -)
-      (par System.Array.Contains[int[],int]/v v int 1 -)
+      (par System.Array.Contains[int[],int]/a a int[] 0 - -)
+      (par System.Array.Contains[int[],int]/v v int 1 - -)
     )
     (fn System.Array.Contains[double[],double] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Array.Contains[double[],double]/a a double[] 0 -)
-      (par System.Array.Contains[double[],double]/v v double 1 -)
+      (par System.Array.Contains[double[],double]/a a double[] 0 - -)
+      (par System.Array.Contains[double[],double]/v v double 1 - -)
     )
     (fn System.Array.IndexOf[int[],int] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Array.IndexOf[int[],int]/a a int[] 0 -)
-      (par System.Array.IndexOf[int[],int]/v v int 1 -)
+      (par System.Array.IndexOf[int[],int]/a a int[] 0 - -)
+      (par System.Array.IndexOf[int[],int]/v v int 1 - -)
     )
     (fn System.Array.IndexOf[double[],double] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Array.IndexOf[double[],double]/a a double[] 0 -)
-      (par System.Array.IndexOf[double[],double]/v v double 1 -)
+      (par System.Array.IndexOf[double[],double]/a a double[] 0 - -)
+      (par System.Array.IndexOf[double[],double]/v v double 1 - -)
     )
     (fn System.Array.Reverse[int[]] name:Reverse ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Reverse[int[]]/a a int[] 0 -)
+      (par System.Array.Reverse[int[]]/a a int[] 0 - -)
     )
     (fn System.Array.Reverse[double[]] name:Reverse ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Reverse[double[]]/a a double[] 0 -)
+      (par System.Array.Reverse[double[]]/a a double[] 0 - -)
     )
     (fn System.Array.Sort[int[]] name:Sort ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Sort[int[]]/a a int[] 0 -)
+      (par System.Array.Sort[int[]]/a a int[] 0 - -)
     )
     (fn System.Array.Sort[double[]] name:Sort ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Array.Sort[double[]]/a a double[] 0 -)
+      (par System.Array.Sort[double[]]/a a double[] 0 - -)
     )
     (fn System.Boolean.ToString[bool] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Boolean.ToString[bool]/this this bool 0 -)
+      (par System.Boolean.ToString[bool]/this this bool 0 - this)
     )
     (fn System.Boolean.Parse[string] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Boolean.Parse[string]/s s string 0 -)
+      (par System.Boolean.Parse[string]/s s string 0 - -)
     )
     (fn System.Boolean.Parse[string,bool] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Boolean.Parse[string,bool]/s s string 0 -)
-      (par System.Boolean.Parse[string,bool]/ignoreCase ignoreCase bool 1 -)
+      (par System.Boolean.Parse[string,bool]/s s string 0 - -)
+      (par System.Boolean.Parse[string,bool]/ignoreCase ignoreCase bool 1 - -)
     )
     (fn System.Byte.ToString[byte] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Byte.ToString[byte]/this this byte 0 -)
+      (par System.Byte.ToString[byte]/this this byte 0 - this)
     )
     (fn System.Byte.CompareTo[byte,byte] name:CompareTo ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Byte.CompareTo[byte,byte]/this this byte 0 -)
-      (par System.Byte.CompareTo[byte,byte]/value value byte 1 -)
+      (par System.Byte.CompareTo[byte,byte]/this this byte 0 - this)
+      (par System.Byte.CompareTo[byte,byte]/value value byte 1 - -)
     )
     (fn System.Byte.Parse[string] name:Parse ret:byte ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Byte.Parse[string]/s s string 0 -)
+      (par System.Byte.Parse[string]/s s string 0 - -)
     )
     (fn System.Char.ToString[char] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.ToString[char]/this this char 0 -)
+      (par System.Char.ToString[char]/this this char 0 - this)
     )
     (fn System.Char.Parse[string] name:Parse ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.Parse[string]/s s string 0 -)
+      (par System.Char.Parse[string]/s s string 0 - -)
     )
     (fn System.Char.CompareTo[char,char] name:CompareTo ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Char.CompareTo[char,char]/this this char 0 -)
-      (par System.Char.CompareTo[char,char]/value value char 1 -)
+      (par System.Char.CompareTo[char,char]/this this char 0 - this)
+      (par System.Char.CompareTo[char,char]/value value char 1 - -)
     )
     (fn System.Char.IsDigit[char] name:IsDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsDigit[char]/c c char 0 -)
+      (par System.Char.IsDigit[char]/c c char 0 - -)
     )
     (fn System.Char.IsLetter[char] name:IsLetter ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsLetter[char]/c c char 0 -)
+      (par System.Char.IsLetter[char]/c c char 0 - -)
     )
     (fn System.Char.IsWhiteSpace[char] name:IsWhiteSpace ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsWhiteSpace[char]/c c char 0 -)
+      (par System.Char.IsWhiteSpace[char]/c c char 0 - -)
     )
     (fn System.Char.ToUpper[char] name:ToUpper ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.ToUpper[char]/c c char 0 -)
+      (par System.Char.ToUpper[char]/c c char 0 - -)
     )
     (fn System.Char.ToLower[char] name:ToLower ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.ToLower[char]/c c char 0 -)
+      (par System.Char.ToLower[char]/c c char 0 - -)
     )
     (fn System.Char.IsLetterOrDigit[char] name:IsLetterOrDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsLetterOrDigit[char]/c c char 0 -)
+      (par System.Char.IsLetterOrDigit[char]/c c char 0 - -)
     )
     (fn System.Char.IsControl[char] name:IsControl ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsControl[char]/c c char 0 -)
+      (par System.Char.IsControl[char]/c c char 0 - -)
     )
     (fn System.Char.IsHexDigit[char] name:IsHexDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsHexDigit[char]/c c char 0 -)
+      (par System.Char.IsHexDigit[char]/c c char 0 - -)
     )
     (fn System.Char.IsUpper[char] name:IsUpper ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsUpper[char]/c c char 0 -)
+      (par System.Char.IsUpper[char]/c c char 0 - -)
     )
     (fn System.Char.IsLower[char] name:IsLower ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Char.IsLower[char]/c c char 0 -)
+      (par System.Char.IsLower[char]/c c char 0 - -)
     )
     (fn System.Console.WriteLine[] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
     (fn System.Console.WriteLine[string] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[string]/text text string 0 -)
+      (par System.Console.WriteLine[string]/text text string 0 - -)
     )
     (fn System.Console.WriteLine[int] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[int]/text text int 0 -)
+      (par System.Console.WriteLine[int]/text text int 0 - -)
     )
     (fn System.Console.WriteLine[double] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[double]/text text double 0 -)
+      (par System.Console.WriteLine[double]/text text double 0 - -)
     )
     (fn System.Console.WriteLine[bool] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[bool]/text text bool 0 -)
+      (par System.Console.WriteLine[bool]/text text bool 0 - -)
     )
     (fn System.Console.WriteLine[char] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[char]/text text char 0 -)
+      (par System.Console.WriteLine[char]/text text char 0 - -)
     )
     (fn System.Console.WriteLine[byte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[byte]/text text byte 0 -)
+      (par System.Console.WriteLine[byte]/text text byte 0 - -)
     )
     (fn System.Console.WriteLine[long] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[long]/text text long 0 -)
+      (par System.Console.WriteLine[long]/text text long 0 - -)
     )
     (fn System.Console.WriteLine[sbyte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[sbyte]/text text sbyte 0 -)
+      (par System.Console.WriteLine[sbyte]/text text sbyte 0 - -)
     )
     (fn System.Console.WriteLine[short] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[short]/text text short 0 -)
+      (par System.Console.WriteLine[short]/text text short 0 - -)
     )
     (fn System.Console.WriteLine[ushort] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[ushort]/text text ushort 0 -)
+      (par System.Console.WriteLine[ushort]/text text ushort 0 - -)
     )
     (fn System.Console.WriteLine[uint] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[uint]/text text uint 0 -)
+      (par System.Console.WriteLine[uint]/text text uint 0 - -)
     )
     (fn System.Console.WriteLine[ulong] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[ulong]/text text ulong 0 -)
+      (par System.Console.WriteLine[ulong]/text text ulong 0 - -)
     )
     (fn System.Console.WriteLine[float] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.WriteLine[float]/text text float 0 -)
+      (par System.Console.WriteLine[float]/text text float 0 - -)
     )
     (fn System.Console.Write[string] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[string]/text text string 0 -)
+      (par System.Console.Write[string]/text text string 0 - -)
     )
     (fn System.Console.Write[int] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[int]/text text int 0 -)
+      (par System.Console.Write[int]/text text int 0 - -)
     )
     (fn System.Console.Write[double] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[double]/text text double 0 -)
+      (par System.Console.Write[double]/text text double 0 - -)
     )
     (fn System.Console.Write[bool] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[bool]/text text bool 0 -)
+      (par System.Console.Write[bool]/text text bool 0 - -)
     )
     (fn System.Console.Write[char] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[char]/text text char 0 -)
+      (par System.Console.Write[char]/text text char 0 - -)
     )
     (fn System.Console.Write[byte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[byte]/text text byte 0 -)
+      (par System.Console.Write[byte]/text text byte 0 - -)
     )
     (fn System.Console.Write[long] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[long]/text text long 0 -)
+      (par System.Console.Write[long]/text text long 0 - -)
     )
     (fn System.Console.Write[sbyte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[sbyte]/text text sbyte 0 -)
+      (par System.Console.Write[sbyte]/text text sbyte 0 - -)
     )
     (fn System.Console.Write[short] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[short]/text text short 0 -)
+      (par System.Console.Write[short]/text text short 0 - -)
     )
     (fn System.Console.Write[ushort] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[ushort]/text text ushort 0 -)
+      (par System.Console.Write[ushort]/text text ushort 0 - -)
     )
     (fn System.Console.Write[uint] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[uint]/text text uint 0 -)
+      (par System.Console.Write[uint]/text text uint 0 - -)
     )
     (fn System.Console.Write[ulong] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[ulong]/text text ulong 0 -)
+      (par System.Console.Write[ulong]/text text ulong 0 - -)
     )
     (fn System.Console.Write[float] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.Write[float]/text text float 0 -)
+      (par System.Console.Write[float]/text text float 0 - -)
     )
     (fn System.Console.ReadLine[] name:ReadLine ret:string ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
     (fn System.Console.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Console.ReadKey[bool]/intercept intercept bool 0 -)
+      (par System.Console.ReadKey[bool]/intercept intercept bool 0 - -)
     )
     (fn System.Console.Beep[int,int] name:Beep ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Console.Beep[int,int]/frequency frequency int 0 -)
-      (par System.Console.Beep[int,int]/duration duration int 1 -)
+      (par System.Console.Beep[int,int]/frequency frequency int 0 - -)
+      (par System.Console.Beep[int,int]/duration duration int 1 - -)
     )
     (fn System.Double.ToString[double] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Double.ToString[double]/this this double 0 -)
+      (par System.Double.ToString[double]/this this double 0 - this)
     )
     (fn System.Double.CompareTo[double,double] name:CompareTo ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Double.CompareTo[double,double]/this this double 0 -)
-      (par System.Double.CompareTo[double,double]/value value double 1 -)
+      (par System.Double.CompareTo[double,double]/this this double 0 - this)
+      (par System.Double.CompareTo[double,double]/value value double 1 - -)
     )
     (fn System.Environment.GetEnvironmentVariable[string] name:GetEnvironmentVariable ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- params:1
-      (par System.Environment.GetEnvironmentVariable[string]/name name string 0 -)
+      (par System.Environment.GetEnvironmentVariable[string]/name name string 0 - -)
     )
     (fn System.Environment.GetCurrentDirectory[] name:GetCurrentDirectory ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetCurrentDirectory entry:- charset:- params:0)
     (fn System.Environment.SetCurrentDirectory[string] name:SetCurrentDirectory ret:void ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:SetCurrentDirectory entry:- charset:- params:1
-      (par System.Environment.SetCurrentDirectory[string]/path path string 0 -)
+      (par System.Environment.SetCurrentDirectory[string]/path path string 0 - -)
     )
     (fn System.Environment.GetExecutablePath[] name:GetExecutablePath ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- params:0)
     (fn System.IO.File.ReadAllText[string] name:ReadAllText ret:string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- params:1
-      (par System.IO.File.ReadAllText[string]/path path string 0 -)
+      (par System.IO.File.ReadAllText[string]/path path string 0 - -)
     )
     (fn System.IO.File.WriteAllText[string,string] name:WriteAllText ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- params:2
-      (par System.IO.File.WriteAllText[string,string]/path path string 0 -)
-      (par System.IO.File.WriteAllText[string,string]/text text string 1 -)
+      (par System.IO.File.WriteAllText[string,string]/path path string 0 - -)
+      (par System.IO.File.WriteAllText[string,string]/text text string 1 - -)
     )
     (fn System.IO.File.Exists[string] name:Exists ret:bool ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- params:1
-      (par System.IO.File.Exists[string]/path path string 0 -)
+      (par System.IO.File.Exists[string]/path path string 0 - -)
     )
     (fn System.IO.File.Copy[string,string] name:Copy ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileCopy entry:- charset:- params:2
-      (par System.IO.File.Copy[string,string]/src src string 0 -)
-      (par System.IO.File.Copy[string,string]/dst dst string 1 -)
+      (par System.IO.File.Copy[string,string]/src src string 0 - -)
+      (par System.IO.File.Copy[string,string]/dst dst string 1 - -)
     )
     (fn System.IO.File.Delete[string] name:Delete ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- params:1
-      (par System.IO.File.Delete[string]/path path string 0 -)
+      (par System.IO.File.Delete[string]/path path string 0 - -)
     )
     (fn System.Int16.ToString[short] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Int16.ToString[short]/this this short 0 -)
+      (par System.Int16.ToString[short]/this this short 0 - this)
     )
     (fn System.Int16.CompareTo[short,short] name:CompareTo ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Int16.CompareTo[short,short]/this this short 0 -)
-      (par System.Int16.CompareTo[short,short]/value value short 1 -)
+      (par System.Int16.CompareTo[short,short]/this this short 0 - this)
+      (par System.Int16.CompareTo[short,short]/value value short 1 - -)
     )
     (fn System.Int16.Parse[string] name:Parse ret:short ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Int16.Parse[string]/s s string 0 -)
+      (par System.Int16.Parse[string]/s s string 0 - -)
     )
     (fn System.Int32.ToString[int] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Int32.ToString[int]/this this int 0 -)
+      (par System.Int32.ToString[int]/this this int 0 - this)
     )
     (fn System.Int32.CompareTo[int,int] name:CompareTo ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Int32.CompareTo[int,int]/this this int 0 -)
-      (par System.Int32.CompareTo[int,int]/value value int 1 -)
+      (par System.Int32.CompareTo[int,int]/this this int 0 - this)
+      (par System.Int32.CompareTo[int,int]/value value int 1 - -)
     )
     (fn System.Int32.Parse[string] name:Parse ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Int32.Parse[string]/s s string 0 -)
+      (par System.Int32.Parse[string]/s s string 0 - -)
     )
     (fn System.Int32.TryParse[string,out:int] name:TryParse ret:bool ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Int32.TryParse[string,out:int]/s s string 0 -)
-      (par System.Int32.TryParse[string,out:int]/result result int 1 out)
+      (par System.Int32.TryParse[string,out:int]/s s string 0 - -)
+      (par System.Int32.TryParse[string,out:int]/result result int 1 out -)
     )
     (fn System.Int64.ToString[long] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Int64.ToString[long]/this this long 0 -)
+      (par System.Int64.ToString[long]/this this long 0 - this)
     )
     (fn System.Int64.CompareTo[long,long] name:CompareTo ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Int64.CompareTo[long,long]/this this long 0 -)
-      (par System.Int64.CompareTo[long,long]/value value long 1 -)
+      (par System.Int64.CompareTo[long,long]/this this long 0 - this)
+      (par System.Int64.CompareTo[long,long]/value value long 1 - -)
     )
     (fn System.Int64.Parse[string] name:Parse ret:long ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Int64.Parse[string]/s s string 0 -)
+      (par System.Int64.Parse[string]/s s string 0 - -)
     )
     (fn System.Math.Max[int,int] name:Max ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Max[int,int]/a a int 0 -)
-      (par System.Math.Max[int,int]/b b int 1 -)
+      (par System.Math.Max[int,int]/a a int 0 - -)
+      (par System.Math.Max[int,int]/b b int 1 - -)
     )
     (fn System.Math.Max[double,double] name:Max ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Max[double,double]/a a double 0 -)
-      (par System.Math.Max[double,double]/b b double 1 -)
+      (par System.Math.Max[double,double]/a a double 0 - -)
+      (par System.Math.Max[double,double]/b b double 1 - -)
     )
     (fn System.Math.Min[int,int] name:Min ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Min[int,int]/a a int 0 -)
-      (par System.Math.Min[int,int]/b b int 1 -)
+      (par System.Math.Min[int,int]/a a int 0 - -)
+      (par System.Math.Min[int,int]/b b int 1 - -)
     )
     (fn System.Math.Min[double,double] name:Min ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Min[double,double]/a a double 0 -)
-      (par System.Math.Min[double,double]/b b double 1 -)
+      (par System.Math.Min[double,double]/a a double 0 - -)
+      (par System.Math.Min[double,double]/b b double 1 - -)
     )
     (fn System.Math.Abs[int] name:Abs ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Abs[int]/x x int 0 -)
+      (par System.Math.Abs[int]/x x int 0 - -)
     )
     (fn System.Math.Abs[double] name:Abs ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Abs[double]/x x double 0 -)
+      (par System.Math.Abs[double]/x x double 0 - -)
     )
     (fn System.Math.Clamp[int,int,int] name:Clamp ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
-      (par System.Math.Clamp[int,int,int]/v v int 0 -)
-      (par System.Math.Clamp[int,int,int]/lo lo int 1 -)
-      (par System.Math.Clamp[int,int,int]/hi hi int 2 -)
+      (par System.Math.Clamp[int,int,int]/v v int 0 - -)
+      (par System.Math.Clamp[int,int,int]/lo lo int 1 - -)
+      (par System.Math.Clamp[int,int,int]/hi hi int 2 - -)
     )
     (fn System.Math.Clamp[double,double,double] name:Clamp ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
-      (par System.Math.Clamp[double,double,double]/v v double 0 -)
-      (par System.Math.Clamp[double,double,double]/lo lo double 1 -)
-      (par System.Math.Clamp[double,double,double]/hi hi double 2 -)
+      (par System.Math.Clamp[double,double,double]/v v double 0 - -)
+      (par System.Math.Clamp[double,double,double]/lo lo double 1 - -)
+      (par System.Math.Clamp[double,double,double]/hi hi double 2 - -)
     )
     (fn System.Math.Sign[int] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Sign[int]/x x int 0 -)
+      (par System.Math.Sign[int]/x x int 0 - -)
     )
     (fn System.Math.Sign[double] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Sign[double]/x x double 0 -)
+      (par System.Math.Sign[double]/x x double 0 - -)
     )
     (fn System.Math.IsEven[int] name:IsEven ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.IsEven[int]/n n int 0 -)
+      (par System.Math.IsEven[int]/n n int 0 - -)
     )
     (fn System.Math.IsOdd[int] name:IsOdd ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.IsOdd[int]/n n int 0 -)
+      (par System.Math.IsOdd[int]/n n int 0 - -)
     )
     (fn System.Math.Pow[int,int] name:Pow ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Pow[int,int]/x x int 0 -)
-      (par System.Math.Pow[int,int]/exp exp int 1 -)
+      (par System.Math.Pow[int,int]/x x int 0 - -)
+      (par System.Math.Pow[int,int]/exp exp int 1 - -)
     )
     (fn System.Math.Factorial[int] name:Factorial ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Factorial[int]/n n int 0 -)
+      (par System.Math.Factorial[int]/n n int 0 - -)
     )
     (fn System.Math.Gcd[int,int] name:Gcd ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Gcd[int,int]/a a int 0 -)
-      (par System.Math.Gcd[int,int]/b b int 1 -)
+      (par System.Math.Gcd[int,int]/a a int 0 - -)
+      (par System.Math.Gcd[int,int]/b b int 1 - -)
     )
     (fn System.Math.Lcm[int,int] name:Lcm ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.Math.Lcm[int,int]/a a int 0 -)
-      (par System.Math.Lcm[int,int]/b b int 1 -)
+      (par System.Math.Lcm[int,int]/a a int 0 - -)
+      (par System.Math.Lcm[int,int]/b b int 1 - -)
     )
     (fn System.Math.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Sqrt[double]/x x double 0 -)
+      (par System.Math.Sqrt[double]/x x double 0 - -)
     )
     (fn System.Math.Floor[double] name:Floor ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Floor[double]/x x double 0 -)
+      (par System.Math.Floor[double]/x x double 0 - -)
     )
     (fn System.Math.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Ceiling[double]/x x double 0 -)
+      (par System.Math.Ceiling[double]/x x double 0 - -)
     )
     (fn System.Math.Truncate[double] name:Truncate ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Truncate[double]/x x double 0 -)
+      (par System.Math.Truncate[double]/x x double 0 - -)
     )
     (fn System.Math.Round[double] name:Round ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Math.Round[double]/x x double 0 -)
+      (par System.Math.Round[double]/x x double 0 - -)
     )
     (fn System.Runtime.WriteLine[any] name:WriteLine ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:WriteLine entry:- charset:- params:1
-      (par System.Runtime.WriteLine[any]/text text any 0 -)
+      (par System.Runtime.WriteLine[any]/text text any 0 - -)
     )
     (fn System.Runtime.Write[any] name:Write ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Write entry:- charset:- params:1
-      (par System.Runtime.Write[any]/text text any 0 -)
+      (par System.Runtime.Write[any]/text text any 0 - -)
     )
     (fn System.Runtime.ReadLine[] name:ReadLine ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadLine entry:- charset:- params:0)
     (fn System.Runtime.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadKey entry:- charset:- params:1
-      (par System.Runtime.ReadKey[bool]/intercept intercept bool 0 -)
+      (par System.Runtime.ReadKey[bool]/intercept intercept bool 0 - -)
     )
     (fn System.Runtime.Random[int] name:Random ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Random entry:- charset:- params:1
-      (par System.Runtime.Random[int]/max max int 0 -)
+      (par System.Runtime.Random[int]/max max int 0 - -)
     )
     (fn System.Runtime.Sleep[int] name:Sleep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sleep entry:- charset:- params:1
-      (par System.Runtime.Sleep[int]/ms ms int 0 -)
+      (par System.Runtime.Sleep[int]/ms ms int 0 - -)
     )
     (fn System.Runtime.TickCount[] name:TickCount ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:TickCount entry:- charset:- params:0)
     (fn System.Runtime.Exit[int] name:Exit ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Exit entry:- charset:- params:1
-      (par System.Runtime.Exit[int]/code code int 0 -)
+      (par System.Runtime.Exit[int]/code code int 0 - -)
     )
     (fn System.Runtime.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- params:1
-      (par System.Runtime.Sqrt[double]/x x double 0 -)
+      (par System.Runtime.Sqrt[double]/x x double 0 - -)
     )
     (fn System.Runtime.Floor[double] name:Floor ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Floor entry:- charset:- params:1
-      (par System.Runtime.Floor[double]/x x double 0 -)
+      (par System.Runtime.Floor[double]/x x double 0 - -)
     )
     (fn System.Runtime.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Ceiling entry:- charset:- params:1
-      (par System.Runtime.Ceiling[double]/x x double 0 -)
+      (par System.Runtime.Ceiling[double]/x x double 0 - -)
     )
     (fn System.Runtime.Truncate[double] name:Truncate ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Truncate entry:- charset:- params:1
-      (par System.Runtime.Truncate[double]/x x double 0 -)
+      (par System.Runtime.Truncate[double]/x x double 0 - -)
     )
     (fn System.Runtime.Round[double] name:Round ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Round entry:- charset:- params:1
-      (par System.Runtime.Round[double]/x x double 0 -)
+      (par System.Runtime.Round[double]/x x double 0 - -)
     )
     (fn System.Runtime.Beep[int,int] name:Beep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Beep entry:- charset:- params:2
-      (par System.Runtime.Beep[int,int]/frequency frequency int 0 -)
-      (par System.Runtime.Beep[int,int]/duration duration int 1 -)
+      (par System.Runtime.Beep[int,int]/frequency frequency int 0 - -)
+      (par System.Runtime.Beep[int,int]/duration duration int 1 - -)
     )
     (fn System.Runtime.Int32ToString[int] name:Int32ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int32ToString entry:- charset:- params:1
-      (par System.Runtime.Int32ToString[int]/value value int 0 -)
+      (par System.Runtime.Int32ToString[int]/value value int 0 - -)
     )
     (fn System.Runtime.Int64ToString[long] name:Int64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int64ToString entry:- charset:- params:1
-      (par System.Runtime.Int64ToString[long]/value value long 0 -)
+      (par System.Runtime.Int64ToString[long]/value value long 0 - -)
     )
     (fn System.Runtime.DoubleToString[double] name:DoubleToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- params:1
-      (par System.Runtime.DoubleToString[double]/value value double 0 -)
+      (par System.Runtime.DoubleToString[double]/value value double 0 - -)
     )
     (fn System.Runtime.BooleanToString[bool] name:BooleanToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:BooleanToString entry:- charset:- params:1
-      (par System.Runtime.BooleanToString[bool]/value value bool 0 -)
+      (par System.Runtime.BooleanToString[bool]/value value bool 0 - -)
     )
     (fn System.Runtime.CharToString[char] name:CharToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:CharToString entry:- charset:- params:1
-      (par System.Runtime.CharToString[char]/value value char 0 -)
+      (par System.Runtime.CharToString[char]/value value char 0 - -)
     )
     (fn System.Runtime.ParseInt64[string] name:ParseInt64 ret:long ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ParseInt64 entry:- charset:- params:1
-      (par System.Runtime.ParseInt64[string]/s s string 0 -)
+      (par System.Runtime.ParseInt64[string]/s s string 0 - -)
     )
     (fn System.Runtime.UInt64ToString[ulong] name:UInt64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:UInt64ToString entry:- charset:- params:1
-      (par System.Runtime.UInt64ToString[ulong]/value value ulong 0 -)
+      (par System.Runtime.UInt64ToString[ulong]/value value ulong 0 - -)
     )
     (fn System.Runtime.StringFromChars[char[]] name:StringFromChars ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- params:1
-      (par System.Runtime.StringFromChars[char[]]/chars chars char[] 0 -)
+      (par System.Runtime.StringFromChars[char[]]/chars chars char[] 0 - -)
     )
     (fn System.SByte.ToString[sbyte] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.SByte.ToString[sbyte]/this this sbyte 0 -)
+      (par System.SByte.ToString[sbyte]/this this sbyte 0 - this)
     )
     (fn System.SByte.CompareTo[sbyte,sbyte] name:CompareTo ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.SByte.CompareTo[sbyte,sbyte]/this this sbyte 0 -)
-      (par System.SByte.CompareTo[sbyte,sbyte]/value value sbyte 1 -)
+      (par System.SByte.CompareTo[sbyte,sbyte]/this this sbyte 0 - this)
+      (par System.SByte.CompareTo[sbyte,sbyte]/value value sbyte 1 - -)
     )
     (fn System.SByte.Parse[string] name:Parse ret:sbyte ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.SByte.Parse[string]/s s string 0 -)
+      (par System.SByte.Parse[string]/s s string 0 - -)
     )
     (fn System.Single.ToString[float] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.Single.ToString[float]/this this float 0 -)
+      (par System.Single.ToString[float]/this this float 0 - this)
     )
     (fn System.String.IsNullOrEmpty[string] name:IsNullOrEmpty ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.String.IsNullOrEmpty[string]/s s string 0 -)
+      (par System.String.IsNullOrEmpty[string]/s s string 0 - -)
     )
     (fn System.String.ToUpper[string] name:ToUpper ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.String.ToUpper[string]/this this string 0 -)
+      (par System.String.ToUpper[string]/this this string 0 - this)
     )
     (fn System.String.ToLower[string] name:ToLower ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.String.ToLower[string]/this this string 0 -)
+      (par System.String.ToLower[string]/this this string 0 - this)
     )
     (fn System.String.StartsWith[string,string] name:StartsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.StartsWith[string,string]/this this string 0 -)
-      (par System.String.StartsWith[string,string]/prefix prefix string 1 -)
+      (par System.String.StartsWith[string,string]/this this string 0 - this)
+      (par System.String.StartsWith[string,string]/prefix prefix string 1 - -)
     )
     (fn System.String.EndsWith[string,string] name:EndsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.EndsWith[string,string]/this this string 0 -)
-      (par System.String.EndsWith[string,string]/suffix suffix string 1 -)
+      (par System.String.EndsWith[string,string]/this this string 0 - this)
+      (par System.String.EndsWith[string,string]/suffix suffix string 1 - -)
     )
     (fn System.String.Contains[string,string] name:Contains ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.Contains[string,string]/this this string 0 -)
-      (par System.String.Contains[string,string]/sub sub string 1 -)
+      (par System.String.Contains[string,string]/this this string 0 - this)
+      (par System.String.Contains[string,string]/sub sub string 1 - -)
     )
     (fn System.String.IndexOf[string,string] name:IndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.IndexOf[string,string]/this this string 0 -)
-      (par System.String.IndexOf[string,string]/sub sub string 1 -)
-    )
-    (fn System.String.Reverse[string] name:Reverse ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.String.Reverse[string]/this this string 0 -)
-    )
-    (fn System.String.Replicate[string,int] name:Replicate ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.Replicate[string,int]/this this string 0 -)
-      (par System.String.Replicate[string,int]/n n int 1 -)
-    )
-    (fn System.String.CountChar[string,char] name:CountChar ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.CountChar[string,char]/this this string 0 -)
-      (par System.String.CountChar[string,char]/c c char 1 -)
-    )
-    (fn System.String.IsPalindrome[string] name:IsPalindrome ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.String.IsPalindrome[string]/this this string 0 -)
+      (par System.String.IndexOf[string,string]/this this string 0 - this)
+      (par System.String.IndexOf[string,string]/sub sub string 1 - -)
     )
     (fn System.String.Trim[string] name:Trim ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.String.Trim[string]/this this string 0 -)
+      (par System.String.Trim[string]/this this string 0 - this)
     )
     (fn System.String.Replace[string,string,string] name:Replace ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
-      (par System.String.Replace[string,string,string]/this this string 0 -)
-      (par System.String.Replace[string,string,string]/old old string 1 -)
-      (par System.String.Replace[string,string,string]/replacement replacement string 2 -)
-    )
-    (fn System.String.CountSubstring[string,string] name:CountSubstring ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.CountSubstring[string,string]/this this string 0 -)
-      (par System.String.CountSubstring[string,string]/sub sub string 1 -)
+      (par System.String.Replace[string,string,string]/this this string 0 - this)
+      (par System.String.Replace[string,string,string]/old old string 1 - -)
+      (par System.String.Replace[string,string,string]/replacement replacement string 2 - -)
     )
     (fn System.String.PadLeft[string,int,char] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
-      (par System.String.PadLeft[string,int,char]/this this string 0 -)
-      (par System.String.PadLeft[string,int,char]/totalWidth totalWidth int 1 -)
-      (par System.String.PadLeft[string,int,char]/padChar padChar char 2 -)
+      (par System.String.PadLeft[string,int,char]/this this string 0 - this)
+      (par System.String.PadLeft[string,int,char]/totalWidth totalWidth int 1 - -)
+      (par System.String.PadLeft[string,int,char]/padChar padChar char 2 - -)
     )
     (fn System.String.PadLeft[string,int] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.PadLeft[string,int]/this this string 0 -)
-      (par System.String.PadLeft[string,int]/totalWidth totalWidth int 1 -)
+      (par System.String.PadLeft[string,int]/this this string 0 - this)
+      (par System.String.PadLeft[string,int]/totalWidth totalWidth int 1 - -)
     )
     (fn System.String.PadRight[string,int,char] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
-      (par System.String.PadRight[string,int,char]/this this string 0 -)
-      (par System.String.PadRight[string,int,char]/totalWidth totalWidth int 1 -)
-      (par System.String.PadRight[string,int,char]/padChar padChar char 2 -)
+      (par System.String.PadRight[string,int,char]/this this string 0 - this)
+      (par System.String.PadRight[string,int,char]/totalWidth totalWidth int 1 - -)
+      (par System.String.PadRight[string,int,char]/padChar padChar char 2 - -)
     )
     (fn System.String.PadRight[string,int] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.PadRight[string,int]/this this string 0 -)
-      (par System.String.PadRight[string,int]/totalWidth totalWidth int 1 -)
+      (par System.String.PadRight[string,int]/this this string 0 - this)
+      (par System.String.PadRight[string,int]/totalWidth totalWidth int 1 - -)
     )
     (fn System.String.Split[string,char] name:Split ret:string[] ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.String.Split[string,char]/this this string 0 -)
-      (par System.String.Split[string,char]/sep sep char 1 -)
+      (par System.String.Split[string,char]/this this string 0 - this)
+      (par System.String.Split[string,char]/sep sep char 1 - -)
     )
     (fn System.UInt16.ToString[ushort] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.UInt16.ToString[ushort]/this this ushort 0 -)
+      (par System.UInt16.ToString[ushort]/this this ushort 0 - this)
     )
     (fn System.UInt16.CompareTo[ushort,ushort] name:CompareTo ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.UInt16.CompareTo[ushort,ushort]/this this ushort 0 -)
-      (par System.UInt16.CompareTo[ushort,ushort]/value value ushort 1 -)
+      (par System.UInt16.CompareTo[ushort,ushort]/this this ushort 0 - this)
+      (par System.UInt16.CompareTo[ushort,ushort]/value value ushort 1 - -)
     )
     (fn System.UInt16.Parse[string] name:Parse ret:ushort ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.UInt16.Parse[string]/s s string 0 -)
+      (par System.UInt16.Parse[string]/s s string 0 - -)
     )
     (fn System.UInt32.ToString[uint] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.UInt32.ToString[uint]/this this uint 0 -)
+      (par System.UInt32.ToString[uint]/this this uint 0 - this)
     )
     (fn System.UInt32.CompareTo[uint,uint] name:CompareTo ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.UInt32.CompareTo[uint,uint]/this this uint 0 -)
-      (par System.UInt32.CompareTo[uint,uint]/value value uint 1 -)
+      (par System.UInt32.CompareTo[uint,uint]/this this uint 0 - this)
+      (par System.UInt32.CompareTo[uint,uint]/value value uint 1 - -)
     )
     (fn System.UInt32.Parse[string] name:Parse ret:uint ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.UInt32.Parse[string]/s s string 0 -)
+      (par System.UInt32.Parse[string]/s s string 0 - -)
     )
     (fn System.UInt64.ToString[ulong] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
-      (par System.UInt64.ToString[ulong]/this this ulong 0 -)
+      (par System.UInt64.ToString[ulong]/this this ulong 0 - this)
     )
     (fn System.UInt64.CompareTo[ulong,ulong] name:CompareTo ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
-      (par System.UInt64.CompareTo[ulong,ulong]/this this ulong 0 -)
-      (par System.UInt64.CompareTo[ulong,ulong]/value value ulong 1 -)
+      (par System.UInt64.CompareTo[ulong,ulong]/this this ulong 0 - this)
+      (par System.UInt64.CompareTo[ulong,ulong]/value value ulong 1 - -)
     )
     (loc System.Array.Sum[int[]]/sum false int)
     (loc System.Array.Sum[int[]]/i false int)
@@ -602,29 +584,19 @@
     (loc System.String.ToLower[string]/v false int)
     (loc System.String.Contains[string,string]/i false int)
     (loc System.String.IndexOf[string,string]/i false int)
-    (loc System.String.Reverse[string]/result false string)
-    (loc System.String.Reverse[string]/i false int)
-    (loc System.String.Replicate[string,int]/result false string)
-    (loc System.String.Replicate[string,int]/i false int)
-    (loc System.String.CountChar[string,char]/count false int)
-    (loc System.String.CountChar[string,char]/i false int)
-    (loc System.String.IsPalindrome[string]/lo false int)
-    (loc System.String.IsPalindrome[string]/hi false int)
     (loc System.String.Trim[string]/start false int)
     (loc System.String.Trim[string]/end false int)
     (loc System.String.Trim[string]/first false char)
     (loc System.String.Trim[string]/last false char)
     (loc System.String.Replace[string,string,string]/result false string)
     (loc System.String.Replace[string,string,string]/i false int)
-    (loc System.String.CountSubstring[string,string]/count false int)
-    (loc System.String.CountSubstring[string,string]/i false int)
     (loc System.String.PadLeft[string,int,char]/result false string)
     (loc System.String.PadRight[string,int,char]/result false string)
     (loc System.String.Split[string,char]/count false int)
+    (loc System.String.Split[string,char]/i false int)
     (loc System.String.Split[string,char]/result false string[])
     (loc System.String.Split[string,char]/start false int)
     (loc System.String.Split[string,char]/index false int)
-    (loc System.String.Split[string,char]/i false int)
     (loc System.UInt16.CompareTo[ushort,ushort]/a false int)
     (loc System.UInt16.CompareTo[ushort,ushort]/b false int)
     (loc System.UInt32.CompareTo[uint,uint]/a false long)
@@ -4081,221 +4053,6 @@
         )
       )
     )
-    (body System.String.Reverse[string]
-      (block 10
-        (vardecl System.String.Reverse[string]/result
-          (lit string s:)
-        )
-        (vardecl System.String.Reverse[string]/i
-          (binary
-            (bop - int int)
-            (memberacc int Length
-              (var System.String.Reverse[string]/this)
-            )
-            (lit int i:1)
-          )
-        )
-        (goto continue1)
-        (label Label1)
-        (exprstmt
-          (assign System.String.Reverse[string]/result
-            (binary
-              (bop + string string)
-              (var System.String.Reverse[string]/result)
-              (conv string
-                (elem char
-                  (var System.String.Reverse[string]/this)
-                  (var System.String.Reverse[string]/i)
-                )
-              )
-            )
-          )
-        )
-        (exprstmt
-          (assign System.String.Reverse[string]/i
-            (binary
-              (bop - int int)
-              (var System.String.Reverse[string]/i)
-              (lit int i:1)
-            )
-          )
-        )
-        (label continue1)
-        (cgoto Label1
-          (binary
-            (bop >= int int)
-            (var System.String.Reverse[string]/i)
-            (lit int i:0)
-          ) true
-        )
-        (label break1)
-        (return
-          (var System.String.Reverse[string]/result)
-        )
-      )
-    )
-    (body System.String.Replicate[string,int]
-      (block 10
-        (vardecl System.String.Replicate[string,int]/result
-          (lit string s:)
-        )
-        (vardecl System.String.Replicate[string,int]/i
-          (lit int i:0)
-        )
-        (goto continue1)
-        (label Label1)
-        (exprstmt
-          (assign System.String.Replicate[string,int]/result
-            (binary
-              (bop + string string)
-              (var System.String.Replicate[string,int]/result)
-              (var System.String.Replicate[string,int]/this)
-            )
-          )
-        )
-        (exprstmt
-          (assign System.String.Replicate[string,int]/i
-            (binary
-              (bop + int int)
-              (var System.String.Replicate[string,int]/i)
-              (lit int i:1)
-            )
-          )
-        )
-        (label continue1)
-        (cgoto Label1
-          (binary
-            (bop < int int)
-            (var System.String.Replicate[string,int]/i)
-            (var System.String.Replicate[string,int]/n)
-          ) true
-        )
-        (label break1)
-        (return
-          (var System.String.Replicate[string,int]/result)
-        )
-      )
-    )
-    (body System.String.CountChar[string,char]
-      (block 12
-        (vardecl System.String.CountChar[string,char]/count
-          (lit int i:0)
-        )
-        (vardecl System.String.CountChar[string,char]/i
-          (lit int i:0)
-        )
-        (goto continue1)
-        (label Label1)
-        (cgoto Label2
-          (binary
-            (bop == char char)
-            (elem char
-              (var System.String.CountChar[string,char]/this)
-              (var System.String.CountChar[string,char]/i)
-            )
-            (var System.String.CountChar[string,char]/c)
-          ) false
-        )
-        (exprstmt
-          (assign System.String.CountChar[string,char]/count
-            (binary
-              (bop + int int)
-              (var System.String.CountChar[string,char]/count)
-              (lit int i:1)
-            )
-          )
-        )
-        (label Label2)
-        (exprstmt
-          (assign System.String.CountChar[string,char]/i
-            (binary
-              (bop + int int)
-              (var System.String.CountChar[string,char]/i)
-              (lit int i:1)
-            )
-          )
-        )
-        (label continue1)
-        (cgoto Label1
-          (binary
-            (bop < int int)
-            (var System.String.CountChar[string,char]/i)
-            (memberacc int Length
-              (var System.String.CountChar[string,char]/this)
-            )
-          ) true
-        )
-        (label break1)
-        (return
-          (var System.String.CountChar[string,char]/count)
-        )
-      )
-    )
-    (body System.String.IsPalindrome[string]
-      (block 13
-        (vardecl System.String.IsPalindrome[string]/lo
-          (lit int i:0)
-        )
-        (vardecl System.String.IsPalindrome[string]/hi
-          (binary
-            (bop - int int)
-            (memberacc int Length
-              (var System.String.IsPalindrome[string]/this)
-            )
-            (lit int i:1)
-          )
-        )
-        (goto continue1)
-        (label Label1)
-        (cgoto Label2
-          (binary
-            (bop != char char)
-            (elem char
-              (var System.String.IsPalindrome[string]/this)
-              (var System.String.IsPalindrome[string]/lo)
-            )
-            (elem char
-              (var System.String.IsPalindrome[string]/this)
-              (var System.String.IsPalindrome[string]/hi)
-            )
-          ) false
-        )
-        (return
-          (lit bool b:0)
-        )
-        (label Label2)
-        (exprstmt
-          (assign System.String.IsPalindrome[string]/lo
-            (binary
-              (bop + int int)
-              (var System.String.IsPalindrome[string]/lo)
-              (lit int i:1)
-            )
-          )
-        )
-        (exprstmt
-          (assign System.String.IsPalindrome[string]/hi
-            (binary
-              (bop - int int)
-              (var System.String.IsPalindrome[string]/hi)
-              (lit int i:1)
-            )
-          )
-        )
-        (label continue1)
-        (cgoto Label1
-          (binary
-            (bop < int int)
-            (var System.String.IsPalindrome[string]/lo)
-            (var System.String.IsPalindrome[string]/hi)
-          ) true
-        )
-        (label break1)
-        (return
-          (lit bool b:1)
-        )
-      )
-    )
     (body System.String.Trim[string]
       (block 32
         (vardecl System.String.Trim[string]/start
@@ -4561,96 +4318,6 @@
         )
       )
     )
-    (body System.String.CountSubstring[string,string]
-      (block 18
-        (cgoto Label1
-          (binary
-            (bop == int int)
-            (memberacc int Length
-              (var System.String.CountSubstring[string,string]/sub)
-            )
-            (lit int i:0)
-          ) false
-        )
-        (return
-          (lit int i:0)
-        )
-        (label Label1)
-        (vardecl System.String.CountSubstring[string,string]/count
-          (lit int i:0)
-        )
-        (vardecl System.String.CountSubstring[string,string]/i
-          (lit int i:0)
-        )
-        (goto continue1)
-        (label Label2)
-        (cgoto Label3
-          (binary
-            (bop == string string)
-            (membercall string substring - 2
-              (var System.String.CountSubstring[string,string]/this)
-              (var System.String.CountSubstring[string,string]/i)
-              (memberacc int Length
-                (var System.String.CountSubstring[string,string]/sub)
-              )
-            )
-            (var System.String.CountSubstring[string,string]/sub)
-          ) false
-        )
-        (exprstmt
-          (assign System.String.CountSubstring[string,string]/count
-            (binary
-              (bop + int int)
-              (var System.String.CountSubstring[string,string]/count)
-              (lit int i:1)
-            )
-          )
-        )
-        (exprstmt
-          (assign System.String.CountSubstring[string,string]/i
-            (binary
-              (bop + int int)
-              (var System.String.CountSubstring[string,string]/i)
-              (memberacc int Length
-                (var System.String.CountSubstring[string,string]/sub)
-              )
-            )
-          )
-        )
-        (goto Label4)
-        (label Label3)
-        (exprstmt
-          (assign System.String.CountSubstring[string,string]/i
-            (binary
-              (bop + int int)
-              (var System.String.CountSubstring[string,string]/i)
-              (lit int i:1)
-            )
-          )
-        )
-        (label Label4)
-        (label continue1)
-        (cgoto Label2
-          (binary
-            (bop <= int int)
-            (var System.String.CountSubstring[string,string]/i)
-            (binary
-              (bop - int int)
-              (memberacc int Length
-                (var System.String.CountSubstring[string,string]/this)
-              )
-              (memberacc int Length
-                (var System.String.CountSubstring[string,string]/sub)
-              )
-            )
-          ) true
-        )
-        (label break1)
-        (return
-          (var System.String.CountSubstring[string,string]/count)
-        )
-      )
-    )
     (body System.String.PadLeft[string,int,char]
       (block 8
         (vardecl System.String.PadLeft[string,int,char]/result
@@ -4742,17 +4409,55 @@
       )
     )
     (body System.String.Split[string,char]
-      (block 18
+      (block 28
         (vardecl System.String.Split[string,char]/count
+          (lit int i:1)
+        )
+        (vardecl System.String.Split[string,char]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
           (binary
-            (bop + int int)
-            (call System.String.CountChar[string,char] 2
+            (bop == char char)
+            (elem char
               (var System.String.Split[string,char]/this)
-              (var System.String.Split[string,char]/sep)
+              (var System.String.Split[string,char]/i)
             )
-            (lit int i:1)
+            (var System.String.Split[string,char]/sep)
+          ) false
+        )
+        (exprstmt
+          (assign System.String.Split[string,char]/count
+            (binary
+              (bop + int int)
+              (var System.String.Split[string,char]/count)
+              (lit int i:1)
+            )
           )
         )
+        (label Label2)
+        (exprstmt
+          (assign System.String.Split[string,char]/i
+            (binary
+              (bop + int int)
+              (var System.String.Split[string,char]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < int int)
+            (var System.String.Split[string,char]/i)
+            (memberacc int Length
+              (var System.String.Split[string,char]/this)
+            )
+          ) true
+        )
+        (label break1)
         (vardecl System.String.Split[string,char]/result
           (arrnew string[]
             (var System.String.Split[string,char]/count) 0
@@ -4764,12 +4469,14 @@
         (vardecl System.String.Split[string,char]/index
           (lit int i:0)
         )
-        (vardecl System.String.Split[string,char]/i
-          (lit int i:0)
+        (exprstmt
+          (assign System.String.Split[string,char]/i
+            (lit int i:0)
+          )
         )
-        (goto continue1)
-        (label Label1)
-        (cgoto Label2
+        (goto continue2)
+        (label Label3)
+        (cgoto Label4
           (binary
             (bop == char char)
             (elem char
@@ -4814,7 +4521,7 @@
             )
           )
         )
-        (label Label2)
+        (label Label4)
         (exprstmt
           (assign System.String.Split[string,char]/i
             (binary
@@ -4824,8 +4531,8 @@
             )
           )
         )
-        (label continue1)
-        (cgoto Label1
+        (label continue2)
+        (cgoto Label3
           (binary
             (bop < int int)
             (var System.String.Split[string,char]/i)
@@ -4834,7 +4541,7 @@
             )
           ) true
         )
-        (label break1)
+        (label break2)
         (exprstmt
           (elemassign string
             (elem string
@@ -5040,4 +4747,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:7fd3e34c8dc9494d2cd51bd13107919118ee3e895ca7bb411b5075eb99469cf1)
+(checksum sha256:643e05575fb925892c0a2b8ba9477de004a46a06db590577b88c6002c976f35f)

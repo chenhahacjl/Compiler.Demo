@@ -38,7 +38,7 @@ namespace System.Collections.Generic
         /// <summary>查看队首不移除。</summary>
         public function Peek(): T
         {
-            return _items.Get(0)
+            return _items[0]
         }
 
         /// <summary>清空。</summary>

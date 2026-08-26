@@ -106,61 +106,6 @@ namespace System
             return -1
         }
 
-        public function Reverse(): string
-        {
-            var result = ""
-            var i = this.Length - 1
-            while i >= 0
-            {
-                result = result + string(this[i])
-                i = i - 1
-            }
-            return result
-        }
-
-        public function Replicate(n: i32): string
-        {
-            var result = ""
-            var i = 0
-            while i < n
-            {
-                result = result + this
-                i = i + 1
-            }
-            return result
-        }
-
-        public function CountChar(c: char): i32
-        {
-            var count = 0
-            var i = 0
-            while i < this.Length
-            {
-                if this[i] == c
-                {
-                    count = count + 1
-                }
-                i = i + 1
-            }
-            return count
-        }
-
-        public function IsPalindrome(): bool
-        {
-            var lo = 0
-            var hi = this.Length - 1
-            while lo < hi
-            {
-                if this[lo] != this[hi]
-                {
-                    return false
-                }
-                lo = lo + 1
-                hi = hi - 1
-            }
-            return true
-        }
-
         public function Trim(): string
         {
             var start = 0
@@ -227,29 +172,6 @@ namespace System
             return result
         }
 
-        public function CountSubstring(sub: string): i32
-        {
-            if sub.Length == 0
-            {
-                return 0
-            }
-            var count = 0
-            var i = 0
-            while i <= this.Length - sub.Length
-            {
-                if this.substring(i, sub.Length) == sub
-                {
-                    count = count + 1
-                    i = i + sub.Length
-                }
-                else
-                {
-                    i = i + 1
-                }
-            }
-            return count
-        }
-
         public function PadLeft(totalWidth: i32, padChar: char): string
         {
             var result = this
@@ -282,11 +204,20 @@ namespace System
 
         public function Split(sep: char): string[]
         {
-            var count = this.CountChar(sep) + 1
+            var count = 1
+            var i = 0
+            while i < this.Length
+            {
+                if this[i] == sep
+                {
+                    count = count + 1
+                }
+                i = i + 1
+            }
             var result = new string[count]
             var start = 0
             var index = 0
-            var i = 0
+            i = 0
             while i < this.Length
             {
                 if this[i] == sep

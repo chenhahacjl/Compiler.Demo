@@ -4,7 +4,7 @@
 
 namespace System.Collections.Generic
 {
-    public class List<T>
+    public facade class List<T>
     {
         private _items: T[]
         private _count: i32
@@ -49,19 +49,19 @@ namespace System.Collections.Generic
         }
 
         // ------------------------------------------------------------------
-        // 元素访问（索引器提级前过渡 API）
+        // 元素访问（索引器 → BCL List`1.get_Item / set_Item）
         // ------------------------------------------------------------------
 
-        /// <summary>读取——越界为运行时错误。</summary>
-        public function Get(index: i32): T
+        public property this[index: i32]: T
         {
-            return _items[index]
-        }
-
-        /// <summary>覆盖写入——index 须在 [0, Count) 内。</summary>
-        public function Set(index: i32, value: T): void
-        {
-            _items[index] = value
+            get
+            {
+                return _items[index]
+            }
+            set
+            {
+                _items[index] = value
+            }
         }
 
         // ------------------------------------------------------------------
@@ -159,7 +159,7 @@ namespace System.Collections.Generic
             var i = index
             while i < index + count && i < _count
             {
-                result.Add(Get(i))
+                result.Add(this[i])
                 i = i + 1
             }
 

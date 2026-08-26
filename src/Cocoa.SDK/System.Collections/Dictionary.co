@@ -5,7 +5,7 @@
 
 namespace System.Collections.Generic
 {
-    public class Dictionary<K, V>
+    public facade class Dictionary<K, V>
     {
         private _keys: K[]
         private _values: V[]
@@ -27,59 +27,57 @@ namespace System.Collections.Generic
             }
         }
 
-        public function Count(): i32
+        public property Count: i32
         {
-            return _count
-        }
-
-        public function Get(key: K): V
-        {
-            var idx = FindEntry(key)
-            return _values[idx]
-        }
-
-        public function Set(key: K, value: V): void
-        {
-            var b = BucketOf(key)
-            var i = _buckets[b]
-            while i >= 0
+            get
             {
-                if SameKey(_keys[i], key)
+                return _count
+            }
+        }
+
+        public property this[key: K]: V
+        {
+            get
+            {
+                var idx = FindEntry(key)
+                return _values[idx]
+            }
+            set
+            {
+                var b = BucketOf(key)
+                var i = _buckets[b]
+                while i >= 0
                 {
-                    _values[i] = value
-                    return
+                    if SameKey(_keys[i], key)
+                    {
+                        _values[i] = value
+                        return
+                    }
+                    i = _next[i]
                 }
-                i = _next[i]
-            }
 
-            if _count >= _keys.Length
-            {
-                Rehash(_keys.Length * 2)
-                b = BucketOf(key)
-            }
+                if _count >= _keys.Length
+                {
+                    Rehash(_keys.Length * 2)
+                    b = BucketOf(key)
+                }
 
-            _keys[_count] = key
-            _values[_count] = value
-            _next[_count] = _buckets[b]
-            _buckets[b] = _count
-            _count = _count + 1
+                _keys[_count] = key
+                _values[_count] = value
+                _next[_count] = _buckets[b]
+                _buckets[b] = _count
+                _count = _count + 1
+            }
         }
 
-        public function TryGetValue(key: K, out value: V): bool
+        public function Add(key: K, value: V): void
         {
-            var b = BucketOf(key)
-            var i = _buckets[b]
-            while i >= 0
+            if ContainsKey(key)
             {
-                if SameKey(_keys[i], key)
-                {
-                    value = _values[i]
-                    return true
-                }
-                i = _next[i]
+                return
             }
 
-            return false
+            this[key] = value
         }
 
         public function ContainsKey(key: K): bool

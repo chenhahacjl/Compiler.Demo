@@ -116,6 +116,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 ? (TypeDef.Namespace.Length == 0 ? TypeDef.Name : TypeDef.Namespace + "." + TypeDef.Name)
                 : Reference!.FullName,
             IlTypeKind.SzArray => ElementType!.FullName + "[]",
+            IlTypeKind.ByRef => ElementType!.FullName + "&",
             _ => "?",
         };
     }

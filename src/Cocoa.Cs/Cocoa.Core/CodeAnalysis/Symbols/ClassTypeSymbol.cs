@@ -263,6 +263,21 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
+        /// <summary>索引器查找（本类声明的第一个 IsIndexer 属性；6e-M24）。</summary>
+        internal PropertySymbol? GetIndexer()
+        {
+            EnsureMembersMaterialized();
+            foreach (var property in _properties)
+            {
+                if (property.IsIndexer)
+                {
+                    return property;
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>属性查找（沿继承链向上，含接口继承链）。</summary>
         public PropertySymbol? GetProperty(string name)
         {

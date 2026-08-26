@@ -456,7 +456,6 @@ function Main()
     Console.WriteLine(String.Replace(""aaa"", ""aa"", ""b""))
     Console.WriteLine(String.PadLeft(""7"", 3, '0'))
     Console.WriteLine(String.PadRight(""7"", 3, '0'))
-    Console.WriteLine(String.CountSubstring(""aaaa"", ""aa""))
     var parts = String.Split(""a,b,c"", ',')
     Console.WriteLine(parts.Length)
     Console.WriteLine(parts[0])
@@ -473,7 +472,6 @@ function Main()
                 "ba\r\n" +
                 "007\r\n" +
                 "700\r\n" +
-                "2\r\n" +
                 "3\r\n" +
                 "a\r\n" +
                 "b\r\n" +

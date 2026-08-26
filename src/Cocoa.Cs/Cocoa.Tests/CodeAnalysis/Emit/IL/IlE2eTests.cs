@@ -42,6 +42,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             {
                 RedirectStandardInput = true,
                 RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 UseShellExecute = false,
             };
             using var process = Process.Start(psi)!;

@@ -38,7 +38,7 @@ namespace System.Collections.Generic
         /// <summary>查看栈顶不移除。</summary>
         public function Peek(): T
         {
-            return _items.Get(_items.Count - 1)
+            return _items[_items.Count - 1]
         }
 
         /// <summary>清空。</summary>

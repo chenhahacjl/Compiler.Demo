@@ -1083,7 +1083,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 initializer = ParseExpression();
             }
 
-            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword: null, identifier, type, openBraceToken, getter, setter, closeBraceToken, equalsToken, initializer);
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword: null, identifier, type, openBraceToken, getter, setter, closeBraceToken, ImmutableArray<ParameterSyntax>.Empty, equalsToken, initializer);
         }
 
         /// <summary>前缀类型：`int` / `int[]` / `List&lt;int&gt;[]`（无冒号，C# 式类型前置）。</summary>
@@ -1374,6 +1374,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var propertyKeyword = MatchToken(SyntaxKind.PropertyKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+            // 索引器：`property this[index: i32]: T { get {} set {} }`
+            if (identifier.Text == "this" && Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                return ParseIndexerDeclaration(modifiers, propertyKeyword, identifier);
+            }
+
             var type = ParseTypeClause();
 
             // 表达式体属性：`property X: int => expr`（合成 get 访问器）
@@ -1425,7 +1432,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 initializer = ParseExpression();
             }
 
-            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken, equalsToken, initializer);
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken, ImmutableArray<ParameterSyntax>.Empty, equalsToken, initializer);
         }
 
         private PropertyAccessorSyntax ParsePropertyAccessor()
@@ -1478,6 +1485,68 @@ namespace Cocoa.CodeAnalysis.Syntax
             var getter = new PropertyAccessorSyntax(_syntaxTree, ImmutableArray<SyntaxToken>.Empty, getKeyword, SynthesizeExpressionBodyBlock(expression, arrow), semicolonToken: null);
 
             return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBrace, getter, setter: null, closeBrace);
+        }
+
+        private MemberSyntax ParseIndexerDeclaration(ImmutableArray<SyntaxToken> modifiers, SyntaxToken? propertyKeyword, SyntaxToken identifier)
+        {
+            // 已匹配 `this`，当前为 `[`
+            NextToken(); // 消耗 [
+            var builder = ImmutableArray.CreateBuilder<ParameterSyntax>();
+            if (Current.Kind != SyntaxKind.CloseBracketToken)
+            {
+                builder.Add(ParseParameter());
+                while (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                    builder.Add(ParseParameter());
+                }
+            }
+
+            MatchToken(SyntaxKind.CloseBracketToken);
+            var type = ParseTypeClause();
+
+            if (Current.Kind == SyntaxKind.FatArrowToken)
+            {
+                _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.OpenBraceToken);
+                NextToken();
+            }
+
+            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
+
+            PropertyAccessorSyntax? getter = null;
+            PropertyAccessorSyntax? setter = null;
+            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
+                {
+                    var accessor = ParsePropertyAccessor();
+                    if (accessor.IsGet)
+                    {
+                        getter = accessor;
+                    }
+                    else
+                    {
+                        setter = accessor;
+                    }
+                }
+                else
+                {
+                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword);
+                    NextToken();
+                }
+            }
+
+            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
+
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? initializer = null;
+            if (Current.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                initializer = ParseExpression();
+            }
+
+            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken, builder.ToImmutable(), equalsToken, initializer);
         }
 
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()

@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed partial class PropertyDeclarationSyntax : MemberSyntax
     {
-        internal PropertyDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken? propertyKeyword, SyntaxToken identifier, TypeClauseSyntax type, SyntaxToken openBraceToken, PropertyAccessorSyntax? getter, PropertyAccessorSyntax? setter, SyntaxToken closeBraceToken, SyntaxToken? equalsToken = null, ExpressionSyntax? initializer = null)
+        internal PropertyDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken? propertyKeyword, SyntaxToken identifier, TypeClauseSyntax type, SyntaxToken openBraceToken, PropertyAccessorSyntax? getter, PropertyAccessorSyntax? setter, SyntaxToken closeBraceToken, ImmutableArray<ParameterSyntax> parameters = default, SyntaxToken? equalsToken = null, ExpressionSyntax? initializer = null)
             : base(syntaxTree, modifiers)
         {
             PropertyKeyword = propertyKeyword;
@@ -17,6 +17,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             Getter = getter;
             Setter = setter;
             CloseBraceToken = closeBraceToken;
+            Parameters = parameters.IsDefault ? ImmutableArray<ParameterSyntax>.Empty : parameters;
             EqualsToken = equalsToken;
             Initializer = initializer;
         }
@@ -30,6 +31,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public PropertyAccessorSyntax? Getter { get; }
         public PropertyAccessorSyntax? Setter { get; }
         public SyntaxToken CloseBraceToken { get; }
+        public ImmutableArray<ParameterSyntax> Parameters { get; }
         public SyntaxToken? EqualsToken { get; }
         public ExpressionSyntax? Initializer { get; }
 

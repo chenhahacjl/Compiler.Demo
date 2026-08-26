@@ -1052,6 +1052,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 w.Field(TypeRef(p.Type));
                 w.Field(p.Ordinal);
                 w.Field(p.IsOut ? "out" : p.IsRef ? "ref" : "-");
+                w.Field(p.IsThisParameter ? "this" : "-");
                 w.End();
             }
             w.End();
@@ -2060,7 +2061,15 @@ namespace Cocoa.CodeAnalysis.Cod
                     isRef = modifierText == "ref";
                 }
 
-                var parameter = new ParameterSymbol(pName, pType, ordinal, isOut, isRef);
+                var isThis = false;
+                var thisText = reader.PeekRaw();
+                if (thisText is "this" or "-")
+                {
+                    reader.ExpectString();
+                    isThis = thisText == "this";
+                }
+
+                var parameter = new ParameterSymbol(pName, pType, ordinal, isOut, isRef, isThis);
                 parameters.Add(parameter);
                 context.VariablesByKey[pKey] = parameter;
                 reader.End();

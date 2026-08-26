@@ -2494,58 +2494,102 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundBlockStatement(accessor, ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(accessor, memberAssignment)));
         }
 
-        private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)        {
+        private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
+        {
+            var isIndexer = syntax.Identifier.Text == "this";
             var propertyType = BindTypeClause(syntax.Type);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Private);
-            var isStatic = syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
+            var isStatic = isIndexer ? false : syntax.Modifiers.Any(m => m.Kind == SyntaxKind.StaticKeyword);
             var isAuto = syntax.IsAuto;
+
+            if (isIndexer && isAuto)
+            {
+                _diagnostics.ReportError(syntax.Getter?.Body?.Location ?? syntax.Location, "索引器不支持自动属性，必须提供 get/set 访问器主体。");
+            }
+
+            // 自动属性：合成后备字段 _Name（索引器禁用自动属性）
+            if (isAuto && !isIndexer)
+            {
+                var backingField = new FieldSymbol("_" + syntax.Identifier.Text, propertyType, visibility, classType, isReadonly: false, isStatic: isStatic);
+                classType.AddField(backingField);
+            }
 
             // 访问器可见性：独立计算 + 严格 C# 校验（CS0273 / 至多一个访问器带修饰符）
             ValidateAccessorVisibility(syntax, visibility);
             var getterVisibility = syntax.Getter != null ? GetVisibility(syntax.Getter.Modifiers, visibility) : visibility;
             var setterVisibility = syntax.Setter != null ? GetVisibility(syntax.Setter.Modifiers, visibility) : visibility;
 
-            // 后备字段（自动属性）
-            FieldSymbol? backingField = null;
-            if (isAuto)
+            // 索引器参数（this[a: T]）：getter 接收全部；setter 额外接收 value
+            var indexParams = ImmutableArray<ParameterSymbol>.Empty;
+            if (isIndexer)
             {
-                var backingName = "_" + syntax.Identifier.Text;
-                if (classType.GetDeclaredField(backingName) == null)
-                {
-                    backingField = new FieldSymbol(backingName, propertyType, Visibility.Private, classType);
-                    classType.AddField(backingField);
-                }
+                indexParams = BindIndexerParameters(syntax.Parameters);
             }
 
-            // getter：get_Name
+            // facade 实例方法降级（隐藏首参 this + 强制静态）；索引器亦遵循
+            var lower = !isStatic && classType.IsFacadeClass;
+
+            // getter：get_Name / get_Item
             FunctionSymbol? getter = null;
             if (syntax.Getter != null)
             {
-                getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
-                    syntax: syntax.Getter, containingClass: classType, visibility: getterVisibility) { IsStatic = isStatic };
+                var getterParams = isIndexer ? indexParams : ImmutableArray<ParameterSymbol>.Empty;
+                if (lower)
+                {
+                    var thisParam = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0, isThis: true);
+                    getterParams = new[] { thisParam }.Concat(getterParams.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal + 1))).ToImmutableArray();
+                }
+
+                getter = new FunctionSymbol(isIndexer ? "get_Item" : "get_" + syntax.Identifier.Text, getterParams, propertyType, null,
+                    syntax: syntax.Getter, containingClass: classType, visibility: getterVisibility) { IsStatic = isStatic || lower };
                 classType.AddMethod(getter);
                 classFunctions.Add(getter);
             }
 
-            // setter：set_Name（value 隐式参数）
+            // setter：set_Name / set_Item（value 隐式参数）
             FunctionSymbol? setter = null;
             if (syntax.Setter != null)
             {
-                var valueParameter = new ParameterSymbol("value", propertyType, 0);
-                setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
-                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic };
+                var valueParameter = new ParameterSymbol("value", propertyType, isIndexer ? indexParams.Length : 0);
+                var setterParams = isIndexer ? indexParams.Add(valueParameter) : ImmutableArray.Create(valueParameter);
+                if (lower)
+                {
+                    var thisParam = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0, isThis: true);
+                    setterParams = new[] { thisParam }.Concat(setterParams.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal + 1))).ToImmutableArray();
+                }
+
+                setter = new FunctionSymbol(isIndexer ? "set_Item" : "set_" + syntax.Identifier.Text, setterParams, TypeSymbol.Void, null,
+                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic || lower };
                 classType.AddMethod(setter);
                 classFunctions.Add(setter);
             }
 
-            if (classType.GetDeclaredProperty(syntax.Identifier.Text) == null)
+            var propertyName = isIndexer ? "Item" : syntax.Identifier.Text;
+            if (classType.GetDeclaredProperty(propertyName) == null)
             {
-                classType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, classType, getter, setter, visibility, isStatic));
+                var property = new PropertySymbol(propertyName, propertyType, classType, getter, setter, visibility, isStatic, isIndexer: isIndexer);
+                if (getter != null) getter.ContainingProperty = property;
+                if (setter != null) setter.ContainingProperty = property;
+                classType.AddProperty(property);
             }
             else
             {
-                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, propertyName);
             }
+        }
+
+        private ImmutableArray<ParameterSymbol> BindIndexerParameters(ImmutableArray<ParameterSyntax> parameters)
+        {
+            var builder = ImmutableArray.CreateBuilder<ParameterSymbol>();
+            var ordinal = 0;
+            foreach (var p in parameters)
+            {
+                var type = BindTypeClause(p.Type);
+                builder.Add(new ParameterSymbol(p.Identifier.Text, type, ordinal));
+                ordinal++;
+            }
+
+            return builder.ToImmutable();
         }
 
         private void CollectClasses(NamespaceDeclarationSyntax syntax, string parentNamespace, List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses)        {
@@ -5402,6 +5446,33 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundElementAssignmentExpression(syntax, arrayElementTarget.Type, arrayElementTarget, convertedExpression);
             }
 
+            // 索引器赋值：list[i] = x → set_Item（facade 经普通调用 → IL 直连 BCL；其余走 Cocoa 体）
+            if (boundTarget is BoundMemberCallExpression mcIndexer && mcIndexer.Method?.ContainingProperty?.IsIndexer == true && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+            {
+                var indexer = mcIndexer.Method.ContainingProperty!;
+                if (indexer.Setter != null)
+                {
+                    var converted = BindConversion(syntax.Expression.Location, boundExpression, indexer.Type);
+                    return new BoundMemberCallExpression(syntax, mcIndexer.Expression, "set_Item", mcIndexer.Arguments.Add(converted), TypeSymbol.Void, indexer.Setter);
+                }
+
+                _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, "Item");
+                return boundExpression;
+            }
+
+            if (boundTarget is BoundCallExpression bcIndexer && bcIndexer.Function.ContainingProperty?.IsIndexer == true && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+            {
+                var indexer = bcIndexer.Function.ContainingProperty!;
+                if (indexer.Setter != null)
+                {
+                    var converted = BindConversion(syntax.Expression.Location, boundExpression, indexer.Type);
+                    return new BoundCallExpression(syntax, indexer.Setter, bcIndexer.Arguments.Add(converted));
+                }
+
+                _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, "Item");
+                return boundExpression;
+            }
+
             if (boundTarget is BoundMemberAccessExpression memberTarget && memberTarget.Field != null &&
                 (syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken ||
                  syntax.AssignmentToken.Kind == SyntaxKind.PlusEqualsToken ||
@@ -5617,6 +5688,22 @@ namespace Cocoa.CodeAnalysis.Binding
             if (boundTarget.Type == TypeSymbol.String)
             {
                 return new BoundElementAccessExpression(syntax, TypeSymbol.Char, boundTarget, boundIndex);
+            }
+
+            // 索引器（this[...]）：重定向到 get_Item（facade 经普通调用 → IL 直连 BCL；其余走 Cocoa 体）
+            if (boundTarget.Type is ClassTypeSymbol cls)
+            {
+                var indexer = cls.GetIndexer();
+                if (indexer != null && indexer.Getter != null)
+                {
+                    var facade = cls.IsFacadeClass || (cls is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true);
+                    if (facade)
+                    {
+                        return new BoundCallExpression(syntax, indexer.Getter, ImmutableArray.Create(boundTarget, boundIndex));
+                    }
+
+                    return new BoundMemberCallExpression(syntax, boundTarget, "get_Item", ImmutableArray.Create(boundIndex), indexer.Type, indexer.Getter);
+                }
             }
 
             if (boundTarget.Type.ElementType == null)

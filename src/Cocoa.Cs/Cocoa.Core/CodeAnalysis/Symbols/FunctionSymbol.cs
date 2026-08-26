@@ -44,6 +44,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>声明语法（类方法/构造函数也指向其语法节点）。</summary>
         public SyntaxNode? Syntax { get; }
 
+        /// <summary>所属属性（索引器 get_Item/set_Item 反查；用于赋值表达式识别索引器）。6e-M24。</summary>
+        public PropertySymbol? ContainingProperty { get; internal set; }
+
         /// <summary>可见性（仅类方法/构造有意义）。</summary>
         public Visibility Visibility { get; }
 

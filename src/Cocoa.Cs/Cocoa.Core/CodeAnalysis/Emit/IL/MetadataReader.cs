@@ -894,7 +894,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                         return IlType.Class(new IlTypeRef(NamespaceOf(fullName), NameOf(fullName), null), isValueType: element == 0x11);
                     }
                 case 0x10: // BYREF
-                    return ParseType(blob, ref pos);
+                    return IlType.ByRefOf(ParseType(blob, ref pos));
                 default:
                     throw new BadImageFormatException($"Unsupported element type 0x{element:X2} in signature.");
             }

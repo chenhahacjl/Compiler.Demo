@@ -107,10 +107,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.cod 的 Console/Math 等，不在 program.Classes 的源码声明集内）
-            var classes = program.Classes.ToList();
+            var classes = program.Classes.Where(c => !c.IsFacadeClass).ToList();
             foreach (var f in program.Functions.Keys)
             {
-                if (f.ContainingClass != null && !classes.Contains(f.ContainingClass))
+                if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass && !classes.Contains(f.ContainingClass))
                 {
                     classes.Add(f.ContainingClass);
                 }
@@ -160,6 +160,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 1.5 InterfaceImpl：所有 TypeDef 就绪后，把类实现/继承的接口（含基类链与接口继承）写入各自 TypeDef
             foreach (var classType in program.Classes)
             {
+                if (classType.IsFacadeClass) continue;
                 var typeDef = _classTypeDefs[classType];
                 foreach (var iface in classType.GetAllInterfaces())
                 {
@@ -203,6 +204,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             foreach (var functionWithBody in program.Functions)
             {
+                if (functionWithBody.Key.ContainingClass?.IsFacadeClass == true) continue;
                 if (functionWithBody.Key.BuiltinKind != null)
                 {
                     // syscall 内部原语：无方法体、调用点按 BuiltinKind 分发，不声明为 IL 方法
@@ -215,6 +217,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 2.5 属性定义（getter/setter 方法已发射）
             foreach (var classType in program.Classes)
             {
+                if (classType.IsFacadeClass) continue;
                 var typeDef = _classTypeDefs[classType];
                 foreach (var property in classType.Properties)
                 {
@@ -241,6 +244,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             foreach (var functionWithBody in program.Functions)
             {
+                if (functionWithBody.Key.ContainingClass?.IsFacadeClass == true) continue;
                 if (functionWithBody.Key.IsExtern || functionWithBody.Key.IsAbstract || functionWithBody.Key.BuiltinKind != null)
                 {
                     continue;
@@ -631,6 +635,23 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             if (type is ClassTypeSymbol classType)
             {
+                // facade 类：整类映射到 BCL（非泛型 → TypeRef；泛型实例化 → TypeSpec）
+                if (IsFacadeRedirect(classType))
+                {
+                    if (classType is InstantiatedTypeSymbol inst)
+                    {
+                        var def = inst.GenericDefinition!;
+                        var openName = def.FullName + "`" + def.TypeParameters.Length;
+                        var genericDef = _framework.RequireType(openName);
+                        return IlType.GenericInstance(genericDef, inst.TypeArguments.Select(ToIlType).ToArray());
+                    }
+
+                    var openNameDef = classType.IsGenericDefinition
+                        ? classType.FullName + "`" + classType.TypeParameters.Length
+                        : classType.FullName;
+                    return IlType.Class(_framework.RequireType(openNameDef));
+                }
+
                 // 动态链接：cod 容器类 → 指向其库 dll 的 TypeRef
                 if (_codAssemblies.TryGetValue(classType, out var codAssembly))
                 {
@@ -1647,6 +1668,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            // facade 类成员：优先重定向到 BCL（解析失败回退下方 codAssemblies 的 Cocoa 体）
+            if (TryEmitFacadeBclCall(il, node))
+            {
+                return;
+            }
+
             // 动态链接（阶段 A3）：cod 顶层函数 → <CocoaTopLevel>.MemberRef 外部调用
             if (_codAssemblies.TryGetValue(node.Function, out var codAssembly))
             {
@@ -1667,6 +1694,157 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var methodDefinition = _methods[node.Function];
             il.Emit(IlOpCodeTable.Get("Call"), methodDefinition);
         }
+
+        /// <summary>
+        /// facade 类成员在 IL 端重定向到 BCL：按 ContainingClass.FullName + 方法名 + 实参类型
+        /// 调 _framework.FindMethod → callvirt/call 到 BCL；解析失败返回 false（调用方回退到
+        /// codAssemblies 的 Cocoa 体）。泛型 facade 的重定向（直构 MemberRef）见后续实现。
+        /// 规则见 docs-dev/对象模型设计.md §5.4。
+        /// </summary>
+        private bool IsFacadeRedirect(ClassTypeSymbol classType)
+        {
+            if (classType.IsFacadeClass) return true;
+            if (classType is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true) return true;
+            return false;
+        }
+
+        private static bool IsValueTypeSymbol(TypeSymbol type)
+            => type == TypeSymbol.Boolean || type == TypeSymbol.Int32 || type == TypeSymbol.Int64 || type == TypeSymbol.Char ||
+               type == TypeSymbol.UInt8 || type == TypeSymbol.Double || type is EnumTypeSymbol ||
+               type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
+               type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64 || type == TypeSymbol.Float;
+
+        /// <summary>
+        /// facade BCL 调用时计算实参的 IL 类型序列（用于 FindMethod 形参签名 / 泛型直构 MemberRef）。
+        /// arguments 不含实例方法的 this 接收者（其位于 node.Expression）；对应形参下标整体右移 1。
+        /// byref 形参（out/ref）追加 &（IlType.ByRefOf），与方法真实签名一致。
+        /// </summary>
+        private IlType[] GetFacadeArgumentIlTypes(FunctionSymbol method, bool isInstance, IEnumerable<BoundExpression> arguments)
+        {
+            var args = arguments.ToList();
+            var argOffset = isInstance ? 1 : 0;
+            var types = new IlType[args.Count];
+            for (var i = 0; i < args.Count; i++)
+            {
+                var p = method.Parameters[i + argOffset];
+                var t = ToIlType(args[i].Type);
+                if (p.IsByRef)
+                {
+                    t = IlType.ByRefOf(t);
+                }
+                types[i] = t;
+            }
+            return types;
+        }
+
+        /// <summary>
+        /// 发射 facade 实例调用的接收者：
+        /// 引用类型直接入栈 + Callvirt；值类型存入临时局部后取地址（ldloca）+ Call（非虚，this 按托管指针传参）。
+        /// </summary>
+        private void EmitFacadeInstanceReceiver(IlAssembler il, BoundExpression receiver)
+        {
+            if (IsValueTypeSymbol(receiver.Type))
+            {
+                var local = AllocateTemporaryLocal(receiver);
+                EmitExpression(il, receiver);
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)local);
+                il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)local);
+            }
+            else
+            {
+                EmitExpression(il, receiver);
+            }
+        }
+
+        private bool TryEmitFacadeBclCall(IlAssembler il, BoundCallExpression node)
+        {
+            var fn = node.Function;
+            var cc = fn.ContainingClass;
+            if (cc == null || !IsFacadeRedirect(cc)) return false;
+
+            // facade 实例方法已降级为静态（首参 = this）；真正静态方法无 this 首参。
+            // this 标记经 .cod 序列化保留（IsThisParameter ⇔ IsReadOnly）。
+            var isInstance = fn.Parameters.Length > 0 && fn.Parameters[0].IsThisParameter;
+            var methodArgs = isInstance ? node.Arguments.Skip(1) : node.Arguments;
+
+            IlMethodRef? methodRef;
+            if (cc is InstantiatedTypeSymbol inst)
+            {
+                // 泛型 facade：直构 MemberRef（绕过 MetadataReader 对 GENERICINST 的解析缺口）
+                methodRef = ResolveFacadeGenericMethodRef(inst, fn, methodArgs, isInstance);
+            }
+            else
+            {
+                var argTypeNames = GetFacadeArgumentIlTypes(fn, isInstance, methodArgs).Select(t => t.FullName).ToArray();
+                methodRef = _framework.FindMethod(cc.FullName, fn.Name, argTypeNames);
+            }
+
+            if (methodRef == null) return false;
+
+            if (isInstance) EmitFacadeInstanceReceiver(il, node.Arguments[0]);
+
+            foreach (var a in methodArgs) EmitExpression(il, a);
+            var callOp = !isInstance || IsValueTypeSymbol(node.Arguments[0].Type) ? "Call" : "Callvirt";
+            il.Emit(IlOpCodeTable.Get(callOp), methodRef);
+            return true;
+        }
+
+        private IlMethodRef? ResolveFacadeGenericMethodRef(InstantiatedTypeSymbol inst, FunctionSymbol fn, IEnumerable<BoundExpression> methodArgs, bool isInstance)
+        {
+            var def = inst.GenericDefinition!;
+            var openName = def.FullName + "`" + def.TypeParameters.Length;
+            var genericDef = _framework.RequireType(openName);
+            var declaringSpec = _metadata.DefineTypeSpec(IlType.GenericInstance(genericDef, inst.TypeArguments.Select(ToIlType).ToArray()));
+            var returnIlType = ToFacadeIlType(fn.ReturnType, inst);
+            var args = methodArgs.ToList();
+            var argOffset = isInstance ? 1 : 0;
+            var paramIlTypes = args.Select((a, i) =>
+            {
+                var p = fn.Parameters[i + argOffset];
+                var t = ToFacadeIlType(a.Type, inst);
+                if (p.IsByRef) t = IlType.ByRefOf(t);
+                return t;
+            }).ToArray();
+            return _metadata.DefineMethodRef(declaringSpec, fn.Name, returnIlType, paramIlTypes, isStatic: !isInstance);
+        }
+
+        private IlMethodRef? ResolveFacadeCtor(ClassTypeSymbol classType, ImmutableArray<BoundExpression> arguments)
+        {
+            var paramTypes = arguments.Select(a => ToIlType(a.Type)).ToArray();
+            if (classType is InstantiatedTypeSymbol inst)
+            {
+                var def = inst.GenericDefinition!;
+                var openName = def.FullName + "`" + def.TypeParameters.Length;
+                var genericDef = _framework.RequireType(openName);
+                var declaringSpec = _metadata.DefineTypeSpec(IlType.GenericInstance(genericDef, inst.TypeArguments.Select(ToIlType).ToArray()));
+                return _metadata.DefineMethodRef(declaringSpec, ".ctor", IlType.Void, paramTypes, isStatic: false);
+            }
+
+            var parameterNames = arguments.Select(a => ToIlType(a.Type).FullName).ToArray();
+            return _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+        }
+
+        private IlType ToFacadeIlType(TypeSymbol type, InstantiatedTypeSymbol inst)
+        {
+            if (type is TypeParameterSymbol tp)
+            {
+                var def = inst.GenericDefinition!;
+                for (var i = 0; i < def.TypeParameters.Length; i++)
+                {
+                    if (def.TypeParameters[i] == tp) return ToIlType(inst.TypeArguments[i]);
+                }
+
+                return ToIlType(type);
+            }
+
+            if (type.ElementType != null)
+            {
+                return IlType.SzArrayOf(ToFacadeIlType(type.ElementType, inst));
+            }
+
+            return ToIlType(type);
+        }
+
 
         private void EmitBuiltinCall(IlAssembler il, FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
         {
@@ -2374,6 +2552,50 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            // facade 类成员调用：降级到 BCL（非泛型 → FindMethod；泛型实例化 → 直构 MemberRef）。
+            // 实例性以“方法首参是否为 this 形参”判定（对齐 TryEmitFacadeBclCall；值类型接收者用托管指针 + Call）。
+            // 必须在本方法统一的 receiver/参数发射之前处理，避免重复压栈导致栈不平衡。
+            if (node.Method != null)
+            {
+                var cc = node.Method.ContainingClass;
+                if (cc != null && IsFacadeRedirect(cc))
+                {
+                    var isInstance = node.Method.Parameters.Length > 0 && node.Method.Parameters[0].IsThisParameter;
+                    var receiver = isInstance ? node.Expression : null;
+                    var paramTypes = GetFacadeArgumentIlTypes(node.Method, isInstance, node.Arguments).Select(t => t.FullName).ToArray();
+                    IlMethodRef? methodRef;
+
+                    InstantiatedTypeSymbol? instType = cc as InstantiatedTypeSymbol
+                        ?? (receiver?.Type as InstantiatedTypeSymbol);
+                    if (instType != null)
+                    {
+                        methodRef = ResolveFacadeGenericMethodRef(instType, node.Method, node.Arguments, isInstance);
+                    }
+                    else
+                    {
+                        methodRef = _framework.FindMethod(cc.FullName, node.Identifier, paramTypes);
+                    }
+
+                    if (methodRef != null)
+                    {
+                        if (isInstance)
+                        {
+                            EmitFacadeInstanceReceiver(il, receiver!);
+                        }
+
+                        foreach (var a in node.Arguments)
+                        {
+                            EmitExpression(il, a);
+                        }
+
+                        var callOp = !isInstance || (receiver != null && IsValueTypeSymbol(receiver.Type)) ? "Call" : "Callvirt";
+                        il.Emit(IlOpCodeTable.Get(callOp), methodRef);
+                        return;
+                    }
+                    // 未找到 BCL 对应（Cocoa 独有成员）→ 回退下方 Cocoa 体发射
+                }
+            }
+
             if (!isStatic)
             {
                 EmitExpression(il, node.Expression);
@@ -2384,9 +2606,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 EmitExpression(il, argument);
             }
 
+            // 动态链接（阶段 A3）：cod 容器类静态方法 → MemberRef 外部调用
             if (node.Method != null)
             {
-                // 动态链接（阶段 A3）：cod 容器类静态方法 → MemberRef 外部调用
                 if (_codAssemblies.TryGetValue(node.Method, out var codAssembly))
                 {
                     il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Method, codAssembly));
@@ -2451,12 +2673,28 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitObjectCreationExpression(IlAssembler il, BoundObjectCreationExpression node)
         {
+            var classType = (ClassTypeSymbol)node.Type;
+
+            // facade 类构造：重定向到 BCL .ctor（泛型直构 MemberRef）
+            if (IsFacadeRedirect(classType))
+            {
+                var ctorRef = ResolveFacadeCtor(classType, node.Arguments);
+                if (ctorRef != null)
+                {
+                    foreach (var argument in node.Arguments)
+                    {
+                        EmitExpression(il, argument);
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
+                    return;
+                }
+            }
+
             foreach (var argument in node.Arguments)
             {
                 EmitExpression(il, argument);
             }
-
-            var classType = (ClassTypeSymbol)node.Type;
 
             if (classType.IsExternal)
             {
