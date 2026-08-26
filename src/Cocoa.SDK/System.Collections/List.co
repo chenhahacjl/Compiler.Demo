@@ -1,6 +1,6 @@
 // Cocoa 系统标准库 · System.Collections 模块
-// List<T> 动态数组（6e-M22 C8）
-// 基于原生数组 + 扩容策略（容量 ×2）
+// List<T> 动态数组（6e-M22 C8，6e-G7 ③b 对齐 C# System.Collections.Generic.List<T>）
+// 基于原生数组 + 扩容策略（容量 ×2）；索引器 this[i] 待提级后替代 Get/Set。
 
 namespace System.Collections.Generic
 {
@@ -15,33 +15,183 @@ namespace System.Collections.Generic
             _count = 0
         }
 
-        public function Add(item: T): void
+        public constructor(capacity: i32)
         {
-            if _count >= _items.Length
+            var cap = capacity
+            if cap < 4
             {
-                var oldItems = _items
-                var oldLen = oldItems.Length
-                var newItems = new T[oldLen * 2]
-                var i = 0
-                while i < oldLen
-                {
-                    newItems[i] = oldItems[i]
-                    i = i + 1
-                }
-                _items = newItems
+                cap = 4
             }
-            _items[_count] = item
-            _count = _count + 1
+
+            _items = new T[cap]
+            _count = 0
         }
 
+        // ------------------------------------------------------------------
+        // 属性（对齐 C# List<T>.Count / Capacity）
+        // ------------------------------------------------------------------
+
+        public property Count: i32
+        {
+            get
+            {
+                return _count
+            }
+        }
+
+        /// <summary>当前容量（含未使用槽位）。</summary>
+        public property Capacity: i32
+        {
+            get
+            {
+                return _items.Length
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // 元素访问（索引器提级前过渡 API）
+        // ------------------------------------------------------------------
+
+        /// <summary>读取——越界为运行时错误。</summary>
         public function Get(index: i32): T
         {
             return _items[index]
         }
 
-        public function Count(): i32
+        /// <summary>覆盖写入——index 须在 [0, Count) 内。</summary>
+        public function Set(index: i32, value: T): void
         {
-            return _count
+            _items[index] = value
+        }
+
+        // ------------------------------------------------------------------
+        // 增删
+        // ------------------------------------------------------------------
+
+        /// <summary>尾部追加——摊还 O(1)。</summary>
+        public function Add(item: T): void
+        {
+            EnsureCapacity(_count + 1)
+            _items[_count] = item
+            _count = _count + 1
+        }
+
+        /// <summary>移除指定索引——后续元素左移，O(n)。</summary>
+        public function RemoveAt(index: i32): void
+        {
+            var i = index
+            while i < _count - 1
+            {
+                _items[i] = _items[i + 1]
+                i = i + 1
+            }
+
+            _count = _count - 1
+        }
+
+        /// <summary>移除首个匹配项——返回是否成功；O(n)。</summary>
+        public function Remove(item: T): bool
+        {
+            var idx = IndexOf(item)
+            if idx >= 0
+            {
+                RemoveAt(idx)
+                return true
+            }
+
+            return false
+        }
+
+        /// <summary>清空全部元素（缓冲保留复用）。</summary>
+        public function Clear(): void
+        {
+            _count = 0
+        }
+
+        // ------------------------------------------------------------------
+        // 查询
+        // ------------------------------------------------------------------
+
+        /// <summary>包含判断——O(n)，经 == 比较。</summary>
+        public function Contains(item: T): bool
+        {
+            return IndexOf(item) >= 0
+        }
+
+        /// <summary>首个匹配索引——不存在返回 -1。</summary>
+        public function IndexOf(item: T): i32
+        {
+            var i = 0
+            while i < _count
+            {
+                if _items[i] == item
+                {
+                    return i
+                }
+                i = i + 1
+            }
+
+            return -1
+        }
+
+        // ------------------------------------------------------------------
+        // 导出
+        // ------------------------------------------------------------------
+
+        /// <summary>导出定长副本。</summary>
+        public function ToArray(): T[]
+        {
+            var copy = new T[_count]
+            var i = 0
+            while i < _count
+            {
+                copy[i] = _items[i]
+                i = i + 1
+            }
+
+            return copy
+        }
+
+        /// <summary>截取子范围。</summary>
+        public function GetRange(index: i32, count: i32): List<T>
+        {
+            var result = new List<T>()
+            var i = index
+            while i < index + count && i < _count
+            {
+                result.Add(Get(i))
+                i = i + 1
+            }
+
+            return result
+        }
+
+        // ------------------------------------------------------------------
+        // 内部
+        // ------------------------------------------------------------------
+
+        private function EnsureCapacity(required: i32): void
+        {
+            if required <= _items.Length
+            {
+                return
+            }
+
+            var newLen = _items.Length * 2
+            while newLen < required
+            {
+                newLen = newLen * 2
+            }
+
+            var grown = new T[newLen]
+            var i = 0
+            while i < _count
+            {
+                grown[i] = _items[i]
+                i = i + 1
+            }
+
+            _items = grown
         }
     }
 }

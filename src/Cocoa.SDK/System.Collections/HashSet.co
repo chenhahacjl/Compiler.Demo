@@ -1,0 +1,54 @@
+// Cocoa 系统标准库 · System.Collections 模块
+// HashSet<T> —— Dictionary<T, bool> 薄封装（对齐 C# System.Collections.Generic.HashSet<T> 子集）
+
+namespace System.Collections.Generic
+{
+    public class HashSet<T>
+    {
+        private _dict: Dictionary<T, bool>
+
+        public constructor()
+        {
+            _dict = new Dictionary<T, bool>()
+        }
+
+        /// <summary>集合内元素数。</summary>
+        public property Count: i32
+        {
+            get
+            {
+                return _dict.Count
+            }
+        }
+
+        /// <summary>添加——已存在返回 false。</summary>
+        public function Add(item: T): bool
+        {
+            if _dict.ContainsKey(item)
+            {
+                return false
+            }
+
+            _dict.Set(item, true)
+            return true
+        }
+
+        /// <summary>包含判断。</summary>
+        public function Contains(item: T): bool
+        {
+            return _dict.ContainsKey(item)
+        }
+
+        /// <summary>移除——返回是否成功。</summary>
+        public function Remove(item: T): bool
+        {
+            return _dict.Remove(item)
+        }
+
+        /// <summary>清空。</summary>
+        public function Clear(): void
+        {
+            _dict = new Dictionary<T, bool>()
+        }
+    }
+}

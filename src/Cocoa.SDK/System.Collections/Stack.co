@@ -1,0 +1,50 @@
+// Cocoa 系统标准库 · System.Collections 模块
+// Stack<T> 后进先出（对齐 C# System.Collections.Generic.Stack<T>）
+
+namespace System.Collections.Generic
+{
+    public class Stack<T>
+    {
+        private _items: List<T>
+
+        public constructor()
+        {
+            _items = new List<T>()
+        }
+
+        /// <summary>栈内元素数。</summary>
+        public property Count: i32
+        {
+            get
+            {
+                return _items.Count
+            }
+        }
+
+        /// <summary>入栈。</summary>
+        public function Push(item: T): void
+        {
+            _items.Add(item)
+        }
+
+        /// <summary>出栈——空栈为运行时错误。</summary>
+        public function Pop(): T
+        {
+            var top = Peek()
+            _items.RemoveAt(_items.Count - 1)
+            return top
+        }
+
+        /// <summary>查看栈顶不移除。</summary>
+        public function Peek(): T
+        {
+            return _items.Get(_items.Count - 1)
+        }
+
+        /// <summary>清空。</summary>
+        public function Clear(): void
+        {
+            _items.Clear()
+        }
+    }
+}
