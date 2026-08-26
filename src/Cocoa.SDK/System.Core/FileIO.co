@@ -1,0 +1,24 @@
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System.IO）
+// class File —— 文件 syscall 声明（6e-G7 ④：自举刚需）
+// 三后端分发：IL → System.IO.File.*；native → kernel32 导入；Evaluator → BCL 直通
+
+namespace System.IO
+{
+    class File
+    {
+        /// <summary>读全文（UTF-8）。</summary>
+        syscall function ReadAllText(path: string): string
+
+        /// <summary>写全文（UTF-8，覆盖）。</summary>
+        syscall function WriteAllText(path: string, text: string): void
+
+        /// <summary>文件是否存在。</summary>
+        syscall function Exists(path: string): bool
+
+        /// <summary>复制文件。</summary>
+        syscall function Copy(src: string, dst: string): void
+
+        /// <summary>删除文件。</summary>
+        syscall function Delete(path: string): void
+    }
+}

@@ -4,7 +4,7 @@
 > 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用 `Cocoa.Core` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**public 门面优先**（新增 `Cocoa.CodeAnalysis.Authoring.SemanticModel`，零 `InternalsVisibleTo`）；**调试器基于解释器**（复用 REPL 的 `Evaluator` 执行路径，后端无关）。
 > 相关文档：`src/Cocoa.IDE/README.md`（路线定稿记录）、`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.coproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
-> 最后更新：2026-08-25
+> 最后更新：2026-08-26（§12 增补与编译器开发的并行策略）
 
 ---
 
@@ -482,6 +482,16 @@ internal IReadOnlyCollection<SourceSpan> CollectSequencePoints(FunctionSymbol f)
 | M7 | HelloWorld 上设断点命中；四种步进行为正确；局部变量/调用栈数值正确；停止后进程干净退出 |
 
 依赖关系：M0 → M1 → {M2, M3} → M4 → M5（M3/M5 共享 SemanticModel，可并行）；M7 独立线，可与 P1 并行。
+
+**与编译器开发的并行策略**（IDE 工程与 6e-M20 泛型绑定单态化等活动区错峰）：
+
+| 阶段 | 触碰编译器？ | 时序 |
+|------|:---:|------|
+| M1 骨架壳（窗口/布局/标签编辑器） | 否 | **可立即开工**；高亮暂用 AvaloniaEdit `.xshd` 关键词规则文件，零编译器依赖 |
+| M0 三件套（SemanticModel / Classifier 迁移 / 模板抽取） | 是（仅此一次） | 待泛型 M20 收官后**单独一个提交**落库（半小时级），随后 IDE 切换到语义高亮/诊断/补全 |
+| M2-M7 | 否 | 全部纯增量新工程 |
+
+分支隔离：`feature/ide-shell`（纯新增）与编译器分支互不相扰；唯一交叉点即 M0 单独提交，挑编译器里程碑空档合并。
 
 ## 13. 风险与开放问题
 

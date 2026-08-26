@@ -6,6 +6,8 @@
     (cls System.Char public methods:8 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char])
     (cls System.Console internal methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
     (cls System.Double public methods:2 ToString[double] CompareTo[double,double])
+    (cls System.Environment internal methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
+    (cls System.IO.File internal methods:5 ReadAllText[string] WriteAllText[string,string] Exists[string] Copy[string,string] Delete[string])
     (cls System.Int16 public methods:3 ToString[short] CompareTo[short,short] Parse[string])
     (cls System.Int32 public methods:4 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int])
     (cls System.Int64 public methods:3 ToString[long] CompareTo[long,long] Parse[string])
@@ -207,6 +209,31 @@
     (fn System.Double.CompareTo[double,double] name:CompareTo ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Double.CompareTo[double,double]/this this double 0 -)
       (par System.Double.CompareTo[double,double]/value value double 1 -)
+    )
+    (fn System.Environment.GetEnvironmentVariable[string] name:GetEnvironmentVariable ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- params:1
+      (par System.Environment.GetEnvironmentVariable[string]/name name string 0 -)
+    )
+    (fn System.Environment.GetCurrentDirectory[] name:GetCurrentDirectory ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetCurrentDirectory entry:- charset:- params:0)
+    (fn System.Environment.SetCurrentDirectory[string] name:SetCurrentDirectory ret:void ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:SetCurrentDirectory entry:- charset:- params:1
+      (par System.Environment.SetCurrentDirectory[string]/path path string 0 -)
+    )
+    (fn System.Environment.GetExecutablePath[] name:GetExecutablePath ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- params:0)
+    (fn System.IO.File.ReadAllText[string] name:ReadAllText ret:string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- params:1
+      (par System.IO.File.ReadAllText[string]/path path string 0 -)
+    )
+    (fn System.IO.File.WriteAllText[string,string] name:WriteAllText ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- params:2
+      (par System.IO.File.WriteAllText[string,string]/path path string 0 -)
+      (par System.IO.File.WriteAllText[string,string]/text text string 1 -)
+    )
+    (fn System.IO.File.Exists[string] name:Exists ret:bool ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- params:1
+      (par System.IO.File.Exists[string]/path path string 0 -)
+    )
+    (fn System.IO.File.Copy[string,string] name:Copy ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileCopy entry:- charset:- params:2
+      (par System.IO.File.Copy[string,string]/src src string 0 -)
+      (par System.IO.File.Copy[string,string]/dst dst string 1 -)
+    )
+    (fn System.IO.File.Delete[string] name:Delete ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- params:1
+      (par System.IO.File.Delete[string]/path path string 0 -)
     )
     (fn System.Int16.ToString[short] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int16.ToString[short]/this this short 0 -)
@@ -2426,6 +2453,33 @@
           (lit int i:0)
         )
       )
+    )
+    (body System.Environment.GetEnvironmentVariable[string]
+      (block 0)
+    )
+    (body System.Environment.GetCurrentDirectory[]
+      (block 0)
+    )
+    (body System.Environment.SetCurrentDirectory[string]
+      (block 0)
+    )
+    (body System.Environment.GetExecutablePath[]
+      (block 0)
+    )
+    (body System.IO.File.ReadAllText[string]
+      (block 0)
+    )
+    (body System.IO.File.WriteAllText[string,string]
+      (block 0)
+    )
+    (body System.IO.File.Exists[string]
+      (block 0)
+    )
+    (body System.IO.File.Copy[string,string]
+      (block 0)
+    )
+    (body System.IO.File.Delete[string]
+      (block 0)
     )
     (body System.Int16.ToString[short]
       (block 1
@@ -4819,6 +4873,7 @@
   (manifest
     (requires any)
     (ns System)
+    (ns System.IO)
   )
 )
-(checksum sha256:b4e0e78be6e490fb6bde4373f98966b6bcd1fc56f58f223d1009f78d2da34337)
+(checksum sha256:11921897284dc9ada11706295c78c2894e3bb6802d96c94db174f0b8307c82c6)

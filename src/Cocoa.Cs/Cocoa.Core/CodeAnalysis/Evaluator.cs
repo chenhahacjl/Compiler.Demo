@@ -814,6 +814,34 @@ namespace Cocoa.CodeAnalysis
                     throw new InvalidOperationException($"StringFromChars: unexpected array type {arr?.GetType().Name}");
                 }
 
+                // ---- 文件 IO / 环境（6e-G7 ④）----
+                case BuiltinKind.FileReadAllText:
+                    return System.IO.File.ReadAllText((string)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.FileWriteAllText:
+                    System.IO.File.WriteAllText((string)EvaluateExpression(arguments[0])!, (string)EvaluateExpression(arguments[1])!);
+                    return null;
+                case BuiltinKind.FileExists:
+                    return System.IO.File.Exists((string)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.GetEnvironmentVariable:
+                    return Environment.GetEnvironmentVariable((string)EvaluateExpression(arguments[0])!) ?? "";
+                case BuiltinKind.GetCurrentDirectory:
+                    return Directory.GetCurrentDirectory();
+                case BuiltinKind.GetExecutablePath:
+                    return AppContext.BaseDirectory;
+                case BuiltinKind.FileDelete:
+                    System.IO.File.Delete((string)EvaluateExpression(arguments[0])!);
+                    return null;
+                case BuiltinKind.FileCopy:
+                    System.IO.File.Copy(
+                        (string)EvaluateExpression(arguments[0])!,
+                        (string)EvaluateExpression(arguments[1])!, true);
+                    return null;
+                case BuiltinKind.DirectoryExists:
+                    return Directory.Exists((string)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.SetCurrentDirectory:
+                    Directory.SetCurrentDirectory((string)EvaluateExpression(arguments[0])!);
+                    return null;
+
                 // 6e-M19 M2-c锛歋ystem.Object 闈欐€佹柟娉曪紙CLR 鐩撮€氾級
                 case BuiltinKind.ObjectStaticEquals:
                     var equalsLeft = EvaluateExpression(arguments[0]);

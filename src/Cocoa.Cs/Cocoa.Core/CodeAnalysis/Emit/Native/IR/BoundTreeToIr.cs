@@ -2161,6 +2161,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     // 6e-G7 ③a：native 运行时实现下一批接入（Evaluator/IL 已可用）
                     throw new Exception("StringFromChars native runtime lands in the next batch (G7-③a follow-up)");
                 }
+                case BuiltinKind.FileReadAllText:
+                case BuiltinKind.FileWriteAllText:
+                case BuiltinKind.FileExists:
+                case BuiltinKind.FileDelete:
+                case BuiltinKind.FileCopy:
+                case BuiltinKind.DirectoryExists:
+                case BuiltinKind.GetEnvironmentVariable:
+                case BuiltinKind.GetCurrentDirectory:
+                case BuiltinKind.SetCurrentDirectory:
+                case BuiltinKind.GetExecutablePath:
+                {
+                    // 6e-G7 ④：文件 IO / 环境 syscall native 接入下一批
+                    throw new Exception($"Builtin '{function.BuiltinKind}' native runtime lands in a follow-up batch (G7-④)");
+                }
                 case BuiltinKind.ParseInt64:
                 {
                     // string → long：ParseInt64（返回 8 字节，x64 RAX / x86 EDX:EAX）

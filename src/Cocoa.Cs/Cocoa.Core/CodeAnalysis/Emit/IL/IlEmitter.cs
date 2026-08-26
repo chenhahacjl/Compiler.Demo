@@ -1762,6 +1762,18 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     // 6e-G7 ③a：new string(char[])
                     il.Emit(IlOpCodeTable.Get("Newobj"), _framework.StringCtorCharArray);
                     break;
+                case BuiltinKind.FileReadAllText:
+                case BuiltinKind.FileWriteAllText:
+                case BuiltinKind.FileExists:
+                case BuiltinKind.FileDelete:
+                case BuiltinKind.FileCopy:
+                case BuiltinKind.DirectoryExists:
+                case BuiltinKind.GetEnvironmentVariable:
+                case BuiltinKind.GetCurrentDirectory:
+                case BuiltinKind.SetCurrentDirectory:
+                case BuiltinKind.GetExecutablePath:
+                    // 6e-G7 ④：文件 IO/环境 IL 接入待 IlFramework 惰性引用基础设施就绪
+                    throw new Exception($"Builtin '{function.BuiltinKind}' IL emission requires lazy framework references (G7-④ follow-up)");
 
                 // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
                 case BuiltinKind.ObjectStaticEquals:

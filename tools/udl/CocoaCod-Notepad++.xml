@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<!-- ======================================================================
+     CocoaCod (.cod 程序集格式) Notepad++ 用户自定义语言 (UDL 2.1)
+     格式依据: src/Cocoa.Cs/Cocoa.Core/CodeAnalysis/Cod/CodSerializer.cs
+               (S 表达式文本格式：魔数 COCOD、三大节 symbols/bodies/manifest、
+                末行 (checksum sha256:<hex>)，无注释、无引号字符串)
+     导入方法见同目录 README.md
+     ====================================================================== -->
+<NotepadPlus>
+    <UserLang name="CocoaCod" ext="cod" udlVersion="2.1">
+        <Settings>
+            <Global caseIgnored="no" allowFoldOfComments="no" foldCompact="no" forcePureLC="0" decimalSeparator="0" />
+            <Prefix Keywords1="no" Keywords2="no" Keywords3="no" Keywords4="no" Keywords5="no" Keywords6="no" Keywords7="no" Keywords8="no" />
+        </Settings>
+        <KeywordLists>
+            <Keywords name="Comments"></Keywords>
+            <Keywords name="Numbers, prefix1"></Keywords>
+            <Keywords name="Numbers, prefix2"></Keywords>
+            <Keywords name="Numbers, suffix1"></Keywords>
+            <Keywords name="Numbers, suffix2"></Keywords>
+            <Keywords name="Numbers, range"></Keywords>
+            <!-- 注意：冒号刻意不列入运算符，否则会破坏 name:/ret:/i: 等冒号关键字的匹配 -->
+            <Keywords name="Operators1">( ) . [ ] , / # ! $</Keywords>
+            <Keywords name="Operators2"></Keywords>
+            <Keywords name="Folders in code1, open">(</Keywords>
+            <Keywords name="Folders in code1, middle"></Keywords>
+            <Keywords name="Folders in code1, close">)</Keywords>
+            <Keywords name="Folders in code2, open"></Keywords>
+            <Keywords name="Folders in code2, middle"></Keywords>
+            <Keywords name="Folders in code2, close"></Keywords>
+            <Keywords name="Folders in code3, open"></Keywords>
+            <Keywords name="Folders in code3, middle"></Keywords>
+            <Keywords name="Folders in code3, close"></Keywords>
+            <Keywords name="Folders in code4, open"></Keywords>
+            <Keywords name="Folders in code4, middle"></Keywords>
+            <Keywords name="Folders in code4, close"></Keywords>
+            <Keywords name="Folders in comment, open"></Keywords>
+            <Keywords name="Folders in comment, middle"></Keywords>
+            <Keywords name="Folders in comment, close"></Keywords>
+            <!-- Keywords1: 结构与节标签（魔数头 / 三大节 / manifest 子项 / 校验和）-->
+            <Keywords name="Keywords1">COCOD cod sha256: checksum symbols bodies manifest body requires platform refdll refcod import ns</Keywords>
+            <!-- Keywords2: 节点指令（符号表条目 + 语句 + 表达式，共 47 个）-->
+            <Keywords name="Keywords2">enum systype cls gcls tpar fld fn glb loc par const block nop vardecl if while dowhile for label goto cgoto return exprstmt lit var assign cassign unary binary cond call byrefarg conv istype astype arrnew elem elemassign memberacc membercall memberassign statictype this uop bop</Keywords>
+            <!-- Keywords3: 字段标记与标志词 -->
+            <Keywords name="Keywords3">name: ret: ns: owner: extern: dll: cc: builtin: entry: charset: params: fields: members: methods: static: ctor: tparams: tps: public internal protected private winapi cdecl stdcall unicode ansi auto true false any dotnet</Keywords>
+            <!-- Keywords4: 常量字面量类型前缀（EncodeValue）-->
+            <Keywords name="Keywords4">n: i: l: b: c: u: d: s:</Keywords>
+            <Keywords name="Keywords5"></Keywords>
+            <Keywords name="Keywords6"></Keywords>
+            <Keywords name="Keywords7"></Keywords>
+            <Keywords name="Keywords8"></Keywords>
+            <Keywords name="Delimiters"></Keywords>
+        </KeywordLists>
+        <Styles>
+            <WordsStyle name="DEFAULT" styleID="11" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="NUMBER" styleID="4" fgColor="FF8000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="KEYWORD1" styleID="5" fgColor="0000FF" bgColor="FFFFFF" fontName="" fontStyle="1" />
+            <WordsStyle name="KEYWORD2" styleID="6" fgColor="2B91AF" bgColor="FFFFFF" fontName="" fontStyle="1" />
+            <WordsStyle name="KEYWORD3" styleID="7" fgColor="795E26" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="KEYWORD4" styleID="8" fgColor="800000" bgColor="FFFFFF" fontName="" fontStyle="1" />
+            <WordsStyle name="OPERATORS" styleID="10" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+            <WordsStyle name="FOLDER IN CODE1" styleID="20" fgColor="000000" bgColor="FFFFFF" fontName="" fontStyle="0" />
+        </Styles>
+    </UserLang>
+</NotepadPlus>

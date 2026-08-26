@@ -32,6 +32,18 @@ namespace Cocoa.CodeAnalysis.Symbols
         UInt64ToString,
         StringFromChars,
 
+        // ---- 文件 IO（6e-G7 ④）----
+        FileReadAllText,
+        FileWriteAllText,
+        FileExists,
+        FileDelete,
+        FileCopy,
+        DirectoryExists,
+        GetEnvironmentVariable,
+        GetCurrentDirectory,
+        SetCurrentDirectory,
+        GetExecutablePath,
+
         // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
         // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
         // `.cod` 序列化经 GetByKindName → SystemObjectMembers.GetByKindName 解析。
@@ -79,7 +91,17 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.CharToString, "CharToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Char) }),
             new BuiltinSpec(BuiltinKind.ParseInt64, "ParseInt64", TypeSymbol.Int64, new[] { ("s", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.UInt64ToString, "UInt64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.UInt64) }),
-            new BuiltinSpec(BuiltinKind.StringFromChars, "StringFromChars", TypeSymbol.String, new[] { ("chars", TypeSymbol.ArrayOf(TypeSymbol.Char)) }));
+            new BuiltinSpec(BuiltinKind.StringFromChars, "StringFromChars", TypeSymbol.String, new[] { ("chars", TypeSymbol.ArrayOf(TypeSymbol.Char)) }),
+            new BuiltinSpec(BuiltinKind.FileReadAllText, "ReadAllText", TypeSymbol.String, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.FileWriteAllText, "WriteAllText", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("text", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.FileExists, "Exists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.GetEnvironmentVariable, "GetEnvironmentVariable", TypeSymbol.String, new[] { ("name", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.GetCurrentDirectory, "GetCurrentDirectory", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.GetExecutablePath, "GetExecutablePath", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.FileDelete, "Delete", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.FileCopy, "Copy", TypeSymbol.Void, new[] { ("src", TypeSymbol.String), ("dst", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.DirectoryExists, "DirectoryExists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }));
 
         /// <summary>
         /// 杈撳嚭瀛楃涓插苟鎹㈣: void WriteLine(any text)锛? Console.WriteLine锛?
@@ -175,6 +197,18 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>字符数组构造字符串: string StringFromChars(char[] chars)（6e-G7 ③a：StringBuilder 底座）。</summary>
         public static readonly FunctionSymbol StringFromChars = Create(BuiltinKind.StringFromChars);
 
+        // ---- 文件 IO / 环境（6e-G7 ④）----
+        public static readonly FunctionSymbol FileReadAllText = Create(BuiltinKind.FileReadAllText);
+        public static readonly FunctionSymbol FileWriteAllText = Create(BuiltinKind.FileWriteAllText);
+        public static readonly FunctionSymbol FileExists = Create(BuiltinKind.FileExists);
+        public static readonly FunctionSymbol GetEnvironmentVariable = Create(BuiltinKind.GetEnvironmentVariable);
+        public static readonly FunctionSymbol GetCurrentDirectory = Create(BuiltinKind.GetCurrentDirectory);
+        public static readonly FunctionSymbol GetExecutablePath = Create(BuiltinKind.GetExecutablePath);
+        public static readonly FunctionSymbol FileDelete = Create(BuiltinKind.FileDelete);
+        public static readonly FunctionSymbol FileCopy = Create(BuiltinKind.FileCopy);
+        public static readonly FunctionSymbol DirectoryExists = Create(BuiltinKind.DirectoryExists);
+        public static readonly FunctionSymbol SetCurrentDirectory = Create(BuiltinKind.SetCurrentDirectory);
+
         private static FunctionSymbol Create(BuiltinKind kind)
         {
             var spec = _specs.First(s => s.Kind == kind);
@@ -216,6 +250,16 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.ParseInt64 => ParseInt64,
                 BuiltinKind.UInt64ToString => UInt64ToString,
                 BuiltinKind.StringFromChars => StringFromChars,
+                BuiltinKind.FileReadAllText => FileReadAllText,
+                BuiltinKind.FileWriteAllText => FileWriteAllText,
+                BuiltinKind.FileExists => FileExists,
+                BuiltinKind.GetEnvironmentVariable => GetEnvironmentVariable,
+                BuiltinKind.GetCurrentDirectory => GetCurrentDirectory,
+                BuiltinKind.GetExecutablePath => GetExecutablePath,
+                BuiltinKind.FileDelete => FileDelete,
+                BuiltinKind.FileCopy => FileCopy,
+                BuiltinKind.DirectoryExists => DirectoryExists,
+                BuiltinKind.SetCurrentDirectory => SetCurrentDirectory,
                 _ => null,
             };
         }
