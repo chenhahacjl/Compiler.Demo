@@ -52,6 +52,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ConvertToStringBoolean = RequireMethod("System.Convert", "ToString", new[] { "System.Boolean" });
             ConvertToStringChar = RequireMethod("System.Convert", "ToString", new[] { "System.Char" });
             ConvertToInt64FromString = RequireMethod("System.Convert", "ToInt64", new[] { "System.String" });
+        StringCtorCharArray = RequireMethod("System.String", ".ctor", new[] { "System.Char[]" });
             StringChars = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
             StringLength = RequireMethod("System.String", "get_Length", Array.Empty<string>());
             StringSubstring = RequireMethod("System.String", "Substring", new[] { "System.Int32", "System.Int32" });
@@ -108,6 +109,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef ConvertToStringBoolean { get; }
         public IlMethodRef ConvertToStringChar { get; }
         public IlMethodRef ConvertToInt64FromString { get; }
+        public IlMethodRef StringCtorCharArray { get; }
         public IlMethodRef StringChars { get; }
         public IlMethodRef StringLength { get; }
         public IlMethodRef StringSubstring { get; }

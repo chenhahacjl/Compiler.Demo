@@ -27,5 +27,6 @@ namespace System
         syscall function CharToString(value: char): string
         syscall function ParseInt64(s: string): i64
         syscall function UInt64ToString(value: u64): string
+        syscall function StringFromChars(chars: char[]): string
     }
 }

@@ -2156,6 +2156,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.StringFromChars:
+                {
+                    // 6e-G7 ③a：native 运行时实现下一批接入（Evaluator/IL 已可用）
+                    throw new Exception("StringFromChars native runtime lands in the next batch (G7-③a follow-up)");
+                }
                 case BuiltinKind.ParseInt64:
                 {
                     // string → long：ParseInt64（返回 8 字节，x64 RAX / x86 EDX:EAX）

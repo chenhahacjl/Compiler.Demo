@@ -1,0 +1,102 @@
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System.Text）
+// class StringBuilder —— 可增长文本缓冲（6e-G7 ③a）：
+// 内部 char[] + 扩容×2；ToString 经 Runtime.StringFromChars 原语（O(n) 拷贝）。
+// Lexer/名称修饰等热点刚需，替代 O(n²) 逐字符拼接。
+
+namespace System.Text
+{
+    public class StringBuilder
+    {
+        private _chars: char[]
+        private _count: i32
+
+        public constructor()
+        {
+            _chars = new char[16]
+            _count = 0
+        }
+
+        /// <summary>带容量创建（静态工厂——类不支持构造重载）。</summary>
+        public static function Create(capacity: i32): StringBuilder
+        {
+            var sb = new StringBuilder()
+            if capacity > 16
+            {
+                sb._chars = new char[capacity]
+            }
+
+            return sb
+        }
+
+        /// <summary>当前字符数。</summary>
+        public function Length(): i32
+        {
+            return _count
+        }
+
+        /// <summary>追加字符串。</summary>
+        public function Append(s: string): StringBuilder
+        {
+            // 逐字符直写（不经 Append 重载——char/string 聚合边界 v1）
+            var i = 0
+            while i < s.Length
+            {
+                EnsureCapacity(_count + 1)
+                _chars[_count] = s[i]
+                _count = _count + 1
+                i = i + 1
+            }
+
+            return this
+        }
+
+        /// <summary>清空（缓冲保留复用）。</summary>
+        public function Clear(): void
+        {
+            _count = 0
+        }
+
+        /// <summary>导出字符串（O(n) 单次拷贝）。</summary>
+        public function ToString(): string
+        {
+            var chars = new char[_count]
+            var i = 0
+            while i < _count
+            {
+                chars[i] = _chars[i]
+                i = i + 1
+            }
+
+            return Runtime.StringFromChars(chars)
+        }
+
+        private function EnsureCapacity(required: i32): void
+        {
+            if required <= _chars.Length
+            {
+                return
+            }
+
+            var newLen = _chars.Length * 2
+            if newLen == 0
+            {
+                newLen = 16
+            }
+
+            while newLen < required
+            {
+                newLen = newLen * 2
+            }
+
+            var grown = new char[newLen]
+            var i = 0
+            while i < _count
+            {
+                grown[i] = _chars[i]
+                i = i + 1
+            }
+
+            _chars = grown
+        }
+    }
+}

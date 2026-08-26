@@ -30,6 +30,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         CharToString,
         ParseInt64,
         UInt64ToString,
+        StringFromChars,
 
         // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
         // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
@@ -77,7 +78,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.BooleanToString, "BooleanToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Boolean) }),
             new BuiltinSpec(BuiltinKind.CharToString, "CharToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Char) }),
             new BuiltinSpec(BuiltinKind.ParseInt64, "ParseInt64", TypeSymbol.Int64, new[] { ("s", TypeSymbol.String) }),
-            new BuiltinSpec(BuiltinKind.UInt64ToString, "UInt64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.UInt64) }));
+            new BuiltinSpec(BuiltinKind.UInt64ToString, "UInt64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.UInt64) }),
+            new BuiltinSpec(BuiltinKind.StringFromChars, "StringFromChars", TypeSymbol.String, new[] { ("chars", TypeSymbol.ArrayOf(TypeSymbol.Char)) }));
 
         /// <summary>
         /// 杈撳嚭瀛楃涓插苟鎹㈣: void WriteLine(any text)锛? Console.WriteLine锛?
@@ -170,6 +172,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>鏃犵鍙烽暱鏁存暟杞瓧绗︿覆: string UInt64ToString(ulong value)锛坒acade System.UInt64.ToString 鐨勫簳灞傚師璇級</summary>
         public static readonly FunctionSymbol UInt64ToString = Create(BuiltinKind.UInt64ToString);
 
+        /// <summary>字符数组构造字符串: string StringFromChars(char[] chars)（6e-G7 ③a：StringBuilder 底座）。</summary>
+        public static readonly FunctionSymbol StringFromChars = Create(BuiltinKind.StringFromChars);
+
         private static FunctionSymbol Create(BuiltinKind kind)
         {
             var spec = _specs.First(s => s.Kind == kind);
@@ -210,6 +215,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.CharToString => CharToString,
                 BuiltinKind.ParseInt64 => ParseInt64,
                 BuiltinKind.UInt64ToString => UInt64ToString,
+                BuiltinKind.StringFromChars => StringFromChars,
                 _ => null,
             };
         }

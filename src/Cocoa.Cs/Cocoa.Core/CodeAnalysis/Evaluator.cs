@@ -791,6 +791,8 @@ namespace Cocoa.CodeAnalysis
                     return Convert.ToInt64((string)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.UInt64ToString:
                     return Convert.ToString((ulong)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.StringFromChars:
+                    return new string((char[])EvaluateExpression(arguments[0])!);
 
                 // 6e-M19 M2-c锛歋ystem.Object 闈欐€佹柟娉曪紙CLR 鐩撮€氾級
                 case BuiltinKind.ObjectStaticEquals:

@@ -2709,8 +2709,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // ------------------------------------------------------------------
 
             private void EmitCharToString()
-            {
-                var c = _args[0];
+            {                var c = _args[0];
                 var oom = NewLabel();
                 var done = NewLabel();
 

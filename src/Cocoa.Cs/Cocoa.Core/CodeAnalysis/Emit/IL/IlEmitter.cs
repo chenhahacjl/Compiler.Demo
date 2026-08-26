@@ -1758,6 +1758,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BuiltinKind.ParseInt64:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt64FromString);
                     break;
+                case BuiltinKind.StringFromChars:
+                    // 6e-G7 ③a：new string(char[])
+                    il.Emit(IlOpCodeTable.Get("Newobj"), _framework.StringCtorCharArray);
+                    break;
 
                 // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
                 case BuiltinKind.ObjectStaticEquals:

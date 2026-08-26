@@ -10,7 +10,7 @@
     (cls System.Int32 public methods:4 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int])
     (cls System.Int64 public methods:3 ToString[long] CompareTo[long,long] Parse[string])
     (cls System.Math internal methods:21 Max[int,int] Max[double,double] Min[int,int] Min[double,double] Abs[int] Abs[double] Clamp[int,int,int] Clamp[double,double,double] Sign[int] Sign[double] IsEven[int] IsOdd[int] Pow[int,int] Factorial[int] Gcd[int,int] Lcm[int,int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double])
-    (cls System.Runtime internal methods:21 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong])
+    (cls System.Runtime internal methods:22 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]])
     (cls System.SByte public methods:3 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string])
     (cls System.Single public methods:1 ToString[float])
     (cls System.String public methods:19 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Reverse[string] Replicate[string,int] CountChar[string,char] IsPalindrome[string] Trim[string] Replace[string,string,string] CountSubstring[string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char])
@@ -375,6 +375,9 @@
     )
     (fn System.Runtime.UInt64ToString[ulong] name:UInt64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:UInt64ToString entry:- charset:- params:1
       (par System.Runtime.UInt64ToString[ulong]/value value ulong 0 -)
+    )
+    (fn System.Runtime.StringFromChars[char[]] name:StringFromChars ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- params:1
+      (par System.Runtime.StringFromChars[char[]]/chars chars char[] 0 -)
     )
     (fn System.SByte.ToString[sbyte] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.SByte.ToString[sbyte]/this this sbyte 0 -)
@@ -3383,6 +3386,9 @@
     (body System.Runtime.UInt64ToString[ulong]
       (block 0)
     )
+    (body System.Runtime.StringFromChars[char[]]
+      (block 0)
+    )
     (body System.SByte.ToString[sbyte]
       (block 1
         (return
@@ -4815,4 +4821,4 @@
     (ns System)
   )
 )
-(checksum sha256:7a602d385c6186805287f5f7a82ba30792b0ce8d4182f704a8df7412c11fa661)
+(checksum sha256:b4e0e78be6e490fb6bde4373f98966b6bcd1fc56f58f223d1009f78d2da34337)
