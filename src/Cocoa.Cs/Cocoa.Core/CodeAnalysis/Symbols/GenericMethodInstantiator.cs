@@ -51,7 +51,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
             var map = TypeSubstituter.BuildMap(definition.TypeParameters, arguments);
             var parameters = definition.Parameters
-                .Select(p => new ParameterSymbol(p.Name, TypeSubstituter.Substitute(p.Type, map), p.Ordinal))
+                .Select(p => new ParameterSymbol(p.Name, TypeSubstituter.Substitute(p.Type, map), p.Ordinal, p.IsOut, p.IsRef))
                 .ToImmutableArray();
             var returnType = TypeSubstituter.Substitute(definition.ReturnType, map);
 

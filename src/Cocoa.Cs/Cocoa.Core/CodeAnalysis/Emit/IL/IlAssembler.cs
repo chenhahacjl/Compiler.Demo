@@ -168,10 +168,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     {
                         0x7E => 1,  // Ldsfld
                         0x80 => -1, // Stsfld
+                        0x7F => 1,  // Ldsflda（6e-M23 R6）
+                        0x7C => 1,  // Ldflda（6e-M23 R6）
                         _ => 0,     // Ldfld（净 0）/Stfld（弹 2 但保守 0）
                     };
                 case IlOperandType.InlineType:
-                    return 0; // Newarr/Box/Castclass 等弹 1 压 1，净增量 0
+                    return instruction.OpCode.Value == 0x8F ? -1 : 0; // Ldelema 弹数组+索引压地址；其余净 0
                 case IlOperandType.InlineBrTarget:
                 case IlOperandType.ShortInlineBrTarget:
                     return 0; // Br/Leave 不动栈；Brtrue/Brfalse 见 InlineNone 分派
@@ -237,9 +239,29 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x92: // Ldelem_I2
                 case 0x93: // Ldelem_U2
                 case 0x97: // Ldelem_I8
+                case 0x98: // Ldelem_R4
                 case 0x99: // Ldelem_R8
                 case 0x9A: // Ldelem_Ref
                     return -1;
+                case 0x46: // Ldind_I1
+                case 0x47: // Ldind_U1
+                case 0x48: // Ldind_I2
+                case 0x49: // Ldind_U2
+                case 0x4A: // Ldind_I4
+                case 0x4B: // Ldind_U4
+                case 0x4C: // Ldind_I8
+                case 0x4E: // Ldind_R4
+                case 0x4F: // Ldind_R8
+                case 0x50: // Ldind_Ref
+                    return 1;
+                case 0x51: // Stind_Ref
+                case 0x52: // Stind_I1
+                case 0x53: // Stind_I2
+                case 0x54: // Stind_I4
+                case 0x55: // Stind_I8
+                case 0x56: // Stind_R4
+                case 0x57: // Stind_R8
+                    return -2;
                 case 0x8E: // Ldlen（弹数组引用，压长度）
                     return 0;
                 case 0x9C: // Stelem_I1

@@ -16,6 +16,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         LeaData,     // LeaData <dst> <data-symbol>  — 数据段符号地址（字符串字面量）
         Lea,         // Lea <dst> <base> <off>       — 指针算术：dst = base + off
         LeaSlot,     // LeaSlot <dst> <src>          — dst = 地址 of <src> 槽（&局部变量）
+        LeaVar,      // LeaVar <dst> <varReg>        — dst = &变量槽（6e-M23 R7：byref 实参取址）
         InitParam,   // InitParam <dst> <byteOffset>  — 函数入口把参数区（[rbp+paramOffset+offset]）拷入虚拟寄存器
         InitRegArg,  // InitRegArg <dst> <ordinal>   — 运行时函数入口从调用约定寄存器 (0→ecx,1→edx) 取参
 

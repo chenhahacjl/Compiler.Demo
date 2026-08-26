@@ -596,5 +596,68 @@ namespace Cocoa.CodeAnalysis
             var message = $"不能继承 sealed 类 '{baseName}'。";
             ReportError(location, message);
         }
+
+        /// <summary>6e-M23 R3：byref 实参不是可赋值 lvalue。</summary>
+        public void ReportByRefArgumentNotLValue(TextLocation location, string modifier)
+        {
+            var message = $"'{modifier}' 实参必须是可赋值变量：局部/参数/字段/静态字段或数组元素（属性、只读字段与任意表达式不可用）。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R3：值形参收到带 out/ref 修饰符的实参。</summary>
+        public void ReportByRefModifierOnValueParameter(TextLocation location, string modifier)
+        {
+            var message = $"形参按值声明，实参不应带 '{modifier}' 修饰符。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R3：out/ref 形参收到的修饰符不匹配。</summary>
+        public void ReportByRefModifierMismatch(TextLocation location, string expectedModifier)
+        {
+            var message = $"形参声明为 '{expectedModifier}'，实参修饰符须一致。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R3：out/ref 形参缺少修饰符实参。</summary>
+        public void ReportMissingByRefModifier(TextLocation location, string expectedModifier)
+        {
+            var message = $"形参声明为 '{expectedModifier}'，实参须写 '{expectedModifier} 变量'。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R3：函数类型 / delegate 签名不支持 byref 形参。</summary>
+        public void ReportFunctionTypeByRefParameter(TextLocation location)
+        {
+            var message = "函数类型 (A,B)->R 与 delegate 声明不支持 out/ref 形参（函数值签名无修饰符概念）。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R3：lambda 捕获外层 out/ref 形参（v1 禁止）。</summary>
+        public void ReportCaptureOfByRefParameter(TextLocation location, string name)
+        {
+            var message = $"lambda 不能捕获 out/ref 形参 '{name}'（v1 边界；别名回写与环境对象语义待后续里程碑）。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R4：读取未赋值的 out 形参。</summary>
+        public void ReportUseOfUnassignedOutParameter(TextLocation location, string name)
+        {
+            var message = $"使用了未赋值的 out 参数 '{name}'。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R4：控制流离开函数时 out 形参未赋值。</summary>
+        public void ReportOutParameterNotAssignedOnReturn(TextLocation location, string name)
+        {
+            var message = $"out 参数 '{name}' 必须在返回前赋值。";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M23 R4：把当前函数未赋值的 out 形参作 ref 实参传递。</summary>
+        public void ReportRefArgumentNotAssigned(TextLocation location, string name)
+        {
+            var message = $"out 参数 '{name}' 未赋值，不能作为 'ref' 实参传递。";
+            ReportError(location, message);
+        }
     }
 }

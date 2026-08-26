@@ -227,7 +227,13 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override ParameterSyntax ParseParameter()
         {
-            // C# 方言参数：仅 `类型 名称`（可带数组后缀 `类型[]`）；拒绝 Cocoa `名称: 类型`
+            // C# 方言参数：仅 `[out|ref] 类型 名称`（6e-M23 R1，可带数组后缀）；拒绝 Cocoa `名称: 类型`
+            SyntaxToken? modifier = null;
+            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword)
+            {
+                modifier = MatchToken(Current.Kind);
+            }
+
             if (Peek(0).Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.ColonToken)
             {
                 Diagnostics.ReportError(Current.Location, "C# 方言参数须为 `类型 名称`，不能 `名称: 类型`。");
@@ -236,7 +242,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParsePrefixTypeClause();
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
 
-            return new ParameterSyntax(_syntaxTree, identifier, type);
+            return new ParameterSyntax(_syntaxTree, modifier, identifier, type);
         }
 
         protected override StatementSyntax ParseVariableDeclaration()

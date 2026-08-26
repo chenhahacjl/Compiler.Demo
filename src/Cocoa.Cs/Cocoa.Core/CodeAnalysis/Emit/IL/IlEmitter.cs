@@ -299,7 +299,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var parameterTypes = new List<IlType>();
             foreach (var parameter in function.Parameters)
             {
-                parameterTypes.Add(ToIlType(parameter.Type));
+                // 6e-M23 R6：byref 形参编码为 T&
+                parameterTypes.Add(parameter.IsByRef ? IlType.ByRefOf(ToIlType(parameter.Type)) : ToIlType(parameter.Type));
             }
 
             var callingConvention = function.CallingConvention switch
@@ -315,7 +316,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (function.ContainingClass == null && !function.IsConstructor &&
                 _overloadedGroups!.Contains((function.Namespace, function.Name)))
             {
-                name += "$" + string.Join("$", function.Parameters.Select(p => EncodeTypeNameForMethodName(p.Type)));
+                // 6e-M23 R6：仅差 out/ref 的重载也须名字唯一（修饰符前缀入 mangle）
+                name += "$" + string.Join("$", function.Parameters.Select(p =>
+                    (p.IsOut ? "out$" : p.IsRef ? "ref$" : "") + EncodeTypeNameForMethodName(p.Type)));
             }
 
             var implementsInterfaceMember = isInstance &&
@@ -998,6 +1001,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BoundNodeKind.InvocationExpression:
                     EmitInvocationExpression(il, (BoundInvocationExpression)node);
                     break;
+                case BoundNodeKind.ByRefArgument:
+                    EmitByRefArgument(il, (BoundByRefArgument)node);
+                    break;
                 default:
                     throw new System.Exception($"Unexpected node kind {node.Kind}");
             }
@@ -1239,6 +1245,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 // 实例方法 arg0 = this，参数从 arg1 起
                 var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
                 il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)argIndex);
+
+                if (parameter.IsByRef)
+                {
+                    // 6e-M23 R6：byref 形参读 = 解引用
+                    EmitLoadIndirect(il, node.Variable.Type);
+                }
             }
             else
             {
@@ -1246,9 +1258,101 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
         }
 
+        /// <summary>
+        /// byref 实参取址（6e-M23 R6）：
+        /// 形参/局部 → ldarga/ldloca；实例字段 → 接收者 + ldflda；静态字段 → ldsflda；
+        /// 数组元素 → 数组 + 索引 + ldelema（CLR 自带越界检查）。字符串元素不可作 byref 目标（绑定层拒绝非数组元素访问?）
+        /// ——string 索引为只读字符，绑定层 lvalue 校验已排除。
+        /// </summary>
+        private void EmitByRefArgument(IlAssembler il, BoundByRefArgument node)
+        {
+            switch (node.Expression)
+            {
+                case BoundVariableExpression variable:
+                    if (variable.Variable is ParameterSymbol parameter)
+                    {
+                        var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
+                        il.Emit(IlOpCodeTable.Get("Ldarga"), (ushort)argIndex);
+                    }
+                    else
+                    {
+                        il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)_locals[variable.Variable]);
+                    }
+
+                    return;
+
+                case BoundMemberAccessExpression member when member.Field is { IsStatic: true } staticField:
+                    il.Emit(IlOpCodeTable.Get("Ldsflda"), _fieldDefs[staticField]);
+                    return;
+
+                case BoundMemberAccessExpression member when member.Field != null:
+                    EmitExpression(il, member.Target);
+                    il.Emit(IlOpCodeTable.Get("Ldflda"), _fieldDefs[member.Field]);
+                    return;
+
+                case BoundElementAccessExpression element when element.Target.Type != TypeSymbol.String &&
+                                                               element.Target.Type.ElementType != null:
+                    EmitExpression(il, element.Target);
+                    EmitExpression(il, element.Index);
+                    il.Emit(IlOpCodeTable.Get("Ldelema"), _metadata.DefineTypeSpec(ToIlType(node.Type)));
+                    return;
+
+                default:
+                    throw new System.Exception($"Unexpected by-ref argument target {node.Expression.Kind}");
+            }
+        }
+
+        /// <summary>byref 解引用读（6e-M23 R6）：按元素类型选 ldind 变体。</summary>
+        private void EmitLoadIndirect(IlAssembler il, TypeSymbol type)
+        {
+            var name = type switch
+            {
+                _ when type == TypeSymbol.Boolean || type == TypeSymbol.UInt8 => "Ldind_U1",
+                _ when type == TypeSymbol.Int8 => "Ldind_I1",
+                _ when type == TypeSymbol.UInt16 || type == TypeSymbol.Char => "Ldind_U2",
+                _ when type == TypeSymbol.Int16 => "Ldind_I2",
+                _ when type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 => "Ldind_I4",
+                _ when type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 => "Ldind_I8",
+                _ when type == TypeSymbol.Float => "Ldind_R4",
+                _ when type == TypeSymbol.Double => "Ldind_R8",
+                _ => "Ldind_Ref",
+            };
+            il.Emit(IlOpCodeTable.Get(name));
+        }
+
+        /// <summary>byref 间接写（6e-M23 R6）：栈顶为值、次顶为地址。</summary>
+        private void EmitStoreIndirect(IlAssembler il, TypeSymbol type)
+        {
+            var name = type switch
+            {
+                _ when type == TypeSymbol.Boolean || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8 => "Stind_I1",
+                _ when type == TypeSymbol.UInt16 || type == TypeSymbol.Char || type == TypeSymbol.Int16 => "Stind_I2",
+                _ when type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 => "Stind_I4",
+                _ when type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 => "Stind_I8",
+                _ when type == TypeSymbol.Float => "Stind_R4",
+                _ when type == TypeSymbol.Double => "Stind_R8",
+                _ => "Stind_Ref",
+            };
+            il.Emit(IlOpCodeTable.Get(name));
+        }
+
         private void EmitAssignmentExpression(IlAssembler il, BoundAssignmentExpression node)
         {
-            EmitExpression(il, node.Expression);
+            // 6e-M23 R6：byref 形参目标 = 值存临时局部 → 取址 → 值+stind（避免 dup 与托管指针在栈上交叠，
+            // RyuJIT 对该形态的优化会产生错误寻址；临时局部方案与 csc 同构）
+            if (node.Variable is ParameterSymbol { IsByRef: true } byRefParameter)
+            {
+                var temporaryLocal = AllocateTemporaryLocal(node);
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+
+                var argIndex = byRefParameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
+                il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)argIndex);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+                EmitStoreIndirect(il, node.Variable.Type);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+                return;
+            }
 
             // 6e-M22 C5-c：捕获变量写环境字段（值同时在栈顶作为表达式结果）
             if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)
@@ -1258,6 +1362,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            EmitExpression(il, node.Expression);
             il.Emit(IlOpCodeTable.Get("Dup"));
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
         }

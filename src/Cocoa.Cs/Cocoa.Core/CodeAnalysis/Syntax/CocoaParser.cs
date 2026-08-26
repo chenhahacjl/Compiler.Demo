@@ -32,21 +32,27 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override ParameterSyntax ParseParameter()
         {
-            // Cocoa 参数：仅 `名称: 类型`（类型后置）；拒绝 C# 式 `类型 名称`
+            // Cocoa 参数：仅 `[out|ref] 名称: 类型`（类型后置，6e-M23 R1）；拒绝 C# 式 `类型 名称`
+            SyntaxToken? modifier = null;
+            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword)
+            {
+                modifier = MatchToken(Current.Kind);
+            }
+
             if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
                 Peek(1).Kind == SyntaxKind.ColonToken)
             {
                 var identifier = MatchToken(SyntaxKind.IdentifierToken);
                 var type = ParseTypeClause();
 
-                return new ParameterSyntax(_syntaxTree, identifier, type);
+                return new ParameterSyntax(_syntaxTree, modifier, identifier, type);
             }
 
             ReportError(Current.Location, "Cocoa 参数须为 `名称: 类型`（类型后置），不支持 C# 式 `类型 名称`。");
             var csType = ParsePrefixTypeClause();
             var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
 
-            return new ParameterSyntax(_syntaxTree, csIdentifier, csType);
+            return new ParameterSyntax(_syntaxTree, modifier, csIdentifier, csType);
         }
 
         protected override StatementSyntax ParseVariableDeclaration()

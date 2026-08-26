@@ -105,7 +105,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         internal static FunctionSymbol SubstituteMethod(FunctionSymbol method, InstantiatedTypeSymbol containingClass, Dictionary<TypeParameterSymbol, TypeSymbol> map, string? nameOverride = null)
         {
             var parameters = method.Parameters
-                .Select(p => new ParameterSymbol(p.Name, TypeSubstituter.Substitute(p.Type, map), p.Ordinal))
+                .Select(p => new ParameterSymbol(p.Name, TypeSubstituter.Substitute(p.Type, map), p.Ordinal, p.IsOut, p.IsRef))
                 .ToImmutableArray();
             var returnType = TypeSubstituter.Substitute(method.ReturnType, map);
 

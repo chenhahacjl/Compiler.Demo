@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Binding;
+﻿using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -10,28 +10,28 @@ using System.Text;
 namespace Cocoa.CodeAnalysis.Cod
 {
     /// <summary>
-    /// `.cod` 语义层序列化器：符号表 + 降级 BoundProgram（函数体）文本 round-trip。
-    /// 双后端共用（native → BoundTreeToIr，IL → IlEmitter）；语法节点（Syntax）不序列化（置 null）。
+    /// `.cod` 璇箟灞傚簭鍒楀寲鍣細绗﹀彿琛?+ 闄嶇骇 BoundProgram锛堝嚱鏁颁綋锛夋枃鏈?round-trip銆?
+    /// 鍙屽悗绔叡鐢紙native 鈫?BoundTreeToIr锛孖L 鈫?IlEmitter锛夛紱璇硶鑺傜偣锛圫yntax锛変笉搴忓垪鍖栵紙缃?null锛夈€?
     ///
-    /// 文本格式（可读优先，类型/函数/变量一律按名字引用，不用数字 id）：
-    ///   (type)     内建/数组类型内联为名字引用：int / int[] / int[][]；类/枚举用全名 System.Console
+    /// 鏂囨湰鏍煎紡锛堝彲璇讳紭鍏堬紝绫诲瀷/鍑芥暟/鍙橀噺涓€寰嬫寜鍚嶅瓧寮曠敤锛屼笉鐢ㄦ暟瀛?id锛夛細
+    ///   (type)     鍐呭缓/鏁扮粍绫诲瀷鍐呰仈涓哄悕瀛楀紩鐢細int / int[] / int[][]锛涚被/鏋氫妇鐢ㄥ叏鍚?System.Console
     ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
-    ///   (systype)  (systype System.Object)——内建单例按全名映射
-    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)——方法列 Name[参数类型] 签名
+    ///   (systype)  (systype System.Object)鈥斺€斿唴寤哄崟渚嬫寜鍏ㄥ悕鏄犲皠
+    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)鈥斺€旀柟娉曞垪 Name[鍙傛暟绫诲瀷] 绛惧悕
     ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
     ///               params:2 (par MyLib.Add/a a i32 0) ...)
-    ///              函数键 = [命名空间或宿主类.]函数名(参数类型列表)，重载靠参数类型区分
+    ///              鍑芥暟閿?= [鍛藉悕绌洪棿鎴栧涓荤被.]鍑芥暟鍚?鍙傛暟绫诲瀷鍒楄〃)锛岄噸杞介潬鍙傛暟绫诲瀷鍖哄垎
     ///   (glb/loc)  (glb global:version true i32 (const i:1)) / (loc MyLib.Factorial/result false i32)
-    ///              变量键：全局 global:名字；局部/参数 函数键/名字（同名冲突加 #2、#3 后缀）
-    ///   运算符      文本记号 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
-    ///   布尔/枚举词  true false；public internal protected private；winapi cdecl stdcall；unicode ansi auto
+    ///              鍙橀噺閿細鍏ㄥ眬 global:鍚嶅瓧锛涘眬閮?鍙傛暟 鍑芥暟閿?鍚嶅瓧锛堝悓鍚嶅啿绐佸姞 #2銆?3 鍚庣紑锛?
+    ///   杩愮畻绗?     鏂囨湰璁板彿 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
+    ///   甯冨皵/鏋氫妇璇? true false锛沺ublic internal protected private锛泈inapi cdecl stdcall锛泆nicode ansi auto
     /// </summary>
     internal static class CodSerializer
     {
         public const string Magic = "COCOD";
         public const int Version = 1;
 
-        /// <summary>完整性校验：文件末行 `(checksum sha256:&lt;hex&gt;)` 覆盖其前全部字节（UTF-8）；读侧强制校验。</summary>
+        /// <summary>瀹屾暣鎬ф牎楠岋細鏂囦欢鏈 `(checksum sha256:&lt;hex&gt;)` 瑕嗙洊鍏跺墠鍏ㄩ儴瀛楄妭锛圲TF-8锛夛紱璇讳晶寮哄埗鏍￠獙銆?/summary>
         private const string ChecksumTag = "sha256:";
 
         // ---------------------------------------------------------------- write
@@ -41,7 +41,7 @@ namespace Cocoa.CodeAnalysis.Cod
             var registry = new Registry();
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
 
-            // 收集符号——函数体按 Functions（声明序）遍历，保证确定性（ImmutableDictionary 迭代序不稳定）
+            // 鏀堕泦绗﹀彿鈥斺€斿嚱鏁颁綋鎸?Functions锛堝０鏄庡簭锛夐亶鍘嗭紝淇濊瘉纭畾鎬э紙ImmutableDictionary 杩唬搴忎笉绋冲畾锛?
             foreach (var e in program.Enums)
             {
                 registry.RegisterType(e);
@@ -70,7 +70,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 labelsByFunction[fn] = labels;
             }
 
-            // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）
+            // 鍏ㄩ儴绗﹀彿鏀堕泦瀹屾瘯鍚庡啀瀹氬悕锛堝彉閲忛敭闇€瑕佸嚱鏁伴敭锛屼笖瑕佽法绗﹀彿娑堥噸锛?
             registry.Seal();
 
             var buffer = new StringWriter();
@@ -79,7 +79,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field(Magic);
             w.Field(Version);
 
-            // 符号表（按注册序）
+            // 绗﹀彿琛紙鎸夋敞鍐屽簭锛?
             w.Open("symbols");
             foreach (var emitter in registry.Emitters)
             {
@@ -87,11 +87,11 @@ namespace Cocoa.CodeAnalysis.Cod
             }
             w.End();
 
-            // 函数体
+            // 鍑芥暟浣?
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
-                // 容器类方法（静态）序列化函数体；实例方法/隐式构造等常规方法不在容器序列化范围，跳过
+                // 瀹瑰櫒绫绘柟娉曪紙闈欐€侊級搴忓垪鍖栧嚱鏁颁綋锛涘疄渚嬫柟娉?闅愬紡鏋勯€犵瓑甯歌鏂规硶涓嶅湪瀹瑰櫒搴忓垪鍖栬寖鍥达紝璺宠繃
                 if (fn.ContainingClass != null && !fn.IsStatic)
                 {
                     continue;
@@ -109,7 +109,7 @@ namespace Cocoa.CodeAnalysis.Cod
             }
             w.End();
 
-            // 依赖清单
+            // 渚濊禆娓呭崟
             w.Open("manifest");
             w.Open("requires");
             w.Field(RequirementName(program.Requires));
@@ -149,7 +149,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End(); // cod
             buffer.WriteLine();
 
-            // 完整性校验：对正文全部字节（UTF-8）取 SHA256，追加为文件末行（读侧强制校验，缺失/不符拒载）
+            // 瀹屾暣鎬ф牎楠岋細瀵规鏂囧叏閮ㄥ瓧鑺傦紙UTF-8锛夊彇 SHA256锛岃拷鍔犱负鏂囦欢鏈锛堣渚у己鍒舵牎楠岋紝缂哄け/涓嶇鎷掕浇锛?
             var payload = buffer.ToString();
             writer.Write(payload);
             writer.WriteLine("(checksum " + ChecksumTag + ComputeChecksum(payload) + ")");
@@ -323,6 +323,12 @@ namespace Cocoa.CodeAnalysis.Cod
                         {
                             CollectExpression(registry, owner, a, labels);
                         }
+                        break;
+                    }
+                case BoundNodeKind.ByRefArgument:
+                    {
+                        var n = (BoundByRefArgument)expression;
+                        CollectExpression(registry, owner, n.Expression, labels);
                         break;
                     }
                 case BoundNodeKind.ConversionExpression:
@@ -524,7 +530,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     }
                 case BoundNodeKind.SequencePointStatement:
-                    // 调试信息降级：仅序列化内层语句
+                    // 璋冭瘯淇℃伅闄嶇骇锛氫粎搴忓垪鍖栧唴灞傝鍙?
                     WriteStatement(w, registry, labels, ((BoundSequencePointStatement)statement).Statement);
                     break;
             }
@@ -636,6 +642,15 @@ namespace Cocoa.CodeAnalysis.Cod
                         w.End();
                         break;
                     }
+                case BoundNodeKind.ByRefArgument:
+                    {
+                        var n = (BoundByRefArgument)expression;
+                        w.Open("byrefarg");
+                        w.Field(n.IsRef ? "ref" : "out");
+                        WriteExpression(w, registry, labels, n.Expression);
+                        w.End();
+                        break;
+                    }
                 case BoundNodeKind.ConversionExpression:
                     {
                         var n = (BoundConversionExpression)expression;
@@ -699,7 +714,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
                 case BoundNodeKind.MemberAccessExpression:
                     {
-                        // 仅数组/字符串 `.Length`（Field == null）；类字段访问 OOP，v1 拒绝
+                        // 浠呮暟缁?瀛楃涓?`.Length`锛團ield == null锛夛紱绫诲瓧娈佃闂?OOP锛寁1 鎷掔粷
                         var n = (BoundMemberAccessExpression)expression;
                         w.Open("memberacc");
                         w.Field(TypeRef(n.Type));
@@ -778,7 +793,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End();
         }
 
-        /// <summary>6e-M19 M2-c：内建单例（System.Object/System.Type）按全名序列化，读侧映射回单例。</summary>
+        /// <summary>6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛夋寜鍏ㄥ悕搴忓垪鍖栵紝璇讳晶鏄犲皠鍥炲崟渚嬨€?/summary>
         private static void EmitBuiltinSystemClass(Writer w, Registry registry, ClassTypeSymbol classType)
         {
             w.Open("systype");
@@ -791,8 +806,8 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("cls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
-            // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
-            // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
+            // 搴忓垪鍖栧叏閮ㄩ潤鎬佹柟娉曠鍚嶏紙6e-M18锛氬鍣ㄧ被鍏佽甯︿綋闈欐€佹柟娉曪紝濡?Console.WriteLine/Math.Max锛泂yscall/extern 浜︿负闈欐€侊級銆?
+            // 鏂规硶鏈綋鐢卞悇鑷?fn 鏉＄洰鎼哄甫锛坥wner 瀛楁鍥炲～绫诲綊灞烇級锛岃繖閲屽垪 Name[鍙傛暟绫诲瀷] 渚涢槄璇伙紙鏃犲弬鐪佺暐鏂规嫭鍙凤級銆?
             var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
@@ -802,12 +817,14 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End();
         }
 
-        /// <summary>方法签名短键：Name 或 Name[参数类型列表]（重载靠参数类型区分）。</summary>
+        /// <summary>鏂规硶绛惧悕鐭敭锛歂ame 鎴?Name[鍙傛暟绫诲瀷鍒楄〃]锛堥噸杞介潬鍙傛暟绫诲瀷鍖哄垎锛夈€?/summary>
         private static string MethodSignature(FunctionSymbol method)
         {
+            // 6e-M23 R8锛氫粎宸?out/ref 鐨勯噸杞介敭椤讳笉鍚岋紙淇グ绗﹀叆绛惧悕锛?
             return method.Parameters.Length == 0
                 ? method.Name
-                : method.Name + "[" + string.Join(",", method.Parameters.Select(p => TypeRef(p.Type))) + "]";
+                : method.Name + "[" + string.Join(",", method.Parameters.Select(p =>
+                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type))) + "]";
         }
 
         private static void EmitFunctionSymbol(Writer w, Registry registry, FunctionSymbol fn)
@@ -832,6 +849,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 w.Field(Str(p.Name));
                 w.Field(TypeRef(p.Type));
                 w.Field(p.Ordinal);
+                w.Field(p.IsOut ? "out" : p.IsRef ? "ref" : "-");
                 w.End();
             }
             w.End();
@@ -855,7 +873,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         // ---------------------------------------------------------------- write: naming
 
-        /// <summary>类型的文本引用：内建/数组用短名（int / int[][]），类/枚举用全名。</summary>
+        /// <summary>绫诲瀷鐨勬枃鏈紩鐢細鍐呭缓/鏁扮粍鐢ㄧ煭鍚嶏紙int / int[][]锛夛紝绫?鏋氫妇鐢ㄥ叏鍚嶃€?/summary>
         private static string TypeRef(TypeSymbol type)
         {
             if (type is EnumTypeSymbol enumType)
@@ -958,8 +976,9 @@ namespace Cocoa.CodeAnalysis.Cod
         {
             switch (value)
             {
-                case null: return "n:"; // 6e-M19 M5-a：null 常量
+                case null: return "n:"; // 6e-M19 M5-a锛歯ull 甯搁噺
                 case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
+                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8锛歩64 甯搁噺
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
                 case byte u: return "u:" + u.ToString(CultureInfo.InvariantCulture);
@@ -976,8 +995,9 @@ namespace Cocoa.CodeAnalysis.Cod
             var rest = token.Substring(2);
             switch (kind)
             {
-                case 'n': return null!; // 6e-M19 M5-a：null 常量
+                case 'n': return null!; // 6e-M19 M5-a锛歯ull 甯搁噺
                 case 'i': return int.Parse(rest, CultureInfo.InvariantCulture);
+                case 'l': return long.Parse(rest, CultureInfo.InvariantCulture); // 6e-M23 R8锛歩64 甯搁噺
                 case 'b': return rest == "1";
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'u': return (byte)int.Parse(rest, CultureInfo.InvariantCulture);
@@ -1091,7 +1111,7 @@ namespace Cocoa.CodeAnalysis.Cod
             {
                 if (_hasChild.Count > 0)
                 {
-                    // 标记父节点含子节点：其闭括号换行缩进，而非行内闭合
+                    // 鏍囪鐖惰妭鐐瑰惈瀛愯妭鐐癸細鍏堕棴鎷彿鎹㈣缂╄繘锛岃€岄潪琛屽唴闂悎
                     _hasChild[_hasChild.Count - 1] = true;
                 }
 
@@ -1118,17 +1138,17 @@ namespace Cocoa.CodeAnalysis.Cod
 
                 if (hasChild && !_lineStart)
                 {
-                    // 多行节点：先回到行首，闭括号与开括号同列
+                    // 澶氳鑺傜偣锛氬厛鍥炲埌琛岄锛岄棴鎷彿涓庡紑鎷彿鍚屽垪
                     _w.WriteLine();
                     _w.Write(new string(' ', _depth * 2));
                 }
 
-                // 行内闭合（无子节点）或定位后闭合均不主动换行——由下一次 Open/Field/End 按需定位
+                // 琛屽唴闂悎锛堟棤瀛愯妭鐐癸級鎴栧畾浣嶅悗闂悎鍧囦笉涓诲姩鎹㈣鈥斺€旂敱涓嬩竴娆?Open/Field/End 鎸夐渶瀹氫綅
                 _w.Write(')');
                 _lineStart = false;
             }
 
-            /// <summary>子节点开括号前定位到下一行缩进列（已在行首则不再换行）。</summary>
+            /// <summary>瀛愯妭鐐瑰紑鎷彿鍓嶅畾浣嶅埌涓嬩竴琛岀缉杩涘垪锛堝凡鍦ㄨ棣栧垯涓嶅啀鎹㈣锛夈€?/summary>
             private void Indent()
             {
                 if (_depth == 0)
@@ -1146,7 +1166,7 @@ namespace Cocoa.CodeAnalysis.Cod
             }
         }
 
-        /// <summary>写侧符号注册表：去重 + 发射顺序（id 仅用于排序，不写入文件）。</summary>
+        /// <summary>鍐欎晶绗﹀彿娉ㄥ唽琛細鍘婚噸 + 鍙戝皠椤哄簭锛坕d 浠呯敤浜庢帓搴忥紝涓嶅啓鍏ユ枃浠讹級銆?/summary>
         private sealed class Registry
         {
             private readonly Dictionary<object, int> _ids = new(ReferenceEqualityComparer.Instance);
@@ -1178,13 +1198,13 @@ namespace Cocoa.CodeAnalysis.Cod
                 {
                     Emitters.Add((w, r) => EmitEnumSymbol(w, r, enumType));
                 }
-                // 其余（内建/数组）自描述，无需独立条目
+                // 鍏朵綑锛堝唴寤?鏁扮粍锛夎嚜鎻忚堪锛屾棤闇€鐙珛鏉＄洰
             }
 
             private void RegisterClassCore(ClassTypeSymbol classType)
             {
-                // 6e-M19 M2-c：内建单例（System.Object/System.Type）不发 cls——读侧会造出新类破坏单例同一性；
-                // 发 systype 按全名映射回单例（成员面由 Ensure 内建注入，不序列化）
+                // 6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛変笉鍙?cls鈥斺€旇渚т細閫犲嚭鏂扮被鐮村潖鍗曚緥鍚屼竴鎬э紱
+                // 鍙?systype 鎸夊叏鍚嶆槧灏勫洖鍗曚緥锛堟垚鍛橀潰鐢?Ensure 鍐呭缓娉ㄥ叆锛屼笉搴忓垪鍖栵級
                 if (SystemObjectMembers.IsBuiltinSystemClass(classType))
                 {
                     Emitters.Add((w, r) => EmitBuiltinSystemClass(w, r, classType));
@@ -1201,8 +1221,8 @@ namespace Cocoa.CodeAnalysis.Cod
                     return;
                 }
 
-                // 类方法：容器类全静态（syscall/extern 及带体静态方法，6e-M18）作为独立 fn 序列化；实例方法/构造由类壳过滤。
-                // 例外：Object 内建方法（M2-c）带 BuiltinKind，读侧经单例复用重建，须随引用序列化
+                // 绫绘柟娉曪細瀹瑰櫒绫诲叏闈欐€侊紙syscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪紝6e-M18锛変綔涓虹嫭绔?fn 搴忓垪鍖栵紱瀹炰緥鏂规硶/鏋勯€犵敱绫诲３杩囨护銆?
+                // 渚嬪锛歄bject 鍐呭缓鏂规硶锛圡2-c锛夊甫 BuiltinKind锛岃渚х粡鍗曚緥澶嶇敤閲嶅缓锛岄』闅忓紩鐢ㄥ簭鍒楀寲
                 if (fn.ContainingClass != null && !fn.IsStatic && !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass))
                 {
                     return;
@@ -1240,16 +1260,18 @@ namespace Cocoa.CodeAnalysis.Cod
                 Emitters.Add((w, r) => EmitVariableSymbol(w, r, v));
             }
 
-            /// <summary>收集完成后统一命名：函数键与变量键（全局 global:名字；局部/参数 函数键/名字；冲突加 #2/#3）。</summary>
+            /// <summary>鏀堕泦瀹屾垚鍚庣粺涓€鍛藉悕锛氬嚱鏁伴敭涓庡彉閲忛敭锛堝叏灞€ global:鍚嶅瓧锛涘眬閮?鍙傛暟 鍑芥暟閿?鍚嶅瓧锛涘啿绐佸姞 #2/#3锛夈€?/summary>
             public void Seal()
             {
                 foreach (var fn in _functions)
                 {
-                    var paramTypes = string.Join(",", fn.Parameters.Select(p => TypeRef(p.Type)));
+                    // 6e-M23 R8锛氫粎宸?out/ref 鐨勯噸杞介敭椤讳笉鍚岋紙淇グ绗﹀叆 FnKey锛?
+                    var paramTypes = string.Join(",", fn.Parameters.Select(p =>
+                        (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type)));
                     var head = fn.ContainingClass != null
                         ? fn.ContainingClass.FullName + "." + fn.Name
                         : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;
-                    // 方括号包裹参数类型（圆括号会被 .cod 分词器当结构符拆开）
+                    // 鏂规嫭鍙峰寘瑁瑰弬鏁扮被鍨嬶紙鍦嗘嫭鍙蜂細琚?.cod 鍒嗚瘝鍣ㄥ綋缁撴瀯绗︽媶寮€锛?
                     _fnKeys[fn] = head + "[" + paramTypes + "]";
                 }
 
@@ -1274,7 +1296,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         // ---------------------------------------------------------------- read
 
-        /// <summary>从 `.cod` 文件加载程序集。</summary>
+        /// <summary>浠?`.cod` 鏂囦欢鍔犺浇绋嬪簭闆嗐€?/summary>
         public static CodProgram Load(string path)
         {
             return Read(File.ReadAllText(path));
@@ -1282,7 +1304,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         public static CodProgram Read(string text)
         {
-            // 完整性校验前置：缺失或不匹配即拒载（防误改/损坏；蓄意伪造需签名机制，不在 v1 范围）
+            // 瀹屾暣鎬ф牎楠屽墠缃細缂哄け鎴栦笉鍖归厤鍗虫嫆杞斤紙闃茶鏀?鎹熷潖锛涜搫鎰忎吉閫犻渶绛惧悕鏈哄埗锛屼笉鍦?v1 鑼冨洿锛?
             var marker = "(checksum " + ChecksumTag;
             var markerIndex = text.LastIndexOf(marker, StringComparison.Ordinal);
             if (markerIndex < 0)
@@ -1386,16 +1408,16 @@ namespace Cocoa.CodeAnalysis.Cod
                 namespaces.ToImmutable());
         }
 
-        /// <summary>读侧共享状态：按名字/键索引的符号表 + 程序集符号清单。</summary>
+        /// <summary>璇讳晶鍏变韩鐘舵€侊細鎸夊悕瀛?閿储寮曠殑绗﹀彿琛?+ 绋嬪簭闆嗙鍙锋竻鍗曘€?/summary>
         private sealed class ReadContext
         {
-            /// <summary>类/枚举全名 → 类型符号（内建类型不经此表，直接解析）。</summary>
+            /// <summary>绫?鏋氫妇鍏ㄥ悕 鈫?绫诲瀷绗﹀彿锛堝唴寤虹被鍨嬩笉缁忔琛紝鐩存帴瑙ｆ瀽锛夈€?/summary>
             public Dictionary<string, TypeSymbol> TypesByName { get; } = new(StringComparer.Ordinal);
 
-            /// <summary>函数键 → 函数符号。</summary>
+            /// <summary>鍑芥暟閿?鈫?鍑芥暟绗﹀彿銆?/summary>
             public Dictionary<string, FunctionSymbol> FunctionsByKey { get; } = new(StringComparer.Ordinal);
 
-            /// <summary>变量键 → 变量/参数符号。</summary>
+            /// <summary>鍙橀噺閿?鈫?鍙橀噺/鍙傛暟绗﹀彿銆?/summary>
             public Dictionary<string, VariableSymbol> VariablesByKey { get; } = new(StringComparer.Ordinal);
 
             public ImmutableArray<FunctionSymbol>.Builder Functions { get; } = ImmutableArray.CreateBuilder<FunctionSymbol>();
@@ -1466,7 +1488,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static void ReadSystemType(Reader reader, ReadContext context)
         {
-            // 6e-M19 M2-c：内建单例按全名映射（成员面已由 Ensure 内建注入）
+            // 6e-M19 M2-c锛氬唴寤哄崟渚嬫寜鍏ㄥ悕鏄犲皠锛堟垚鍛橀潰宸茬敱 Ensure 鍐呭缓娉ㄥ叆锛?
             var fullName = reader.ExpectString();
             var singleton = fullName switch
             {
@@ -1490,14 +1512,14 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             var methodCount = ReadCountField(reader, "methods:");
-            // 方法名仅供阅读，方法符号由各 fn 条目的 owner 字段回填
+            // 鏂规硶鍚嶄粎渚涢槄璇伙紝鏂规硶绗﹀彿鐢卞悇 fn 鏉＄洰鐨?owner 瀛楁鍥炲～
             for (var i = 0; i < methodCount; i++)
             {
                 reader.ExpectString();
             }
 
             var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
-            // 6e-M19 M2-c：.cod 类默认继承 System.Object（与源码绑定一致；.cod v1 不序列化接口声明）
+            // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.cod v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
             classType.BaseType = ClassTypeSymbol.SystemObject;
             context.Classes.Add(classType);
             context.AddNamedType(fullName, classType);
@@ -1562,13 +1584,25 @@ namespace Cocoa.CodeAnalysis.Cod
                 var pName = Unescape(reader.ExpectString());
                 var pType = ResolveTypeRef(reader.ExpectString(), context);
                 var ordinal = reader.ExpectInt();
-                var parameter = new ParameterSymbol(pName, pType, ordinal);
+
+                // 6e-M23 R8锛氱 5 涓?token = out/ref/-锛堟棫鏂囦欢鏃犳 token锛屾寜 "-" 鍏煎锛?
+                var isOut = false;
+                var isRef = false;
+                var modifierText = reader.PeekRaw();
+                if (modifierText is "out" or "ref" or "-")
+                {
+                    reader.ExpectString();
+                    isOut = modifierText == "out";
+                    isRef = modifierText == "ref";
+                }
+
+                var parameter = new ParameterSymbol(pName, pType, ordinal, isOut, isRef);
                 parameters.Add(parameter);
                 context.VariablesByKey[pKey] = parameter;
                 reader.End();
             }
 
-            // 6e-M19 M2-c：Object 内建方法复用单例（保持符号同一性，发射器按 BuiltinKind 分发）
+            // 6e-M19 M2-c锛歄bject 鍐呭缓鏂规硶澶嶇敤鍗曚緥锛堜繚鎸佺鍙峰悓涓€鎬э紝鍙戝皠鍣ㄦ寜 BuiltinKind 鍒嗗彂锛?
             if (containingClass != null && builtinKind != null && SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
                 var singleton = SystemObjectMembers.GetByKind(builtinKind.Value);
@@ -1581,7 +1615,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
             }
 
-            // 含类归属或内置种类：不复用全局单例（内置单例无类归属），重建带上下文符号
+            // 鍚被褰掑睘鎴栧唴缃绫伙細涓嶅鐢ㄥ叏灞€鍗曚緥锛堝唴缃崟渚嬫棤绫诲綊灞烇級锛岄噸寤哄甫涓婁笅鏂囩鍙?
             FunctionSymbol function;
             if (containingClass != null || builtinKind != null)
             {
@@ -1615,8 +1649,8 @@ namespace Cocoa.CodeAnalysis.Cod
             context.Functions.Add(function);
             context.FunctionsByKey[key] = function;
 
-            // 类方法回填：含类归属的 fn 归入其类（6e-M18：容器类全静态——syscall/extern 及带体静态方法）。
-            // 内建单例（System.Object/System.Type，M2-c）成员已由 Ensure 注入，跳过回填防重复/防误标 static
+            // 绫绘柟娉曞洖濉細鍚被褰掑睘鐨?fn 褰掑叆鍏剁被锛?e-M18锛氬鍣ㄧ被鍏ㄩ潤鎬佲€斺€攕yscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪級銆?
+            // 鍐呭缓鍗曚緥锛圫ystem.Object/System.Type锛孧2-c锛夋垚鍛樺凡鐢?Ensure 娉ㄥ叆锛岃烦杩囧洖濉槻閲嶅/闃茶鏍?static
             if (containingClass != null && !SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
                 function.IsStatic = true;
@@ -1669,7 +1703,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
                 var body = (BoundBlockStatement)ReadStatement(reader, context, labels);
 
-                // extern 函数无实现：空 body（与 Binder.BindProgram 一致）
+                // extern 鍑芥暟鏃犲疄鐜帮細绌?body锛堜笌 Binder.BindProgram 涓€鑷达級
                 if (function.IsExtern)
                 {
                     body = new BoundBlockStatement(null, ImmutableArray<BoundStatement>.Empty);
@@ -1776,7 +1810,7 @@ namespace Cocoa.CodeAnalysis.Cod
             };
         }
 
-        /// <summary>读取 label:value 形式的字段并校验标签。</summary>
+        /// <summary>璇诲彇 label:value 褰㈠紡鐨勫瓧娈靛苟鏍￠獙鏍囩銆?/summary>
         private static string ReadLabeledField(Reader reader, string label)
         {
             var token = reader.ExpectString();
@@ -1788,7 +1822,7 @@ namespace Cocoa.CodeAnalysis.Cod
             return Unescape(token.Substring(label.Length));
         }
 
-        /// <summary>读取 count:N 形式的计数字段。</summary>
+        /// <summary>璇诲彇 count:N 褰㈠紡鐨勮鏁板瓧娈点€?/summary>
         private static int ReadCountField(Reader reader, string label)
         {
             var token = reader.ExpectString();
@@ -1800,14 +1834,14 @@ namespace Cocoa.CodeAnalysis.Cod
             return int.Parse(token.Substring(label.Length), CultureInfo.InvariantCulture);
         }
 
-        /// <summary>全名拆分为（命名空间, 名）；无点号时命名空间为空。</summary>
+        /// <summary>鍏ㄥ悕鎷嗗垎涓猴紙鍛藉悕绌洪棿, 鍚嶏級锛涙棤鐐瑰彿鏃跺懡鍚嶇┖闂翠负绌恒€?/summary>
         private static (string Namespace, string Name) SplitFullName(string fullName)
         {
             var lastDot = fullName.LastIndexOf('.');
             return lastDot < 0 ? ("", fullName) : (fullName.Substring(0, lastDot), fullName.Substring(lastDot + 1));
         }
 
-        /// <summary>变量键还原真实符号名：去掉 global:/函数键前缀与 #N 冲突后缀。</summary>
+        /// <summary>鍙橀噺閿繕鍘熺湡瀹炵鍙峰悕锛氬幓鎺?global:/鍑芥暟閿墠缂€涓?#N 鍐茬獊鍚庣紑銆?/summary>
         private static string KeyToName(string key)
         {
             var name = key;
@@ -2011,6 +2045,13 @@ namespace Cocoa.CodeAnalysis.Cod
                         }
 
                         return new BoundCallExpression(null, function, arguments.ToImmutable());
+                    }
+                case "byrefarg":
+                    {
+                        // 6e-M23 R8锛歰ut/ref 瀹炲弬鍖呰锛堝唴灞備负鍙祴鍊?lvalue锛?
+                        var modifier = reader.ExpectString();
+                        var expression = ReadExpression(reader, context, labels);
+                        return new BoundByRefArgument(null, expression, isRef: modifier == "ref");
                     }
                 case "conv":
                     {
@@ -2224,7 +2265,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 return value;
             }
 
-            /// <summary>窥探当前原始 token（不跳过 `(`）——用于判断子节点是否出现。</summary>
+            /// <summary>绐ユ帰褰撳墠鍘熷 token锛堜笉璺宠繃 `(`锛夆€斺€旂敤浜庡垽鏂瓙鑺傜偣鏄惁鍑虹幇銆?/summary>
             public string PeekRaw()
             {
                 return _pos < _tokens.Length ? _tokens[_pos] : "";
@@ -2232,7 +2273,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
             public bool TryExpect(out string token)
             {
-                // 跳过节点开括号 `(`
+                // 璺宠繃鑺傜偣寮€鎷彿 `(`
                 while (_pos < _tokens.Length && _tokens[_pos] == "(")
                 {
                     _pos++;
@@ -2244,7 +2285,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     return false;
                 }
 
-                // `)` 不消费（留给 End()），返回 false 终止当前列表
+                // `)` 涓嶆秷璐癸紙鐣欑粰 End()锛夛紝杩斿洖 false 缁堟褰撳墠鍒楄〃
                 if (_tokens[_pos] == ")")
                 {
                     token = ")";
@@ -2257,7 +2298,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
             public void End()
             {
-                // 当前 token 应为节点闭括号 `)`（直接消费，不跳过 `(`）
+                // 褰撳墠 token 搴斾负鑺傜偣闂嫭鍙?`)`锛堢洿鎺ユ秷璐癸紝涓嶈烦杩?`(`锛?
                 if (_pos >= _tokens.Length)
                 {
                     throw new InvalidDataException($"unexpected end of .cod file at pos {_pos}; context: {Context()}");
@@ -2279,7 +2320,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
             private string Next()
             {
-                // 跳过节点开括号 `(`；返回原子或 `)`（列表终止）
+                // 璺宠繃鑺傜偣寮€鎷彿 `(`锛涜繑鍥炲師瀛愭垨 `)`锛堝垪琛ㄧ粓姝級
                 while (true)
                 {
                     if (_pos >= _tokens.Length)

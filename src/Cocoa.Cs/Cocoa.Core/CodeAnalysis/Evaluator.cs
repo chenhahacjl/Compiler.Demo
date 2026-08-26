@@ -25,6 +25,12 @@ namespace Cocoa.CodeAnalysis
 
         private object? _lastValue;
 
+        // 6e-M23 R5：byref 实参回写队列（LIFO——调用退出时回写到基线标记）
+        private readonly List<Action> _byRefWriteBacks = new List<Action>();
+
+        // 6e-M23 R5：当前调用实参物化的别名去重作用域（同一存储共享 Box，三后端别名语义一致）
+        private Dictionary<object, ByRefBox> _byRefSlotScope = new Dictionary<object, ByRefBox>();
+
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
             _program = program;
@@ -231,6 +237,9 @@ namespace Cocoa.CodeAnalysis
                 // 6e-M22 C4：函数值与间接调用
                 case BoundNodeKind.FunctionValueExpression:
                     return EvaluateFunctionValue((BoundFunctionValueExpression)node);
+                case BoundNodeKind.ByRefArgument:
+                    return EvaluateByRefSlot((BoundByRefArgument)node);
+
                 case BoundNodeKind.InvocationExpression:
                     return EvaluateInvocation((BoundInvocationExpression)node);
                 default:
@@ -327,17 +336,17 @@ namespace Cocoa.CodeAnalysis
         {
             if (variable.Variable.Kind == SymbolKind.GlobalVariable)
             {
-                return _globals[variable.Variable];
+                return ByRefBox.Deref(_globals[variable.Variable]);
             }
 
             // 6e-M22 C5：捕获变量读写环境对象字段
             if (variable.Variable.IsCaptured)
             {
-                return PeekClosureEnvironment().Slots[variable.Variable];
+                return ByRefBox.Deref(PeekClosureEnvironment().Slots[variable.Variable]);
             }
 
             var locals = _locals.Peek();
-            return locals[variable.Variable];
+            return ByRefBox.Deref(locals[variable.Variable]);
         }
 
         private object EvaluateAssignmentExpression(BoundAssignmentExpression assignment)
@@ -550,9 +559,23 @@ namespace Cocoa.CodeAnalysis
 
             var locals = new Dictionary<VariableSymbol, object>();
             var argumentValues = new object?[node.Arguments.Length];
+
+            // 6e-M23 R5：byref 实参 copy-in/out——标记本调用的回写基线 + 别名去重作用域，退出时统一回写
+            var byRefMarker = _byRefWriteBacks.Count;
+            var savedSlots = _byRefSlotScope;
+            _byRefSlotScope = new Dictionary<object, ByRefBox>();
+
             for (var i = 0; i < node.Arguments.Length; i++)
             {
                 var parameter = node.Function.Parameters[i];
+                if (node.Arguments[i] is BoundByRefArgument byRefArgument)
+                {
+                    var box = EvaluateByRefSlot(byRefArgument);
+                    locals.Add(parameter, box);
+                    argumentValues[i] = box;
+                    continue;
+                }
+
                 var value = EvaluateExpression(node.Arguments[i]);
 
                 Debug.Assert(value != null);
@@ -586,6 +609,9 @@ namespace Cocoa.CodeAnalysis
             }
             finally
             {
+                RunByRefWriteBacks(byRefMarker);
+                _byRefSlotScope = savedSlots;
+
                 if (pushedEnvironment != null)
                 {
                     _closureEnvironments.Pop();
@@ -595,6 +621,107 @@ namespace Cocoa.CodeAnalysis
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// byref 实参槽求值（6e-M23 R5）：copy-in 当前值入 Box，登记回写动作；
+        /// 同一次调用的相同存储（别名去重键）共享同一 Box，保证三后端别名语义一致。
+        /// </summary>
+        private ByRefBox EvaluateByRefSlot(BoundByRefArgument node)
+        {
+            var dedupe = _byRefSlotScope;
+
+            switch (node.Expression)
+            {
+                case BoundVariableExpression variable:
+                {
+                    if (dedupe.TryGetValue(variable.Variable, out var sharedVariableBox))
+                    {
+                        return sharedVariableBox;
+                    }
+
+                    var current = EvaluateVariableExpression(variable);
+                    var box = new ByRefBox(current);
+                    dedupe[variable.Variable] = box;
+                    _byRefWriteBacks.Add(() => Assign(variable.Variable, box.Value));
+                    return box;
+                }
+
+                case BoundMemberAccessExpression member when member.Field is { IsStatic: true } staticField:
+                {
+                    if (dedupe.TryGetValue(staticField, out var sharedStaticBox))
+                    {
+                        return sharedStaticBox;
+                    }
+
+                    EnsureStaticInit(staticField.ContainingClass);
+                    var current = _staticFields.TryGetValue(staticField, out var staticValue)
+                        ? staticValue
+                        : DefaultValueOf(staticField.Type);
+                    var staticSlotBox = new ByRefBox(current);
+                    dedupe[staticField] = staticSlotBox;
+                    _byRefWriteBacks.Add(() =>
+                    {
+                        EnsureStaticInit(staticField.ContainingClass);
+                        _staticFields[staticField] = staticSlotBox.Value!;
+                    });
+                    return staticSlotBox;
+                }
+
+                case BoundMemberAccessExpression member when member.Field != null:
+                {
+                    var field = member.Field;
+                    var target = (EvaluatorObject)EvaluateExpression(member.Target)!;
+                    var ordinal = FieldOrdinal(field, target.Class);
+
+                    var slotKey = (target, ordinal);
+                    if (dedupe.TryGetValue(slotKey, out var sharedFieldBox))
+                    {
+                        return sharedFieldBox;
+                    }
+
+                    var current = target.Fields[ordinal] ?? DefaultValueOf(field.Type);
+                    var fieldBox = new ByRefBox(current);
+                    dedupe[slotKey] = fieldBox;
+                    _byRefWriteBacks.Add(() => target.Fields[ordinal] = fieldBox.Value);
+                    return fieldBox;
+                }
+
+                case BoundElementAccessExpression element:
+                {
+                    var array = (object[])EvaluateExpression(element.Target)!;
+                    var index = Convert.ToInt32(EvaluateExpression(element.Index));
+
+                    var slotKey = (array, index);
+                    if (dedupe.TryGetValue(slotKey, out var sharedElementBox))
+                    {
+                        return sharedElementBox;
+                    }
+
+                    var current = array[index];
+                    var elementBox = new ByRefBox(current);
+                    dedupe[slotKey] = elementBox;
+                    _byRefWriteBacks.Add(() => array[index] = elementBox.Value!);
+                    return elementBox;
+                }
+
+                default:
+                    throw new Exception($"Unexpected by-ref argument target {node.Expression.Kind}");
+            }
+        }
+
+        /// <summary>回写本调用登记的 byref 实参（LIFO 基线之上），异常路径同样执行。</summary>
+        private void RunByRefWriteBacks(int marker)
+        {
+            for (var i = _byRefWriteBacks.Count - 1; i >= marker; i--)
+            {
+                _byRefWriteBacks[i]();
+            }
+
+            if (_byRefWriteBacks.Count > marker)
+            {
+                _byRefWriteBacks.RemoveRange(marker, _byRefWriteBacks.Count - marker);
+            }
         }
 
         /// <summary>求值器显示形态：用户类实例 → 类名（对齐 IL 默认 ToString）；类型值 → 全名。</summary>
@@ -1004,14 +1131,28 @@ namespace Cocoa.CodeAnalysis
         private object? DispatchOnInstance(BoundMemberCallExpression node, FunctionSymbol declared, EvaluatorObject instance)
         {
             var target = node.IsBase ? declared : ResolveDispatch(instance.Class, declared) ?? declared;
-            var argumentValues = MaterializeArguments(node);
 
-            if (target.BuiltinKind != null)
+            // 6e-M23 R5：实参物化可能登记 byref 回写，基线传给 InvokeFunction 在退出时回写
+            var byRefMarker = _byRefWriteBacks.Count;
+            var savedSlots = _byRefSlotScope;
+            _byRefSlotScope = new Dictionary<object, ByRefBox>();
+            try
             {
-                return EvaluateBuiltinDefaultOnInstance(target.BuiltinKind.Value, instance, node);
-            }
+                var argumentValues = MaterializeArguments(node);
 
-            return InvokeFunction(target, instance, argumentValues);
+                if (target.BuiltinKind != null)
+                {
+                    RunByRefWriteBacks(byRefMarker);
+                    return EvaluateBuiltinDefaultOnInstance(target.BuiltinKind.Value, instance, node);
+                }
+
+                return InvokeFunction(target, instance, argumentValues, byRefMarker: byRefMarker);
+            }
+            finally
+            {
+                RunByRefWriteBacks(byRefMarker);
+                _byRefSlotScope = savedSlots;
+            }
         }
 
         /// <summary>内建默认实现的求值器语义（对齐 C# System.Object 默认行为）。</summary>
@@ -1200,13 +1341,25 @@ namespace Cocoa.CodeAnalysis
                 return null;
             }
 
+            // 6e-M23 R5：byref 实参回写基线 + 别名作用域（构造形参同样支持 out/ref）
+            var byRefMarker = _byRefWriteBacks.Count;
+            var savedSlots = _byRefSlotScope;
+            _byRefSlotScope = new Dictionary<object, ByRefBox>();
             var argumentValues = new object?[node.Arguments.Length];
-            for (var i = 0; i < node.Arguments.Length; i++)
+            try
             {
-                argumentValues[i] = EvaluateExpression(node.Arguments[i]);
-            }
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    argumentValues[i] = EvaluateExpression(node.Arguments[i]);
+                }
 
-            InvokeFunction(node.Constructor, _thisStack.Peek(), argumentValues);
+                InvokeFunction(node.Constructor, _thisStack.Peek(), argumentValues, byRefMarker: byRefMarker);
+            }
+            finally
+            {
+                RunByRefWriteBacks(byRefMarker);
+                _byRefSlotScope = savedSlots;
+            }
             return null;
         }
 
@@ -1229,7 +1382,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 实例函数调用环境：参数入局部帧 + this 压接收者栈（BoundThisExpression 求值返回栈顶），退出对称弹栈。
         /// </summary>
-        private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues, ClosureEnvironment? existingEnvironment = null)
+        private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues, ClosureEnvironment? existingEnvironment = null, int byRefMarker = -1)
         {
             var locals = new Dictionary<VariableSymbol, object>();
             for (var i = 0; i < function.Parameters.Length; i++)
@@ -1257,6 +1410,11 @@ namespace Cocoa.CodeAnalysis
             }
             finally
             {
+                if (byRefMarker >= 0)
+                {
+                    RunByRefWriteBacks(byRefMarker);
+                }
+
                 if (thisReceiver != null)
                 {
                     _thisStack.Pop();
@@ -1325,18 +1483,38 @@ namespace Cocoa.CodeAnalysis
 
         private void Assign(VariableSymbol variable, object? value)
         {
+            // 6e-M23 R5：形参槽持有 ByRefBox 时写入穿透到调用方存储
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
+                if (_globals.TryGetValue(variable, out var existingGlobal) && existingGlobal is ByRefBox globalBox)
+                {
+                    globalBox.Value = value;
+                    return;
+                }
+
                 _globals[variable] = value!;
             }
             else if (variable.IsCaptured)
             {
                 // 6e-M22 C5：捕获变量写环境对象字段
-                PeekClosureEnvironment().Slots[variable] = value!;
+                var slots = PeekClosureEnvironment().Slots;
+                if (slots.TryGetValue(variable, out var existingCaptured) && existingCaptured is ByRefBox capturedBox)
+                {
+                    capturedBox.Value = value;
+                    return;
+                }
+
+                slots[variable] = value!;
             }
             else
             {
                 var locals = _locals.Peek();
+                if (locals.TryGetValue(variable, out var existingLocal) && existingLocal is ByRefBox localBox)
+                {
+                    localBox.Value = value;
+                    return;
+                }
+
                 locals[variable] = value!;
             }
         }

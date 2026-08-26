@@ -142,6 +142,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.NewKeyword;
                 case "null":
                     return SyntaxKind.NullKeyword;
+                case "out":
+                    return SyntaxKind.OutKeyword;
                 case "namespace":
                     return SyntaxKind.NamespaceKeyword;
                 case "override":
@@ -152,6 +154,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.ProtectedKeyword;
                 case "readonly":
                     return SyntaxKind.ReadonlyKeyword;
+                case "ref":
+                    return SyntaxKind.RefKeyword;
                 case "sealed":
                     return SyntaxKind.SealedKeyword;
                 case "static":
@@ -375,6 +379,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "protected";
                 case SyntaxKind.ReadonlyKeyword:
                     return "readonly";
+                case SyntaxKind.RefKeyword:
+                    return "ref";
                 case SyntaxKind.SealedKeyword:
                     return "sealed";
                 case SyntaxKind.StaticKeyword:
@@ -403,6 +409,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "new";
                 case SyntaxKind.NullKeyword:
                     return "null";
+                case SyntaxKind.OutKeyword:
+                    return "out";
                 case SyntaxKind.NamespaceKeyword:
                     return "namespace";
                 case SyntaxKind.UsingKeyword:

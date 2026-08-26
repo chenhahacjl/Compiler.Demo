@@ -1,5 +1,7 @@
 ﻿// Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
 // class Int32 —— i32 的成员面载体（6e-M19 M2-b，对齐 C# System.Int32）。
+// 6e-M23 R9：新增 TryParse（语言级 out 参数的 stdlib 旗舰消费者）；
+// Parse 复用底层 ParseInt64 原语 + i32 值域校验（失败沿原语语义）。
 
 namespace System
 {
@@ -25,7 +27,79 @@ namespace System
 
         public static function Parse(s: string): i32
         {
-            return i32(Runtime.ParseInt64(s))
+            let v = Runtime.ParseInt64(s)
+            if v < -2147483648 || v > 2147483647
+            {
+                Runtime.Exit(1)
+            }
+
+            return i32(v)
+        }
+
+        public static function TryParse(s: string, out result: i32): bool
+        {
+            result = 0
+            let len = s.Length
+            if len == 0
+            {
+                return false
+            }
+
+            var index = 0
+            var negative = false
+            let first = s[0]
+            if first == '+'
+            {
+                index = 1
+            }
+            else if first == '-'
+            {
+                negative = true
+                index = 1
+            }
+
+            if index >= len
+            {
+                return false
+            }
+
+            var acc: i64 = 0
+            while index < len
+            {
+                let c = s[index]
+                if Char.IsDigit(c)
+                {
+                    acc = acc * 10 + i64(i32(c) - 48)
+                }
+                else
+                {
+                    return false
+                }
+
+                // 上界预检：正数上限 2147483647，负数允许 2147483648（= int.MinValue）
+                if acc > 2147483648
+                {
+                    return false
+                }
+
+                index = index + 1
+            }
+
+            if negative
+            {
+                if acc == 2147483648
+                {
+                    result = -2147483647 - 1
+                    return true
+                }
+            }
+            else if acc > 2147483647
+            {
+                return false
+            }
+
+            result = i32(acc)
+            return true
         }
     }
 }

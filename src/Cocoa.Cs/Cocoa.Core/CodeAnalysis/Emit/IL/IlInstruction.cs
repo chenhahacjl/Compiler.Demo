@@ -25,6 +25,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         U4,             // System.UInt32
         U8,             // System.UInt64
         R4,             // System.Single
+        ByRef,          // ELEMENT_TYPE_BYREF T&（6e-M23 R6，仅形参位）
     }
 
     /// <summary>P/Invoke 调用约定（对应 ECMA-335 II.23.1.10 ImplMapFlags.CallConvMask）。</summary>
@@ -89,6 +90,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         /// <summary>泛型实参变量 !n（委托 Invoke 开放签名，对齐 csc）。</summary>
         public static IlType GenericVar(int ordinal) => new IlType(IlTypeKind.GenericParameter, genericOrdinal: ordinal);
+
+        /// <summary>托管引用 T&amp;（6e-M23 R6：byref 形参）。</summary>
+        public static IlType ByRefOf(IlType elementType) => new IlType(IlTypeKind.ByRef, elementType: elementType);
 
         /// <summary>CLR 元数据全名（参数类型匹配用）。</summary>
         public string FullName => Kind switch

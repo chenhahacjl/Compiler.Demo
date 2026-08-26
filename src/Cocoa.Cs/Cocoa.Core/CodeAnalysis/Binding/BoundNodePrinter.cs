@@ -124,6 +124,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.ThisExpression:
                     WriteThisExpression((BoundThisExpression)node, writer);
                     break;
+                case BoundNodeKind.ByRefArgument:
+                    WriteByRefArgument((BoundByRefArgument)node, writer);
+                    break;
                 default:
                     throw new Exception($"Unexpected node {node.Kind}");
             }
@@ -575,6 +578,14 @@ namespace Cocoa.CodeAnalysis.Binding
         private static void WriteThisExpression(BoundThisExpression node, IndentedTextWriter writer)
         {
             writer.WriteKeyword("this");
+        }
+
+        /// <summary>byref 实参（6e-M23 R3）：<c>out x</c> / <c>ref a[i]</c>。</summary>
+        private static void WriteByRefArgument(BoundByRefArgument node, IndentedTextWriter writer)
+        {
+            writer.WriteKeyword(node.IsRef ? "ref" : "out");
+            writer.WriteSpace();
+            node.Expression.WriteTo(writer);
         }
 
         private static void WriteMemberAccessExpression(BoundMemberAccessExpression node, IndentedTextWriter writer)

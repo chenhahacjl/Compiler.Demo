@@ -561,6 +561,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     stream.WriteByte(0x1D); // SZARRAY
                     EncodeType(stream, type.ElementType!);
                     break;
+                case IlTypeKind.ByRef:
+                    stream.WriteByte(0x10); // ELEMENT_TYPE_BYREF（6e-M23 R6）
+                    EncodeType(stream, type.ElementType!);
+                    break;
                 case IlTypeKind.NativeInt:
                     stream.WriteByte(0x18); // ELEMENT_TYPE_I
                     break;

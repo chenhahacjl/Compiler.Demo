@@ -426,7 +426,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// <summary>this 参数在参数区占用的字节数（两架构均 8 字节槽；x86 双 dword）。</summary>
         private int ThisParamBytes(FunctionSymbol function) => HasThisParameter(function) || _environmentFirstFunctions.Contains(function) ? 8 : 0;
 
-        /// <summary>x86 用户函数实参/形参的字节偏移：double 占 8 字节，其余 4 字节（x64 统一每参 8 字节槽）。实例方法前置 8 字节 this 槽。</summary>
+        /// <summary>byref 形参的参数区槽宽 = 指针宽（6e-M23 R7）；其余按值类型宽度。</summary>
+        private int ParamSlotSize(ParameterSymbol parameter) => parameter.IsByRef ? (_isX64 ? 8 : 4) : ReturnSize(parameter.Type);
+
+        /// <summary>x86 用户函数实参/形参的字节偏移：double 占 8 字节，byref 占指针宽，其余 4 字节（x64 统一每参 8 字节槽）。实例方法前置 8 字节 this 槽。</summary>
         private int ParamByteOffset(FunctionSymbol function, int index, int count)
         {
             var offset = ThisParamBytes(function);
@@ -437,7 +440,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             for (var i = 0; i < index && i < count; i++)
             {
-                offset += ReturnSize(function.Parameters[i].Type);
+                offset += ParamSlotSize(function.Parameters[i]);
             }
 
             return offset;
@@ -453,7 +456,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             for (var i = 0; i < count; i++)
             {
-                total += ReturnSize(function.Parameters[i].Type);
+                total += ParamSlotSize(function.Parameters[i]);
             }
 
             return total;
@@ -494,7 +497,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             foreach (var parameter in function.Parameters)
             {
-                var register = AllocateRegister(parameter, ReturnSize(parameter.Type));
+                // 6e-M23 R7：byref 形参寄存器持指针（槽宽 = 指针宽），点类型尺寸仅用于解引用读写
+                var register = AllocateRegister(parameter, ParamSlotSize(parameter));
                 if (function.Name == _irProgram.EntryFunctionName)
                 {
                     // 入口函数参数（main(args: string[])）由运行时从命令行构造，无需 ABI 传参。
@@ -503,6 +507,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 else
                 {
                     Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(ParamByteOffset(function, parameter.Ordinal, function.Parameters.Length))));
+                }
+
+                if (parameter.IsOut)
+                {
+                    // 明确赋值防御兜底（设计 §5.3）：out 形参入口写穿透默认值，杜绝未赋值读到帧垃圾
+                    var valueSize = ReturnSize(parameter.Type);
+                    var zero = AllocateRegister(valueSize);
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
+                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(register), IrOperand.Reg(zero), 0, valueSize));
                 }
             }
 
@@ -781,7 +794,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             return result;
                         }
 
-                        return GetVariable(variable);
+                        var value = GetVariable(variable);
+
+                        // 6e-M23 R7：byref 形参读 = 解引用（寄存器持指针）
+                        if (variable is ParameterSymbol { IsByRef: true } byRefParameter)
+                        {
+                            var loaded = AllocateRegister(ReturnSize(byRefParameter.Type));
+                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Load, loaded, IrOperand.Reg(value), IrOperand.None, 0, ReturnSize(byRefParameter.Type)));
+                            return loaded;
+                        }
+
+                        return value;
                     }
 
                 case BoundNodeKind.AssignmentExpression:
@@ -796,6 +819,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
                             Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(_closureRegister), IrOperand.Reg(value), offset, size));
+                            return value;
+                        }
+
+                        // 6e-M23 R7：byref 形参写 = 穿透指针
+                        if (assignment.Variable is ParameterSymbol { IsByRef: true })
+                        {
+                            var pointer = GetVariable(assignment.Variable);
+                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(pointer), IrOperand.Reg(value), 0, ReturnSize(assignment.Variable.Type)));
                             return value;
                         }
 
@@ -865,6 +896,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 case BoundNodeKind.InvocationExpression:
                     return EmitInvocationExpression((BoundInvocationExpression)node);
+
+                case BoundNodeKind.ByRefArgument:
+                    return EmitByRefArgument((BoundByRefArgument)node);
 
                 case BoundNodeKind.ErrorExpression:
                     return EmitConst(0);
@@ -1148,6 +1182,50 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(loop)));
 
             Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(done)));
+        }
+
+        /// <summary>
+        /// byref 实参取址（6e-M23 R7）：变量 → LeaVar（帧槽地址）；静态字段 → 数据段符号地址；
+        /// 实例字段 → 对象指针 + 布局偏移；数组元素 → 越界检查后数据区地址（复用 EmitElementAddress）。
+        /// </summary>
+        private IrVirtualRegister EmitByRefArgument(BoundByRefArgument node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+
+            switch (node.Expression)
+            {
+                case BoundVariableExpression variable:
+                {
+                    var variableRegister = GetVariable(variable.Variable);
+                    var address = AllocateRegister(pointerSize);
+                    Add(instructions, new IrInstruction(IrOpCode.LeaVar, address, IrOperand.Reg(variableRegister)));
+                    return address;
+                }
+
+                case BoundMemberAccessExpression member when member.Field is { IsStatic: true } staticField:
+                    return EmitStaticFieldAddress(staticField);
+
+                case BoundMemberAccessExpression member when member.Field != null:
+                {
+                    var target = EmitExpression(member.Target);
+                    var (offsets, _) = GetLayout((ClassTypeSymbol)member.Field.ContainingClass);
+                    var address = AllocateRegister(pointerSize);
+                    Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(target), IrOperand.None, offsets[member.Field], 0));
+                    return address;
+                }
+
+                case BoundElementAccessExpression element when element.Target.Type != TypeSymbol.String &&
+                                                               element.Target.Type.ElementType != null:
+                {
+                    var array = EmitExpression(element.Target);
+                    var index = EmitExpression(element.Index);
+                    return EmitElementAddress(instructions, array, index, ElementSize(node.Type));
+                }
+
+                default:
+                    throw new Exception($"Unexpected by-ref argument target {node.Expression.Kind}");
+            }
         }
 
         private IrVirtualRegister EmitElementAccessExpression(BoundElementAccessExpression node)
@@ -3007,7 +3085,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(0), IrOperand.Reg(receiver!)));
             }
 
-            for (var i = count - 1; i >= 0; i--)
+            // 6e-M23 R7：实参改为源顺序（左→右）求值——对齐 C#/Evaluator/IL；out 实参依赖同调用内先写后读的顺序语义
+            for (var i = 0; i < count; i++)
             {
                 var value = EmitExpression(arguments[i]);
                 Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(function, i, count)), IrOperand.Reg(value)));

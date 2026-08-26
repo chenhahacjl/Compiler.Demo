@@ -149,7 +149,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
             for (var i = 0; i < a.Parameters.Length; i++)
             {
-                if (a.Parameters[i].Type != b.Parameters[i].Type)
+                if (a.Parameters[i].Type != b.Parameters[i].Type ||
+                    a.Parameters[i].IsOut != b.Parameters[i].IsOut ||
+                    a.Parameters[i].IsRef != b.Parameters[i].IsRef)
                 {
                     return false;
                 }

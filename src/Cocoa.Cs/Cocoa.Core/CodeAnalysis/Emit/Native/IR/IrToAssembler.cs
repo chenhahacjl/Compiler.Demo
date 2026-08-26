@@ -392,6 +392,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case IrOpCode.LeaSlot:
                     EmitLeaSlot(instruction);
                     break;
+                case IrOpCode.LeaVar:
+                    EmitLeaVar(instruction);
+                    break;
                 case IrOpCode.InitParam:
                     EmitInitParam(instruction);
                     break;
@@ -751,6 +754,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // 指向帧底部的缓冲槽（远离返回地址；配合 EmitFunction 的 LeaSlot 缓冲空间）
             var offset = -_frameBytes + _slotSize;
             _a.Lea(X64Register.EAX, new X64MemoryOperand(X64Register.RBP, offset));
+            StoreSlot(instruction.Dst!, X64Register.EAX);
+        }
+
+        /// <summary>LeaVar（6e-M23 R7）：dst = &amp;变量槽——byref 实参把调用方变量的帧槽地址传给被调方。</summary>
+        private void EmitLeaVar(IrInstruction instruction)
+        {
+            var slot = GetSlotOffset(instruction.A.Register!);
+            _a.Lea(X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 

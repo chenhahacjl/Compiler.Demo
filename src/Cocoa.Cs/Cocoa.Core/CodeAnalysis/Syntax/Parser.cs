@@ -1508,20 +1508,26 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected virtual ParameterSyntax ParseParameter()
         {
-            // 双语法参数：Cocoa `name: Type` | C# `Type name`
+            // 双语法参数：Cocoa `name: Type` | C# `Type name`；可带 out/ref 修饰符（6e-M23 R1）
+            SyntaxToken? modifier = null;
+            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword)
+            {
+                modifier = MatchToken(Current.Kind);
+            }
+
             if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
                 Peek(1).Kind == SyntaxKind.ColonToken)
             {
                 var identifier = MatchToken(SyntaxKind.IdentifierToken);
                 var type = ParseTypeClause();
 
-                return new ParameterSyntax(_syntaxTree, identifier, type);
+                return new ParameterSyntax(_syntaxTree, modifier, identifier, type);
             }
 
             var csType = ParsePrefixTypeClause();
             var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
 
-            return new ParameterSyntax(_syntaxTree, csIdentifier, csType);
+            return new ParameterSyntax(_syntaxTree, modifier, csIdentifier, csType);
         }
 
         private MemberSyntax ParseGlobalStatement()
@@ -2724,6 +2730,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ThisKeyword:
                     return new ThisExpressionSyntax(_syntaxTree, NextToken());
 
+                case SyntaxKind.OutKeyword:
+                case SyntaxKind.RefKeyword:
+                    return ParseByRefArgumentExpression();
+
                 case SyntaxKind.BaseKeyword:
                     return new BaseExpressionSyntax(_syntaxTree, NextToken());
 
@@ -2739,6 +2749,15 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                     return ParseNameOrCallExpression();
             }
+        }
+
+        /// <summary>byref 实参（6e-M23 R1）：`out x` / `ref arr[i]`——体只消费一元表达式；仅调用实参位合法，绑定层校验。</summary>
+        private ExpressionSyntax ParseByRefArgumentExpression()
+        {
+            var keyword = NextToken();
+            var expression = ParseBinaryExpression(6);
+
+            return new ByRefArgumentExpressionSyntax(_syntaxTree, keyword, expression);
         }
 
         /// <summary>lambda 前瞻（6e-M22 C2）：平衡括号参数表 + 显式类型/隐式标识符/空参，闭合后紧跟 `=&gt;`。</summary>
@@ -2779,6 +2798,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     case SyntaxKind.ShiftRightToken:
                     case SyntaxKind.OpenBracketToken:
                     case SyntaxKind.CloseBracketToken:
+                    case SyntaxKind.OutKeyword:
+                    case SyntaxKind.RefKeyword:
                         i++;
                         break;
 
@@ -2833,7 +2854,13 @@ namespace Cocoa.CodeAnalysis.Syntax
                         {
                             // 显式参数：Cocoa `name: Type` / C# `Type name`（ParseParameter 双形态）
                             sawExplicit = true;
-                            nodesAndSeparators.Add(ParseParameter());
+                            var lambdaParameter = ParseParameter();
+                            var lambdaModifier = lambdaParameter.Modifier;
+                            if (lambdaModifier != null)
+                            {
+                                ReportError(lambdaModifier.Location, "lambda 形参不支持 out/ref 修饰符（6e-M23）。");
+                            }
+                            nodesAndSeparators.Add(lambdaParameter);
                         }
 
                         if (Current.Kind == SyntaxKind.CommaToken)

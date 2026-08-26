@@ -180,6 +180,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Ldfld", 0x7B, IlOperandType.InlineField);
             Define("Stsfld", 0x80, IlOperandType.InlineField);
             Define("Stfld", 0x7D, IlOperandType.InlineField);
+            Define("Ldsflda", 0x7F, IlOperandType.InlineField);
+            Define("Ldflda", 0x7C, IlOperandType.InlineField);
             Define("Ldlen", 0x8E, IlOperandType.InlineNone);
             Define("Ldelem_I1", 0x90, IlOperandType.InlineNone);
             Define("Ldelem_U1", 0x91, IlOperandType.InlineNone);
@@ -187,14 +189,36 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Ldelem_I2", 0x92, IlOperandType.InlineNone);
             Define("Ldelem_U2", 0x93, IlOperandType.InlineNone);
             Define("Ldelem_I8", 0x97, IlOperandType.InlineNone);
+            Define("Ldelem_R4", 0x98, IlOperandType.InlineNone);
             Define("Ldelem_R8", 0x99, IlOperandType.InlineNone);
             Define("Ldelem_Ref", 0x9A, IlOperandType.InlineNone);
             Define("Stelem_I1", 0x9C, IlOperandType.InlineNone);
             Define("Stelem_I2", 0x9D, IlOperandType.InlineNone);
             Define("Stelem_I4", 0x9E, IlOperandType.InlineNone);
             Define("Stelem_I8", 0x9F, IlOperandType.InlineNone);
+            Define("Stelem_R4", 0xA0, IlOperandType.InlineNone);
             Define("Stelem_R8", 0xA1, IlOperandType.InlineNone);
             Define("Stelem_Ref", 0xA2, IlOperandType.InlineNone);
+
+            // 间接寻址（6e-M23 R6：byref 解引用）
+            Define("Ldind_I1", 0x46, IlOperandType.InlineNone);
+            Define("Ldind_U1", 0x47, IlOperandType.InlineNone);
+            Define("Ldind_I2", 0x48, IlOperandType.InlineNone);
+            Define("Ldind_U2", 0x49, IlOperandType.InlineNone);
+            Define("Ldind_I4", 0x4A, IlOperandType.InlineNone);
+            Define("Ldind_U4", 0x4B, IlOperandType.InlineNone);
+            Define("Ldind_I8", 0x4C, IlOperandType.InlineNone);
+            Define("Ldind_R4", 0x4E, IlOperandType.InlineNone);
+            Define("Ldind_R8", 0x4F, IlOperandType.InlineNone);
+            Define("Ldind_Ref", 0x50, IlOperandType.InlineNone);
+            Define("Stind_Ref", 0x51, IlOperandType.InlineNone);
+            Define("Stind_I1", 0x52, IlOperandType.InlineNone);
+            Define("Stind_I2", 0x53, IlOperandType.InlineNone);
+            Define("Stind_I4", 0x54, IlOperandType.InlineNone);
+            Define("Stind_I8", 0x55, IlOperandType.InlineNone);
+            Define("Stind_R4", 0x56, IlOperandType.InlineNone);
+            Define("Stind_R8", 0x57, IlOperandType.InlineNone);
+            Define("Ldelema", 0x8F, IlOperandType.InlineType);
 
             // 字符串
             Define("Ldstr", 0x72, IlOperandType.InlineString);

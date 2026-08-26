@@ -308,6 +308,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteAsExpression((BoundAsExpression)node);
                 }
+                case BoundNodeKind.ByRefArgument:
+                {
+                    return RewriteByRefArgument((BoundByRefArgument)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -358,6 +362,16 @@ namespace Cocoa.CodeAnalysis.Binding
             return callee == node.Callee && builder == null
                 ? node
                 : new BoundInvocationExpression(node.Syntax, callee, builder?.ToImmutable() ?? node.Arguments, node.Type);
+        }
+
+        /// <summary>byref 实参（6e-M23 R3）：仅重写内层 lvalue，包装保持。</summary>
+        protected virtual BoundExpression RewriteByRefArgument(BoundByRefArgument node)
+        {
+            var expression = RewriteExpression(node.Expression);
+
+            return expression == node.Expression
+                ? node
+                : new BoundByRefArgument(node.Syntax, expression, node.IsRef);
         }
 
         protected virtual BoundExpression RewriteLiteralExpression(BoundLiteralExpression node)

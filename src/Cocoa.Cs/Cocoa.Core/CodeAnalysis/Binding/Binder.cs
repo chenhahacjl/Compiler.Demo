@@ -684,6 +684,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 binder._diagnostics.ReportAllPathsMustReturn(location);
             }
 
+            // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参
+            DefiniteAssignmentAnalysis.Analyze(
+                loweredBody,
+                function.Parameters.Where(p => p.IsOut).ToImmutableArray(),
+                binder._diagnostics);
+
             return (loweredBody, binder.Diagnostics.ToImmutableArray());
         }
 
@@ -802,7 +808,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
                     else
                     {
-                        var parameter = new ParameterSymbol(parameterName, parameterType, parameters.Count);
+                        var parameter = CreateParameterSymbol(parameterName, parameterType, parameterSyntax, parameters.Count);
                         parameters.Add(parameter);
                     }
                 }
@@ -876,12 +882,21 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
                 else
                 {
-                    var parameter = new ParameterSymbol(parameterName, parameterType, parameters.Count);
+                    var parameter = CreateParameterSymbol(parameterName, parameterType, parameterSyntax, parameters.Count);
                     parameters.Add(parameter);
                 }
             }
 
             return parameters.ToImmutable();
+        }
+
+        /// <summary>形参符号构造（6e-M23 R2）：携带 out/ref 修饰符；普通形参可赋值（对齐 C#），this 保持只读。</summary>
+        private ParameterSymbol CreateParameterSymbol(string name, TypeSymbol type, ParameterSyntax syntax, int ordinal)
+        {
+            var isOut = syntax.Modifier?.Kind == SyntaxKind.OutKeyword;
+            var isRef = syntax.Modifier?.Kind == SyntaxKind.RefKeyword;
+
+            return new ParameterSymbol(name, type, ordinal, isOut, isRef);
         }
 
         /// <summary>泛型方法类型参数绑定（6e-M20）：建 TypeParameterSymbol 列表（重名/与类类型参数同名诊断）。</summary>
@@ -1934,6 +1949,11 @@ namespace Cocoa.CodeAnalysis.Binding
             if (returnType == null)
                 return;
 
+            if (ReportByRefDelegateParameters(syntax))
+            {
+                return;
+            }
+
             var parameters = BindParameters(syntax.Parameters);
 
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
@@ -1968,6 +1988,11 @@ namespace Cocoa.CodeAnalysis.Binding
             if (returnType == null)
                 return;
 
+            if (ReportByRefDelegateParameters(syntax))
+            {
+                return;
+            }
+
             var parameters = BindParameters(syntax.Parameters);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var delegateName = syntax.Identifier.Text;
@@ -1988,6 +2013,21 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 命名空间级 delegate 直接注册进当前作用域（Namespace 属性承载限定）
             _scope.TryDeclareClass(delegateClass);
+        }
+
+        /// <summary>delegate 声明 byref 形参拦截（6e-M23 R3）：函数值签名无修饰符概念。有则报诊断并返回 true。</summary>
+        private bool ReportByRefDelegateParameters(DelegateDeclarationSyntax syntax)
+        {
+            foreach (var parameter in syntax.Parameters)
+            {
+                if (parameter.Modifier != null)
+                {
+                    _diagnostics.ReportFunctionTypeByRefParameter(parameter.Modifier.Location);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>
@@ -2695,7 +2735,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass)
             {
                 isStatic = true;
-                var thisParameter = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0);
+                var thisParameter = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0, isThis: true);
                 var shifted = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal + 1)).ToArray();
                 parameters = new[] { thisParameter }.Concat(shifted).ToImmutableArray();
             }
@@ -2844,7 +2884,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
             for (var i = 0; i < baseMethod.Parameters.Length; i++)
             {
-                if (baseMethod.Parameters[i].Type != overrideMethod.Parameters[i].Type)
+                if (baseMethod.Parameters[i].Type != overrideMethod.Parameters[i].Type ||
+                    baseMethod.Parameters[i].IsOut != overrideMethod.Parameters[i].IsOut ||
+                    baseMethod.Parameters[i].IsRef != overrideMethod.Parameters[i].IsRef)
                 {
                     return false;
                 }
@@ -4722,10 +4764,77 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case SyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 case SyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
+                case SyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
 
                 default:
                     throw new Exception($"Unexpected syntax {syntax.Kind}");
             }
+        }
+
+        /// <summary>byref 实参绑定（6e-M23 R3）：实参须为可赋值 lvalue——变量/实例或静态字段（非只读）/数组元素。</summary>
+        private BoundExpression BindByRefArgument(ByRefArgumentExpressionSyntax syntax)
+        {
+            var inner = BindExpression(syntax.Expression);
+
+            var isLValue = inner switch
+            {
+                BoundVariableExpression variable => !variable.Variable.IsReadOnly,
+                // 数组元素可作 byref 目标；string 索引为只读字符（对齐 C#）
+                BoundElementAccessExpression element => element.Target.Type != TypeSymbol.String,
+                BoundMemberAccessExpression member => member.Field != null && !member.Field.IsReadOnly,
+                _ => false,
+            };
+
+            if (!isLValue)
+            {
+                _diagnostics.ReportByRefArgumentNotLValue(syntax.Expression.Location, syntax.IsRef ? "ref" : "out");
+                return new BoundErrorExpression(syntax);
+            }
+
+            return new BoundByRefArgument(syntax, inner, syntax.IsRef);
+        }
+
+        /// <summary>实参转换统一入口（6e-M23 R3）：byref 形参做修饰符对应与精确类型校验；值形参拒绝带修饰符实参；其余走 BindConversion。</summary>
+        private BoundExpression BindArgumentConversion(TextLocation location, BoundExpression argument, ParameterSymbol parameter)
+        {
+            if (parameter.IsByRef)
+            {
+                return CheckByRefArgument(location, argument, parameter);
+            }
+
+            if (argument is BoundByRefArgument stray)
+            {
+                _diagnostics.ReportByRefModifierOnValueParameter(location, stray.IsRef ? "ref" : "out");
+                return new BoundErrorExpression(stray.Syntax);
+            }
+
+            return BindConversion(location, argument, parameter.Type);
+        }
+
+        /// <summary>byref 形参-实参对应校验（6e-M23 R3）：修饰符一致 + 类型精确相等（对齐 C#，byref 不参与隐式转换）。</summary>
+        private BoundExpression CheckByRefArgument(TextLocation location, BoundExpression argument, ParameterSymbol parameter)
+        {
+            var expectedModifier = parameter.IsRef ? "ref" : "out";
+
+            if (argument is not BoundByRefArgument wrapped)
+            {
+                _diagnostics.ReportMissingByRefModifier(location, expectedModifier);
+                return new BoundErrorExpression(argument.Syntax);
+            }
+
+            if (wrapped.IsRef != parameter.IsRef)
+            {
+                _diagnostics.ReportByRefModifierMismatch(location, expectedModifier);
+                return new BoundErrorExpression(wrapped.Syntax);
+            }
+
+            if (wrapped.Type != TypeSymbol.Error && wrapped.Expression.Type != parameter.Type)
+            {
+                _diagnostics.ReportCannotConvert(location, wrapped.Expression.Type, parameter.Type);
+                return new BoundErrorExpression(wrapped.Syntax);
+            }
+
+            return wrapped;
         }
 
         /// <summary>插值字符串 → 字符串 <c>+</c> 链（每洞转 string；含对齐/格式时包 BoundFormatExpression）；常量折叠天然不启用（转换/格式节点无 ConstantValue）。</summary>
@@ -4906,9 +5015,15 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundErrorExpression(syntax);
         }
 
-        /// <summary>方法组 → 函数值（6e-M22 C4）：类型 = 签名形状（接收者作环境槽，不入参数表）。</summary>
-        private BoundFunctionValueExpression CreateFunctionValue(SyntaxNode syntax, BoundExpression? receiver, FunctionSymbol function)
+        /// <summary>方法组 → 函数值（6e-M22 C4）：类型 = 签名形状（接收者作环境槽，不入参数表）；byref 签名不可转函数类型（6e-M23 R3）。</summary>
+        private BoundExpression CreateFunctionValue(SyntaxNode syntax, BoundExpression? receiver, FunctionSymbol function)
         {
+            if (function.Parameters.Any(p => p.IsByRef))
+            {
+                _diagnostics.ReportFunctionTypeByRefParameter(syntax.Location);
+                return new BoundErrorExpression(syntax);
+            }
+
             var parameterTypes = function.Parameters.Select(p => p.Type).ToImmutableArray();
             var functionType = FunctionTypeSymbol.Get(parameterTypes, function.ReturnType);
 
@@ -5040,6 +5155,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 if (variable is GlobalVariableSymbol)
                 {
                     continue; // 全局变量静态存储，无需环境承载
+                }
+
+                if (variable is ParameterSymbol { IsByRef: true } byRefParameter)
+                {
+                    _diagnostics.ReportCaptureOfByRefParameter(syntax.Location, byRefParameter.Name);
+                    return new BoundErrorExpression(syntax);
                 }
 
                 captures.Add(variable);
@@ -5882,7 +6003,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             for (var i = 0; i < syntax.Arguments.Count; i++)
             {
-                boundArguments[i] = BindConversion(syntax.Arguments[i].Location, boundArguments[i], function.Parameters[i].Type);
+                boundArguments[i] = BindArgumentConversion(syntax.Arguments[i].Location, boundArguments[i], function.Parameters[i]);
             }
 
             result = new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
@@ -6269,7 +6390,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 var argument = boundArguments[i];
                 var parameter = function.Parameters[i];
 
-                boundArguments[i] = BindConversion(argumentLocation, argument, parameter.Type);
+                boundArguments[i] = BindArgumentConversion(argumentLocation, argument, parameter);
             }
 
             return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
@@ -6327,6 +6448,20 @@ namespace Cocoa.CodeAnalysis.Binding
                 var ok = true;
                 for (var i = 0; i < arguments.Length; i++)
                 {
+                    // byref 对应过滤（6e-M23 R3）：修饰符不匹配的候选直接出局（f(i32) 与 f(out i32) 不构成歧义）
+                    if (candidate.Parameters[i].IsByRef != arguments[i] is BoundByRefArgument)
+                    {
+                        ok = false;
+                        break;
+                    }
+
+                    if (arguments[i] is BoundByRefArgument wrapped &&
+                        wrapped.IsRef != candidate.Parameters[i].IsRef)
+                    {
+                        ok = false;
+                        break;
+                    }
+
                     var conversion = Conversion.Classify(arguments[i].Type, candidate.Parameters[i].Type);
                     if (!conversion.Exists || !conversion.IsImplicit)
                     {
@@ -6407,7 +6542,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             for (var i = 0; i < syntax.Arguments.Count; i++)
             {
-                boundArguments[i] = BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type);
+                boundArguments[i] = BindArgumentConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i]);
             }
 
             return new BoundMemberCallExpression(syntax, target, method.Name, boundArguments.ToImmutable(), method.ReturnType, method);
@@ -6499,7 +6634,12 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var functions = candidates.Value.Where(f => !f.IsConstructor).ToImmutableArray();
-            return functions.Length == 1 ? CreateFunctionValue(syntax, receiver: null, functions[0]) : null;
+            if (functions.Length != 1)
+            {
+                return null;
+            }
+
+            return CreateFunctionValue(syntax, receiver: null, functions[0]) as BoundFunctionValueExpression;
         }
 
         /// <summary>函数值间接调用共享核心（6e-M22 C4）：元数校验 + 实参转换 + Invocation 节点。</summary>
@@ -6514,7 +6654,14 @@ namespace Cocoa.CodeAnalysis.Binding
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
             for (var i = 0; i < argumentSyntaxes.Count; i++)
             {
-                boundArguments.Add(BindConversion(argumentSyntaxes[i].Location, BindExpression(argumentSyntaxes[i]), functionType.ParameterTypes[i]));
+                var boundArgument = BindExpression(argumentSyntaxes[i]);
+                if (boundArgument is BoundByRefArgument)
+                {
+                    _diagnostics.ReportFunctionTypeByRefParameter(argumentSyntaxes[i].Location);
+                    return new BoundErrorExpression(callee.Syntax!);
+                }
+
+                boundArguments.Add(BindConversion(argumentSyntaxes[i].Location, boundArgument, functionType.ParameterTypes[i]));
             }
 
             return new BoundInvocationExpression(callee.Syntax!, callee, boundArguments.ToImmutable(), functionType.ReturnType);

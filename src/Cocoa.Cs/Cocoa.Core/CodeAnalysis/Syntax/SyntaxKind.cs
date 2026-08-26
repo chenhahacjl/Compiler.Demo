@@ -103,6 +103,7 @@ ColonToken,               // :
         NamespaceKeyword,         // namespace
         NewKeyword,               // new
         NullKeyword,              // null（6e-M19 M5-a）
+        OutKeyword,               // out（6e-M23 参数修饰符）
         OverrideKeyword,          // override
         PartialKeyword,           // partial
         PrivateKeyword,           // private
@@ -110,6 +111,7 @@ ColonToken,               // :
         ProtectedKeyword,         // protected
         PublicKeyword,            // public
         ReadonlyKeyword,          // readonly
+        RefKeyword,               // ref（6e-M23 参数修饰符）
         ReturnKeyword,            // return
         SealedKeyword,            // sealed
         SetKeyword,               // set
@@ -186,6 +188,7 @@ ColonToken,               // :
         CompoundAssignmentExpression, // 复合赋值表达式
         ParenthesizedExpression,  // 括号表达式
         LambdaExpression,         // lambda (x: int) => x * 2（6e-M22 C2）
+        ByRefArgument,            // byref 实参 out x / ref arr[i]（6e-M23 R1）
         CastExpression,           // 类型转换表达式
         AssignmentExpression,     // 赋值表达式
         PostfixIncrementExpression, // 后缀自增/自减表达式 i++/i--
