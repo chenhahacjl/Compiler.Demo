@@ -3,7 +3,7 @@
     (cls System.Array internal methods:16 Sum[int[]] Sum[double[]] Min[int[]] Min[double[]] Max[int[]] Max[double[]] Average[int[]] Average[double[]] Contains[int[],int] Contains[double[],double] IndexOf[int[],int] IndexOf[double[],double] Reverse[int[]] Reverse[double[]] Sort[int[]] Sort[double[]])
     (cls System.Boolean public methods:3 ToString[bool] Parse[string] Parse[string,bool])
     (cls System.Byte public methods:3 ToString[byte] CompareTo[byte,byte] Parse[string])
-    (cls System.Char public methods:8 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char])
+    (cls System.Char public methods:13 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char] IsLetterOrDigit[char] IsControl[char] IsHexDigit[char] IsUpper[char] IsLower[char])
     (cls System.Console internal methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
     (cls System.Double public methods:2 ToString[double] CompareTo[double,double])
     (cls System.Environment internal methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
@@ -115,6 +115,21 @@
     )
     (fn System.Char.ToLower[char] name:ToLower ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.ToLower[char]/c c char 0 -)
+    )
+    (fn System.Char.IsLetterOrDigit[char] name:IsLetterOrDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Char.IsLetterOrDigit[char]/c c char 0 -)
+    )
+    (fn System.Char.IsControl[char] name:IsControl ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Char.IsControl[char]/c c char 0 -)
+    )
+    (fn System.Char.IsHexDigit[char] name:IsHexDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Char.IsHexDigit[char]/c c char 0 -)
+    )
+    (fn System.Char.IsUpper[char] name:IsUpper ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Char.IsUpper[char]/c c char 0 -)
+    )
+    (fn System.Char.IsLower[char] name:IsLower ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Char.IsLower[char]/c c char 0 -)
     )
     (fn System.Console.WriteLine[] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
     (fn System.Console.WriteLine[string] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
@@ -561,6 +576,10 @@
     (loc System.Char.IsLetter[char]/v false int)
     (loc System.Char.ToUpper[char]/v false int)
     (loc System.Char.ToLower[char]/v false int)
+    (loc System.Char.IsControl[char]/v false int)
+    (loc System.Char.IsHexDigit[char]/v false int)
+    (loc System.Char.IsUpper[char]/v false int)
+    (loc System.Char.IsLower[char]/v false int)
     (loc System.Int32.Parse[string]/v true long)
     (loc System.Int32.TryParse[string,out:int]/len true int)
     (loc System.Int32.TryParse[string,out:int]/index false int)
@@ -2027,6 +2046,151 @@
         (label Label1)
         (return
           (var System.Char.ToLower[char]/c)
+        )
+      )
+    )
+    (body System.Char.IsLetterOrDigit[char]
+      (block 1
+        (return
+          (binary
+            (bop || bool bool)
+            (membercall bool IsLetter System.Char.IsLetter[char] 1
+              (this System.Char)
+              (var System.Char.IsLetterOrDigit[char]/c)
+            )
+            (membercall bool IsDigit System.Char.IsDigit[char] 1
+              (this System.Char)
+              (var System.Char.IsLetterOrDigit[char]/c)
+            )
+          )
+        )
+      )
+    )
+    (body System.Char.IsControl[char]
+      (block 2
+        (vardecl System.Char.IsControl[char]/v
+          (conv int
+            (var System.Char.IsControl[char]/c)
+          )
+        )
+        (return
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop < int int)
+              (var System.Char.IsControl[char]/v)
+              (lit int i:32)
+            )
+            (binary
+              (bop == int int)
+              (var System.Char.IsControl[char]/v)
+              (lit int i:127)
+            )
+          )
+        )
+      )
+    )
+    (body System.Char.IsHexDigit[char]
+      (block 2
+        (vardecl System.Char.IsHexDigit[char]/v
+          (conv int
+            (var System.Char.IsHexDigit[char]/c)
+          )
+        )
+        (return
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop || bool bool)
+              (binary
+                (bop && bool bool)
+                (binary
+                  (bop >= int int)
+                  (var System.Char.IsHexDigit[char]/v)
+                  (lit int i:48)
+                )
+                (binary
+                  (bop <= int int)
+                  (var System.Char.IsHexDigit[char]/v)
+                  (lit int i:57)
+                )
+              )
+              (binary
+                (bop && bool bool)
+                (binary
+                  (bop >= int int)
+                  (var System.Char.IsHexDigit[char]/v)
+                  (lit int i:65)
+                )
+                (binary
+                  (bop <= int int)
+                  (var System.Char.IsHexDigit[char]/v)
+                  (lit int i:70)
+                )
+              )
+            )
+            (binary
+              (bop && bool bool)
+              (binary
+                (bop >= int int)
+                (var System.Char.IsHexDigit[char]/v)
+                (lit int i:97)
+              )
+              (binary
+                (bop <= int int)
+                (var System.Char.IsHexDigit[char]/v)
+                (lit int i:102)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Char.IsUpper[char]
+      (block 2
+        (vardecl System.Char.IsUpper[char]/v
+          (conv int
+            (var System.Char.IsUpper[char]/c)
+          )
+        )
+        (return
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (var System.Char.IsUpper[char]/v)
+              (lit int i:65)
+            )
+            (binary
+              (bop <= int int)
+              (var System.Char.IsUpper[char]/v)
+              (lit int i:90)
+            )
+          )
+        )
+      )
+    )
+    (body System.Char.IsLower[char]
+      (block 2
+        (vardecl System.Char.IsLower[char]/v
+          (conv int
+            (var System.Char.IsLower[char]/c)
+          )
+        )
+        (return
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (var System.Char.IsLower[char]/v)
+              (lit int i:97)
+            )
+            (binary
+              (bop <= int int)
+              (var System.Char.IsLower[char]/v)
+              (lit int i:122)
+            )
+          )
         )
       )
     )
@@ -4876,4 +5040,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:11921897284dc9ada11706295c78c2894e3bb6802d96c94db174f0b8307c82c6)
+(checksum sha256:7fd3e34c8dc9494d2cd51bd13107919118ee3e895ca7bb411b5075eb99469cf1)
