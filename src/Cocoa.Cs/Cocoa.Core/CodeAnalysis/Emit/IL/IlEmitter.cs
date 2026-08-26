@@ -1766,17 +1766,40 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     // 6e-G7 ⑤a：native+IL 接入待 IlFramework 惰性引用基础设施就绪
                     throw new Exception("Sha256Hash IL emission requires lazy framework references (G7-⑤a follow-up)");
                 case BuiltinKind.FileReadAllText:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "ReadAllText", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.ReadAllText not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.FileWriteAllText:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "WriteAllText", new[] { "System.String", "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.WriteAllText not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.FileExists:
-                case BuiltinKind.FileDelete:
-                case BuiltinKind.FileCopy:
-                case BuiltinKind.DirectoryExists:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "Exists", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.Exists not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.GetEnvironmentVariable:
+                {
+                    var m = _framework.ResolveMethod("System.Environment", "GetEnvironmentVariable", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.Environment.GetEnvironmentVariable not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.GetCurrentDirectory:
-                case BuiltinKind.SetCurrentDirectory:
-                case BuiltinKind.GetExecutablePath:
-                    // 6e-G7 ④：文件 IO/环境 IL 接入待 IlFramework 惰性引用基础设施就绪
-                    throw new Exception($"Builtin '{function.BuiltinKind}' IL emission requires lazy framework references (G7-④ follow-up)");
+                {
+                    var m = _framework.ResolveMethod("System.Environment", "get_CurrentDirectory", Array.Empty<string>());
+                    if (m == null) throw new Exception("System.Environment.CurrentDirectory not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
 
                 // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
                 case BuiltinKind.ObjectStaticEquals:

@@ -73,6 +73,32 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ConsoleBeep = RequireMethod("System.Console", "Beep", new[] { "System.Int32", "System.Int32" });
         }
 
+        // 6e-G7 ④：新增 syscall 方法引用——惰性解析（构造器不急切 RequireMethod，
+        // 避免引用程序集不含目标 API 时全量编译失败），首次使用时解析并缓存。
+        private readonly Dictionary<string, IlMethodRef?> _lazyRefs = new(StringComparer.Ordinal);
+
+        /// <summary>按需解析框架方法引用——未命中返回 null（调用方决定如何处理）。</summary>
+        public IlMethodRef? ResolveMethod(string typeFullName, string methodName, string[] parameterTypeNames)
+        {
+            var key = typeFullName + "::" + methodName + "(" + string.Join(",", parameterTypeNames) + ")";
+            if (_lazyRefs.TryGetValue(key, out var cached))
+            {
+                return cached;
+            }
+
+            try
+            {
+                var result = RequireMethod(typeFullName, methodName, parameterTypeNames);
+                _lazyRefs[key] = result;
+                return result;
+            }
+            catch
+            {
+                _lazyRefs[key] = null;
+                return null;
+            }
+        }
+
         public IlTypeRef ObjectType { get; }
         public IlTypeRef StringType { get; }
         public IlTypeRef ConsoleKeyInfoType { get; }
