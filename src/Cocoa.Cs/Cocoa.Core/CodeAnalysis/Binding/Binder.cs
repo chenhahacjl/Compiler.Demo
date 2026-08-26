@@ -420,13 +420,28 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
+            var genericOpenBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
             foreach (var function in globalScope.Functions)
             {
-                // 泛型定义方法（6e-M20）：模板体不进发射清单——实例化类方法经 Monomorphizer 重绑后并入
-                // （须先于 extern/abstract 短路：接口抽象成员含类型参数签名，入清单将令发射器无法编码）
-                if (function.ContainingClass?.IsGenericDefinition == true || function.IsGenericMethod)
+                // 泛型定义方法（6e-M20）：模板体不进发射清单——实例化类方法经 Monomorphizer 重绑后并入。
+                // 6e-G7 S2：改跳过为「构建开放绑定体」（T 保持开放的降级 Bound 块）随库携带，
+                // 供消费方 BoundTreeSubstituter 替换展开（cod 库无源码，语法重绑路径不可达）。
+                if (function.ContainingClass?.IsGenericDefinition == true)
+                {
+                    // 开放体在 T 开放上下文下绑定，个别转换检查会报「假阳性」诊断
+                    // （历史边界：正因此前选语法重绑路线）——诊断不外泄，体照常携带供替换展开
+                    if (!function.IsGenericMethod && !function.IsExtern && !function.IsAbstract && function.BuiltinKind == null)
+                    {
+                        var (openBody, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect);
+                        genericOpenBodies.Add(function, openBody);
+                    }
+
+                    continue;
+                }
+
+                if (function.IsGenericMethod)
                 {
                     continue;
                 }
@@ -540,6 +555,13 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         foreach (var (fn, body) in library.Bodies)
                         {
+                            // 6e-G7 S6：泛型定义方法（开放体）仅供 Monomorphizer 替换展开源使用，
+                            // 不进消费方发射清单（开放类型无法编码到三后端）
+                            if (fn.ContainingClass?.IsGenericDefinition == true || fn.IsGenericMethod)
+                            {
+                                continue;
+                            }
+
                             if (!functionBodies.ContainsKey(fn))
                             {
                                 functionBodies.Add(fn, body);
@@ -582,7 +604,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions);
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions, genericOpenBodies.ToImmutable());
         }
 
         /// <summary>绑定树先序递归枚举（6e-M22 C4）：lambda 后处理走查用。</summary>
@@ -2029,6 +2051,24 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// 6e-G7 S6：种子收集辅助 binder 注册 cod 库的泛型定义类名——
+        /// 使 BindGenericTypeNameForExpansion 能解析消费方站点的 `Box&lt;i32&gt;` 为实例化类型。
+        /// </summary>
+        internal void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CodProgram> libraries)
+        {
+            foreach (var library in libraries)
+            {
+                foreach (var classType in library.Classes)
+                {
+                    if (classType.IsGenericDefinition)
+                    {
+                        _scope.TryDeclareClass(classType);
+                    }
+                }
+            }
         }
 
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>

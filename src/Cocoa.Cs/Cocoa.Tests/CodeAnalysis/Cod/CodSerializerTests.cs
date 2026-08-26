@@ -8,6 +8,16 @@ using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Cod
 {
+    /// <summary>
+    /// cod 库相关测试串行集合：成员测试会改写进程级 COCOA_STDLIB 并 Reset stdlib，
+    /// 与其他消费 stdlib 的测试并行时产生注入窗口竞争（G7 期间实证），故整体禁并行。
+    /// </summary>
+    [CollectionDefinition("CodStdlibSequence", DisableParallelization = true)]
+    public class CodStdlibSequenceCollection
+    {
+    }
+
+    [Collection("CodStdlibSequence")]
     public class CodSerializerTests
     {
         private static readonly string TestRoot = Path.Combine(Path.GetTempPath(), "cocoa-cod-tests");

@@ -492,7 +492,8 @@ namespace Cocoa.CodeAnalysis
                 imports,
                 ImmutableArray<string>.Empty,
                 namespaces,
-                program.GenericDefinitions)
+                program.GenericDefinitions,
+                program.GenericOpenBodies)
             {
                 // 程序集名 = 模块名：动态链接时消费方据此合成 AssemblyRef 指向同名 dll（阶段 A2）
                 Name = moduleName,

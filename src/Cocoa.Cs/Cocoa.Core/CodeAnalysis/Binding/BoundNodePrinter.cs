@@ -127,6 +127,16 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.ByRefArgument:
                     WriteByRefArgument((BoundByRefArgument)node, writer);
                     break;
+                case BoundNodeKind.MemberAssignmentExpression:
+                    {
+                        var n = (BoundMemberAssignmentExpression)node;
+                        n.Target.WriteTo(writer);
+                        writer.WritePunctuation(SyntaxKind.DotToken);
+                        writer.WriteIdentifier(n.Field.Name);
+                        writer.WritePunctuation(SyntaxKind.EqualsToken);
+                        n.Expression.WriteTo(writer);
+                        break;
+                    }
                 default:
                     throw new Exception($"Unexpected node {node.Kind}");
             }

@@ -75,6 +75,14 @@ namespace Cocoa.CodeAnalysis.Cod
                 labelsByFunction[fn] = labels;
             }
 
+            // 6e-G7 S2：泛型定义方法的开放绑定体同样收集（显式清单，不触碰 stdlib 注入体）
+            foreach (var pair in program.GenericOpenBodies)
+            {
+                var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
+                CollectBody(registry, pair.Key, pair.Value, labels);
+                labelsByFunction[pair.Key] = labels;
+            }
+
             // 鍏ㄩ儴绗﹀彿鏀堕泦瀹屾瘯鍚庡啀瀹氬悕锛堝彉閲忛敭闇€瑕佸嚱鏁伴敭锛屼笖瑕佽法绗﹀彿娑堥噸锛?
             registry.Seal();
 
@@ -107,10 +115,13 @@ namespace Cocoa.CodeAnalysis.Cod
                     continue;
                 }
 
-                w.Open("body");
-                w.Field(registry.FnKey(fn));
-                WriteStatement(w, registry, labelsByFunction[fn], body);
-                w.End();
+                WriteBodyEntry(w, registry, labelsByFunction, fn, body);
+            }
+
+            // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入体
+            foreach (var pair in program.GenericOpenBodies)
+            {
+                WriteBodyEntry(w, registry, labelsByFunction, pair.Key, pair.Value);
             }
             w.End();
 
@@ -535,9 +546,12 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     }
                 case BoundNodeKind.SequencePointStatement:
-                    // 璋冭瘯淇℃伅闄嶇骇锛氫粎搴忓垪鍖栧唴灞傝鍙?
+                    // 璋冭瘯淇℃伅闄嶇骇锛氫粎搴忓垪鍖栧唴灞傝澶?
                     WriteStatement(w, registry, labels, ((BoundSequencePointStatement)statement).Statement);
                     break;
+                default:
+                    // 6e-G7 S2：杜绝静默产出损坏流——未覆盖节点显式失败
+                    throw new NotSupportedException($"[cod] Unserializable statement kind '{statement.Kind}'");
             }
         }
 
@@ -719,11 +733,16 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
                 case BoundNodeKind.MemberAccessExpression:
                     {
-                        // 浠呮暟缁?瀛楃涓?`.Length`锛團ield == null锛夛紱绫诲瓧娈佃闂?OOP锛寁1 鎷掔粷
+                        // 6e-G7：字段访问随 gcls/fld 携带（Field 经 FnKey 式名字回填）；仅数组/字符串 `.Length` 时 Field == null
                         var n = (BoundMemberAccessExpression)expression;
                         w.Open("memberacc");
                         w.Field(TypeRef(n.Type));
                         w.Field(Str(n.Identifier));
+                        if (n.Field != null)
+                        {
+                            w.Field("owner:" + n.Field.ContainingClass.FullName);
+                        }
+
                         WriteExpression(w, registry, labels, n.Target);
                         w.End();
                         break;
@@ -760,6 +779,21 @@ namespace Cocoa.CodeAnalysis.Cod
                         w.End();
                         break;
                     }
+                case BoundNodeKind.MemberAssignmentExpression:
+                    {
+                        // 6e-G7 S2：字段赋值（开放体携带）：target 表达式 + 字段名/类型/静态位 + 值
+                        var n = (BoundMemberAssignmentExpression)expression;
+                        w.Open("memberassign");
+                        WriteExpression(w, registry, labels, n.Target);
+                        w.Field("name:" + Str(n.Field.Name));
+                        w.Field(TypeRef(n.Field.Type));
+                        w.Field(BoolWord(n.Field.IsStatic));
+                        WriteExpression(w, registry, labels, n.Expression);
+                        w.End();
+                        break;
+                    }
+                default:
+                    throw new NotSupportedException($"[cod] Unserializable expression kind '{expression.Kind}'（开放体节点覆盖缺口）");
             }
         }
 
@@ -838,6 +872,9 @@ namespace Cocoa.CodeAnalysis.Cod
         /// </summary>
         private static void EmitGenericClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
         {
+            System.Console.Error.WriteLine("[G7] gcls " + classType.FullName + " methods=[" +
+                string.Join(",", classType.Methods.Select(m => m.Name + (m.IsStatic ? "(s)" : m.IsConstructor ? "(ctor)" : "(i)"))) + "]" +
+                " fns=" + string.Join(",", ((IEnumerable<object>)classType.Methods).Count()));
             w.Open("gcls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
@@ -1092,6 +1129,15 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             return builder.ToString();
+        }
+
+        /// <summary>6e-G7 S2：单条 body 条目（FnKey + 语句块）。</summary>
+        private static void WriteBodyEntry(Writer w, Registry registry, Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>> labelsByFunction, FunctionSymbol fn, BoundBlockStatement body)
+        {
+            w.Open("body");
+            w.Field(registry.FnKey(fn));
+            WriteStatement(w, registry, labelsByFunction[fn], body);
+            w.End();
         }
 
         private static string BoolWord(bool value)
@@ -1382,7 +1428,12 @@ namespace Cocoa.CodeAnalysis.Cod
 
             public List<Action<Writer, Registry>> Emitters { get; } = new();
 
-            public string FnKey(FunctionSymbol fn) => _fnKeys[fn];
+            public string FnKey(FunctionSymbol fn)
+        {
+            // 6e-G7：开放体携带后，部分符号（如 cod 注入链上的实例化副本）不经 RegisterFunction——
+            // 缺键时回退动态计算（公式与 Seal 一致），读写两侧对称即自洽
+            return _fnKeys.TryGetValue(fn, out var key) ? key : ComputeFnKey(fn);
+        }
 
             public string VarKey(VariableSymbol v) => _varKeys[v];
 
@@ -1515,18 +1566,22 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             /// <summary>鏀堕泦瀹屾垚鍚庣粺涓€鍛藉悕锛氬嚱鏁伴敭涓庡彉閲忛敭锛堝叏灞€ global:鍚嶅瓧锛涘眬閮?鍙傛暟 鍑芥暟閿?鍚嶅瓧锛涘啿绐佸姞 #2/#3锛夈€?/summary>
+            /// <summary>FnKey 计算（6e-G7 抽取）：owner/ns 前缀 + 名 + [参数类型]；仅差 out/ref 的重载键不同。</summary>
+            private static string ComputeFnKey(FunctionSymbol fn)
+            {
+                var paramTypes = string.Join(",", fn.Parameters.Select(p =>
+                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type)));
+                var head = fn.ContainingClass != null
+                    ? fn.ContainingClass.FullName + "." + fn.Name
+                    : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;
+                return head + "[" + paramTypes + "]";
+            }
+
             public void Seal()
             {
                 foreach (var fn in _functions)
                 {
-                    // 6e-M23 R8锛氫粎宸?out/ref 鐨勯噸杞介敭椤讳笉鍚岋紙淇グ绗﹀叆 FnKey锛?
-                    var paramTypes = string.Join(",", fn.Parameters.Select(p =>
-                        (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type)));
-                    var head = fn.ContainingClass != null
-                        ? fn.ContainingClass.FullName + "." + fn.Name
-                        : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;
-                    // 鏂规嫭鍙峰寘瑁瑰弬鏁扮被鍨嬶紙鍦嗘嫭鍙蜂細琚?.cod 鍒嗚瘝鍣ㄥ綋缁撴瀯绗︽媶寮€锛?
-                    _fnKeys[fn] = head + "[" + paramTypes + "]";
+                    _fnKeys[fn] = ComputeFnKey(fn);
                 }
 
                 var used = new HashSet<string>(StringComparer.Ordinal);
@@ -2355,12 +2410,39 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static FunctionSymbol ResolveFunction(string key, ReadContext context)
         {
-            if (!context.FunctionsByKey.TryGetValue(key, out var function))
+            if (context.FunctionsByKey.TryGetValue(key, out var function))
             {
-                throw new InvalidDataException($"Unknown function '{key}'");
+                return function;
             }
 
-            return function;
+            // 6e-G7 回退：开放体内对同类实例成员的调用，键可能携带实例化副本前缀
+            // （如 `MyLib.MyLib.Box`1#!T.Get[]`——inst.FullName 双缀 + 实参 mangle）。
+            // 按「方法名 + 元数」在已注册函数中归一到定义符号（消费方替换期再映射回实例化副本）。
+            var bracketIndex = key.LastIndexOf('[');
+            if (bracketIndex > 0)
+            {
+                var head = key.Substring(0, bracketIndex);
+                var dotIndex = head.LastIndexOf('.');
+                if (dotIndex > 0)
+                {
+                    var methodName = head.Substring(dotIndex + 1);
+                    var parameterCountText = key.Substring(bracketIndex + 1, key.Length - bracketIndex - 2);
+                    var parameterCount = parameterCountText.Length == 0
+                        ? 0
+                        : parameterCountText.Split(',').Length;
+
+                    var candidates = context.Functions.Where(f =>
+                        f.Name == methodName &&
+                        f.Parameters.Length == parameterCount).ToList();
+
+                    if (candidates.Count == 1)
+                    {
+                        return candidates[0];
+                    }
+                }
+            }
+
+            throw new InvalidDataException($"Unknown function '{key}'");
         }
 
         private static bool ParseBoolWord(string text)
@@ -2653,8 +2735,46 @@ namespace Cocoa.CodeAnalysis.Cod
                     {
                         var type = ResolveTypeRef(reader.ExpectString(), context);
                         var identifier = Unescape(reader.ExpectString());
+
+                        // 6e-G7 S2：owner 字段可选携带 → 回填 FieldSymbol（实例化类型的 Fields 经物化钩子可达）
+                        FieldSymbol? field = null;
+                        var hasOwner = reader.PeekRaw().StartsWith("owner:", StringComparison.Ordinal);
+                        if (hasOwner)
+                        {
+                            var ownerFullName = ReadLabeledField(reader, "owner:");
+                            if (ResolveNamedType(ownerFullName, context) is ClassTypeSymbol ownerClass)
+                            {
+                                field = ownerClass.Fields.FirstOrDefault(f => f.Name == identifier);
+                            }
+                        }
+
                         var target = ReadExpression(reader, context, labels);
-                        return new BoundMemberAccessExpression(null, type, target, identifier);
+                        return new BoundMemberAccessExpression(null, type, target, identifier, field);
+                    }
+                case "memberassign":
+                    {
+                        // 6e-G7 S2：字段赋值读回——Field 由 target 形态 + 名字解析
+                        var target = ReadExpression(reader, context, labels);
+                        var fieldName = Unescape(ReadLabeledField(reader, "name:"));
+                        _ = ResolveTypeRef(reader.ExpectString(), context);
+                        _ = ParseBoolWord(reader.ExpectString());
+                        var value = ReadExpression(reader, context, labels);
+
+                        FieldSymbol? field = target switch
+                        {
+                            // 6e-G7：隐式 this 赋值（`_value = v`）——字段在 this 的类上
+                            BoundThisExpression thisExpression => ((ClassTypeSymbol)thisExpression.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
+                            BoundMemberAccessExpression access => access.Field,
+                            BoundStaticTypeExpression staticType => ((ClassTypeSymbol)staticType.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
+                            _ => null,
+                        };
+
+                        if (field == null)
+                        {
+                            throw new InvalidDataException($"Unknown field '{fieldName}' in memberassign");
+                        }
+
+                        return new BoundMemberAssignmentExpression(null, target, field, value);
                     }
                 case "membercall":
                     {

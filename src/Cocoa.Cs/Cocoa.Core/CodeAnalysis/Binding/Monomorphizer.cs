@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -29,6 +29,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
             var helperBinder = new Binder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            helperBinder.RegisterCodGenericDefinitionsForSeed(codLibraries);
             var seeded = new HashSet<InstantiatedTypeSymbol>();
             var methodSeeds = new List<(FunctionSymbol Instantiated, FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)>();
             var seenMethods = new HashSet<FunctionSymbol>();
@@ -139,6 +140,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+
             // 接口实例化仅作编译期能力标记/类型检查：不进发射清单（native 无接口分派、
             // IL 接口定义成员携带类型参数无法按具体类发射）；foreach 走具体枚举器类
             live.RemoveAll(i => i.GenericDefinition.IsInterface);
@@ -156,6 +158,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 for (var i = 0; i < definition.Methods.Length && i < instantiated.Methods.Length; i++)
                 {
                     var instantiatedMethod = instantiated.Methods[i];
+                    var definitionMethod = definition.Methods[i];
 
                     // 方法级泛型模板（6e-M22 C1）：类实例化携带的 <U> 模板不重绑不发射——
                     // 开放类型参数签名无法编码，调用点经 GenericMethodInstantiator 产出具体副本走溯源不动点
@@ -168,6 +171,27 @@ namespace Cocoa.CodeAnalysis.Binding
                     {
                         functionBodies[instantiatedMethod] = new BoundBlockStatement(instantiatedMethod.Declaration!, ImmutableArray<BoundStatement>.Empty);
                         continue;
+                    }
+
+                    // 6e-G7 S5/S6：cod 来源定义（无语法树）→ 用库携带的开放绑定体做替换展开
+                    if (definition.Declaration == null)
+                    {
+                        BoundBlockStatement? openBody = null;
+                        foreach (var library in codLibraries)
+                        {
+                            if (library.Bodies.TryGetValue(definitionMethod, out var candidate))
+                            {
+                                openBody = candidate;
+                                break;
+                            }
+                        }
+
+                        if (openBody != null)
+                        {
+                            functionBodies[instantiatedMethod] =
+                                BoundTreeSubstituter.SubstituteMethodBody(openBody, definition, instantiated, instantiatedMethod, definitionMethod);
+                            continue;
+                        }
                     }
 
                     var (body, bodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(

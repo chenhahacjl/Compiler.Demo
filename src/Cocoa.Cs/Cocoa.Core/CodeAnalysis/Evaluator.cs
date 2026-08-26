@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
-    /// 求值器
+    /// 姹傚€煎櫒
     /// </summary>
     internal sealed class Evaluator
     {
@@ -17,7 +17,7 @@ namespace Cocoa.CodeAnalysis
         private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
 
-        // 6e-M19 M3-c：OOP 运行时状态——实例字段布局缓存 / 静态字段槽 / .cctor 已初始化集 / this 接收者栈
+        // 6e-M19 M3-c锛歄OP 杩愯鏃剁姸鎬佲€斺€斿疄渚嬪瓧娈靛竷灞€缂撳瓨 / 闈欐€佸瓧娈垫Ы / .cctor 宸插垵濮嬪寲闆?/ this 鎺ユ敹鑰呮爤
         private readonly Dictionary<ClassTypeSymbol, ImmutableArray<FieldSymbol>> _instanceFields = new Dictionary<ClassTypeSymbol, ImmutableArray<FieldSymbol>>();
         private readonly Dictionary<FieldSymbol, object> _staticFields = new Dictionary<FieldSymbol, object>();
         private readonly HashSet<ClassTypeSymbol> _staticsInitialized = new HashSet<ClassTypeSymbol>();
@@ -25,10 +25,10 @@ namespace Cocoa.CodeAnalysis
 
         private object? _lastValue;
 
-        // 6e-M23 R5：byref 实参回写队列（LIFO——调用退出时回写到基线标记）
+        // 6e-M23 R5锛歜yref 瀹炲弬鍥炲啓闃熷垪锛圠IFO鈥斺€旇皟鐢ㄩ€€鍑烘椂鍥炲啓鍒板熀绾挎爣璁帮級
         private readonly List<Action> _byRefWriteBacks = new List<Action>();
 
-        // 6e-M23 R5：当前调用实参物化的别名去重作用域（同一存储共享 Box，三后端别名语义一致）
+        // 6e-M23 R5锛氬綋鍓嶈皟鐢ㄥ疄鍙傜墿鍖栫殑鍒悕鍘婚噸浣滅敤鍩燂紙鍚屼竴瀛樺偍鍏变韩 Box锛屼笁鍚庣鍒悕璇箟涓€鑷达級
         private Dictionary<object, ByRefBox> _byRefSlotScope = new Dictionary<object, ByRefBox>();
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
@@ -73,7 +73,7 @@ namespace Cocoa.CodeAnalysis
                 _locals.Peek()[function.Parameters[0]] = (args ?? Array.Empty<string>()).Cast<object>().ToArray();
             }
 
-            // 6e-M22 C5：入口函数自身带捕获变量时（顶层 lambda 捕获入口局部——当前限定非顶层，占位防御）
+            // 6e-M22 C5锛氬叆鍙ｅ嚱鏁拌嚜韬甫鎹曡幏鍙橀噺鏃讹紙椤跺眰 lambda 鎹曡幏鍏ュ彛灞€閮ㄢ€斺€斿綋鍓嶉檺瀹氶潪椤跺眰锛屽崰浣嶉槻寰★級
             var pushedEnvironment = false;
             if (function.CapturedVariables is { Count: > 0 })
             {
@@ -217,13 +217,13 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.FormatExpression:
                     return EvaluateFormatExpression((BoundFormatExpression)node);
 
-                // 6e-M19 M3-c：OOP 五节点（此前 default throw，REPL 无对象概念）
+                // 6e-M19 M3-c锛歄OP 浜旇妭鐐癸紙姝ゅ墠 default throw锛孯EPL 鏃犲璞℃蹇碉級
                 case BoundNodeKind.ObjectCreationExpression:
                     return EvaluateObjectCreation((BoundObjectCreationExpression)node);
                 case BoundNodeKind.ThisExpression:
                     return _thisStack.Peek();
                 case BoundNodeKind.BaseExpression:
-                    // base 与 this 指向同一实例；base.Method() 的非虚目标由绑定期 Method 直接解析
+                    // base 涓?this 鎸囧悜鍚屼竴瀹炰緥锛沚ase.Method() 鐨勯潪铏氱洰鏍囩敱缁戝畾鏈?Method 鐩存帴瑙ｆ瀽
                     return _thisStack.Peek();
                 case BoundNodeKind.ConstructorChainExpression:
                     return EvaluateConstructorChain((BoundConstructorChainExpression)node);
@@ -234,7 +234,7 @@ namespace Cocoa.CodeAnalysis
                 case BoundNodeKind.AsExpression:
                     return EvaluateAsExpression((BoundAsExpression)node);
 
-                // 6e-M22 C4：函数值与间接调用
+                // 6e-M22 C4锛氬嚱鏁板€间笌闂存帴璋冪敤
                 case BoundNodeKind.FunctionValueExpression:
                     return EvaluateFunctionValue((BoundFunctionValueExpression)node);
                 case BoundNodeKind.ByRefArgument:
@@ -254,7 +254,7 @@ namespace Cocoa.CodeAnalysis
             return expression.ConstantValue.Value;
         }
 
-        /// <summary>函数值运行期表示（6e-M22 C4）：目标方法 + 接收者（实例方法组的环境槽；静态/lambda 为 null）。</summary>
+        /// <summary>鍑芥暟鍊艰繍琛屾湡琛ㄧず锛?e-M22 C4锛夛細鐩爣鏂规硶 + 鎺ユ敹鑰咃紙瀹炰緥鏂规硶缁勭殑鐜妲斤紱闈欐€?lambda 涓?null锛夈€?/summary>
         private sealed class EvaluatorFunctionValue
         {
             public EvaluatorFunctionValue(FunctionSymbol function, object? receiver)
@@ -268,7 +268,7 @@ namespace Cocoa.CodeAnalysis
             public object? Receiver { get; }
         }
 
-        /// <summary>闭包环境对象（6e-M22 C5）：捕获变量的堆上规范存储。</summary>
+        /// <summary>闂寘鐜瀵硅薄锛?e-M22 C5锛夛細鎹曡幏鍙橀噺鐨勫爢涓婅鑼冨瓨鍌ㄣ€?/summary>
         internal sealed class ClosureEnvironment
         {
             public System.Collections.Generic.Dictionary<VariableSymbol, object> Slots { get; } = new();
@@ -298,7 +298,7 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateFunctionValue(BoundFunctionValueExpression node)
         {
-            // 捕获 lambda：Receiver = 当前环境对象；方法组：Receiver = 接收者求值
+            // 鎹曡幏 lambda锛歊eceiver = 褰撳墠鐜瀵硅薄锛涙柟娉曠粍锛歊eceiver = 鎺ユ敹鑰呮眰鍊?
             object? receiver;
             if (node.EnvironmentClass != null)
             {
@@ -339,7 +339,7 @@ namespace Cocoa.CodeAnalysis
                 return ByRefBox.Deref(_globals[variable.Variable]);
             }
 
-            // 6e-M22 C5：捕获变量读写环境对象字段
+            // 6e-M22 C5锛氭崟鑾峰彉閲忚鍐欑幆澧冨璞″瓧娈?
             if (variable.Variable.IsCaptured)
             {
                 return ByRefBox.Deref(PeekClosureEnvironment().Slots[variable.Variable]);
@@ -353,7 +353,7 @@ namespace Cocoa.CodeAnalysis
         {
             var value = EvaluateExpression(assignment.Expression);
 
-            // 6e-M19 M5-a：null 赋值合法（可空引用型变量）；其余仍视为内部缺陷
+            // 6e-M19 M5-a锛歯ull 璧嬪€煎悎娉曪紙鍙┖寮曠敤鍨嬪彉閲忥級锛涘叾浣欎粛瑙嗕负鍐呴儴缂洪櫡
             Debug.Assert(value != null ||
                          assignment.Variable.Type is Symbols.ClassTypeSymbol ||
                          assignment.Variable.Type == TypeSymbol.String ||
@@ -372,7 +372,7 @@ namespace Cocoa.CodeAnalysis
             Debug.Assert(operand != null);
 
             var operandType = unary.Op.OperandType;
-            // 6e-M21 Phase 7：窄整型一元结果升 Int32——归位以结果类型为准
+            // 6e-M21 Phase 7锛氱獎鏁村瀷涓€鍏冪粨鏋滃崌 Int32鈥斺€斿綊浣嶄互缁撴灉绫诲瀷涓哄噯
             var resultType = unary.Op.ResultType;
 
             switch (unary.Op.Kind)
@@ -417,7 +417,7 @@ namespace Cocoa.CodeAnalysis
             var left = EvaluateExpression(binary.Left);
             var right = EvaluateExpression(binary.Right);
 
-            // 6e-M19 M5-a：引用相等与字符串拼接允许单侧 null（null 字面量比较 / 空串拼接语义）
+            // 6e-M19 M5-a锛氬紩鐢ㄧ浉绛変笌瀛楃涓叉嫾鎺ュ厑璁稿崟渚?null锛坣ull 瀛楅潰閲忔瘮杈?/ 绌轰覆鎷兼帴璇箟锛?
             Debug.Assert(left != null && right != null ||
                          binary.Op.Kind == BoundBinaryOperatorKind.Equals ||
                          binary.Op.Kind == BoundBinaryOperatorKind.NotEquals ||
@@ -425,7 +425,7 @@ namespace Cocoa.CodeAnalysis
                          binary.Op.Kind == BoundBinaryOperatorKind.ReferenceNotEquals ||
                          (binary.Op.Kind == BoundBinaryOperatorKind.Addition && binary.Type == TypeSymbol.String));
 
-            // 6e-M21 Phase 3：整数按符号域（long/ulong）、f32 按 float 域求值后归位
+            // 6e-M21 Phase 3锛氭暣鏁版寜绗﹀彿鍩燂紙long/ulong锛夈€乫32 鎸?float 鍩熸眰鍊煎悗褰掍綅
             var resultType = binary.Type;
             if (resultType.IsInteger && !resultType.IsPlaceholder128)
             {
@@ -510,7 +510,7 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.NotEquals:
                     return !Equals(left, right);
 
-                // 6e-M19 M2-c：类类型引用相等（C# 对齐；值语义不受影响）
+                // 6e-M19 M2-c锛氱被绫诲瀷寮曠敤鐩哥瓑锛圕# 瀵归綈锛涘€艰涔変笉鍙楀奖鍝嶏級
                 case BoundBinaryOperatorKind.ReferenceEquals:
                     return ReferenceEquals(left, right);
                 case BoundBinaryOperatorKind.ReferenceNotEquals:
@@ -560,7 +560,7 @@ namespace Cocoa.CodeAnalysis
             var locals = new Dictionary<VariableSymbol, object>();
             var argumentValues = new object?[node.Arguments.Length];
 
-            // 6e-M23 R5：byref 实参 copy-in/out——标记本调用的回写基线 + 别名去重作用域，退出时统一回写
+            // 6e-M23 R5锛歜yref 瀹炲弬 copy-in/out鈥斺€旀爣璁版湰璋冪敤鐨勫洖鍐欏熀绾?+ 鍒悕鍘婚噸浣滅敤鍩燂紝閫€鍑烘椂缁熶竴鍥炲啓
             var byRefMarker = _byRefWriteBacks.Count;
             var savedSlots = _byRefSlotScope;
             _byRefSlotScope = new Dictionary<object, ByRefBox>();
@@ -584,7 +584,7 @@ namespace Cocoa.CodeAnalysis
                 argumentValues[i] = value;
             }
 
-            // 类静态方法直呼（using static 等）：首次触碰触发 .cctor（M3-c）
+            // 绫婚潤鎬佹柟娉曠洿鍛硷紙using static 绛夛級锛氶娆¤Е纰拌Е鍙?.cctor锛圡3-c锛?
             if (node.Function.ContainingClass != null && node.Function.IsStatic)
             {
                 EnsureStaticInit(node.Function.ContainingClass);
@@ -592,7 +592,7 @@ namespace Cocoa.CodeAnalysis
 
             _locals.Push(locals);
 
-            // 6e-M22 C5：宿主函数直呼路径同样需要环境对象
+            // 6e-M22 C5锛氬涓诲嚱鏁扮洿鍛艰矾寰勫悓鏍烽渶瑕佺幆澧冨璞?
             ClosureEnvironment? pushedEnvironment = null;
             if (node.Function.CapturedVariables is { Count: > 0 })
             {
@@ -624,8 +624,8 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// byref 实参槽求值（6e-M23 R5）：copy-in 当前值入 Box，登记回写动作；
-        /// 同一次调用的相同存储（别名去重键）共享同一 Box，保证三后端别名语义一致。
+        /// byref 瀹炲弬妲芥眰鍊硷紙6e-M23 R5锛夛細copy-in 褰撳墠鍊煎叆 Box锛岀櫥璁板洖鍐欏姩浣滐紱
+        /// 鍚屼竴娆¤皟鐢ㄧ殑鐩稿悓瀛樺偍锛堝埆鍚嶅幓閲嶉敭锛夊叡浜悓涓€ Box锛屼繚璇佷笁鍚庣鍒悕璇箟涓€鑷淬€?
         /// </summary>
         private ByRefBox EvaluateByRefSlot(BoundByRefArgument node)
         {
@@ -710,7 +710,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>回写本调用登记的 byref 实参（LIFO 基线之上），异常路径同样执行。</summary>
+        /// <summary>鍥炲啓鏈皟鐢ㄧ櫥璁扮殑 byref 瀹炲弬锛圠IFO 鍩虹嚎涔嬩笂锛夛紝寮傚父璺緞鍚屾牱鎵ц銆?/summary>
         private void RunByRefWriteBacks(int marker)
         {
             for (var i = _byRefWriteBacks.Count - 1; i >= marker; i--)
@@ -724,7 +724,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>求值器显示形态：用户类实例 → 类名（对齐 IL 默认 ToString）；类型值 → 全名。</summary>
+        /// <summary>姹傚€煎櫒鏄剧ず褰㈡€侊細鐢ㄦ埛绫诲疄渚?鈫?绫诲悕锛堝榻?IL 榛樿 ToString锛夛紱绫诲瀷鍊?鈫?鍏ㄥ悕銆?/summary>
         private static string DisplayValue(object? value) => value switch
         {
             EvaluatorObject o => o.Class.Name,
@@ -792,7 +792,7 @@ namespace Cocoa.CodeAnalysis
                 case BuiltinKind.UInt64ToString:
                     return Convert.ToString((ulong)EvaluateExpression(arguments[0])!);
 
-                // 6e-M19 M2-c：System.Object 静态方法（CLR 直通）
+                // 6e-M19 M2-c锛歋ystem.Object 闈欐€佹柟娉曪紙CLR 鐩撮€氾級
                 case BuiltinKind.ObjectStaticEquals:
                     var equalsLeft = EvaluateExpression(arguments[0]);
                     var equalsRight = EvaluateExpression(arguments[1]);
@@ -806,7 +806,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>6e-M19 M5-b：is 运行时判定——用户类沿 Class 继承链，string/CLR 对象走宿主类型。</summary>
+        /// <summary>6e-M19 M5-b锛歩s 杩愯鏃跺垽瀹氣€斺€旂敤鎴风被娌?Class 缁ф壙閾撅紝string/CLR 瀵硅薄璧板涓荤被鍨嬨€?/summary>
         private object EvaluateIsExpression(BoundIsExpression node)
         {
             var value = EvaluateExpression(node.Expression);
@@ -830,7 +830,7 @@ namespace Cocoa.CodeAnalysis
                 return false;
             }
 
-            // string / CLR 对象（外部互操作值）：目标 string → 宿主类型判定；类目标对非 Evaluator 对象不可能
+            // string / CLR 瀵硅薄锛堝閮ㄤ簰鎿嶄綔鍊硷級锛氱洰鏍?string 鈫?瀹夸富绫诲瀷鍒ゅ畾锛涚被鐩爣瀵归潪 Evaluator 瀵硅薄涓嶅彲鑳?
             if (node.TargetType == TypeSymbol.String)
             {
                 return value is string;
@@ -839,7 +839,7 @@ namespace Cocoa.CodeAnalysis
             return false;
         }
 
-        /// <summary>6e-M19 M5-b：as 运行时转换——命中返回原引用，失败得 null。</summary>
+        /// <summary>6e-M19 M5-b锛歛s 杩愯鏃惰浆鎹⑩€斺€斿懡涓繑鍥炲師寮曠敤锛屽け璐ュ緱 null銆?/summary>
         private object? EvaluateAsExpression(BoundAsExpression node)
         {
             var value = EvaluateExpression(node.Expression);
@@ -875,7 +875,7 @@ namespace Cocoa.CodeAnalysis
         {
             var value = EvaluateExpression(node.Expression);
 
-            // 6e-M19 M5-a：null → 引用型直通（必须先于 String 分支——Convert.ToString(null) 会折叠成 ""）
+            // 6e-M19 M5-a锛歯ull 鈫?寮曠敤鍨嬬洿閫氾紙蹇呴』鍏堜簬 String 鍒嗘敮鈥斺€擟onvert.ToString(null) 浼氭姌鍙犳垚 ""锛?
             if (node.Expression.Type == TypeSymbol.Null)
             {
                 return value;
@@ -895,7 +895,7 @@ namespace Cocoa.CodeAnalysis
                     return (int)Convert.ToDouble(value);
                 }
 
-                // 无符号大值按位模式截断（与 C# unchecked 窄化一致）
+                // 鏃犵鍙峰ぇ鍊兼寜浣嶆ā寮忔埅鏂紙涓?C# unchecked 绐勫寲涓€鑷达級
                 return unchecked((int)Binding.NumericBox.ToSigned64(value));
             }
             else if (node.Type == TypeSymbol.Int64)
@@ -907,7 +907,7 @@ namespace Cocoa.CodeAnalysis
 
                 if (value is int longInt)
                 {
-                    // 符号扩展（与 C# (long)int 一致）
+                    // 绗﹀彿鎵╁睍锛堜笌 C# (long)int 涓€鑷达級
                     return (long)longInt;
                 }
 
@@ -934,7 +934,7 @@ namespace Cocoa.CodeAnalysis
                     return unchecked((byte)(int)byteDouble);
                 }
 
-                // 无符号字节截断，与 (byte)300 == 44 语义一致
+                // 鏃犵鍙峰瓧鑺傛埅鏂紝涓?(byte)300 == 44 璇箟涓€鑷?
                 return unchecked((byte)Convert.ToInt32(value));
             }
             else if (node.Type == TypeSymbol.Int8)
@@ -981,12 +981,12 @@ namespace Cocoa.CodeAnalysis
             }
             else if (node.Type is EnumTypeSymbol)
             {
-                // 枚举底层为 int，无操作
+                // 鏋氫妇搴曞眰涓?int锛屾棤鎿嶄綔
                 return Convert.ToInt32(value);
             }
             else if (node.Type is Symbols.ClassTypeSymbol)
             {
-                // 6e-M19 M2-c：类间引用转换（派生→基类隐式 / 基类→派生显式）——CLR 对象直通
+                // 6e-M19 M2-c锛氱被闂村紩鐢ㄨ浆鎹紙娲剧敓鈫掑熀绫婚殣寮?/ 鍩虹被鈫掓淳鐢熸樉寮忥級鈥斺€擟LR 瀵硅薄鐩撮€?
                 return value;
             }
             else
@@ -1048,7 +1048,7 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateMemberAccessExpression(BoundMemberAccessExpression node)
         {
-            // 6e-M19 M3-c：类字段读（实例沿扁平化布局取槽；静态走字段槽字典）
+            // 6e-M19 M3-c锛氱被瀛楁璇伙紙瀹炰緥娌挎墎骞冲寲甯冨眬鍙栨Ы锛涢潤鎬佽蛋瀛楁妲藉瓧鍏革級
             if (node.Field != null)
             {
                 if (node.Field.IsStatic)
@@ -1082,7 +1082,7 @@ namespace Cocoa.CodeAnalysis
         {
             var method = node.Method;
 
-            // 实例方法：用户类虚链分派 / Object 内建面 / System.Type 属性 getter
+            // 瀹炰緥鏂规硶锛氱敤鎴风被铏氶摼鍒嗘淳 / Object 鍐呭缓闈?/ System.Type 灞炴€?getter
             if (method != null && !method.IsStatic)
             {
                 var receiver = EvaluateExpression(node.Expression);
@@ -1105,8 +1105,8 @@ namespace Cocoa.CodeAnalysis
                 return EvaluateBuiltinCall(method, node.Arguments);
             }
 
-            // 静态容器类方法调用（6e-M18：System.Console.WriteLine / System.Math.Max ...）：按函数调用求值；
-            // 首次触碰类静态成员时触发其 .cctor（M3-c）
+            // 闈欐€佸鍣ㄧ被鏂规硶璋冪敤锛?e-M18锛歋ystem.Console.WriteLine / System.Math.Max ...锛夛細鎸夊嚱鏁拌皟鐢ㄦ眰鍊硷紱
+            // 棣栨瑙︾绫婚潤鎬佹垚鍛樻椂瑙﹀彂鍏?.cctor锛圡3-c锛?
             if (method != null)
             {
                 if (method.ContainingClass != null && method.IsStatic)
@@ -1125,14 +1125,14 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 用户类实例上的调用分派：非 base 沿运行时类链找最近实现（override 生效）；
-        /// 走到内建单例即默认实现（ToString→类名等）。
+        /// 鐢ㄦ埛绫诲疄渚嬩笂鐨勮皟鐢ㄥ垎娲撅細闈?base 娌胯繍琛屾椂绫婚摼鎵炬渶杩戝疄鐜帮紙override 鐢熸晥锛夛紱
+        /// 璧板埌鍐呭缓鍗曚緥鍗抽粯璁ゅ疄鐜帮紙ToString鈫掔被鍚嶇瓑锛夈€?
         /// </summary>
         private object? DispatchOnInstance(BoundMemberCallExpression node, FunctionSymbol declared, EvaluatorObject instance)
         {
             var target = node.IsBase ? declared : ResolveDispatch(instance.Class, declared) ?? declared;
 
-            // 6e-M23 R5：实参物化可能登记 byref 回写，基线传给 InvokeFunction 在退出时回写
+            // 6e-M23 R5锛氬疄鍙傜墿鍖栧彲鑳界櫥璁?byref 鍥炲啓锛屽熀绾夸紶缁?InvokeFunction 鍦ㄩ€€鍑烘椂鍥炲啓
             var byRefMarker = _byRefWriteBacks.Count;
             var savedSlots = _byRefSlotScope;
             _byRefSlotScope = new Dictionary<object, ByRefBox>();
@@ -1155,7 +1155,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>内建默认实现的求值器语义（对齐 C# System.Object 默认行为）。</summary>
+        /// <summary>鍐呭缓榛樿瀹炵幇鐨勬眰鍊煎櫒璇箟锛堝榻?C# System.Object 榛樿琛屼负锛夈€?/summary>
         private object? EvaluateBuiltinDefaultOnInstance(BuiltinKind kind, EvaluatorObject instance, BoundMemberCallExpression node)
         {
             switch (kind)
@@ -1174,7 +1174,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>非用户类接收者（基元/string/CLR Type/EvaluatorTypeInfo）的内建面直通。</summary>
+        /// <summary>闈炵敤鎴风被鎺ユ敹鑰咃紙鍩哄厓/string/CLR Type/EvaluatorTypeInfo锛夌殑鍐呭缓闈㈢洿閫氥€?/summary>
         private object? EvaluateBuiltinInstanceFace(BuiltinKind kind, object receiver, BoundMemberCallExpression node)
         {
             switch (kind)
@@ -1188,7 +1188,7 @@ namespace Cocoa.CodeAnalysis
                 case BuiltinKind.ObjectGetType:
                     return receiver.GetType();
 
-                // 6e-M19 M3-b：System.Type 只读属性（Name 与 IL 同构——FullName 末段；用户类为 EvaluatorTypeInfo）
+                // 6e-M19 M3-b锛歋ystem.Type 鍙灞炴€э紙Name 涓?IL 鍚屾瀯鈥斺€擣ullName 鏈锛涚敤鎴风被涓?EvaluatorTypeInfo锛?
                 case BuiltinKind.TypeName:
                     var fullName = FullNameOfTypeValue(receiver);
                     var lastDot = fullName.LastIndexOf('.');
@@ -1207,9 +1207,9 @@ namespace Cocoa.CodeAnalysis
             _ => throw new Exception($"Unexpected type value {receiver}"),
         };
 
-        // ------------------------------------------------------ 6e-M19 M3-c：OOP 运行时辅助
+        // ------------------------------------------------------ 6e-M19 M3-c锛歄OP 杩愯鏃惰緟鍔?
 
-        /// <summary>类的扁平化实例字段布局（基类字段在前、声明序；跨继承链，按类缓存）。</summary>
+        /// <summary>绫荤殑鎵佸钩鍖栧疄渚嬪瓧娈靛竷灞€锛堝熀绫诲瓧娈靛湪鍓嶃€佸０鏄庡簭锛涜法缁ф壙閾撅紝鎸夌被缂撳瓨锛夈€?/summary>
         private ImmutableArray<FieldSymbol> InstanceFieldsOf(ClassTypeSymbol classType)
         {
             if (_instanceFields.TryGetValue(classType, out var cached))
@@ -1248,7 +1248,7 @@ namespace Cocoa.CodeAnalysis
             throw new Exception($"Field '{field.Name}' not found on '{classType.Name}'");
         }
 
-        /// <summary>字段零值默认（语言无 null 字面量，未赋值读取给类型零值；引用类型 null）。</summary>
+        /// <summary>瀛楁闆跺€奸粯璁わ紙璇█鏃?null 瀛楅潰閲忥紝鏈祴鍊艰鍙栫粰绫诲瀷闆跺€硷紱寮曠敤绫诲瀷 null锛夈€?/summary>
         private static object? DefaultValueOf(TypeSymbol type)
         {
             if (type == TypeSymbol.Int32 || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8 ||
@@ -1277,7 +1277,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 静态初始化（CLR 语义近似）：首次触碰类静态成员时执行其 .cctor（字段初始化器已由绑定前缀进体）。
+        /// 闈欐€佸垵濮嬪寲锛圕LR 璇箟杩戜技锛夛細棣栨瑙︾绫婚潤鎬佹垚鍛樻椂鎵ц鍏?.cctor锛堝瓧娈靛垵濮嬪寲鍣ㄥ凡鐢辩粦瀹氬墠缂€杩涗綋锛夈€?
         /// </summary>
         private void EnsureStaticInit(ClassTypeSymbol classType)
         {
@@ -1304,7 +1304,7 @@ namespace Cocoa.CodeAnalysis
 
             var instance = new EvaluatorObject(classType, new object?[InstanceFieldsOf(classType).Length]);
 
-            // 构造函数解析：与绑定期一致（名字=类名，参数个数+类型逐一匹配）；无显式构造时隐式默认构造已在 Functions 中
+            // 鏋勯€犲嚱鏁拌В鏋愶細涓庣粦瀹氭湡涓€鑷达紙鍚嶅瓧=绫诲悕锛屽弬鏁颁釜鏁?绫诲瀷閫愪竴鍖归厤锛夛紱鏃犳樉寮忔瀯閫犳椂闅愬紡榛樿鏋勯€犲凡鍦?Functions 涓?
             foreach (var candidate in classType.Methods)
             {
                 if (!candidate.IsConstructor || candidate.IsStatic || candidate.Parameters.Length != argumentValues.Length)
@@ -1324,7 +1324,7 @@ namespace Cocoa.CodeAnalysis
 
                 if (match)
                 {
-                    // 构造体已由绑定注入 base(...) 链 + 字段初始化器前缀（隐式链对 Object 无 .ctor 自动跳过）
+                    // 鏋勯€犱綋宸茬敱缁戝畾娉ㄥ叆 base(...) 閾?+ 瀛楁鍒濆鍖栧櫒鍓嶇紑锛堥殣寮忛摼瀵?Object 鏃?.ctor 鑷姩璺宠繃锛?
                     InvokeFunction(candidate, instance, argumentValues);
                     break;
                 }
@@ -1335,13 +1335,13 @@ namespace Cocoa.CodeAnalysis
 
         private object? EvaluateConstructorChain(BoundConstructorChainExpression node)
         {
-            // 链到内建 System.Object（Constructor=null）：no-op
+            // 閾惧埌鍐呭缓 System.Object锛圕onstructor=null锛夛細no-op
             if (node.Constructor == null)
             {
                 return null;
             }
 
-            // 6e-M23 R5：byref 实参回写基线 + 别名作用域（构造形参同样支持 out/ref）
+            // 6e-M23 R5锛歜yref 瀹炲弬鍥炲啓鍩虹嚎 + 鍒悕浣滅敤鍩燂紙鏋勯€犲舰鍙傚悓鏍锋敮鎸?out/ref锛?
             var byRefMarker = _byRefWriteBacks.Count;
             var savedSlots = _byRefSlotScope;
             _byRefSlotScope = new Dictionary<object, ByRefBox>();
@@ -1380,7 +1380,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 实例函数调用环境：参数入局部帧 + this 压接收者栈（BoundThisExpression 求值返回栈顶），退出对称弹栈。
+        /// 瀹炰緥鍑芥暟璋冪敤鐜锛氬弬鏁板叆灞€閮ㄥ抚 + this 鍘嬫帴鏀惰€呮爤锛圔oundThisExpression 姹傚€艰繑鍥炴爤椤讹級锛岄€€鍑哄绉板脊鏍堛€?
         /// </summary>
         private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues, ClosureEnvironment? existingEnvironment = null, int byRefMarker = -1)
         {
@@ -1392,7 +1392,7 @@ namespace Cocoa.CodeAnalysis
 
             _locals.Push(locals);
 
-            // 6e-M22 C5：环境对象入栈——lambda 用调用方传递的实例；宿主函数新建（捕获参数随入参播种）
+            // 6e-M22 C5锛氱幆澧冨璞″叆鏍堚€斺€攍ambda 鐢ㄨ皟鐢ㄦ柟浼犻€掔殑瀹炰緥锛涘涓诲嚱鏁版柊寤猴紙鎹曡幏鍙傛暟闅忓叆鍙傛挱绉嶏級
             var usesEnvironment = existingEnvironment != null || function.CapturedVariables is { Count: > 0 };
             if (usesEnvironment)
             {
@@ -1430,8 +1430,8 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 虚分派（镜像 CLR 槽复用语义）：沿运行时类继承链找最近同名同签名实现——
-        /// 内建单例位于链根自然最后命中（即 C# 默认实现）。IsBase 直调绑定期解析的基类实现，不经此重派发。
+        /// 铏氬垎娲撅紙闀滃儚 CLR 妲藉鐢ㄨ涔夛級锛氭部杩愯鏃剁被缁ф壙閾炬壘鏈€杩戝悓鍚嶅悓绛惧悕瀹炵幇鈥斺€?
+        /// 鍐呭缓鍗曚緥浣嶄簬閾炬牴鑷劧鏈€鍚庡懡涓紙鍗?C# 榛樿瀹炵幇锛夈€侷sBase 鐩磋皟缁戝畾鏈熻В鏋愮殑鍩虹被瀹炵幇锛屼笉缁忔閲嶆淳鍙戙€?
         /// </summary>
         private FunctionSymbol? ResolveDispatch(ClassTypeSymbol runtimeClass, FunctionSymbol declared)
         {
@@ -1483,7 +1483,7 @@ namespace Cocoa.CodeAnalysis
 
         private void Assign(VariableSymbol variable, object? value)
         {
-            // 6e-M23 R5：形参槽持有 ByRefBox 时写入穿透到调用方存储
+            // 6e-M23 R5锛氬舰鍙傛Ы鎸佹湁 ByRefBox 鏃跺啓鍏ョ┛閫忓埌璋冪敤鏂瑰瓨鍌?
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
                 if (_globals.TryGetValue(variable, out var existingGlobal) && existingGlobal is ByRefBox globalBox)
@@ -1496,7 +1496,7 @@ namespace Cocoa.CodeAnalysis
             }
             else if (variable.IsCaptured)
             {
-                // 6e-M22 C5：捕获变量写环境对象字段
+                // 6e-M22 C5锛氭崟鑾峰彉閲忓啓鐜瀵硅薄瀛楁
                 var slots = PeekClosureEnvironment().Slots;
                 if (slots.TryGetValue(variable, out var existingCaptured) && existingCaptured is ByRefBox capturedBox)
                 {
@@ -1520,8 +1520,8 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 6e-M21 Phase 3：整数二元求值——有符号在 long 域、无符号在 ulong 域（右移为逻辑移位），
-        /// 移位计数按结果位宽掩码（32 位 &31 / 64 位 &63），结果按类型归位装箱。
+        /// 6e-M21 Phase 3锛氭暣鏁颁簩鍏冩眰鍊尖€斺€旀湁绗﹀彿鍦?long 鍩熴€佹棤绗﹀彿鍦?ulong 鍩燂紙鍙崇Щ涓洪€昏緫绉讳綅锛夛紝
+        /// 绉讳綅璁℃暟鎸夌粨鏋滀綅瀹芥帺鐮侊紙32 浣?&31 / 64 浣?&63锛夛紝缁撴灉鎸夌被鍨嬪綊浣嶈绠便€?
         /// </summary>
         private static object EvaluateIntegerBinary(BoundBinaryOperatorKind kind, object left, object right, TypeSymbol type)
         {
@@ -1577,7 +1577,7 @@ namespace Cocoa.CodeAnalysis
             throw new Exception($"Unexpected integer binary operator {kind}");
         }
 
-        /// <summary>f32 二元求值：float 域四则与比较。</summary>
+        /// <summary>f32 浜屽厓姹傚€硷細float 鍩熷洓鍒欎笌姣旇緝銆?/summary>
         private static object EvaluateFloat32Binary(BoundBinaryOperatorKind kind, object left, object right)
         {
             var a = (float)left;

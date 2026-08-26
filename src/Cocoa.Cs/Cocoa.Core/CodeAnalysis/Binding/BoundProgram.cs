@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundProgram
     {
-        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<ClassTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<ClassTypeSymbol>? genericDefinitions = null)
+        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<ClassTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<ClassTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
         {
             Previous = previous;
             Diagnostics = diagnostics;
@@ -15,6 +15,7 @@ namespace Cocoa.CodeAnalysis.Binding
             Classes = classes;
             CodAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
             GenericDefinitions = genericDefinitions ?? ImmutableArray<ClassTypeSymbol>.Empty;
+            GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
         }
 
         public BoundProgram? Previous { get; }
@@ -35,5 +36,11 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 泛型定义类（6e-G7 S1）：模板壳，IL/native 发射清单排除；仅 EmitCocoa 序列化为 gcls 条目。
         /// </summary>
         public ImmutableArray<ClassTypeSymbol> GenericDefinitions { get; }
+
+        /// <summary>
+        /// 泛型定义方法的开放绑定体（6e-G7 S2）：T 保持开放的降级 Bound 块，
+        /// EmitCocoa 序列化进 bodies 区供消费方替换展开。
+        /// </summary>
+        public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> GenericOpenBodies { get; }
     }
 }

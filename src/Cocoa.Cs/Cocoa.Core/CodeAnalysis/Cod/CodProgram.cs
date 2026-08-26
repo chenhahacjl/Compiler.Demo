@@ -21,7 +21,8 @@ namespace Cocoa.CodeAnalysis.Cod
             ImmutableArray<string> nativeImports,
             ImmutableArray<string> codReferences,
             ImmutableArray<string> namespaces,
-            ImmutableArray<ClassTypeSymbol> genericDefinitions = default)
+            ImmutableArray<ClassTypeSymbol> genericDefinitions = default,
+            ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
         {
             Functions = functions;
             Globals = globals;
@@ -35,6 +36,7 @@ namespace Cocoa.CodeAnalysis.Cod
             CodReferences = codReferences;
             Namespaces = namespaces;
             GenericDefinitions = genericDefinitions.IsDefault ? ImmutableArray<ClassTypeSymbol>.Empty : genericDefinitions;
+            GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
         }
 
         /// <summary>库的顶层函数（含 extern 声明，无入口点）。</summary>
@@ -51,6 +53,9 @@ namespace Cocoa.CodeAnalysis.Cod
 
         /// <summary>泛型定义类（6e-G7 S1：模板壳 + 开放类型参数；消费方实例化展开）。</summary>
         public ImmutableArray<ClassTypeSymbol> GenericDefinitions { get; }
+
+        /// <summary>泛型定义方法的开放绑定体（6e-G7 S2：T 保持开放；消费方替换展开）。</summary>
+        public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> GenericOpenBodies { get; }
 
         /// <summary>函数体（语义层 BoundProgram 片段，已降级）。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Bodies { get; }
