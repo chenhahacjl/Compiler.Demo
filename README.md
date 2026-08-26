@@ -70,6 +70,7 @@ cocoa build -p foo.coproj -b dotnet
 | [`docs-dev/泛型设计.md`](docs-dev/泛型设计.md) | **泛型（类/接口/方法 + 约束）编译期单态化设计**（6e-M20 规划） |
 | [`docs-dev/委托与Lambda设计.md`](docs-dev/委托与Lambda设计.md) | **函数类型 / Lambda / 闭包 / event / delegate 糖设计**（6e-M22 规划：结构化函数类型内核 + 三后端函数值 ABI + 自研事件多播） |
 | [`docs-dev/out与ref参数设计.md`](docs-dev/out与ref参数设计.md) | **out / ref 参数 + 可赋值形参 + 明确赋值分析设计**（6e-M23 规划：修饰符标志位建模 + DFA 对齐 C# + 三后端传址 + `.cod` 格式扩展；自举前置语言件） |
+| [`docs-dev/文档注释设计.md`](docs-dev/文档注释设计.md) | **`///` 文档注释 + 编译期 XML 文档文件 + `.cod` 内嵌 docs 段设计**（6e-M24 规划：.NET DocID 兼容格式 + `--doc`/coproj 开关默认关 + REPL/IDE 悬停前置；开发延后） |
 | [`docs-dev/自举缺口分析.md`](docs-dev/自举缺口分析.md) | **自举前置盘点：语言/stdlib 缺口分级与实施顺序**（BCL 依赖面全库扫描 → P0/P1/P2 缺口清单、文件 IO syscall 路线、Dictionary/API 形态方针、mini-Lexer 开工信号） |
 | [`docs-dev/Cocoa.IDE设计.md`](docs-dev/Cocoa.IDE设计.md) | **类 Visual Studio 桌面 IDE 总体设计**（Avalonia 11 + SemanticModel 门面 + 语言服务 + M7 解释器调试器；功能矩阵与里程碑） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |
