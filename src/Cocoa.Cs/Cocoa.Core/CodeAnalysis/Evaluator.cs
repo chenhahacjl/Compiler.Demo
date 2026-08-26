@@ -792,7 +792,27 @@ namespace Cocoa.CodeAnalysis
                 case BuiltinKind.UInt64ToString:
                     return Convert.ToString((ulong)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.StringFromChars:
-                    return new string((char[])EvaluateExpression(arguments[0])!);
+                {
+                    // 6e-G7 ③a：char[] 在 Evaluator 中为 .NET char[] 或 object[]（装箱元素）
+                    var arr = EvaluateExpression(arguments[0]);
+                    if (arr is char[] typedChars)
+                    {
+                        return new string(typedChars);
+                    }
+
+                    if (arr is object[] boxedChars)
+                    {
+                        var chars = new char[boxedChars.Length];
+                        for (var ci = 0; ci < boxedChars.Length; ci++)
+                        {
+                            chars[ci] = (char)boxedChars[ci]!;
+                        }
+
+                        return new string(chars);
+                    }
+
+                    throw new InvalidOperationException($"StringFromChars: unexpected array type {arr?.GetType().Name}");
+                }
 
                 // 6e-M19 M2-c锛歋ystem.Object 闈欐€佹柟娉曪紙CLR 鐩撮€氾級
                 case BuiltinKind.ObjectStaticEquals:

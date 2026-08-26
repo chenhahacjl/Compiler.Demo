@@ -3242,6 +3242,18 @@ namespace Cocoa.CodeAnalysis.Syntax
             var newKeyword = MatchToken(SyntaxKind.NewKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
 
+            // 6e-G7 ③a：贪心消费 `.Identifier` 链——全限定类型名（如 System.Text.StringBuilder）
+            while (Current.Kind == SyntaxKind.DotToken &&
+                   Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                var dot = NextToken();
+                var next = MatchToken(SyntaxKind.IdentifierToken);
+                var combinedText = identifier.Text + "." + next.Text;
+                identifier = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken,
+                    identifier.Position, combinedText, combinedText,
+                    identifier.LeadingTrivia, next.TrailingTrivia);
+            }
+
             // 泛型类型实参：`new List<int>(args)`（6e-M20；`new` 后 `<` 无歧义）
             TypeArgumentListSyntax? typeArguments = null;
             if (Current.Kind == SyntaxKind.LessToken)
