@@ -1800,6 +1800,43 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
+                case BuiltinKind.FileDelete:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "Delete", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.Delete not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileCopy:
+                {
+                    // File.Copy(src, dst, overwrite=true)
+                    var src = _framework.ResolveMethod("System.IO.File", "Copy", new[] { "System.String", "System.String", "System.Boolean" });
+                    if (src == null) throw new Exception("System.IO.File.Copy not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), src);
+                    break;
+                }
+                case BuiltinKind.DirectoryExists:
+                {
+                    var m = _framework.ResolveMethod("System.IO.Directory", "Exists", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.Directory.Exists not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.SetCurrentDirectory:
+                {
+                    var m = _framework.ResolveMethod("System.Environment", "SetCurrentDirectory", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.Environment.SetCurrentDirectory not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.GetExecutablePath:
+                {
+                    // AppContext.BaseDirectory 作为可执行文件路径的近似
+                    var m = _framework.ResolveMethod("AppContext", "get_BaseDirectory", Array.Empty<string>());
+                    if (m == null) throw new Exception("AppContext.BaseDirectory not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
 
                 // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
                 case BuiltinKind.ObjectStaticEquals:
