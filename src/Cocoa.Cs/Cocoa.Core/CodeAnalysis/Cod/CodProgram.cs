@@ -20,7 +20,8 @@ namespace Cocoa.CodeAnalysis.Cod
             ImmutableArray<string> dotnetReferences,
             ImmutableArray<string> nativeImports,
             ImmutableArray<string> codReferences,
-            ImmutableArray<string> namespaces)
+            ImmutableArray<string> namespaces,
+            ImmutableArray<ClassTypeSymbol> genericDefinitions = default)
         {
             Functions = functions;
             Globals = globals;
@@ -33,6 +34,7 @@ namespace Cocoa.CodeAnalysis.Cod
             NativeImports = nativeImports;
             CodReferences = codReferences;
             Namespaces = namespaces;
+            GenericDefinitions = genericDefinitions.IsDefault ? ImmutableArray<ClassTypeSymbol>.Empty : genericDefinitions;
         }
 
         /// <summary>库的顶层函数（含 extern 声明，无入口点）。</summary>
@@ -46,6 +48,9 @@ namespace Cocoa.CodeAnalysis.Cod
 
         /// <summary>库的纯容器类（6e-M17：仅 syscall/extern 静态方法，无实例成员/构造/字段/属性/继承）。</summary>
         public ImmutableArray<ClassTypeSymbol> Classes { get; }
+
+        /// <summary>泛型定义类（6e-G7 S1：模板壳 + 开放类型参数；消费方实例化展开）。</summary>
+        public ImmutableArray<ClassTypeSymbol> GenericDefinitions { get; }
 
         /// <summary>函数体（语义层 BoundProgram 片段，已降级）。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Bodies { get; }

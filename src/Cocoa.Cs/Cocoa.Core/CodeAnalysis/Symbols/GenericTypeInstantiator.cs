@@ -183,6 +183,15 @@ namespace Cocoa.CodeAnalysis.Symbols
             [TypeSymbol.Void] = "!System.Void",
         };
 
+        /// <summary>基元权威编码反解（6e-G7 S1：.cod 类型流读侧）。</summary>
+        private static readonly Dictionary<string, TypeSymbol> PrimitiveDecodeNames =
+            PrimitiveEncodeNames.ToDictionary(pair => pair.Value, pair => pair.Key);
+
+        internal static bool TryDecodePrimitive(string encoded, out TypeSymbol type)
+        {
+            return PrimitiveDecodeNames.TryGetValue(encoded, out type!);
+        }
+
         /// <summary>类型实参编码（mangle 与缓存键共用）：`!` 权威实体 / FullName 点保留 / 数组 `[]` 后缀 / 嵌套实例化递归。</summary>
         public static string Encode(TypeSymbol type)
         {

@@ -46,6 +46,11 @@ namespace Cocoa.CodeAnalysis.Cod
             {
                 registry.RegisterType(e);
             }
+            // 6e-G7 S1：泛型定义在枚举后、类/函数前注册——gcls 条目须先于引用 !开放参数 的 fn 条目落盘
+            foreach (var g in program.GenericDefinitions)
+            {
+                registry.RegisterType(g);
+            }
             foreach (var c in program.Classes)
             {
                 registry.RegisterType(c);
@@ -91,8 +96,8 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
-                // 瀹瑰櫒绫绘柟娉曪紙闈欐€侊級搴忓垪鍖栧嚱鏁颁綋锛涘疄渚嬫柟娉?闅愬紡鏋勯€犵瓑甯歌鏂规硶涓嶅湪瀹瑰櫒搴忓垪鍖栬寖鍥达紝璺宠繃
-                if (fn.ContainingClass != null && !fn.IsStatic)
+                // 6e-G7 S2：泛型定义属主的方法体（开放绑定体）随库携带；其余实例方法不在容器序列化范围，跳过
+                if (fn.ContainingClass != null && !fn.IsStatic && !fn.ContainingClass.IsGenericDefinition)
                 {
                     continue;
                 }
@@ -827,11 +832,163 @@ namespace Cocoa.CodeAnalysis.Cod
                     (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type))) + "]";
         }
 
+        /// <summary>
+        /// 泛型定义类节点（6e-G7 S1）：类型参数（含约束）+ 字段 + 静态方法签名。
+        /// 成员类型经 TypeRef 携带开放参数（!属主.名）与实例化 mangle；开放绑定体由 bodies 区按 FnKey 携带（S2）。
+        /// </summary>
+        private static void EmitGenericClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
+        {
+            w.Open("gcls");
+            w.Field(classType.FullName);
+            w.Field(classType.Visibility.ToString().ToLowerInvariant());
+
+            var typeParameters = classType.TypeParameters;
+            w.Field("tparams:" + typeParameters.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var typeParameter in typeParameters)
+            {
+                WriteTypeParameter(w, typeParameter);
+            }
+
+            var fields = classType.Fields.ToArray();
+            w.Field("fields:" + fields.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var field in fields)
+            {
+                w.Open("fld");
+                w.Field(Str(field.Name));
+                w.Field(TypeRef(field.Type));
+                w.Field(field.Visibility.ToString().ToLowerInvariant());
+                w.Field(BoolWord(field.IsStatic));
+                w.Field(BoolWord(field.IsReadonly));
+                w.End();
+            }
+
+            var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
+            w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var method in methods)
+            {
+                w.Field(MethodSignature(method));
+            }
+
+            w.End();
+        }
+
+        /// <summary>tpar/ftp 子节点共用写出（6e-G7 S1）：名 / 序号 / 约束标志 / 显式约束类型列表。</summary>
+        private static void WriteTypeParameter(Writer w, TypeParameterSymbol typeParameter)
+        {
+            w.Open("tpar");
+            w.Field(typeParameter.Name);
+            w.Field(typeParameter.Ordinal);
+            var flags = new List<string>();
+            if (typeParameter.HasNewConstraint)
+            {
+                flags.Add("new");
+            }
+
+            if (typeParameter.HasReferenceTypeConstraint)
+            {
+                flags.Add("class");
+            }
+
+            if (typeParameter.HasValueTypeConstraint)
+            {
+                flags.Add("struct");
+            }
+
+            w.Field(flags.Count == 0 ? "-" : string.Join("+", flags));
+            w.Field("c:" + typeParameter.ConstraintTypes.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var constraint in typeParameter.ConstraintTypes)
+            {
+                w.Field(TypeRef(constraint));
+            }
+
+            w.End();
+        }
+
+        /// <summary>约束标志解析（gcls.tpar 与 fn.tps 共用，6e-G7 S1）。</summary>
+        private static void ApplyTypeParameterFlags(TypeParameterSymbol parameter, string flagsText)
+        {
+            if (flagsText == "-")
+            {
+                return;
+            }
+
+            foreach (var flag in flagsText.Split('+'))
+            {
+                switch (flag)
+                {
+                    case "new":
+                        parameter.HasNewConstraint = true;
+                        break;
+                    case "class":
+                        parameter.HasReferenceTypeConstraint = true;
+                        break;
+                    case "struct":
+                        parameter.HasValueTypeConstraint = true;
+                        break;
+                    default:
+                        throw new InvalidDataException($"Unknown type parameter constraint flag '{flag}'");
+                }
+            }
+        }
+
+        /// <summary>
+        /// tpar/ftp 子节点读取（6e-G7 S1）：构造符号 + 应用标志 + 登记开放键（类级=限定键 !属主.名；
+        /// 方法级=裸键 !名）+ 暂存约束数。返回 (参数, 约束数)，约束由第二趟解析。
+        /// </summary>
+        private static (TypeParameterSymbol Parameter, int ConstraintCount) ReadTypeParameter(Reader reader, ReadContext context, string? ownerFullName)
+        {
+            reader.Expect("tpar");
+            var parameterName = Unescape(reader.ExpectString());
+            var ordinal = reader.ExpectInt();
+            var flagsText = reader.ExpectString();
+            var constraintCount = ReadCountField(reader, "c:");
+
+            var parameter = new TypeParameterSymbol(parameterName, ordinal, owningClass: null);
+            ApplyTypeParameterFlags(parameter, flagsText);
+
+            var openKey = ownerFullName == null
+                ? "!" + parameterName
+                : "!" + ownerFullName + "." + parameterName;
+            context.OpenTypeParametersByKey[openKey] = parameter;
+
+            return (parameter, constraintCount);
+        }
+
+        /// <summary>约束第二趟：兄弟参数已全部注册后解析显式约束类型。</summary>
+        private static void ResolveDeferredConstraints(Reader reader, TypeParameterSymbol parameter, int constraintCount, ReadContext context)
+        {
+            if (constraintCount == 0)
+            {
+                reader.End();
+                return;
+            }
+
+            var constraints = ImmutableArray.CreateBuilder<TypeSymbol>(constraintCount);
+            for (var c = 0; c < constraintCount; c++)
+            {
+                constraints.Add(ResolveTypeRef(reader.ExpectString(), context));
+            }
+
+            parameter.ConstraintTypes = constraints.ToImmutable();
+            reader.End();
+        }
+
         private static void EmitFunctionSymbol(Writer w, Registry registry, FunctionSymbol fn)
         {
             w.Open("fn");
             w.Field(registry.FnKey(fn));
             w.Field("name:" + Str(fn.Name));
+
+            // 6e-G7 S1：方法级类型参数（顶层泛型函数）——裸键 !名（无属主类）
+            if (fn.TypeParameters.Length > 0)
+            {
+                w.Field("tps:" + fn.TypeParameters.Length.ToString(CultureInfo.InvariantCulture));
+                foreach (var typeParameter in fn.TypeParameters)
+                {
+                    WriteTypeParameter(w, typeParameter);
+                }
+            }
+
             w.Field("ret:" + TypeRef(fn.ReturnType));
             w.Field("ns:" + (fn.Namespace.Length > 0 ? Str(fn.Namespace) : "-"));
             w.Field("owner:" + (fn.ContainingClass != null ? fn.ContainingClass.FullName : "-"));
@@ -841,6 +998,14 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field("builtin:" + (fn.BuiltinKind != null ? fn.BuiltinKind.Value.ToString() : "-"));
             w.Field("entry:" + (fn.EntryPoint != null ? Str(fn.EntryPoint) : "-"));
             w.Field("charset:" + (fn.CharSet != null ? fn.CharSet.Value.ToString().ToLowerInvariant() : "-"));
+
+            // 6e-G7 S2：泛型定义属主的方法携带静态位（容器类全静态隐含 true；顶层函数恒 static；gcls 实例方法需显式 false）
+            if (fn.ContainingClass is { IsGenericDefinition: true })
+            {
+                w.Field("static:" + BoolWord(fn.IsStatic));
+                w.Field("ctor:" + BoolWord(fn.IsConstructor));
+            }
+
             w.Field("params:" + fn.Parameters.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var p in fn.Parameters)
             {
@@ -876,6 +1041,20 @@ namespace Cocoa.CodeAnalysis.Cod
         /// <summary>绫诲瀷鐨勬枃鏈紩鐢細鍐呭缓/鏁扮粍鐢ㄧ煭鍚嶏紙int / int[][]锛夛紝绫?鏋氫妇鐢ㄥ叏鍚嶃€?/summary>
         private static string TypeRef(TypeSymbol type)
         {
+            // 6e-G7 S1：开放类型参数 → 限定权威键 `!属主全名.参数名`（方法级无属主回落裸名）；
+            // 实例化类型 → Encode v3 完整 mangle（backtick 元数 + # + $ 分隔递归实参）
+            if (type is TypeParameterSymbol openParameter)
+            {
+                return openParameter.OwningClass != null
+                    ? "!" + openParameter.OwningClass.FullName + "." + openParameter.Name
+                    : "!" + openParameter.Name;
+            }
+
+            if (type is InstantiatedTypeSymbol instantiated)
+            {
+                return EncodeInstantiatedTypeRef(instantiated);
+            }
+
             if (type is EnumTypeSymbol enumType)
             {
                 return enumType.FullName;
@@ -887,6 +1066,32 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             return type.Name;
+        }
+
+        /// <summary>
+        /// 实例化类型的 .cod 编码（6e-G7 S1）：定义全名 + backtick 元数 + # + $ 分隔实参。
+        /// 实参递归走 <see cref="TypeRef"/>——开放参数为限定键 !属主.名（区别于 mangle 缓存键的裸 !T），
+        /// 保证跨定义无歧义且读侧可独立解析；基元/类用平名（不含 $、`、#，分隔安全）；嵌套实例化递归。
+        /// </summary>
+        private static string EncodeInstantiatedTypeRef(InstantiatedTypeSymbol instantiated)
+        {
+            var builder = new System.Text.StringBuilder();
+            builder.Append(instantiated.GenericDefinition.FullName);
+            builder.Append('`');
+            builder.Append(instantiated.TypeArguments.Length);
+            builder.Append('#');
+
+            for (var i = 0; i < instantiated.TypeArguments.Length; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append('$');
+                }
+
+                builder.Append(TypeRef(instantiated.TypeArguments[i]));
+            }
+
+            return builder.ToString();
         }
 
         private static string BoolWord(bool value)
@@ -1188,6 +1393,25 @@ namespace Cocoa.CodeAnalysis.Cod
                     return;
                 }
 
+                // 6e-G7 S1：开放类型参数自描述（gcls 内 tpar 声明 + !属主.名 引用），无独立条目
+                if (type is TypeParameterSymbol)
+                {
+                    return;
+                }
+
+                // 6e-G7 S1：实例化类型 → 注册泛型定义与全部实参（依赖先行）；本体无独立条目（引用处 mangle 自描述）
+                if (type is InstantiatedTypeSymbol instantiated)
+                {
+                    _ids[type] = _ids.Count;
+                    RegisterType(instantiated.GenericDefinition);
+                    foreach (var argument in instantiated.TypeArguments)
+                    {
+                        RegisterType(argument);
+                    }
+
+                    return;
+                }
+
                 _ids[type] = _ids.Count;
 
                 if (type is ClassTypeSymbol classType)
@@ -1211,6 +1435,33 @@ namespace Cocoa.CodeAnalysis.Cod
                     return;
                 }
 
+                // 6e-G7 S1：泛型定义走 gcls 专属节点；gcls 必须先于其静态方法 fn 落盘
+                // （fn 的 ret/par 引用 !开放参数，读侧需先经 gcls 注册限定键）；连带注册非开放类型依赖
+                if (classType.IsGenericDefinition)
+                {
+                    Emitters.Add((w, r) => EmitGenericClassSymbol(w, r, classType));
+
+                    foreach (var typeParameter in classType.TypeParameters)
+                    {
+                        foreach (var constraint in typeParameter.ConstraintTypes)
+                        {
+                            RegisterType(constraint);
+                        }
+                    }
+
+                    foreach (var field in classType.Fields)
+                    {
+                        RegisterType(field.Type);
+                    }
+
+                    foreach (var method in classType.Methods.Where(m => m.IsStatic))
+                    {
+                        RegisterFunction(method);
+                    }
+
+                    return;
+                }
+
                 Emitters.Add((w, r) => EmitClassSymbol(w, r, classType));
             }
 
@@ -1223,7 +1474,10 @@ namespace Cocoa.CodeAnalysis.Cod
 
                 // 绫绘柟娉曪細瀹瑰櫒绫诲叏闈欐€侊紙syscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪紝6e-M18锛変綔涓虹嫭绔?fn 搴忓垪鍖栵紱瀹炰緥鏂规硶/鏋勯€犵敱绫诲３杩囨护銆?
                 // 渚嬪锛歄bject 鍐呭缓鏂规硶锛圡2-c锛夊甫 BuiltinKind锛岃渚х粡鍗曚緥澶嶇敤閲嶅缓锛岄』闅忓紩鐢ㄥ簭鍒楀寲
-                if (fn.ContainingClass != null && !fn.IsStatic && !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass))
+                // 6e-G7 S1/S2：泛型定义的实例方法/构造也随库携带（消费方单态化素材）；其余实例方法仍由类壳过滤
+                if (fn.ContainingClass != null && !fn.IsStatic &&
+                    !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass) &&
+                    !fn.ContainingClass.IsGenericDefinition)
                 {
                     return;
                 }
@@ -1405,7 +1659,8 @@ namespace Cocoa.CodeAnalysis.Cod
                 dotnetRefs.ToImmutable(),
                 imports.ToImmutable(),
                 codRefs.ToImmutable(),
-                namespaces.ToImmutable());
+                namespaces.ToImmutable(),
+                context.GenericDefinitions.ToImmutable());
         }
 
         /// <summary>璇讳晶鍏变韩鐘舵€侊細鎸夊悕瀛?閿储寮曠殑绗﹀彿琛?+ 绋嬪簭闆嗙鍙锋竻鍗曘€?/summary>
@@ -1413,6 +1668,9 @@ namespace Cocoa.CodeAnalysis.Cod
         {
             /// <summary>绫?鏋氫妇鍏ㄥ悕 鈫?绫诲瀷绗﹀彿锛堝唴寤虹被鍨嬩笉缁忔琛紝鐩存帴瑙ｆ瀽锛夈€?/summary>
             public Dictionary<string, TypeSymbol> TypesByName { get; } = new(StringComparer.Ordinal);
+
+            /// <summary>6e-G7 S1：开放类型参数限定键（!属主全名.参数名）→ 符号。文件级平铺——限定键天然无碰撞。</summary>
+            public Dictionary<string, TypeParameterSymbol> OpenTypeParametersByKey { get; } = new(StringComparer.Ordinal);
 
             /// <summary>鍑芥暟閿?鈫?鍑芥暟绗﹀彿銆?/summary>
             public Dictionary<string, FunctionSymbol> FunctionsByKey { get; } = new(StringComparer.Ordinal);
@@ -1427,6 +1685,9 @@ namespace Cocoa.CodeAnalysis.Cod
             public ImmutableArray<EnumTypeSymbol>.Builder Enums { get; } = ImmutableArray.CreateBuilder<EnumTypeSymbol>();
 
             public ImmutableArray<ClassTypeSymbol>.Builder Classes { get; } = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
+
+            /// <summary>6e-G7 S1：泛型定义类（gcls 读入）。</summary>
+            public ImmutableArray<ClassTypeSymbol>.Builder GenericDefinitions { get; } = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
 
             public void AddNamedType(string fullName, TypeSymbol type)
             {
@@ -1448,6 +1709,9 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     case "cls":
                         ReadClass(reader, context);
+                        break;
+                    case "gcls":
+                        ReadGenericClass(reader, context);
                         break;
                     case "fn":
                         ReadFunction(reader, context);
@@ -1522,6 +1786,113 @@ namespace Cocoa.CodeAnalysis.Cod
             // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.cod v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
             classType.BaseType = ClassTypeSymbol.SystemObject;
             context.Classes.Add(classType);
+            context.GenericDefinitions.Add(classType);
+            context.AddNamedType(fullName, classType);
+            reader.End();
+        }
+
+        /// <summary>
+        /// 泛型定义类读取（6e-G7 S1）：重建 IsGenericDefinition 壳 + 类型参数（含约束，两趟——约束可引用兄弟参数）+
+        /// 字段；静态方法签名仅作清单，符号由各自 fn 条目 owner 回填。
+        /// 开放类型参数按限定键 `!属主全名.名` 注册进文件级表，后续 fn/bodies 的类型引用据此解析。
+        /// </summary>
+        private static void ReadGenericClass(Reader reader, ReadContext context)
+        {
+            var fullName = reader.ExpectString();
+            var (ns, name) = SplitFullName(fullName);
+            var visibilityText = reader.ExpectString();
+            if (!Enum.TryParse<Visibility>(visibilityText, ignoreCase: true, out var visibility))
+            {
+                throw new InvalidDataException($"Unknown visibility '{visibilityText}' on generic class '{fullName}'");
+            }
+
+            var typeParameterCount = ReadCountField(reader, "tparams:");
+            var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
+            classType.BaseType = ClassTypeSymbol.SystemObject;
+
+            var pendingConstraints = new (TypeParameterSymbol Parameter, int Count)[typeParameterCount];
+            for (var i = 0; i < typeParameterCount; i++)
+            {
+                reader.Expect("tpar");
+                var parameterName = Unescape(reader.ExpectString());
+                var ordinal = reader.ExpectInt();
+                var flagsText = reader.ExpectString();
+                var constraintCount = ReadCountField(reader, "c:");
+
+                var parameter = new TypeParameterSymbol(parameterName, ordinal, classType);
+                if (flagsText != "-")
+                {
+                    foreach (var flag in flagsText.Split('+'))
+                    {
+                        switch (flag)
+                        {
+                            case "new":
+                                parameter.HasNewConstraint = true;
+                                break;
+                            case "class":
+                                parameter.HasReferenceTypeConstraint = true;
+                                break;
+                            case "struct":
+                                parameter.HasValueTypeConstraint = true;
+                                break;
+                            default:
+                                throw new InvalidDataException($"Unknown type parameter constraint flag '{flag}' on '{fullName}.{parameterName}'");
+                        }
+                    }
+                }
+
+                classType.TypeParameters = classType.TypeParameters.Add(parameter);
+                context.OpenTypeParametersByKey["!" + fullName + "." + parameterName] = parameter;
+                pendingConstraints[i] = (parameter, constraintCount);
+            }
+
+            // 约束第二趟：兄弟参数已全部注册，!限定键可解析
+            for (var i = 0; i < typeParameterCount; i++)
+            {
+                var (parameter, constraintCount) = pendingConstraints[i];
+                if (constraintCount == 0)
+                {
+                    reader.End();
+                    continue;
+                }
+
+                var constraints = ImmutableArray.CreateBuilder<TypeSymbol>(constraintCount);
+                for (var c = 0; c < constraintCount; c++)
+                {
+                    constraints.Add(ResolveTypeRef(reader.ExpectString(), context));
+                }
+
+                parameter.ConstraintTypes = constraints.ToImmutable();
+                reader.End();
+            }
+
+            var fieldCount = ReadCountField(reader, "fields:");
+            for (var i = 0; i < fieldCount; i++)
+            {
+                reader.Expect("fld");
+                var fieldName = Unescape(reader.ExpectString());
+                var fieldType = ResolveTypeRef(reader.ExpectString(), context);
+                var fieldVisibilityText = reader.ExpectString();
+                if (!Enum.TryParse<Visibility>(fieldVisibilityText, ignoreCase: true, out var fieldVisibility))
+                {
+                    throw new InvalidDataException($"Unknown visibility '{fieldVisibilityText}' on field '{fullName}.{fieldName}'");
+                }
+
+                var isStatic = ParseBoolWord(reader.ExpectString());
+                var isReadonly = ParseBoolWord(reader.ExpectString());
+                classType.AddField(new FieldSymbol(fieldName, fieldType, fieldVisibility, classType, isReadonly, isStatic));
+                reader.End();
+            }
+
+            var methodCount = ReadCountField(reader, "methods:");
+            // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填
+            for (var i = 0; i < methodCount; i++)
+            {
+                reader.ExpectString();
+            }
+
+            context.Classes.Add(classType);
+            context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
             reader.End();
         }
@@ -1530,6 +1901,34 @@ namespace Cocoa.CodeAnalysis.Cod
         {
             var key = reader.ExpectString();
             var name = ReadLabeledField(reader, "name:");
+
+            // 6e-G7 S1：方法级类型参数（顶层泛型函数，裸键 !名）——先注册再解析 ret/par 的类型引用
+            var typeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
+            if (reader.PeekRaw().StartsWith("tps:", StringComparison.Ordinal))
+            {
+                var tpsHeader = reader.ExpectString();
+                if (!int.TryParse(tpsHeader.AsSpan(4), NumberStyles.Integer, CultureInfo.InvariantCulture, out var tpsCount))
+                {
+                    throw new InvalidDataException($"Malformed 'tps:' count '{tpsHeader}' on function '{name}'");
+                }
+
+                var builder = ImmutableArray.CreateBuilder<TypeParameterSymbol>(tpsCount);
+                var deferred = new List<(TypeParameterSymbol Parameter, int ConstraintCount)>(tpsCount);
+                for (var i = 0; i < tpsCount; i++)
+                {
+                    var (parameter, constraintCount) = ReadTypeParameter(reader, context, ownerFullName: null);
+                    builder.Add(parameter);
+                    deferred.Add((parameter, constraintCount));
+                }
+
+                foreach (var (parameter, constraintCount) in deferred)
+                {
+                    ResolveDeferredConstraints(reader, parameter, constraintCount, context);
+                }
+
+                typeParameters = builder.ToImmutable();
+            }
+
             var returnType = ResolveTypeRef(ReadLabeledField(reader, "ret:"), context);
             var nsText = ReadLabeledField(reader, "ns:");
             var ownerText = ReadLabeledField(reader, "owner:");
@@ -1539,6 +1938,16 @@ namespace Cocoa.CodeAnalysis.Cod
             var builtinText = ReadLabeledField(reader, "builtin:");
             var entryText = ReadLabeledField(reader, "entry:");
             var charSetText = ReadLabeledField(reader, "charset:");
+
+            // 6e-G7 S2：泛型属主方法的显式静态/构造位（旧文件无此字段，按默认推断）
+            bool? explicitIsStatic = null;
+            var explicitIsConstructor = false;
+            if (reader.PeekRaw().StartsWith("static:", StringComparison.Ordinal))
+            {
+                explicitIsStatic = ParseBoolWord(ReadLabeledField(reader, "static:"));
+                explicitIsConstructor = ParseBoolWord(ReadLabeledField(reader, "ctor:"));
+            }
+
 
             var ns = nsText == "-" ? "" : nsText;
             var dllName = dllText == "-" ? null : dllText;
@@ -1649,11 +2058,23 @@ namespace Cocoa.CodeAnalysis.Cod
             context.Functions.Add(function);
             context.FunctionsByKey[key] = function;
 
+            // 6e-G7 S1：方法级类型参数回填（顶层泛型函数）
+            if (typeParameters.Length > 0)
+            {
+                function.TypeParameters = typeParameters;
+            }
+
             // 绫绘柟娉曞洖濉細鍚被褰掑睘鐨?fn 褰掑叆鍏剁被锛?e-M18锛氬鍣ㄧ被鍏ㄩ潤鎬佲€斺€攕yscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪級銆?
             // 鍐呭缓鍗曚緥锛圫ystem.Object/System.Type锛孧2-c锛夋垚鍛樺凡鐢?Ensure 娉ㄥ叆锛岃烦杩囧洖濉槻閲嶅/闃茶鏍?static
             if (containingClass != null && !SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
-                function.IsStatic = true;
+                // 6e-G7 S2：泛型定义属主按显式位还原（实例方法 false / .ctor true）；容器类隐含全静态
+                function.IsStatic = explicitIsStatic ?? true;
+                if (explicitIsStatic.HasValue)
+                {
+                    function.IsConstructor = explicitIsConstructor;
+                }
+
                 containingClass.AddMethod(function);
             }
 
@@ -1744,6 +2165,28 @@ namespace Cocoa.CodeAnalysis.Cod
                 return known;
             }
 
+            // 6e-G7 S1：开放类型参数限定键（!属主.名）或基元权威编码（!System.Int32 等，实例化实参位置出现）
+            if (name.StartsWith("!", StringComparison.Ordinal))
+            {
+                if (context.OpenTypeParametersByKey.TryGetValue(name, out var openParameter))
+                {
+                    return openParameter;
+                }
+
+                if (GenericTypeInstantiator.TryDecodePrimitive(name, out var primitive))
+                {
+                    return primitive;
+                }
+
+                throw new InvalidDataException($"Unknown open type parameter '{name}'");
+            }
+
+            // 6e-G7 S1：实例化类型 mangle（backtick 元数 + # + $ 分隔递归实参）
+            if (name.Contains('`') && name.Contains('#'))
+            {
+                return ParseInstantiatedTypeRef(name, context);
+            }
+
             return name switch
             {
                 "any" => TypeSymbol.Any,
@@ -1768,6 +2211,126 @@ namespace Cocoa.CodeAnalysis.Cod
                 "?" => TypeSymbol.Error,
                 _ => throw new InvalidDataException($"Unknown type '{name}'"),
             };
+        }
+
+        /// <summary>
+        /// 实例化类型 mangle 递归解析（6e-G7 S1）：`定义全名\`N#实参1$...$实参N`，
+        /// 按 arity 递归消费（嵌套实例化的内层 $ 归属内层分组）；叶子经
+        /// !开放参数/!基元反解或既有名字解析；`[]` 后缀按数组还原。
+        /// </summary>
+        private static TypeSymbol ParseInstantiatedTypeRef(string text, ReadContext context)
+        {
+            var position = 0;
+            var type = ParseEncodedType(text, ref position, context);
+            if (position != text.Length)
+            {
+                throw new InvalidDataException($"Trailing characters in instantiated type '{text}'");
+            }
+
+            return type;
+        }
+
+        private static TypeSymbol ParseEncodedType(string text, ref int position, ReadContext context)
+        {
+            // ! 前缀：开放类型参数限定键 / 基元权威编码
+            if (position < text.Length && text[position] == '!')
+            {
+                var start = position;
+                position++;
+                while (position < text.Length && IsEncodedNameChar(text[position]))
+                {
+                    position++;
+                }
+
+                var key = text.Substring(start, position - start);
+                if (context.OpenTypeParametersByKey.TryGetValue(key, out var openParameter))
+                {
+                    return ConsumeArraySuffixes(key, openParameter, text, ref position);
+                }
+
+                if (GenericTypeInstantiator.TryDecodePrimitive(key, out var primitive))
+                {
+                    return ConsumeArraySuffixes(key, primitive, text, ref position);
+                }
+
+                throw new InvalidDataException($"Unknown encoded type '{key}' in '{text}'");
+            }
+
+            // 名字段：字母数字._ （实例化头在此处截断于 backtick）
+            var nameStart = position;
+            while (position < text.Length && IsEncodedNameChar(text[position]))
+            {
+                position++;
+            }
+
+            var fullName = text.Substring(nameStart, position - nameStart);
+
+            // 实例化：backtick 元数 + # + N 个递归实参（$ 分隔）
+            if (position < text.Length && text[position] == '`')
+            {
+                position++;
+                var arityStart = position;
+                while (position < text.Length && text[position] >= '0' && text[position] <= '9')
+                {
+                    position++;
+                }
+
+                if (!int.TryParse(text.Substring(arityStart, position - arityStart), NumberStyles.Integer, CultureInfo.InvariantCulture, out var arity) ||
+                    posAt(text, position) != '#')
+                {
+                    throw new InvalidDataException($"Malformed instantiation arity in '{text}'");
+                }
+
+                position++; // skip '#'
+                if (!context.TypesByName.TryGetValue(fullName, out var definitionObject) ||
+                    definitionObject is not ClassTypeSymbol definition ||
+                    !definition.IsGenericDefinition ||
+                    definition.TypeParameters.Length != arity)
+                {
+                    throw new InvalidDataException($"Unknown generic definition or arity mismatch '{fullName}`{arity}' in '{text}'");
+                }
+
+                var arguments = ImmutableArray.CreateBuilder<TypeSymbol>(arity);
+                for (var i = 0; i < arity; i++)
+                {
+                    if (i > 0)
+                    {
+                        if (posAt(text, position) != '$')
+                        {
+                            throw new InvalidDataException($"Expected '$' separator in '{text}'");
+                        }
+
+                        position++;
+                    }
+
+                    arguments.Add(ParseEncodedType(text, ref position, context));
+                }
+
+                var instantiated = GenericTypeInstantiator.Instantiate(definition, arguments.ToImmutable());
+                return ConsumeArraySuffixes(fullName + "`" + arity, instantiated, text, ref position);
+            }
+
+            // 平名：类/枚举全名或别名，走既有解析
+            var resolved = ResolveNamedType(fullName, context);
+            return ConsumeArraySuffixes(fullName, resolved, text, ref position);
+        }
+
+        private static TypeSymbol ConsumeArraySuffixes(string debugName, TypeSymbol type, string text, ref int position)
+        {
+            while (position + 1 < text.Length && text[position] == '[' && text[position + 1] == ']')
+            {
+                position += 2;
+                type = TypeSymbol.ArrayOf(type);
+            }
+
+            return type;
+        }
+
+        private static char posAt(string text, int index) => index < text.Length ? text[index] : '\0';
+
+        private static bool IsEncodedNameChar(char c)
+        {
+            return char.IsLetterOrDigit(c) || c == '.' || c == '_';
         }
 
         private static ClassTypeSymbol ResolveOwnerClass(string fullName, ReadContext context)

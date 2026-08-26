@@ -450,7 +450,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 6e-M20 G2 单态化展开：语法扫描收集活实例化 → 实例化类方法体重绑（T→实参）→ 类并入发射清单
-            var emittedClasses = Monomorphizer.Expand(globalScope, parentScope, isScript, codLibraries, dialect, functionBodies, diagnostics);
+            // 6e-G7 S1：泛型定义单独携带（仅 .cod gcls 消费）
+            var (emittedClasses, genericDefinitions) = Monomorphizer.Expand(globalScope, parentScope, isScript, codLibraries, dialect, functionBodies, diagnostics);
 
             // 6e-M22 C4：lambda 提升后处理——函数值携带的已绑定体入 Functions 清单
             // （BoundProgram.Functions == bodies 键集）；体中嵌套 lambda 一并发现，工作表至不动点
@@ -581,7 +582,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies);
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions);
         }
 
         /// <summary>绑定树先序递归枚举（6e-M22 C4）：lambda 后处理走查用。</summary>

@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal static class Monomorphizer
     {
-        public static ImmutableArray<ClassTypeSymbol> Expand(
+        public static (ImmutableArray<ClassTypeSymbol> Classes, ImmutableArray<ClassTypeSymbol> GenericDefinitions) Expand(
             BoundGlobalScope globalScope,
             BoundScope parentScope,
             bool isScript,
@@ -113,7 +113,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (seeded.Count == 0 && methodSeeds.Count == 0)
             {
-                return FilterDeclaredClasses(globalScope);
+                // 6e-G7 S1：无活实例化时泛型定义仍需携带（.cod gcls）
+                return (FilterDeclaredClasses(globalScope),
+                        globalScope.Classes.Where(c => c.IsGenericDefinition).ToImmutableArray());
             }
 
             // 2. 成员签名 BFS 闭包（嵌套实例化）
@@ -201,11 +203,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 4. 发射清单：过滤泛型定义（模板）+ 并入活实例化
+            // 4. 发射清单：过滤泛型定义（模板）+ 并入活实例化；
+            //    6e-G7 S1：泛型定义单独携带（仅 .cod 发射消费 gcls；IL/native 清单仍排除模板）
             var builder = FilterDeclaredClasses(globalScope).ToBuilder();
             builder.AddRange(live);
 
-            return builder.ToImmutable();
+            var genericDefinitions = globalScope.Classes.Where(c => c.IsGenericDefinition).ToImmutableArray();
+
+            return (builder.ToImmutable(), genericDefinitions);
         }
 
         private static ImmutableArray<ClassTypeSymbol> FilterDeclaredClasses(BoundGlobalScope globalScope)

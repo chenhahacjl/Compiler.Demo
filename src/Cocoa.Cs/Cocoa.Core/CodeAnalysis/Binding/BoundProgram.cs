@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundProgram
     {
-        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<ClassTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null)
+        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<ClassTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<ClassTypeSymbol>? genericDefinitions = null)
         {
             Previous = previous;
             Diagnostics = diagnostics;
@@ -14,6 +14,7 @@ namespace Cocoa.CodeAnalysis.Binding
             Functions = functions;
             Classes = classes;
             CodAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
+            GenericDefinitions = genericDefinitions ?? ImmutableArray<ClassTypeSymbol>.Empty;
         }
 
         public BoundProgram? Previous { get; }
@@ -29,5 +30,10 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 而非内联实现；键为 ClassTypeSymbol / FunctionSymbol（extern 与 builtin 单例不入表）。
         /// </summary>
         public ImmutableDictionary<object, string> CodAssemblies { get; }
+
+        /// <summary>
+        /// 泛型定义类（6e-G7 S1）：模板壳，IL/native 发射清单排除；仅 EmitCocoa 序列化为 gcls 条目。
+        /// </summary>
+        public ImmutableArray<ClassTypeSymbol> GenericDefinitions { get; }
     }
 }

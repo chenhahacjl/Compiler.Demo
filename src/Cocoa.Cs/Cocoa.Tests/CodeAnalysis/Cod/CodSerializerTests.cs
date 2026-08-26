@@ -87,6 +87,70 @@ namespace MyLib
         }
 
         [Fact]
+        public void G7_GenericDefinition_RoundTrips_TypeFlow()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace MyLib
+{
+    public class Box<T>
+    {
+        private _value: T
+
+        public constructor(v: T)
+        {
+            _value = v
+        }
+
+        public function Get(): T
+        {
+            return _value
+        }
+
+        public static function Echo(input: Box<T>): Box<T>
+        {
+            return input
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var text = File.ReadAllText(output);
+            Assert.True(text.Contains("(gcls"), "cod 缺少 gcls 节点，实际前 600 字符：\n" + text.Substring(0, Math.Min(600, text.Length)));
+            Assert.Contains("(tpar", text);
+            Assert.Contains("!MyLib.Box.T", text);
+            Assert.Contains("MyLib.Box`1#!MyLib.Box.T", text);
+
+            var loaded = CodSerializer.Load(output);
+            Assert.True(loaded.GenericDefinitions.Length == 1,
+                "gdefs=" + loaded.GenericDefinitions.Length +
+                " classes=[" + string.Join(",", loaded.Classes.Select(c => c.FullName + (c.IsGenericDefinition ? "<GEN>" : ""))) + "]");
+
+            var box = loaded.GenericDefinitions[0];
+            Assert.Equal("MyLib.Box", box.FullName);
+            Assert.True(box.IsGenericDefinition);
+
+            var tParameter = Assert.Single(box.TypeParameters);
+            Assert.Equal("T", tParameter.Name);
+            Assert.True(box.Methods.Length == 3, "methods=[" + string.Join(",", box.Methods.Select(m => m.Name + (m.IsStatic ? "(static)" : ""))) + "]");
+            Assert.Equal(0, tParameter.Ordinal);
+            Assert.Same(box, tParameter.OwningClass);
+
+            var valueField = box.Fields.Single(f => f.Name == "_value");
+            var openReference = Assert.IsType<TypeParameterSymbol>(valueField.Type);
+            Assert.Equal("T", openReference.Name);
+            Assert.Same(box, openReference.OwningClass);
+
+            var echo = box.Methods.Single(m => m.Name == "Echo");
+            Assert.True(echo.IsStatic);
+            var parameterType = Assert.IsType<InstantiatedTypeSymbol>(echo.Parameters[0].Type);
+            Assert.Same(box, parameterType.GenericDefinition);
+            Assert.Equal("T", Assert.IsType<TypeParameterSymbol>(parameterType.TypeArguments[0]).Name);
+            var returnType = Assert.IsType<InstantiatedTypeSymbol>(echo.ReturnType);
+            Assert.Same(parameterType, returnType);
+        }
+
+        [Fact]
         public void Cod_Emit_WritesFile()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);
