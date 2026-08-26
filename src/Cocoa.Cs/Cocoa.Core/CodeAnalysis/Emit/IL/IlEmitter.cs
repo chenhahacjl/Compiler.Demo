@@ -1762,6 +1762,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     // 6e-G7 ③a：new string(char[])
                     il.Emit(IlOpCodeTable.Get("Newobj"), _framework.StringCtorCharArray);
                     break;
+                case BuiltinKind.Sha256Hash:
+                    // 6e-G7 ⑤a：native+IL 接入待 IlFramework 惰性引用基础设施就绪
+                    throw new Exception("Sha256Hash IL emission requires lazy framework references (G7-⑤a follow-up)");
                 case BuiltinKind.FileReadAllText:
                 case BuiltinKind.FileWriteAllText:
                 case BuiltinKind.FileExists:

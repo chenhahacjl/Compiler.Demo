@@ -841,6 +841,27 @@ namespace Cocoa.CodeAnalysis
                 case BuiltinKind.SetCurrentDirectory:
                     Directory.SetCurrentDirectory((string)EvaluateExpression(arguments[0])!);
                     return null;
+                case BuiltinKind.Sha256Hash:
+                {
+                    var data = EvaluateExpression(arguments[0]);
+                    if (data is byte[] bytes)
+                    {
+                        return System.Security.Cryptography.SHA256.HashData(bytes);
+                    }
+
+                    if (data is object[] boxed)
+                    {
+                        var raw = new byte[boxed.Length];
+                        for (var bi = 0; bi < boxed.Length; bi++)
+                        {
+                            raw[bi] = (byte)boxed[bi]!;
+                        }
+
+                        return System.Security.Cryptography.SHA256.HashData(raw);
+                    }
+
+                    throw new InvalidOperationException($"Sha256Hash: unexpected input type {data?.GetType().Name}");
+                }
 
                 // 6e-M19 M2-c锛歋ystem.Object 闈欐€佹柟娉曪紙CLR 鐩撮€氾級
                 case BuiltinKind.ObjectStaticEquals:

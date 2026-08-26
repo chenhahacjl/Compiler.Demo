@@ -32,6 +32,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         UInt64ToString,
         StringFromChars,
 
+        // ---- 加密（6e-G7 ⑤a）----
+        Sha256Hash,
+
         // ---- 文件 IO（6e-G7 ④）----
         FileReadAllText,
         FileWriteAllText,
@@ -101,7 +104,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.FileDelete, "Delete", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileCopy, "Copy", TypeSymbol.Void, new[] { ("src", TypeSymbol.String), ("dst", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.DirectoryExists, "DirectoryExists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
-            new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }));
+            new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }));
 
         /// <summary>
         /// 杈撳嚭瀛楃涓插苟鎹㈣: void WriteLine(any text)锛? Console.WriteLine锛?
@@ -208,6 +212,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly FunctionSymbol FileCopy = Create(BuiltinKind.FileCopy);
         public static readonly FunctionSymbol DirectoryExists = Create(BuiltinKind.DirectoryExists);
         public static readonly FunctionSymbol SetCurrentDirectory = Create(BuiltinKind.SetCurrentDirectory);
+        public static readonly FunctionSymbol Sha256Hash = Create(BuiltinKind.Sha256Hash);
 
         private static FunctionSymbol Create(BuiltinKind kind)
         {
@@ -260,6 +265,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.FileCopy => FileCopy,
                 BuiltinKind.DirectoryExists => DirectoryExists,
                 BuiltinKind.SetCurrentDirectory => SetCurrentDirectory,
+                BuiltinKind.Sha256Hash => Sha256Hash,
                 _ => null,
             };
         }
