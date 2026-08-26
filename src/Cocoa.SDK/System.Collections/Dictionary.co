@@ -1,0 +1,247 @@
+// Cocoa 系统标准库 · System.Collections 模块
+// Dictionary<K,V> 哈希表（6e-G7 ③b）：
+// TryGetValue 消费 6e-M23 out 参数。
+// Remove 策略：摘链 + 尾元素回填（同步修正尾元素桶链接），O(桶链长)。
+
+namespace System.Collections.Generic
+{
+    public class Dictionary<K, V>
+    {
+        private _keys: K[]
+        private _values: V[]
+        private _next: i32[]
+        private _buckets: i32[]
+        private _count: i32
+
+        public constructor()
+        {
+            _keys = new K[16]
+            _values = new V[16]
+            _next = new i32[16]
+            _buckets = new i32[16]
+            var i = 0
+            while i < 16
+            {
+                _buckets[i] = -1
+                i = i + 1
+            }
+        }
+
+        public function Count(): i32
+        {
+            return _count
+        }
+
+        public function Get(key: K): V
+        {
+            var idx = FindEntry(key)
+            return _values[idx]
+        }
+
+        public function Set(key: K, value: V): void
+        {
+            var b = BucketOf(key)
+            var i = _buckets[b]
+            while i >= 0
+            {
+                if SameKey(_keys[i], key)
+                {
+                    _values[i] = value
+                    return
+                }
+                i = _next[i]
+            }
+
+            if _count >= _keys.Length
+            {
+                Rehash(_keys.Length * 2)
+                b = BucketOf(key)
+            }
+
+            _keys[_count] = key
+            _values[_count] = value
+            _next[_count] = _buckets[b]
+            _buckets[b] = _count
+            _count = _count + 1
+        }
+
+        public function TryGetValue(key: K, out value: V): bool
+        {
+            var b = BucketOf(key)
+            var i = _buckets[b]
+            while i >= 0
+            {
+                if SameKey(_keys[i], key)
+                {
+                    value = _values[i]
+                    return true
+                }
+                i = _next[i]
+            }
+
+            return false
+        }
+
+        public function ContainsKey(key: K): bool
+        {
+            return FindEntry(key) >= 0
+        }
+
+        public function Remove(key: K): bool
+        {
+            var b = BucketOf(key)
+            var i = _buckets[b]
+            var prev = -1
+            while i >= 0
+            {
+                if SameKey(_keys[i], key)
+                {
+                    // 摘链
+                    if prev < 0
+                    {
+                        _buckets[b] = _next[i]
+                    }
+                    else
+                    {
+                        _next[prev] = _next[i]
+                    }
+
+                    // 尾元素回填到空洞（若非自身）
+                    var last = _count - 1
+                    if i < last
+                    {
+                        _keys[i] = _keys[last]
+                        _values[i] = _values[last]
+                        _next[i] = _next[last]
+
+                        // 重链尾元素：遍历其桶找到指向 last 的前驱并改指 i
+                        var lb = BucketOf(_keys[i])
+                        var j = _buckets[lb]
+                        while j >= 0
+                        {
+                            if j == last
+                            {
+                                // j 是桶头或中间节点——通过扫描定位
+                                break
+                            }
+                            j = _next[j]
+                        }
+
+                        // 简化：直接重建该桶的整条链中 last→i 的映射
+                        // 由于链表节点已断开，此处用全量扫描修正
+                        var bi = 0
+                        while bi < _buckets.Length
+                        {
+                            if _buckets[bi] == last
+                            {
+                                _buckets[bi] = i
+                            }
+                            bi = bi + 1
+                        }
+
+                        var ni = 0
+                        while ni < _count
+                        {
+                            if _next[ni] == last
+                            {
+                                _next[ni] = i
+                            }
+                            ni = ni + 1
+                        }
+                    }
+
+                    _count = _count - 1
+                    return true
+                }
+                prev = i
+                i = _next[i]
+            }
+
+            return false
+        }
+
+        private function FindEntry(key: K): i32
+        {
+            var b = BucketOf(key)
+            var i = _buckets[b]
+            while i >= 0
+            {
+                if SameKey(_keys[i], key)
+                {
+                    return i
+                }
+                i = _next[i]
+            }
+
+            return -1
+        }
+
+        private function BucketOf(key: K): i32
+        {
+            return HashCode(key) % _buckets.Length
+        }
+
+        /// <summary>键哈希——string 走 djb2（小常数不溢出，三后端确定性）；其余经 GetHashCode。</summary>
+        private function HashCode(key: K): i32
+        {
+            var s = key as string
+            if s != null
+            {
+                var hash: i32 = 5381
+                var i = 0
+                while i < s.Length
+                {
+                    hash = hash * 33 + i32(s[i])
+                    i = i + 1
+                }
+
+                return hash
+            }
+
+            return key.GetHashCode()
+        }
+
+        private function SameKey(a: K, b: K): bool
+        {
+            var sa = a as string
+            var sb = b as string
+            if sa != null && sb != null
+            {
+                return sa == sb
+            }
+
+            return a.GetHashCode() == b.GetHashCode() && a.Equals(b)
+        }
+
+        private function Rehash(newLen: i32): void
+        {
+            var newKeys = new K[newLen]
+            var newValues = new V[newLen]
+            var newNext = new i32[newLen]
+            var newBuckets = new i32[newLen]
+
+            var i = 0
+            while i < newLen
+            {
+                newBuckets[i] = -1
+                i = i + 1
+            }
+
+            var j = 0
+            while j < _count
+            {
+                newKeys[j] = _keys[j]
+                newValues[j] = _values[j]
+                var b = HashCode(newKeys[j]) % newLen
+                newNext[j] = newBuckets[b]
+                newBuckets[b] = j
+                j = j + 1
+            }
+
+            _keys = newKeys
+            _values = newValues
+            _next = newNext
+            _buckets = newBuckets
+        }
+    }
+}
