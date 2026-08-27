@@ -155,6 +155,23 @@
   `List_Implements_ICollection_Members` 接口成员形状校验）；全量回归 37059 通过（skip 2）。
 - 已知限制：接口类型变量在 IL 不可用（见偏差 6）。
 
+### 八.1 本轮新增发现（影响 Dictionary / HashSet 全量对齐）
+
+- **泛型嵌套实例化暂不支持**：泛型类内部以自身类型参数实例化另一个泛型类会触发
+  `泛型嵌套上下文中的实例化暂不支持（外层类型参数 'K' 作实参）`——例如 `Dictionary<K,V>`
+  内的 `new List<K>()` / `new KeyValuePair<K,V>(...)`。因此 `Dictionary` **无法**对齐
+  `IDictionary<K,V>`（`Keys/Values` 需返回 `List<K>/List<V>`，`foreach` 需构造
+  `KeyValuePair<K,V>`）。`Dictionary` 维持当前可用形态（数组实现 + `HashCode` 负键修复），
+  `IDictionary` 全量对齐列为待编译器补齐泛型嵌套后的后续项。
+- **接口类型作形参/变量不可用**：因 CO 接口不发射 CLR 类型（偏差 6），凡以
+  `IEnumerable<T>` 等接口为形参的成员（如 `HashSet.UnionWith(IEnumerable<T>)`、
+  `IList` 形参重载）在 IL 发射期会因 `ToIlType` 失败。故 `HashSet` 仅能对齐
+  `ICollection<T>`+`IEnumerable<T>`（成员均用 `T`/`T[]`，不依赖接口形参）；
+  集合代数运算（set 运算、LINQ 式 `where`/`Select`）暂以 `T[]` 形参或延后实现。
+- 本轮额外提交：编译器 `FindImplementation` 改为按签名匹配接口重载
+  （`GetDeclaredMethods` 提升为 public）——为后续接口重载场景预留，但 `Dictionary`
+  的 `Add(K,V)`+`Add(KeyValuePair)` 双重载仍受上述泛型嵌套限制而无法落地。
+
 ---
 
 ## 七、执行里程碑与验证

@@ -402,5 +402,105 @@ function Main()
             Assert.Contains("5", stdout);
             Assert.Contains("6", stdout);
         }
+
+        [Fact]
+        public void HashSet_Implements_ICollection_And_Foreach_Il()
+        {
+            var source = @"using System
+using System.Collections.Generic
+
+function Main()
+{
+    var hs = new HashSet<i32>()
+    Console.WriteLine(hs.Add(3))
+    Console.WriteLine(hs.Add(3))
+    Console.WriteLine(hs.Count)
+    Console.WriteLine(hs.IsReadOnly)
+    Console.WriteLine(hs.Contains(3))
+    Console.WriteLine(hs.Contains(4))
+    var buf = new i32[4]
+    hs.Add(1)
+    hs.Add(2)
+    hs.CopyTo(buf, 0)
+    Console.WriteLine(buf[0] + buf[1] + buf[2] + buf[3])
+    var sum = 0
+    foreach (var x in hs)
+    {
+        sum = sum + x
+    }
+    Console.WriteLine(sum)
+    Console.WriteLine(hs.Remove(3))
+    Console.WriteLine(hs.Count)
+}";
+            var (exitCode, stdout) = EmitAndRun(source, "CollHashSet", "HashSet.co");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("True", stdout);
+            Assert.Contains("False", stdout);
+            Assert.Contains("1", stdout);
+            Assert.Contains("6", stdout);
+            Assert.Contains("2", stdout);
+        }
+
+        [Fact]
+        public void Queue_Implements_IReadOnlyCollection_And_Foreach_Il()
+        {
+            var source = @"using System
+using System.Collections.Generic
+
+function Main()
+{
+    var q = new Queue<i32>()
+    q.Enqueue(10)
+    q.Enqueue(20)
+    q.Enqueue(30)
+    Console.WriteLine(q.Count)
+    var sum = 0
+    foreach (var x in q)
+    {
+        sum = sum + x
+    }
+    Console.WriteLine(sum)
+    Console.WriteLine(q.Dequeue())
+    Console.WriteLine(q.Peek())
+    Console.WriteLine(q.Count)
+}";
+            var (exitCode, stdout) = EmitAndRun(source, "CollQueue", "Queue.co");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("3", stdout);
+            Assert.Contains("60", stdout);
+            Assert.Contains("10", stdout);
+            Assert.Contains("20", stdout);
+            Assert.Contains("2", stdout);
+        }
+
+        [Fact]
+        public void Stack_Implements_IReadOnlyCollection_And_Foreach_Il()
+        {
+            var source = @"using System
+using System.Collections.Generic
+
+function Main()
+{
+    var s = new Stack<i32>()
+    s.Push(1)
+    s.Push(2)
+    s.Push(3)
+    Console.WriteLine(s.Count)
+    var sum = 0
+    foreach (var x in s)
+    {
+        sum = sum + x
+    }
+    Console.WriteLine(sum)
+    Console.WriteLine(s.Pop())
+    Console.WriteLine(s.Peek())
+    Console.WriteLine(s.Count)
+}";
+            var (exitCode, stdout) = EmitAndRun(source, "CollStack", "Stack.co");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("3", stdout);
+            Assert.Contains("6", stdout);
+            Assert.Contains("2", stdout);
+        }
     }
 }

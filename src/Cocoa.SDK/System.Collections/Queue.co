@@ -4,7 +4,7 @@
 
 namespace System.Collections.Generic
 {
-    public class Queue<T>
+    public class Queue<T> extends IReadOnlyCollection<T>
     {
         private _items: T[]
         private _count: i32
@@ -70,6 +70,48 @@ namespace System.Collections.Generic
         {
             _count = 0
             _head = 0
+        }
+
+        public function GetEnumerator(): QueueEnumerator<T>
+        {
+            return new QueueEnumerator<T>(_items, _head, _count, _capacity)
+        }
+    }
+
+    public class QueueEnumerator<T> extends IEnumerator<T>
+    {
+        private _items: T[]
+        private _head: i32
+        private _count: i32
+        private _capacity: i32
+        private _index: i32
+
+        public constructor(items: T[], head: i32, count: i32, capacity: i32)
+        {
+            _items = items
+            _head = head
+            _count = count
+            _capacity = capacity
+            _index = -1
+        }
+
+        public property Current: T
+        {
+            get
+            {
+                return _items[(_head + _index) % _capacity]
+            }
+        }
+
+        public function MoveNext(): bool
+        {
+            _index = _index + 1
+            return _index < _count
+        }
+
+        public function Reset(): void
+        {
+            _index = 0
         }
     }
 }

@@ -4,7 +4,7 @@
 
 namespace System.Collections.Generic
 {
-    public class Stack<T>
+    public class Stack<T> extends IReadOnlyCollection<T>
     {
         private _items: T[]
         private _count: i32
@@ -59,6 +59,44 @@ namespace System.Collections.Generic
         public function Clear(): void
         {
             _count = 0
+        }
+
+        public function GetEnumerator(): StackEnumerator<T>
+        {
+            return new StackEnumerator<T>(_items, _count)
+        }
+    }
+
+    public class StackEnumerator<T> extends IEnumerator<T>
+    {
+        private _items: T[]
+        private _count: i32
+        private _index: i32
+
+        public constructor(items: T[], count: i32)
+        {
+            _items = items
+            _count = count
+            _index = _count
+        }
+
+        public property Current: T
+        {
+            get
+            {
+                return _items[_index]
+            }
+        }
+
+        public function MoveNext(): bool
+        {
+            _index = _index - 1
+            return _index >= 0
+        }
+
+        public function Reset(): void
+        {
+            _index = _count
         }
     }
 }
