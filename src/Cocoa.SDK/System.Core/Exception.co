@@ -1,0 +1,23 @@
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
+// class Exception —— 异常基类（facade 映射到 BCL System.Exception）。
+// facade 使异常实例为真实 System.Exception：未捕获时不被 RuntimeWrappedException 包装，
+// Message 属性映射 get_Message()，构造器映射 .ctor(string)。
+// throw/catch 仅接受 Exception 及其子类（编译器绑定期强制），string 不可抛出。
+
+namespace System
+{
+    public facade class Exception
+    {
+        public constructor(message: string)
+        {
+        }
+
+        public property Message: string
+        {
+            get
+            {
+                return ""
+            }
+        }
+    }
+}

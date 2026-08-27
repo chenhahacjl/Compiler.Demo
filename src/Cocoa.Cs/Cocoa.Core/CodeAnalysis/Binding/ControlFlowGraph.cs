@@ -106,6 +106,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         case BoundNodeKind.VariableDeclaration:
                         case BoundNodeKind.SequencePointStatement:
                         case BoundNodeKind.ExpressionStatement:
+                        case BoundNodeKind.ThrowStatement:
+                        case BoundNodeKind.TryStatement:
                             _statements.Add(statement);
                             break;
                         default:
@@ -195,6 +197,8 @@ namespace Cocoa.CodeAnalysis.Binding
                             case BoundNodeKind.LabelStatement:
                             case BoundNodeKind.SequencePointStatement:
                             case BoundNodeKind.ExpressionStatement:
+                            case BoundNodeKind.ThrowStatement:
+                            case BoundNodeKind.TryStatement:
                                 if (isLastStatement)
                                     Connect(current, next);
                                 break;

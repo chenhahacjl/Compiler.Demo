@@ -204,6 +204,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.WhereKeyword;
                 case "facade":
                     return SyntaxKind.FacadeKeyword;
+                case "throw":
+                    return SyntaxKind.ThrowKeyword;
+                case "try":
+                    return SyntaxKind.TryKeyword;
+                case "catch":
+                    return SyntaxKind.CatchKeyword;
+                case "finally":
+                    return SyntaxKind.FinallyKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -457,6 +465,14 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "where";
                 case SyntaxKind.FacadeKeyword:
                     return "facade";
+                case SyntaxKind.ThrowKeyword:
+                    return "throw";
+                case SyntaxKind.TryKeyword:
+                    return "try";
+                case SyntaxKind.CatchKeyword:
+                    return "catch";
+                case SyntaxKind.FinallyKeyword:
+                    return "finally";
                 default:
                     return null;
             }

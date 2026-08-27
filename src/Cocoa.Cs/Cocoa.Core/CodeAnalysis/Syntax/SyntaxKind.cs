@@ -130,6 +130,10 @@ ColonToken,               // :
         SyscallKeyword,           // syscall
         WhereKeyword,             // where（6e-M20 泛型约束子句）
         FacadeKeyword,            // facade（6e-M20 基元成员面载体显式标记）
+        ThrowKeyword,             // throw
+        TryKeyword,               // try
+        CatchKeyword,             // catch
+        FinallyKeyword,           // finally
 
         // Nodes
         CompilationUnit,          // 编译单元
@@ -179,6 +183,10 @@ ColonToken,               // :
         SwitchStatement,          // SWITCH 语句
         CaseClause,               // SWITCH case 子句
         DefaultClause,            // SWITCH default 子句
+        ThrowStatement,           // THROW 语句
+        TryStatement,             // TRY 语句
+        CatchClause,              // TRY catch 子句
+        FinallyClause,            // TRY finally 子句
 
         // Expressions
         LiteralExpression,        // 文字表达式

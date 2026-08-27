@@ -19,6 +19,8 @@ namespace Cocoa.CodeAnalysis.Binding
         ReturnStatement,
         ExpressionStatement,
         SequencePointStatement,
+        ThrowStatement,
+        TryStatement,
 
         // Expression
 ErrorExpression,

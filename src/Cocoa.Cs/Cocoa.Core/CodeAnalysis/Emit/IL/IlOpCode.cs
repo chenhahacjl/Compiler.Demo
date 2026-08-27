@@ -161,6 +161,8 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Leave", 0xDD, IlOperandType.InlineBrTarget);
             Define("Leave_S", 0xDE, IlOperandType.ShortInlineBrTarget);
             Define("Endfinally", 0xDC, IlOperandType.InlineNone);
+            Define("Throw", 0x7A, IlOperandType.InlineNone);
+            Define("Rethrow", 0xFE1A, IlOperandType.InlineNone);
 
             // 调用/对象
             Define("Call", 0x28, IlOperandType.InlineMethod);

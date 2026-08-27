@@ -20,19 +20,21 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public const uint TextRva = 0x1000;
         private const int CorHeaderSize = 72; // IMAGE_COR20_HEADER
 
-        /// <summary>方法体（已编码字节 + 局部变量签名 token + 最大栈）。</summary>
+        /// <summary>方法体（已编码字节 + 局部变量签名 token + 最大栈 + 可选异常表）。</summary>
         internal sealed class MethodBodyBlob
         {
-            public MethodBodyBlob(byte[] code, uint localVarSigToken, ushort maxStack)
+            public MethodBodyBlob(byte[] code, uint localVarSigToken, ushort maxStack, byte[]? exceptionTable = null)
             {
                 Code = code;
                 LocalVarSigToken = localVarSigToken;
                 MaxStack = maxStack;
+                ExceptionTable = exceptionTable;
             }
 
             public byte[] Code { get; }
             public uint LocalVarSigToken { get; }
             public ushort MaxStack { get; }
+            public byte[]? ExceptionTable { get; }
         }
 
         /// <summary>
@@ -89,6 +91,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 methodRvas[methods[i]] = (uint)(methodStreamRva + section.Position - methodStreamOffset);
                 WriteFatMethodHeader(section, body);
                 section.Write(body.Code, 0, body.Code.Length);
+
+                if (body.ExceptionTable != null)
+                {
+                    while (section.Position % 4 != 0) section.WriteByte(0);
+                    section.Write(body.ExceptionTable, 0, body.ExceptionTable.Length);
+                }
             }
 
             // 3. 元数据区（4 字节对齐）：元数据根 + 流（#~ #Strings #US #GUID #Blob）
@@ -262,6 +270,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (body.LocalVarSigToken != 0)
             {
                 flags |= 0x10; // InitLocals
+            }
+
+            if (body.ExceptionTable != null)
+            {
+                flags |= 0x0008; // CorILMethod_MoreSections
             }
 
             WriteUInt16(section, flags);

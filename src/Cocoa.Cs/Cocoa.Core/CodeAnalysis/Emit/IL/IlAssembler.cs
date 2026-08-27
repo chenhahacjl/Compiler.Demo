@@ -11,6 +11,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     internal sealed class IlAssembler
     {
         public List<IlInstruction> Instructions { get; } = new List<IlInstruction>();
+
+        /// <summary>SEH 异常子句（.try/.catch/.finally）。标签用 IlInstruction 占位，Assemble 第一遍后取其 .Offset。</summary>
+        public List<ExceptionClause> ExceptionClauses { get; } = new List<ExceptionClause>();
         private readonly List<(int Offset, object Key)> _tokenFixups = new List<(int, object)>();
         private readonly List<(int Offset, string Value)> _stringFixups = new List<(int, string)>();
 
@@ -443,5 +446,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     throw new InvalidOperationException($"Unhandled operand type {instruction.OpCode.OperandType}");
             }
         }
+    }
+
+    /// <summary>.try/.catch/.finally 子句描述（SEH 异常表）。各边界用 IlInstruction 占位（Assemble 后取 .Offset）。</summary>
+    internal sealed class ExceptionClause
+    {
+        public IlInstruction TryStart = null!;
+        public IlInstruction TryEnd = null!;
+        public IlInstruction HandlerStart = null!;
+        public IlInstruction HandlerEnd = null!;
+        public int HandlerKind; // 0 = catch，2 = finally
+        public IlType? CatchType; // catch 用：被捕获类型（token 来自 BuildTokenMap）
     }
 }

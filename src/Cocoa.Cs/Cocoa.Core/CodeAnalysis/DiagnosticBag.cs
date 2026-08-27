@@ -76,6 +76,18 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
+        internal void ReportThrowTypeNotException(TextLocation location, TypeSymbol thrownType)
+        {
+            var message = $"Cannot throw value of type '{thrownType}'; only Exception or a subclass may be thrown.";
+            ReportError(location, message);
+        }
+
+        internal void ReportCatchTypeNotException(TextLocation location, TypeSymbol catchType)
+        {
+            var message = $"Catch clause type '{catchType}' is not Exception or a subclass of Exception.";
+            ReportError(location, message);
+        }
+
         public void ReportUndefinedBinaryOperator(TextLocation location, string operatorText, TypeSymbol leftType, TypeSymbol rightType)
         {
             var message = $"Binary operator '{operatorText}' is not defined for types '{leftType}' and '{rightType}'.";

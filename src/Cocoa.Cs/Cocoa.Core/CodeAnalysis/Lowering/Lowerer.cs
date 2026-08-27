@@ -69,7 +69,8 @@ namespace Cocoa.CodeAnalysis.Lowering
         private static bool CanFallThrough(BoundStatement boundStatement)
         {
             return boundStatement.Kind != BoundNodeKind.ReturnStatement &&
-                   boundStatement.Kind != BoundNodeKind.GotoStatement;
+                   boundStatement.Kind != BoundNodeKind.GotoStatement &&
+                   boundStatement.Kind != BoundNodeKind.ThrowStatement;
         }
 
         private static BoundBlockStatement RemoveDeadCode(BoundBlockStatement node)

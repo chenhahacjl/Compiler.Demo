@@ -3302,6 +3302,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 case SyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
+                case SyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
+                case SyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
                 case SyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 default:
                     throw new Exception($"Unexcepted syntax {syntax.Kind}");
@@ -4792,6 +4794,69 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundReturnStatement(syntax, expression);
+        }
+
+        private BoundStatement BindThrowStatement(ThrowStatementSyntax syntax)
+        {
+            var expression = BindExpression(syntax.Expression);
+
+            if (!IsExceptionType(expression.Type))
+            {
+                _diagnostics.ReportThrowTypeNotException(syntax.Expression.Location, expression.Type);
+            }
+
+            return new BoundThrowStatement(syntax, expression);
+        }
+
+        /// <summary>类型是否为 Exception 或其后代（沿 BaseType 链上溯）。</summary>
+        private bool IsExceptionType(TypeSymbol type)
+        {
+            var exceptionRoot = LookupType("Exception") as ClassTypeSymbol;
+            if (exceptionRoot == null)
+            {
+                return true; // 无 Exception 根（stdlib 缺失）时不额外报错
+            }
+
+            for (var current = type as ClassTypeSymbol; current != null; current = current.BaseType)
+            {
+                if (current == exceptionRoot)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private BoundStatement BindTryStatement(TryStatementSyntax syntax)
+        {
+            var tryBlock = BindStatement(syntax.TryBlock);
+
+            var catches = ImmutableArray.CreateBuilder<BoundCatchClause>();
+            foreach (var catchClause in syntax.Catches)
+            {
+                var catchType = BindTypeClause(catchClause.Type) ?? TypeSymbol.Error;
+
+                if (catchType != TypeSymbol.Error && !IsExceptionType(catchType))
+                {
+                    _diagnostics.ReportCatchTypeNotException(catchClause.Type!.Location, catchType);
+                }
+
+                _scope = new BoundScope(_scope);
+                var variable = BindVariableDeclaration(catchClause.Identifier, isReadOnly: false, catchType);
+                var body = BindStatement(catchClause.Body);
+                _scope = _scope.Parent!;
+
+                catches.Add(new BoundCatchClause(variable, catchType, body));
+            }
+
+            BoundStatement? finallyBlock = null;
+            if (syntax.Finally != null)
+            {
+                finallyBlock = BindStatement(syntax.Finally.Body);
+            }
+
+            return new BoundTryStatement(syntax, tryBlock, catches.ToImmutable(), finallyBlock);
         }
 
         private BoundStatement BindExpressionStatement(ExpressionStatementSyntax syntax)
@@ -7066,6 +7131,7 @@ namespace Cocoa.CodeAnalysis.Binding
             ["System.Char"] = TypeSymbol.Char,
             ["System.Object"] = null,
             ["System.Type"] = null,
+            ["System.Exception"] = null,
         };
 
         /// <summary>6e-M19 M2-b：facade 静态常量表（i32.MaxValue 等，编译期折叠为字面量）。</summary>

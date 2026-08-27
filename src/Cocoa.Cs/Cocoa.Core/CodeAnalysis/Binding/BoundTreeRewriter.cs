@@ -33,6 +33,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     return RewriteConditionalGotoStatement((BoundConditionalGotoStatement)node);
                 case BoundNodeKind.ReturnStatement:
                     return RewriteReturnStatement((BoundReturnStatement)node);
+                case BoundNodeKind.ThrowStatement:
+                    return RewriteThrowStatement((BoundThrowStatement)node);
+                case BoundNodeKind.TryStatement:
+                    return RewriteTryStatement((BoundTryStatement)node);
                 case BoundNodeKind.ExpressionStatement:
                     return RewriteExpressionStatement((BoundExpressionStatement)node);
                 case BoundNodeKind.SequencePointStatement:
@@ -176,6 +180,44 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundReturnStatement(node.Syntax, expression);
+        }
+
+        protected virtual BoundStatement RewriteThrowStatement(BoundThrowStatement node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundThrowStatement(node.Syntax, expression);
+        }
+
+        protected virtual BoundStatement RewriteTryStatement(BoundTryStatement node)
+        {
+            var tryBlock = RewriteStatement(node.TryBlock);
+
+            var changed = tryBlock != node.TryBlock;
+            var catchesBuilder = ImmutableArray.CreateBuilder<BoundCatchClause>(node.Catches.Length);
+            foreach (var catchClause in node.Catches)
+            {
+                var body = RewriteStatement(catchClause.Body);
+                catchesBuilder.Add(new BoundCatchClause(catchClause.Variable, catchClause.CatchType, body));
+                if (body != catchClause.Body)
+                {
+                    changed = true;
+                }
+            }
+
+            var finallyBlock = node.FinallyBlock == null ? null : RewriteStatement(node.FinallyBlock);
+            if (finallyBlock != node.FinallyBlock)
+            {
+                changed = true;
+            }
+
+            return changed
+                ? new BoundTryStatement(node.Syntax, tryBlock, catchesBuilder.MoveToImmutable(), finallyBlock)
+                : node;
         }
 
         protected virtual BoundStatement RewriteExpressionStatement(BoundExpressionStatement node)

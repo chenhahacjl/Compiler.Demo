@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Symbols;
@@ -105,10 +106,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         _publishPublicSurface = publishPublicSurface;
         _entryFunction = emitLibrary ? null : program.MainFunction;
 
+            // 6e-M26：FunctionSymbol 走默认引用 GetHashCode（进程随机）→ program.Functions（ImmutableDictionary）
+            // 枚举顺序跨运行不稳定，导致方法体/MemberRef/#US 注册顺序变化、构建不可复现。
+            // 统一按确定性键排序后再迭代（FunctionSortKey：Ordinal 组合键），保证发射顺序可复现。
+            var orderedFunctions = program.Functions.Keys
+                .OrderBy(FunctionSortKey, StringComparer.Ordinal)
+                .ToList();
+
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.cod 的 Console/Math 等，不在 program.Classes 的源码声明集内）
             var classes = program.Classes.Where(c => !c.IsFacadeClass).ToList();
-            foreach (var f in program.Functions.Keys)
+            foreach (var f in orderedFunctions)
             {
                 if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass && !classes.Contains(f.ContainingClass))
                 {
@@ -185,7 +193,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 先计算重载组（同 (ns, name) 顶层函数 >1）：IL 方法名追加参数类型后缀保证元数据唯一
             _overloadedGroups = new HashSet<(string, string)>();
             var topLevelNameCounts = new Dictionary<(string, string), int>();
-            foreach (var f in program.Functions.Keys)
+            foreach (var f in orderedFunctions)
             {
                 if (f.ContainingClass == null && !f.IsConstructor)
                 {
@@ -202,16 +210,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
             }
 
-            foreach (var functionWithBody in program.Functions)
+            foreach (var function in orderedFunctions)
             {
-                if (functionWithBody.Key.ContainingClass?.IsFacadeClass == true) continue;
-                if (functionWithBody.Key.BuiltinKind != null)
+                if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.BuiltinKind != null)
                 {
                     // syscall 内部原语：无方法体、调用点按 BuiltinKind 分发，不声明为 IL 方法
                     continue;
                 }
 
-                EmitFunctionDeclaration(functionWithBody.Key);
+                EmitFunctionDeclaration(function);
             }
 
             // 2.5 属性定义（getter/setter 方法已发射）
@@ -242,19 +250,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var bodies = new List<ManagedPEWriter.MethodBodyBlob>();
             var methods = new List<IlMethodDef>();
 
-            foreach (var functionWithBody in program.Functions)
+            foreach (var function in orderedFunctions)
             {
-                if (functionWithBody.Key.ContainingClass?.IsFacadeClass == true) continue;
-                if (functionWithBody.Key.IsExtern || functionWithBody.Key.IsAbstract || functionWithBody.Key.BuiltinKind != null)
+                if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.IsExtern || function.IsAbstract || function.BuiltinKind != null)
                 {
                     continue;
                 }
 
-                var method = _methods[functionWithBody.Key];
+                var method = _methods[function];
                 methods.Add(method);
-                _entryVoidMain = _entryFunction == functionWithBody.Key && functionWithBody.Key.ReturnType == TypeSymbol.Void;
-                var (code, localSigToken, maxStack) = EmitFunctionBody(method, functionWithBody.Key, functionWithBody.Value);
-                bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack));
+                _entryVoidMain = _entryFunction == function && function.ReturnType == TypeSymbol.Void;
+                var (code, localSigToken, maxStack, exceptionTable) = EmitFunctionBody(method, function, program.Functions[function]);
+                bodies.Add(new ManagedPEWriter.MethodBodyBlob(code, localSigToken, (ushort)maxStack, exceptionTable));
             }
 
             // 6e-M22 C5-c：环境类 .ctor 方法体（ldarg.0 → Object::.ctor → ret）
@@ -365,6 +373,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     // delegate 子类 extends System.MulticastDelegate → 框架 TypeRef
                     baseTypeRef = multicastDelegateRef;
                 }
+                else if (IsFacadeRedirect(classType.BaseType!))
+                {
+                    // 6e-M25：facade 基类（MyError extends Exception，Exception → System.Exception）
+                    // TypeDef 基类指向框架 TypeRef（facade 类无 TypeDef）。
+                    baseTypeRef = ToIlType(classType.BaseType!).Reference;
+                }
                 else if (_classTypeDefs.TryGetValue(classType.BaseType!, out var bt))
                 {
                     baseTypeDef = bt;
@@ -397,7 +411,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
         }
 
-        private (byte[] Code, uint LocalSigToken, int MaxStack) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body)
+        private (byte[] Code, uint LocalSigToken, int MaxStack, byte[]? ExceptionTable) EmitFunctionBody(IlMethodDef method, FunctionSymbol function, BoundBlockStatement body)
         {
             _locals.Clear();
             _labelTargets.Clear();
@@ -497,7 +511,51 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 localSigToken = tokenMap[sigReference];
             }
 
-            return (code, localSigToken, maxStack);
+            byte[]? exceptionTable = null;
+            if (assembler.ExceptionClauses.Count > 0)
+            {
+                exceptionTable = BuildExceptionTable(assembler.ExceptionClauses, tokenMap, _framework);
+            }
+
+            return (code, localSigToken, maxStack, exceptionTable);
+        }
+
+        /// <summary>由 SEH 子句生成异常表字节（fat 格式 24 字节/子句；子句偏移为方法体代码段相对偏移，即 IlInstruction.Offset）。</summary>
+        private static byte[] BuildExceptionTable(List<ExceptionClause> clauses, IReadOnlyDictionary<object, uint> tokenMap, IlFramework framework)
+        {
+            var section = new MemoryStream();
+            using var writer = new BinaryWriter(section);
+
+            var totalSize = 4 + clauses.Count * 24;
+            // 节头：低 8 位 = EH 表(0x01) | fat 格式(0x40)；高位 = 节总字节数
+            writer.Write((uint)((totalSize << 8) | 0x41));
+
+            foreach (var clause in clauses)
+            {
+                var tryStart = (uint)clause.TryStart.Offset;
+                var tryEnd = (uint)clause.TryEnd.Offset;
+                var handlerStart = (uint)clause.HandlerStart.Offset;
+                var handlerEnd = (uint)clause.HandlerEnd.Offset;
+
+                uint classToken = 0;
+                if (clause.CatchType != null)
+                {
+                    object? key = clause.CatchType.TypeDef as object
+                               ?? clause.CatchType.Reference as object
+                               ?? (clause.CatchType.Kind == IlTypeKind.String ? framework.StringType : null)
+                               ?? throw new InvalidOperationException("catch 类型既无 TypeDef 也无 Reference。");
+                    classToken = tokenMap[key];
+                }
+
+                writer.Write((uint)clause.HandlerKind);
+                writer.Write(tryStart);
+                writer.Write(tryEnd - tryStart);
+                writer.Write(handlerStart);
+                writer.Write(handlerEnd - handlerStart);
+                writer.Write(classToken);
+            }
+
+            return section.ToArray();
         }
 
         private void CollectLabels(BoundStatement node)
@@ -537,6 +595,21 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     break;
                 case BoundSequencePointStatement sequencePoint:
                     CollectLocals(sequencePoint.Statement, localTypes);
+                    break;
+                case BoundTryStatement tryStatement:
+                    CollectLocals(tryStatement.TryBlock, localTypes);
+                    foreach (var catchClause in tryStatement.Catches)
+                    {
+                        _locals.Add(catchClause.Variable, localTypes.Count);
+                        localTypes.Add(ToIlType(catchClause.CatchType));
+                        CollectLocals(catchClause.Body, localTypes);
+                    }
+
+                    if (tryStatement.FinallyBlock != null)
+                    {
+                        CollectLocals(tryStatement.FinallyBlock, localTypes);
+                    }
+
                     break;
             }
         }
@@ -691,6 +764,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             throw new System.Exception($"Unexpected type {type}");
         }
 
+        /// <summary>6e-M26：函数确定性排序键（ContainingClass.FullName + 命名空间 + 方法名 + 参数签名，Ordinal）。
+        /// 保证 program.Functions（ImmutableDictionary，引用哈希进程随机）的发射顺序可复现。</summary>
+        private static string FunctionSortKey(FunctionSymbol function)
+        {
+            var owner = function.ContainingClass?.FullName ?? "";
+            var parameters = string.Join(",", function.Parameters.Select(p => p.Type.ToString()));
+            return $"{owner}|{function.Namespace}|{function.Name}|{parameters}";
+        }
+
         /// <summary>类型名编码进方法名后缀（`int[]` 的 `[]` 非法，转下划线）。</summary>
         private static string EncodeTypeNameForMethodName(TypeSymbol type)
         {
@@ -802,6 +884,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             switch (node.Kind)
             {
+                case BoundNodeKind.BlockStatement:
+                    foreach (var statement in ((BoundBlockStatement)node).Statements)
+                    {
+                        EmitStatement(il, statement);
+                    }
+
+                    break;
                 case BoundNodeKind.NopStatement:
                     il.Emit(IlOpCodeTable.Get("Nop"));
                     break;
@@ -819,6 +908,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     break;
                 case BoundNodeKind.ReturnStatement:
                     EmitReturnStatement(il, (BoundReturnStatement)node);
+                    break;
+                case BoundNodeKind.ThrowStatement:
+                    EmitThrowStatement(il, (BoundThrowStatement)node);
+                    break;
+                case BoundNodeKind.TryStatement:
+                    EmitTryStatement(il, (BoundTryStatement)node);
                     break;
                 case BoundNodeKind.ExpressionStatement:
                     EmitExpressionStatement(il, (BoundExpressionStatement)node);
@@ -887,6 +982,79 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 il.Emit(IlOpCodeTable.Get("Pop"));
             }
+        }
+
+        private void EmitThrowStatement(IlAssembler il, BoundThrowStatement node)
+        {
+            EmitExpression(il, node.Expression);
+            il.Emit(IlOpCodeTable.Get("Throw"));
+        }
+
+        private void EmitTryStatement(IlAssembler il, BoundTryStatement node)
+        {
+            // 结束标签（前向引用，最终作为方法体内的 Nop 落位）
+            var endLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+
+            var tryStart = EmitLabel(il);
+            // 空 try 体（无任何语句）：插入平衡无害指令，避免"try 区域仅含 leave"被 CLR EH 校验拒绝。
+            if (node.TryBlock is BoundBlockStatement tryBlock && tryBlock.Statements.Length == 0)
+            {
+                il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                il.Emit(IlOpCodeTable.Get("Pop"));
+            }
+            EmitStatement(il, node.TryBlock);
+            il.Emit(IlOpCodeTable.Get("Leave"), endLabel);
+
+            var firstHandlerStart = EmitLabel(il); // try 区域终点 = 首个 handler 起点
+
+            var catchStart = firstHandlerStart;
+            foreach (var catchClause in node.Catches)
+            {
+                var handlerStart = catchStart;
+                var localIndex = _locals[catchClause.Variable];
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)localIndex);
+                EmitStatement(il, catchClause.Body);
+                il.Emit(IlOpCodeTable.Get("Leave"), endLabel);
+                var handlerEnd = EmitLabel(il); // 本 catch 终点 = 下一 handler 起点
+
+                il.ExceptionClauses.Add(new ExceptionClause
+                {
+                    TryStart = tryStart,
+                    TryEnd = firstHandlerStart,
+                    HandlerStart = handlerStart,
+                    HandlerEnd = handlerEnd,
+                    HandlerKind = 0, // COR_ILEXCEPTION_CLAUSE_EXCEPTION (catch)
+                    CatchType = ToIlType(catchClause.CatchType),
+                });
+
+                catchStart = handlerEnd;
+            }
+
+            var finallyStart = catchStart; // 所有 catch 之后的边界（无 catch 则为首个 handler 起点）
+            if (node.FinallyBlock != null)
+            {
+                EmitStatement(il, node.FinallyBlock);
+                il.Emit(IlOpCodeTable.Get("Endfinally"));
+
+                il.ExceptionClauses.Add(new ExceptionClause
+                {
+                    TryStart = tryStart,
+                    TryEnd = finallyStart,
+                    HandlerStart = finallyStart,
+                    HandlerEnd = endLabel,
+                    HandlerKind = 2, // COR_ILEXCEPTION_CLAUSE_FINALLY
+                });
+            }
+
+            il.Emit(endLabel);
+        }
+
+        /// <summary>在指令流中插入一个 Nop 标签并返回其 IlInstruction（供 leave/异常区域引用）。</summary>
+        private IlInstruction EmitLabel(IlAssembler il)
+        {
+            var label = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+            il.Emit(label);
+            return label;
         }
 
         private void EmitSequencePointStatement(IlAssembler il, BoundSequencePointStatement node)
@@ -2756,6 +2924,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 if (methodRef == null)
                 {
                     throw new System.Exception($"外部构造函数 {target.ContainingClass.FullName} 未找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), methodRef);
+                return;
+            }
+
+            // 6e-M25：facade 基类 .ctor 链（class MyError extends Exception → call System.Exception::.ctor）
+            if (IsFacadeRedirect(target.ContainingClass!))
+            {
+                var methodRef = ResolveFacadeCtor(target.ContainingClass!, node.Arguments);
+                if (methodRef == null)
+                {
+                    throw new System.Exception($"facade 构造函数 {target.ContainingClass.FullName} 未找到。");
                 }
 
                 il.Emit(IlOpCodeTable.Get("Call"), methodRef);

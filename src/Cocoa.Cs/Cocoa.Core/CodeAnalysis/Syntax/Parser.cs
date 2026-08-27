@@ -1660,6 +1660,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ReturnKeyword:
                     statement = ParseReturnStatement();
                     break;
+                case SyntaxKind.ThrowKeyword:
+                    statement = ParseThrowStatement();
+                    break;
+                case SyntaxKind.TryKeyword:
+                    statement = ParseTryStatement();
+                    break;
                 default:
                     // C# 式局部变量：`type name [= expr]`
                     if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
@@ -2631,6 +2637,42 @@ namespace Cocoa.CodeAnalysis.Syntax
             var expression = ParseExpression();
 
             return new ExpressionStatementSyntax(_syntaxTree, expression);
+        }
+
+        private StatementSyntax ParseThrowStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.ThrowKeyword);
+            var expression = ParseExpression();
+
+            return new ThrowStatementSyntax(_syntaxTree, keyword, expression);
+        }
+
+        private StatementSyntax ParseTryStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.TryKeyword);
+            var tryBlock = ParseBlockStatement();
+
+            var catches = ImmutableArray.CreateBuilder<CatchClauseSyntax>();
+            while (Current.Kind == SyntaxKind.CatchKeyword)
+            {
+                var catchKeyword = MatchToken(SyntaxKind.CatchKeyword);
+                MatchToken(SyntaxKind.OpenParenthesisToken);
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                var type = ParseTypeClause();
+                MatchToken(SyntaxKind.CloseParenthesisToken);
+                var body = ParseBlockStatement();
+                catches.Add(new CatchClauseSyntax(_syntaxTree, catchKeyword, identifier, type, body));
+            }
+
+            FinallyClauseSyntax? finallyClause = null;
+            if (Current.Kind == SyntaxKind.FinallyKeyword)
+            {
+                var finallyKeyword = MatchToken(SyntaxKind.FinallyKeyword);
+                var body = ParseBlockStatement();
+                finallyClause = new FinallyClauseSyntax(_syntaxTree, finallyKeyword, body);
+            }
+
+            return new TryStatementSyntax(_syntaxTree, keyword, tryBlock, catches.ToImmutable(), finallyClause);
         }
 
         protected ExpressionSyntax ParseExpression()
