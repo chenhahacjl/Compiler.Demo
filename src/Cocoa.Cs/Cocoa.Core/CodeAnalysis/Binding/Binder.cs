@@ -2373,38 +2373,35 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             for (var current = classType; current != null; current = current.BaseType)
             {
-                var method = current.GetDeclaredMethod(interfaceMethod.Name);
-                if (method == null)
+                foreach (var method in current.GetDeclaredMethods(interfaceMethod.Name))
                 {
-                    continue;
-                }
-
-                if (method.Visibility != Visibility.Public)
-                {
-                    continue;
-                }
-
-                if (method.Parameters.Length != interfaceMethod.Parameters.Length)
-                {
-                    continue;
-                }
-
-                var parametersMatch = true;
-                for (var i = 0; i < method.Parameters.Length; i++)
-                {
-                    if (!TypesMatchForInterfaceImplementation(method.Parameters[i].Type, interfaceMethod.Parameters[i].Type))
+                    if (method.Visibility != Visibility.Public)
                     {
-                        parametersMatch = false;
-                        break;
+                        continue;
                     }
-                }
 
-                if (!parametersMatch || !TypesMatchForInterfaceImplementation(method.ReturnType, interfaceMethod.ReturnType))
-                {
-                    continue;
-                }
+                    if (method.Parameters.Length != interfaceMethod.Parameters.Length)
+                    {
+                        continue;
+                    }
 
-                return method;
+                    var parametersMatch = true;
+                    for (var i = 0; i < method.Parameters.Length; i++)
+                    {
+                        if (!TypesMatchForInterfaceImplementation(method.Parameters[i].Type, interfaceMethod.Parameters[i].Type))
+                        {
+                            parametersMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (!parametersMatch || !TypesMatchForInterfaceImplementation(method.ReturnType, interfaceMethod.ReturnType))
+                    {
+                        continue;
+                    }
+
+                    return method;
+                }
             }
 
             return null;

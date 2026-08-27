@@ -462,7 +462,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return false;
         }
 
-        private ImmutableArray<FunctionSymbol> GetDeclaredMethods(string name)
+        public ImmutableArray<FunctionSymbol> GetDeclaredMethods(string name)
         {
             var builder = ImmutableArray.CreateBuilder<FunctionSymbol>();
             foreach (var method in _methods)
