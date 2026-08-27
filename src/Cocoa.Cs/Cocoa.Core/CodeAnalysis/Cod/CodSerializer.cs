@@ -76,7 +76,7 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             // 6e-G7 S2：泛型定义方法的开放绑定体同样收集（显式清单，不触碰 stdlib 注入体）
-            foreach (var pair in program.GenericOpenBodies)
+            foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
                 CollectBody(registry, pair.Key, pair.Value, labels);
@@ -119,7 +119,7 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入体
-            foreach (var pair in program.GenericOpenBodies)
+            foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 WriteBodyEntry(w, registry, labelsByFunction, pair.Key, pair.Value);
             }
@@ -1133,6 +1133,14 @@ namespace Cocoa.CodeAnalysis.Cod
         }
 
         /// <summary>6e-G7 S2：单条 body 条目（FnKey + 语句块）。</summary>
+        /// <summary>6e-M26：泛型开放绑定体确定性排序键（GenericOpenBodies 为 ImmutableDictionary，枚举不稳定）。</summary>
+        private static string GenericOpenSortKey(FunctionSymbol function)
+        {
+            var owner = function.ContainingClass?.FullName ?? "";
+            var parameters = string.Join(",", function.Parameters.Select(p => p.Type.ToString()));
+            return $"{owner}|{function.Namespace}|{function.Name}|{parameters}";
+        }
+
         private static void WriteBodyEntry(Writer w, Registry registry, Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>> labelsByFunction, FunctionSymbol fn, BoundBlockStatement body)
         {
             w.Open("body");

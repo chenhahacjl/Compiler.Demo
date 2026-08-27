@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -166,7 +167,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // 可达性过滤（6e-M17）：仅发射从入口可达的函数；M4 起存活类把构造函数与
             // 虚槽实现并入可达集（vtable 分派目标无法静态枚举，须随类存活整体发射）
             var reachable = ComputeReachableFunctions(_program.MainFunction!);
-            var functionsToEmit = _program.Functions.Where(kv => reachable.Contains(kv.Key)).ToArray();
+            // 6e-M26：program.Functions（ImmutableDictionary，引用哈希进程随机）枚举不稳定 →
+            // 按确定性键排序，保证 native 产物函数顺序可复现。
+            var functionsToEmit = _program.Functions
+                .Where(kv => reachable.Contains(kv.Key))
+                .OrderBy(kv => FunctionSortKey(kv.Key), StringComparer.Ordinal)
+                .ToArray();
 
             foreach (var (function, body) in functionsToEmit)
             {
@@ -198,6 +204,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             {
                 EmitFunction(_functionMap[function], function, body);
             }
+        }
+
+        /// <summary>6e-M26：函数确定性排序键（ContainingClass.FullName + 命名空间 + 方法名 + 参数签名，Ordinal）。</summary>
+        private static string FunctionSortKey(FunctionSymbol function)
+        {
+            var owner = function.ContainingClass?.FullName ?? "";
+            var parameters = string.Join(",", function.Parameters.Select(p => p.Type.ToString()));
+            return $"{owner}|{function.Namespace}|{function.Name}|{parameters}";
         }
 
         // ------------------------------------------------------------------

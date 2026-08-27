@@ -145,7 +145,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private readonly string _moduleName;
         private readonly string _assemblyName;
-        private readonly Guid _mvid = Guid.NewGuid();
+        private readonly Guid _mvid;
 
         private readonly List<IlTypeRef> _typeRefs = new List<IlTypeRef>();
         private readonly List<IlAssemblyRef> _assemblyRefs = new List<IlAssemblyRef>();
@@ -185,6 +185,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         {
             _moduleName = moduleName;
             _assemblyName = assemblyName;
+            // 6e-M26：MVID 确定性派生（同程序多次编译字节可复现）。MVID 仅信息性、不参与程序集绑定，
+            // 用 MD5(module|assembly) 的 16 字节生成稳定 GUID（对齐可复现构建语义）。
+            _mvid = DeterministicMvid(moduleName, assemblyName);
 
             // 索引 0 预置为空条目：GetOrAddString("")/GetOrAddBlob(empty) 必须返回 0，
             // 否则 AssemblyRef 的 Culture/HashValue 会指向非空堆条目，CLR 4.8 拒绝加载。
@@ -193,6 +196,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _usHeap.Add(0);
             _blobHeap.Add(0);
             _blobs.Add(new BlobKey(Array.Empty<byte>()), 0);
+        }
+
+        /// <summary>由模块/程序集名确定性生成 MVID（16 字节 = MD5 前 16 字节）。</summary>
+        private static Guid DeterministicMvid(string moduleName, string assemblyName)
+        {
+            using var md5 = System.Security.Cryptography.MD5.Create();
+            var hash = md5.ComputeHash(Encoding.UTF8.GetBytes(moduleName + "|" + assemblyName));
+            return new Guid(hash);
         }
 
         // ------------------------------------------------------------------
