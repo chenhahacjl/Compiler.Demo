@@ -29,6 +29,9 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
             {
                 Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source),
             };
+            // 集合接口集（Enumerable.co）始终参与编译：各集合类实现其中的泛型接口。
+            syntaxTrees.Insert(0, Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(File.ReadAllText(Path.Combine(collectionDir, "Enumerable.co"))));
+
             foreach (var coFile in coFiles)
             {
                 syntaxTrees.Insert(0, Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(File.ReadAllText(Path.Combine(collectionDir, coFile))));
@@ -359,6 +362,45 @@ function Main()
             Assert.Contains("50", stdout);
             Assert.Contains("200", stdout);
             Assert.Contains("2", stdout);
+        }
+
+        [Fact]
+        public void List_Implements_ICollection_Members_Il()
+        {
+            // 集合类声明 implements IList<T>/ICollection<T> 等，编译器在绑定期经
+            // CheckInterfaceImplementation 校验成员齐全（含 Add(bool)/Contains/Remove/CopyTo/
+            // IsReadOnly）；此测试以具体类型调用这些接口成员，验证形状对齐 BCL 泛型半边。
+            var source = @"using System
+using System.Collections.Generic
+
+function Main()
+{
+    var list = new List<i32>()
+    Console.WriteLine(list.Add(10))
+    Console.WriteLine(list.Add(10))
+    Console.WriteLine(list.Count)
+    Console.WriteLine(list.Contains(10))
+    Console.WriteLine(list.Contains(99))
+    Console.WriteLine(list.IndexOf(10))
+    Console.WriteLine(list.Remove(10))
+    Console.WriteLine(list.Remove(10))
+    Console.WriteLine(list.Count)
+    Console.WriteLine(list.IsReadOnly)
+    var buf = new i32[4]
+    list.Add(5)
+    list.Add(6)
+    list.CopyTo(buf, 1)
+    Console.WriteLine(buf[1])
+    Console.WriteLine(buf[2])
+}";
+            var (exitCode, stdout) = EmitAndRun(source, "CollListColl", "List.co");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("True", stdout);
+            Assert.Contains("False", stdout);
+            Assert.Contains("2", stdout);
+            Assert.Contains("0", stdout);
+            Assert.Contains("5", stdout);
+            Assert.Contains("6", stdout);
         }
     }
 }

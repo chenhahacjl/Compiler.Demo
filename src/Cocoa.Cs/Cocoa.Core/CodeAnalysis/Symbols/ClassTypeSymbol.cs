@@ -411,7 +411,14 @@ namespace Cocoa.CodeAnalysis.Symbols
 
                 foreach (var iface in type._interfaces)
                 {
-                    builder.AddRange(iface.GetInterfaceInheritedMethods(name));
+                    // 具体类已实现该接口方法时，只保留类自身的方法（避免与接口抽象方法形成“同名重载”歧义）。
+                    foreach (var interfaceMethod in iface.GetInterfaceInheritedMethods(name))
+                    {
+                        if (!TypeChainDeclaresMatchingMethod(type, interfaceMethod))
+                        {
+                            builder.Add(interfaceMethod);
+                        }
+                    }
                 }
 
                 if (type.IsInterface)
@@ -421,6 +428,38 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
 
             return builder.ToImmutable();
+        }
+
+        /// <summary>从 type 沿继承链向上查找是否存在与 candidate 同名且参数类型一致的方法（即已实现 candidate 的类方法）。</summary>
+        private static bool TypeChainDeclaresMatchingMethod(ClassTypeSymbol? type, FunctionSymbol candidate)
+        {
+            for (var t = type; t != null; t = t.BaseType)
+            {
+                foreach (var declared in t.GetDeclaredMethods(candidate.Name))
+                {
+                    if (declared.Parameters.Length != candidate.Parameters.Length)
+                    {
+                        continue;
+                    }
+
+                    var match = true;
+                    for (var i = 0; i < declared.Parameters.Length; i++)
+                    {
+                        if (!declared.Parameters[i].Type.Equals(candidate.Parameters[i].Type))
+                        {
+                            match = false;
+                            break;
+                        }
+                    }
+
+                    if (match)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         private ImmutableArray<FunctionSymbol> GetDeclaredMethods(string name)

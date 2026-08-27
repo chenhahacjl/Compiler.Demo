@@ -1,17 +1,90 @@
 // Cocoa 系统标准库 · System.Collections 模块
-// IEnumerable<T> / IEnumerator<T> 接口（6e-M22 C8）
-// foreach 枚举器模式的编译期能力标记接口
+// 泛型集合接口集（按 C# BCL 泛型半边对齐，第二阶段）
+// 注：仅定义泛型半边；非泛型 IList/ICollection/IDictionary 因 Current:object 与
+// 显式接口实现限制未定义。KeyValuePair 用 class（CO 无 struct）。
 
 namespace System.Collections.Generic
 {
     public interface IEnumerator<T>
     {
-        function MoveNext(): Boolean
-        function Current(): T
+        function MoveNext(): bool
+        property Current: T { get; }
     }
 
     public interface IEnumerable<T>
     {
         function GetEnumerator(): IEnumerator<T>
+    }
+
+    public interface ICollection<T>
+    {
+        property Count: i32 { get; }
+        property IsReadOnly: bool { get; }
+        function Add(item: T): bool
+        function Clear(): void
+        function Contains(item: T): bool
+        function CopyTo(array: T[], arrayIndex: i32): void
+        function Remove(item: T): bool
+    }
+
+    public interface IList<T> extends ICollection<T>, IEnumerable<T>
+    {
+        property this[index: i32]: T { get; set; }
+        function IndexOf(item: T): i32
+        function Insert(index: i32, item: T): void
+        function RemoveAt(index: i32): void
+    }
+
+    public interface IReadOnlyCollection<T> extends IEnumerable<T>
+    {
+        property Count: i32 { get; }
+    }
+
+    public interface IReadOnlyList<T> extends IReadOnlyCollection<T>
+    {
+        property this[index: i32]: T { get; }
+    }
+
+    public interface ISet<T> extends ICollection<T>
+    {
+        function UnionWith(other: IEnumerable<T>): void
+        function IntersectWith(other: IEnumerable<T>): void
+        function ExceptWith(other: IEnumerable<T>): void
+        function SymmetricExceptWith(other: IEnumerable<T>): void
+        function IsSubsetOf(other: IEnumerable<T>): bool
+        function IsSupersetOf(other: IEnumerable<T>): bool
+        function IsProperSubsetOf(other: IEnumerable<T>): bool
+        function IsProperSupersetOf(other: IEnumerable<T>): bool
+        function Overlaps(other: IEnumerable<T>): bool
+        function SetEquals(other: IEnumerable<T>): bool
+    }
+
+    public interface IDictionary<TKey, TValue> extends IEnumerable<KeyValuePair<TKey, TValue>>
+    {
+        property this[key: TKey]: TValue { get; set; }
+        property Keys: ICollection<TKey> { get; }
+        property Values: ICollection<TValue> { get; }
+        property Count: i32 { get; }
+        property IsReadOnly: bool { get; }
+        function Add(key: TKey, value: TValue): void
+        function Clear(): void
+        function ContainsKey(key: TKey): bool
+        function Contains(item: KeyValuePair<TKey, TValue>): bool
+        function CopyTo(array: KeyValuePair<TKey, TValue>[], arrayIndex: i32): void
+        function Remove(key: TKey): bool
+        function TryGetValue(key: TKey, out value: TValue): bool
+    }
+
+    // CO 无 struct，故用 class。只读属性 + 构造器初始化。
+    public class KeyValuePair<TKey, TValue>
+    {
+        public property Key: TKey { get; }
+        public property Value: TValue { get; }
+
+        public function KeyValuePair(key: TKey, value: TValue)
+        {
+            Key = key
+            Value = value
+        }
     }
 }

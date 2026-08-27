@@ -133,6 +133,27 @@
 4. **仅泛型半边接口**（非泛型 `IEnumerable`/`IList`/`ICollection`/`IDictionary` 因
    `Current: object` 冲突不实现）。
 5. **无 struct** → `KeyValuePair` 为 class。
+6. **CO 接口不发射为 CLR 类型**（编译器 `IlEmitter` 对泛型标记接口 `continue` 跳过，
+   仅作编译期能力标记）：故接口不能作为变量/参数/局部类型在 IL 中使用（无法写
+   `var l: IList<i32>`）。集合类的 `extends IList<T>, ICollection<T>, …` 声明用于
+   `CheckInterfaceImplementation` 在绑定期校验成员形状（含 `Add` 返回 `bool`/`Contains`/
+   `Remove`/`CopyTo`/`IsReadOnly`），并支撑 `foreach`；运行时仍以具体类型使用。
+   （若需以接口类型变量编程，需另行为 CO 接口补齐 CLR 接口发射——另立专项。）
+
+## 八、本阶段已落地（M1-C + 接口集 + List 对齐）
+
+- 编译器：`BindInterfacePropertyDeclaration` 接口索引器命名 `"this"`→`"Item"`（与类侧一致）；
+  接口索引器 getter/setter 补索引参数（修复 `get_Item` 无参导致 `l[0]` 崩溃）；
+  `ClassTypeSymbol.GetMethods` 对具体类去重接口抽象方法（避免 `IndexOf` 等"同名重载"歧义）。
+- `Enumerable.co`：定义 `IEnumerable<T>`/`IEnumerator<T>`（Current 改为属性）/
+  `ICollection<T>`/`IList<T>`/`ISet<T>`/`IDictionary<TKey,TValue>`/`IReadOnlyCollection<T>`/
+  `IReadOnlyList<T>` 及 `KeyValuePair<TKey,TValue>`（class）。
+- `List.co`：`extends IList<T>, ICollection<T>, IEnumerable<T>, IReadOnlyList<T>,
+  IReadOnlyCollection<T>`；补 `IsReadOnly`/`Contains`/`Remove`/`CopyTo`，`Add` 返回 `bool`；
+  `ListEnumerator<T> extends IEnumerator<T>`。
+- 测试：`CollectionFacadeTests` 10→11 例（含 `Dictionary_NegativeKey` 负键崩溃回归、
+  `List_Implements_ICollection_Members` 接口成员形状校验）；全量回归 37059 通过（skip 2）。
+- 已知限制：接口类型变量在 IL 不可用（见偏差 6）。
 
 ---
 

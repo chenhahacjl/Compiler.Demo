@@ -2283,6 +2283,13 @@ namespace Cocoa.CodeAnalysis.Binding
             var isIndexer = syntax.Identifier.Text == "this";
             var propertyName = isIndexer ? "Item" : syntax.Identifier.Text;
 
+            // 索引器参数（this[index: i32]）：getter 接收；setter 额外接收 value。
+            var indexParams = ImmutableArray<ParameterSymbol>.Empty;
+            if (isIndexer)
+            {
+                indexParams = BindIndexerParameters(syntax.Parameters);
+            }
+
             // 访问器可见性：独立计算 + 严格 C# 校验（CS0273 / 至多一个访问器带修饰符）
             ValidateAccessorVisibility(syntax, visibility);
             var getterVisibility = syntax.Getter != null ? GetVisibility(syntax.Getter.Modifiers, visibility) : visibility;
@@ -2297,7 +2304,8 @@ namespace Cocoa.CodeAnalysis.Binding
             FunctionSymbol? getter = null;
             if (syntax.Getter != null)
             {
-                getter = new FunctionSymbol("get_" + propertyName, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
+                var getterParams = isIndexer ? indexParams : ImmutableArray<ParameterSymbol>.Empty;
+                getter = new FunctionSymbol("get_" + propertyName, getterParams, propertyType, null,
                     syntax: syntax.Getter, containingClass: interfaceType, visibility: getterVisibility)
                 {
                     IsAbstract = true,
@@ -2310,8 +2318,9 @@ namespace Cocoa.CodeAnalysis.Binding
             FunctionSymbol? setter = null;
             if (syntax.Setter != null)
             {
-                var valueParameter = new ParameterSymbol("value", propertyType, 0);
-                setter = new FunctionSymbol("set_" + propertyName, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
+                var valueParameter = new ParameterSymbol("value", propertyType, isIndexer ? indexParams.Length : 0);
+                var setterParams = isIndexer ? indexParams.Add(valueParameter) : ImmutableArray.Create(valueParameter);
+                setter = new FunctionSymbol("set_" + propertyName, setterParams, TypeSymbol.Void, null,
                     syntax: syntax.Setter, containingClass: interfaceType, visibility: setterVisibility)
                 {
                     IsAbstract = true,

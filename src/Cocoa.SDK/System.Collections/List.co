@@ -1,10 +1,11 @@
 // Cocoa 系统标准库 · System.Collections 模块
 // List<T> 动态数组（6e-M22 C8，6e-G7 ③b 对齐 C# System.Collections.Generic.List<T>）
 // 基于原生数组 + 扩容策略（容量 ×2）。
+// 实现 IList<T>/ICollection<T>/IEnumerable<T>/IReadOnlyList<T>/IReadOnlyCollection<T>。
 
 namespace System.Collections.Generic
 {
-    public class List<T>
+    public class List<T> extends IList<T>, ICollection<T>, IEnumerable<T>, IReadOnlyList<T>, IReadOnlyCollection<T>
     {
         private _items: T[]
         private _count: i32
@@ -24,6 +25,15 @@ namespace System.Collections.Generic
             get
             {
                 return _count
+            }
+        }
+
+        /// <summary>BCL ICollection&lt;T&gt;.IsReadOnly——List 始终可变，返回 false。</summary>
+        public property IsReadOnly: bool
+        {
+            get
+            {
+                return false
             }
         }
 
@@ -56,12 +66,13 @@ namespace System.Collections.Generic
         // 增删
         // ------------------------------------------------------------------
 
-        /// <summary>尾部追加——摊还 O(1)。</summary>
-        public function Add(item: T): void
+        /// <summary>尾部追加——摊还 O(1)；BCL ICollection&lt;T&gt;.Add 返回 true。</summary>
+        public function Add(item: T): bool
         {
             EnsureCapacity(_count + 1)
             _items[_count] = item
             _count = _count + 1
+            return true
         }
 
         /// <summary>清空全部元素（缓冲保留复用）。</summary>
@@ -120,6 +131,25 @@ namespace System.Collections.Generic
             return a.GetHashCode() == b.GetHashCode() && a.Equals(b)
         }
 
+        /// <summary>BCL ICollection&lt;T&gt;.Contains——是否存在等于 item 的元素。</summary>
+        public function Contains(item: T): bool
+        {
+            return IndexOf(item) >= 0
+        }
+
+        /// <summary>BCL ICollection&lt;T&gt;.Remove——移除首个匹配项，成功返回 true。</summary>
+        public function Remove(item: T): bool
+        {
+            var index = IndexOf(item)
+            if index >= 0
+            {
+                RemoveAt(index)
+                return true
+            }
+
+            return false
+        }
+
         // ------------------------------------------------------------------
         // 导出
         // ------------------------------------------------------------------
@@ -138,11 +168,22 @@ namespace System.Collections.Generic
             return copy
         }
 
+        /// <summary>BCL ICollection&lt;T&gt;.CopyTo——将元素复制到 array 自 arrayIndex 起。</summary>
+        public function CopyTo(array: T[], arrayIndex: i32): void
+        {
+            var i = 0
+            while i < _count
+            {
+                array[arrayIndex + i] = _items[i]
+                i = i + 1
+            }
+        }
+
         // ------------------------------------------------------------------
         // 枚举（支持 foreach）
         // ------------------------------------------------------------------
 
-        /// <summary>返回枚举器供 foreach 使用。</summary>
+        /// <summary>返回枚举器供 foreach 使用（BCL IEnumerable&lt;T&gt;.GetEnumerator）。</summary>
         public function GetEnumerator(): ListEnumerator<T>
         {
             return new ListEnumerator<T>(this)
@@ -177,8 +218,8 @@ namespace System.Collections.Generic
         }
     }
 
-    /// <summary>List&lt;T&gt; 的前向枚举器（支撑 foreach）。</summary>
-    public class ListEnumerator<T>
+    /// <summary>List&lt;T&gt; 的前向枚举器（支撑 foreach），实现 IEnumerator&lt;T&gt;。</summary>
+    public class ListEnumerator<T> extends IEnumerator<T>
     {
         private _list: List<T>
         private _index: i32
