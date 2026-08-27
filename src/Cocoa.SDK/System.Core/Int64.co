@@ -27,5 +27,26 @@ namespace System
         {
             return Runtime.ParseInt64(s)
         }
+        public function Equals(value: i64): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
+        public static function TryParse(s: string, out result: i64): bool
+        {
+            result = 0
+            return false
+        }
+
     }
 }

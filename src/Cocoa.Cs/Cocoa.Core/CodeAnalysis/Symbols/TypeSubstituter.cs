@@ -43,6 +43,15 @@ namespace Cocoa.CodeAnalysis.Symbols
                 return GenericTypeInstantiator.Instantiate(instantiated.GenericDefinition, arguments);
             }
 
+            // 函数类型（6e-M22 C3）：递归替换参数类型与返回类型（泛型类实例化时，
+            // 方法参数中的 (T, T) -> i32 内部 T 必须一并替换为实参）
+            if (type is FunctionTypeSymbol functionType)
+            {
+                var parameterTypes = functionType.ParameterTypes.Select(p => Substitute(p, map)).ToImmutableArray();
+                var returnType = Substitute(functionType.ReturnType, map);
+                return FunctionTypeSymbol.Get(parameterTypes, returnType);
+            }
+
             return type;
         }
     }

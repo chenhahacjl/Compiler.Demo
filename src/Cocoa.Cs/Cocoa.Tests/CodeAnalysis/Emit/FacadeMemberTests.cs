@@ -69,5 +69,70 @@ function Main()
             Assert.Contains("255", stdout);
             Assert.Contains("-2147483648", stdout);
         }
+
+        [Fact]
+        public void Facade_NumericConstants_AllTypes_Il()
+        {
+            var source = @"using System
+
+function Main()
+{
+    Console.WriteLine(u16.MaxValue)
+    Console.WriteLine(u16.MinValue)
+    Console.WriteLine(i16.MaxValue)
+    Console.WriteLine(i16.MinValue)
+    Console.WriteLine(u32.MaxValue)
+    Console.WriteLine(i8.MaxValue)
+    Console.WriteLine(i8.MinValue)
+    Console.WriteLine(u64.MaxValue)
+    Console.WriteLine(f32.MaxValue)
+    Console.WriteLine(char.MaxValue)
+}";
+            var (exitCode, stdout) = CodeAnalysis.Emit.IL.IlE2eTests.EmitAndRun(source, "FacadeNumericConstants");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("65535", stdout);
+            Assert.Contains("0", stdout);
+            Assert.Contains("32767", stdout);
+            Assert.Contains("-32768", stdout);
+            Assert.Contains("4294967295", stdout);
+            Assert.Contains("127", stdout);
+            Assert.Contains("-128", stdout);
+            Assert.Contains("18446744073709551615", stdout);
+            Assert.Contains("3.4028235", stdout);
+        }
+
+        [Fact]
+        public void Facade_PrimitiveMembers_BclRedirect_Il()
+        {
+            var source = @"using System
+
+function Main()
+{
+    var a = 5
+    Console.WriteLine(a.Equals(5))
+    Console.WriteLine(a.Equals(6))
+    Console.WriteLine(a.GetHashCode())
+    var r: i32 = 0
+    var ok = Int32.TryParse(""123"", out r)
+    Console.WriteLine(ok)
+    Console.WriteLine(r)
+    Console.WriteLine(Double.IsNaN(1.0))
+    Console.WriteLine(Double.IsNaN(Double.NaN))
+    var u: u64 = 0
+    var ok2 = UInt64.TryParse(""18446744073709551615"", out u)
+    Console.WriteLine(ok2)
+    Console.WriteLine(u)
+    Console.WriteLine(Double.Parse(""3.14""))
+    Console.WriteLine(Char.IsDigit('7'))
+}";
+            var (exitCode, stdout) = CodeAnalysis.Emit.IL.IlE2eTests.EmitAndRun(source, "FacadePrimitiveMembers");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("True", stdout);
+            Assert.Contains("False", stdout);
+            Assert.Contains("5", stdout);
+            Assert.Contains("123", stdout);
+            Assert.Contains("18446744073709551615", stdout);
+            Assert.Contains("3.14", stdout);
+        }
     }
 }

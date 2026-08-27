@@ -26,6 +26,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 return TypeSymbol.Null;
             if (value is bool)
                 return TypeSymbol.Boolean;
+            if (value is sbyte)
+                return TypeSymbol.Int8;
+            if (value is byte)
+                return TypeSymbol.UInt8;
+            if (value is short)
+                return TypeSymbol.Int16;
+            if (value is ushort)
+                return TypeSymbol.UInt16;
             if (value is int)
                 return TypeSymbol.Int32;
             if (value is uint)

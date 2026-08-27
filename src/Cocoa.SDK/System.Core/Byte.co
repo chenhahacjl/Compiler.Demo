@@ -30,5 +30,26 @@ namespace System
         {
             return u8(Runtime.ParseInt64(s))
         }
+        public function Equals(value: u8): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
+        public static function TryParse(s: string, out result: u8): bool
+        {
+            result = 0
+            return false
+        }
+
     }
 }

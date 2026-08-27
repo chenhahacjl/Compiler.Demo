@@ -237,6 +237,40 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return reference;
         }
 
+        /// <summary>facade BCL 重定向：将方法引用的（可能尚未被程序引用到的）类型引用登记进 TypeRef 表，
+        /// 否则 EncodeType 的 CodedIndexTypeDefOrRef 会因键缺失抛 KeyNotFoundException（仅被别处引用过的 BCL 类型才会自动登记）。</summary>
+        public void RegisterTypeRef(IlTypeRef reference)
+        {
+            if (!_typeRefIndex.ContainsKey(reference))
+            {
+                _typeRefIndex.Add(reference, _typeRefs.Count + 1);
+                _typeRefs.Add(reference);
+            }
+        }
+
+        public void RegisterType(IlType type)
+        {
+            switch (type.Kind)
+            {
+                case IlTypeKind.Class:
+                    if (type.Reference != null) RegisterTypeRef(type.Reference);
+                    break;
+                case IlTypeKind.ByRef:
+                    RegisterType(type.ElementType!);
+                    break;
+                case IlTypeKind.SzArray:
+                    RegisterType(type.ElementType!);
+                    break;
+                case IlTypeKind.GenericInst:
+                    if (type.Reference != null) RegisterTypeRef(type.Reference);
+                    if (type.GenericArguments != null)
+                    {
+                        foreach (var arg in type.GenericArguments) RegisterType(arg);
+                    }
+                    break;
+            }
+        }
+
         /// <summary>TypeSpec 注册（6e-M22 C4-b）：GENERICINST 类型签名 → 表行（token 经 BuildTokenMap）。</summary>
         public IlTypeSpec DefineTypeSpec(IlType instantiatedType)
         {

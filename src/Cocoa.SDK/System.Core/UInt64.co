@@ -14,5 +14,26 @@ namespace System
             if this > value { return 1 }
             return 0
         }
+        public function Equals(value: u64): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
+        public static function TryParse(s: string, out result: u64): bool
+        {
+            result = 0
+            return false
+        }
+
     }
 }

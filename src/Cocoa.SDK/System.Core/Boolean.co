@@ -23,5 +23,26 @@ namespace System
             }
             return s == "True"
         }
+        public function Equals(value: bool): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
+        public static function TryParse(s: string, out result: bool): bool
+        {
+            result = false
+            return false
+        }
+
     }
 }

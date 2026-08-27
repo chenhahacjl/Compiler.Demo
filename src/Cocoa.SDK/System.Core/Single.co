@@ -8,5 +8,46 @@ namespace System
         {
             return Runtime.DoubleToString(f64(this))
         }
+        public function Equals(value: f32): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
+        public static function TryParse(s: string, out result: f32): bool
+        {
+            result = 0
+            return false
+        }
+
+        public static function Parse(s: string): f32
+        {
+            return 0
+        }
+
+        public static function IsNaN(x: f32): bool
+        {
+            return false
+        }
+
+        public static function IsInfinity(x: f32): bool
+        {
+            return false
+        }
+
+        public static function IsFinite(x: f32): bool
+        {
+            return false
+        }
+
     }
 }

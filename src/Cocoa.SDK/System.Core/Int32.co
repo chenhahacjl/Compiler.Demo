@@ -101,5 +101,20 @@ namespace System
             result = i32(acc)
             return true
         }
+        public function Equals(value: i32): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
     }
 }

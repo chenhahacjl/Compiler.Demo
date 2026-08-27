@@ -5,7 +5,7 @@
 
 namespace System.Collections.Generic
 {
-    public facade class Dictionary<K, V>
+    public class Dictionary<K, V>
     {
         private _keys: K[]
         private _values: V[]
@@ -32,6 +32,40 @@ namespace System.Collections.Generic
             get
             {
                 return _count
+            }
+        }
+
+        /// <summary>键快照（按插入序，长度=Count）。</summary>
+        public property Keys: K[]
+        {
+            get
+            {
+                var result = new K[_count]
+                var i = 0
+                while i < _count
+                {
+                    result[i] = _keys[i]
+                    i = i + 1
+                }
+
+                return result
+            }
+        }
+
+        /// <summary>值快照（按插入序，长度=Count）。</summary>
+        public property Values: V[]
+        {
+            get
+            {
+                var copy = new V[_count]
+                var i = 0
+                while i < _count
+                {
+                    copy[i] = _values[i]
+                    i = i + 1
+                }
+
+                return copy
             }
         }
 
@@ -83,6 +117,32 @@ namespace System.Collections.Generic
         public function ContainsKey(key: K): bool
         {
             return FindEntry(key) >= 0
+        }
+
+        /// <summary>尝试取值；命中写 out value 并返回 true，否则返回 false。</summary>
+        public function TryGetValue(key: K, out value: V): bool
+        {
+            var idx = FindEntry(key)
+            if idx >= 0
+            {
+                value = _values[idx]
+                return true
+            }
+
+            value = _values[0]
+            return false
+        }
+
+        /// <summary>清空全部条目（桶链复位，缓冲保留复用）。</summary>
+        public function Clear(): void
+        {
+            _count = 0
+            var i = 0
+            while i < _buckets.Length
+            {
+                _buckets[i] = -1
+                i = i + 1
+            }
         }
 
         public function Remove(key: K): bool
@@ -179,35 +239,20 @@ namespace System.Collections.Generic
             return HashCode(key) % _buckets.Length
         }
 
-        /// <summary>键哈希——string 走 djb2（小常数不溢出，三后端确定性）；其余经 GetHashCode。</summary>
+        /// <summary>键哈希——统一经 Object.GetHashCode 虚派发，并规整为非负（避免取模得负桶下标）。</summary>
         private function HashCode(key: K): i32
         {
-            var s = key as string
-            if s != null
+            var h = key.GetHashCode()
+            if h < 0
             {
-                var hash: i32 = 5381
-                var i = 0
-                while i < s.Length
-                {
-                    hash = hash * 33 + i32(s[i])
-                    i = i + 1
-                }
-
-                return hash
+                h = 0 - h
             }
 
-            return key.GetHashCode()
+            return h
         }
 
         private function SameKey(a: K, b: K): bool
         {
-            var sa = a as string
-            var sb = b as string
-            if sa != null && sb != null
-            {
-                return sa == sb
-            }
-
             return a.GetHashCode() == b.GetHashCode() && a.Equals(b)
         }
 

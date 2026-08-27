@@ -96,6 +96,27 @@ namespace System
             var v = i32(c)
             return v >= 97 && v <= 122
         }
+        public function Equals(value: char): bool
+        {
+            return this == value
+        }
+
+        public function GetHashCode(): i32
+        {
+            return 0
+        }
+
+        public function ToString(format: string): string
+        {
+            return this.ToString()
+        }
+
+        public static function TryParse(s: string, out result: char): bool
+        {
+            result = '\0'
+            return false
+        }
+
     }
 }
 

@@ -1,54 +1,108 @@
 // Cocoa 系统标准库 · System.Collections 模块
-// HashSet<T> —— Dictionary<T, bool> 薄封装（对齐 C# System.Collections.Generic.HashSet<T> 子集）
+// HashSet<T> 集合（6e-M22 C8 / 6e-G7 ③b，对齐 C# System.Collections.Generic.HashSet<T>）
+// 基于原生数组 + 线性探测式去重（SameItem 用 GetHashCode/Equals，避免泛型 == 限制 G6）。
 
 namespace System.Collections.Generic
 {
-    public facade class HashSet<T>
+    public class HashSet<T>
     {
-        private _dict: Dictionary<T, bool>
+        private _items: T[]
+        private _count: i32
 
         public constructor()
         {
-            _dict = new Dictionary<T, bool>()
+            _items = new T[4]
+            _count = 0
         }
 
-        /// <summary>集合内元素数。</summary>
         public property Count: i32
         {
             get
             {
-                return _dict.Count
+                return _count
             }
         }
 
-        /// <summary>添加——已存在返回 false。</summary>
+        /// <summary>加入元素；已存在则忽略并返回 false。</summary>
         public function Add(item: T): bool
         {
-            if _dict.ContainsKey(item)
+            if Contains(item)
             {
                 return false
             }
 
-            _dict[item] = true
+            if _count >= _items.Length
+            {
+                EnsureCapacity(_items.Length * 2)
+            }
+
+            _items[_count] = item
+            _count = _count + 1
             return true
         }
 
-        /// <summary>包含判断。</summary>
         public function Contains(item: T): bool
         {
-            return _dict.ContainsKey(item)
+            var i = 0
+            while i < _count
+            {
+                if SameItem(_items[i], item)
+                {
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
         }
 
-        /// <summary>移除——返回是否成功。</summary>
+        /// <summary>移除元素；成功返回 true，不存在返回 false。</summary>
         public function Remove(item: T): bool
         {
-            return _dict.Remove(item)
+            var i = 0
+            while i < _count
+            {
+                if SameItem(_items[i], item)
+                {
+                    // 尾元素回填到空洞
+                    var last = _count - 1
+                    if i < last
+                    {
+                        _items[i] = _items[last]
+                    }
+
+                    _count = _count - 1
+                    return true
+                }
+
+                i = i + 1
+            }
+
+            return false
         }
 
-        /// <summary>清空。</summary>
         public function Clear(): void
         {
-            _dict = new Dictionary<T, bool>()
+            _count = 0
+        }
+
+        private function EnsureCapacity(cap: i32): void
+        {
+            var newItems = new T[cap]
+            var i = 0
+            while i < _count
+            {
+                newItems[i] = _items[i]
+                i = i + 1
+            }
+
+            _items = newItems
+        }
+
+        private function SameItem(a: T, b: T): bool
+        {
+            return a.GetHashCode() == b.GetHashCode() && a.Equals(b)
         }
     }
 }

@@ -1373,7 +1373,9 @@ namespace Cocoa.CodeAnalysis.Syntax
         private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
             var propertyKeyword = MatchToken(SyntaxKind.PropertyKeyword);
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
+            var identifier = Current.Kind == SyntaxKind.ThisKeyword
+                ? MatchToken(SyntaxKind.ThisKeyword)
+                : MatchToken(SyntaxKind.IdentifierToken);
 
             // 索引器：`property this[index: i32]: T { get {} set {} }`
             if (identifier.Text == "this" && Current.Kind == SyntaxKind.OpenBracketToken)
@@ -1894,7 +1896,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                     if (Current.Kind == SyntaxKind.CommaToken)
                     {
-                        NextToken();
+                        parameters.Add(MatchToken(SyntaxKind.CommaToken));
                         continue;
                     }
 

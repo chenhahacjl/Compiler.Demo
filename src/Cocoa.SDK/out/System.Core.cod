@@ -1,24 +1,24 @@
 (cod COCOD 1
   (symbols
     (cls System.Array internal methods:16 Sum[int[]] Sum[double[]] Min[int[]] Min[double[]] Max[int[]] Max[double[]] Average[int[]] Average[double[]] Contains[int[],int] Contains[double[],double] IndexOf[int[],int] IndexOf[double[],double] Reverse[int[]] Reverse[double[]] Sort[int[]] Sort[double[]])
-    (cls System.Boolean public methods:3 ToString[bool] Parse[string] Parse[string,bool])
-    (cls System.Byte public methods:3 ToString[byte] CompareTo[byte,byte] Parse[string])
-    (cls System.Char public methods:13 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char] IsLetterOrDigit[char] IsControl[char] IsHexDigit[char] IsUpper[char] IsLower[char])
+    (cls System.Boolean public methods:7 ToString[bool] Parse[string] Parse[string,bool] Equals[bool,bool] GetHashCode[bool] ToString[bool,string] TryParse[string,out:bool])
+    (cls System.Byte public methods:7 ToString[byte] CompareTo[byte,byte] Parse[string] Equals[byte,byte] GetHashCode[byte] ToString[byte,string] TryParse[string,out:byte])
+    (cls System.Char public methods:17 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char] IsLetterOrDigit[char] IsControl[char] IsHexDigit[char] IsUpper[char] IsLower[char] Equals[char,char] GetHashCode[char] ToString[char,string] TryParse[string,out:char])
     (cls System.Console internal methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
-    (cls System.Double public methods:2 ToString[double] CompareTo[double,double])
+    (cls System.Double public methods:10 ToString[double] CompareTo[double,double] Equals[double,double] GetHashCode[double] ToString[double,string] TryParse[string,out:double] Parse[string] IsNaN[double] IsInfinity[double] IsFinite[double])
     (cls System.Environment internal methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
     (cls System.IO.File internal methods:5 ReadAllText[string] WriteAllText[string,string] Exists[string] Copy[string,string] Delete[string])
-    (cls System.Int16 public methods:3 ToString[short] CompareTo[short,short] Parse[string])
-    (cls System.Int32 public methods:4 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int])
-    (cls System.Int64 public methods:3 ToString[long] CompareTo[long,long] Parse[string])
+    (cls System.Int16 public methods:7 ToString[short] CompareTo[short,short] Parse[string] Equals[short,short] GetHashCode[short] ToString[short,string] TryParse[string,out:short])
+    (cls System.Int32 public methods:7 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int] Equals[int,int] GetHashCode[int] ToString[int,string])
+    (cls System.Int64 public methods:7 ToString[long] CompareTo[long,long] Parse[string] Equals[long,long] GetHashCode[long] ToString[long,string] TryParse[string,out:long])
     (cls System.Math internal methods:21 Max[int,int] Max[double,double] Min[int,int] Min[double,double] Abs[int] Abs[double] Clamp[int,int,int] Clamp[double,double,double] Sign[int] Sign[double] IsEven[int] IsOdd[int] Pow[int,int] Factorial[int] Gcd[int,int] Lcm[int,int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double])
     (cls System.Runtime internal methods:22 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]])
-    (cls System.SByte public methods:3 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string])
-    (cls System.Single public methods:1 ToString[float])
+    (cls System.SByte public methods:7 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string] Equals[sbyte,sbyte] GetHashCode[sbyte] ToString[sbyte,string] TryParse[string,out:sbyte])
+    (cls System.Single public methods:9 ToString[float] Equals[float,float] GetHashCode[float] ToString[float,string] TryParse[string,out:float] Parse[string] IsNaN[float] IsInfinity[float] IsFinite[float])
     (cls System.String public methods:14 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Trim[string] Replace[string,string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char])
-    (cls System.UInt16 public methods:3 ToString[ushort] CompareTo[ushort,ushort] Parse[string])
-    (cls System.UInt32 public methods:3 ToString[uint] CompareTo[uint,uint] Parse[string])
-    (cls System.UInt64 public methods:2 ToString[ulong] CompareTo[ulong,ulong])
+    (cls System.UInt16 public methods:7 ToString[ushort] CompareTo[ushort,ushort] Parse[string] Equals[ushort,ushort] GetHashCode[ushort] ToString[ushort,string] TryParse[string,out:ushort])
+    (cls System.UInt32 public methods:7 ToString[uint] CompareTo[uint,uint] Parse[string] Equals[uint,uint] GetHashCode[uint] ToString[uint,string] TryParse[string,out:uint])
+    (cls System.UInt64 public methods:6 ToString[ulong] CompareTo[ulong,ulong] Equals[ulong,ulong] GetHashCode[ulong] ToString[ulong,string] TryParse[string,out:ulong])
     (fn System.Array.Sum[int[]] name:Sum ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Array.Sum[int[]]/a a int[] 0 - -)
     )
@@ -81,6 +81,21 @@
       (par System.Boolean.Parse[string,bool]/s s string 0 - -)
       (par System.Boolean.Parse[string,bool]/ignoreCase ignoreCase bool 1 - -)
     )
+    (fn System.Boolean.Equals[bool,bool] name:Equals ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Boolean.Equals[bool,bool]/this this bool 0 - this)
+      (par System.Boolean.Equals[bool,bool]/value value bool 1 - -)
+    )
+    (fn System.Boolean.GetHashCode[bool] name:GetHashCode ret:int ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Boolean.GetHashCode[bool]/this this bool 0 - this)
+    )
+    (fn System.Boolean.ToString[bool,string] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Boolean.ToString[bool,string]/this this bool 0 - this)
+      (par System.Boolean.ToString[bool,string]/format format string 1 - -)
+    )
+    (fn System.Boolean.TryParse[string,out:bool] name:TryParse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Boolean.TryParse[string,out:bool]/s s string 0 - -)
+      (par System.Boolean.TryParse[string,out:bool]/result result bool 1 out -)
+    )
     (fn System.Byte.ToString[byte] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Byte.ToString[byte]/this this byte 0 - this)
     )
@@ -90,6 +105,21 @@
     )
     (fn System.Byte.Parse[string] name:Parse ret:byte ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Byte.Parse[string]/s s string 0 - -)
+    )
+    (fn System.Byte.Equals[byte,byte] name:Equals ret:bool ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Byte.Equals[byte,byte]/this this byte 0 - this)
+      (par System.Byte.Equals[byte,byte]/value value byte 1 - -)
+    )
+    (fn System.Byte.GetHashCode[byte] name:GetHashCode ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Byte.GetHashCode[byte]/this this byte 0 - this)
+    )
+    (fn System.Byte.ToString[byte,string] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Byte.ToString[byte,string]/this this byte 0 - this)
+      (par System.Byte.ToString[byte,string]/format format string 1 - -)
+    )
+    (fn System.Byte.TryParse[string,out:byte] name:TryParse ret:bool ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Byte.TryParse[string,out:byte]/s s string 0 - -)
+      (par System.Byte.TryParse[string,out:byte]/result result byte 1 out -)
     )
     (fn System.Char.ToString[char] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.ToString[char]/this this char 0 - this)
@@ -130,6 +160,21 @@
     )
     (fn System.Char.IsLower[char] name:IsLower ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Char.IsLower[char]/c c char 0 - -)
+    )
+    (fn System.Char.Equals[char,char] name:Equals ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Char.Equals[char,char]/this this char 0 - this)
+      (par System.Char.Equals[char,char]/value value char 1 - -)
+    )
+    (fn System.Char.GetHashCode[char] name:GetHashCode ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Char.GetHashCode[char]/this this char 0 - this)
+    )
+    (fn System.Char.ToString[char,string] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Char.ToString[char,string]/this this char 0 - this)
+      (par System.Char.ToString[char,string]/format format string 1 - -)
+    )
+    (fn System.Char.TryParse[string,out:char] name:TryParse ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Char.TryParse[string,out:char]/s s string 0 - -)
+      (par System.Char.TryParse[string,out:char]/result result char 1 out -)
     )
     (fn System.Console.WriteLine[] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
     (fn System.Console.WriteLine[string] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
@@ -225,6 +270,33 @@
       (par System.Double.CompareTo[double,double]/this this double 0 - this)
       (par System.Double.CompareTo[double,double]/value value double 1 - -)
     )
+    (fn System.Double.Equals[double,double] name:Equals ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Double.Equals[double,double]/this this double 0 - this)
+      (par System.Double.Equals[double,double]/value value double 1 - -)
+    )
+    (fn System.Double.GetHashCode[double] name:GetHashCode ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Double.GetHashCode[double]/this this double 0 - this)
+    )
+    (fn System.Double.ToString[double,string] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Double.ToString[double,string]/this this double 0 - this)
+      (par System.Double.ToString[double,string]/format format string 1 - -)
+    )
+    (fn System.Double.TryParse[string,out:double] name:TryParse ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Double.TryParse[string,out:double]/s s string 0 - -)
+      (par System.Double.TryParse[string,out:double]/result result double 1 out -)
+    )
+    (fn System.Double.Parse[string] name:Parse ret:double ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Double.Parse[string]/s s string 0 - -)
+    )
+    (fn System.Double.IsNaN[double] name:IsNaN ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Double.IsNaN[double]/x x double 0 - -)
+    )
+    (fn System.Double.IsInfinity[double] name:IsInfinity ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Double.IsInfinity[double]/x x double 0 - -)
+    )
+    (fn System.Double.IsFinite[double] name:IsFinite ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Double.IsFinite[double]/x x double 0 - -)
+    )
     (fn System.Environment.GetEnvironmentVariable[string] name:GetEnvironmentVariable ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- params:1
       (par System.Environment.GetEnvironmentVariable[string]/name name string 0 - -)
     )
@@ -260,6 +332,21 @@
     (fn System.Int16.Parse[string] name:Parse ret:short ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int16.Parse[string]/s s string 0 - -)
     )
+    (fn System.Int16.Equals[short,short] name:Equals ret:bool ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int16.Equals[short,short]/this this short 0 - this)
+      (par System.Int16.Equals[short,short]/value value short 1 - -)
+    )
+    (fn System.Int16.GetHashCode[short] name:GetHashCode ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Int16.GetHashCode[short]/this this short 0 - this)
+    )
+    (fn System.Int16.ToString[short,string] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int16.ToString[short,string]/this this short 0 - this)
+      (par System.Int16.ToString[short,string]/format format string 1 - -)
+    )
+    (fn System.Int16.TryParse[string,out:short] name:TryParse ret:bool ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int16.TryParse[string,out:short]/s s string 0 - -)
+      (par System.Int16.TryParse[string,out:short]/result result short 1 out -)
+    )
     (fn System.Int32.ToString[int] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int32.ToString[int]/this this int 0 - this)
     )
@@ -274,6 +361,17 @@
       (par System.Int32.TryParse[string,out:int]/s s string 0 - -)
       (par System.Int32.TryParse[string,out:int]/result result int 1 out -)
     )
+    (fn System.Int32.Equals[int,int] name:Equals ret:bool ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int32.Equals[int,int]/this this int 0 - this)
+      (par System.Int32.Equals[int,int]/value value int 1 - -)
+    )
+    (fn System.Int32.GetHashCode[int] name:GetHashCode ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Int32.GetHashCode[int]/this this int 0 - this)
+    )
+    (fn System.Int32.ToString[int,string] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int32.ToString[int,string]/this this int 0 - this)
+      (par System.Int32.ToString[int,string]/format format string 1 - -)
+    )
     (fn System.Int64.ToString[long] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int64.ToString[long]/this this long 0 - this)
     )
@@ -283,6 +381,21 @@
     )
     (fn System.Int64.Parse[string] name:Parse ret:long ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Int64.Parse[string]/s s string 0 - -)
+    )
+    (fn System.Int64.Equals[long,long] name:Equals ret:bool ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int64.Equals[long,long]/this this long 0 - this)
+      (par System.Int64.Equals[long,long]/value value long 1 - -)
+    )
+    (fn System.Int64.GetHashCode[long] name:GetHashCode ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Int64.GetHashCode[long]/this this long 0 - this)
+    )
+    (fn System.Int64.ToString[long,string] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int64.ToString[long,string]/this this long 0 - this)
+      (par System.Int64.ToString[long,string]/format format string 1 - -)
+    )
+    (fn System.Int64.TryParse[string,out:long] name:TryParse ret:bool ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Int64.TryParse[string,out:long]/s s string 0 - -)
+      (par System.Int64.TryParse[string,out:long]/result result long 1 out -)
     )
     (fn System.Math.Max[int,int] name:Max ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.Math.Max[int,int]/a a int 0 - -)
@@ -431,8 +544,50 @@
     (fn System.SByte.Parse[string] name:Parse ret:sbyte ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.SByte.Parse[string]/s s string 0 - -)
     )
+    (fn System.SByte.Equals[sbyte,sbyte] name:Equals ret:bool ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.SByte.Equals[sbyte,sbyte]/this this sbyte 0 - this)
+      (par System.SByte.Equals[sbyte,sbyte]/value value sbyte 1 - -)
+    )
+    (fn System.SByte.GetHashCode[sbyte] name:GetHashCode ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.SByte.GetHashCode[sbyte]/this this sbyte 0 - this)
+    )
+    (fn System.SByte.ToString[sbyte,string] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.SByte.ToString[sbyte,string]/this this sbyte 0 - this)
+      (par System.SByte.ToString[sbyte,string]/format format string 1 - -)
+    )
+    (fn System.SByte.TryParse[string,out:sbyte] name:TryParse ret:bool ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.SByte.TryParse[string,out:sbyte]/s s string 0 - -)
+      (par System.SByte.TryParse[string,out:sbyte]/result result sbyte 1 out -)
+    )
     (fn System.Single.ToString[float] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.Single.ToString[float]/this this float 0 - this)
+    )
+    (fn System.Single.Equals[float,float] name:Equals ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Single.Equals[float,float]/this this float 0 - this)
+      (par System.Single.Equals[float,float]/value value float 1 - -)
+    )
+    (fn System.Single.GetHashCode[float] name:GetHashCode ret:int ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Single.GetHashCode[float]/this this float 0 - this)
+    )
+    (fn System.Single.ToString[float,string] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Single.ToString[float,string]/this this float 0 - this)
+      (par System.Single.ToString[float,string]/format format string 1 - -)
+    )
+    (fn System.Single.TryParse[string,out:float] name:TryParse ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.Single.TryParse[string,out:float]/s s string 0 - -)
+      (par System.Single.TryParse[string,out:float]/result result float 1 out -)
+    )
+    (fn System.Single.Parse[string] name:Parse ret:float ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Single.Parse[string]/s s string 0 - -)
+    )
+    (fn System.Single.IsNaN[float] name:IsNaN ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Single.IsNaN[float]/x x float 0 - -)
+    )
+    (fn System.Single.IsInfinity[float] name:IsInfinity ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Single.IsInfinity[float]/x x float 0 - -)
+    )
+    (fn System.Single.IsFinite[float] name:IsFinite ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.Single.IsFinite[float]/x x float 0 - -)
     )
     (fn System.String.IsNullOrEmpty[string] name:IsNullOrEmpty ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.String.IsNullOrEmpty[string]/s s string 0 - -)
@@ -499,6 +654,21 @@
     (fn System.UInt16.Parse[string] name:Parse ret:ushort ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt16.Parse[string]/s s string 0 - -)
     )
+    (fn System.UInt16.Equals[ushort,ushort] name:Equals ret:bool ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt16.Equals[ushort,ushort]/this this ushort 0 - this)
+      (par System.UInt16.Equals[ushort,ushort]/value value ushort 1 - -)
+    )
+    (fn System.UInt16.GetHashCode[ushort] name:GetHashCode ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.UInt16.GetHashCode[ushort]/this this ushort 0 - this)
+    )
+    (fn System.UInt16.ToString[ushort,string] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt16.ToString[ushort,string]/this this ushort 0 - this)
+      (par System.UInt16.ToString[ushort,string]/format format string 1 - -)
+    )
+    (fn System.UInt16.TryParse[string,out:ushort] name:TryParse ret:bool ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt16.TryParse[string,out:ushort]/s s string 0 - -)
+      (par System.UInt16.TryParse[string,out:ushort]/result result ushort 1 out -)
+    )
     (fn System.UInt32.ToString[uint] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt32.ToString[uint]/this this uint 0 - this)
     )
@@ -509,12 +679,42 @@
     (fn System.UInt32.Parse[string] name:Parse ret:uint ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt32.Parse[string]/s s string 0 - -)
     )
+    (fn System.UInt32.Equals[uint,uint] name:Equals ret:bool ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt32.Equals[uint,uint]/this this uint 0 - this)
+      (par System.UInt32.Equals[uint,uint]/value value uint 1 - -)
+    )
+    (fn System.UInt32.GetHashCode[uint] name:GetHashCode ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.UInt32.GetHashCode[uint]/this this uint 0 - this)
+    )
+    (fn System.UInt32.ToString[uint,string] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt32.ToString[uint,string]/this this uint 0 - this)
+      (par System.UInt32.ToString[uint,string]/format format string 1 - -)
+    )
+    (fn System.UInt32.TryParse[string,out:uint] name:TryParse ret:bool ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt32.TryParse[string,out:uint]/s s string 0 - -)
+      (par System.UInt32.TryParse[string,out:uint]/result result uint 1 out -)
+    )
     (fn System.UInt64.ToString[ulong] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
       (par System.UInt64.ToString[ulong]/this this ulong 0 - this)
     )
     (fn System.UInt64.CompareTo[ulong,ulong] name:CompareTo ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
       (par System.UInt64.CompareTo[ulong,ulong]/this this ulong 0 - this)
       (par System.UInt64.CompareTo[ulong,ulong]/value value ulong 1 - -)
+    )
+    (fn System.UInt64.Equals[ulong,ulong] name:Equals ret:bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt64.Equals[ulong,ulong]/this this ulong 0 - this)
+      (par System.UInt64.Equals[ulong,ulong]/value value ulong 1 - -)
+    )
+    (fn System.UInt64.GetHashCode[ulong] name:GetHashCode ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+      (par System.UInt64.GetHashCode[ulong]/this this ulong 0 - this)
+    )
+    (fn System.UInt64.ToString[ulong,string] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt64.ToString[ulong,string]/this this ulong 0 - this)
+      (par System.UInt64.ToString[ulong,string]/format format string 1 - -)
+    )
+    (fn System.UInt64.TryParse[string,out:ulong] name:TryParse ret:bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+      (par System.UInt64.TryParse[string,out:ulong]/s s string 0 - -)
+      (par System.UInt64.TryParse[string,out:ulong]/result result ulong 1 out -)
     )
     (loc System.Array.Sum[int[]]/sum false int)
     (loc System.Array.Sum[int[]]/i false int)
@@ -1720,6 +1920,45 @@
         )
       )
     )
+    (body System.Boolean.Equals[bool,bool]
+      (block 1
+        (return
+          (binary
+            (bop == bool bool)
+            (var System.Boolean.Equals[bool,bool]/this)
+            (var System.Boolean.Equals[bool,bool]/value)
+          )
+        )
+      )
+    )
+    (body System.Boolean.GetHashCode[bool]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Boolean.ToString[bool,string]
+      (block 1
+        (return
+          (call System.Boolean.ToString[bool] 1
+            (var System.Boolean.ToString[bool,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Boolean.TryParse[string,out:bool]
+      (block 2
+        (exprstmt
+          (assign System.Boolean.TryParse[string,out:bool]/result
+            (lit bool b:0)
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
     (body System.Byte.ToString[byte]
       (block 1
         (return
@@ -1783,6 +2022,47 @@
               (var System.Byte.Parse[string]/s)
             )
           )
+        )
+      )
+    )
+    (body System.Byte.Equals[byte,byte]
+      (block 1
+        (return
+          (binary
+            (bop == byte byte)
+            (var System.Byte.Equals[byte,byte]/this)
+            (var System.Byte.Equals[byte,byte]/value)
+          )
+        )
+      )
+    )
+    (body System.Byte.GetHashCode[byte]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Byte.ToString[byte,string]
+      (block 1
+        (return
+          (call System.Byte.ToString[byte] 1
+            (var System.Byte.ToString[byte,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Byte.TryParse[string,out:byte]
+      (block 2
+        (exprstmt
+          (assign System.Byte.TryParse[string,out:byte]/result
+            (conv byte
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
         )
       )
     )
@@ -2163,6 +2443,45 @@
               (lit int i:122)
             )
           )
+        )
+      )
+    )
+    (body System.Char.Equals[char,char]
+      (block 1
+        (return
+          (binary
+            (bop == char char)
+            (var System.Char.Equals[char,char]/this)
+            (var System.Char.Equals[char,char]/value)
+          )
+        )
+      )
+    )
+    (body System.Char.GetHashCode[char]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Char.ToString[char,string]
+      (block 1
+        (return
+          (call System.Char.ToString[char] 1
+            (var System.Char.ToString[char,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Char.TryParse[string,out:char]
+      (block 2
+        (exprstmt
+          (assign System.Char.TryParse[string,out:char]/result
+            (lit char c:0)
+          )
+        )
+        (return
+          (lit bool b:0)
         )
       )
     )
@@ -2590,6 +2909,77 @@
         )
       )
     )
+    (body System.Double.Equals[double,double]
+      (block 1
+        (return
+          (binary
+            (bop == double double)
+            (var System.Double.Equals[double,double]/this)
+            (var System.Double.Equals[double,double]/value)
+          )
+        )
+      )
+    )
+    (body System.Double.GetHashCode[double]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Double.ToString[double,string]
+      (block 1
+        (return
+          (call System.Double.ToString[double] 1
+            (var System.Double.ToString[double,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Double.TryParse[string,out:double]
+      (block 2
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/result
+            (conv double
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
+    (body System.Double.Parse[string]
+      (block 1
+        (return
+          (conv double
+            (lit int i:0)
+          )
+        )
+      )
+    )
+    (body System.Double.IsNaN[double]
+      (block 1
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
+    (body System.Double.IsInfinity[double]
+      (block 1
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
+    (body System.Double.IsFinite[double]
+      (block 1
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
     (body System.Environment.GetEnvironmentVariable[string]
       (block 0)
     )
@@ -2670,6 +3060,47 @@
               (var System.Int16.Parse[string]/s)
             )
           )
+        )
+      )
+    )
+    (body System.Int16.Equals[short,short]
+      (block 1
+        (return
+          (binary
+            (bop == short short)
+            (var System.Int16.Equals[short,short]/this)
+            (var System.Int16.Equals[short,short]/value)
+          )
+        )
+      )
+    )
+    (body System.Int16.GetHashCode[short]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Int16.ToString[short,string]
+      (block 1
+        (return
+          (call System.Int16.ToString[short] 1
+            (var System.Int16.ToString[short,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Int16.TryParse[string,out:short]
+      (block 2
+        (exprstmt
+          (assign System.Int16.TryParse[string,out:short]/result
+            (conv short
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
         )
       )
     )
@@ -2967,6 +3398,33 @@
         )
       )
     )
+    (body System.Int32.Equals[int,int]
+      (block 1
+        (return
+          (binary
+            (bop == int int)
+            (var System.Int32.Equals[int,int]/this)
+            (var System.Int32.Equals[int,int]/value)
+          )
+        )
+      )
+    )
+    (body System.Int32.GetHashCode[int]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Int32.ToString[int,string]
+      (block 1
+        (return
+          (call System.Int32.ToString[int] 1
+            (var System.Int32.ToString[int,string]/this)
+          )
+        )
+      )
+    )
     (body System.Int64.ToString[long]
       (block 1
         (return
@@ -3016,6 +3474,47 @@
             (statictype System.Runtime)
             (var System.Int64.Parse[string]/s)
           )
+        )
+      )
+    )
+    (body System.Int64.Equals[long,long]
+      (block 1
+        (return
+          (binary
+            (bop == long long)
+            (var System.Int64.Equals[long,long]/this)
+            (var System.Int64.Equals[long,long]/value)
+          )
+        )
+      )
+    )
+    (body System.Int64.GetHashCode[long]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Int64.ToString[long,string]
+      (block 1
+        (return
+          (call System.Int64.ToString[long] 1
+            (var System.Int64.ToString[long,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Int64.TryParse[string,out:long]
+      (block 2
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/result
+            (conv long
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
         )
       )
     )
@@ -3635,6 +4134,47 @@
         )
       )
     )
+    (body System.SByte.Equals[sbyte,sbyte]
+      (block 1
+        (return
+          (binary
+            (bop == sbyte sbyte)
+            (var System.SByte.Equals[sbyte,sbyte]/this)
+            (var System.SByte.Equals[sbyte,sbyte]/value)
+          )
+        )
+      )
+    )
+    (body System.SByte.GetHashCode[sbyte]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.SByte.ToString[sbyte,string]
+      (block 1
+        (return
+          (call System.SByte.ToString[sbyte] 1
+            (var System.SByte.ToString[sbyte,string]/this)
+          )
+        )
+      )
+    )
+    (body System.SByte.TryParse[string,out:sbyte]
+      (block 2
+        (exprstmt
+          (assign System.SByte.TryParse[string,out:sbyte]/result
+            (conv sbyte
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
     (body System.Single.ToString[float]
       (block 1
         (return
@@ -3644,6 +4184,77 @@
               (var System.Single.ToString[float]/this)
             )
           )
+        )
+      )
+    )
+    (body System.Single.Equals[float,float]
+      (block 1
+        (return
+          (binary
+            (bop == float float)
+            (var System.Single.Equals[float,float]/this)
+            (var System.Single.Equals[float,float]/value)
+          )
+        )
+      )
+    )
+    (body System.Single.GetHashCode[float]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.Single.ToString[float,string]
+      (block 1
+        (return
+          (call System.Single.ToString[float] 1
+            (var System.Single.ToString[float,string]/this)
+          )
+        )
+      )
+    )
+    (body System.Single.TryParse[string,out:float]
+      (block 2
+        (exprstmt
+          (assign System.Single.TryParse[string,out:float]/result
+            (conv float
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
+    (body System.Single.Parse[string]
+      (block 1
+        (return
+          (conv float
+            (lit int i:0)
+          )
+        )
+      )
+    )
+    (body System.Single.IsNaN[float]
+      (block 1
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
+    (body System.Single.IsInfinity[float]
+      (block 1
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
+    (body System.Single.IsFinite[float]
+      (block 1
+        (return
+          (lit bool b:0)
         )
       )
     )
@@ -4632,6 +5243,47 @@
         )
       )
     )
+    (body System.UInt16.Equals[ushort,ushort]
+      (block 1
+        (return
+          (binary
+            (bop == ushort ushort)
+            (var System.UInt16.Equals[ushort,ushort]/this)
+            (var System.UInt16.Equals[ushort,ushort]/value)
+          )
+        )
+      )
+    )
+    (body System.UInt16.GetHashCode[ushort]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.UInt16.ToString[ushort,string]
+      (block 1
+        (return
+          (call System.UInt16.ToString[ushort] 1
+            (var System.UInt16.ToString[ushort,string]/this)
+          )
+        )
+      )
+    )
+    (body System.UInt16.TryParse[string,out:ushort]
+      (block 2
+        (exprstmt
+          (assign System.UInt16.TryParse[string,out:ushort]/result
+            (conv ushort
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
     (body System.UInt32.ToString[uint]
       (block 1
         (return
@@ -4698,6 +5350,47 @@
         )
       )
     )
+    (body System.UInt32.Equals[uint,uint]
+      (block 1
+        (return
+          (binary
+            (bop == uint uint)
+            (var System.UInt32.Equals[uint,uint]/this)
+            (var System.UInt32.Equals[uint,uint]/value)
+          )
+        )
+      )
+    )
+    (body System.UInt32.GetHashCode[uint]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.UInt32.ToString[uint,string]
+      (block 1
+        (return
+          (call System.UInt32.ToString[uint] 1
+            (var System.UInt32.ToString[uint,string]/this)
+          )
+        )
+      )
+    )
+    (body System.UInt32.TryParse[string,out:uint]
+      (block 2
+        (exprstmt
+          (assign System.UInt32.TryParse[string,out:uint]/result
+            (conv uint
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
     (body System.UInt64.ToString[ulong]
       (block 1
         (return
@@ -4740,6 +5433,47 @@
         )
       )
     )
+    (body System.UInt64.Equals[ulong,ulong]
+      (block 1
+        (return
+          (binary
+            (bop == ulong ulong)
+            (var System.UInt64.Equals[ulong,ulong]/this)
+            (var System.UInt64.Equals[ulong,ulong]/value)
+          )
+        )
+      )
+    )
+    (body System.UInt64.GetHashCode[ulong]
+      (block 1
+        (return
+          (lit int i:0)
+        )
+      )
+    )
+    (body System.UInt64.ToString[ulong,string]
+      (block 1
+        (return
+          (call System.UInt64.ToString[ulong] 1
+            (var System.UInt64.ToString[ulong,string]/this)
+          )
+        )
+      )
+    )
+    (body System.UInt64.TryParse[string,out:ulong]
+      (block 2
+        (exprstmt
+          (assign System.UInt64.TryParse[string,out:ulong]/result
+            (conv ulong
+              (lit int i:0)
+            )
+          )
+        )
+        (return
+          (lit bool b:0)
+        )
+      )
+    )
   )
   (manifest
     (requires any)
@@ -4747,4 +5481,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:643e05575fb925892c0a2b8ba9477de004a46a06db590577b88c6002c976f35f)
+(checksum sha256:bff94b35da75f461d43956f767df5f12801b68d6194932dd5c280c9bf2c58094)

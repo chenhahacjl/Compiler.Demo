@@ -4363,30 +4363,33 @@ namespace Cocoa.CodeAnalysis.Binding
                 return null;
             }
 
-            var implementsEnumerable = false;
-            foreach (var iface in classType.GetAllInterfaces())
-            {
-                if (iface is InstantiatedTypeSymbol instantiated &&
-                    instantiated.GenericDefinition.Name == "IEnumerable" &&
-                    instantiated.GenericDefinition.Namespace == "System.Collections.Generic")
-                {
-                    implementsEnumerable = true;
-                    break;
-                }
-            }
-
-            if (!implementsEnumerable)
-            {
-                return null;
-            }
-
             var getEnumerator = classType.GetMethod("GetEnumerator");
             if (getEnumerator == null || getEnumerator.Parameters.Length > 0)
             {
                 return null;
             }
 
-            return getEnumerator.ReturnType as ClassTypeSymbol;
+            // 直接模式：GetEnumerator 返回具备 MoveNext() 与 Current 的类或接口即视为可枚举
+            // （无需显式声明 IEnumerable<T>，支持 CO/BCL 自定义枚举器，如 List<T>）。
+            if (getEnumerator.ReturnType is ClassTypeSymbol enumType &&
+                enumType.GetMethod("MoveNext") != null &&
+                enumType.GetProperty("Current")?.Getter != null)
+            {
+                return enumType;
+            }
+
+            // 传统判定：实现 System.Collections.Generic.IEnumerable<T>。
+            foreach (var iface in classType.GetAllInterfaces())
+            {
+                if (iface is InstantiatedTypeSymbol instantiated &&
+                    instantiated.GenericDefinition.Name == "IEnumerable" &&
+                    instantiated.GenericDefinition.Namespace == "System.Collections.Generic")
+                {
+                    return getEnumerator.ReturnType as ClassTypeSymbol;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -5383,7 +5386,9 @@ namespace Cocoa.CodeAnalysis.Binding
                     }
 
                     var converted = BindConversion(syntax.Expression.Location, boundExpression, property.Type);
-                    return new BoundMemberCallExpression(syntax, propertyGetCall.Expression, property.Setter.Name, ImmutableArray.Create(converted), TypeSymbol.Void, property.Setter, propertyGetCall.IsBase);
+                    // 保留 getter 调用的实参（普通属性为空；索引器为 [下标]，须随 setter 透传），
+                    // 否则 list[i] = v 会因丢失下标实参导致 set_Item 调用栈不平衡（InvalidProgramException）。
+                    return new BoundMemberCallExpression(syntax, propertyGetCall.Expression, property.Setter.Name, propertyGetCall.Arguments.Add(converted), TypeSymbol.Void, property.Setter, propertyGetCall.IsBase);
                 }
 
                 _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, propertyName);
@@ -5674,12 +5679,6 @@ namespace Cocoa.CodeAnalysis.Binding
             var boundTarget = BindExpression(syntax.Expression);
             var boundIndex = BindExpression(syntax.Index);
 
-            if (boundIndex.Type != TypeSymbol.Error && boundIndex.Type != TypeSymbol.Int32)
-            {
-                _diagnostics.ReportCannotConvert(syntax.Index.Location, boundIndex.Type, TypeSymbol.Int32);
-                boundIndex = new BoundErrorExpression(syntax.Index);
-            }
-
             if (boundTarget.Type == TypeSymbol.Error)
             {
                 return new BoundErrorExpression(syntax);
@@ -5687,6 +5686,13 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundTarget.Type == TypeSymbol.String)
             {
+                // string[index] → char（下标须为 i32）
+                if (boundIndex.Type != TypeSymbol.Error && boundIndex.Type != TypeSymbol.Int32)
+                {
+                    _diagnostics.ReportCannotConvert(syntax.Index.Location, boundIndex.Type, TypeSymbol.Int32);
+                    boundIndex = new BoundErrorExpression(syntax.Index);
+                }
+
                 return new BoundElementAccessExpression(syntax, TypeSymbol.Char, boundTarget, boundIndex);
             }
 
@@ -5696,6 +5702,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 var indexer = cls.GetIndexer();
                 if (indexer != null && indexer.Getter != null)
                 {
+                    // 下标须可转换为索引器参数类型（List 为 i32；Dictionary 为 K；不可硬编码 i32）
+                    var indexParameterType = indexer.Getter.Parameters[0].Type;
+                    if (boundIndex.Type != TypeSymbol.Error)
+                    {
+                        boundIndex = BindConversion(syntax.Index.Location, boundIndex, indexParameterType);
+                    }
+
                     var facade = cls.IsFacadeClass || (cls is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true);
                     if (facade)
                     {
@@ -5751,7 +5764,8 @@ namespace Cocoa.CodeAnalysis.Binding
             if (ResolveDottedTypeName(syntax.Expression) is string facadeConstTypeName &&
                 LookupType(facadeConstTypeName) is TypeSymbol constReceiverType &&
                 FacadeNameOfType(constReceiverType) is string constFacadeName &&
-                FacadeConstants[constFacadeName].TryGetValue(identifier, out var constantValue))
+                FacadeConstants.TryGetValue(constFacadeName, out var constTable) &&
+                constTable.TryGetValue(identifier, out var constantValue))
             {
                 return new BoundLiteralExpression(syntax, constantValue);
             }
@@ -6411,7 +6425,12 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 return BindGenericMethodCall(syntax);
             }
-            if (syntax.Arguments.Count == 1 && LookupType(syntax.Identifier.Text) is TypeSymbol type)
+
+            // 优先于强制转换简写：若标识符是已知函数/方法，按调用解析，
+            // 避免与类型名同名（如 .NET System.HashCode）时 `HashCode(x)` 被误判为 (HashCode)x 转换
+            if (!IsFunctionName(syntax.Identifier.Text) &&
+                syntax.Arguments.Count == 1 &&
+                LookupType(syntax.Identifier.Text) is TypeSymbol type)
             {
                 return BindConversion(syntax.Arguments[0], type, allowExplicit: true);
             }
@@ -6522,6 +6541,22 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
+        }
+
+        /// <summary>判断标识符是否为可调用函数/方法名（裸调用 `Foo(args)` 应走调用而非转换简写；避免与类型名同名冲突）。</summary>
+        private bool IsFunctionName(string name)
+        {
+            if (_scope.TryLookupFunctions(name) is { Length: > 0 })
+            {
+                return true;
+            }
+
+            if (_currentClass != null && !_currentClass.GetMethods(name).IsEmpty)
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -7053,6 +7088,45 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 ["TrueString"] = "True",
                 ["FalseString"] = "False",
+            },
+            ["System.Int16"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = (short)32767,
+                ["MinValue"] = (short)(-32768),
+            },
+            ["System.UInt16"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = (ushort)65535,
+                ["MinValue"] = (ushort)0,
+            },
+            ["System.UInt32"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = (uint)4294967295,
+                ["MinValue"] = (uint)0,
+            },
+            ["System.UInt64"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = ulong.MaxValue,
+                ["MinValue"] = (ulong)0,
+            },
+            ["System.SByte"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = (sbyte)127,
+                ["MinValue"] = (sbyte)(-128),
+            },
+            ["System.Char"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = (char)0xFFFF,
+                ["MinValue"] = (char)0x0000,
+            },
+            ["System.Single"] = new Dictionary<string, object>
+            {
+                ["MaxValue"] = float.MaxValue,
+                ["MinValue"] = float.MinValue,
+                ["Epsilon"] = float.Epsilon,
+                ["NaN"] = float.NaN,
+                ["PositiveInfinity"] = float.PositiveInfinity,
+                ["NegativeInfinity"] = float.NegativeInfinity,
             },
         };
 

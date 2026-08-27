@@ -82,8 +82,21 @@ namespace Cocoa.CodeAnalysis.Symbols
                 instantiated.AddField(new FieldSymbol(field.Name, TypeSubstituter.Substitute(field.Type, map), field.Visibility, instantiated, field.IsReadonly, field.IsStatic));
             }
 
+            // 属性访问器（getter/setter）同时登记在 definition.Methods 与 definition.Properties 中，
+            // 若在此一并实例化会与其在下方属性循环里产生的访问器形成两个不同 FunctionSymbol 实例，
+            // 导致同一实例化类上出现同名同签名的重复方法 def（非法元数据 → InvalidProgramException）。
+            // 故此处跳过访问器，仅由属性循环负责。
+            var accessors = new HashSet<FunctionSymbol>();
+            foreach (var property in definition.Properties)
+            {
+                if (property.Getter != null) accessors.Add(property.Getter);
+                if (property.Setter != null) accessors.Add(property.Setter);
+            }
+
             foreach (var method in definition.Methods)
             {
+                if (accessors.Contains(method)) continue;
+
                 // 实例构造器名须随实例化类名（`GetMethod(classType.Name)` 是全编译器的构造查找约定）；
                 // 静态构造 `.cctor` 与普通方法名不变
                 var nameOverride = method.IsConstructor && !method.IsStatic && method.Name == definition.Name
@@ -97,7 +110,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             {
                 var getter = property.Getter == null ? null : SubstituteMethod(property.Getter, instantiated, map);
                 var setter = property.Setter == null ? null : SubstituteMethod(property.Setter, instantiated, map);
-                instantiated.AddProperty(new PropertySymbol(property.Name, TypeSubstituter.Substitute(property.Type, map), instantiated, getter, setter, property.Visibility, property.IsStatic));
+                instantiated.AddProperty(new PropertySymbol(property.Name, TypeSubstituter.Substitute(property.Type, map), instantiated, getter, setter, property.Visibility, property.IsStatic, property.IsIndexer));
             }
         }
 
