@@ -336,5 +336,29 @@ function Main()
             Assert.Contains("9", stdout);
             Assert.Contains("1", stdout);
         }
+
+        [Fact]
+        public void Dictionary_NegativeKey_Indexer_Il()
+        {
+            // 负键（含负哈希）曾在 BucketOf 取模得负桶下标 -> IndexOutOfRange 崩溃；
+            // 现已在 BucketOf/Rehash 处对余数归一化，验证不再崩溃且读写正确。
+            var source = @"using System
+using System.Collections.Generic
+
+function Main()
+{
+    var d = new Dictionary<i32, i32>()
+    d[-5] = 50
+    d[-100] = 200
+    Console.WriteLine(d[-5])
+    Console.WriteLine(d[-100])
+    Console.WriteLine(d.Count)
+}";
+            var (exitCode, stdout) = EmitAndRun(source, "CollDictNeg", "List.co", "Dictionary.co");
+            Assert.Equal(0, exitCode);
+            Assert.Contains("50", stdout);
+            Assert.Contains("200", stdout);
+            Assert.Contains("2", stdout);
+        }
     }
 }

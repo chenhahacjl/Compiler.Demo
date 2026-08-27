@@ -2277,21 +2277,27 @@ namespace Cocoa.CodeAnalysis.Binding
             var propertyType = BindTypeClause(syntax.Type);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
 
+            // 索引器在类侧命名为 "Item"（见 BindPropertyDeclaration），接口侧须保持一致，
+            // 否则 IList<T>.this[] 与 List<T>.this[] 因名称（"this" vs "Item"）不匹配，
+            // 导致 CheckInterfaceImplementation 报"未实现属性 this"。
+            var isIndexer = syntax.Identifier.Text == "this";
+            var propertyName = isIndexer ? "Item" : syntax.Identifier.Text;
+
             // 访问器可见性：独立计算 + 严格 C# 校验（CS0273 / 至多一个访问器带修饰符）
             ValidateAccessorVisibility(syntax, visibility);
             var getterVisibility = syntax.Getter != null ? GetVisibility(syntax.Getter.Modifiers, visibility) : visibility;
             var setterVisibility = syntax.Setter != null ? GetVisibility(syntax.Setter.Modifiers, visibility) : visibility;
 
-            if (interfaceType.GetProperty(syntax.Identifier.Text) != null)
+            if (interfaceType.GetProperty(propertyName) != null)
             {
-                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
+                _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, propertyName);
                 return;
             }
 
             FunctionSymbol? getter = null;
             if (syntax.Getter != null)
             {
-                getter = new FunctionSymbol("get_" + syntax.Identifier.Text, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
+                getter = new FunctionSymbol("get_" + propertyName, ImmutableArray<ParameterSymbol>.Empty, propertyType, null,
                     syntax: syntax.Getter, containingClass: interfaceType, visibility: getterVisibility)
                 {
                     IsAbstract = true,
@@ -2305,7 +2311,7 @@ namespace Cocoa.CodeAnalysis.Binding
             if (syntax.Setter != null)
             {
                 var valueParameter = new ParameterSymbol("value", propertyType, 0);
-                setter = new FunctionSymbol("set_" + syntax.Identifier.Text, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
+                setter = new FunctionSymbol("set_" + propertyName, ImmutableArray.Create(valueParameter), TypeSymbol.Void, null,
                     syntax: syntax.Setter, containingClass: interfaceType, visibility: setterVisibility)
                 {
                     IsAbstract = true,
@@ -2315,7 +2321,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 classFunctions.Add(setter);
             }
 
-            interfaceType.AddProperty(new PropertySymbol(syntax.Identifier.Text, propertyType, interfaceType, getter, setter, visibility, isStatic: false));
+            interfaceType.AddProperty(new PropertySymbol(propertyName, propertyType, interfaceType, getter, setter, visibility, isStatic: false, isIndexer: isIndexer));
         }
 
         /// <summary>接口实现完整性：类（含继承链）须实现其全部接口的每个成员（方法签名/属性访问器）。</summary>

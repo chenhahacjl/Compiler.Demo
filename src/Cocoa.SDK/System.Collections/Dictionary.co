@@ -236,19 +236,19 @@ namespace System.Collections.Generic
 
         private function BucketOf(key: K): i32
         {
-            return HashCode(key) % _buckets.Length
-        }
-
-        /// <summary>键哈希——统一经 Object.GetHashCode 虚派发，并规整为非负（避免取模得负桶下标）。</summary>
-        private function HashCode(key: K): i32
-        {
-            var h = key.GetHashCode()
-            if h < 0
+            var b = HashCode(key) % _buckets.Length
+            if b < 0
             {
-                h = 0 - h
+                b = b + _buckets.Length
             }
 
-            return h
+            return b
+        }
+
+        /// <summary>键哈希——统一经 Object.GetHashCode 虚派发（可为负）。桶下标在 BucketOf/Rehash 处归一化。</summary>
+        private function HashCode(key: K): i32
+        {
+            return key.GetHashCode()
         }
 
         private function SameKey(a: K, b: K): bool
@@ -276,6 +276,11 @@ namespace System.Collections.Generic
                 newKeys[j] = _keys[j]
                 newValues[j] = _values[j]
                 var b = HashCode(newKeys[j]) % newLen
+                if b < 0
+                {
+                    b = b + newLen
+                }
+
                 newNext[j] = newBuckets[b]
                 newBuckets[b] = j
                 j = j + 1
