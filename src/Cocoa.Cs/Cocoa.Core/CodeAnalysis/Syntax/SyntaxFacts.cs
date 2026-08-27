@@ -116,6 +116,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.PropertyKeyword;
                 case "class":
                     return SyntaxKind.ClassKeyword;
+                case "struct":
+                    return SyntaxKind.StructKeyword;
                 case "event":
                     return SyntaxKind.EventKeyword;
                 case "delegate":
@@ -441,6 +443,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "while";
                 case SyntaxKind.ClassKeyword:
                     return "class";
+                case SyntaxKind.StructKeyword:
+                    return "struct";
                 case SyntaxKind.EventKeyword:
                     return "event";
                 case SyntaxKind.DelegateKeyword:

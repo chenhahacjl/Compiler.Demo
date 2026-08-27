@@ -118,6 +118,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public virtual bool IsAbstract { get; internal set; }
 
+        /// <summary>是否为值类型（struct，6e-M26）：默认 false；<see cref="StructTypeSymbol"/> 为 true。</summary>
+        public virtual bool IsValueType => false;
+
         public virtual bool IsSealed { get; internal set; }
 
         /// <summary>

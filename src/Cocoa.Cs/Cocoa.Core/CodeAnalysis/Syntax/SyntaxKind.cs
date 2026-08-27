@@ -79,6 +79,7 @@ ColonToken,               // :
         CaseKeyword,              // case
         CdeclKeyword,             // cdecl
         ClassKeyword,             // class
+        StructKeyword,            // struct（6e-M26 值类型）
         ConstKeyword,             // const
         ConstructorKeyword,       // constructor
         ContinueKeyword,          // continue

@@ -1085,9 +1085,35 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            var classType = new ClassTypeSymbol(name, primary.Namespace, visibility, primary.Syntax);
+            // 6e-M26：struct（值类型）→ StructTypeSymbol；class → ClassTypeSymbol
+            var isStruct = primary.Syntax.IsStruct;
+            ClassTypeSymbol classType = isStruct
+                ? new StructTypeSymbol(name, primary.Namespace, visibility, primary.Syntax)
+                : new ClassTypeSymbol(name, primary.Namespace, visibility, primary.Syntax);
             classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword));
             classType.IsSealed = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword));
+
+            // struct 约束（MVP）：不可有基类/接口、不可 abstract/facade、不可 partial（v1）
+            if (isStruct)
+            {
+                foreach (var (syntax, _) in parts)
+                {
+                    if (syntax.BaseTypes.Length > 0)
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能有基类或实现接口（MVP 阶段仅支持值字段/构造器）。");
+                    }
+
+                    if (syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword))
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 abstract。");
+                    }
+
+                    if (syntax.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword))
+                    {
+                        _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 facade。");
+                    }
+                }
+            }
 
             // 泛型类型参数声明（6e-M20）：`class Box<T, U>`——部分类各段须一致
             var typeParameters = BindClassTypeParameters(primary.Syntax.TypeParameters, classType, name);

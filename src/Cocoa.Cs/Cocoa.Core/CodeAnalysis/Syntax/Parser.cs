@@ -240,6 +240,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return ParseClassDeclaration(modifiers);
             }
 
+            if (Current.Kind == SyntaxKind.StructKeyword)
+            {
+                // 6e-M26：struct（值类型）——复用类解析，classKeyword 承载 struct 关键字
+                return ParseClassDeclaration(modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.InterfaceKeyword)
             {
                 return ParseInterfaceDeclaration(modifiers);
@@ -758,7 +764,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private MemberSyntax ParseClassDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
-            var classKeyword = MatchToken(SyntaxKind.ClassKeyword);
+            var classKeyword = Current.Kind == SyntaxKind.StructKeyword
+                ? MatchToken(SyntaxKind.StructKeyword)
+                : MatchToken(SyntaxKind.ClassKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var typeParameters = ParseOptionalTypeParameterList();
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
