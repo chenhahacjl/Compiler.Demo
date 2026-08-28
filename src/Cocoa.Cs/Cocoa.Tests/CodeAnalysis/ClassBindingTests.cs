@@ -884,6 +884,43 @@ function Main()
             Assert.NotNull(typedEnum.Members[1].EqualsToken);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_Conditional_TypeParams_Field()
+        {
+            var tree = SyntaxTree.Parse(@"function F<T>(x: T): T
+{
+    return x
+}
+
+public class Box
+{
+    private _x: i32
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+}
+
+function Main()
+{
+    var y = a > 0 ? 1 : 2
+}");
+            var conditional = tree.Root.DescendantNodes().OfType<ConditionalExpressionSyntax>().First();
+            var typedConditional = Assert.IsType<ConditionalExpressionSyntax>(conditional.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.QuestionToken, typedConditional.QuestionToken.Kind);
+            Assert.Equal(SyntaxKind.ColonToken, typedConditional.ColonToken.Kind);
+
+            var typeParameters = tree.Root.DescendantNodes().OfType<TypeParameterListSyntax>().First();
+            var typedTypeParameters = Assert.IsType<TypeParameterListSyntax>(typeParameters.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(1, typedTypeParameters.Parameters.Length);
+            Assert.Equal("T", typedTypeParameters.Parameters[0].Text);
+
+            var field = tree.Root.DescendantNodes().OfType<ClassFieldDeclarationSyntax>().First();
+            var typedField = Assert.IsType<ClassFieldDeclarationSyntax>(field.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("_x", typedField.Identifier.Text);
+            Assert.Equal("i32", typedField.Type.Identifier.Text);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

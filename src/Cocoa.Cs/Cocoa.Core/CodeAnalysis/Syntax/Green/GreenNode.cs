@@ -90,6 +90,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.EnumDeclaration => BuildEnumDeclaration(syntaxTree, position),
                 SyntaxKind.EnumMember => BuildEnumMember(syntaxTree, position),
                 SyntaxKind.GlobalStatement => BuildGlobalStatement(syntaxTree, position),
+                SyntaxKind.ConditionalExpression => BuildConditionalExpression(syntaxTree, position),
+                SyntaxKind.TypeParameterList => BuildTypeParameterList(syntaxTree, position),
+                SyntaxKind.ClassFieldDeclaration => BuildClassFieldDeclaration(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -623,6 +626,69 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var statement = (StatementSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
             return new GlobalStatementSyntax(syntaxTree, statement);
+        }
+
+        private SyntaxNode BuildConditionalExpression(SyntaxTree syntaxTree, int position)
+        {
+            var condition = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var questionPosition = position + GetSlot(0)!.Width;
+            var questionToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, questionPosition);
+            var whenTruePosition = questionPosition + GetSlot(1)!.Width;
+            var whenTrue = (ExpressionSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, whenTruePosition);
+            var colonPosition = whenTruePosition + GetSlot(2)!.Width;
+            var colonToken = (SyntaxToken)GetSlot(3)!.CreateTypedRed(syntaxTree, colonPosition);
+            var whenFalsePosition = colonPosition + GetSlot(3)!.Width;
+            var whenFalse = (ExpressionSyntax)GetSlot(4)!.CreateTypedRed(syntaxTree, whenFalsePosition);
+            return new ConditionalExpressionSyntax(syntaxTree, condition, questionToken, whenTrue, colonToken, whenFalse);
+        }
+
+        private SyntaxNode BuildTypeParameterList(SyntaxTree syntaxTree, int position)
+        {
+            var lessThanToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var parametersPosition = position + GetSlot(0)!.Width;
+            var parameters = BuildSlotArray<SyntaxToken>(syntaxTree, parametersPosition, 1, SlotCount - 2);
+            var greaterPosition = parametersPosition;
+            for (var i = 1; i < SlotCount - 1; i++)
+            {
+                greaterPosition += GetSlot(i)!.Width;
+            }
+
+            var greaterThanToken = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, greaterPosition);
+            return new TypeParameterListSyntax(syntaxTree, lessThanToken, parameters, greaterThanToken);
+        }
+
+        private SyntaxNode BuildClassFieldDeclaration(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < SlotCount && IsModifierToken(GetSlot(slot)!.Kind))
+            {
+                modifiers.Add((SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var type = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? initializer = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                if (slot < SlotCount)
+                {
+                    initializer = (ExpressionSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                }
+            }
+
+            return new ClassFieldDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), identifier, type, equalsToken, initializer);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
