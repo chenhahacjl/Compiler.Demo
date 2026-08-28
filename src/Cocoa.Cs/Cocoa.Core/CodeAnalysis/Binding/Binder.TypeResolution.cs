@@ -273,57 +273,13 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 按方言解析内建类型名。CO 方言只认简写（i8/u8/.../f32/f64 + 128 占位），
-        /// C# 方言只认原名（sbyte/byte/short/.../float/double）。两方言共享 bool/char/string/void/any。
+        /// 按语言解析内建类型名（M2 收敛至 <see cref="Language.LookupBuiltinType"/>）：
+        /// 共享 any/bool/char/string/void；CO 简写 i8/u8/.../f32/f64（+128 占位），
+        /// C# 原名 sbyte/byte/short/.../float/double——词汇表各由语言实现承载。
         /// </summary>
         private TypeSymbol? LookupBuiltinType(string name)
         {
-            switch (name)
-            {
-                case "any": return TypeSymbol.Any;
-                case "bool": return TypeSymbol.Boolean;
-                case "char": return TypeSymbol.Char;
-                case "string": return TypeSymbol.String;
-                case "void": return TypeSymbol.Void;
-            }
-
-            if (_dialect == LanguageDialect.CSharp)
-            {
-                switch (name)
-                {
-                    case "int": return TypeSymbol.Int32;
-                    case "long": return TypeSymbol.Int64;
-                    case "short": return TypeSymbol.Int16;
-                    case "ushort": return TypeSymbol.UInt16;
-                    case "uint": return TypeSymbol.UInt32;
-                    case "ulong": return TypeSymbol.UInt64;
-                    case "sbyte": return TypeSymbol.Int8;
-                    case "byte": return TypeSymbol.UInt8;
-                    case "float": return TypeSymbol.Float;
-                    case "double": return TypeSymbol.Double;
-                }
-            }
-            else
-            {
-                switch (name)
-                {
-                    case "i8": return TypeSymbol.Int8;
-                    case "u8": return TypeSymbol.UInt8;
-                    case "i16": return TypeSymbol.Int16;
-                    case "u16": return TypeSymbol.UInt16;
-                    case "i32": return TypeSymbol.Int32;
-                    case "u32": return TypeSymbol.UInt32;
-                    case "i64": return TypeSymbol.Int64;
-                    case "u64": return TypeSymbol.UInt64;
-                    case "f32": return TypeSymbol.Float;
-                    case "f64": return TypeSymbol.Double;
-                    case "i128": return TypeSymbol.Int128;
-                    case "u128": return TypeSymbol.UInt128;
-                    case "f128": return TypeSymbol.Float128;
-                }
-            }
-
-            return null;
+            return _language.LookupBuiltinType(name);
         }
 
         /// <summary>按全名（`Namespace.ClassName`）沿作用域链查找内部声明的类。

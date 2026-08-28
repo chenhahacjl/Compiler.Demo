@@ -416,7 +416,7 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : SyntaxTrees[0].Dialect, _linkCodDynamically, GlobalNamespace);
+            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : SyntaxTrees[0].Language, _linkCodDynamically, GlobalNamespace);
         }
 
         /// <summary>

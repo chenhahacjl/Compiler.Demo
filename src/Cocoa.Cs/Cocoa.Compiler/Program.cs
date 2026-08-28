@@ -11,6 +11,9 @@ namespace Cocoa.Compiler
     {
         private static int Main(string[] args)
         {
+            // M2 种子：触达 C# 语言实例，注册 "csharp" 供 SyntaxTree.Load(.cs)/ParseCs 使用
+            _ = CSharpLanguage.Instance;
+
             if (args.Length == 0)
             {
                 PrintHelp();

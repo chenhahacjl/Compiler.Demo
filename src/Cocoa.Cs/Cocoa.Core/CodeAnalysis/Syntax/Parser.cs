@@ -9,8 +9,8 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// Token =&gt; 语法树
     /// <br/>
     /// 共享：token 管道 / 诊断 / trivia / 表达式引擎 / 公共语句。
-    /// 方言差异经 virtual 钩子由子类覆写：<see cref="CocoaParser"/>（宽松，`.co`）与 <see cref="CSharpParser"/>（严格，`.cs`）。
-    /// 规约：基类不得出现方言分支；新语法落点 = 覆写各自钩子，逐字相同的进基类一次。
+    /// 语法差异经 virtual 钩子由各语言解析器覆写：CocoaParser（核心，`.co`）与 CSharpParser（Cocoa.Core.CSharp，`.cs`，
+    /// 经 <see cref="Language"/> 工厂创建）。规约：基类不得出现语言分支；新语法落点 = 覆写各自钩子，逐字相同的进基类一次。
     /// </summary>
     internal abstract partial class ParserCore
     {
@@ -23,8 +23,8 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>`>>` 拆分出的合成 token 队列（6e-M20 嵌套泛型 `List<List<int>>`；仅在泛型实参表解析窗口内非空）。</summary>
         private readonly Queue<SyntaxToken> _syntheticTokens = new Queue<SyntaxToken>();
 
-        /// <summary>当前解析方言（子类覆写；用于插值洞子解析与方言钩子默认行为）。</summary>
-        protected abstract LanguageDialect Dialect { get; }
+        /// <summary>当前宿主语言（经语法树；供子解析/工厂默认行为）。</summary>
+        protected Language Language => _syntaxTree.Language;
 
         protected ParserCore(SyntaxTree syntaxTree)
         {
@@ -90,22 +90,16 @@ namespace Cocoa.CodeAnalysis.Syntax
             _tokens = tokens;
         }
 
-        /// <summary>按方言创建解析器（入口工厂，SyntaxTree.Parse 使用）。</summary>
-        public static ParserCore Create(SyntaxTree syntaxTree, LanguageDialect dialect)
+        /// <summary>按树语言创建解析器（入口工厂，SyntaxTree.Parse 使用）。</summary>
+        public static ParserCore Create(SyntaxTree syntaxTree)
         {
-            return dialect switch
-            {
-                LanguageDialect.CSharp => new CSharpParser(syntaxTree),
-                _ => new CocoaParser(syntaxTree),
-            };
+            return syntaxTree.Language.CreateParser(syntaxTree);
         }
 
-        /// <summary>用预词法 token 按当前方言创建子解析器（插值洞；洞内语法与宿主方言一致）。</summary>
+        /// <summary>用预词法 token 按当前树语言创建子解析器（插值洞；洞内语法与宿主语言一致）。</summary>
         protected ParserCore CreateSubParser(ImmutableArray<SyntaxToken> tokens)
         {
-            return Dialect == LanguageDialect.CSharp
-                ? new CSharpParser(_syntaxTree, tokens)
-                : new CocoaParser(_syntaxTree, tokens);
+            return _syntaxTree.Language.CreateParser(_syntaxTree, tokens);
         }
 
         public DiagnosticBag Diagnostics => _diagnostics;

@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Binding
             BoundScope parentScope,
             bool isScript,
             ImmutableArray<CodProgram> codLibraries,
-            LanguageDialect dialect,
+            Language dialect,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies,
             ImmutableArray<Diagnostic>.Builder diagnostics)
         {

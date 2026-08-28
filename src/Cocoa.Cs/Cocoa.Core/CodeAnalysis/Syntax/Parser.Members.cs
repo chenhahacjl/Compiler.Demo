@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// Token =&gt; 语法树
     /// <br/>
     /// 共享：token 管道 / 诊断 / trivia / 表达式引擎 / 公共语句。
-    /// 方言差异经 virtual 钩子由子类覆写：<see cref="CocoaParser"/>（宽松，`.co`）与 <see cref="CSharpParser"/>（严格，`.cs`）。
+    /// 方言差异经 virtual 钩子由子类覆写：CocoaParser（`.co`）与 CSharpParser（`.cs`，Cocoa.Core.CSharp）。
     /// 规约：基类不得出现方言分支；新语法落点 = 覆写各自钩子，逐字相同的进基类一次。
     /// </summary>
     internal abstract partial class ParserCore

@@ -14,10 +14,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                                             out CompilationUnitSyntax root,
                                             out ImmutableArray<Diagnostic> diagnostics);
 
-        private SyntaxTree(SourceText text, ParseHandler handler, LanguageDialect dialect = LanguageDialect.Cocoa)
+        private SyntaxTree(SourceText text, ParseHandler handler, Language? language = null)
         {
             Text = text;
-            Dialect = dialect;
+            Language = language ?? Cocoa.CodeAnalysis.Language.Cocoa;
 
             handler(this, out var root, out var diagnostics);
 
@@ -34,23 +34,23 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>红树的不可变绿形式（Phase 4 桥接：经 <see cref="SyntaxNode.ToGreen"/> 惰性转换，可跨树共享）。</summary>
         public GreenNode GreenRoot => _greenRoot ??= Root.ToGreen();
 
-        /// <summary>解析本语法树所用的语言方言（6e-M21：CO 简写 / C# 原名类型词汇分流依据）。</summary>
-        public LanguageDialect Dialect { get; }
+        /// <summary>解析本语法树所用的语言（M2 设计 X：解析前端与类型词汇/拼写分流依据；CO 默认，`.cs` 需装载 CSharp 程序集）。</summary>
+        public Language Language { get; }
 
         public static SyntaxTree Load(string fileName)
         {
             var text = File.ReadAllText(fileName);
             var sourceText = SourceText.From(text, fileName);
-            var dialect = Path.GetExtension(fileName).Equals(".cs", StringComparison.OrdinalIgnoreCase)
-                ? LanguageDialect.CSharp
-                : LanguageDialect.Cocoa;
+            var language = Path.GetExtension(fileName).Equals(".cs", StringComparison.OrdinalIgnoreCase)
+                ? Language.GetOrThrow("csharp")
+                : Language.Cocoa;
 
-            return Parse(sourceText, dialect);
+            return Parse(sourceText, language);
         }
 
-        private static void Parse(SyntaxTree syntaxTree, LanguageDialect dialect, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics)
+        private static void Parse(SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics)
         {
-            var parser = ParserCore.Create(syntaxTree, dialect);
+            var parser = ParserCore.Create(syntaxTree);
             root = parser.ParseCompilationUnit();
             diagnostics = parser.Diagnostics.ToImmutableArray();
         }
@@ -58,36 +58,36 @@ namespace Cocoa.CodeAnalysis.Syntax
         public static SyntaxTree Parse(string text)
         {
             var sourceText = SourceText.From(text);
-            return Parse(sourceText, LanguageDialect.Cocoa);
+            return Parse(sourceText, Language.Cocoa);
         }
 
-        public static SyntaxTree Parse(string text, LanguageDialect dialect)
+        public static SyntaxTree Parse(string text, Language language)
         {
             var sourceText = SourceText.From(text);
-            return Parse(sourceText, dialect);
+            return Parse(sourceText, language);
         }
 
-        /// <summary>以严格 C# 方言解析文本（测试辅助，等价 <c>Parse(text, LanguageDialect.CSharp)</c>）。</summary>
+        /// <summary>以严格 C# 方言解析文本（测试辅助，等价 <c>Parse(text, Language.GetOrThrow("csharp"))</c>）。</summary>
         public static SyntaxTree ParseCs(string text)
         {
-            return Parse(text, LanguageDialect.CSharp);
+            return Parse(text, Language.GetOrThrow("csharp"));
         }
 
         public static SyntaxTree Parse(SourceText text)
         {
-            return Parse(text, LanguageDialect.Cocoa);
+            return Parse(text, Language.Cocoa);
         }
 
-        public static SyntaxTree Parse(SourceText text, LanguageDialect dialect)
+        public static SyntaxTree Parse(SourceText text, Language language)
         {
-            return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, dialect, out root, out diagnostics), dialect);
+            return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, out root, out diagnostics), language);
         }
 
         /// <summary>绿→红（Phase 4 桥接 1b 第一步）：由不可变绿树重新物化红树。绿树自描述（文本/trivia 完整），
         /// 经文本重新解析重建；真·惰性红视图（绿槽直构红节点）为后续子步。</summary>
-        public static SyntaxTree FromGreen(GreenNode greenRoot, LanguageDialect dialect = LanguageDialect.Cocoa)
+        public static SyntaxTree FromGreen(GreenNode greenRoot, Language? language = null)
         {
-            return Parse(greenRoot.ToString(), dialect);
+            return Parse(greenRoot.ToString(), language ?? Language.Cocoa);
         }
 
         public static ImmutableArray<SyntaxToken> ParseTokens(string text, bool includeEndOfFile = false)

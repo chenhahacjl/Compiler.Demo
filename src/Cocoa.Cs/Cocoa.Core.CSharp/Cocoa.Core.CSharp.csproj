@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -3,6 +3,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
     <InternalsVisibleTo Include="cocoa" />
+    <InternalsVisibleTo Include="Cocoa.Core.CSharp" />
   </ItemGroup>
 
   <ItemGroup>

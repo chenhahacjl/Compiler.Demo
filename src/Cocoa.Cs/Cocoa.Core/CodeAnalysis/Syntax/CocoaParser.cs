@@ -20,8 +20,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
         }
 
-        protected override LanguageDialect Dialect => LanguageDialect.Cocoa;
-
         protected override bool AllowCSharpStyleTopLevelFunction() => false;
 
         protected override bool AllowCSharpStyleMember() => false;

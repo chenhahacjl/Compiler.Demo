@@ -6,7 +6,8 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// 严格 C# 方言解析器（`.cs`，6e-M15）：仅收 C# 式拼写、分号必选；拒绝 Cocoa 专属拼写——
     /// `function`/`property`/`constructor`/`let` 关键字、`name: Type` 参数/字段、Cocoa `for i = 0 to n`、
     /// 无 var 的 `foreach (x in ...)`、无关键字顶层函数 `Main(): void`。
-    /// 共享 <see cref="ParserCore"/> 的表达式引擎；声明/语句层经覆写收紧。详见 语法手册 §46。
+    /// 共享 ParserCore 的表达式引擎；声明/语句层经覆写收紧。详见 语法手册 §46。
+    /// M2 起随 C# 语言迁入程序集 Cocoa.Core.CSharp（由 <c>Cocoa.CodeAnalysis.CSharpLanguage</c> 工厂创建）。
     /// </summary>
     internal sealed class CSharpParser : ParserCore
     {
@@ -17,8 +18,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         public CSharpParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens) : base(syntaxTree, tokens)
         {
         }
-
-        protected override LanguageDialect Dialect => LanguageDialect.CSharp;
 
         protected override bool AllowLetKeyword() => false;
 

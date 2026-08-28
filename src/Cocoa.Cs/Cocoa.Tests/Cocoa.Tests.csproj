@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
+    <ProjectReference Include="..\Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj" />
     <ProjectReference Include="..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
   </ItemGroup>
 

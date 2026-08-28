@@ -114,12 +114,21 @@ Cocoa.CodeAnalysis
 ### 6.3 解耦设计裁决：X 现在做，Y 留给"形状分叉"触发（已定）
 | 设计 | 内容 | 成本 | 结论 |
 |---|---|---|---|
-| **X（选定）** | 程序集拆分：`Cocoa.CodeAnalysis`（中性语法节点/绿红层/`Language` 抽象/共享文法 `SyntaxKind`/Binder/后端）+ `Cocoa.CodeAnalysis.Cocoa`（CocoaParser、CocoaLanguage：`function`/`let`/`->` 拼写、i8/i32…）+ `Cocoa.CodeAnalysis.CSharp`（CSharpParser、CSharpLanguage：C# 拼写、int/long…）。新语言 = 新增程序集，核心零改动。 | 中 | ✅ 立即执行（M2） |
+| **X（选定）** | 程序集拆分：`Cocoa.CodeAnalysis`（核心：中性语法节点/绿红层/`Language` 抽象/共享文法 `SyntaxKind`/Binder/后端）+ **Cocoa 宿主语言内置核心**（CocoaLanguage/CocoaParser） + `Cocoa.CodeAnalysis.CSharp`（C# 方言全套：CSharpParser、CSharpLanguage：C# 拼写、int/long…）。新语言 = 新增 `Language` 子类 + 解析器 + （可选项）独立程序集，核心零改动。 | 中 | ✅ 立即执行（M2 已落地，§6.5） |
 | **Y（备选，触发后执行）** | 每语言独立节点层级（全 Roslyn 级）：各自 SyntaxKind/节点类/CreateTypedRed/Binder；核心只留泛型基座。**包含 X 全部工作 + 每语言复制节点层**（71 节点 ×2、~85 工厂 ×2、Binder ~100+ 具体类型耦合 ×2 或泛型重写）≈ 重写核心 90%。 | 极高 | 仅当 C# 方言**结构性分叉**（C# 特有形状装不进 CO 树：自动属性/`?.`/`??`/模式匹配/async 等）时才付；Roslyn 自身的判据即"形状会不会结构性不同"，CO/C# 目前逐一同构 → 不该拆。 |
 
 **触发条件（明确记录）**：C# 方言确定长出 CO 树装不下的语法形状时，按 Roslyn 做法上 Y；X 的 `Language` 抽象 + 程序集拆分是 Y 的地基，届时在现有基础上演进，不推倒重来。
 
-### 6.4 路线图（M1–M3，M1 立即执行）
-- **M1（P0，本次）**：绿模型自描述——using 别名 `=`（UsingDirectiveSyntax 加 EqualsToken）、delegate 绿往返源序化；使 `GreenRoot.ToString() == 源码` 对全部构造成立。
-- **M2**：`Language` 抽象 + 程序集拆分（上表设计 X）；行为等价全量绿。
+### 6.4 路线图（M1–M3）
+- **M1（P0）✅ 已落地**：绿模型自描述——using 别名 `=`（UsingDirectiveSyntax 加 EqualsToken）、delegate 绿往返源序化（含 `.cs`/`.co` 两形态与参数方言序）；`GreenRoot.ToString() == 源码` 全构造成立（提交 `da79ea9`）。
+- **M2（Language 抽象 + 设计 X 程序集拆分）✅ 已落地**：见 §6.5。
 - **M3**：`coc`/`csc` 薄入口（DLL + apphost）+ `cocoa` 分派（进程内调用共享核心）+ 20 个 `.coproj`→`.cocproj` 迁移 + `.cocproj`/`.cscproj`/`.cosln` 支持 + `new` 模板。
+
+### 6.5 M2 落地记录（Language 抽象 + 程序集拆分）
+- **`Language` 抽象**（核心 `CodeAnalysis/Language.cs`）：Name / 共享内建类型名词汇（any/bool/char/string/void）+ 抽象专属词汇 / 解析器工厂（含插值洞子解析）/ 参数拼写策略（`ParametersAreTypeFirst`）；实例经类内注册表（`Language.GetOrThrow`）暴露，新语言 = 新 `Language` 子类 + 解析器。
+- **程序集拆分（精化记录）**：
+  - `Cocoa.Core`：语言无关核心 + **Cocoa 宿主语言**（`CocoaLanguage`/`CocoaParser` 保留于核心——核心即 CO 工具链本体，承载默认语言语义，避免默认解析依赖外部程序集注册空窗）。
+  - **`Cocoa.Core.CSharp`（新程序集）**：`CSharpParser`（git 迁移）+ `CSharpLanguage`（原名类型表 int/long/…/double）——C# 方言全套移出核心，`InternalsVisibleTo` 提供 ParserCore/Lexer 内部访问。
+- **Binder 去方言**：删 `_dialect` 字段与 `LookupBuiltinType` 方言分支（收敛至 `_language.LookupBuiltinType`），`LanguageDialect` 枚举删除；28 处引用全部落位。
+- **注册种子**：`Program.cs`（CLI）与 `Cocoa.Tests`（`[ModuleInitializer] LanguageSeeding`）各自触达 `CSharpLanguage.Instance`，`SyntaxTree.Load(.cs)`/`ParseCs` 经 `Language.GetOrThrow("csharp")` 定型。
+- **验证**：行为等价全量绿（41670 通过 / 2 skip / 仅既知 `e2e-string-oob` 环境锁失败）。

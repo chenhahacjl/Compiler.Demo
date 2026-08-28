@@ -48,7 +48,7 @@ namespace Cocoa.CodeAnalysis
                     null,
                     _compilation.GlobalScope,
                     _compilation.CodLibraries,
-                    _syntaxTree.Dialect,
+                    _syntaxTree.Language,
                     false,
                     _compilation.GlobalNamespace);
 
