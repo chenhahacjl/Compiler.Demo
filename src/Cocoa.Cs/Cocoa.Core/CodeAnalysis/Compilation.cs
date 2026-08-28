@@ -238,6 +238,45 @@ namespace Cocoa.CodeAnalysis
             return isArray && type != null ? TypeSymbol.ArrayOf(type) : type;
         }
 
+        private NamespaceSymbol? _globalNamespace;
+
+        /// <summary>全局命名空间根（对齐 Roslyn <c>Compilation.GlobalNamespace</c>）：包含子命名空间与
+        /// 全部已声明的命名类型（源 + 注入的 .cod 库；按符号的 <see cref="NamedTypeSymbol.Namespace"/> 归组）。</summary>
+        public NamespaceSymbol GlobalNamespace
+        {
+            get
+            {
+                var global = _globalNamespace;
+                if (global != null)
+                {
+                    return global;
+                }
+
+                var tree = NamespaceSymbol.CreateGlobal();
+                AddTypesToNamespace(tree, GlobalScope.Enums);
+                AddTypesToNamespace(tree, GlobalScope.Classes);
+                AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Enums));
+                AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Classes));
+                Interlocked.CompareExchange(ref _globalNamespace, tree, null);
+                return _globalNamespace;
+            }
+        }
+
+        /// <summary>按点分全名解析命名空间符号（全局根取 ""；未命中返回 null）。</summary>
+        public NamespaceSymbol? GetNamespace(string fullName)
+        {
+            return GlobalNamespace.GetNamespace(fullName ?? "");
+        }
+
+        private static void AddTypesToNamespace(NamespaceSymbol root, IEnumerable<NamedTypeSymbol> types)
+        {
+            foreach (var type in types)
+            {
+                var ns = NamespaceSymbol.GetOrCreateNamespace(root, type.Namespace);
+                ns.AddTypeMember(type);
+            }
+        }
+
         private BoundProgram GetProgram()
         {
             var previous = Previous == null ? null : Previous.GetProgram();

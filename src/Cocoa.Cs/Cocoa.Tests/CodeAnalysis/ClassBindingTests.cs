@@ -81,6 +81,42 @@ function Main()
         }
 
         [Fact]
+        public void GlobalNamespace_GroupsTypesByDeclaredNamespace()
+        {
+            var code = @"using System
+
+namespace Foo.Bar
+{
+    public class Point
+    {
+        public function Get(): i32 { return 0 }
+    }
+}
+
+public enum Color { Red, Green }
+
+function Main()
+{
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+
+            Assert.True(compilation.GlobalNamespace.IsGlobal);
+            Assert.Equal("", compilation.GlobalNamespace.FullName);
+            Assert.Equal(compilation.GlobalNamespace, compilation.GetNamespace(""));
+
+            var fooBar = compilation.GetNamespace("Foo.Bar");
+            Assert.NotNull(fooBar);
+            Assert.Equal("Bar", fooBar!.Name);
+            Assert.Equal("Foo.Bar", fooBar.FullName);
+            Assert.Contains(fooBar.GetTypeMembers(), t => t.Name == "Point");
+
+            Assert.Contains(compilation.GlobalNamespace.GetTypeMembers(), t => t.Name == "Color");
+
+            Assert.Null(compilation.GetNamespace("Foo.Baz"));
+            Assert.Null(compilation.GetNamespace("Definitely.Not.Real"));
+        }
+
+        [Fact]
         public void Class_MethodCall_Binds()
         {
             var code = @"using System

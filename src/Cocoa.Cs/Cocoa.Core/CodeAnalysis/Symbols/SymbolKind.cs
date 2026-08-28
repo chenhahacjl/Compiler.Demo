@@ -3,6 +3,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     public enum SymbolKind
     {
         Function,
+        Namespace,
         GlobalVariable,
         LocalVariable,
         Parameter,
