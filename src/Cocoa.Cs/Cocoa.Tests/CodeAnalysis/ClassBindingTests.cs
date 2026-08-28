@@ -1029,6 +1029,30 @@ function Main()
             Assert.NotNull(typedElements.CloseBraceToken);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_NamespaceAndUsing()
+        {
+            var tree = SyntaxTree.Parse(@"using System
+
+namespace Foo.Bar
+{
+    function Helper(): i32
+    {
+        return 1
+    }
+}");
+            var usingDirective = tree.Root.DescendantNodes().OfType<UsingDirectiveSyntax>().First();
+            var typedUsing = Assert.IsType<UsingDirectiveSyntax>(usingDirective.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("System", typedUsing.NameTokens[0].Text);
+            Assert.Null(typedUsing.AliasToken);
+
+            var namespaceDeclaration = tree.Root.DescendantNodes().OfType<NamespaceDeclarationSyntax>().First();
+            var typedNamespace = Assert.IsType<NamespaceDeclarationSyntax>(namespaceDeclaration.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(3, typedNamespace.NameTokens.Length);
+            Assert.Equal(1, typedNamespace.Members.Length);
+            Assert.IsType<FunctionDeclarationSyntax>(typedNamespace.Members[0]);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

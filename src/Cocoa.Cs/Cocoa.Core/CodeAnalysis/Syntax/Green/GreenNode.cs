@@ -107,6 +107,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.ForeachStatement => BuildForeachStatement(syntaxTree, position),
                 SyntaxKind.ForStatement => BuildForStatement(syntaxTree, position),
                 SyntaxKind.ArrayCreationExpression => BuildArrayCreationExpression(syntaxTree, position),
+                SyntaxKind.NamespaceDeclaration => BuildNamespaceDeclaration(syntaxTree, position),
+                SyntaxKind.UsingDirective => BuildUsingDirective(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -1105,6 +1107,72 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var elements = new SeparatedSyntaxList<ExpressionSyntax>(elementsBuilder.ToImmutable());
             return new ArrayCreationExpressionSyntax(syntaxTree, newKeyword, identifier, openBracket, size, closeBracket, openBrace, elements, closeBrace);
+        }
+
+        private SyntaxNode BuildNamespaceDeclaration(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var namespaceKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.OpenBraceToken)
+            {
+                nameTokens.Add((SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var openBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var members = BuildSlotArray<MemberSyntax>(syntaxTree, position, slot, SlotCount - 2);
+            var closePosition = position;
+            for (var i = slot; i < SlotCount - 1; i++)
+            {
+                closePosition += GetSlot(i)!.Width;
+            }
+
+            var closeBrace = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, closePosition);
+            return new NamespaceDeclarationSyntax(syntaxTree, namespaceKeyword, nameTokens.ToImmutable(), openBrace, members, closeBrace);
+        }
+
+        private SyntaxNode BuildUsingDirective(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var usingKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? staticKeyword = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.StaticKeyword)
+            {
+                staticKeyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            // 别名：`using Alias = Foo.Bar` → aliasToken + EqualsToken 前缀
+            SyntaxToken? aliasToken = null;
+            if (slot + 1 < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.IdentifierToken && GetSlot(slot + 1)!.Kind == SyntaxKind.EqualsToken)
+            {
+                aliasToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
+            for (var i = slot; i < SlotCount; i++)
+            {
+                nameTokens.Add((SyntaxToken)GetSlot(i).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(i)!.Width;
+            }
+
+            return new UsingDirectiveSyntax(syntaxTree, usingKeyword, staticKeyword, aliasToken, nameTokens.ToImmutable());
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
