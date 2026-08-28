@@ -54,7 +54,7 @@ namespace Cocoa.CodeAnalysis
                 var collector = new BoundNodeCollector(map);
                 foreach (var body in program.Functions.Values)
                 {
-                    collector.RewriteStatement(body);
+                    collector.Walk(body);
                 }
 
                 _boundBySyntax = map;
@@ -62,7 +62,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private sealed class BoundNodeCollector : BoundTreeRewriter
+        private sealed class BoundNodeCollector : BoundTreeWalker
         {
             private readonly Dictionary<SyntaxNode, BoundNode> _map;
 
@@ -71,24 +71,22 @@ namespace Cocoa.CodeAnalysis
                 _map = map;
             }
 
-            public override BoundStatement RewriteStatement(BoundStatement node)
+            protected override void VisitStatement(BoundStatement node)
             {
-                if (node.Syntax != null)
-                {
-                    _map[node.Syntax] = node;
-                }
-
-                return base.RewriteStatement(node);
+                Record(node);
             }
 
-            public override BoundExpression RewriteExpression(BoundExpression node)
+            protected override void VisitExpression(BoundExpression node)
+            {
+                Record(node);
+            }
+
+            private void Record(BoundNode node)
             {
                 if (node.Syntax != null)
                 {
                     _map[node.Syntax] = node;
                 }
-
-                return base.RewriteExpression(node);
             }
         }
 
