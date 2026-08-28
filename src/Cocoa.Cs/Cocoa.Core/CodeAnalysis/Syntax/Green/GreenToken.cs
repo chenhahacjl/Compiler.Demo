@@ -65,5 +65,29 @@ namespace Cocoa.CodeAnalysis.Syntax
                 writer.Write(trivia.Text);
             }
         }
+
+        /// <summary>绿→红：转为类型化 <see cref="SyntaxToken"/>（保留文本/值/trivia，位置经 leading trivia 后）。</summary>
+        public SyntaxToken ToRed(SyntaxTree syntaxTree, int position)
+        {
+            var triviaPosition = position;
+            var leading = ImmutableArray.CreateBuilder<SyntaxTrivia>(_leadingTrivia.Length);
+            foreach (var trivia in _leadingTrivia)
+            {
+                leading.Add(new SyntaxTrivia(syntaxTree, trivia.Kind, triviaPosition, trivia.Text));
+                triviaPosition += trivia.Width;
+            }
+
+            var tokenPosition = triviaPosition;
+            triviaPosition += Text.Length;
+
+            var trailing = ImmutableArray.CreateBuilder<SyntaxTrivia>(_trailingTrivia.Length);
+            foreach (var trivia in _trailingTrivia)
+            {
+                trailing.Add(new SyntaxTrivia(syntaxTree, trivia.Kind, triviaPosition, trivia.Text));
+                triviaPosition += trivia.Width;
+            }
+
+            return new SyntaxToken(syntaxTree, Kind, tokenPosition, Text, Value, leading.ToImmutable(), trailing.ToImmutable());
+        }
     }
 }

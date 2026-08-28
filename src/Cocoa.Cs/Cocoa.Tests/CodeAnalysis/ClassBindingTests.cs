@@ -640,6 +640,28 @@ function Main()
             Assert.Same(red, leftRed.Parent);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_BinaryExpression()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    var x = a + b
+}");
+            var binaryRed = tree.Root.DescendantNodes().OfType<BinaryExpressionSyntax>().First();
+            var green = binaryRed.ToGreen();
+            var typed = green.CreateTypedRed(tree);
+
+            Assert.IsType<BinaryExpressionSyntax>(typed);
+            var binary = (BinaryExpressionSyntax)typed;
+            Assert.Equal(SyntaxKind.BinaryExpression, binary.Kind);
+            Assert.IsType<NameExpressionSyntax>(binary.Left);
+            Assert.Equal(SyntaxKind.PlusToken, binary.OperatorToken.Kind);
+            Assert.Equal("+", binary.OperatorToken.Text);
+            Assert.IsType<NameExpressionSyntax>(binary.Right);
+            Assert.Equal("a", ((NameExpressionSyntax)binary.Left).IdentifierToken.Text);
+            Assert.Equal("b", ((NameExpressionSyntax)binary.Right).IdentifierToken.Text);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

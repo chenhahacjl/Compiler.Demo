@@ -40,5 +40,45 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             return new RedNode(syntaxTree, this, position, parent);
         }
+
+        /// <summary>绿→类型化红节点（逐类型迁移）：按 <see cref="Kind"/> 派发到具体类型（BinaryExpression/NameExpression/
+        /// LiteralExpression 等，子节点递归类型化）；未覆盖的 Kind 回落通用 <see cref="RedNode"/>。</summary>
+        public SyntaxNode CreateTypedRed(SyntaxTree syntaxTree, int position = 0)
+        {
+            if (this is GreenToken token)
+            {
+                return token.ToRed(syntaxTree, position);
+            }
+
+            return Kind switch
+            {
+                SyntaxKind.NameExpression => BuildNameExpression(syntaxTree, position),
+                SyntaxKind.BinaryExpression => BuildBinaryExpression(syntaxTree, position),
+                SyntaxKind.LiteralExpression => BuildLiteralExpression(syntaxTree, position),
+                _ => CreateRed(syntaxTree, position),
+            };
+        }
+
+        private SyntaxNode BuildNameExpression(SyntaxTree syntaxTree, int position)
+        {
+            var identifier = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return new NameExpressionSyntax(syntaxTree, identifier);
+        }
+
+        private SyntaxNode BuildBinaryExpression(SyntaxTree syntaxTree, int position)
+        {
+            var left = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var operatorPosition = position + GetSlot(0)!.Width;
+            var operatorToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, operatorPosition);
+            var rightPosition = operatorPosition + GetSlot(1)!.Width;
+            var right = (ExpressionSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, rightPosition);
+            return new BinaryExpressionSyntax(syntaxTree, left, operatorToken, right);
+        }
+
+        private SyntaxNode BuildLiteralExpression(SyntaxTree syntaxTree, int position)
+        {
+            var literalToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return new LiteralExpressionSyntax(syntaxTree, literalToken);
+        }
     }
 }
