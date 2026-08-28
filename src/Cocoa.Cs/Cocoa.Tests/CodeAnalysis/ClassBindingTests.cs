@@ -209,6 +209,49 @@ function Main()
             Assert.Null(model.GetTypeInfo(null!));
         }
 
+        [Fact]
+        public void SemanticModel_GetDeclaredSymbol_ResolvesTypesAndFunctions()
+        {
+            var code = @"using System
+
+public class Point
+{
+    public function Get(): i32 { return 0 }
+}
+
+public enum Color { Red, Green }
+
+function Compute(): i32 { return 1 }
+
+function Main()
+{
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var classNode = Descendants(tree.Root).OfType<ClassDeclarationSyntax>().Single(c => c.Identifier.Text == "Point");
+            var enumNode = Descendants(tree.Root).OfType<EnumDeclarationSyntax>().Single();
+            var computeNode = Descendants(tree.Root).OfType<FunctionDeclarationSyntax>().Single(f => f.Identifier.Text == "Compute");
+
+            var pointClass = model.GetDeclaredSymbol(classNode);
+            Assert.NotNull(pointClass);
+            Assert.Equal("Point", pointClass!.Name);
+            Assert.Equal(SymbolKind.NamedType, pointClass.Kind);
+
+            var colorEnum = model.GetDeclaredSymbol(enumNode);
+            Assert.NotNull(colorEnum);
+            Assert.Equal("Color", colorEnum!.Name);
+            Assert.Equal(SymbolKind.NamedType, colorEnum.Kind);
+
+            var computeFn = model.GetDeclaredSymbol(computeNode);
+            Assert.NotNull(computeFn);
+            Assert.Equal("Compute", computeFn!.Name);
+            Assert.Equal(SymbolKind.Function, computeFn.Kind);
+
+            Assert.Null(model.GetDeclaredSymbol(tree.Root));
+        }
+
         private static IEnumerable<SyntaxNode> Descendants(SyntaxNode root)
         {
             foreach (var child in root.GetChildren())

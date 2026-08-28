@@ -46,6 +46,76 @@ namespace Cocoa.CodeAnalysis
             return ResolveBuiltin(name) ?? _compilation.GetTypeByMetadataName(name);
         }
 
+        /// <summary>解析声明语法节点对应的符号（对齐 Roslyn <c>SemanticModel.GetDeclaredSymbol</c>）：
+        /// 类/枚举 → 命名类型（类按声明引用精确匹配、枚举按名）；顶层函数 → 函数符号；其余返回 null。
+        /// 嵌套类型/构造器等不在全局命名空间树，暂不支持。</summary>
+        public Symbol? GetDeclaredSymbol(SyntaxNode declaration)
+        {
+            if (declaration is FunctionDeclarationSyntax function)
+            {
+                foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+                {
+                    foreach (var member in ns.GetFunctionMembers())
+                    {
+                        if (ReferenceEquals(member.Declaration, function))
+                        {
+                            return member;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            if (declaration is ClassDeclarationSyntax classDeclaration)
+            {
+                foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+                {
+                    foreach (var member in ns.GetTypeMembers())
+                    {
+                        if (member is NamedTypeSymbol named && ReferenceEquals(named.Declaration, classDeclaration))
+                        {
+                            return named;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            if (declaration is EnumDeclarationSyntax enumDeclaration)
+            {
+                foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+                {
+                    foreach (var member in ns.GetTypeMembers())
+                    {
+                        if (member is NamedTypeSymbol { TypeKind: TypeKind.Enum } named && named.Name == enumDeclaration.Identifier.Text)
+                        {
+                            return named;
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            return null;
+        }
+
+        private NamespaceSymbol GlobalNamespace => _compilation.GlobalNamespace;
+
+        private static IEnumerable<NamespaceSymbol> EnumerateNamespaces(NamespaceSymbol root)
+        {
+            yield return root;
+            foreach (var child in root.GetNamespaceMembers())
+            {
+                foreach (var nested in EnumerateNamespaces(child))
+                {
+                    yield return nested;
+                }
+            }
+        }
+
         private static TypeSymbol? ResolveBuiltin(string name)
         {
             return name switch
