@@ -202,6 +202,12 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
+        /// <summary>为指定语法树获取语义模型（对齐 Roslyn <c>Compilation.GetSemanticModel</c>）。</summary>
+        public SemanticModel GetSemanticModel(SyntaxTree syntaxTree)
+        {
+            return new SemanticModel(this, syntaxTree);
+        }
+
         /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。
         /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .cod 库）类与枚举；
         /// 缺失返回 null。支持后置 [] 数组全名（如 <c>"System.Int32[]"</c>）。</summary>

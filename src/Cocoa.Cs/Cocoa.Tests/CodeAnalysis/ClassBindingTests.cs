@@ -177,6 +177,51 @@ function Main()
         }
 
         [Fact]
+        public void SemanticModel_GetTypeInfo_ResolvesBuiltinAndDeclaredTypes()
+        {
+            var code = @"using System
+
+public class Point
+{
+    public function Get(): i32 { return 0 }
+}
+
+function Main()
+{
+    var n: i32 = 1
+    var s: string = ""a""
+    var p: Point = null
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var clauses = Descendants(tree.Root).OfType<TypeClauseSyntax>().ToList();
+            var i32 = clauses.First(c => c.Identifier.Text == "i32");
+            var str = clauses.First(c => c.Identifier.Text == "string");
+            var point = clauses.First(c => c.Identifier.Text == "Point");
+
+            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(i32));
+            Assert.Equal(TypeSymbol.String, model.GetTypeInfo(str));
+            Assert.Equal("Point", model.GetTypeInfo(point)!.Name);
+
+            Assert.Null(model.GetTypeInfo(tree.Root));
+            Assert.Null(model.GetTypeInfo(null!));
+        }
+
+        private static IEnumerable<SyntaxNode> Descendants(SyntaxNode root)
+        {
+            foreach (var child in root.GetChildren())
+            {
+                yield return child;
+                foreach (var nested in Descendants(child))
+                {
+                    yield return nested;
+                }
+            }
+        }
+
+        [Fact]
         public void GlobalNamespace_GroupsNamespacedFunctions()
         {
             var code = @"using System
