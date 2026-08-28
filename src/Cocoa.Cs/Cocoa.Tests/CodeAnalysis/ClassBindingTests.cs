@@ -426,6 +426,56 @@ function Main()
         }
 
         [Fact]
+        public void SemanticModel_PropertyThisBaseAndDiagnostics()
+        {
+            var code = @"using System
+
+public class Counter
+{
+    private _count: i32
+
+    public property Count: i32 { get set }
+
+    public function Increment(): i32
+    {
+        _count = _count + 1
+        return this.Count
+    }
+}
+
+function Main()
+{
+    var c = new Counter()
+    var n = c.Count
+    var a = new i32[] {1, 2, 3}
+    var len = a.Length
+    c.Count = n + len
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var countAccess = Descendants(tree.Root).OfType<MemberAccessExpressionSyntax>().First(m => m.IdentifierToken.Text == "Count");
+            var countSymbol = model.GetSymbolInfo(countAccess);
+            Assert.NotNull(countSymbol);
+            Assert.Equal(SymbolKind.Property, countSymbol!.Kind);
+            Assert.Equal("Count", countSymbol.Name);
+
+            var thisExpr = Descendants(tree.Root).OfType<ThisExpressionSyntax>().First();
+            var thisSymbol = model.GetSymbolInfo(thisExpr);
+            Assert.NotNull(thisSymbol);
+            Assert.Equal("Counter", thisSymbol!.Name);
+
+            var oneLiteral = Descendants(tree.Root).OfType<LiteralExpressionSyntax>().First(l => l.LiteralToken.Text == "1");
+            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(oneLiteral));
+
+            var lenAccess = Descendants(tree.Root).OfType<MemberAccessExpressionSyntax>().First(m => m.IdentifierToken.Text == "Length");
+            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(lenAccess));
+
+            Assert.DoesNotContain(model.GetDiagnostics(), d => d.IsError);
+        }
+
+        [Fact]
         public void SemanticModel_GetSymbolInfo_ResolvesStaticMemberAccess()
         {
             var code = @"using System

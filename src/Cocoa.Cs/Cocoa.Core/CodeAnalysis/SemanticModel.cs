@@ -1,8 +1,10 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Cocoa.CodeAnalysis
 {
@@ -185,6 +187,29 @@ namespace Cocoa.CodeAnalysis
             return BoundBySyntax.TryGetValue(node, out var bound) ? bound : null;
         }
 
+        /// <summary>本语法树相关的全部诊断（对齐 Roslyn <c>SemanticModel.GetDiagnostics</c>）。</summary>
+        public ImmutableArray<Diagnostic> GetDiagnostics()
+        {
+            return _compilation.GetDiagnostics()
+                .Where(d => ReferenceEquals(d.Location.Text, _syntaxTree.Text))
+                .ToImmutableArray();
+        }
+
+        /// <summary>本语法树中与指定范围相交的诊断。</summary>
+        public ImmutableArray<Diagnostic> GetDiagnostics(TextSpan span)
+        {
+            var builder = ImmutableArray.CreateBuilder<Diagnostic>();
+            foreach (var diagnostic in _compilation.GetDiagnostics())
+            {
+                if (ReferenceEquals(diagnostic.Location.Text, _syntaxTree.Text) && diagnostic.Location.Span.OverlapsWith(span))
+                {
+                    builder.Add(diagnostic);
+                }
+            }
+
+            return builder.ToImmutable();
+        }
+
         /// <summary>表达式对应符号（对齐 Roslyn <c>SemanticModel.GetSymbolInfo</c>）。
         /// 优先绑定树（局部变量/参数/实例成员等返回真实绑定符号）；未命中回落名称/成员解析。</summary>
         public Symbol? GetSymbolInfo(SyntaxNode node)
@@ -198,9 +223,16 @@ namespace Cocoa.CodeAnalysis
                     case BoundCallExpression callExpression:
                         return callExpression.Function;
                     case BoundMemberCallExpression memberCallExpression:
-                        return memberCallExpression.Method;
+                        // 属性/索引器读（getter 调用）→ 属性符号（对齐 Roslyn：obj.Prop / obj[i] 返回属性而非 getter）
+                        return memberCallExpression.Method?.ContainingProperty != null
+                            ? memberCallExpression.Method.ContainingProperty
+                            : memberCallExpression.Method;
                     case BoundMemberAccessExpression memberAccessExpression:
                         return memberAccessExpression.Field;
+                    case BoundThisExpression thisExpression:
+                        return thisExpression.Type;
+                    case BoundBaseExpression baseExpression:
+                        return baseExpression.Type;
                 }
             }
 
