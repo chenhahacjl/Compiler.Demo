@@ -961,6 +961,41 @@ function Main()
             Assert.Equal(1, typedDelegate.Parameters.Count);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_TryCatchForeach()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    try
+    {
+        foreach (var x in arr)
+        {
+            arr[0] = x
+        }
+    }
+    catch (e: Exception)
+    {
+    }
+    finally
+    {
+    }
+}");
+            var tryStatement = tree.Root.DescendantNodes().OfType<TryStatementSyntax>().First();
+            var typedTry = Assert.IsType<TryStatementSyntax>(tryStatement.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(1, typedTry.Catches.Length);
+            Assert.NotNull(typedTry.Finally);
+
+            var catchClause = tree.Root.DescendantNodes().OfType<CatchClauseSyntax>().First();
+            var typedCatch = Assert.IsType<CatchClauseSyntax>(catchClause.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("Exception", typedCatch.Type.Identifier.Text);
+
+            var foreachStatement = tree.Root.DescendantNodes().OfType<ForeachStatementSyntax>().First();
+            var typedForeach = Assert.IsType<ForeachStatementSyntax>(foreachStatement.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("x", typedForeach.Identifier.Text);
+            Assert.Equal(SyntaxKind.InKeyword, typedForeach.InKeyword.Kind);
+            Assert.Equal(SyntaxKind.OpenParenthesisToken, typedForeach.OpenParenToken!.Kind);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

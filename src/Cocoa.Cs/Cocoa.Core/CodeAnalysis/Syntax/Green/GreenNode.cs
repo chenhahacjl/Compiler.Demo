@@ -102,6 +102,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.WhereClause => BuildWhereClause(syntaxTree, position),
                 SyntaxKind.DefaultClause => BuildDefaultClause(syntaxTree, position),
                 SyntaxKind.FinallyClause => BuildFinallyClause(syntaxTree, position),
+                SyntaxKind.TryStatement => BuildTryStatement(syntaxTree, position),
+                SyntaxKind.CatchClause => BuildCatchClause(syntaxTree, position),
+                SyntaxKind.ForeachStatement => BuildForeachStatement(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -891,6 +894,88 @@ namespace Cocoa.CodeAnalysis.Syntax
             var bodyPosition = position + GetSlot(0)!.Width;
             var body = (BlockStatementSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, bodyPosition);
             return new FinallyClauseSyntax(syntaxTree, finallyKeyword, body);
+        }
+
+        private SyntaxNode BuildTryStatement(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var blockPosition = position + GetSlot(0)!.Width;
+            var tryBlock = (BlockStatementSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, blockPosition);
+            position += GetSlot(1)!.Width;
+
+            var catches = ImmutableArray.CreateBuilder<CatchClauseSyntax>();
+            var slot = 2;
+            while (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CatchClause)
+            {
+                catches.Add((CatchClauseSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            FinallyClauseSyntax? finallyClause = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.FinallyClause)
+            {
+                finallyClause = (FinallyClauseSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+            }
+
+            return new TryStatementSyntax(syntaxTree, keyword, tryBlock, catches.ToImmutable(), finallyClause);
+        }
+
+        private SyntaxNode BuildCatchClause(SyntaxTree syntaxTree, int position)
+        {
+            var catchKeyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var identifierPosition = position + GetSlot(0)!.Width;
+            var identifier = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, identifierPosition);
+            var typePosition = identifierPosition + GetSlot(1)!.Width;
+            var type = (TypeClauseSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, typePosition);
+            var bodyPosition = typePosition + GetSlot(2)!.Width;
+            var body = (BlockStatementSyntax)GetSlot(3)!.CreateTypedRed(syntaxTree, bodyPosition);
+            return new CatchClauseSyntax(syntaxTree, catchKeyword, identifier, type, body);
+        }
+
+        private SyntaxNode BuildForeachStatement(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var keyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? openParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? varKeyword = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.VarKeyword)
+            {
+                varKeyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var inKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var collection = (ExpressionSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? closeParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                closeParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var body = (StatementSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            return new ForeachStatementSyntax(syntaxTree, keyword, openParenthesis, varKeyword, identifier, inKeyword, collection, closeParenthesis, body);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
