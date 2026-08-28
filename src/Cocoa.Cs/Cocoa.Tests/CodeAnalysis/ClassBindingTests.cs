@@ -292,6 +292,31 @@ function Main()
             Assert.Null(model.GetSymbolInfo(tree.Root));
         }
 
+        [Fact]
+        public void SemanticModel_GetSymbolInfo_ResolvesStaticMemberAccess()
+        {
+            var code = @"using System
+
+public class Utils
+{
+    public static function Twice(x: i32): i32 { return x * 2 }
+}
+
+function Main()
+{
+    Utils.Twice(2)
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var memberCall = Descendants(tree.Root).OfType<MemberCallExpressionSyntax>().First(m => m.IdentifierToken.Text == "Twice");
+            var symbol = model.GetSymbolInfo(memberCall);
+            Assert.NotNull(symbol);
+            Assert.Equal(SymbolKind.Function, symbol!.Kind);
+            Assert.Equal("Twice", symbol.Name);
+        }
+
         private static IEnumerable<SyntaxNode> Descendants(SyntaxNode root)
         {
             foreach (var child in root.GetChildren())

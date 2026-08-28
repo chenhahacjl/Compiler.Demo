@@ -110,15 +110,41 @@ namespace Cocoa.CodeAnalysis
         /// 基于编译级解析（非逐节点绑定），局部变量/成员访问等暂不支持。</summary>
         public Symbol? GetSymbolInfo(SyntaxNode node)
         {
-            string? text = node switch
+            return node switch
             {
-                NameExpressionSyntax nameExpression => nameExpression.IdentifierToken.Text,
-                CallExpressionSyntax callExpression => callExpression.Identifier.Text,
+                NameExpressionSyntax nameExpression => ResolveName(nameExpression.IdentifierToken.Text),
+                CallExpressionSyntax callExpression => ResolveName(callExpression.Identifier.Text),
+                MemberAccessExpressionSyntax memberAccess => ResolveMemberAccess(memberAccess.Expression, memberAccess.IdentifierToken.Text),
+                MemberCallExpressionSyntax memberCall => ResolveMemberAccess(memberCall.Expression, memberCall.IdentifierToken.Text),
                 null => null,
                 _ => null,
             };
+        }
 
-            return text == null ? null : ResolveName(text);
+        /// <summary>成员解析：接收者解析为类型（静态成员，如 <c>Utils.Twice</c>）→ 返回成员符号；
+        /// 实例接收者/嵌套命名空间（如 System.Math.Max）暂不支持。</summary>
+        private Symbol? ResolveMemberAccess(ExpressionSyntax receiver, string memberName)
+        {
+            if (ResolveReceiverType(receiver) is not NamedTypeSymbol receiverType)
+            {
+                return null;
+            }
+
+            return receiverType.GetMethod(memberName)
+                ?? (Symbol?)receiverType.GetField(memberName)
+                ?? receiverType.GetProperty(memberName);
+        }
+
+        private TypeSymbol? ResolveReceiverType(ExpressionSyntax receiver)
+        {
+            return receiver switch
+            {
+                NameExpressionSyntax name => ResolveName(name.IdentifierToken.Text) as TypeSymbol,
+                MemberAccessExpressionSyntax nested => ResolveReceiverType(nested.Expression) is NamedTypeSymbol parent
+                    ? parent.GetMethod(nested.IdentifierToken.Text)?.ReturnType
+                    : null,
+                _ => null,
+            };
         }
 
         private Symbol? ResolveName(string text)
