@@ -1474,7 +1474,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
                 _ids[type] = _ids.Count;
 
-                if (type is NamedTypeSymbol { TypeKind: not TypeKind.Enum } classType)
+                if (type is NamedTypeSymbol { TypeKind: not TypeKind.Enum } classType && !type.IsPrimitiveValueType)
                 {
                     RegisterClassCore(classType);
                 }

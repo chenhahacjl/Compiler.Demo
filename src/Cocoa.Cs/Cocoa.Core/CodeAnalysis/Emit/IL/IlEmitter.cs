@@ -1913,7 +1913,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         /// <summary>facade 类型运行期映射到的 BCL 全名：优先用 FacadeThisType（struct facade 由此提供 BCL 值类型名；
         /// class facade 的 FacadeThisType 即 BCL 目标，与自身 FullName 一致，故回退到 FullName 等价）。</summary>
         private string FacadeBclFullName(NamedTypeSymbol classType)
-            => classType.FacadeThisType is NamedTypeSymbol nts ? nts.FullName : classType.FullName;
+            => classType.FacadeThisType is NamedTypeSymbol nts && !nts.IsPrimitiveValueType && nts != TypeSymbol.String
+                ? nts.FullName
+                : classType.FullName;
 
         private static bool IsValueTypeSymbol(TypeSymbol type)
             => type.IsValueType;

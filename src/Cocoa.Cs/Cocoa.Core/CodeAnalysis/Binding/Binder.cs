@@ -3581,7 +3581,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             if ((targetClass != null && targetClass.IsInterface) || target.ElementType != null ||
-                (targetClass == null && target != TypeSymbol.String))
+                (targetClass == null && target != TypeSymbol.String) ||
+                (targetClass != null && target.IsPrimitiveValueType))
             {
                 _diagnostics.ReportIsAsUnsupportedTarget(typeName.Location, typeName.Text ?? "?");
                 return new BoundErrorExpression(ownerSyntax);
@@ -3595,10 +3596,10 @@ namespace Cocoa.CodeAnalysis.Binding
 
             var receiverType = operand.Type;
 
-            // 接收者约束：类（含接口变量）/string/null 字面量之外拒绝
+            // 接收者约束：类（含接口变量）/string/null 字面量之外拒绝（值类型/基元不支持 is/as）
             if (receiverType != TypeSymbol.Null && receiverType != TypeSymbol.String &&
                 receiverType != TypeSymbol.Any && receiverType.ElementType == null &&
-                !(receiverType is NamedTypeSymbol))
+                (!(receiverType is NamedTypeSymbol) || receiverType.IsPrimitiveValueType))
             {
                 _diagnostics.ReportIsAsUnsupportedReceiver(expressionSyntax.Location, receiverType);
                 return new BoundErrorExpression(ownerSyntax);
@@ -4211,7 +4212,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>引用类型判定（where T: class）：类/接口/string/数组；基元值类型为否。</summary>
         private static bool IsReferenceType(TypeSymbol type)
         {
-            if (type is NamedTypeSymbol || type is TypeParameterSymbol)
+            if (type is NamedTypeSymbol { IsValueType: false } || type is TypeParameterSymbol)
             {
                 return true;
             }
@@ -5953,7 +5954,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 类字段访问：point._x
-            if (boundTarget.Type is NamedTypeSymbol classType)
+            if (boundTarget.Type is NamedTypeSymbol classType && !classType.IsPrimitiveValueType)
             {
                 var field = classType.GetField(identifier);
                 if (field != null)
@@ -6075,7 +6076,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(BindExpression(argument));
             }
 
-            if (boundExpression.Type is NamedTypeSymbol classType)
+            if (boundExpression.Type is NamedTypeSymbol classType && !classType.IsPrimitiveValueType)
             {
                 if (classType.IsFacadeClass)
                 {
