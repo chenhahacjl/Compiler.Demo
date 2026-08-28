@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>csc</AssemblyName>
+    <RootNamespace>Cocoa.CsCompiler</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
+    <ProjectReference Include="..\Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj" />
+    <ProjectReference Include="..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
+  </ItemGroup>
+
+</Project>

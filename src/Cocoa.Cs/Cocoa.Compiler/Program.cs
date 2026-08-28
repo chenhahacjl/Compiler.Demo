@@ -7,7 +7,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.Compiler
 {
-    internal static class Program
+    public static class Program
     {
         private static int Main(string[] args)
         {
@@ -60,6 +60,19 @@ namespace Cocoa.Compiler
         }
 
         private static int Compile(string[] args)
+        {
+            return CompileImpl(args, SyntaxTree.Load);
+        }
+
+        /// <summary>
+        /// M3：指定语言编译源文件（coc/csc 薄入口复用；按语言强制解析，忽略扩展名分派）。
+        /// </summary>
+        public static int CompileForLanguage(string[] args, Language language)
+        {
+            return CompileImpl(args, path => SyntaxTree.Parse(File.ReadAllText(path), language));
+        }
+
+        private static int CompileImpl(string[] args, Func<string, SyntaxTree> createTree)
         {
             var outputPath = (string?)null;
             var moduleName = (string?)null;
@@ -213,7 +226,7 @@ namespace Cocoa.Compiler
                     continue;
                 }
 
-                var syntaxTree = SyntaxTree.Load(path);
+                var syntaxTree = createTree(path);
                 syntaxTrees.Add(syntaxTree);
             }
 

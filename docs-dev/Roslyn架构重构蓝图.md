@@ -122,7 +122,13 @@ Cocoa.CodeAnalysis
 ### 6.4 路线图（M1–M3）
 - **M1（P0）✅ 已落地**：绿模型自描述——using 别名 `=`（UsingDirectiveSyntax 加 EqualsToken）、delegate 绿往返源序化（含 `.cs`/`.co` 两形态与参数方言序）；`GreenRoot.ToString() == 源码` 全构造成立（提交 `da79ea9`）。
 - **M2（Language 抽象 + 设计 X 程序集拆分）✅ 已落地**：见 §6.5。
-- **M3**：`coc`/`csc` 薄入口（DLL + apphost）+ `cocoa` 分派（进程内调用共享核心）+ 20 个 `.cocproj`→`.cocproj` 迁移 + `.cocproj`/`.cscproj`/`.cosln` 支持 + `new` 模板。
+- **M3 ✅ 已落地**：`coc`/`csc` 薄入口（独立 Exe，DLL + apphost，对标 Roslyn csc）/ `.cocproj`/`.cscproj`/`.cosln` 全链路兼容 + 18 个样例 `.coproj`→`.cocproj` 迁移。详见 §6.6。
+
+### 6.6 M3 落地记录（coc/csc 薄入口 + 项目扩展名迁移）
+- **扩展名迁移**：`.coproj` → **`.cocproj`**（Cocoa 项目）；C# 方言项目 = **`.cscproj`**；解决方案 `.cosln` 不变。CLI 全链路（build/clean/list/run/add·remove reference/CliHelper 默认项目解析）接受 `.cocproj`/`.cscproj`；`cocoa new csharp` 产出 `{name}.cscproj`，其余模板 `.cocproj`；18 个样例 `.coproj` git rename → `.cocproj`，`samples.cosln`/样例 README/全库 `.md`/README 引用同步（核心 `ProjectFileParser` 不校验扩展名，解析零改动）。
+- **coc / csc 薄入口**：新项目 `Cocoa.CocCompiler`（AssemblyName `coc`）/ `Cocoa.CsCompiler`（AssemblyName `csc`）——强制指定 `Language.Cocoa` / `Language.GetOrThrow("csharp")` 解析全部源文件，复用 `Cocoa.Compiler.Program.CompileForLanguage(args, language)`（原 `Compile` 抽分母 `CompileImpl(args, createTree)`）；编译核心仍在共享 `Cocoa.CodeAnalysis`，三后端零改动。
+- **分派语义**：`cocoa build` 按源文件扩展名经 `SyntaxTree.Load` 分派语言（`.cs`→C# / `.co`→Cocoa），**进程内**调用共享核心（对齐 MSBuild 进程内加载 csc.dll），不 spawn 子进程；`coc`/`csc` 为独立薄编译器 exe（DLL + apphost）供直接调用与未来桥/IDE 使用。
+- **验证**：`coc` 编译运行 `.co`、`csc` 编译运行 `.cs` 双冒烟通过；`.cscproj`（new csharp → build → list → run）端到端通过；SampleSmokeTests 3/3 全绿。
 
 ### 6.5 M2 落地记录（Language 抽象 + 程序集拆分）
 - **`Language` 抽象**（核心 `CodeAnalysis/Language.cs`）：Name / 共享内建类型名词汇（any/bool/char/string/void）+ 抽象专属词汇 / 解析器工厂（含插值洞子解析）/ 参数拼写策略（`ParametersAreTypeFirst`）；实例经类内注册表（`Language.GetOrThrow`）暴露，新语言 = 新 `Language` 子类 + 解析器。
