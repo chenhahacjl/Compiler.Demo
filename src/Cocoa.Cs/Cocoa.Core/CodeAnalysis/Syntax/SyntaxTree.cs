@@ -83,6 +83,13 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, dialect, out root, out diagnostics), dialect);
         }
 
+        /// <summary>绿→红（Phase 4 桥接 1b 第一步）：由不可变绿树重新物化红树。绿树自描述（文本/trivia 完整），
+        /// 经文本重新解析重建；真·惰性红视图（绿槽直构红节点）为后续子步。</summary>
+        public static SyntaxTree FromGreen(GreenNode greenRoot, LanguageDialect dialect = LanguageDialect.Cocoa)
+        {
+            return Parse(greenRoot.ToString(), dialect);
+        }
+
         public static ImmutableArray<SyntaxToken> ParseTokens(string text, bool includeEndOfFile = false)
         {
             var sourceText = SourceText.From(text);

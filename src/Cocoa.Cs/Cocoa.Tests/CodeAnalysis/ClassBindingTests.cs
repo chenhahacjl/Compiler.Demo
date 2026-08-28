@@ -594,6 +594,23 @@ function Main()
             Assert.Same(green, tree.GreenRoot);
         }
 
+        [Fact]
+        public void FromGreen_ReproducesRedTree()
+        {
+            var code = @"using System
+
+function Main()
+{
+    Console.WriteLine(1 + 2)
+}";
+            var original = SyntaxTree.Parse(code);
+            var rebuilt = SyntaxTree.FromGreen(original.GreenRoot);
+
+            Assert.Equal(original.Text.ToString(), rebuilt.Text.ToString());
+            Assert.Equal(original.Root.ToString(), rebuilt.Root.ToString());
+            Assert.Equal(original.GreenRoot.ToString(), rebuilt.GreenRoot.ToString());
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
