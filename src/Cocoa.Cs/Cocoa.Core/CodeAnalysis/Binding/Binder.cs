@@ -724,15 +724,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, prefixStatements.AddRange(body.Statements));
             }
 
-            var loweredBody = Lowerer.Lower(function, body);
-
-            if (function.ReturnType != TypeSymbol.Void && !function.IsAbstract && !ControlFlowGraph.AllPathsReturn(loweredBody))
-            {
-                var location = function.Declaration != null
-                    ? function.Declaration.Identifier.Location
-                    : bodyLocation.Location;
-                binder._diagnostics.ReportAllPathsMustReturn(location);
-            }
+            var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
+                ? (function.Declaration != null ? function.Declaration.Identifier.Location : bodyLocation.Location)
+                : (TextLocation?)null;
+            var loweredBody = LoweringPipeline.Lower(function, body, binder._diagnostics, returnCheckLocation);
 
             // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参
             DefiniteAssignmentAnalysis.Analyze(
@@ -825,12 +820,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, prefixStatements.AddRange(body.Statements));
             }
 
-            var loweredBody = Lowerer.Lower(function, body);
-
-            if (function.ReturnType != TypeSymbol.Void && !ControlFlowGraph.AllPathsReturn(loweredBody))
-            {
-                binder._diagnostics.ReportAllPathsMustReturn(bodyLocation.Location);
-            }
+            var returnCheckLocation = function.ReturnType != TypeSymbol.Void
+                ? (TextLocation?)bodyLocation.Location
+                : null;
+            var loweredBody = LoweringPipeline.Lower(function, body, binder._diagnostics, returnCheckLocation);
 
             return (loweredBody, binder.Diagnostics.ToImmutableArray());
         }
