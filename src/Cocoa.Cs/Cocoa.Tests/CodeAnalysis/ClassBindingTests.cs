@@ -611,6 +611,35 @@ function Main()
             Assert.Equal(original.GreenRoot.ToString(), rebuilt.GreenRoot.ToString());
         }
 
+        [Fact]
+        public void RedNode_LazyView_FromGreen()
+        {
+            var tree = SyntaxTree.Parse("function Main() { }");
+
+            var left = SyntaxFactory.Identifier("a");
+            var plus = SyntaxFactory.Token(SyntaxKind.PlusToken);
+            var right = SyntaxFactory.Identifier("b");
+            var green = SyntaxFactory.Node(SyntaxKind.BinaryExpression, left, plus, right);
+
+            var red = green.CreateRed(tree);
+
+            Assert.Equal(SyntaxKind.BinaryExpression, red.Kind);
+            Assert.Same(green, red.Green);
+            Assert.Equal("a+b", red.ToString());
+
+            var children = red.GetChildren().ToList();
+            Assert.Equal(3, children.Count);
+            Assert.Equal(SyntaxKind.IdentifierToken, children[0].Kind);
+            Assert.Equal(SyntaxKind.PlusToken, children[1].Kind);
+            Assert.Equal(SyntaxKind.IdentifierToken, children[2].Kind);
+            Assert.Equal("a", children[0].ToString());
+            Assert.Equal("+", children[1].ToString());
+
+            var leftRed = Assert.IsType<RedNode>(children[0]);
+            Assert.Same(left, leftRed.Green);
+            Assert.Same(red, leftRed.Parent);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

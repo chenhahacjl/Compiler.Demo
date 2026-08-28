@@ -33,5 +33,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             WriteTo(writer);
             return writer.ToString();
         }
+
+        /// <summary>绿→红（真·惰性红视图）：产出一个包裹本绿节点的 <see cref="RedNode"/>，
+        /// 子节点经 <see cref="GreenNode.GetSlot"/> 惰性实现。</summary>
+        public RedNode CreateRed(SyntaxTree syntaxTree, int position = 0, RedNode? parent = null)
+        {
+            return new RedNode(syntaxTree, this, position, parent);
+        }
     }
 }
