@@ -921,6 +921,46 @@ function Main()
             Assert.Equal("i32", typedField.Type.Identifier.Text);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_TypeAndDelegateBatch()
+        {
+            var tree = SyntaxTree.Parse(@"delegate IntTransform(x: i32): i32
+
+function F<T>(x: T): T where T: class
+{
+    return x
+}
+
+function Main()
+{
+    var a: i32[] = null
+    var f: (i32) -> i32 = null
+    var l: List<i32> = null
+}");
+            var arrayType = tree.Root.DescendantNodes().OfType<ArrayTypeClauseSyntax>().First();
+            var typedArray = Assert.IsType<ArrayTypeClauseSyntax>(arrayType.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("i32", typedArray.ElementType.Identifier.Text);
+            Assert.Equal("i32", typedArray.ElementType.Identifier.Text);
+
+            var functionType = tree.Root.DescendantNodes().OfType<FunctionTypeSyntax>().First();
+            var typedFunctionType = Assert.IsType<FunctionTypeSyntax>(functionType.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(1, typedFunctionType.ParameterTypes.Count);
+            Assert.Equal(SyntaxKind.ArrowToken, typedFunctionType.ArrowToken.Kind);
+
+            var genericType = tree.Root.DescendantNodes().OfType<GenericTypeClauseSyntax>().First();
+            var typedGenericType = Assert.IsType<GenericTypeClauseSyntax>(genericType.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("List", typedGenericType.Identifier.Text);
+            Assert.Equal(1, typedGenericType.TypeArguments.Length);
+
+            var whereClause = tree.Root.DescendantNodes().OfType<WhereClauseSyntax>().First();
+            Assert.IsType<WhereClauseSyntax>(whereClause.ToGreen().CreateTypedRed(tree));
+
+            var delegateDecl = tree.Root.DescendantNodes().OfType<DelegateDeclarationSyntax>().First();
+            var typedDelegate = Assert.IsType<DelegateDeclarationSyntax>(delegateDecl.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("IntTransform", typedDelegate.Identifier.Text);
+            Assert.Equal(1, typedDelegate.Parameters.Count);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
