@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.IO;
 
 namespace Cocoa.CodeAnalysis.Syntax
@@ -60,6 +61,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.ExpressionStatement => BuildExpressionStatement(syntaxTree, position),
                 SyntaxKind.AssignmentExpression => BuildAssignmentExpression(syntaxTree, position),
                 SyntaxKind.MemberAccessExpression => BuildMemberAccessExpression(syntaxTree, position),
+                SyntaxKind.ReturnStatement => BuildReturnStatement(syntaxTree, position),
+                SyntaxKind.WhileStatement => BuildWhileStatement(syntaxTree, position),
+                SyntaxKind.BlockStatement => BuildBlockStatement(syntaxTree, position),
+                SyntaxKind.IfStatement => BuildIfStatement(syntaxTree, position),
+                SyntaxKind.ElseClause => BuildElseClause(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -128,6 +134,85 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifierPosition = dotPosition + GetSlot(1)!.Width;
             var identifierToken = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, identifierPosition);
             return new MemberAccessExpressionSyntax(syntaxTree, expression, dotToken, identifierToken);
+        }
+
+        private SyntaxNode BuildReturnStatement(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            ExpressionSyntax? expression = null;
+            if (SlotCount > 1)
+            {
+                var expressionPosition = position + GetSlot(0)!.Width;
+                expression = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, expressionPosition);
+            }
+
+            return new ReturnStatementSyntax(syntaxTree, keyword, expression);
+        }
+
+        private SyntaxNode BuildWhileStatement(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var conditionPosition = position + GetSlot(0)!.Width;
+            var condition = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, conditionPosition);
+            var bodyPosition = conditionPosition + GetSlot(1)!.Width;
+            var body = (StatementSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, bodyPosition);
+            return new WhileStatementSyntax(syntaxTree, keyword, condition, body);
+        }
+
+        private SyntaxNode BuildBlockStatement(SyntaxTree syntaxTree, int position)
+        {
+            var openBrace = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var bodyPosition = position + GetSlot(0)!.Width;
+            var statements = BuildSlotArray<StatementSyntax>(syntaxTree, bodyPosition, 1, SlotCount - 2);
+            var closePosition = bodyPosition;
+            for (var i = 1; i < SlotCount - 1; i++)
+            {
+                closePosition += GetSlot(i)!.Width;
+            }
+
+            var closeBrace = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, closePosition);
+            return new BlockStatementSyntax(syntaxTree, openBrace, statements, closeBrace);
+        }
+
+        private SyntaxNode BuildIfStatement(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var conditionPosition = position + GetSlot(0)!.Width;
+            var condition = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, conditionPosition);
+            var thenPosition = conditionPosition + GetSlot(1)!.Width;
+            var thenStatement = (StatementSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, thenPosition);
+            ElseClauseSyntax? elseClause = null;
+            if (SlotCount > 3)
+            {
+                var elsePosition = thenPosition + GetSlot(2)!.Width;
+                elseClause = (ElseClauseSyntax)GetSlot(3)!.CreateTypedRed(syntaxTree, elsePosition);
+            }
+
+            return new IfStatementSyntax(syntaxTree, keyword, condition, thenStatement, elseClause);
+        }
+
+        private SyntaxNode BuildElseClause(SyntaxTree syntaxTree, int position)
+        {
+            var elseKeyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var statementPosition = position + GetSlot(0)!.Width;
+            var elseStatement = (StatementSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, statementPosition);
+            return new ElseClauseSyntax(syntaxTree, elseKeyword, elseStatement);
+        }
+
+        /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
+        private ImmutableArray<T> BuildSlotArray<T>(SyntaxTree syntaxTree, int startPosition, int startIndex, int endIndex)
+            where T : SyntaxNode
+        {
+            var builder = ImmutableArray.CreateBuilder<T>();
+            var position = startPosition;
+            for (var i = startIndex; i <= endIndex; i++)
+            {
+                var slot = GetSlot(i)!;
+                builder.Add((T)slot.CreateTypedRed(syntaxTree, position));
+                position += slot.Width;
+            }
+
+            return builder.ToImmutable();
         }
     }
 }

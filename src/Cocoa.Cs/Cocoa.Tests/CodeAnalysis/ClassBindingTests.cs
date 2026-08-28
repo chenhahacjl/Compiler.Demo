@@ -682,6 +682,42 @@ function Main()
             Assert.IsType<MemberAccessExpressionSyntax>(member.ToGreen().CreateTypedRed(tree));
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_Statements()
+        {
+            var tree = SyntaxTree.Parse(@"function Main(): i32
+{
+    if a == 1
+    {
+        return 1
+    }
+    else
+    {
+        return 2
+    }
+    while a > 0
+    {
+        a = a - 1
+    }
+    return 0
+}");
+            var ifRed = tree.Root.DescendantNodes().OfType<IfStatementSyntax>().First();
+            var whileRed = tree.Root.DescendantNodes().OfType<WhileStatementSyntax>().First();
+            var returnRed = tree.Root.DescendantNodes().OfType<ReturnStatementSyntax>().First();
+            var blockRed = tree.Root.DescendantNodes().OfType<BlockStatementSyntax>().First();
+
+            var typedIf = Assert.IsType<IfStatementSyntax>(ifRed.ToGreen().CreateTypedRed(tree));
+            Assert.NotNull(typedIf.ElseClause);
+            Assert.Equal(SyntaxKind.EqualsEqualsToken, Assert.IsType<BinaryExpressionSyntax>(typedIf.Condition).OperatorToken.Kind);
+
+            var typedWhile = Assert.IsType<WhileStatementSyntax>(whileRed.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.GreaterToken, Assert.IsType<BinaryExpressionSyntax>(typedWhile.Condition).OperatorToken.Kind);
+            Assert.IsType<BlockStatementSyntax>(typedWhile.Body);
+
+            Assert.IsType<ReturnStatementSyntax>(returnRed.ToGreen().CreateTypedRed(tree));
+            Assert.IsType<BlockStatementSyntax>(blockRed.ToGreen().CreateTypedRed(tree));
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
