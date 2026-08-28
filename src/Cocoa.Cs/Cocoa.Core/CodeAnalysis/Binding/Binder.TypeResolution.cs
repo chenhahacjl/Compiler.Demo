@@ -326,9 +326,17 @@ namespace Cocoa.CodeAnalysis.Binding
             return null;
         }
 
-        /// <summary>按全名（`Namespace.ClassName`）沿作用域链查找内部声明的类。</summary>
+        /// <summary>按全名（`Namespace.ClassName`）沿作用域链查找内部声明的类。
+        /// Phase 1-5：函数体绑定阶段优先经全局命名空间树定位（O(命名空间成员)），未命中回退作用域链扫描
+        /// （树只索引全局静态声明；动态/单态化/委托/父作用域类型等以回退兜底）。</summary>
         private NamedTypeSymbol? FindDeclaredClassByFullName(string fullName)
         {
+            var viaTree = ResolveDeclaredTypeByFullName(fullName, wantEnum: false);
+            if (viaTree != null)
+            {
+                return viaTree;
+            }
+
             for (var scope = _scope; scope != null; scope = scope.Parent)
             {
                 foreach (var cls in scope.GetDeclaredClasses())
@@ -346,6 +354,12 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>按全名（`Namespace.EnumName`）沿作用域链查找内部声明的枚举。</summary>
         private NamedTypeSymbol? FindDeclaredEnumByFullName(string fullName)
         {
+            var viaTree = ResolveDeclaredTypeByFullName(fullName, wantEnum: true);
+            if (viaTree != null)
+            {
+                return viaTree;
+            }
+
             for (var scope = _scope; scope != null; scope = scope.Parent)
             {
                 foreach (var enumType in scope.GetDeclaredEnums())
@@ -353,6 +367,54 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (enumType.FullName == fullName)
                     {
                         return enumType;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>经全局命名空间树按全名定位命名类型（类或枚举，按 wantEnum 过滤）；树不可用或未命中返回 null。</summary>
+        private NamedTypeSymbol? ResolveDeclaredTypeByFullName(string fullName, bool wantEnum)
+        {
+            if (_globalNamespace == null)
+            {
+                return null;
+            }
+
+            var dotIndex = fullName.LastIndexOf('.');
+            NamespaceSymbol ns;
+            string simpleName;
+            if (dotIndex < 0)
+            {
+                ns = _globalNamespace;
+                simpleName = fullName;
+            }
+            else
+            {
+                var resolved = _globalNamespace.GetNamespace(fullName.Substring(0, dotIndex));
+                if (resolved == null)
+                {
+                    return null;
+                }
+
+                ns = resolved;
+                simpleName = fullName.Substring(dotIndex + 1);
+            }
+
+            foreach (var member in ns.GetTypeMembers())
+            {
+                if (member.Name != simpleName)
+                {
+                    continue;
+                }
+
+                if (member is NamedTypeSymbol named)
+                {
+                    var isEnum = named.TypeKind == TypeKind.Enum;
+                    if (isEnum == wantEnum)
+                    {
+                        return named;
                     }
                 }
             }

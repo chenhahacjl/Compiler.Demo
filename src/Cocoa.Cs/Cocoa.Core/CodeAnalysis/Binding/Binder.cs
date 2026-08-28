@@ -27,6 +27,11 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly Dictionary<string, string> _usingAliases = new Dictionary<string, string>();
         private readonly ImmutableArray<CodProgram> _codLibraries;
 
+        /// <summary>全局命名空间树（Phase 1-5：声明阶段后才可用——树由已完成的全局作用域构建）。
+        /// 仅在函数体绑定阶段注入；`FindDeclaredClassByFullName/Enum` 优先用它做全名/using 定位，
+        /// 未命中回退作用域链（树只索引全局静态声明，动态/单态化/委托类型等以回退兜底）。</summary>
+        private readonly NamespaceSymbol? _globalNamespace;
+
         private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
@@ -60,7 +65,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
         internal void SetBindingClass(NamedTypeSymbol? classType) => _bindingClass = classType;
 
-        internal Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, LanguageDialect dialect, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<CodProgram> codLibraries = default)
+        internal Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, LanguageDialect dialect, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<CodProgram> codLibraries = default, NamespaceSymbol? globalNamespace = null)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
@@ -69,6 +74,7 @@ namespace Cocoa.CodeAnalysis.Binding
             _references = references.ToArray();
             _dialect = dialect;
             _codLibraries = codLibraries.IsDefault ? ImmutableArray<CodProgram>.Empty : codLibraries;
+            _globalNamespace = globalNamespace;
             _usingNamespaces.AddRange(usingNamespaces);
             if (!usingStatics.IsDefaultOrEmpty)
             {
@@ -430,7 +436,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, usingStatics, usingAliases, (references ?? Array.Empty<string>()).ToImmutableArray());
         }
 
-        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default, LanguageDialect dialect = LanguageDialect.Cocoa, bool linkCodDynamically = false)
+        public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries = default, LanguageDialect dialect = LanguageDialect.Cocoa, bool linkCodDynamically = false, NamespaceSymbol? globalNamespace = null)
         {
             var parentScope = CreateParentScope(globalScope);
             InjectCodSymbols(parentScope, codLibraries);
@@ -455,7 +461,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     // （历史边界：正因此前选语法重绑路线）——诊断不外泄，体照常携带供替换展开
                     if (!function.IsGenericMethod && !function.IsExtern && !function.IsAbstract && function.BuiltinKind == null)
                     {
-                        var (openBody, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect);
+                        var (openBody, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
                         genericOpenBodies.Add(function, openBody);
                     }
 
@@ -480,7 +486,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     continue;
                 }
 
-                var (loweredBody, bodyDiagnostics) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect);
+                var (loweredBody, bodyDiagnostics) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
                 functionBodies.Add(function, loweredBody);
                 diagnostics.AddRange(bodyDiagnostics);
             }
@@ -645,7 +651,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>
         /// 单函数体构建（6e-M20 自 BindProgram 抽取复用）：方法体绑定 + 构造链/字段初始化器前缀 + 降级 + AllPathsReturn 检查。
         /// </summary>
-        private static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries, LanguageDialect dialect)
+        private static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CodProgram> codLibraries, LanguageDialect dialect, NamespaceSymbol? globalNamespace)
         {
             var bodySyntax = function.Declaration?.Body;
             var bodyLocation = (SyntaxNode?)function.Declaration?.Identifier ?? function.Syntax;
@@ -656,7 +662,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
             if (function.Syntax is not LambdaExpressionSyntax)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
