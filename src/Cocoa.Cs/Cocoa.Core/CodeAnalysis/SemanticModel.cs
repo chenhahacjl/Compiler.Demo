@@ -1,18 +1,23 @@
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// 语义模型（Phase 2 起点，对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SemanticModel"/>）。
-    /// 当前提供「类型名语法节点」的符号解析：关键字基元（CO 方言 + C# 原名）直接映射，
-    /// 其余经 <see cref="Compilation.GetTypeByMetadataName"/> 走全局命名空间树（源 + .cod 库）。
-    /// 完整 <c>GetSymbolInfo</c>/<c>GetOperation</c> 属后续里程碑。
+    /// 语义模型（对齐 Roslyn <see cref="Microsoft.CodeAnalysis.SemanticModel"/>）。
+    /// 基于绑定树（经 <see cref="Compilation"/> 惰性绑定全部函数体，Syntax→BoundNode 映射）提供
+    /// <c>GetTypeInfo</c>/<c>GetSymbolInfo</c>：任意函数体内的表达式（含局部变量/参数/实例成员）返回真实绑定结果；
+    /// 未命中（如类型名、声明节点）回落名称/声明解析。
     /// </summary>
     public sealed class SemanticModel
     {
         private readonly Compilation _compilation;
         private readonly SyntaxTree _syntaxTree;
+
+        private Dictionary<SyntaxNode, BoundNode>? _boundBySyntax;
 
         internal SemanticModel(Compilation compilation, SyntaxTree syntaxTree)
         {
@@ -26,10 +31,75 @@ namespace Cocoa.CodeAnalysis
         /// <summary>所属语法树。</summary>
         public SyntaxTree SyntaxTree => _syntaxTree;
 
-        /// <summary>解析类型名语法节点（<see cref="NameExpressionSyntax"/> / <see cref="TypeClauseSyntax"/>）对应的类型符号；
-        /// 其它形状/null 返回 null。</summary>
+        /// <summary>惰性绑定全部函数体并建 Syntax→BoundNode 映射（A-1/A-2：实例成员/局部变量/参数解析）。</summary>
+        private Dictionary<SyntaxNode, BoundNode> BoundBySyntax
+        {
+            get
+            {
+                if (_boundBySyntax != null)
+                {
+                    return _boundBySyntax;
+                }
+
+                var program = Binder.BindProgram(
+                    _compilation.IsScript,
+                    null,
+                    _compilation.GlobalScope,
+                    _compilation.CodLibraries,
+                    _syntaxTree.Dialect,
+                    false,
+                    _compilation.GlobalNamespace);
+
+                var map = new Dictionary<SyntaxNode, BoundNode>();
+                var collector = new BoundNodeCollector(map);
+                foreach (var body in program.Functions.Values)
+                {
+                    collector.RewriteStatement(body);
+                }
+
+                _boundBySyntax = map;
+                return map;
+            }
+        }
+
+        private sealed class BoundNodeCollector : BoundTreeRewriter
+        {
+            private readonly Dictionary<SyntaxNode, BoundNode> _map;
+
+            public BoundNodeCollector(Dictionary<SyntaxNode, BoundNode> map)
+            {
+                _map = map;
+            }
+
+            public override BoundStatement RewriteStatement(BoundStatement node)
+            {
+                if (node.Syntax != null)
+                {
+                    _map[node.Syntax] = node;
+                }
+
+                return base.RewriteStatement(node);
+            }
+
+            public override BoundExpression RewriteExpression(BoundExpression node)
+            {
+                if (node.Syntax != null)
+                {
+                    _map[node.Syntax] = node;
+                }
+
+                return base.RewriteExpression(node);
+            }
+        }
+
+        /// <summary>表达式类型：优先绑定树（任意表达式，含局部变量/参数/实例成员）；类型名节点回落名称解析。</summary>
         public TypeSymbol? GetTypeInfo(SyntaxNode node)
         {
+            if (node != null && BoundBySyntax.TryGetValue(node, out var bound) && bound is BoundExpression expression)
+            {
+                return expression.Type;
+            }
+
             string? name = node switch
             {
                 NameExpressionSyntax nameExpression => nameExpression.IdentifierToken.Text,
@@ -104,12 +174,25 @@ namespace Cocoa.CodeAnalysis
 
         private NamespaceSymbol GlobalNamespace => _compilation.GlobalNamespace;
 
-        /// <summary>解析名称表达式对应的符号（对齐 Roslyn <c>SemanticModel.GetSymbolInfo</c>）：
-        /// 按名解析——类型（关键字/元数据全名）优先，其次全局变量，其次函数；其余/null 返回 null。
-        /// 支持 NameExpression（变量/类型用法）与 CallExpression（函数调用，名字存于 Identifier token）。
-        /// 基于编译级解析（非逐节点绑定），局部变量/成员访问等暂不支持。</summary>
+        /// <summary>表达式对应符号（对齐 Roslyn <c>SemanticModel.GetSymbolInfo</c>）。
+        /// 优先绑定树（局部变量/参数/实例成员等返回真实绑定符号）；未命中回落名称/成员解析。</summary>
         public Symbol? GetSymbolInfo(SyntaxNode node)
         {
+            if (node != null && BoundBySyntax.TryGetValue(node, out var bound))
+            {
+                switch (bound)
+                {
+                    case BoundVariableExpression variableExpression:
+                        return variableExpression.Variable;
+                    case BoundCallExpression callExpression:
+                        return callExpression.Function;
+                    case BoundMemberCallExpression memberCallExpression:
+                        return memberCallExpression.Method;
+                    case BoundMemberAccessExpression memberAccessExpression:
+                        return memberAccessExpression.Field;
+                }
+            }
+
             return node switch
             {
                 NameExpressionSyntax nameExpression => ResolveName(nameExpression.IdentifierToken.Text),

@@ -327,6 +327,63 @@ function Main()
         }
 
         [Fact]
+        public void SemanticModel_BoundTree_ResolvesLocalsParamsAndInstanceMembers()
+        {
+            var code = @"using System
+
+public class Point
+{
+    private _x: i32
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+
+    public function Get(): i32
+    {
+        return _x
+    }
+}
+
+function UsePoint(p: Point): i32
+{
+    var local: i32 = p.Get()
+    var sum: i32 = local + p.Get()
+    return sum
+}
+
+function Main()
+{
+    var pt = new Point(3)
+    UsePoint(pt)
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var localUse = Descendants(tree.Root).OfType<NameExpressionSyntax>().First(n => n.IdentifierToken.Text == "local");
+            var localSymbol = model.GetSymbolInfo(localUse);
+            Assert.NotNull(localSymbol);
+            Assert.Equal(SymbolKind.LocalVariable, localSymbol!.Kind);
+            Assert.Equal("local", localSymbol.Name);
+            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(localUse));
+
+            var pUse = Descendants(tree.Root).OfType<NameExpressionSyntax>().First(n => n.IdentifierToken.Text == "p");
+            var pSymbol = model.GetSymbolInfo(pUse);
+            Assert.NotNull(pSymbol);
+            Assert.Equal(SymbolKind.Parameter, pSymbol!.Kind);
+            Assert.Equal("Point", model.GetTypeInfo(pUse)!.Name);
+
+            var getCall = Descendants(tree.Root).OfType<MemberCallExpressionSyntax>().First(m => m.IdentifierToken.Text == "Get");
+            var getSymbol = model.GetSymbolInfo(getCall);
+            Assert.NotNull(getSymbol);
+            Assert.Equal(SymbolKind.Function, getSymbol!.Kind);
+            Assert.Equal("Get", getSymbol.Name);
+            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(getCall));
+        }
+
+        [Fact]
         public void SemanticModel_GetSymbolInfo_ResolvesStaticMemberAccess()
         {
             var code = @"using System
