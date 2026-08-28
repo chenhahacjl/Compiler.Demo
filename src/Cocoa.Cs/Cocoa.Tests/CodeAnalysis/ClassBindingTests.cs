@@ -996,6 +996,39 @@ function Main()
             Assert.Equal(SyntaxKind.OpenParenthesisToken, typedForeach.OpenParenToken!.Kind);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_ForAndArrayCreation()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    var sum = 0
+    for var i = 0 to 10 step 2
+    {
+        sum = sum + i
+    }
+    var a = new i32[3]
+    var b = new i32[] { 1, 2, 3 }
+    sum = b[0]
+}");
+            var forStatement = tree.Root.DescendantNodes().OfType<ForStatementSyntax>().First();
+            var typedFor = Assert.IsType<ForStatementSyntax>(forStatement.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.ForKeyword, typedFor.Keyword.Kind);
+            Assert.Equal("i", typedFor.Identifier!.Text);
+            Assert.Equal(SyntaxKind.ToKeyword, typedFor.ToKeyword.Kind);
+            Assert.Equal(SyntaxKind.StepKeyword, typedFor.StepKeyword!.Kind);
+            Assert.NotNull(typedFor.Step);
+
+            var sized = tree.Root.DescendantNodes().OfType<ArrayCreationExpressionSyntax>().First(a => a.Size != null);
+            var typedSized = Assert.IsType<ArrayCreationExpressionSyntax>(sized.ToGreen().CreateTypedRed(tree));
+            Assert.NotNull(typedSized.Size);
+
+            var withElements = tree.Root.DescendantNodes().OfType<ArrayCreationExpressionSyntax>().First(a => a.Size == null);
+            var typedElements = Assert.IsType<ArrayCreationExpressionSyntax>(withElements.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(3, typedElements.Elements.Count);
+            Assert.NotNull(typedElements.OpenBraceToken);
+            Assert.NotNull(typedElements.CloseBraceToken);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
