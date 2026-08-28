@@ -662,6 +662,26 @@ function Main()
             Assert.Equal("b", ((NameExpressionSyntax)binary.Right).IdentifierToken.Text);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_CoversMoreKinds()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    var x = -a
+    x = (a + b)
+    var s = a.b
+}");
+            var unary = tree.Root.DescendantNodes().OfType<UnaryExpressionSyntax>().First();
+            var paren = tree.Root.DescendantNodes().OfType<ParenthesizedExpressionSyntax>().First();
+            var assign = tree.Root.DescendantNodes().OfType<AssignmentExpressionSyntax>().First();
+            var member = tree.Root.DescendantNodes().OfType<MemberAccessExpressionSyntax>().First();
+
+            Assert.IsType<UnaryExpressionSyntax>(unary.ToGreen().CreateTypedRed(tree));
+            Assert.IsType<ParenthesizedExpressionSyntax>(paren.ToGreen().CreateTypedRed(tree));
+            Assert.IsType<AssignmentExpressionSyntax>(assign.ToGreen().CreateTypedRed(tree));
+            Assert.IsType<MemberAccessExpressionSyntax>(member.ToGreen().CreateTypedRed(tree));
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

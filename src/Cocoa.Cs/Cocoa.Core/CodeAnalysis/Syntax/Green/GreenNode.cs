@@ -54,7 +54,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 SyntaxKind.NameExpression => BuildNameExpression(syntaxTree, position),
                 SyntaxKind.BinaryExpression => BuildBinaryExpression(syntaxTree, position),
+                SyntaxKind.UnaryExpression => BuildUnaryExpression(syntaxTree, position),
+                SyntaxKind.ParenthesizedExpression => BuildParenthesizedExpression(syntaxTree, position),
                 SyntaxKind.LiteralExpression => BuildLiteralExpression(syntaxTree, position),
+                SyntaxKind.ExpressionStatement => BuildExpressionStatement(syntaxTree, position),
+                SyntaxKind.AssignmentExpression => BuildAssignmentExpression(syntaxTree, position),
+                SyntaxKind.MemberAccessExpression => BuildMemberAccessExpression(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -79,6 +84,50 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var literalToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
             return new LiteralExpressionSyntax(syntaxTree, literalToken);
+        }
+
+        private SyntaxNode BuildUnaryExpression(SyntaxTree syntaxTree, int position)
+        {
+            var operatorToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var operandPosition = position + GetSlot(0)!.Width;
+            var operand = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, operandPosition);
+            return new UnaryExpressionSyntax(syntaxTree, operatorToken, operand);
+        }
+
+        private SyntaxNode BuildParenthesizedExpression(SyntaxTree syntaxTree, int position)
+        {
+            var openParenthesis = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var expressionPosition = position + GetSlot(0)!.Width;
+            var expression = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, expressionPosition);
+            var closePosition = expressionPosition + GetSlot(1)!.Width;
+            var closeParenthesis = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, closePosition);
+            return new ParenthesizedExpressionSyntax(syntaxTree, openParenthesis, expression, closeParenthesis);
+        }
+
+        private SyntaxNode BuildExpressionStatement(SyntaxTree syntaxTree, int position)
+        {
+            var expression = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return new ExpressionStatementSyntax(syntaxTree, expression);
+        }
+
+        private SyntaxNode BuildAssignmentExpression(SyntaxTree syntaxTree, int position)
+        {
+            var target = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var tokenPosition = position + GetSlot(0)!.Width;
+            var assignmentToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, tokenPosition);
+            var expressionPosition = tokenPosition + GetSlot(1)!.Width;
+            var expression = (ExpressionSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, expressionPosition);
+            return new AssignmentExpressionSyntax(syntaxTree, target, assignmentToken, expression);
+        }
+
+        private SyntaxNode BuildMemberAccessExpression(SyntaxTree syntaxTree, int position)
+        {
+            var expression = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var dotPosition = position + GetSlot(0)!.Width;
+            var dotToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, dotPosition);
+            var identifierPosition = dotPosition + GetSlot(1)!.Width;
+            var identifierToken = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, identifierPosition);
+            return new MemberAccessExpressionSyntax(syntaxTree, expression, dotToken, identifierToken);
         }
     }
 }
