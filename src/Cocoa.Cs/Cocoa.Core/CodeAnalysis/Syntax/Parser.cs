@@ -2190,7 +2190,8 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 while (Current.Kind == SyntaxKind.IdentifierToken ||
                        Current.Kind == SyntaxKind.NewKeyword ||
-                       Current.Kind == SyntaxKind.ClassKeyword)
+                       Current.Kind == SyntaxKind.ClassKeyword ||
+                       Current.Kind == SyntaxKind.StructKeyword)
                 {
                     constraints.Add(ParseConstraintType());
 
@@ -2226,6 +2227,14 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             // `class` 特殊约束：关键字合成为同名标识符（绑定层按文本识别；struct 约束待 struct 落地后扩展）
             if (Current.Kind == SyntaxKind.ClassKeyword)
+            {
+                var keyword = NextToken();
+                var synthesizedIdentifier = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, keyword.Position, keyword.Text, keyword.Text, keyword.LeadingTrivia, keyword.TrailingTrivia);
+                return new TypeClauseSyntax(_syntaxTree, null, synthesizedIdentifier);
+            }
+
+            // `struct` 特殊约束：关键字合成为同名标识符（绑定层按文本识别；与 class 互斥由 Binder 约束校验报告）
+            if (Current.Kind == SyntaxKind.StructKeyword)
             {
                 var keyword = NextToken();
                 var synthesizedIdentifier = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, keyword.Position, keyword.Text, keyword.Text, keyword.LeadingTrivia, keyword.TrailingTrivia);

@@ -4180,10 +4180,16 @@ namespace Cocoa.CodeAnalysis.Binding
             return type == TypeSymbol.String || type == TypeSymbol.Any;
         }
 
-        /// <summary>值类型判定（where T: struct，6e-M22 C1）：基元数值全集 + bool + char + enum；语言暂无用户 struct。</summary>
+        /// <summary>值类型判定（where T: struct，6e-M22 C1）：基元数值全集 + bool + char + enum + 用户 struct；其数组形式同视为值类型。</summary>
         private static bool IsValueType(TypeSymbol type)
         {
-            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } ||
+                type is NamedTypeSymbol { TypeKind: TypeKind.Struct })
+            {
+                return true;
+            }
+
+            if (type.ElementType != null && IsValueType(type.ElementType))
             {
                 return true;
             }
