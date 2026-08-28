@@ -494,6 +494,23 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target)
             => Emit(moduleName, references, outputPath, target, emitLibrary: false);
 
+        // 引用作为编译组成部分（对齐 Roslyn：Emit 不接收引用参数，经 Compilation.References 提供）
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string outputPath)
+            => Emit(moduleName, this.References.Select(r => r.Display).ToArray(), outputPath, IlTarget.Default, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string outputPath, IlTarget target)
+            => Emit(moduleName, this.References.Select(r => r.Display).ToArray(), outputPath, target, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, string outputPath, IlTarget target, bool emitLibrary)
+            => Emit(moduleName, this.References.Select(r => r.Display).ToArray(), outputPath, target, emitLibrary);
+
+        // MetadataReference 形态重载（Roslyn 形态引用参数）
+        public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<MetadataReference> references, string outputPath)
+            => Emit(moduleName, references.Select(r => r.Display).ToArray(), outputPath, IlTarget.Default, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<MetadataReference> references, string outputPath, IlTarget target)
+            => Emit(moduleName, references.Select(r => r.Display).ToArray(), outputPath, target, emitLibrary: false);
+
         public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);

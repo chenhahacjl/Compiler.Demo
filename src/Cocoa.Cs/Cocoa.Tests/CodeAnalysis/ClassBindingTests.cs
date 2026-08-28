@@ -183,6 +183,18 @@ function Main()
         }
 
         [Fact]
+        public void Emit_MetadataReferenceOverloads_Resolve()
+        {
+            var compilation = Compilation.Create(new[] { "System.Core.cod", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse("function Main() {"));
+
+            var viaCompilationRefs = compilation.Emit("test", "C:\\Temp\\cocoa-test-out.exe");
+            Assert.Contains(viaCompilationRefs, d => d.IsError);
+
+            var viaMetadataRefs = compilation.Emit("test", compilation.References, "C:\\Temp\\cocoa-test-out.exe");
+            Assert.Contains(viaMetadataRefs, d => d.IsError);
+        }
+
+        [Fact]
         public void GetDiagnostics_AggregatesParseAndBinding()
         {
             // 语法错误
