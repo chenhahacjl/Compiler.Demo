@@ -1174,6 +1174,74 @@ function Main()
             Assert.Contains(typedInterpolated.Contents, c => c is InterpolationSyntax);
         }
 
+        [Fact]
+        public void TypedRed_WholeFile_Comprehensive()
+        {
+            var code = @"using System
+
+public enum Color { Red, Green = 2 }
+
+public interface IShape
+{
+    public function Area(): i32
+}
+
+public class Box : IShape
+{
+    private _x: i32
+
+    public property Count: i32 { get set }
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+
+    public function Area(): i32
+    {
+        return _x
+    }
+}
+
+delegate IntTransform(x: i32): i32
+
+function Main()
+{
+    var sum = 0
+    for var i = 0 to 10 step 2
+    {
+        sum = sum + i
+    }
+    foreach (var x in arr)
+    {
+        arr[0] = x
+    }
+    switch sum
+    {
+        case 0:
+            return 0
+        default:
+            break
+    }
+    var s = $""value: {sum}""
+    var f = (a) => a + 1
+    try
+    {
+        throw new Exception()
+    }
+    finally
+    {
+    }
+    return sum
+}";
+            var tree = SyntaxTree.Parse(code);
+            var typed = tree.GreenRoot.CreateTypedRed(tree);
+
+            var unit = Assert.IsType<CompilationUnitSyntax>(typed);
+            Assert.True(unit.Members.Length >= 5);
+            Assert.Contains(unit.Members, m => m is DelegateDeclarationSyntax);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
