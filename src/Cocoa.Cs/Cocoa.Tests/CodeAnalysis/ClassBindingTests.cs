@@ -82,6 +82,39 @@ function Main()
         }
 
         [Fact]
+        public void GetTypeByMetadataName_ResolvesGenericDefinitionAndInstantiation()
+        {
+            var code = @"using System
+
+public class Box<T>
+{
+    private _value: T
+
+    public constructor(value: T)
+    {
+        _value = value
+    }
+}
+
+function Main()
+{
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+
+            var boxDef = compilation.GetTypeByMetadataName("Box`1");
+            Assert.NotNull(boxDef);
+            Assert.IsType<NamedTypeSymbol>(boxDef);
+            var boxDefNamed = (NamedTypeSymbol)boxDef!;
+            Assert.True(boxDefNamed.IsGenericDefinition);
+            Assert.Equal(1, boxDefNamed.TypeParameters.Length);
+
+            var boxInt = compilation.GetTypeByMetadataName("Box`1#System.Int32");
+            Assert.NotNull(boxInt);
+            Assert.IsType<InstantiatedTypeSymbol>(boxInt);
+            Assert.Same(boxDefNamed, ((InstantiatedTypeSymbol)boxInt!).GenericDefinition);
+        }
+
+        [Fact]
         public void GlobalNamespace_GroupsTypesByDeclaredNamespace()
         {
             var code = @"using System

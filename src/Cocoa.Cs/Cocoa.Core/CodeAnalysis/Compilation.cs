@@ -209,8 +209,8 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。
-        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .cod 库）类与枚举；
-        /// 缺失返回 null。支持后置 [] 数组全名（如 <c>"System.Int32[]"</c>）。</summary>
+        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .cod 库）类/枚举/
+        /// 泛型定义。支持后置 [] 数组全名、泛型定义（<c>"...List`1"</c>）与实例化 mangle（<c>"...List`1#System.Int32"</c>）。</summary>
         public TypeSymbol? GetTypeByMetadataName(string fullyQualifiedName)
         {
             var elementName = fullyQualifiedName;
@@ -244,25 +244,79 @@ namespace Cocoa.CodeAnalysis
 
             if (type == null)
             {
-                // 声明的命名类型（源 + 注入的 .cod 库）：经全局命名空间树归组解析（Phase 1-5）
-                var dotIndex = elementName.LastIndexOf('.');
-                var namespaceName = dotIndex < 0 ? "" : elementName.Substring(0, dotIndex);
-                var simpleName = dotIndex < 0 ? elementName : elementName.Substring(dotIndex + 1);
-                var ns = GlobalNamespace.GetNamespace(namespaceName);
-                if (ns != null)
+                type = ResolveNamedTypeByMetadataName(elementName);
+            }
+
+            return isArray && type != null ? TypeSymbol.ArrayOf(type) : type;
+        }
+
+        /// <summary>命名类型解析：泛型定义（<c>名称`元数</c>）/ 实例化（<c>名称`元数#实参$实参</c>）或普通声明类型。</summary>
+        private TypeSymbol? ResolveNamedTypeByMetadataName(string elementName)
+        {
+            var backtick = elementName.IndexOf('`');
+            if (backtick >= 0)
+            {
+                var baseName = elementName.Substring(0, backtick);
+                var rest = elementName.Substring(backtick + 1);
+                var hash = rest.IndexOf('#');
+                var arityText = hash < 0 ? rest : rest.Substring(0, hash);
+                if (int.TryParse(arityText, out var arity) && arity > 0)
                 {
-                    foreach (var member in ns.GetTypeMembers())
+                    if (ResolveDeclaredType(baseName) is NamedTypeSymbol definition &&
+                        definition.IsGenericDefinition && definition.TypeParameters.Length == arity)
                     {
-                        if (member.Name == simpleName)
+                        if (hash < 0)
                         {
-                            type = member;
-                            break;
+                            return definition;
                         }
+
+                        var argsText = rest.Substring(hash + 1);
+                        if (argsText.Length == 0)
+                        {
+                            return null;
+                        }
+
+                        var argumentNames = argsText.Split('$');
+                        var arguments = ImmutableArray.CreateBuilder<TypeSymbol>(argumentNames.Length);
+                        foreach (var argumentName in argumentNames)
+                        {
+                            if (GetTypeByMetadataName(argumentName) is not { } argumentType)
+                            {
+                                return null;
+                            }
+
+                            arguments.Add(argumentType);
+                        }
+
+                        return GenericTypeInstantiator.Instantiate(definition, arguments.ToImmutable());
+                    }
+                }
+
+                return null;
+            }
+
+            return ResolveDeclaredType(elementName);
+        }
+
+        /// <summary>经全局命名空间树按「命名空间.简单名」定位声明类型。</summary>
+        private TypeSymbol? ResolveDeclaredType(string elementName)
+        {
+            var dotIndex = elementName.LastIndexOf('.');
+            var namespaceName = dotIndex < 0 ? "" : elementName.Substring(0, dotIndex);
+            var simpleName = dotIndex < 0 ? elementName : elementName.Substring(dotIndex + 1);
+            var ns = GlobalNamespace.GetNamespace(namespaceName);
+            if (ns != null)
+            {
+                foreach (var member in ns.GetTypeMembers())
+                {
+                    if (member.Name == simpleName)
+                    {
+                        return member;
                     }
                 }
             }
 
-            return isArray && type != null ? TypeSymbol.ArrayOf(type) : type;
+            return null;
         }
 
         private NamespaceSymbol? _globalNamespace;
@@ -284,6 +338,7 @@ namespace Cocoa.CodeAnalysis
                 AddTypesToNamespace(tree, GlobalScope.Classes);
                 AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Enums));
                 AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Classes));
+                AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.GenericDefinitions));
                 AddFunctionsToNamespace(tree, GlobalScope.Functions.Where(f => f.ContainingClass == null));
                 AddFunctionsToNamespace(tree, _codLibraries.SelectMany(l => l.Functions).Where(f => f.ContainingClass == null));
                 Interlocked.CompareExchange(ref _globalNamespace, tree, null);
