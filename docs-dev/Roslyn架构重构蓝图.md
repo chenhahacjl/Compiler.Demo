@@ -66,14 +66,15 @@ Cocoa.CodeAnalysis
 
 ### Phase 4 — Syntax 红/绿节点（体量最大、风险最高，独立里程碑排期）
 
-**已完成（2026-08-28，`fee6e92`/`bfe6680`）**：
-1. 红树遍历基础设施：`SyntaxNode.DescendantNodes/DescendantNodesAndSelf/DescendantTokens` + `SyntaxWalker`。
-2. 绿节点基础设施：`Syntax/Green/`（`GreenNode`/`GreenToken`/`GreenTrivia`/`GreenNodeWithChildren`）+ `SyntaxFactory`，与现有红树/解析器并行共存、零破坏。
+**已完成**：
+1. 红树遍历基础设施（`fee6e92`）：`DescendantNodes/DescendantNodesAndSelf/DescendantTokens` + `SyntaxWalker`。
+2. 绿节点基础设施（`bfe6680`）：`Syntax/Green/`（`GreenNode`/`GreenToken`/`GreenTrivia`/`GreenNodeWithChildren`）+ `SyntaxFactory`。
+3. **桥接 1a 红→绿（`a51c13e`，已收敛）**：`SyntaxNode.ToGreen()`（沿 `GetChildren` 递归）+ `SyntaxToken.ToGreen()`（保留文本/值/trivia）+ `SyntaxTree.GreenRoot`（惰性、可跨树共享）；往返测试 `GreenRoot.ToString()==源码`。
 
-**独立里程碑排期（后续立项，不随主线实施）**：
-1. **红/绿桥接**：`SyntaxNode` 改为包 `GreenNode` 的惰性红视图（父链/子节点经绿槽实现），`SyntaxTree` 存绿根。
-2. **解析器迁移**：Lexer/Parser 直接产出绿树。
-3. **增量重解析**（为将来 IDE 打底）。
+**独立子分支排期（1a 收敛后，后续立项）**：
+1. **1b 绿→红惰性视图**：`SyntaxNode` 改包 `GreenNode` 的惰性红视图（父链/子节点经绿槽实现），`SyntaxTree.FromGreen`；需 ~44 个红节点按绿槽实现 + 逐步迁移，每步全量验证。
+2. **2 解析器迁移**：Lexer/Parser 直接产出绿树。
+3. **3 增量重解析**（为将来 IDE 打底）。
 4. 验收：全量绿。
 
 ## 四、关键取舍
