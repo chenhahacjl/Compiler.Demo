@@ -152,6 +152,31 @@ function Main()
         }
 
         [Fact]
+        public void GetSymbolsWithName_MatchesAcrossTypesAndFunctions()
+        {
+            var code = @"using System
+
+public class Point
+{
+    public function Get(): i32 { return 0 }
+}
+
+public enum Color { Red, Green }
+
+function Compute(): i32 { return 1 }
+
+function Main()
+{
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+
+            Assert.Contains(compilation.GetSymbolsWithName("Point"), s => s is NamedTypeSymbol && s.Name == "Point");
+            Assert.Contains(compilation.GetSymbolsWithName("Color"), s => s is NamedTypeSymbol && s.Name == "Color");
+            Assert.Contains(compilation.GetSymbolsWithName("Compute"), s => s is FunctionSymbol && s.Name == "Compute");
+            Assert.Empty(compilation.GetSymbolsWithName("DefinitelyMissing"));
+        }
+
+        [Fact]
         public void GlobalNamespace_GroupsNamespacedFunctions()
         {
             var code = @"using System

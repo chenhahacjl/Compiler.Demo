@@ -157,6 +157,51 @@ namespace Cocoa.CodeAnalysis
             return builder.ToImmutable();
         }
 
+        /// <summary>按名称枚举符号（对齐 Roslyn <c>Compilation.GetSymbolsWithName</c>）：
+        /// 命名类型 + 顶层函数（经全局命名空间树）+ 全局变量；去重。</summary>
+        public IEnumerable<Symbol> GetSymbolsWithName(string name)
+        {
+            var seen = new HashSet<Symbol>(ReferenceEqualityComparer.Instance);
+            foreach (var ns in EnumerateNamespaces(GlobalNamespace))
+            {
+                foreach (var type in ns.GetTypeMembers())
+                {
+                    if (type.Name == name && seen.Add(type))
+                    {
+                        yield return type;
+                    }
+                }
+
+                foreach (var function in ns.GetFunctionMembers())
+                {
+                    if (function.Name == name && seen.Add(function))
+                    {
+                        yield return function;
+                    }
+                }
+            }
+
+            foreach (var variable in Variables)
+            {
+                if (variable.Name == name && seen.Add(variable))
+                {
+                    yield return variable;
+                }
+            }
+        }
+
+        private static IEnumerable<NamespaceSymbol> EnumerateNamespaces(NamespaceSymbol root)
+        {
+            yield return root;
+            foreach (var child in root.GetNamespaceMembers())
+            {
+                foreach (var nested in EnumerateNamespaces(child))
+                {
+                    yield return nested;
+                }
+            }
+        }
+
         /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。
         /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .cod 库）类与枚举；
         /// 缺失返回 null。支持后置 [] 数组全名（如 <c>"System.Int32[]"</c>）。</summary>
