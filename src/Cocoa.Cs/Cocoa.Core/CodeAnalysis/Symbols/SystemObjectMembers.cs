@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// <summary>
     /// 6e-M19 M2-c：System.Object 内建成员面（编译器内建虚方法符号，非 stdlib facade 源码）。
     /// 虚方法语义与 facade 静态降级互斥（override 需要动态分派），故直接向
-    /// <see cref="ClassTypeSymbol.SystemObject"/> 单例注入 FunctionSymbol：
+    /// <see cref="NamedTypeSymbol.SystemObject"/> 单例注入 FunctionSymbol：
     /// 用户类成员查找沿 BaseType 链自然上溯命中；override 校验经 OverriddenMethod 回填；
     /// 三后端按 <see cref="FunctionSymbol.BuiltinKind"/> 分发（IL box+callvirt / Evaluator CLR / native M4 vtable）。
     /// 单例为 static readonly（跨编译共享），<see cref="Ensure"/> 幂等。
@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.ObjectToString, "ToString", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.ObjectGetHashCode, "GetHashCode", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.ObjectEquals, "Equals", TypeSymbol.Boolean, new[] { ("other", TypeSymbol.Any) }),
-            new BuiltinSpec(BuiltinKind.ObjectGetType, "GetType", ClassTypeSymbol.SystemType, System.Array.Empty<(string, TypeSymbol)>()),
+            new BuiltinSpec(BuiltinKind.ObjectGetType, "GetType", NamedTypeSymbol.SystemType, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.ObjectStaticEquals, "Equals", TypeSymbol.Boolean, new[] { ("a", TypeSymbol.Any), ("b", TypeSymbol.Any) }),
             new BuiltinSpec(BuiltinKind.ObjectReferenceEquals, "ReferenceEquals", TypeSymbol.Boolean, new[] { ("a", TypeSymbol.Any), ("b", TypeSymbol.Any) }),
             new BuiltinSpec(BuiltinKind.TypeName, "get_Name", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
@@ -64,7 +64,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
             _initialized = true;
 
-            var obj = ClassTypeSymbol.SystemObject;
+            var obj = NamedTypeSymbol.SystemObject;
             obj.AddMethod(ToString);
             obj.AddMethod(GetHashCode);
             obj.AddMethod(Equals);
@@ -72,8 +72,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             obj.AddMethod(StaticEquals);
             obj.AddMethod(ReferenceEquals);
 
-            var type = ClassTypeSymbol.SystemType;
-            type.BaseType = ClassTypeSymbol.SystemObject;
+            var type = NamedTypeSymbol.SystemType;
+            type.BaseType = NamedTypeSymbol.SystemObject;
             var nameProperty = new PropertySymbol("Name", TypeSymbol.String, type, TypeName, setter: null, Visibility.Public, isStatic: false);
             var fullNameProperty = new PropertySymbol("FullName", TypeSymbol.String, type, TypeFullName, setter: null, Visibility.Public, isStatic: false);
             type.AddProperty(nameProperty);
@@ -83,8 +83,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>是否为 Object/Type 内建单例（`.cod` 序列化跳过 cls 壳与方法回填的判据）。</summary>
-        internal static bool IsBuiltinSystemClass(ClassTypeSymbol classType)
-            => classType == ClassTypeSymbol.SystemObject || classType == ClassTypeSymbol.SystemType;
+        internal static bool IsBuiltinSystemClass(NamedTypeSymbol classType)
+            => classType == NamedTypeSymbol.SystemObject || classType == NamedTypeSymbol.SystemType;
 
         /// <summary>按 BuiltinKind 解析单例符号（`.cod` 读侧重建时复用，保证发射器识别内置）。</summary>
         internal static FunctionSymbol? GetByKind(BuiltinKind kind) => kind switch
@@ -135,7 +135,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         {
             var spec = _specs.First(s => s.Kind == kind);
             var parameters = spec.Parameters.Select((p, i) => new ParameterSymbol(p.Name, p.Type, i)).ToImmutableArray();
-            return new FunctionSymbol(spec.Name, parameters, spec.ReturnType, containingClass: ClassTypeSymbol.SystemObject, builtinKind: kind);
+            return new FunctionSymbol(spec.Name, parameters, spec.ReturnType, containingClass: NamedTypeSymbol.SystemObject, builtinKind: kind);
         }
     }
 }

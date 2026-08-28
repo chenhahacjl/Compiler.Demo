@@ -19,9 +19,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public bool TryDeclareVariable(VariableSymbol variable) => TryDeclareNonFunctionSymbol(variable);
 
-        public bool TryDeclareEnum(EnumTypeSymbol enumType) => TryDeclareNonFunctionSymbol(enumType);
+        public bool TryDeclareEnum(NamedTypeSymbol enumType) => TryDeclareNonFunctionSymbol(enumType);
 
-        public bool TryDeclareClass(ClassTypeSymbol classType) => TryDeclareNonFunctionSymbol(classType);
+        public bool TryDeclareClass(NamedTypeSymbol classType) => TryDeclareNonFunctionSymbol(classType);
 
         private bool TryDeclareNonFunctionSymbol(Symbol symbol)
         {
@@ -162,9 +162,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public ImmutableArray<VariableSymbol> GetDeclaredVariables() => GetDeclaredSymbols<VariableSymbol>();
 
-        public ImmutableArray<EnumTypeSymbol> GetDeclaredEnums() => GetDeclaredSymbols<EnumTypeSymbol>();
+        public ImmutableArray<NamedTypeSymbol> GetDeclaredEnums() => GetDeclaredSymbols<NamedTypeSymbol>();
 
-        public ImmutableArray<ClassTypeSymbol> GetDeclaredClasses() => GetDeclaredSymbols<ClassTypeSymbol>();
+        public ImmutableArray<NamedTypeSymbol> GetDeclaredClasses() => GetDeclaredSymbols<NamedTypeSymbol>();
 
         public ImmutableArray<FunctionSymbol> GetDeclaredFunctions()
         {

@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundTreeSubstituter : BoundTreeRewriter
     {
-        private readonly ClassTypeSymbol _definition;
+        private readonly NamedTypeSymbol _definition;
         private readonly InstantiatedTypeSymbol _instantiated;
         private readonly Dictionary<TypeParameterSymbol, TypeSymbol> _typeMap;
         private readonly Dictionary<VariableSymbol, VariableSymbol> _variableMap = new(ReferenceEqualityComparer.Instance);
@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly Dictionary<FunctionSymbol, FunctionSymbol> _functionMap = new(ReferenceEqualityComparer.Instance);
 
         private BoundTreeSubstituter(
-            ClassTypeSymbol definition,
+            NamedTypeSymbol definition,
             InstantiatedTypeSymbol instantiated,
             ImmutableArray<TypeParameterSymbol> openParameters)
         {
@@ -46,7 +46,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
         public static BoundBlockStatement SubstituteMethodBody(
             BoundBlockStatement openBody,
-            ClassTypeSymbol definition,
+            NamedTypeSymbol definition,
             InstantiatedTypeSymbol instantiated,
             FunctionSymbol instantiatedMethod,
             FunctionSymbol? definitionMethodOverride = null)
@@ -66,7 +66,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return (BoundBlockStatement)substituter.RewriteStatement(openBody);
         }
 
-        private static FunctionSymbol? FindDefinitionMethod(ClassTypeSymbol definition, FunctionSymbol instantiatedMethod)
+        private static FunctionSymbol? FindDefinitionMethod(NamedTypeSymbol definition, FunctionSymbol instantiatedMethod)
         {
             // 实例化构造器被 Populate 改名为实例化类 mangle 名——按构造器身份优先匹配；
             // 其余按名字匹配（开放体 v1 无重载场景，名字唯一）
@@ -231,7 +231,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 arguments.Add(RewriteExpression(argument));
             }
 
-            return new BoundObjectCreationExpression(node.Syntax, (ClassTypeSymbol)SubstituteType(node.Type), arguments.ToImmutable());
+            return new BoundObjectCreationExpression(node.Syntax, (NamedTypeSymbol)SubstituteType(node.Type), arguments.ToImmutable());
         }
 
         protected override BoundExpression RewriteConversionExpression(BoundConversionExpression node)

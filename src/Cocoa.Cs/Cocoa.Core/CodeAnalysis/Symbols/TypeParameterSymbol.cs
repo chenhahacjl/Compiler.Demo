@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class TypeParameterSymbol : TypeSymbol
     {
-        internal TypeParameterSymbol(string name, int ordinal, ClassTypeSymbol? owningClass)
+        internal TypeParameterSymbol(string name, int ordinal, NamedTypeSymbol? owningClass)
             : base(name)
         {
             Ordinal = ordinal;
@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public int Ordinal { get; }
 
         /// <summary>所属泛型类定义（类级类型参数；null = 顶层/独立上下文）。</summary>
-        public ClassTypeSymbol? OwningClass { get; }
+        public NamedTypeSymbol? OwningClass { get; }
 
         /// <summary>约束类型列表（接口/基类；实例化期校验实参满足）。</summary>
         public ImmutableArray<TypeSymbol> ConstraintTypes { get; internal set; } = ImmutableArray<TypeSymbol>.Empty;

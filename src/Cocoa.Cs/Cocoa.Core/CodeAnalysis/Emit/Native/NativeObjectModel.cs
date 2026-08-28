@@ -46,7 +46,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
                 return 2;
             }
 
-            if (type is EnumTypeSymbol || type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 || type == TypeSymbol.Float)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } || type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 || type == TypeSymbol.Float)
             {
                 return 4;
             }
@@ -55,10 +55,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         }
 
         /// <summary>沿继承链（基类在前）计算全部实例字段偏移与实例总尺寸。</summary>
-        public static (Dictionary<FieldSymbol, int> Offsets, int InstanceSize) BuildLayout(ClassTypeSymbol classType)
+        public static (Dictionary<FieldSymbol, int> Offsets, int InstanceSize) BuildLayout(NamedTypeSymbol classType)
         {
-            var chain = new List<ClassTypeSymbol>();
-            var seen = new HashSet<ClassTypeSymbol>();
+            var chain = new List<NamedTypeSymbol>();
+            var seen = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seen.Add(current); current = current.BaseType)
             {
                 chain.Add(current);
@@ -94,10 +94,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         }
 
         /// <summary>沿继承链收集全部实例字段（基类在前）。</summary>
-        public static List<FieldSymbol> CollectInstanceFields(ClassTypeSymbol classType)
+        public static List<FieldSymbol> CollectInstanceFields(NamedTypeSymbol classType)
         {
-            var chain = new List<ClassTypeSymbol>();
-            var seen = new HashSet<ClassTypeSymbol>();
+            var chain = new List<NamedTypeSymbol>();
+            var seen = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seen.Add(current); current = current.BaseType)
             {
                 chain.Add(current);
@@ -144,7 +144,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         /// 用户虚根按类全名字典序 + 链序（基→派）+ 声明序确定性地自 4 续接。
         /// 返回 根方法 → 槽索引 映射。
         /// </summary>
-        public static Dictionary<FunctionSymbol, int> AssignVirtualSlots(IEnumerable<ClassTypeSymbol> liveClasses)
+        public static Dictionary<FunctionSymbol, int> AssignVirtualSlots(IEnumerable<NamedTypeSymbol> liveClasses)
         {
             var slots = new Dictionary<FunctionSymbol, int>();
             for (var i = 0; i < ObjectVirtualRoots.Length; i++)
@@ -173,10 +173,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         public static bool IsObjectBuiltinRoot(FunctionSymbol root) => ObjectVirtualRoots.Contains(root);
 
         /// <summary>沿链（基→派）枚举本类声明为 virtual/override 的方法（去重按根）。</summary>
-        private static IEnumerable<FunctionSymbol> EnumerateChainVirtualMethods(ClassTypeSymbol classType)
+        private static IEnumerable<FunctionSymbol> EnumerateChainVirtualMethods(NamedTypeSymbol classType)
         {
-            var chain = new List<ClassTypeSymbol>();
-            var seenTypes = new HashSet<ClassTypeSymbol>();
+            var chain = new List<NamedTypeSymbol>();
+            var seenTypes = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seenTypes.Add(current); current = current.BaseType)
             {
                 chain.Add(current);
@@ -203,9 +203,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         }
 
         /// <summary>类 C 对虚根 root 的生效实现：从 C 沿链向上找最近声明（含 C 自身），返回 null = 无用户实现（用运行时默认）。</summary>
-        public static FunctionSymbol? FindImplementation(ClassTypeSymbol classType, FunctionSymbol root)
+        public static FunctionSymbol? FindImplementation(NamedTypeSymbol classType, FunctionSymbol root)
         {
-            var seen = new HashSet<ClassTypeSymbol>();
+            var seen = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seen.Add(current); current = current.BaseType)
             {
                 foreach (var method in current.Methods)
@@ -230,7 +230,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         // ------------------------------------------------------------------
 
         /// <summary>vtable 数据项 key。</summary>
-        public static string VTableKey(ClassTypeSymbol classType) => "$vt:" + classType.FullName;
+        public static string VTableKey(NamedTypeSymbol classType) => "$vt:" + classType.FullName;
 
         /// <summary>基元/Type 伪 vtable（System.Type 对象）数据项 key。</summary>
         public static string PseudoVTableKey(string fullName) => "$vt:" + fullName;
@@ -264,12 +264,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native
                 return EncodeTypeName(type.ElementType) + "[]";
             }
 
-            if (type is ClassTypeSymbol classType)
+            if (type is NamedTypeSymbol classType)
             {
                 return classType.FullName;
             }
 
-            if (type is EnumTypeSymbol enumType)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
             {
                 return enumType.FullName;
             }

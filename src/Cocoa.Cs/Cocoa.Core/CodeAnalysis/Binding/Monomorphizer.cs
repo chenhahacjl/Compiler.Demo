@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal static class Monomorphizer
     {
-        public static (ImmutableArray<ClassTypeSymbol> Classes, ImmutableArray<ClassTypeSymbol> GenericDefinitions) Expand(
+        public static (ImmutableArray<NamedTypeSymbol> Classes, ImmutableArray<NamedTypeSymbol> GenericDefinitions) Expand(
             BoundGlobalScope globalScope,
             BoundScope parentScope,
             bool isScript,
@@ -237,7 +237,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return (builder.ToImmutable(), genericDefinitions);
         }
 
-        private static ImmutableArray<ClassTypeSymbol> FilterDeclaredClasses(BoundGlobalScope globalScope)
+        private static ImmutableArray<NamedTypeSymbol> FilterDeclaredClasses(BoundGlobalScope globalScope)
         {
             return globalScope.Classes.Where(c => !c.IsGenericDefinition).ToImmutableArray();
         }

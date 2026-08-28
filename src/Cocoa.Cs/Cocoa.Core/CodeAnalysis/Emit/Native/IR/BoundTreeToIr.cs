@@ -31,10 +31,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         /// <summary>6e-M22 C5：当前函数的环境对象寄存器与布局类（无捕获 = null）。</summary>
         private IrVirtualRegister? _closureRegister;
-        private ClassTypeSymbol? _closureClass;
+        private NamedTypeSymbol? _closureClass;
 
         /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
-        private readonly HashSet<ClassTypeSymbol> _liveClasses = new();
+        private readonly HashSet<NamedTypeSymbol> _liveClasses = new();
 
         /// <summary>M4：已登记的虚方法根（Object 固定三虚根预种子）。</summary>
         private readonly HashSet<FunctionSymbol> _virtualRoots = new();
@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private Dictionary<FunctionSymbol, int> _virtualSlots = new();
 
         /// <summary>M4：类实例布局缓存（字段偏移 + 实例尺寸）。</summary>
-        private readonly Dictionary<ClassTypeSymbol, (Dictionary<FieldSymbol, int> Offsets, int InstanceSize)> _layoutCache = new();
+        private readonly Dictionary<NamedTypeSymbol, (Dictionary<FieldSymbol, int> Offsets, int InstanceSize)> _layoutCache = new();
 
         /// <summary>M4：已发射的伪 vtable（System.Type 对象）key 集合。</summary>
         private readonly HashSet<string> _pseudoVTableKeys = new();
@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>类继承链是否包含虚根的声明类。</summary>
-        private static bool InheritsRoot(ClassTypeSymbol classType, FunctionSymbol root)
+        private static bool InheritsRoot(NamedTypeSymbol classType, FunctionSymbol root)
         {
             var declaringClass = root.ContainingClass;
             if (declaringClass == null)
@@ -129,7 +129,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return false;
             }
 
-            var seen = new HashSet<ClassTypeSymbol>();
+            var seen = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seen.Add(current); current = current.BaseType)
             {
                 if (current == declaringClass)
@@ -141,7 +141,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return false;
         }
 
-        private string ResolveObjectSlot(ClassTypeSymbol classType, FunctionSymbol root, string runtimeFallback)
+        private string ResolveObjectSlot(NamedTypeSymbol classType, FunctionSymbol root, string runtimeFallback)
         {
             var implementation = NativeObjectModel.FindImplementation(classType, root);
             return implementation != null
@@ -149,7 +149,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 : runtimeFallback;
         }
 
-        private string ResolveRequiredImplementation(ClassTypeSymbol classType, FunctionSymbol root)
+        private string ResolveRequiredImplementation(NamedTypeSymbol classType, FunctionSymbol root)
         {
             var implementation = NativeObjectModel.FindImplementation(classType, root)
                 ?? throw new Exception($"vtable slot for '{root.Name}' has no implementation in concrete class '{classType.FullName}'");
@@ -231,7 +231,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             var reachable = new HashSet<FunctionSymbol>();
             var pendingFunctions = new Stack<FunctionSymbol>();
-            var pendingClasses = new Stack<ClassTypeSymbol>();
+            var pendingClasses = new Stack<NamedTypeSymbol>();
             pendingFunctions.Push(entry);
 
             while (pendingFunctions.Count > 0 || pendingClasses.Count > 0)
@@ -272,7 +272,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return reachable;
         }
 
-        private void ProcessLiveClass(ClassTypeSymbol classType, Stack<FunctionSymbol> pendingFunctions, Stack<ClassTypeSymbol> pendingClasses)
+        private void ProcessLiveClass(NamedTypeSymbol classType, Stack<FunctionSymbol> pendingFunctions, Stack<NamedTypeSymbol> pendingClasses)
         {
             if (!_liveClasses.Add(classType))
             {
@@ -280,7 +280,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // 基类链全部存活
-            var seenBases = new HashSet<ClassTypeSymbol>();
+            var seenBases = new HashSet<NamedTypeSymbol>();
             for (var baseType = classType.BaseType; baseType != null && !baseType.IsSystemObjectRoot && seenBases.Add(baseType); baseType = baseType.BaseType)
             {
                 if (!_liveClasses.Contains(baseType))
@@ -323,7 +323,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EnqueueImplementation(ClassTypeSymbol classType, FunctionSymbol root, Stack<FunctionSymbol> pendingFunctions)
+        private void EnqueueImplementation(NamedTypeSymbol classType, FunctionSymbol root, Stack<FunctionSymbol> pendingFunctions)
         {
             if (classType.IsAbstract || classType.IsInterface)
             {
@@ -337,21 +337,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private static IEnumerable<ClassTypeSymbol> CollectCreatedClasses(BoundNode node)
+        private static IEnumerable<NamedTypeSymbol> CollectCreatedClasses(BoundNode node)
         {
-            if (node.Kind == BoundNodeKind.ObjectCreationExpression && ((BoundObjectCreationExpression)node).Type is ClassTypeSymbol created)
+            if (node.Kind == BoundNodeKind.ObjectCreationExpression && ((BoundObjectCreationExpression)node).Type is NamedTypeSymbol created)
             {
                 yield return created;
             }
 
             // 6e-M19 M5-b：is/as 目标类标记存活（vtable 链比对依赖目标及祖先已发射）；抽象/接口无 vtable 不入
-            if (node.Kind == BoundNodeKind.IsExpression && ((BoundIsExpression)node).TargetType is ClassTypeSymbol isTarget &&
+            if (node.Kind == BoundNodeKind.IsExpression && ((BoundIsExpression)node).TargetType is NamedTypeSymbol isTarget &&
                 !isTarget.IsAbstract && !isTarget.IsInterface)
             {
                 yield return isTarget;
             }
 
-            if (node.Kind == BoundNodeKind.AsExpression && ((BoundAsExpression)node).TargetType is ClassTypeSymbol asTarget &&
+            if (node.Kind == BoundNodeKind.AsExpression && ((BoundAsExpression)node).TargetType is NamedTypeSymbol asTarget &&
                 !asTarget.IsAbstract && !asTarget.IsInterface)
             {
                 yield return asTarget;
@@ -366,9 +366,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private IEnumerable<FunctionSymbol> EnumerateDeclaredVirtualMethods(ClassTypeSymbol classType)
+        private IEnumerable<FunctionSymbol> EnumerateDeclaredVirtualMethods(NamedTypeSymbol classType)
         {
-            var seenTypes = new HashSet<ClassTypeSymbol>();
+            var seenTypes = new HashSet<NamedTypeSymbol>();
             for (var current = classType; current != null && !current.IsSystemObjectRoot && seenTypes.Add(current); current = current.BaseType)
             {
                 foreach (var method in current.Methods)
@@ -432,7 +432,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
-            type.ElementType != null || type is ClassTypeSymbol || type is FunctionTypeSymbol;
+            type.ElementType != null || (type is NamedTypeSymbol { TypeKind: not TypeKind.Enum }) || type is FunctionTypeSymbol;
         /// <summary>M4：实例方法/实例构造含隐藏 this 首参（静态成员与顶层函数无）。</summary>
         private static bool HasThisParameter(FunctionSymbol function)
             => function.ContainingClass != null && !function.IsStatic;
@@ -1100,7 +1100,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 return 2;
             }
 
-            if (type is EnumTypeSymbol)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return 4;
             }
@@ -1148,7 +1148,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // M4：类类型数组元素零值默认（null）——bump 分配器不复位脏页，逐元素清零
-            if (elementType is ClassTypeSymbol && node.Initializers.Length == 0)
+            if (elementType is NamedTypeSymbol && node.Initializers.Length == 0)
             {
                 EmitZeroFillElements(instructions, array, length, elementSize);
             }
@@ -1223,7 +1223,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BoundMemberAccessExpression member when member.Field != null:
                 {
                     var target = EmitExpression(member.Target);
-                    var (offsets, _) = GetLayout((ClassTypeSymbol)member.Field.ContainingClass);
+                    var (offsets, _) = GetLayout((NamedTypeSymbol)member.Field.ContainingClass);
                     var address = AllocateRegister(pointerSize);
                     Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(target), IrOperand.None, offsets[member.Field], 0));
                     return address;
@@ -1311,7 +1311,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 }
 
                 var target = EmitExpression(node.Target);
-                var (offsets, _) = GetLayout((ClassTypeSymbol)field.ContainingClass);
+                var (offsets, _) = GetLayout((NamedTypeSymbol)field.ContainingClass);
                 var offset = offsets[field];
                 var result = AllocateRegister(fieldSize == 8 ? 8 : 4);
                 Add(instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(target), IrOperand.None, offset, fieldSize));
@@ -1350,7 +1350,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             var target = EmitExpression(node.Target);
             var value = EmitExpression(node.Expression);
-            var (offsets, _) = GetLayout((ClassTypeSymbol)field.ContainingClass);
+            var (offsets, _) = GetLayout((NamedTypeSymbol)field.ContainingClass);
             Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(target), IrOperand.Reg(value), offsets[field], NativeObjectModel.FieldSize(field.Type)));
             return value;
         }
@@ -1361,7 +1361,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private IrVirtualRegister EmitObjectCreationExpression(BoundObjectCreationExpression node)
         {
             var instructions = _currentFunction.Instructions;
-            var classType = (ClassTypeSymbol)node.Type;
+            var classType = (NamedTypeSymbol)node.Type;
             var (offsets, instanceSize) = GetLayout(classType);
             var pointerSize = _isX64 ? 8 : 4;
 
@@ -1406,7 +1406,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return VoidResult();
         }
 
-        private static FunctionSymbol FindInstanceConstructor(ClassTypeSymbol classType)
+        private static FunctionSymbol FindInstanceConstructor(NamedTypeSymbol classType)
         {
             foreach (var method in classType.Methods)
             {
@@ -1420,7 +1420,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>类实例布局缓存（偏移按继承链基类在前计算）。</summary>
-        private (Dictionary<FieldSymbol, int> Offsets, int InstanceSize) GetLayout(ClassTypeSymbol classType)
+        private (Dictionary<FieldSymbol, int> Offsets, int InstanceSize) GetLayout(NamedTypeSymbol classType)
         {
             if (!_layoutCache.TryGetValue(classType, out var layout))
             {
@@ -1577,7 +1577,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var functionType = node.Callee.Type switch
             {
                 FunctionTypeSymbol ft => ft,
-                ClassTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
+                NamedTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
                 _ => throw new Exception($"Unexpected callee type {node.Callee.Type}"),
             };
 
@@ -1726,7 +1726,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BuiltinKind.ObjectGetType:
                 {
                     var receiver = EmitExpression(node.Expression);
-                    if (receiverType is ClassTypeSymbol userClass && !userClass.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol userClass && !userClass.IsFacadeClass)
                     {
                         // 用户类：对象头 [0] 即具体类 vtable（= System.Type 实例）
                         return EmitLoadPointerField(receiver, 0);
@@ -1745,7 +1745,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return receiver; // 字符串值自身即表示
                     }
 
-                    if (receiverType == ClassTypeSymbol.SystemType)
+                    if (receiverType == NamedTypeSymbol.SystemType)
                     {
                         // M4c：Type 值（vtable 记录指针）——名字字段读取。不走槽分派：
                         // 槽 0 可能是用户 override（期望对象 this），对记录指针调用会踩字段布局。
@@ -1753,7 +1753,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectToString", 8, receiver);
                     }
 
-                    if (receiverType is ClassTypeSymbol cls && !cls.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol cls && !cls.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1770,12 +1770,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     var receiver = EmitExpression(node.Expression);
 
-                    if (receiverType == ClassTypeSymbol.SystemType)
+                    if (receiverType == NamedTypeSymbol.SystemType)
                     {
                         return EmitStackRuntimeCall("ObjectGetHashCode", 4, WidenTo8(receiver));
                     }
 
-                    if (receiverType is ClassTypeSymbol hcls && !hcls.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol hcls && !hcls.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1792,13 +1792,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     var receiver = EmitExpression(node.Expression);
 
-                    if (receiverType == ClassTypeSymbol.SystemType)
+                    if (receiverType == NamedTypeSymbol.SystemType)
                     {
                         var typeOther = EmitExpression(node.Arguments[0]);
                         return EmitStackRuntimeCall("ObjectEquals", 4, WidenTo8(receiver), WidenTo8(typeOther));
                     }
 
-                    if (receiverType is ClassTypeSymbol ecl && !ecl.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol ecl && !ecl.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1837,7 +1837,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>用户类 receiver 的固定槽分派（ToString/GetHashCode/Equals）。extraArguments 为 Equals 的实参。</summary>
-        private IrVirtualRegister InvokeVirtualSlot(ClassTypeSymbol classType, int slotIndex, IrVirtualRegister receiver, ImmutableArray<BoundExpression> extraArguments)
+        private IrVirtualRegister InvokeVirtualSlot(NamedTypeSymbol classType, int slotIndex, IrVirtualRegister receiver, ImmutableArray<BoundExpression> extraArguments)
         {
             var instructions = _currentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
@@ -1897,7 +1897,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// <summary>类型对应的封装类全名（伪 vtable 名字来源）。</summary>
         private static string FacadeFullNameOfType(TypeSymbol type)
         {
-            if (type == ClassTypeSymbol.SystemType)
+            if (type == NamedTypeSymbol.SystemType)
             {
                 return "System.Type";
             }
@@ -1924,12 +1924,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case "string": return "System.String";
             }
 
-            if (type is EnumTypeSymbol enumType)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
             {
                 return enumType.FullName;
             }
 
-            if (type is ClassTypeSymbol classType)
+            if (type is NamedTypeSymbol classType)
             {
                 return classType.FullName;
             }
@@ -2045,12 +2045,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 }
 
                 var type = current.Type;
-                if (type is EnumTypeSymbol)
+                if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
                 {
                     return true;
                 }
 
-                if (type is ClassTypeSymbol || type.ElementType != null)
+                if (type is NamedTypeSymbol || type.ElementType != null)
                 {
                     return false;
                 }
@@ -2834,7 +2834,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             Add(instructions, new IrInstruction(IrOpCode.Load, curVt, IrOperand.Reg(obj), IrOperand.None, 0, ps));
 
             var candidate = AllocateRegister(ps);
-            foreach (var key in EnumerateDescendantVTableKeys((ClassTypeSymbol)targetType))
+            foreach (var key in EnumerateDescendantVTableKeys((NamedTypeSymbol)targetType))
             {
                 Add(instructions, new IrInstruction(IrOpCode.LeaData, candidate, IrOperand.Data(key)));
                 Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(curVt), IrOperand.Reg(candidate)));
@@ -2849,7 +2849,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// 对象头只存自身 vtable 地址、无向下类型信息，故以编译期存活类闭包枚举后代；
         /// 抽象/接口/根不实例化（不在 _liveClasses），行序取 Ordinal 保证确定性。
         /// </summary>
-        private IEnumerable<string> EnumerateDescendantVTableKeys(ClassTypeSymbol targetClass)
+        private IEnumerable<string> EnumerateDescendantVTableKeys(NamedTypeSymbol targetClass)
         {
             return _liveClasses
                 .Where(c => c == targetClass || targetClass.IsBaseOf(c))
@@ -2993,7 +2993,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
                 Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
             }
-            else if (type == TypeSymbol.Int32 || type is EnumTypeSymbol || type == TypeSymbol.UInt8 ||
+            else if (type == TypeSymbol.Int32 || type is NamedTypeSymbol { TypeKind: TypeKind.Enum } || type == TypeSymbol.UInt8 ||
                      type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16)
             {
                 Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
@@ -3164,7 +3164,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             var fromIsIntLike = (from.IsInteger && from != TypeSymbol.Boolean) ||
                                 from == TypeSymbol.Char ||
-                                from is EnumTypeSymbol;
+                                from is NamedTypeSymbol { TypeKind: TypeKind.Enum };
             if (!fromIsIntLike || from == TypeSymbol.String)
             {
                 return false;
@@ -3286,7 +3286,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             var singleTarget = to == TypeSymbol.Float;
-            if (!(from.IsNumeric && !from.IsPlaceholder128) && from != TypeSymbol.Char && !(from is EnumTypeSymbol))
+            if (!(from.IsNumeric && !from.IsPlaceholder128) && from != TypeSymbol.Char && !(from is NamedTypeSymbol { TypeKind: TypeKind.Enum }))
             {
                 return false; // 字符串等走既有专用路径
             }
@@ -3472,7 +3472,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // M4：类/接口引用转换——同一指针表示，上转/下转均为直通（运行时不做类型检查）
-            if (from is ClassTypeSymbol && to is ClassTypeSymbol)
+            if (from is NamedTypeSymbol && to is NamedTypeSymbol)
             {
                 return value;
             }
@@ -3491,8 +3491,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||
                 from == TypeSymbol.Int32 && to == TypeSymbol.Char ||
-                from is EnumTypeSymbol && to == TypeSymbol.Int32 ||
-                from == TypeSymbol.Int32 && to is EnumTypeSymbol ||
+                from is NamedTypeSymbol { TypeKind: TypeKind.Enum } && to == TypeSymbol.Int32 ||
+                from == TypeSymbol.Int32 && to is NamedTypeSymbol { TypeKind: TypeKind.Enum } ||
                 from == TypeSymbol.UInt8 && to == TypeSymbol.Int32)
             {
                 // 同为 4 字节值，无需指令
@@ -3518,7 +3518,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (to == TypeSymbol.Int64)
             {
-                if (from == TypeSymbol.Int32 || from is EnumTypeSymbol)
+                if (from == TypeSymbol.Int32 || from is NamedTypeSymbol { TypeKind: TypeKind.Enum })
                 {
                     // 符号扩展
                     var result = AllocateRegister(8);

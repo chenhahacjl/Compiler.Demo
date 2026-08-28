@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundBaseExpression : BoundExpression
     {
-        public BoundBaseExpression(SyntaxNode syntax, ClassTypeSymbol type)
+        public BoundBaseExpression(SyntaxNode syntax, NamedTypeSymbol type)
             : base(syntax)
         {
             Type = type;

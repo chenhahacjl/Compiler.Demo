@@ -612,7 +612,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundObjectCreationExpression(node.Syntax, (Symbols.ClassTypeSymbol)node.Type, arguments);
+            return new BoundObjectCreationExpression(node.Syntax, (Symbols.NamedTypeSymbol)node.Type, arguments);
         }
 
         protected virtual BoundExpression RewriteThisExpression(BoundThisExpression node)

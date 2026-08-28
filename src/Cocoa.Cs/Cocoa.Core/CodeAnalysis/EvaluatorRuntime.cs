@@ -8,13 +8,13 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     internal sealed class EvaluatorObject
     {
-        public EvaluatorObject(ClassTypeSymbol @class, object?[] fields)
+        public EvaluatorObject(NamedTypeSymbol @class, object?[] fields)
         {
             Class = @class;
             Fields = fields;
         }
 
-        public ClassTypeSymbol Class { get; }
+        public NamedTypeSymbol Class { get; }
 
         public object?[] Fields { get; }
     }

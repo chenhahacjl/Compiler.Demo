@@ -10,9 +10,9 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal static class ExternalTypeResolver
     {
-        private static readonly ConcurrentDictionary<string, ClassTypeSymbol?> _cache = new ConcurrentDictionary<string, ClassTypeSymbol?>();
+        private static readonly ConcurrentDictionary<string, NamedTypeSymbol?> _cache = new ConcurrentDictionary<string, NamedTypeSymbol?>();
 
-        public static ClassTypeSymbol? TryResolve(string fullName, string[] references)
+        public static NamedTypeSymbol? TryResolve(string fullName, string[] references)
         {
             if (_cache.TryGetValue(fullName, out var cached))
             {
@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return result;
         }
 
-        private static ClassTypeSymbol? Resolve(string fullName, string[] references)
+        private static NamedTypeSymbol? Resolve(string fullName, string[] references)
         {
             var reader = new MetadataReader(references);
             var info = reader.FindTypeInfo(fullName);
@@ -37,9 +37,9 @@ namespace Cocoa.CodeAnalysis.Binding
             var ns = dot < 0 ? "" : fullName.Substring(0, dot);
             var name = dot < 0 ? fullName : fullName.Substring(dot + 1);
 
-            var classType = new ClassTypeSymbol(name, ns, Visibility.Public, declaration: null, isExternal: true)
+            var classType = new NamedTypeSymbol(name, ns, Visibility.Public, declaration: null, isExternal: true)
             {
-                IsInterface = info.IsInterface,
+                TypeKind = info.IsInterface ? TypeKind.Interface : TypeKind.Class,
             };
 
             foreach (var field in info.Fields)

@@ -350,7 +350,7 @@ namespace Cocoa.CodeAnalysis
         /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
         /// 不涉对象模型。
         /// </summary>
-        private static bool IsPureContainerClass(ClassTypeSymbol classType)
+        private static bool IsPureContainerClass(NamedTypeSymbol classType)
         {
             if (classType.IsInterface || (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot) || classType.Fields.Any(f => !f.IsStatic))
             {
@@ -389,7 +389,7 @@ namespace Cocoa.CodeAnalysis
         /// Binder 仅在存在静态初始化器或显式声明时创建 .cctor 符号，故符号存在即需运行期触发——
         /// native 后端无该时机，门禁拒绝并提示改写为显式赋值。
         /// </summary>
-        private static bool HasStaticInitializer(ClassTypeSymbol classType)
+        private static bool HasStaticInitializer(NamedTypeSymbol classType)
         {
             foreach (var method in classType.Methods)
             {

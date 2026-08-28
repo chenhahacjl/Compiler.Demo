@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundObjectCreationExpression : BoundExpression
     {
-        public BoundObjectCreationExpression(SyntaxNode syntax, ClassTypeSymbol type, ImmutableArray<BoundExpression> arguments)
+        public BoundObjectCreationExpression(SyntaxNode syntax, NamedTypeSymbol type, ImmutableArray<BoundExpression> arguments)
             : base(syntax)
         {
             Type = type;

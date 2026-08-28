@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class PropertySymbol : Symbol
     {
-        internal PropertySymbol(string name, TypeSymbol type, ClassTypeSymbol containingClass, FunctionSymbol? getter, FunctionSymbol? setter, Visibility visibility, bool isStatic, bool isIndexer = false)
+        internal PropertySymbol(string name, TypeSymbol type, NamedTypeSymbol containingClass, FunctionSymbol? getter, FunctionSymbol? setter, Visibility visibility, bool isStatic, bool isIndexer = false)
             : base(name)
         {
             Type = type;
@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public override SymbolKind Kind => SymbolKind.Property;
 
         public TypeSymbol Type { get; }
-        public ClassTypeSymbol ContainingClass { get; }
+        public NamedTypeSymbol ContainingClass { get; }
         public FunctionSymbol? Getter { get; }
         public FunctionSymbol? Setter { get; }
         public Visibility Visibility { get; }

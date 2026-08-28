@@ -122,12 +122,12 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 比较与引用转换的合法目标。</summary>
         private static bool IsNullableReference(TypeSymbol type)
         {
-            return type is ClassTypeSymbol || type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null;
+            return type is NamedTypeSymbol || type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null;
         }
 
         public static BoundBinaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol leftType, TypeSymbol rightType)
         {
-            if (leftType is EnumTypeSymbol enumType && leftType == rightType)
+            if (leftType is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType && leftType == rightType)
             {
                 if (syntaxKind == SyntaxKind.EqualsEqualsToken)
                     return new BoundBinaryOperator(syntaxKind, BoundBinaryOperatorKind.Equals, enumType, TypeSymbol.Boolean);
@@ -138,7 +138,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 6e-M19 M2-c：类类型 == / != → 引用相等（动态合成，仿 enum 先例）。
             // 条件：双侧均为类（含 System.Object/接口/外部类），且存在继承关系（同型或一侧可隐式转换到另一侧）。
             // string/值类型/any 走既有值比较表，不受影响。
-            if (leftType is ClassTypeSymbol leftClass && rightType is ClassTypeSymbol rightClass &&
+            if (leftType is NamedTypeSymbol leftClass && rightType is NamedTypeSymbol rightClass &&
                 (leftClass == rightClass || leftClass.IsBaseOf(rightClass) || rightClass.IsBaseOf(leftClass)))
             {
                 var referenceKind = syntaxKind switch

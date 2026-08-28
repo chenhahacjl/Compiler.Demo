@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;
         private readonly FunctionSymbol? _function;
-        private readonly ClassTypeSymbol? _currentClass;
+        private readonly NamedTypeSymbol? _currentClass;
         private readonly string[] _references;
         private readonly LanguageDialect _dialect;
 
@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private readonly Dictionary<string, TypeSymbol> _typeArgumentsByName = new Dictionary<string, TypeSymbol>();
 
         /// <summary>类/接口声明绑定上下文（6e-M20）：成员签名/基类/约束解析期间的类型参数来源。</summary>
-        private ClassTypeSymbol? _bindingClass;
+        private NamedTypeSymbol? _bindingClass;
 
         /// <summary>泛型方法签名绑定上下文（6e-M20）：BindFunctionDeclaration / 类方法 / 接口成员签名期间的 T 解析。</summary>
         private ImmutableArray<TypeParameterSymbol> _declaringMethodTypeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
@@ -50,7 +50,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private FunctionSymbol? _environmentOwner;
 
         /// <summary>环境类缓存（6e-M22 C5）：每宿主函数一个合成 `__Env_&lt;fn&gt;` 类。</summary>
-        private readonly Dictionary<FunctionSymbol, ClassTypeSymbol> _environmentClasses = new();
+        private readonly Dictionary<FunctionSymbol, NamedTypeSymbol> _environmentClasses = new();
 
         /// <summary>lambda 体绑定深度（6e-M22 C5）：>0 时返回语句按推断语义处理（不套外层签名转换）。</summary>
         private int _lambdaBodyDepth;
@@ -58,7 +58,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private bool IsBindingLambdaBody() => _lambdaBodyDepth > 0;
 
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
-        internal void SetBindingClass(ClassTypeSymbol? classType) => _bindingClass = classType;
+        internal void SetBindingClass(NamedTypeSymbol? classType) => _bindingClass = classType;
 
         internal Binder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, LanguageDialect dialect, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<CodProgram> codLibraries = default)
         {
@@ -101,8 +101,8 @@ namespace Cocoa.CodeAnalysis.Binding
             InjectCodSymbols(parentScope, codLibraries);
 
             // 6e-M22 C5+：内建 Delegate/MulticastDelegate 注册进根作用域（类型位置可用）
-            parentScope.TryDeclareClass(ClassTypeSymbol.SystemDelegate);
-            parentScope.TryDeclareClass(ClassTypeSymbol.SystemMulticastDelegate);
+            parentScope.TryDeclareClass(NamedTypeSymbol.SystemDelegate);
+            parentScope.TryDeclareClass(NamedTypeSymbol.SystemMulticastDelegate);
 
             var dialect = syntaxTrees.IsDefaultOrEmpty ? LanguageDialect.Cocoa : syntaxTrees[0].Dialect;
             var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, dialect, codLibraries: codLibraries);
@@ -110,7 +110,7 @@ namespace Cocoa.CodeAnalysis.Binding
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
             {
-                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<EnumTypeSymbol>.Empty, ImmutableArray<ClassTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, ImmutableDictionary<string, string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
+                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, ImmutableDictionary<string, string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
             }
 
             var globalStatements = syntaxTrees.SelectMany(st => st.Root.Members)
@@ -180,7 +180,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 阶段 2：声明所有类壳（部分类按全名分组合并为同一符号；两阶段：类可前向引用基类）
-            var classGroups = new List<(ClassTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)>();
+            var classGroups = new List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)>();
             var classByName = new Dictionary<string, List<(ClassDeclarationSyntax Syntax, string Namespace)>>();
 
             foreach (var (syntax, ns) in allClasses)
@@ -201,7 +201,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 阶段 2.5：声明接口（先于类，类可实现后声明的接口）
-            var interfaceSymbols = new List<(InterfaceDeclarationSyntax Syntax, string Namespace, ClassTypeSymbol Symbol)>();
+            var interfaceSymbols = new List<(InterfaceDeclarationSyntax Syntax, string Namespace, NamedTypeSymbol Symbol)>();
             foreach (var (syntax, ns) in allInterfaces)
             {
                 var symbol = binder.DeclareInterfaceSymbol(syntax, ns);
@@ -261,7 +261,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 // 须先于成员绑定，override 签名解析/base 表达式/成员沿链上溯依赖基类链就位（接口不默认）
                 if (!classType.IsInterface && classType.BaseType == null)
                 {
-                    classType.BaseType = ClassTypeSymbol.SystemObject;
+                    classType.BaseType = NamedTypeSymbol.SystemObject;
                 }
 
                 // 3.5b：成员绑定
@@ -482,7 +482,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     pendingLambdaScopes.Enqueue(functionBodies[existing]);
                 }
 
-                var environmentClasses = new HashSet<ClassTypeSymbol>();
+                var environmentClasses = new HashSet<NamedTypeSymbol>();
 
                 while (pendingLambdaScopes.Count > 0)
                 {
@@ -1027,7 +1027,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>成员可见性判定（private 仅含类；protected 含类及派生类；internal 同程序集恒可访问）。</summary>
-        private bool IsAccessibleMember(Visibility visibility, ClassTypeSymbol containingClass)
+        private bool IsAccessibleMember(Visibility visibility, NamedTypeSymbol containingClass)
         {
             switch (visibility)
             {
@@ -1043,7 +1043,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>创建类符号；部分类（partial）的多段声明合并为同一符号（各段成员分别绑定）。</summary>
-        private ClassTypeSymbol DeclareClassGroup(List<(ClassDeclarationSyntax Syntax, string Namespace)> parts)
+        private NamedTypeSymbol DeclareClassGroup(List<(ClassDeclarationSyntax Syntax, string Namespace)> parts)
         {
             var primary = parts[0];
             var name = primary.Syntax.Identifier.Text;
@@ -1085,13 +1085,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 6e-M26：struct（值类型）→ StructTypeSymbol；class → ClassTypeSymbol
+            // 6e-M26：struct（值类型）与 class 共用同一 NamedTypeSymbol，TypeKind 判别
             var isStruct = primary.Syntax.IsStruct;
-            ClassTypeSymbol classType = isStruct
-                ? new StructTypeSymbol(name, primary.Namespace, visibility, primary.Syntax)
-                : new ClassTypeSymbol(name, primary.Namespace, visibility, primary.Syntax);
+            NamedTypeSymbol classType = new NamedTypeSymbol(name, primary.Namespace, visibility, primary.Syntax);
+            classType.TypeKind = isStruct ? TypeKind.Struct : TypeKind.Class;
             classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword));
-            classType.IsSealed = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword));
+            classType.IsSealed = isStruct || parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword));
 
             // struct 约束（MVP）：不可有基类/接口、不可 abstract/facade、不可 partial（v1）
             if (isStruct)
@@ -1137,7 +1136,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>阶段 3.2：类泛型 where 约束解析（6e-M20；接口/类符号均已就位）。</summary>
-        private void BindClassWhereClauses(List<(ClassDeclarationSyntax Syntax, string Namespace)> parts, ClassTypeSymbol classType)
+        private void BindClassWhereClauses(List<(ClassDeclarationSyntax Syntax, string Namespace)> parts, NamedTypeSymbol classType)
         {
             var previous = _bindingClass;
             _bindingClass = classType;
@@ -1153,7 +1152,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>类泛型类型参数绑定：建 TypeParameterSymbol 列表（重名/与类名冲突诊断）。</summary>
-        private ImmutableArray<TypeParameterSymbol> BindClassTypeParameters(TypeParameterListSyntax? syntax, ClassTypeSymbol classType, string className)
+        private ImmutableArray<TypeParameterSymbol> BindClassTypeParameters(TypeParameterListSyntax? syntax, NamedTypeSymbol classType, string className)
         {
             if (syntax == null)
             {
@@ -1277,7 +1276,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private void BindClassBase(ClassDeclarationSyntax syntax, ClassTypeSymbol classType)
+        private void BindClassBase(ClassDeclarationSyntax syntax, NamedTypeSymbol classType)
         {
             // 6e-M20：声明上下文（泛型基类 `class MyList<T> extends List<T>` 的 T 解析）
             var previousBindingClass = _bindingClass;
@@ -1293,7 +1292,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private void BindClassBaseCore(ClassDeclarationSyntax syntax, ClassTypeSymbol classType)
+        private void BindClassBaseCore(ClassDeclarationSyntax syntax, NamedTypeSymbol classType)
         {
             // 基类型解析（`class Foo: Bar, IA, IB`；首个非接口 = 基类，其余须为接口；部分类多段声明时基类必须一致）
             // 6e-M20：泛型基类/基接口经实参实例化
@@ -1335,7 +1334,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         classType.BaseType = baseType;
 
                         // 循环继承检测：沿基类链查找本类
-                        var seen = new HashSet<ClassTypeSymbol>();
+                        var seen = new HashSet<NamedTypeSymbol>();
                         var circular = false;
                         for (var current = baseType; current != null && seen.Add(current); current = current.BaseType)
                         {
@@ -1363,14 +1362,14 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 视为真基类——override 解析、base 表达式、成员沿链上溯均正常工作。
         /// 仅接口（BaseType=null）无基类。
         /// </summary>
-        private static bool HasBaseClass(ClassTypeSymbol classType)
+        private static bool HasBaseClass(NamedTypeSymbol classType)
             => classType.BaseType != null;
 
         /// <summary>
         /// 基类/基接口子句绑定（6e-M20 泛型感知）：`extends List&lt;T&gt;` / `: Collection&lt;int&gt;`
         /// 经泛型名解析实例化；裸泛型定义报错并返回 null。
         /// </summary>
-        private ClassTypeSymbol? BindBaseTypeClause(TypeClauseSyntax syntax)
+        private NamedTypeSymbol? BindBaseTypeClause(TypeClauseSyntax syntax)
         {
             TypeSymbol? resolved;
 
@@ -1381,7 +1380,7 @@ namespace Cocoa.CodeAnalysis.Binding
             else
             {
                 var lookup = LookupType(syntax.Identifier.Text);
-                if (lookup is ClassTypeSymbol { IsGenericDefinition: true } nakedGeneric)
+                if (lookup is NamedTypeSymbol { IsGenericDefinition: true } nakedGeneric)
                 {
                     _diagnostics.ReportGenericDefinitionRequiresTypeArguments(syntax.Identifier.Location, nakedGeneric.Name);
                     return null;
@@ -1390,10 +1389,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 resolved = lookup;
             }
 
-            return resolved as ClassTypeSymbol;
+            return resolved as NamedTypeSymbol;
         }
 
-        private void BindClassMembers(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
+        private void BindClassMembers(ClassDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
         {
             // 6e-M20：声明上下文（字段/方法签名的 T 解析）
             var previousBindingClass = _bindingClass;
@@ -1409,7 +1408,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private void BindClassMembersCore(ClassDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
+        private void BindClassMembersCore(ClassDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions, string @namespace)
         {
             foreach (var member in syntax.Members)
             {
@@ -1538,7 +1537,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 合成隐藏后备字段 `_<eventName>`（类型 = 处理器签名的数组，初值 null）。
         /// 订阅/触发的多播语义在语句级脱糖（TryBindEventSubscription / BindEventRaise），三后端零改动。
         /// </summary>
-        private void BindEventDeclaration(EventDeclarationSyntax syntax, ClassTypeSymbol classType)
+        private void BindEventDeclaration(EventDeclarationSyntax syntax, NamedTypeSymbol classType)
         {
             var handlerType = BindTypeClause(syntax.HandlerType);
             if (handlerType == null)
@@ -1550,7 +1549,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 resolvedHandler = fts;
             }
-            else if (handlerType is ClassTypeSymbol { IsDelegateClass: true } dc)
+            else if (handlerType is NamedTypeSymbol { IsDelegateClass: true } dc)
             {
                 var sig = dc.GetDelegateSignature();
                 if (sig == null)
@@ -1599,7 +1598,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 目标形态：`obj.e` / `this.e` / 类内裸名 `e`
             string? eventName = null;
-            ClassTypeSymbol? ownerClass = null;
+            NamedTypeSymbol? ownerClass = null;
             BoundExpression? receiver = null;
 
             if (syntax.Target.Kind == SyntaxKind.MemberAccessExpression)
@@ -1607,7 +1606,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 var memberAccess = (MemberAccessExpressionSyntax)syntax.Target;
                 var boundReceiver = BindExpression(memberAccess.Expression);
 
-                if (boundReceiver.Type is ClassTypeSymbol candidate &&
+                if (boundReceiver.Type is NamedTypeSymbol candidate &&
                     candidate.GetEvent(memberAccess.IdentifierToken.Text) is EventSymbol)
                 {
                     receiver = boundReceiver;
@@ -1656,7 +1655,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var boundHandler = BindExpression(syntax.Expression);
             var handlerType = boundHandler.Type switch
             {
-                ClassTypeSymbol { IsDelegateClass: true } delegateClass => delegateClass.GetDelegateSignature(),
+                NamedTypeSymbol { IsDelegateClass: true } delegateClass => delegateClass.GetDelegateSignature(),
                 var other => other,
             };
 
@@ -1992,7 +1991,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// delegate 声明绑定（6e-M22 D-A）：合成为 sealed class extends MulticastDelegate + Invoke 方法。
         /// 复用全部类机制（类型查找/is-as/继承链/三后端发射）。
         /// </summary>
-        private void BindDelegateDeclaration(DelegateDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
+        private void BindDelegateDeclaration(DelegateDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
             var returnType = BindTypeClause(syntax.ReturnType);
             if (returnType == null)
@@ -2009,9 +2008,9 @@ namespace Cocoa.CodeAnalysis.Binding
             var delegateName = syntax.Identifier.Text;
 
             // 合成 sealed class extends MulticastDelegate
-            var delegateClass = new ClassTypeSymbol(delegateName, classType.Namespace, visibility, declaration: null)
+            var delegateClass = new NamedTypeSymbol(delegateName, classType.Namespace, visibility, declaration: null)
             {
-                BaseType = ClassTypeSymbol.SystemMulticastDelegate,
+                BaseType = NamedTypeSymbol.SystemMulticastDelegate,
                 IsSealed = true,
             };
 
@@ -2047,9 +2046,9 @@ namespace Cocoa.CodeAnalysis.Binding
             var delegateName = syntax.Identifier.Text;
             var fullName = ns.Length == 0 ? delegateName : ns + "." + delegateName;
 
-            var delegateClass = new ClassTypeSymbol(delegateName, ns, visibility, declaration: null)
+            var delegateClass = new NamedTypeSymbol(delegateName, ns, visibility, declaration: null)
             {
-                BaseType = ClassTypeSymbol.SystemMulticastDelegate,
+                BaseType = NamedTypeSymbol.SystemMulticastDelegate,
                 IsSealed = true,
             };
 
@@ -2098,7 +2097,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>
-        private void DeclareImplicitConstructor(ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
+        private void DeclareImplicitConstructor(NamedTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
         {
             if (classType.GetDeclaredMethod(classType.Name) == null)
             {                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, visibility: Visibility.Public) { IsConstructor = true };
@@ -2108,7 +2107,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>隐式静态构造（.cctor）：类含静态字段/静态自动属性初始化器时生成。</summary>
-        private void DeclareImplicitStaticConstructor(ClassTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
+        private void DeclareImplicitStaticConstructor(NamedTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
         {
             if (classType.GetDeclaredMethod(".cctor") != null)
             {
@@ -2128,7 +2127,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>收集类的字段/自动属性初始化器（语法级，未绑定）。</summary>
-        private static ImmutableArray<(FieldSymbol Field, ExpressionSyntax Initializer)> CollectFieldInitializers(ClassTypeSymbol classType)
+        private static ImmutableArray<(FieldSymbol Field, ExpressionSyntax Initializer)> CollectFieldInitializers(NamedTypeSymbol classType)
         {
             var result = ImmutableArray.CreateBuilder<(FieldSymbol, ExpressionSyntax)>();
             if (classType.Declaration == null)
@@ -2160,7 +2159,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>绑定字段初始化器为赋值语句（静态或实例，取决于 isStatic）。</summary>
-        private static ImmutableArray<BoundStatement> BindFieldInitializerStatements(Binder binder, ClassTypeSymbol classType, bool isStatic)
+        private static ImmutableArray<BoundStatement> BindFieldInitializerStatements(Binder binder, NamedTypeSymbol classType, bool isStatic)
         {
             var result = ImmutableArray.CreateBuilder<BoundStatement>();
             foreach (var (field, initializer) in CollectFieldInitializers(classType))
@@ -2188,7 +2187,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>创建接口符号（不可实例化、成员无实现）。</summary>
-        private ClassTypeSymbol DeclareInterfaceSymbol(InterfaceDeclarationSyntax syntax, string @namespace)
+        private NamedTypeSymbol DeclareInterfaceSymbol(InterfaceDeclarationSyntax syntax, string @namespace)
         {
             var name = syntax.Identifier.Text;
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Internal);
@@ -2198,9 +2197,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 _diagnostics.ReportError(syntax.Identifier.Location, $"接口 '{name}' 的可见性只能为 public 或 internal。");
             }
 
-            var classType = new ClassTypeSymbol(name, @namespace, visibility, declaration: null)
+            var classType = new NamedTypeSymbol(name, @namespace, visibility, declaration: null)
             {
-                IsInterface = true,
+                TypeKind = TypeKind.Interface,
                 IsAbstract = true,
             };
 
@@ -2216,7 +2215,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>绑定接口声明：基接口列表 + 抽象成员（函数签名/属性访问器）。</summary>
-        private void BindInterfaceDeclaration(InterfaceDeclarationSyntax syntax, ClassTypeSymbol interfaceType, List<FunctionSymbol> classFunctions)
+        private void BindInterfaceDeclaration(InterfaceDeclarationSyntax syntax, NamedTypeSymbol interfaceType, List<FunctionSymbol> classFunctions)
         {
             var previousBindingClass = _bindingClass;
             _bindingClass = interfaceType;
@@ -2298,7 +2297,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>接口属性：getter/setter 访问器（无实现、抽象）。</summary>
-        private void BindInterfacePropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol interfaceType, List<FunctionSymbol> classFunctions)
+        private void BindInterfacePropertyDeclaration(PropertyDeclarationSyntax syntax, NamedTypeSymbol interfaceType, List<FunctionSymbol> classFunctions)
         {
             var propertyType = BindTypeClause(syntax.Type);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
@@ -2360,7 +2359,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>接口实现完整性：类（含继承链）须实现其全部接口的每个成员（方法签名/属性访问器）。</summary>
-        private void CheckInterfaceImplementation(ClassTypeSymbol classType)
+        private void CheckInterfaceImplementation(NamedTypeSymbol classType)
         {
             foreach (var iface in classType.GetAllInterfaces())
             {
@@ -2395,7 +2394,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>查找类（含继承链）中对接口方法的实现：名称 + 参数类型 + 返回类型匹配且 public。</summary>
-        private static FunctionSymbol? FindImplementation(ClassTypeSymbol classType, FunctionSymbol interfaceMethod)
+        private static FunctionSymbol? FindImplementation(NamedTypeSymbol classType, FunctionSymbol interfaceMethod)
         {
             for (var current = classType; current != null; current = current.BaseType)
             {
@@ -2453,7 +2452,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 按「实现类型的全部接口包含该接口实例（实参通配）」判定
             if (interfaceType is InstantiatedTypeSymbol requiredInterface &&
                 requiredInterface.GenericDefinition.IsInterface &&
-                implementationType is ClassTypeSymbol implementationClass)
+                implementationType is NamedTypeSymbol implementationClass)
             {
                 foreach (var iface in implementationClass.GetAllInterfaces())
                 {
@@ -2532,7 +2531,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundBlockStatement(accessor, ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(accessor, memberAssignment)));
         }
 
-        private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
+        private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
             var isIndexer = syntax.Identifier.Text == "this";
             var propertyType = BindTypeClause(syntax.Type);
@@ -2825,7 +2824,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
+        private FunctionSymbol BindClassMethodDeclaration(FunctionDeclarationSyntax syntax, NamedTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
         {
             // 泛型方法类型参数（6e-M20）先行落符号：签名 T 解析依赖此上下文
             var previousMethodTypeParameters = _declaringMethodTypeParameters;
@@ -2841,7 +2840,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private FunctionSymbol BindClassMethodDeclarationCore(FunctionDeclarationSyntax syntax, ClassTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
+        private FunctionSymbol BindClassMethodDeclarationCore(FunctionDeclarationSyntax syntax, NamedTypeSymbol classType, string? dllName = null, CharSet? blockCharSet = null)
         {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
@@ -3033,7 +3032,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 绑定 import 块（6e-M17 Step 4）：`import <dll> { static extern ... }`。
         /// 块内成员只允许 extern 函数声明，DLL 归属由块声明式绑定；外部使用类名限定调用（`Kernel32.GetTickCount()`）。
         /// </summary>
-        private void BindImportBlock(ImportBlockSyntax importBlock, ClassTypeSymbol classType, List<FunctionSymbol> classFunctions)
+        private void BindImportBlock(ImportBlockSyntax importBlock, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
             // 块级 charset 键（6e-M17 Step 5）：块内函数缺省编码；缺省 unicode
             var blockCharSet = importBlock.CharsetKey != null
@@ -3093,7 +3092,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        private BoundConstructorChainExpression? BindConstructorChain(ConstructorDeclarationSyntax syntax, ClassTypeSymbol classType)
+        private BoundConstructorChainExpression? BindConstructorChain(ConstructorDeclarationSyntax syntax, NamedTypeSymbol classType)
         {
             var isBase = syntax.InitializerKeyword!.Kind == SyntaxKind.BaseKeyword;
             var targetClass = isBase ? classType.BaseType : classType;
@@ -3425,14 +3424,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 return 0.0;
             }
 
-            if (type == TypeSymbol.String || type is ClassTypeSymbol || type.ElementType != null)
-            {
-                return null!;
-            }
-
-            if (type is EnumTypeSymbol)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return 0;
+            }
+
+            if (type == TypeSymbol.String || type is NamedTypeSymbol || type.ElementType != null)
+            {
+                return null!;
             }
 
             throw new System.Exception($"Unexpected type {type}");
@@ -3528,7 +3527,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 目标约束：非接口类或 string（接口分派 native 未实现、数组无类型对象——三后端一致先拒）
-            var targetClass = target as ClassTypeSymbol;
+            var targetClass = target as NamedTypeSymbol;
 
             // `is/as String` 解析为 System.String 承载类（facade/外部）→ 归一为基元 string
             if (targetClass != null && targetClass.FullName == "System.String")
@@ -3555,7 +3554,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 接收者约束：类（含接口变量）/string/null 字面量之外拒绝
             if (receiverType != TypeSymbol.Null && receiverType != TypeSymbol.String &&
                 receiverType != TypeSymbol.Any && receiverType.ElementType == null &&
-                !(receiverType is ClassTypeSymbol))
+                !(receiverType is NamedTypeSymbol))
             {
                 _diagnostics.ReportIsAsUnsupportedReceiver(expressionSyntax.Location, receiverType);
                 return new BoundErrorExpression(ownerSyntax);
@@ -3586,7 +3585,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return FoldNeverMatch(ownerSyntax, target, wantBool);
             }
 
-            var receiverClass = (ClassTypeSymbol)receiverType;
+            var receiverClass = (NamedTypeSymbol)receiverType;
             if (!receiverClass.IsInterface)
             {
                 // 目标在接收者继承链上（含同类）→ 每个 R 实例都是 C → 静态真/直通
@@ -3687,7 +3686,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 裸泛型定义不可作具体类型使用（`var x: List` → 须 `List<int>`）
-            if (type is ClassTypeSymbol { IsGenericDefinition: true })
+            if (type is NamedTypeSymbol { IsGenericDefinition: true })
             {
                 _diagnostics.ReportGenericDefinitionRequiresTypeArguments(syntax.Identifier.Location, type.Name);
                 return null;
@@ -3808,7 +3807,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return familyResult;
             }
 
-            var definition = LookupType(identifier.Text) as ClassTypeSymbol;
+            var definition = LookupType(identifier.Text) as NamedTypeSymbol;
             if (definition == null)
             {
                 _diagnostics.ReportUndefinedType(identifier.Location, identifier.Text);
@@ -3909,7 +3908,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 路径二：类静态泛型方法（点号目标解析为类型名）
-            if (!string.IsNullOrEmpty(prefix) && LookupType(prefix!) is ClassTypeSymbol staticType)
+            if (!string.IsNullOrEmpty(prefix) && LookupType(prefix!) is NamedTypeSymbol staticType)
             {
                 if (staticType.IsGenericDefinition)
                 {
@@ -3955,7 +3954,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            if (boundReceiver.Type is ClassTypeSymbol receiverClass)
+            if (boundReceiver.Type is NamedTypeSymbol receiverClass)
             {
                 var instanceMatches = receiverClass.GetMethods(identifier)
                     .Where(m => !m.IsStatic && m.IsGenericMethod && m.TypeParameters.Length == arity && IsAccessibleMember(m.Visibility, receiverClass))
@@ -4108,7 +4107,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 实例化期约束校验（6e-M20）：实参须满足 where 约束（引用类型/接口/基类）。
         /// 类型参数作实参（嵌套上下文）暂跳过——由 Monomorphizer 展开时按外层映射判定。
         /// </summary>
-        private void ValidateTypeArgumentConstraints(TextLocation errorLocation, ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
+        private void ValidateTypeArgumentConstraints(TextLocation errorLocation, NamedTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
             => ValidateTypeArgumentConstraints(errorLocation, definition.TypeParameters, arguments, definition.Name);
 
         /// <summary>类/方法两路共用的约束校验核心。</summary>
@@ -4139,7 +4138,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 foreach (var constraint in parameter.ConstraintTypes)
                 {
-                    if (constraint is not ClassTypeSymbol constraintClass)
+                    if (constraint is not NamedTypeSymbol constraintClass)
                     {
                         _diagnostics.ReportError(errorLocation, $"约束 '{constraint.Name}' 不是受支持的约束形式（支持接口/基类）。");
                         continue;
@@ -4147,7 +4146,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                     var constraintName = constraintClass.FullName;
 
-                    if (argument is not ClassTypeSymbol argumentClass)
+                    if (argument is not NamedTypeSymbol argumentClass)
                     {
                         _diagnostics.ReportError(errorLocation, $"泛型 '{definitionName}' 的类型实参 '{argument.Name}' 不满足约束 '{constraintName}'。");
                         continue;
@@ -4168,7 +4167,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>引用类型判定（where T: class）：类/接口/string/数组；基元值类型为否。</summary>
         private static bool IsReferenceType(TypeSymbol type)
         {
-            if (type is ClassTypeSymbol || type is TypeParameterSymbol)
+            if (type is NamedTypeSymbol || type is TypeParameterSymbol)
             {
                 return true;
             }
@@ -4184,7 +4183,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>值类型判定（where T: struct，6e-M22 C1）：基元数值全集 + bool + char + enum；语言暂无用户 struct。</summary>
         private static bool IsValueType(TypeSymbol type)
         {
-            if (type is EnumTypeSymbol)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return true;
             }
@@ -4396,9 +4395,9 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 集合是否可枚举（6e-M20 G6）：实现 System.Collections.Generic.IEnumerable&lt;T&gt; 实例化
         /// 且存在无参 GetEnumerator() 方法 → 返回其具体枚举器类。
         /// </summary>
-        private static ClassTypeSymbol? FindEnumeratorClass(TypeSymbol collectionType)
+        private static NamedTypeSymbol? FindEnumeratorClass(TypeSymbol collectionType)
         {
-            if (collectionType is not ClassTypeSymbol classType || classType.IsInterface)
+            if (collectionType is not NamedTypeSymbol classType || classType.IsInterface)
             {
                 return null;
             }
@@ -4411,7 +4410,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 直接模式：GetEnumerator 返回具备 MoveNext() 与 Current 的类或接口即视为可枚举
             // （无需显式声明 IEnumerable<T>，支持 CO/BCL 自定义枚举器，如 List<T>）。
-            if (getEnumerator.ReturnType is ClassTypeSymbol enumType &&
+            if (getEnumerator.ReturnType is NamedTypeSymbol enumType &&
                 enumType.GetMethod("MoveNext") != null &&
                 enumType.GetProperty("Current")?.Getter != null)
             {
@@ -4425,7 +4424,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     instantiated.GenericDefinition.Name == "IEnumerable" &&
                     instantiated.GenericDefinition.Namespace == "System.Collections.Generic")
                 {
-                    return getEnumerator.ReturnType as ClassTypeSymbol;
+                    return getEnumerator.ReturnType as NamedTypeSymbol;
                 }
             }
 
@@ -4441,7 +4440,7 @@ namespace Cocoa.CodeAnalysis.Binding
         ///     body
         /// }
         /// </summary>
-        private BoundStatement BindEnumeratorForeach(ForeachStatementSyntax syntax, BoundExpression collection, ClassTypeSymbol enumeratorClass)
+        private BoundStatement BindEnumeratorForeach(ForeachStatementSyntax syntax, BoundExpression collection, NamedTypeSymbol enumeratorClass)
         {
             _labelCounter++;
             var counter = _labelCounter;
@@ -4470,7 +4469,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var enumVariable = BoundNodeFactory.Variable(syntax, enumeratorDecl);
 
             // init：collection.GetEnumerator()
-            var getEnumeratorMethod = ((ClassTypeSymbol)collection.Type).GetMethod("GetEnumerator")!;
+            var getEnumeratorMethod = ((NamedTypeSymbol)collection.Type).GetMethod("GetEnumerator")!;
             var getEnumeratorCall = new BoundMemberCallExpression(syntax, collection, "GetEnumerator", ImmutableArray<BoundExpression>.Empty, enumeratorClass, getEnumeratorMethod);
             var enumeratorInit = BoundNodeFactory.VariableDeclaration(syntax, enumeratorDecl, getEnumeratorCall);
 
@@ -4837,13 +4836,13 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>类型是否为 Exception 或其后代（沿 BaseType 链上溯）。</summary>
         private bool IsExceptionType(TypeSymbol type)
         {
-            var exceptionRoot = LookupType("Exception") as ClassTypeSymbol;
+            var exceptionRoot = LookupType("Exception") as NamedTypeSymbol;
             if (exceptionRoot == null)
             {
                 return true; // 无 Exception 根（stdlib 缺失）时不额外报错
             }
 
-            for (var current = type as ClassTypeSymbol; current != null; current = current.BaseType)
+            for (var current = type as NamedTypeSymbol; current != null; current = current.BaseType)
             {
                 if (current == exceptionRoot)
                 {
@@ -5358,7 +5357,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             FunctionSymbol? environmentOwner = null;
-            ClassTypeSymbol? environmentClass = null;
+            NamedTypeSymbol? environmentClass = null;
 
             if (captures.Count > 0)
             {
@@ -5372,9 +5371,9 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 if (!_environmentClasses.TryGetValue(environmentOwner, out environmentClass))
                 {
-                    environmentClass = new ClassTypeSymbol($"__Env_{environmentOwner.Name}", string.Empty, Visibility.Private, declaration: null)
+                    environmentClass = new NamedTypeSymbol($"__Env_{environmentOwner.Name}", string.Empty, Visibility.Private, declaration: null)
                     {
-                        BaseType = ClassTypeSymbol.SystemObject,
+                        BaseType = NamedTypeSymbol.SystemObject,
                     };
                     _environmentClasses[environmentOwner] = environmentClass;
                 }
@@ -5703,10 +5702,10 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindObjectCreationExpression(ObjectCreationExpressionSyntax syntax)
         {
             // 泛型对象创建（6e-M20）：`new Box<int>(…)` → 实例化类
-            ClassTypeSymbol? classType;
+            NamedTypeSymbol? classType;
             if (syntax.TypeArguments != null)
             {
-                classType = BindGenericTypeName(syntax.Identifier, syntax.TypeArguments.Arguments) as ClassTypeSymbol;
+                classType = BindGenericTypeName(syntax.Identifier, syntax.TypeArguments.Arguments) as NamedTypeSymbol;
 
                 if (classType == null)
                 {
@@ -5715,7 +5714,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
             else
             {
-                classType = LookupType(syntax.Identifier.Text) as ClassTypeSymbol;
+                classType = LookupType(syntax.Identifier.Text) as NamedTypeSymbol;
             }
 
             if (classType == null)
@@ -5800,7 +5799,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 索引器（this[...]）：重定向到 get_Item（facade 经普通调用 → IL 直连 BCL；其余走 Cocoa 体）
-            if (boundTarget.Type is ClassTypeSymbol cls)
+            if (boundTarget.Type is NamedTypeSymbol cls)
             {
                 var indexer = cls.GetIndexer();
                 if (indexer != null && indexer.Getter != null)
@@ -5837,7 +5836,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 静态字段访问：MathHelpers.Count / My.App.Utils.Count
             if (ResolveDottedTypeName(syntax.Expression) is string staticTypeName &&
-                LookupType(staticTypeName) is ClassTypeSymbol staticType &&
+                LookupType(staticTypeName) is NamedTypeSymbol staticType &&
                 staticType.GetField(identifier) is FieldSymbol staticField &&
                 staticField.IsStatic)
             {
@@ -5852,7 +5851,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             // 枚举成员访问（Color.Red / My.App.Color.Red）：左侧为枚举类型名 → 折叠为常量字面量
             if (ResolveDottedTypeName(syntax.Expression) is string enumTypeName &&
-                LookupType(enumTypeName) is EnumTypeSymbol enumType)
+                LookupType(enumTypeName) is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
             {
                 if (enumType.TryGetMember(syntax.IdentifierToken.Text, out var value))
                 {
@@ -5881,7 +5880,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 类字段访问：point._x
-            if (boundTarget.Type is ClassTypeSymbol classType)
+            if (boundTarget.Type is NamedTypeSymbol classType)
             {
                 var field = classType.GetField(identifier);
                 if (field != null)
@@ -5954,7 +5953,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 静态方法调用：MathHelpers.Square(2) / My.App.Utils.Square(2) / System.Math.Max(3,5)（target 是类型名，可为点号全名/别名）
             // 6e-M18：按参数类型解析重载（GetMethods 取全部同名静态方法）。
             if (ResolveDottedTypeName(syntax.Expression) is string staticTypeName &&
-                LookupType(staticTypeName) is ClassTypeSymbol staticType)
+                LookupType(staticTypeName) is NamedTypeSymbol staticType)
             {
                 var staticCandidates = staticType.GetMethods(identifier)
                     .Where(m => m.IsStatic && IsAccessibleMember(m.Visibility, staticType))
@@ -5997,7 +5996,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(BindExpression(argument));
             }
 
-            if (boundExpression.Type is ClassTypeSymbol classType)
+            if (boundExpression.Type is NamedTypeSymbol classType)
             {
                 var method = classType.GetMethod(identifier);
                 if (method != null)
@@ -6087,7 +6086,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 6e-M19 M2-c：Object 成员面回退绑定。receiver 非 ClassTypeSymbol（基元/string/any）时查
+        /// 6e-M19 M2-c：Object 成员面回退绑定。receiver 非 NamedTypeSymbol（基元/string/any）时查
         /// SystemObject 单例的实例方法（虚四方法），receiver 保持表达式形状（三后端按 BuiltinKind 分发，
         /// 值类型装箱由发射器处理）。用户类 receiver 走上方 GetMethod 沿链路径，不经此处。
         /// </summary>
@@ -6102,8 +6101,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 return null;
             }
 
-            var candidates = ClassTypeSymbol.SystemObject.GetMethods(identifier)
-                .Where(m => !m.IsStatic && m.BuiltinKind != null && IsAccessibleMember(m.Visibility, ClassTypeSymbol.SystemObject))
+            var candidates = NamedTypeSymbol.SystemObject.GetMethods(identifier)
+                .Where(m => !m.IsStatic && m.BuiltinKind != null && IsAccessibleMember(m.Visibility, NamedTypeSymbol.SystemObject))
                 .ToImmutableArray();
             if (candidates.IsEmpty)
             {
@@ -6183,7 +6182,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>receiver 类型 → facade 类（stdlib cod 注入；全名解析优先，cod 库直查兜底）。</summary>
-        private ClassTypeSymbol? ResolveFacadeClass(TypeSymbol receiverType)
+        private NamedTypeSymbol? ResolveFacadeClass(TypeSymbol receiverType)
         {
             var fullName = FacadeNameOfType(receiverType);
             if (fullName == null)
@@ -6197,7 +6196,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return null;
             }
 
-            if (LookupType(fullName) is ClassTypeSymbol viaLookup)
+            if (LookupType(fullName) is NamedTypeSymbol viaLookup)
             {
                 return viaLookup;
             }
@@ -6294,7 +6293,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>`using static <类>`：取目标类的静态方法候选（含访问性；目标非类返回 null）。</summary>
         private ImmutableArray<FunctionSymbol>? LookupUsingStaticMethods(string target, string identifier)
         {
-            if (LookupType(target) is not ClassTypeSymbol cls)
+            if (LookupType(target) is not NamedTypeSymbol cls)
             {
                 return null;
             }
@@ -6544,7 +6543,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 FunctionTypeSymbol? calleeFnType = calleeVariable.Type switch
                 {
                     FunctionTypeSymbol ft => ft,
-                    ClassTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature(),
+                    NamedTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature(),
                     _ => null,
                 };
 
@@ -6830,7 +6829,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 6e-M22 D-A：目标为 delegate 类时提取 Invoke 签名作为函数类型（复用函数值管道）
-            if (type is ClassTypeSymbol { IsDelegateClass: true } delegateClass)
+            if (type is NamedTypeSymbol { IsDelegateClass: true } delegateClass)
             {
                 var delegateSignature = delegateClass.GetDelegateSignature();
                 if (delegateSignature == null)
@@ -6936,7 +6935,7 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindConversion(TextLocation diagnosticLocation, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)
         {
             // 6e-M22 D-A：delegate 类目标——函数值与 delegate 类型的结构兼容（同表示，类型身份编译期）
-            if (type is ClassTypeSymbol { IsDelegateClass: true } delegateTarget &&
+            if (type is NamedTypeSymbol { IsDelegateClass: true } delegateTarget &&
                 expression.Type == delegateTarget.GetDelegateSignature())
             {
                 return expression;
@@ -7079,7 +7078,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 6e-M19 M2-a：System.Object 内建单例（用户同名类已由上方 scope 命中短路；小写关键字与 C# 原名皆可）
             if (name is "object" or "Object")
             {
-                return ClassTypeSymbol.SystemObject;
+                return NamedTypeSymbol.SystemObject;
             }
 
             // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
@@ -7237,7 +7236,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>基元类型 → facade 全名（全基元集 + facade 类符号自身——dotted 类名形式解析产物）。</summary>
         private static string? FacadeNameOfType(TypeSymbol receiverType)
         {
-            if (receiverType is ClassTypeSymbol classSymbol &&
+            if (receiverType is NamedTypeSymbol classSymbol &&
                 (classSymbol.IsFacadeClass || FacadeTargets.ContainsKey(classSymbol.FullName)))
             {
                 return classSymbol.FullName;
@@ -7267,9 +7266,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case "object":
                 case "Object":
                 case "System.Object":
-                    return ClassTypeSymbol.SystemObject;
+                    return NamedTypeSymbol.SystemObject;
                 case "System.Type":
-                    return ClassTypeSymbol.SystemType;
+                    return NamedTypeSymbol.SystemType;
                 default:
                     return null;
             }
@@ -7330,7 +7329,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>按全名（`Namespace.ClassName`）沿作用域链查找内部声明的类。</summary>
-        private ClassTypeSymbol? FindDeclaredClassByFullName(string fullName)
+        private NamedTypeSymbol? FindDeclaredClassByFullName(string fullName)
         {
             for (var scope = _scope; scope != null; scope = scope.Parent)
             {
@@ -7347,7 +7346,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>按全名（`Namespace.EnumName`）沿作用域链查找内部声明的枚举。</summary>
-        private EnumTypeSymbol? FindDeclaredEnumByFullName(string fullName)
+        private NamedTypeSymbol? FindDeclaredEnumByFullName(string fullName)
         {
             for (var scope = _scope; scope != null; scope = scope.Parent)
             {
@@ -7388,7 +7387,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var className = entryPointName.Substring(0, lastDot);
             var methodName = entryPointName.Substring(lastDot + 1);
 
-            var classMatches = new List<ClassTypeSymbol>();
+            var classMatches = new List<NamedTypeSymbol>();
             for (var scope = binder._scope; scope != null; scope = scope.Parent)
             {
                 foreach (var cls in scope.GetDeclaredClasses())
@@ -7451,7 +7450,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 字面量的合法转换目标。</summary>
         private static bool IsNullableReferenceType(TypeSymbol type)
         {
-            return type is ClassTypeSymbol || type == TypeSymbol.String ||
+            return type is NamedTypeSymbol || type == TypeSymbol.String ||
                    type == TypeSymbol.Any || type.ElementType != null;
         }
 
@@ -7542,7 +7541,12 @@ namespace Cocoa.CodeAnalysis.Binding
                 nextValue = nextValue + 1;
             }
 
-            var enumType = new EnumTypeSymbol(syntax.Identifier.Text, members, @namespace);
+            var enumType = new NamedTypeSymbol(syntax.Identifier.Text, @namespace, Visibility.Public, declaration: null)
+            {
+                TypeKind = TypeKind.Enum,
+                IsSealed = true,
+            };
+            enumType.SetEnumMembers(members);
 
             if (!_scope.TryDeclareEnum(enumType))
             {

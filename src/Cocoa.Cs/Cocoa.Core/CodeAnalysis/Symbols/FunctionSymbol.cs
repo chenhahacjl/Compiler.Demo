@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class FunctionSymbol : Symbol
     {
-        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, ClassTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "", string? entryPoint = null, CharSet? charSet = null)
+        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, NamedTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "", string? entryPoint = null, CharSet? charSet = null)
             : base(name)
         {
             Parameters = parameters;
@@ -39,7 +39,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public CharSet? CharSet { get; }
 
         /// <summary>所属类（null = 顶层函数）。</summary>
-        public ClassTypeSymbol? ContainingClass { get; }
+        public NamedTypeSymbol? ContainingClass { get; }
 
         /// <summary>声明语法（类方法/构造函数也指向其语法节点）。</summary>
         public SyntaxNode? Syntax { get; }
@@ -94,6 +94,6 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsLambdaWithEnvironment { get; internal set; }
 
         /// <summary>合成环境类（6e-M22 C5）：宿主函数与其体内捕获 lambda 共享同一类（发射布局用）。</summary>
-        internal ClassTypeSymbol? EnvironmentClass { get; set; }
+        internal NamedTypeSymbol? EnvironmentClass { get; set; }
     }
 }

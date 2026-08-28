@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -816,7 +816,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         // ---------------------------------------------------------------- write: symbols
 
-        private static void EmitEnumSymbol(Writer w, Registry registry, EnumTypeSymbol e)
+        private static void EmitEnumSymbol(Writer w, Registry registry, NamedTypeSymbol e)
         {
             w.Open("enum");
             w.Field(e.FullName);
@@ -833,14 +833,14 @@ namespace Cocoa.CodeAnalysis.Cod
         }
 
         /// <summary>6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛夋寜鍏ㄥ悕搴忓垪鍖栵紝璇讳晶鏄犲皠鍥炲崟渚嬨€?/summary>
-        private static void EmitBuiltinSystemClass(Writer w, Registry registry, ClassTypeSymbol classType)
+        private static void EmitBuiltinSystemClass(Writer w, Registry registry, NamedTypeSymbol classType)
         {
             w.Open("systype");
             w.Field(classType.FullName);
             w.End();
         }
 
-        private static void EmitClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
+        private static void EmitClassSymbol(Writer w, Registry registry, NamedTypeSymbol classType)
         {
             w.Open("cls");
             w.Field(classType.FullName);
@@ -870,7 +870,7 @@ namespace Cocoa.CodeAnalysis.Cod
         /// 泛型定义类节点（6e-G7 S1）：类型参数（含约束）+ 字段 + 静态方法签名。
         /// 成员类型经 TypeRef 携带开放参数（!属主.名）与实例化 mangle；开放绑定体由 bodies 区按 FnKey 携带（S2）。
         /// </summary>
-        private static void EmitGenericClassSymbol(Writer w, Registry registry, ClassTypeSymbol classType)
+        private static void EmitGenericClassSymbol(Writer w, Registry registry, NamedTypeSymbol classType)
         {
             System.Console.Error.WriteLine("[G7] gcls " + classType.FullName + " methods=[" +
                 string.Join(",", classType.Methods.Select(m => m.Name + (m.IsStatic ? "(s)" : m.IsConstructor ? "(ctor)" : "(i)"))) + "]" +
@@ -1093,12 +1093,12 @@ namespace Cocoa.CodeAnalysis.Cod
                 return EncodeInstantiatedTypeRef(instantiated);
             }
 
-            if (type is EnumTypeSymbol enumType)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
             {
                 return enumType.FullName;
             }
 
-            if (type is ClassTypeSymbol classType)
+            if (type is NamedTypeSymbol classType)
             {
                 return classType.FullName;
             }
@@ -1474,18 +1474,18 @@ namespace Cocoa.CodeAnalysis.Cod
 
                 _ids[type] = _ids.Count;
 
-                if (type is ClassTypeSymbol classType)
+                if (type is NamedTypeSymbol { TypeKind: not TypeKind.Enum } classType)
                 {
                     RegisterClassCore(classType);
                 }
-                else if (type is EnumTypeSymbol enumType)
+                else if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
                 {
                     Emitters.Add((w, r) => EmitEnumSymbol(w, r, enumType));
                 }
                 // 鍏朵綑锛堝唴寤?鏁扮粍锛夎嚜鎻忚堪锛屾棤闇€鐙珛鏉＄洰
             }
 
-            private void RegisterClassCore(ClassTypeSymbol classType)
+            private void RegisterClassCore(NamedTypeSymbol classType)
             {
                 // 6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛変笉鍙?cls鈥斺€旇渚т細閫犲嚭鏂扮被鐮村潖鍗曚緥鍚屼竴鎬э紱
                 // 鍙?systype 鎸夊叏鍚嶆槧灏勫洖鍗曚緥锛堟垚鍛橀潰鐢?Ensure 鍐呭缓娉ㄥ叆锛屼笉搴忓垪鍖栵級
@@ -1746,12 +1746,12 @@ namespace Cocoa.CodeAnalysis.Cod
 
             public ImmutableArray<GlobalVariableSymbol>.Builder Globals { get; } = ImmutableArray.CreateBuilder<GlobalVariableSymbol>();
 
-            public ImmutableArray<EnumTypeSymbol>.Builder Enums { get; } = ImmutableArray.CreateBuilder<EnumTypeSymbol>();
+            public ImmutableArray<NamedTypeSymbol>.Builder Enums { get; } = ImmutableArray.CreateBuilder<NamedTypeSymbol>();
 
-            public ImmutableArray<ClassTypeSymbol>.Builder Classes { get; } = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
+            public ImmutableArray<NamedTypeSymbol>.Builder Classes { get; } = ImmutableArray.CreateBuilder<NamedTypeSymbol>();
 
             /// <summary>6e-G7 S1：泛型定义类（gcls 读入）。</summary>
-            public ImmutableArray<ClassTypeSymbol>.Builder GenericDefinitions { get; } = ImmutableArray.CreateBuilder<ClassTypeSymbol>();
+            public ImmutableArray<NamedTypeSymbol>.Builder GenericDefinitions { get; } = ImmutableArray.CreateBuilder<NamedTypeSymbol>();
 
             public void AddNamedType(string fullName, TypeSymbol type)
             {
@@ -1808,7 +1808,12 @@ namespace Cocoa.CodeAnalysis.Cod
                 reader.End();
             }
 
-            var enumType = new EnumTypeSymbol(name, members, ns);
+            var enumType = new NamedTypeSymbol(name, ns, Visibility.Public, declaration: null)
+            {
+                TypeKind = TypeKind.Enum,
+                IsSealed = true,
+            };
+            enumType.SetEnumMembers(members);
             context.Enums.Add(enumType);
             context.AddNamedType(fullName, enumType);
             reader.End();
@@ -1820,8 +1825,8 @@ namespace Cocoa.CodeAnalysis.Cod
             var fullName = reader.ExpectString();
             var singleton = fullName switch
             {
-                "System.Object" => ClassTypeSymbol.SystemObject,
-                "System.Type" => ClassTypeSymbol.SystemType,
+                "System.Object" => NamedTypeSymbol.SystemObject,
+                "System.Type" => NamedTypeSymbol.SystemType,
                 _ => throw new InvalidDataException($"Unknown builtin system class '{fullName}'"),
             };
             context.Classes.Add(singleton);
@@ -1846,9 +1851,9 @@ namespace Cocoa.CodeAnalysis.Cod
                 reader.ExpectString();
             }
 
-            var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
+            var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
             // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.cod v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
-            classType.BaseType = ClassTypeSymbol.SystemObject;
+            classType.BaseType = NamedTypeSymbol.SystemObject;
             context.Classes.Add(classType);
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
@@ -1871,8 +1876,8 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             var typeParameterCount = ReadCountField(reader, "tparams:");
-            var classType = new ClassTypeSymbol(name, ns, visibility, declaration: null);
-            classType.BaseType = ClassTypeSymbol.SystemObject;
+            var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
+            classType.BaseType = NamedTypeSymbol.SystemObject;
 
             var pendingConstraints = new (TypeParameterSymbol Parameter, int Count)[typeParameterCount];
             for (var i = 0; i < typeParameterCount; i++)
@@ -2355,7 +2360,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
                 position++; // skip '#'
                 if (!context.TypesByName.TryGetValue(fullName, out var definitionObject) ||
-                    definitionObject is not ClassTypeSymbol definition ||
+                    definitionObject is not NamedTypeSymbol definition ||
                     !definition.IsGenericDefinition ||
                     definition.TypeParameters.Length != arity)
                 {
@@ -2405,9 +2410,9 @@ namespace Cocoa.CodeAnalysis.Cod
             return char.IsLetterOrDigit(c) || c == '.' || c == '_';
         }
 
-        private static ClassTypeSymbol ResolveOwnerClass(string fullName, ReadContext context)
+        private static NamedTypeSymbol ResolveOwnerClass(string fullName, ReadContext context)
         {
-            if (!context.TypesByName.TryGetValue(fullName, out var type) || type is not ClassTypeSymbol classType)
+            if (!context.TypesByName.TryGetValue(fullName, out var type) || type is not NamedTypeSymbol classType)
             {
                 throw new InvalidDataException($"Unknown owner class '{fullName}'");
             }
@@ -2759,7 +2764,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         if (hasOwner)
                         {
                             var ownerFullName = ReadLabeledField(reader, "owner:");
-                            if (ResolveNamedType(ownerFullName, context) is ClassTypeSymbol ownerClass)
+                            if (ResolveNamedType(ownerFullName, context) is NamedTypeSymbol ownerClass)
                             {
                                 field = ownerClass.Fields.FirstOrDefault(f => f.Name == identifier);
                             }
@@ -2780,9 +2785,9 @@ namespace Cocoa.CodeAnalysis.Cod
                         FieldSymbol? field = target switch
                         {
                             // 6e-G7：隐式 this 赋值（`_value = v`）——字段在 this 的类上
-                            BoundThisExpression thisExpression => ((ClassTypeSymbol)thisExpression.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
+                            BoundThisExpression thisExpression => ((NamedTypeSymbol)thisExpression.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
                             BoundMemberAccessExpression access => access.Field,
-                            BoundStaticTypeExpression staticType => ((ClassTypeSymbol)staticType.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
+                            BoundStaticTypeExpression staticType => ((NamedTypeSymbol)staticType.Type).Fields.FirstOrDefault(f => f.Name == fieldName),
                             _ => null,
                         };
 
@@ -2811,12 +2816,12 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
                 case "statictype":
                     {
-                        var type = (ClassTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                        var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
                         return new BoundStaticTypeExpression(null, type);
                     }
                 case "this":
                     {
-                        var type = (ClassTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                        var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
                         return new BoundThisExpression(null, type);
                     }
                 case "istype":

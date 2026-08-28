@@ -1227,7 +1227,7 @@ public class Point
 }");
             var compilation = Compilation.Create(syntaxTree);
             var point = compilation.GlobalScope.Classes.Single(c => c.Name == "Point");
-            Assert.True(point.BaseType == ClassTypeSymbol.SystemObject);
+            Assert.True(point.BaseType == NamedTypeSymbol.SystemObject);
         }
 
         [Fact]
@@ -1247,7 +1247,7 @@ public class Point extends {baseName}
 }}";
                 var syntaxTree = SyntaxTree.Parse(code);
                 var compilation = Compilation.Create(syntaxTree);
-                Assert.True(compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType == ClassTypeSymbol.SystemObject);
+                Assert.True(compilation.GlobalScope.Classes.Single(c => c.Name == "Point").BaseType == NamedTypeSymbol.SystemObject);
                 Assert.Empty(GetDiagnostics(code));
             }
         }
@@ -1288,7 +1288,7 @@ public class Point extends Object
             var point = compilation.GlobalScope.Classes.Single(c => c.Name == "Point");
             Assert.NotNull(point.BaseType);
             Assert.False(point.BaseType!.IsSystemObjectRoot);
-            Assert.NotSame(ClassTypeSymbol.SystemObject, point.BaseType);
+            Assert.NotSame(NamedTypeSymbol.SystemObject, point.BaseType);
         }
 
         [Fact]

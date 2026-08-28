@@ -57,17 +57,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native
 
         private static bool IsSupportedReceiver(TypeSymbol type)
         {
-            if (type == TypeSymbol.String || type == ClassTypeSymbol.SystemType)
+            if (type == TypeSymbol.String || type == NamedTypeSymbol.SystemType)
             {
                 return true;
             }
 
-            if (type is EnumTypeSymbol || type.ElementType != null)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } || type.ElementType != null)
             {
                 return false;
             }
 
-            if (type is ClassTypeSymbol classType)
+            if (type is NamedTypeSymbol classType)
             {
                 return true; // 用户类/facade 类均受支持（facade 走基元路径）
             }

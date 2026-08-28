@@ -14,13 +14,13 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public static class GenericTypeInstantiator
     {
-        private static readonly ConcurrentDictionary<string, ClassTypeSymbol> _cache = new();
+        private static readonly ConcurrentDictionary<string, NamedTypeSymbol> _cache = new();
 
         /// <summary>
         /// 实例化（去重）：definition 须为泛型定义类，实参数须与类型参数数一致。
         /// 成员<b>惰性物化</b>——首次成员访问时从定义快照替换填充（定义可能尚未完成绑定，前向引用安全）。
         /// </summary>
-        public static ClassTypeSymbol Instantiate(ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
+        public static NamedTypeSymbol Instantiate(NamedTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {
             if (!definition.IsGenericDefinition)
             {
@@ -52,7 +52,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             var definition = instantiated.GenericDefinition;
             var map = TypeSubstituter.BuildMap(definition.TypeParameters, instantiated.TypeArguments);
 
-            instantiated.IsInterface = definition.IsInterface;
+            instantiated.TypeKind = definition.TypeKind;
             instantiated.IsAbstract = definition.IsAbstract;
             instantiated.IsSealed = definition.IsSealed;
             instantiated.TypeParameters = ImmutableArray<TypeParameterSymbol>.Empty;
@@ -60,21 +60,21 @@ namespace Cocoa.CodeAnalysis.Symbols
             // 基类/基接口实参化：`List<T> : Collection<T>` → `List<int> : Collection<int>`
             if (definition.BaseType != null)
             {
-                instantiated.BaseType = (ClassTypeSymbol)TypeSubstituter.Substitute(definition.BaseType, map);
+                instantiated.BaseType = (NamedTypeSymbol)TypeSubstituter.Substitute(definition.BaseType, map);
             }
             else if (!definition.IsInterface)
             {
-                instantiated.BaseType = ClassTypeSymbol.SystemObject;
+                instantiated.BaseType = NamedTypeSymbol.SystemObject;
             }
 
             foreach (var iface in definition.Interfaces)
             {
-                instantiated.AddInterface((ClassTypeSymbol)TypeSubstituter.Substitute(iface, map));
+                instantiated.AddInterface((NamedTypeSymbol)TypeSubstituter.Substitute(iface, map));
             }
 
             foreach (var baseInterface in definition.BaseInterfaces)
             {
-                instantiated.AddBaseInterface((ClassTypeSymbol)TypeSubstituter.Substitute(baseInterface, map));
+                instantiated.AddBaseInterface((NamedTypeSymbol)TypeSubstituter.Substitute(baseInterface, map));
             }
 
             foreach (var field in definition.Fields)
@@ -155,7 +155,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// `!` 前缀标记编译器权威身份（内建基元/开放类型参数）——均为用户不可声明实体
         /// （!/`/#/$ 均非标识符字符），与用户 FullName 结构性隔离，零名字禁令自足注入。
         /// </summary>
-        public static string MangledName(ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
+        public static string MangledName(NamedTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {
             var builder = new System.Text.StringBuilder();
             builder.Append(definition.FullName);
@@ -233,7 +233,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
 
             // 用户类/接口/枚举：FullName 点原样保留（点非标识符字符，一一映射）
-            if (type is ClassTypeSymbol classType)
+            if (type is NamedTypeSymbol classType)
             {
                 return classType.FullName;
             }
@@ -241,7 +241,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return type.Name;
         }
 
-        private static string CacheKey(ClassTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
+        private static string CacheKey(NamedTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
         {
             var builder = new System.Text.StringBuilder();
             builder.Append(definition.GetHashCode());

@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         /// <summary>库产物（emitLibrary）：类型/方法统一按 public 发布（分发面即公共契约）。</summary>
         private bool _publishPublicSurface;
 
-        private readonly Dictionary<ClassTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<ClassTypeSymbol, IlTypeDef>();
+        private readonly Dictionary<NamedTypeSymbol, IlTypeDef> _classTypeDefs = new Dictionary<NamedTypeSymbol, IlTypeDef>();
         private readonly Dictionary<FieldSymbol, IlFieldDef> _fieldDefs = new Dictionary<FieldSymbol, IlFieldDef>();
     private readonly DelegateShapeCache _delegateShapes;
         private HashSet<(string Namespace, string Name)>? _overloadedGroups;
@@ -46,12 +46,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         /// <summary>6e-M22 C5-c：当前方法的环境对象局部槽索引与布局类（无捕获 = null）。</summary>
         private int? _closureEnvLocalIndex;
-        private ClassTypeSymbol? _closureClass;
+        private NamedTypeSymbol? _closureClass;
         private Dictionary<string, IlFieldDef>? _closureFieldDefs;
-        private readonly Dictionary<ClassTypeSymbol, IlMethodDef> environmentCtorDefs = new();
+        private readonly Dictionary<NamedTypeSymbol, IlMethodDef> environmentCtorDefs = new();
 
         /// <summary>闭包环境类判定：Binder 合成的 `__Env_<fn>` 命名约定。</summary>
-        private static bool IsClosureEnvironmentClass(ClassTypeSymbol classType)
+        private static bool IsClosureEnvironmentClass(NamedTypeSymbol classType)
             => classType.Name.StartsWith("__Env_", StringComparison.Ordinal);
 
         private IlEmitter(string moduleName, string[] references, ImmutableDictionary<object, string>? codAssemblies = null)
@@ -124,7 +124,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
             }
 
-            var emitted = new HashSet<ClassTypeSymbol>();
+            var emitted = new HashSet<NamedTypeSymbol>();
 
             // 1a：先注册全部 TypeDef 壳（6e-M20：泛型实例化类的字段可前向引用兄弟实例化类，
             // 依赖序无法仅按基类链排序——壳先行入表，Extends/字段随后填充）
@@ -152,7 +152,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             // 6e-M22 C5-c：合成环境类的默认 .ctor（ldarg.0 → Object::.ctor → ret），
             // 直接挂 TypeDef；方法体在本函数尾部统一手工组装
-            var environmentCtorBodies = new List<(ClassTypeSymbol ClassType, IlMethodDef Ctor)>();
+            var environmentCtorBodies = new List<(NamedTypeSymbol ClassType, IlMethodDef Ctor)>();
             foreach (var classType in classes)
             {
                 if (IsClosureEnvironmentClass(classType))
@@ -359,7 +359,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _metadata.AddMethodDef(declaringType, method);
         }
 
-        private void EmitClassDeclaration(ClassTypeSymbol classType, IlTypeRef multicastDelegateRef)
+        private void EmitClassDeclaration(NamedTypeSymbol classType, IlTypeRef multicastDelegateRef)
         {
             var typeDef = _classTypeDefs[classType];
             var hasUserBase = classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot;
@@ -368,7 +368,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             if (hasUserBase)
             {
-                if (classType.BaseType == ClassTypeSymbol.SystemMulticastDelegate)
+                if (classType.BaseType == NamedTypeSymbol.SystemMulticastDelegate)
                 {
                     // delegate 子类 extends System.MulticastDelegate → 框架 TypeRef
                     baseTypeRef = multicastDelegateRef;
@@ -691,13 +691,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return IlType.Void;
             }
 
-            if (type is EnumTypeSymbol)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return IlType.Int32;
             }
 
             // 6e-M22 D-B：delegate 类 → Func`N 等价类型（运行期表示与函数值一致）
-            if (type is ClassTypeSymbol { IsDelegateClass: true } delegateClassType)
+            if (type is NamedTypeSymbol { IsDelegateClass: true } delegateClassType)
             {
                 var sig = delegateClassType.GetDelegateSignature();
                 if (sig != null)
@@ -706,7 +706,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
             }
 
-            if (type is ClassTypeSymbol classType)
+            if (type is NamedTypeSymbol classType)
             {
                 // facade 类：整类映射到 BCL（非泛型 → TypeRef；泛型实例化 → TypeSpec）
                 if (IsFacadeRedirect(classType))
@@ -742,7 +742,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     return IlType.Class(_framework.ObjectType);
                 }
 
-                if (classType == ClassTypeSymbol.SystemType)
+                if (classType == NamedTypeSymbol.SystemType)
                 {
                     return IlType.Class(_framework.RequireType("System.Type"));
                 }
@@ -825,7 +825,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return CodTypeRef(assemblyName, "", "<CocoaTopLevel>");
         }
 
-        private IlTypeRef CodClassRef(ClassTypeSymbol classType, string assemblyName)
+        private IlTypeRef CodClassRef(NamedTypeSymbol classType, string assemblyName)
         {
             // 与库侧 TypeDef 命名同构：Namespace/Name 原样拆分
             return CodTypeRef(assemblyName, classType.Namespace, classType.Name);
@@ -871,7 +871,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return _metadata.DefineMethodRef(declaringType, methodName, returnType, parameterTypes, isStatic: true);
         }
 
-        private IlTypeRef ResolveExternalTypeRef(ClassTypeSymbol classType)
+        private IlTypeRef ResolveExternalTypeRef(NamedTypeSymbol classType)
         {
             return _framework.RequireType(classType.FullName);
         }
@@ -1092,7 +1092,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var functionType = node.Callee.Type switch
             {
                 FunctionTypeSymbol ft => ft,
-                ClassTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
+                NamedTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
                 _ => throw new System.Exception($"Unexpected callee type {node.Callee.Type}"),
             };
             var shape = _delegateShapes.Resolve(functionType, ToIlType);
@@ -1169,7 +1169,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     EmitThisExpression(il, (BoundThisExpression)node);
                     break;
                 case BoundNodeKind.BaseExpression:
-                    EmitThisExpression(il, new BoundThisExpression(node.Syntax, (ClassTypeSymbol)node.Type));
+                    EmitThisExpression(il, new BoundThisExpression(node.Syntax, (NamedTypeSymbol)node.Type));
                     break;
                 case BoundNodeKind.StaticTypeExpression:
                     break; // 静态类型引用：无实例值
@@ -1226,7 +1226,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return false;
             }
 
-            var fromIsNumericLike = from.IsNumeric || from == TypeSymbol.Char || from is EnumTypeSymbol;
+            var fromIsNumericLike = from.IsNumeric || from == TypeSymbol.Char || from is NamedTypeSymbol { TypeKind: TypeKind.Enum };
             if (!to.IsNumeric || !fromIsNumericLike)
             {
                 return false;
@@ -1284,7 +1284,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     {
                         if (from == TypeSymbol.Int8 || from == TypeSymbol.Int16 ||
                             from == TypeSymbol.Int32 || from == TypeSymbol.Char ||
-                            from is EnumTypeSymbol)
+                            from is NamedTypeSymbol { TypeKind: TypeKind.Enum })
                         {
                             // 符号扩展位模式进入 int64 栈
                             il.Emit(IlOpCodeTable.Get("Conv_I8"));
@@ -1403,7 +1403,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 var value = (double)node.ConstantValue.Value;
                 il.Emit(IlOpCodeTable.Get("Ldc_R8"), value);
             }
-            else if (node.Type is EnumTypeSymbol)
+            else if (node.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 var value = (int)node.ConstantValue.Value;
                 il.Emit(IlOpCodeTable.Get("Ldc_I4"), value);
@@ -1869,7 +1869,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         /// codAssemblies 的 Cocoa 体）。泛型 facade 的重定向（直构 MemberRef）见后续实现。
         /// 规则见 docs-dev/对象模型设计.md §5.4。
         /// </summary>
-        private bool IsFacadeRedirect(ClassTypeSymbol classType)
+        private bool IsFacadeRedirect(NamedTypeSymbol classType)
         {
             if (classType.IsFacadeClass) return true;
             if (classType is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true) return true;
@@ -1878,7 +1878,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private static bool IsValueTypeSymbol(TypeSymbol type)
             => type == TypeSymbol.Boolean || type == TypeSymbol.Int32 || type == TypeSymbol.Int64 || type == TypeSymbol.Char ||
-               type == TypeSymbol.UInt8 || type == TypeSymbol.Double || type is EnumTypeSymbol ||
+               type == TypeSymbol.UInt8 || type == TypeSymbol.Double || type is NamedTypeSymbol { TypeKind: TypeKind.Enum } ||
                type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
                type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64 || type == TypeSymbol.Float;
 
@@ -1976,7 +1976,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return _metadata.DefineMethodRef(declaringSpec, fn.Name, returnIlType, paramIlTypes, isStatic: !isInstance);
         }
 
-        private IlMethodRef? ResolveFacadeCtor(ClassTypeSymbol classType, ImmutableArray<BoundExpression> arguments)
+        private IlMethodRef? ResolveFacadeCtor(NamedTypeSymbol classType, ImmutableArray<BoundExpression> arguments)
         {
             var paramTypes = arguments.Select(a => ToIlType(a.Type)).ToArray();
             if (classType is InstantiatedTypeSymbol inst)
@@ -2253,7 +2253,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
-            if (node.Expression.Type is EnumTypeSymbol && node.Type == TypeSymbol.Int64 ||
+            if (node.Expression.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum } && node.Type == TypeSymbol.Int64 ||
                 node.Expression.Type == TypeSymbol.UInt8 && node.Type == TypeSymbol.Int64 ||
                 node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int64)
             {
@@ -2341,14 +2341,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.Int32 ||
                 node.Expression.Type == TypeSymbol.Int32 && node.Type == TypeSymbol.Char ||
-                node.Expression.Type is EnumTypeSymbol && node.Type == TypeSymbol.Int32 ||
-                node.Expression.Type == TypeSymbol.Int32 && node.Type is EnumTypeSymbol)
+                node.Expression.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum } && node.Type == TypeSymbol.Int32 ||
+                node.Expression.Type == TypeSymbol.Int32 && node.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 // 栈上同为 4 字节，无需指令
                 return;
             }
 
-            if (node.Expression.Type is ClassTypeSymbol fromClass && node.Type is ClassTypeSymbol toClass)
+            if (node.Expression.Type is NamedTypeSymbol fromClass && node.Type is NamedTypeSymbol toClass)
             {
                 if (toClass.IsInterface &&
                     (fromClass == toClass || fromClass.IsBaseOf(toClass) || fromClass.GetAllInterfaces().Contains(toClass)))
@@ -2407,7 +2407,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private void EmitBoxIfValueType(IlAssembler il, TypeSymbol type)
         {
             if (type != TypeSymbol.Boolean && type != TypeSymbol.Int32 && type != TypeSymbol.Int64 && type != TypeSymbol.Char &&
-                type != TypeSymbol.UInt8 && type != TypeSymbol.Double && type is not EnumTypeSymbol &&
+                type != TypeSymbol.UInt8 && type != TypeSymbol.Double && type is not NamedTypeSymbol { TypeKind: TypeKind.Enum } &&
                 type != TypeSymbol.Int8 && type != TypeSymbol.Int16 && type != TypeSymbol.UInt16 &&
                 type != TypeSymbol.UInt32 && type != TypeSymbol.UInt64 && type != TypeSymbol.Float)
             {
@@ -2509,7 +2509,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 _ when elementType == TypeSymbol.UInt8 => "System.Byte",
                 _ when elementType == TypeSymbol.Double => "System.Double",
                 _ when elementType == TypeSymbol.Boolean => "System.Boolean",
-                _ when elementType is EnumTypeSymbol => "System.Int32",
+                _ when elementType is NamedTypeSymbol { TypeKind: TypeKind.Enum } => "System.Int32",
                 _ => throw new System.NotSupportedException($"Array of '{elementType}' is not yet supported by the IL emitter."),
             };
         }
@@ -2526,7 +2526,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return false;
             }
 
-            if (elementType is EnumTypeSymbol)
+            if (elementType is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return false;
             }
@@ -2841,7 +2841,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitObjectCreationExpression(IlAssembler il, BoundObjectCreationExpression node)
         {
-            var classType = (ClassTypeSymbol)node.Type;
+            var classType = (NamedTypeSymbol)node.Type;
 
             // facade 类构造：重定向到 BCL .ctor（泛型直构 MemberRef）
             if (IsFacadeRedirect(classType))

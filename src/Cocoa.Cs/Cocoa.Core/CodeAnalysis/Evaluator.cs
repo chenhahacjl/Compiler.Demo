@@ -18,9 +18,9 @@ namespace Cocoa.CodeAnalysis
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
 
         // 6e-M19 M3-c锛歄OP 杩愯鏃剁姸鎬佲€斺€斿疄渚嬪瓧娈靛竷灞€缂撳瓨 / 闈欐€佸瓧娈垫Ы / .cctor 宸插垵濮嬪寲闆?/ this 鎺ユ敹鑰呮爤
-        private readonly Dictionary<ClassTypeSymbol, ImmutableArray<FieldSymbol>> _instanceFields = new Dictionary<ClassTypeSymbol, ImmutableArray<FieldSymbol>>();
+        private readonly Dictionary<NamedTypeSymbol, ImmutableArray<FieldSymbol>> _instanceFields = new Dictionary<NamedTypeSymbol, ImmutableArray<FieldSymbol>>();
         private readonly Dictionary<FieldSymbol, object> _staticFields = new Dictionary<FieldSymbol, object>();
-        private readonly HashSet<ClassTypeSymbol> _staticsInitialized = new HashSet<ClassTypeSymbol>();
+        private readonly HashSet<NamedTypeSymbol> _staticsInitialized = new HashSet<NamedTypeSymbol>();
         private readonly Stack<object> _thisStack = new Stack<object>();
 
         private object? _lastValue;
@@ -355,7 +355,7 @@ namespace Cocoa.CodeAnalysis
 
             // 6e-M19 M5-a锛歯ull 璧嬪€煎悎娉曪紙鍙┖寮曠敤鍨嬪彉閲忥級锛涘叾浣欎粛瑙嗕负鍐呴儴缂洪櫡
             Debug.Assert(value != null ||
-                         assignment.Variable.Type is Symbols.ClassTypeSymbol ||
+                         assignment.Variable.Type is Symbols.NamedTypeSymbol ||
                          assignment.Variable.Type == TypeSymbol.String ||
                          assignment.Variable.Type == TypeSymbol.Any ||
                          assignment.Variable.Type.ElementType != null);
@@ -889,7 +889,7 @@ namespace Cocoa.CodeAnalysis
 
             if (value is EvaluatorObject evalObject)
             {
-                var targetClass = (Symbols.ClassTypeSymbol)node.TargetType;
+                var targetClass = (Symbols.NamedTypeSymbol)node.TargetType;
                 for (var current = evalObject.Class; current != null; current = current.BaseType)
                 {
                     if (current == targetClass)
@@ -922,7 +922,7 @@ namespace Cocoa.CodeAnalysis
 
             if (value is EvaluatorObject evalObject)
             {
-                var targetClass = (Symbols.ClassTypeSymbol)node.TargetType;
+                var targetClass = (Symbols.NamedTypeSymbol)node.TargetType;
                 for (var current = evalObject.Class; current != null; current = current.BaseType)
                 {
                     if (current == targetClass)
@@ -1050,12 +1050,12 @@ namespace Cocoa.CodeAnalysis
             {
                 return Convert.ToString(value);
             }
-            else if (node.Type is EnumTypeSymbol)
+            else if (node.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 // 鏋氫妇搴曞眰涓?int锛屾棤鎿嶄綔
                 return Convert.ToInt32(value);
             }
-            else if (node.Type is Symbols.ClassTypeSymbol)
+            else if (node.Type is Symbols.NamedTypeSymbol)
             {
                 // 6e-M19 M2-c锛氱被闂村紩鐢ㄨ浆鎹紙娲剧敓鈫掑熀绫婚殣寮?/ 鍩虹被鈫掓淳鐢熸樉寮忥級鈥斺€擟LR 瀵硅薄鐩撮€?
                 return value;
@@ -1281,7 +1281,7 @@ namespace Cocoa.CodeAnalysis
         // ------------------------------------------------------ 6e-M19 M3-c锛歄OP 杩愯鏃惰緟鍔?
 
         /// <summary>绫荤殑鎵佸钩鍖栧疄渚嬪瓧娈靛竷灞€锛堝熀绫诲瓧娈靛湪鍓嶃€佸０鏄庡簭锛涜法缁ф壙閾撅紝鎸夌被缂撳瓨锛夈€?/summary>
-        private ImmutableArray<FieldSymbol> InstanceFieldsOf(ClassTypeSymbol classType)
+        private ImmutableArray<FieldSymbol> InstanceFieldsOf(NamedTypeSymbol classType)
         {
             if (_instanceFields.TryGetValue(classType, out var cached))
             {
@@ -1289,7 +1289,7 @@ namespace Cocoa.CodeAnalysis
             }
 
             var fields = new List<FieldSymbol>();
-            for (var current = (ClassTypeSymbol?)classType; current != null; current = current.BaseType)
+            for (var current = (NamedTypeSymbol?)classType; current != null; current = current.BaseType)
             {
                 foreach (var field in current.Fields)
                 {
@@ -1305,7 +1305,7 @@ namespace Cocoa.CodeAnalysis
             return result;
         }
 
-        private int FieldOrdinal(FieldSymbol field, ClassTypeSymbol classType)
+        private int FieldOrdinal(FieldSymbol field, NamedTypeSymbol classType)
         {
             var layout = InstanceFieldsOf(classType);
             for (var i = 0; i < layout.Length; i++)
@@ -1324,7 +1324,7 @@ namespace Cocoa.CodeAnalysis
         {
             if (type == TypeSymbol.Int32 || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8 ||
                 type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 || type == TypeSymbol.UInt32 ||
-                type == TypeSymbol.Char || type is EnumTypeSymbol)
+                type == TypeSymbol.Char || type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return 0;
             }
@@ -1350,7 +1350,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 闈欐€佸垵濮嬪寲锛圕LR 璇箟杩戜技锛夛細棣栨瑙︾绫婚潤鎬佹垚鍛樻椂鎵ц鍏?.cctor锛堝瓧娈靛垵濮嬪寲鍣ㄥ凡鐢辩粦瀹氬墠缂€杩涗綋锛夈€?
         /// </summary>
-        private void EnsureStaticInit(ClassTypeSymbol classType)
+        private void EnsureStaticInit(NamedTypeSymbol classType)
         {
             if (!_staticsInitialized.Add(classType))
             {
@@ -1366,7 +1366,7 @@ namespace Cocoa.CodeAnalysis
 
         private object EvaluateObjectCreation(BoundObjectCreationExpression node)
         {
-            var classType = (ClassTypeSymbol)node.Type;
+            var classType = (NamedTypeSymbol)node.Type;
             var argumentValues = new object?[node.Arguments.Length];
             for (var i = 0; i < node.Arguments.Length; i++)
             {
@@ -1504,9 +1504,9 @@ namespace Cocoa.CodeAnalysis
         /// 铏氬垎娲撅紙闀滃儚 CLR 妲藉鐢ㄨ涔夛級锛氭部杩愯鏃剁被缁ф壙閾炬壘鏈€杩戝悓鍚嶅悓绛惧悕瀹炵幇鈥斺€?
         /// 鍐呭缓鍗曚緥浣嶄簬閾炬牴鑷劧鏈€鍚庡懡涓紙鍗?C# 榛樿瀹炵幇锛夈€侷sBase 鐩磋皟缁戝畾鏈熻В鏋愮殑鍩虹被瀹炵幇锛屼笉缁忔閲嶆淳鍙戙€?
         /// </summary>
-        private FunctionSymbol? ResolveDispatch(ClassTypeSymbol runtimeClass, FunctionSymbol declared)
+        private FunctionSymbol? ResolveDispatch(NamedTypeSymbol runtimeClass, FunctionSymbol declared)
         {
-            for (var current = (ClassTypeSymbol?)runtimeClass; current != null; current = current.BaseType)
+            for (var current = (NamedTypeSymbol?)runtimeClass; current != null; current = current.BaseType)
             {
                 foreach (var method in current.Methods)
                 {

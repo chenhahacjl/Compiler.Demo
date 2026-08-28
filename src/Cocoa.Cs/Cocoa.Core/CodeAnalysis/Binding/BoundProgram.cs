@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundProgram
     {
-        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<ClassTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<ClassTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
+        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<NamedTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<NamedTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
         {
             Previous = previous;
             Diagnostics = diagnostics;
@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Binding
             Functions = functions;
             Classes = classes;
             CodAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
-            GenericDefinitions = genericDefinitions ?? ImmutableArray<ClassTypeSymbol>.Empty;
+            GenericDefinitions = genericDefinitions ?? ImmutableArray<NamedTypeSymbol>.Empty;
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
         }
 
@@ -23,19 +23,19 @@ namespace Cocoa.CodeAnalysis.Binding
         public FunctionSymbol? MainFunction { get; }
         public FunctionSymbol? ScriptFunction { get; }
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Functions { get; }
-        public ImmutableArray<ClassTypeSymbol> Classes { get; }
+        public ImmutableArray<NamedTypeSymbol> Classes { get; }
 
         /// <summary>
         /// 动态链接（阶段 A2）：cod 来源符号 → 所属库程序集名（如 "MyLib"）。
         /// 非空时 IlEmitter 对这些符号合成 AssemblyRef/TypeRef/MemberRef 指向同名 dll，
-        /// 而非内联实现；键为 ClassTypeSymbol / FunctionSymbol（extern 与 builtin 单例不入表）。
+        /// 而非内联实现；键为 NamedTypeSymbol / FunctionSymbol（extern 与 builtin 单例不入表）。
         /// </summary>
         public ImmutableDictionary<object, string> CodAssemblies { get; }
 
         /// <summary>
         /// 泛型定义类（6e-G7 S1）：模板壳，IL/native 发射清单排除；仅 EmitCocoa 序列化为 gcls 条目。
         /// </summary>
-        public ImmutableArray<ClassTypeSymbol> GenericDefinitions { get; }
+        public ImmutableArray<NamedTypeSymbol> GenericDefinitions { get; }
 
         /// <summary>
         /// 泛型定义方法的开放绑定体（6e-G7 S2）：T 保持开放的降级 Bound 块，

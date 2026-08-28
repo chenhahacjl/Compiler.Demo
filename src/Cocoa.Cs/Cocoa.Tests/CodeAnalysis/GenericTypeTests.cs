@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 using System.Linq;
 using Xunit;
@@ -10,9 +10,9 @@ namespace Cocoa.Tests.CodeAnalysis
     /// </summary>
     public class GenericTypeTests
     {
-        private static (ClassTypeSymbol Definition, TypeParameterSymbol T) DeclareGeneric(string name = "Box")
+        private static (NamedTypeSymbol Definition, TypeParameterSymbol T) DeclareGeneric(string name = "Box")
         {
-            var definition = new ClassTypeSymbol(name, "Test", Visibility.Public, declaration: null);
+            var definition = new NamedTypeSymbol(name, "Test", Visibility.Public, declaration: null);
             var t = new TypeParameterSymbol("T", 0, definition);
             definition.TypeParameters = ImmutableArray.Create(t);
 
@@ -54,7 +54,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Instantiate_NonGenericDefinition_Throws()
         {
-            var plain = new ClassTypeSymbol("Plain", "Test", Visibility.Public, declaration: null);
+            var plain = new NamedTypeSymbol("Plain", "Test", Visibility.Public, declaration: null);
 
             Assert.Throws<InvalidOperationException>(() => GenericTypeInstantiator.Instantiate(plain, ImmutableArray.Create<TypeSymbol>(TypeSymbol.Int32)));
         }
@@ -90,7 +90,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Substitute_ReplacesArraysAndNestedGenerics()
         {
             var (definition, t) = DeclareGeneric("Store");
-            var innerDefinition = new ClassTypeSymbol("Wrapper", "Test", Visibility.Public, declaration: null);
+            var innerDefinition = new NamedTypeSymbol("Wrapper", "Test", Visibility.Public, declaration: null);
             var u = new TypeParameterSymbol("U", 0, innerDefinition);
             innerDefinition.TypeParameters = ImmutableArray.Create(u);
 
@@ -144,8 +144,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Instantiate_CopiesBaseAndInterfaces()
         {
-            var baseDef = new ClassTypeSymbol("Repo", "Test", Visibility.Public, declaration: null);
-            var ifaceDef = new ClassTypeSymbol("IStore", "Test", Visibility.Public, declaration: null) { IsInterface = true };
+            var baseDef = new NamedTypeSymbol("Repo", "Test", Visibility.Public, declaration: null);
+            var ifaceDef = new NamedTypeSymbol("IStore", "Test", Visibility.Public, declaration: null) { TypeKind = TypeKind.Interface };
 
             var (definition, _) = DeclareGeneric("Db");
             definition.BaseType = baseDef;

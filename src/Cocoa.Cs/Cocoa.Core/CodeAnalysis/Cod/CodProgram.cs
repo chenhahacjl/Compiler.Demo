@@ -12,8 +12,8 @@ namespace Cocoa.CodeAnalysis.Cod
         public CodProgram(
             ImmutableArray<FunctionSymbol> functions,
             ImmutableArray<GlobalVariableSymbol> globals,
-            ImmutableArray<EnumTypeSymbol> enums,
-            ImmutableArray<ClassTypeSymbol> classes,
+            ImmutableArray<NamedTypeSymbol> enums,
+            ImmutableArray<NamedTypeSymbol> classes,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement> bodies,
             CodRequirement requires,
             ImmutableArray<string> platforms,
@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis.Cod
             ImmutableArray<string> nativeImports,
             ImmutableArray<string> codReferences,
             ImmutableArray<string> namespaces,
-            ImmutableArray<ClassTypeSymbol> genericDefinitions = default,
+            ImmutableArray<NamedTypeSymbol> genericDefinitions = default,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
         {
             Functions = functions;
@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Cod
             NativeImports = nativeImports;
             CodReferences = codReferences;
             Namespaces = namespaces;
-            GenericDefinitions = genericDefinitions.IsDefault ? ImmutableArray<ClassTypeSymbol>.Empty : genericDefinitions;
+            GenericDefinitions = genericDefinitions.IsDefault ? ImmutableArray<NamedTypeSymbol>.Empty : genericDefinitions;
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
         }
 
@@ -46,13 +46,13 @@ namespace Cocoa.CodeAnalysis.Cod
         public ImmutableArray<GlobalVariableSymbol> Globals { get; }
 
         /// <summary>库的枚举类型。</summary>
-        public ImmutableArray<EnumTypeSymbol> Enums { get; }
+        public ImmutableArray<NamedTypeSymbol> Enums { get; }
 
         /// <summary>库的纯容器类（6e-M17：仅 syscall/extern 静态方法，无实例成员/构造/字段/属性/继承）。</summary>
-        public ImmutableArray<ClassTypeSymbol> Classes { get; }
+        public ImmutableArray<NamedTypeSymbol> Classes { get; }
 
         /// <summary>泛型定义类（6e-G7 S1：模板壳 + 开放类型参数；消费方实例化展开）。</summary>
-        public ImmutableArray<ClassTypeSymbol> GenericDefinitions { get; }
+        public ImmutableArray<NamedTypeSymbol> GenericDefinitions { get; }
 
         /// <summary>泛型定义方法的开放绑定体（6e-G7 S2：T 保持开放；消费方替换展开）。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> GenericOpenBodies { get; }

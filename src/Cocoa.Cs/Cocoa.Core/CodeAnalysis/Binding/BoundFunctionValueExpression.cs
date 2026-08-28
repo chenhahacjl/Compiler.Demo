@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </summary>
     internal sealed class BoundFunctionValueExpression : BoundExpression
     {
-        public BoundFunctionValueExpression(SyntaxNode syntax, FunctionSymbol function, BoundExpression? receiver, BoundBlockStatement? body, FunctionTypeSymbol type, ClassTypeSymbol? environmentClass = null)
+        public BoundFunctionValueExpression(SyntaxNode syntax, FunctionSymbol function, BoundExpression? receiver, BoundBlockStatement? body, FunctionTypeSymbol type, NamedTypeSymbol? environmentClass = null)
             : base(syntax)
         {
             Function = function;
@@ -36,6 +36,6 @@ namespace Cocoa.CodeAnalysis.Binding
         public BoundBlockStatement? Body { get; }
 
         /// <summary>捕获闭包时的合成环境类（6e-M22 C5）；null = 无捕获。</summary>
-        public ClassTypeSymbol? EnvironmentClass { get; }
+        public NamedTypeSymbol? EnvironmentClass { get; }
     }
 }

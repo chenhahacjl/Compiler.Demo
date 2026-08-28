@@ -8,19 +8,19 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// 类类型：承载字段/方法/构造函数成员，支持单继承。
     /// 派生：<see cref="InstantiatedTypeSymbol"/>（6e-M20 泛型实例化类，惰性物化成员）。
     /// </summary>
-    public class ClassTypeSymbol : TypeSymbol
+    public class NamedTypeSymbol : TypeSymbol
     {
         /// <summary>System.Object 内建单例（6e-M19 M2-a）：所有无显式基类类的隐式根，成员面随 M2-b/M2-c 接入。</summary>
-        public static readonly ClassTypeSymbol SystemObject = new ClassTypeSymbol("Object", "System", Visibility.Public, declaration: null);
+        public static readonly NamedTypeSymbol SystemObject = new NamedTypeSymbol("Object", "System", Visibility.Public, declaration: null);
 
         /// <summary>System.Type 内建单例（6e-M19 M2-a）：GetType() 的返回类型。</summary>
-        public static readonly ClassTypeSymbol SystemType = new ClassTypeSymbol("Type", "System", Visibility.Public, declaration: null);
+        public static readonly NamedTypeSymbol SystemType = new NamedTypeSymbol("Type", "System", Visibility.Public, declaration: null);
 
         /// <summary>System.Delegate 内建单例（6e-M22 C5+）：所有委托声明的间接基类。</summary>
-        public static readonly ClassTypeSymbol SystemDelegate = new ClassTypeSymbol("Delegate", "System", Visibility.Public, declaration: null);
+        public static readonly NamedTypeSymbol SystemDelegate = new NamedTypeSymbol("Delegate", "System", Visibility.Public, declaration: null);
 
         /// <summary>System.MulticastDelegate 内建单例（6e-M22 C5+）：多播委托基类。</summary>
-        public static readonly ClassTypeSymbol SystemMulticastDelegate = new ClassTypeSymbol("MulticastDelegate", "System", Visibility.Public, declaration: null);
+        public static readonly NamedTypeSymbol SystemMulticastDelegate = new NamedTypeSymbol("MulticastDelegate", "System", Visibility.Public, declaration: null);
 
         /// <summary>是否为内建 Delegate 根单例。</summary>
         public bool IsSystemDelegate => this == SystemDelegate;
@@ -46,7 +46,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>6e-M22 C5+：内建 Delegate/MulticastDelegate 继承链初始化。</summary>
-        static ClassTypeSymbol()
+        static NamedTypeSymbol()
         {
             SystemDelegate.BaseType = SystemObject;
             SystemMulticastDelegate.BaseType = SystemDelegate;
@@ -56,10 +56,13 @@ namespace Cocoa.CodeAnalysis.Symbols
         private readonly ImmutableArray<FunctionSymbol>.Builder _methods;
         private readonly ImmutableArray<PropertySymbol>.Builder _properties;
         private readonly List<EventSymbol> _events = new List<EventSymbol>();
-        private readonly List<ClassTypeSymbol> _interfaces = new List<ClassTypeSymbol>();
-        private readonly List<ClassTypeSymbol> _baseInterfaces = new List<ClassTypeSymbol>();
+        private readonly List<NamedTypeSymbol> _interfaces = new List<NamedTypeSymbol>();
+        private readonly List<NamedTypeSymbol> _baseInterfaces = new List<NamedTypeSymbol>();
 
-        internal ClassTypeSymbol(string name, string @namespace, Visibility visibility, ClassDeclarationSyntax? declaration, bool isExternal = false)
+        // 枚举常量成员（TypeKind.Enum 时使用；class/struct/interface 为 null）
+        private Dictionary<string, int>? _enumMembers;
+
+        internal NamedTypeSymbol(string name, string @namespace, Visibility visibility, ClassDeclarationSyntax? declaration, bool isExternal = false)
             : base(name)
         {
             Namespace = @namespace ?? "";
@@ -78,8 +81,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>外部引用程序集类型（消费 -r 库时 true）。</summary>
         public bool IsExternal { get; }
 
+        /// <summary>命名类型类别（6e-M26）：class/struct/interface/enum/delegate 共用同一符号，以 TypeKind 判别。</summary>
+        public virtual TypeKind TypeKind { get; internal set; } = TypeKind.Class;
+
         /// <summary>是否为接口（interface 声明；不可实例化、成员无实现）。</summary>
-        public virtual bool IsInterface { get; internal set; }
+        public virtual bool IsInterface => TypeKind == TypeKind.Interface;
 
         /// <summary>完整类型名（含命名空间）。</summary>
         public string FullName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
@@ -89,7 +95,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public ClassDeclarationSyntax? Declaration { get; }
 
         /// <summary>基类（null = 接口或未落位；非接口类绑定后恒为显式基类或 <see cref="SystemObject"/>）。</summary>
-        public virtual ClassTypeSymbol? BaseType
+        public virtual NamedTypeSymbol? BaseType
         {
             get
             {
@@ -102,7 +108,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
         }
 
-        private ClassTypeSymbol? _baseType;
+        private NamedTypeSymbol? _baseType;
 
         /// <summary>是否为内建 Object 根单例（区别于用户声明的类）。</summary>
         public bool IsSystemObjectRoot => this == SystemObject;
@@ -118,8 +124,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public virtual bool IsAbstract { get; internal set; }
 
-        /// <summary>是否为值类型（struct，6e-M26）：默认 false；<see cref="StructTypeSymbol"/> 为 true。</summary>
-        public virtual bool IsValueType => false;
+        /// <summary>是否为值类型（struct/enum，6e-M26）：对齐 C#，struct 与枚举都是值类型。</summary>
+        public virtual bool IsValueType => TypeKind is TypeKind.Struct or TypeKind.Enum;
 
         public virtual bool IsSealed { get; internal set; }
 
@@ -139,6 +145,27 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public bool IsStatic => IsAbstract && IsSealed;
 
+        /// <summary>是否为枚举（6e-M26 并入 NamedTypeSymbol）。</summary>
+        public bool IsEnum => TypeKind == TypeKind.Enum;
+
+        /// <summary>注入枚举常量成员（仅 TypeKind.Enum 调用）。</summary>
+        internal void SetEnumMembers(Dictionary<string, int> members) => _enumMembers = members;
+
+        /// <summary>枚举成员名→常量值查找（非枚举返回 false）。</summary>
+        public bool TryGetMember(string name, out int value)
+        {
+            if (_enumMembers != null && _enumMembers.TryGetValue(name, out value))
+            {
+                return true;
+            }
+
+            value = 0;
+            return false;
+        }
+
+        /// <summary>枚举成员名集合（非枚举为空）。</summary>
+        public IReadOnlyCollection<string> MemberNames => (IReadOnlyCollection<string>?)_enumMembers?.Keys ?? Array.Empty<string>();
+
         internal void AddField(FieldSymbol field) => _fields.Add(field);
 
         internal void AddMethod(FunctionSymbol method) => _methods.Add(method);
@@ -154,7 +181,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public EventSymbol? GetEvent(string name)
         {
             EnsureMembersMaterialized();
-            for (var type = (ClassTypeSymbol?)this; type != null; type = type.BaseType)
+            for (var type = (NamedTypeSymbol?)this; type != null; type = type.BaseType)
             {
                 type.EnsureMembersMaterialized();
                 foreach (var e in type._events)
@@ -166,13 +193,13 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>类直接实现的接口（`class C: I` 的基类型列表中的接口）。</summary>
-        internal void AddInterface(ClassTypeSymbol interfaceType) => _interfaces.Add(interfaceType);
+        internal void AddInterface(NamedTypeSymbol interfaceType) => _interfaces.Add(interfaceType);
 
         /// <summary>接口直接继承的基接口（`interface IBird: IAnimal, IFlyable`）。</summary>
-        internal void AddBaseInterface(ClassTypeSymbol interfaceType) => _baseInterfaces.Add(interfaceType);
+        internal void AddBaseInterface(NamedTypeSymbol interfaceType) => _baseInterfaces.Add(interfaceType);
 
         /// <summary>类/接口直接列出的接口（不含继承）。</summary>
-        public ImmutableArray<ClassTypeSymbol> Interfaces
+        public ImmutableArray<NamedTypeSymbol> Interfaces
         {
             get
             {
@@ -182,7 +209,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>接口直接继承的基接口（不含递归）。</summary>
-        public ImmutableArray<ClassTypeSymbol> BaseInterfaces
+        public ImmutableArray<NamedTypeSymbol> BaseInterfaces
         {
             get
             {
@@ -192,11 +219,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>全部接口（本类直接实现 + 基类链 + 接口继承链，去重）。</summary>
-        public ImmutableArray<ClassTypeSymbol> GetAllInterfaces()
+        public ImmutableArray<NamedTypeSymbol> GetAllInterfaces()
         {
             EnsureMembersMaterialized();
 
-            var seen = new HashSet<ClassTypeSymbol>();
+            var seen = new HashSet<NamedTypeSymbol>();
 
             for (var current = this; current != null; current = current.BaseType)
             {
@@ -209,7 +236,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return seen.ToImmutableArray();
         }
 
-        private static void CollectInterfaceHierarchy(ClassTypeSymbol iface, HashSet<ClassTypeSymbol> seen)
+        private static void CollectInterfaceHierarchy(NamedTypeSymbol iface, HashSet<NamedTypeSymbol> seen)
         {
             if (!seen.Add(iface))
             {
@@ -434,7 +461,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>从 type 沿继承链向上查找是否存在与 candidate 同名且参数类型一致的方法（即已实现 candidate 的类方法）。</summary>
-        private static bool TypeChainDeclaresMatchingMethod(ClassTypeSymbol? type, FunctionSymbol candidate)
+        private static bool TypeChainDeclaresMatchingMethod(NamedTypeSymbol? type, FunctionSymbol candidate)
         {
             for (var t = type; t != null; t = t.BaseType)
             {
@@ -571,10 +598,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>this 是否为 base（含同一类型）或其派生类型（防循环继承死循环）。</summary>
-        public bool IsBaseOf(ClassTypeSymbol type)
+        public bool IsBaseOf(NamedTypeSymbol type)
         {
             EnsureMembersMaterialized();
-            var seen = new System.Collections.Generic.HashSet<ClassTypeSymbol>();
+            var seen = new System.Collections.Generic.HashSet<NamedTypeSymbol>();
             for (var current = type; current != null && seen.Add(current); current = current.BaseType)
             {
                 current.EnsureMembersMaterialized();

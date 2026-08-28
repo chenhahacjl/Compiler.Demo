@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class EventSymbol : Symbol
     {
-        internal EventSymbol(string name, FunctionTypeSymbol handlerType, Visibility visibility, ClassTypeSymbol containingClass)
+        internal EventSymbol(string name, FunctionTypeSymbol handlerType, Visibility visibility, NamedTypeSymbol containingClass)
             : base(name)
         {
             HandlerType = handlerType;
@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public Visibility Visibility { get; }
 
         /// <summary>所属类。</summary>
-        public ClassTypeSymbol ContainingClass { get; }
+        public NamedTypeSymbol ContainingClass { get; }
 
         /// <summary>是否为静态事件。</summary>
         public bool IsStatic { get; internal set; }
