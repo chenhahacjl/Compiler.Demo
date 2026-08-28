@@ -44,6 +44,43 @@ function Main()
         }
 
         [Fact]
+        public void GetTypeByMetadataName_ResolvesBuiltinSourceAndArray()
+        {
+            var code = @"using System
+
+public class Point
+{
+    public function Get(): i32 { return 0 }
+}
+
+public enum Color { Red, Green }
+
+function Main()
+{
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+
+            Assert.Equal(TypeSymbol.Int32, compilation.GetTypeByMetadataName("System.Int32"));
+            Assert.Equal(TypeSymbol.String, compilation.GetTypeByMetadataName("System.String"));
+            Assert.Equal(NamedTypeSymbol.SystemObject, compilation.GetTypeByMetadataName("System.Object"));
+            Assert.Equal(TypeSymbol.Void, compilation.GetTypeByMetadataName("System.Void"));
+
+            var point = compilation.GetTypeByMetadataName("Point");
+            Assert.NotNull(point);
+            Assert.Equal("Point", point!.Name);
+
+            var color = compilation.GetTypeByMetadataName("Color");
+            Assert.NotNull(color);
+            Assert.Equal(SymbolKind.NamedType, color!.Kind);
+
+            var intArray = compilation.GetTypeByMetadataName("System.Int32[]");
+            Assert.NotNull(intArray);
+            Assert.True(intArray!.ElementType == TypeSymbol.Int32);
+
+            Assert.Null(compilation.GetTypeByMetadataName("System.NoSuchType"));
+        }
+
+        [Fact]
         public void Class_MethodCall_Binds()
         {
             var code = @"using System

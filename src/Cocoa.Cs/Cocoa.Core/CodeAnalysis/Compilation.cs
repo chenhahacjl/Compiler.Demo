@@ -143,6 +143,101 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
+        /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。
+        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局作用域声明（源 + 注入的 .cod 库）类与枚举；
+        /// 缺失返回 null。支持后置 [] 数组全名（如 <c>"System.Int32[]"</c>）。</summary>
+        public TypeSymbol? GetTypeByMetadataName(string fullyQualifiedName)
+        {
+            var elementName = fullyQualifiedName;
+            var isArray = false;
+            if (fullyQualifiedName.EndsWith("[]", StringComparison.Ordinal))
+            {
+                isArray = true;
+                elementName = fullyQualifiedName.Substring(0, fullyQualifiedName.Length - 2);
+            }
+
+            TypeSymbol? type = elementName switch
+            {
+                "System.Object" => NamedTypeSymbol.SystemObject,
+                "System.Type" => NamedTypeSymbol.SystemType,
+                "System.String" => TypeSymbol.String,
+                "System.Void" => TypeSymbol.Void,
+                "System.Boolean" => TypeSymbol.Boolean,
+                "System.SByte" => TypeSymbol.Int8,
+                "System.Byte" => TypeSymbol.UInt8,
+                "System.Int16" => TypeSymbol.Int16,
+                "System.UInt16" => TypeSymbol.UInt16,
+                "System.Int32" => TypeSymbol.Int32,
+                "System.UInt32" => TypeSymbol.UInt32,
+                "System.Int64" => TypeSymbol.Int64,
+                "System.UInt64" => TypeSymbol.UInt64,
+                "System.Single" => TypeSymbol.Float,
+                "System.Double" => TypeSymbol.Double,
+                "System.Char" => TypeSymbol.Char,
+                _ => null,
+            };
+
+            if (type == null)
+            {
+                foreach (var declared in GlobalScope.Enums)
+                {
+                    if (declared.FullName == elementName)
+                    {
+                        type = declared;
+                        break;
+                    }
+                }
+            }
+
+            if (type == null)
+            {
+                foreach (var declared in GlobalScope.Classes)
+                {
+                    if (declared.FullName == elementName)
+                    {
+                        type = declared;
+                        break;
+                    }
+                }
+            }
+
+            if (type == null)
+            {
+                foreach (var library in _codLibraries)
+                {
+                    foreach (var declared in library.Enums)
+                    {
+                        if (declared.FullName == elementName)
+                        {
+                            type = declared;
+                            break;
+                        }
+                    }
+
+                    if (type != null)
+                    {
+                        break;
+                    }
+
+                    foreach (var declared in library.Classes)
+                    {
+                        if (declared.FullName == elementName)
+                        {
+                            type = declared;
+                            break;
+                        }
+                    }
+
+                    if (type != null)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            return isArray && type != null ? TypeSymbol.ArrayOf(type) : type;
+        }
+
         private BoundProgram GetProgram()
         {
             var previous = Previous == null ? null : Previous.GetProgram();
