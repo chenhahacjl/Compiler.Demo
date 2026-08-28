@@ -64,10 +64,16 @@ Cocoa.CodeAnalysis
 3. async/迭代器状态机标为**可选**。
 4. 验收：全量绿（双后端行为不变）。
 
-### Phase 4 — Syntax 红/绿节点（体量最大、风险最高，最后或独立子分支）
-1. 绿节点（不可变，无父链）→ 红节点（惰性实现、父链、引用）拆分；改写 Parser/Lexer/SyntaxTree。
-2. `SyntaxFactory` + `SyntaxWalker/Visitor` + 规范的 `SeparatedSyntaxList`。
-3. 增量重解析（为将来 IDE 打底）。
+### Phase 4 — Syntax 红/绿节点（体量最大、风险最高，独立里程碑排期）
+
+**已完成（2026-08-28，`fee6e92`/`bfe6680`）**：
+1. 红树遍历基础设施：`SyntaxNode.DescendantNodes/DescendantNodesAndSelf/DescendantTokens` + `SyntaxWalker`。
+2. 绿节点基础设施：`Syntax/Green/`（`GreenNode`/`GreenToken`/`GreenTrivia`/`GreenNodeWithChildren`）+ `SyntaxFactory`，与现有红树/解析器并行共存、零破坏。
+
+**独立里程碑排期（后续立项，不随主线实施）**：
+1. **红/绿桥接**：`SyntaxNode` 改为包 `GreenNode` 的惰性红视图（父链/子节点经绿槽实现），`SyntaxTree` 存绿根。
+2. **解析器迁移**：Lexer/Parser 直接产出绿树。
+3. **增量重解析**（为将来 IDE 打底）。
 4. 验收：全量绿。
 
 ## 四、关键取舍
