@@ -4,6 +4,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         Function,
         Namespace,
+        Assembly,
         GlobalVariable,
         LocalVariable,
         Parameter,

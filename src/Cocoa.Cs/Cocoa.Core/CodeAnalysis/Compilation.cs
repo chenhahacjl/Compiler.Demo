@@ -277,6 +277,50 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
+        private AssemblySymbol? _sourceAssembly;
+
+        /// <summary>本编译的源程序集（对齐 Roslyn <c>Compilation.SourceAssembly</c>）。</summary>
+        public AssemblySymbol SourceAssembly
+        {
+            get
+            {
+                var source = _sourceAssembly;
+                if (source == null)
+                {
+                    source = new AssemblySymbol("Cocoa", isSource: true);
+                    Interlocked.CompareExchange(ref _sourceAssembly, source, null);
+                    source = _sourceAssembly;
+                }
+
+                return source;
+            }
+        }
+
+        private ImmutableArray<AssemblySymbol> _referencedAssemblies = ImmutableArray<AssemblySymbol>.Empty;
+
+        /// <summary>引用的元数据程序集（对齐 Roslyn <c>Compilation.References</c>；本阶段即已加载的 `.cod` 库）。</summary>
+        public ImmutableArray<AssemblySymbol> ReferencedAssemblies
+        {
+            get
+            {
+                if (_referencedAssemblies.Length == 0 && _codLibraries.Length > 0)
+                {
+                    var builder = ImmutableArray.CreateBuilder<AssemblySymbol>(_codLibraries.Length);
+                    foreach (var library in _codLibraries)
+                    {
+                        var name = string.IsNullOrEmpty(library.Name)
+                            ? Path.GetFileNameWithoutExtension(library.SourcePath ?? "reference")
+                            : library.Name;
+                        builder.Add(new AssemblySymbol(name, isSource: false));
+                    }
+
+                    ImmutableInterlocked.InterlockedInitialize(ref _referencedAssemblies, builder.MoveToImmutable());
+                }
+
+                return _referencedAssemblies;
+            }
+        }
+
         private BoundProgram GetProgram()
         {
             var previous = Previous == null ? null : Previous.GetProgram();

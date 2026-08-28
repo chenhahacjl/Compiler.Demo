@@ -117,6 +117,25 @@ function Main()
         }
 
         [Fact]
+        public void AssemblySymbols_SourceAndReferenced()
+        {
+            var code = @"function Main() {}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+
+            Assert.True(compilation.SourceAssembly.IsSourceAssembly);
+            Assert.Equal("Cocoa", compilation.SourceAssembly.Name);
+            Assert.Equal(SymbolKind.Assembly, compilation.SourceAssembly.Kind);
+
+            var referenced = compilation.ReferencedAssemblies;
+            Assert.All(referenced, a =>
+            {
+                Assert.False(a.IsSourceAssembly);
+                Assert.False(string.IsNullOrEmpty(a.Name));
+                Assert.Equal(SymbolKind.Assembly, a.Kind);
+            });
+        }
+
+        [Fact]
         public void Class_MethodCall_Binds()
         {
             var code = @"using System

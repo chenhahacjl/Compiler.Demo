@@ -9,6 +9,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         {
             switch (symbol.Kind)
             {
+                case SymbolKind.Assembly:
+                    writer.WriteIdentifier(symbol.Name);
+                    break;
                 case SymbolKind.Namespace:
                     writer.WriteIdentifier(symbol.Name);
                     break;
