@@ -44,16 +44,16 @@ cocoa build -p samples/samples.cosln
 ./samples/Tutorial/Basics/HelloWorld/out/HelloWorld.exe
 
 # 库互操作三形态（.NET dll 库 / .cod 程序集 / native DLL import），命令见 samples/README.md
-cocoa build -p samples/Libraries/CodLibrary/app/App.coproj -b native
+cocoa build -p samples/Libraries/CodLibrary/app/App.cocproj -b native
 ./samples/Libraries/CodLibrary/app/out/App.exe
 
 # 指定输出格式与 .NET 目标框架
-cocoa build -p foo.coproj -f library
-cocoa build -p foo.coproj --dotnet-runtime net9.0
+cocoa build -p foo.cocproj -f library
+cocoa build -p foo.cocproj --dotnet-runtime net9.0
 # netcore 产物 = 托管 x.dll + 原生 apphost x.exe（SDK 标准布局）：x.exe 直接/双击运行，dotnet x.dll 亦可
 
 # netfx 默认：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
-cocoa build -p foo.coproj -b dotnet
+cocoa build -p foo.cocproj -b dotnet
 ./foo.exe
 ```
 
@@ -73,7 +73,7 @@ cocoa build -p foo.coproj -b dotnet
 | [`docs-dev/文档注释设计.md`](docs-dev/文档注释设计.md) | **`///` 文档注释 + 编译期 XML 文档文件 + `.cod` 内嵌 docs 段设计**（6e-M24 规划：.NET DocID 兼容格式 + `--doc`/coproj 开关默认关 + REPL/IDE 悬停前置；开发延后） |
 | [`docs-dev/自举缺口分析.md`](docs-dev/自举缺口分析.md) | **自举前置盘点：语言/stdlib 缺口分级与实施顺序**（BCL 依赖面全库扫描 → P0/P1/P2 缺口清单、文件 IO syscall 路线、Dictionary/API 形态方针、mini-Lexer 开工信号） |
 | [`docs-dev/Cocoa.IDE设计.md`](docs-dev/Cocoa.IDE设计.md) | **类 Visual Studio 桌面 IDE 总体设计**（Avalonia 11 + SemanticModel 门面 + 语言服务 + M7 解释器调试器；功能矩阵与里程碑） |
-| [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.coproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |
+| [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.cocproj` / `.cosln` 轻量文本格式规范、`.cod` 程序集格式、增量哈希 |
 | [`docs-dev/实现目标.md`](docs-dev/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs-dev/开发计划.md`](docs-dev/开发计划.md) | 阶段 0-9 路线图与里程碑 |
 | [`docs-dev/输出格式.md`](docs-dev/输出格式.md) | executable / library / cocoa 三种输出格式规范 |

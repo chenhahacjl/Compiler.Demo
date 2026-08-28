@@ -83,10 +83,11 @@ namespace Cocoa.Compiler
                 return 1;
             }
 
-            if (!projectPath.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase) &&
+            if (!projectPath.EndsWith(".cocproj", StringComparison.OrdinalIgnoreCase) &&
+                !projectPath.EndsWith(".cscproj", StringComparison.OrdinalIgnoreCase) &&
                 !projectPath.EndsWith(".cosln", StringComparison.OrdinalIgnoreCase))
             {
-                Console.Error.WriteLine($"error: '{projectPath}' is not a .coproj or .cosln file");
+                Console.Error.WriteLine($"error: '{projectPath}' is not a .cocproj/.cscproj or .cosln file");
                 return 1;
             }
 
@@ -185,7 +186,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("usage: cocoa run [-p <project-or-solution>] [-- <args>]");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -p <path>          A .coproj or .cosln file (default: the single project/solution in the current directory)");
+            Console.WriteLine("  -p <path>          A .cocproj/.cscproj or .cosln file (default: the single project/solution in the current directory)");
             Console.WriteLine("  -- <args>          Arguments passed to the built executable");
             Console.WriteLine("  -?, -h, --help     Prints help");
         }

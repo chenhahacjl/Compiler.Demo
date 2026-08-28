@@ -186,7 +186,7 @@ namespace Cocoa.Compiler
             var solution = $@"name = {name}
 
 [projects]
-{name}/{name}.coproj
+{name}/{name}.cocproj
 ";
             File.WriteAllText(solutionPath, solution);
             Console.WriteLine(solutionPath);
@@ -197,7 +197,8 @@ namespace Cocoa.Compiler
         {
             Directory.CreateDirectory(targetDirectory);
 
-            var projectPath = Path.Combine(targetDirectory, name + ".coproj");
+            var projectPath = Path.Combine(targetDirectory,
+                name + (string.Equals(template, CSharpTemplate, StringComparison.OrdinalIgnoreCase) ? ".cscproj" : ".cocproj"));
             EnsureFileDoesNotExist(projectPath);
 
             var (coproj, sourceFileName, source) = BuildTemplate(template, name, dotnetRuntime);
@@ -378,7 +379,7 @@ function Main()
             Console.WriteLine("  console (default)  A console application (executable)");
             Console.WriteLine("  library            A .NET library (dll)");
             Console.WriteLine("  cocoa              A .cod Cocoa assembly (cocoa library)");
-            Console.WriteLine("  csharp             A C# dialect console application (.cs files, 6e-M15)");
+            Console.WriteLine("  csharp             A C# dialect console application (.cs files, .cscproj, 6e-M15)");
             Console.WriteLine("  solution           A solution (.cosln) with a console sub-project");
             Console.WriteLine();
             Console.WriteLine("options:");

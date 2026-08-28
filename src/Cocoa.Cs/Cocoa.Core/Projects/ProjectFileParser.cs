@@ -5,7 +5,7 @@ using System.IO;
 
 namespace Cocoa.Projects
 {
-    /// <summary>用户级覆盖（`.coproj.user`，仿 `.csproj.user`）：仅可覆盖构建属性，未知节/键为 IDE 预留。</summary>
+    /// <summary>用户级覆盖（`.cocproj.user`，仿 `.csproj.user`）：仅可覆盖构建属性，未知节/键为 IDE 预留。</summary>
     public sealed class UserProjectOverrides
     {
         public string? Name { get; set; }
@@ -214,7 +214,7 @@ namespace Cocoa.Projects
             return new CocoaSolutionFile(fileName, name, projects.ToImmutableArray());
         }
 
-        /// <summary>解析 `.coproj.user`：顶层构建属性 + `[options]` 可覆盖；未知节/未知键忽略（IDE 预留）。</summary>
+        /// <summary>解析 `.cocproj.user`：顶层构建属性 + `[options]` 可覆盖；未知节/未知键忽略（IDE 预留）。</summary>
         public static UserProjectOverrides ParseUserOverrides(string text, string fileName)
         {
             var overrides = new UserProjectOverrides();

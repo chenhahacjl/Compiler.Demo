@@ -7,7 +7,7 @@ using System.Linq;
 namespace Cocoa.Compiler
 {
     /// <summary>
-    /// `cocoa add reference` / `cocoa remove reference` — 在 .coproj 的 [references] 节增删引用（轻量文本编辑）。
+    /// `cocoa add reference` / `cocoa remove reference` — 在 .cocproj 的 [references] 节增删引用（轻量文本编辑）。
     /// </summary>
     internal static class ReferenceCommand
     {
@@ -101,9 +101,10 @@ namespace Cocoa.Compiler
                 return 1;
             }
 
-            if (!projectPath.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase))
+            if (!projectPath.EndsWith(".cocproj", StringComparison.OrdinalIgnoreCase) &&
+                !projectPath.EndsWith(".cscproj", StringComparison.OrdinalIgnoreCase))
             {
-                Console.Error.WriteLine($"error: '{projectPath}' is not a .coproj file");
+                Console.Error.WriteLine($"error: '{projectPath}' is not a .cocproj/.cscproj file");
                 return 1;
             }
 
@@ -256,7 +257,7 @@ namespace Cocoa.Compiler
             Console.WriteLine($"usage: cocoa {action} reference [-p <project>] <path>");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -p <path>          The .coproj project file (default: the single project in the current directory)");
+            Console.WriteLine("  -p <path>          The .cocproj/.cscproj project file (default: the single project in the current directory)");
             Console.WriteLine("  -?, -h, --help     Prints help");
         }
     }

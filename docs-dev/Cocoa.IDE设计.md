@@ -3,7 +3,7 @@
 > 状态：🔧 设计中（2026-08-25 定稿技术路线与功能矩阵，实施排期见 §12）
 > 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用 `Cocoa.Core` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**public 门面优先**（新增 `Cocoa.CodeAnalysis.Authoring.SemanticModel`，零 `InternalsVisibleTo`）；**调试器基于解释器**（复用 REPL 的 `Evaluator` 执行路径，后端无关）。
-> 相关文档：`src/Cocoa.IDE/README.md`（路线定稿记录）、`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.coproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
+> 相关文档：`src/Cocoa.IDE/README.md`（路线定稿记录）、`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.cocproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
 > 最后更新：2026-08-26（§12 增补与编译器开发的并行策略）
 
 ---
@@ -34,7 +34,7 @@
 |------|------|
 | 形态 | 独立桌面应用（Windows/Linux/macOS），单进程内嵌编译器 |
 | 编辑体验 | 多标签编辑器、双方言（`.co` 宽松 / `.cs` 严格 C#）语法着色、折叠、行号、文件内查找 |
-| 项目能力 | 打开/创建 `.cosln`/`.coproj`，树形资源管理器，新建项目向导（复用 CLI 模板） |
+| 项目能力 | 打开/创建 `.cosln`/`.cocproj`，树形资源管理器，新建项目向导（复用 CLI 模板） |
 | 语义服务 | 实时诊断（错误列表 + 波浪线）、补全（Ctrl+Space）、Hover 签名提示、F12 跳转定义 |
 | 构建运行 | F6 构建 / F5 运行，输出窗口捕获 `ProjectBuilder` 消息流，增量缓存指示 |
 | 调试（M7） | 解释器断点 / 单步 / 步入 / 步出 / 局部变量监视 / 调用栈窗口 |
@@ -199,7 +199,7 @@ public sealed class SemanticModel
 | 里程碑 | 功能 | 复用点 | 状态 |
 |--------|------|--------|:---:|
 | **M0 编译器侧准备** | `SemanticModel` 门面；`Classifier` 迁入 Core；`NewCommand.BuildTemplate` 模板抽取为 `Projects\CocoaTemplates.cs`（public static，CLI 委托调用）；xUnit 测试 | 既有全部 public API | 📋 待实现 |
-| **M1 IDE 骨架** | 五区布局主窗口；多标签编辑器（着色/行号/折叠/括号匹配/Ctrl+F）；打开 `.co/.cs/.coproj/.cosln` | `SyntaxTree.Parse`、Classifier | 📋 待实现 |
+| **M1 IDE 骨架** | 五区布局主窗口；多标签编辑器（着色/行号/折叠/括号匹配/Ctrl+F）；打开 `.co/.cs/.cocproj/.cosln` | `SyntaxTree.Parse`、Classifier | 📋 待实现 |
 | **M2 项目系统** | 解决方案树（懒加载展开 glob）；新建项目向导（console/library/csharp/solution）；添加/移除文件（文本级改写 `[sources]` 节） | `CocoaSolutionFile`、`Glob`、`CocoaTemplates` | 📋 规划 |
 | **M3 实时诊断** | 防抖重解析管线；错误列表（错误/警告分组过滤、双击定位）；编辑器红色波浪线 | `SemanticModel.GetDiagnostics` | 📋 规划 |
 | **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物（Process.Start）；输出窗口；"up to date" 增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | 📋 规划 |
@@ -215,7 +215,7 @@ public sealed class SemanticModel
 | **P1** | 查找所有引用（Shift+F12）+ 引用结果窗口 | 遍历项目内全部语法树匹配标识符 Span |
 | **P1** | 重命名重构（Ctrl+R,R） | 声明 + 全部引用处文本改写 |
 | **P1** | 全解决方案查找（Ctrl+Shift+F）+ 结果窗口 | glob 遍历 + 正则 |
-| **P1** | 项目属性页（F4） | 表格化编辑 `.coproj` 字段（output/platform/entry/dotnetRuntime…） |
+| **P1** | 项目属性页（F4） | 表格化编辑 `.cocproj` 字段（output/platform/entry/dotnetRuntime…） |
 | **P1** | 引用管理对话框 | `.cod` / .NET dll / native DLL 三形态；逻辑对齐 `cocoa add reference` |
 | **P1** | 集成终端（Ctrl+`）嵌入 REPL | 直接托管 `cocoa -i` 同款交互（REPL 已有行编辑器与着色） |
 | **P2** | 代码片段（Tab 展开 ~15 个内置模板） | `for`/`if`/`class`/`function`… |
@@ -223,7 +223,7 @@ public sealed class SemanticModel
 | **P2** | 快速操作灯泡（Ctrl+.） | 诊断 → 修复建议映射表 |
 | **P2** | 导航栏（类型/成员下拉）、书签、TODO 任务列表 | 各自独立小功能 |
 | **P2** | Git 集成（变更徽标/提交/历史） | LibGit2Sharp 或 git CLI 包装 |
-| **P2** | Debug/Release 配置切换 | `.coproj debug=` 目前仅为指纹参数，需补真实语义（如断言/优化开关） |
+| **P2** | Debug/Release 配置切换 | `.cocproj debug=` 目前仅为指纹参数，需补真实语义（如断言/优化开关） |
 | **P2** | 预览标签/拆分编辑器/Ctrl+Q 全局搜索/全屏/完整选项页/中文 i18n | Shell 增强 |
 | **P3** | **GUI 库 + 工具箱 + 设计器** | 前置链：Cocoa 标准库窗体/控件层 → 事件模型 → 序列化格式 → 设计画布；随语言生态立项 |
 | **P3** | **扩展系统（MEF 类）** | 前置链：Shell 插件点抽象（命令/工具窗口/语言服务注入协议）→ 清单格式 → 隔离加载 |
@@ -364,11 +364,11 @@ F12 导航：symbol.Declaration?.Syntax?.Span 或 FunctionSymbol.Syntax.Span
 |------|------|
 | 解决方案树 | `CocoaSolutionFile.Load` → 逐 `CocoaProjectFile.Load` → `Glob.Expand(SourcePatterns)` 懒展开（首次点击项目节点才扫盘） |
 | 新建项目向导 | M0 后调 `CocoaTemplates.BuildTemplate("console"/"library"/"csharp"/"solution", name)`；写盘后刷新树。**模板单一事实源在 Core，CLI `new` 同步受益** |
-| 添加/移除文件 | 文本级改写 `.coproj` `[sources]` 节（保留注释与其余节原样；移除=删行，添加=节尾插行）→ 重载项目节点 |
+| 添加/移除文件 | 文本级改写 `.cocproj` `[sources]` 节（保留注释与其余节原样；移除=删行，添加=节尾插行）→ 重载项目节点 |
 | 文件监听 | `FileSystemWatcher` 监听项目目录；外部改动 → 对应 DocumentService 缓冲失效提示重载 |
 | 未保存状态 | 标签 ● 标记；关闭确认；构建前自动保存询问（VS 行为） |
 
-`.cocoa` 增量缓存目录、`.coproj.user` 覆盖均由 Core 侧既有逻辑处理，IDE 零额外实现。
+`.cocoa` 增量缓存目录、`.cocproj.user` 覆盖均由 Core 侧既有逻辑处理，IDE 零额外实现。
 
 ---
 
@@ -474,7 +474,7 @@ internal IReadOnlyCollection<SourceSpan> CollectSequencePoints(FunctionSymbol f)
 |--------|------------|
 | M0 | `dotnet test src\Cocoa.Cs\Cocoa.Tests` 全绿（新增 SemanticModelTests：诊断/补全符号/位置解析 ≥15 用例；模板 round-trip 用例）；CLI 回归 `cocoa new console X && cocoa build` 与 `samples.cosln` 构建不变 |
 | M1 | IDE 启动 <2s；打开 samples 任一 `.co/.cs` 着色正确（对照 REPL 配色）；折叠/行号/查找可用；崩溃率 0（冒烟脚本 20 操作序列） |
-| M2 | 向导创建 console/library/csharp/solution 四模板与 `cocoa new` 产物一致；添加/移除文件后 `.coproj` 手工 diff 仅 `[sources]` 节变化 |
+| M2 | 向导创建 console/library/csharp/solution 四模板与 `cocoa new` 产物一致；添加/移除文件后 `.cocproj` 手工 diff 仅 `[sources]` 节变化 |
 | M3 | 故意输错 → ≤0.5s 出红波浪线与错误列表项；双击定位准确；修复后消失 |
 | M4 | IDE 内 F6 构建 `samples.cosln` 成功（18 项目拓扑序）；F5 运行 HelloWorld 弹出控制台；二次构建显示 up to date |
 | M5 | Ctrl+Space 对变量./类型名./裸上下文三类给出正确候选；Hover 显示签名；F12 跨文件跳转准确（含 stdlib 函数） |

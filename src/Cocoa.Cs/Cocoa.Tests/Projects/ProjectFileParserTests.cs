@@ -34,7 +34,7 @@ debug = true
 outputPath = bin
 ";
 
-            var project = ProjectFileParser.ParseProject(text, @"C:\Proj\MyApp.coproj");
+            var project = ProjectFileParser.ParseProject(text, @"C:\Proj\MyApp.cocproj");
 
             Assert.Equal("MyApp", project.Name);
             Assert.Equal(ProjectOutputFormat.Exe, project.Output);
@@ -51,7 +51,7 @@ outputPath = bin
         [Fact]
         public void ParseProject_Defaults()
         {
-            var project = ProjectFileParser.ParseProject("[sources]\n*.co", @"C:\Proj\Greeter.coproj");
+            var project = ProjectFileParser.ParseProject("[sources]\n*.co", @"C:\Proj\Greeter.cocproj");
 
             Assert.Equal("Greeter", project.Name);
             Assert.Equal(ProjectOutputFormat.Exe, project.Output);
@@ -64,7 +64,7 @@ outputPath = bin
         [Fact]
         public void ParseProject_NoSuffix_TopLevelUsesCasedValue()
         {
-            var project = ProjectFileParser.ParseProject("output = LIBRARY\n[sources]\n*.co", "x.coproj");
+            var project = ProjectFileParser.ParseProject("output = LIBRARY\n[sources]\n*.co", "x.cocproj");
 
             Assert.Equal(ProjectOutputFormat.Dll, project.Output);
         }
@@ -73,7 +73,7 @@ outputPath = bin
         public void ParseProject_MissingSources_Throws()
         {
             var ex = Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseProject("name = X\n", "x.coproj"));
+                ProjectFileParser.ParseProject("name = X\n", "x.cocproj"));
 
             Assert.Contains("[sources]", ex.Message);
         }
@@ -84,7 +84,7 @@ outputPath = bin
         public void ParseProject_InvalidOutput_Throws(string line)
         {
             var ex = Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseProject(line + "\n[sources]\n*.co", "x.coproj"));
+                ProjectFileParser.ParseProject(line + "\n[sources]\n*.co", "x.cocproj"));
 
             Assert.Contains("invalid output", ex.Message);
         }
@@ -95,7 +95,7 @@ outputPath = bin
         public void ParseProject_InvalidPlatform_Throws(string line)
         {
             var ex = Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseProject(line + "\n[sources]\n*.co", "x.coproj"));
+                ProjectFileParser.ParseProject(line + "\n[sources]\n*.co", "x.cocproj"));
 
             Assert.Contains("invalid platform", ex.Message);
         }
@@ -104,7 +104,7 @@ outputPath = bin
         public void ParseProject_InvalidBoolean_ReportsLineNumber()
         {
             var ex = Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseProject("[sources]\n*.co\n[options]\nincremental = maybe", "x.coproj"));
+                ProjectFileParser.ParseProject("[sources]\n*.co\n[options]\nincremental = maybe", "x.cocproj"));
 
             Assert.Contains("invalid boolean", ex.Message);
             Assert.Contains("line 4", ex.Message);
@@ -114,13 +114,13 @@ outputPath = bin
         public void ParseProject_OptionsWithoutEquals_Throws()
         {
             Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseProject("[sources]\n*.co\n[options]\nincremental", "x.coproj"));
+                ProjectFileParser.ParseProject("[sources]\n*.co\n[options]\nincremental", "x.cocproj"));
         }
 
         [Fact]
         public void ParseProject_SourcesEntryWithEquals_UsesRightSide()
         {
-            var project = ProjectFileParser.ParseProject("[sources]\npattern = src/*.co", "x.coproj");
+            var project = ProjectFileParser.ParseProject("[sources]\npattern = src/*.co", "x.cocproj");
 
             Assert.Equal("src/*.co", project.SourcePatterns.Single());
         }
@@ -132,20 +132,20 @@ outputPath = bin
 name = MyApp
 
 [projects]
-src/Core/Core.coproj
-src/App/App.coproj
+src/Core/Core.cocproj
+src/App/App.cocproj
 ";
 
             var solution = ProjectFileParser.ParseSolution(text, @"C:\Proj\MyApp.cosln");
 
             Assert.Equal("MyApp", solution.Name);
-            Assert.Equal(new[] { "src/Core/Core.coproj", "src/App/App.coproj" }, solution.ProjectPaths.ToArray());
+            Assert.Equal(new[] { "src/Core/Core.cocproj", "src/App/App.cocproj" }, solution.ProjectPaths.ToArray());
         }
 
         [Fact]
         public void ParseSolution_SolutionNameDefaultsToFile()
         {
-            var solution = ProjectFileParser.ParseSolution("[projects]\nApp.coproj", @"C:\Proj\Sln.cosln");
+            var solution = ProjectFileParser.ParseSolution("[projects]\nApp.cocproj", @"C:\Proj\Sln.cosln");
 
             Assert.Null(solution.Name);
         }
@@ -170,7 +170,7 @@ src/App/App.coproj
         public void Parse_LineNumber_Reported_ForMalformedEntry()
         {
             var ex = Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseProject("name = X\n\noutput", "x.coproj"));
+                ProjectFileParser.ParseProject("name = X\n\noutput", "x.cocproj"));
 
             Assert.Contains("line 3", ex.Message);
         }
@@ -178,7 +178,7 @@ src/App/App.coproj
         [Fact]
         public void ParseUserOverrides_Empty_AllNull()
         {
-            var overrides = ProjectFileParser.ParseUserOverrides("# nothing\n", "x.coproj.user");
+            var overrides = ProjectFileParser.ParseUserOverrides("# nothing\n", "x.cocproj.user");
 
             Assert.Null(overrides.Name);
             Assert.Null(overrides.Output);
@@ -204,7 +204,7 @@ debug = true
 outputPath = bin
 ";
 
-            var overrides = ProjectFileParser.ParseUserOverrides(text, "x.coproj.user");
+            var overrides = ProjectFileParser.ParseUserOverrides(text, "x.cocproj.user");
 
             Assert.Equal("MyLocal", overrides.Name);
             Assert.Equal(ProjectOutputFormat.Dll, overrides.Output);
@@ -231,7 +231,7 @@ startupObject = main
 anything = goes
 ";
 
-            var overrides = ProjectFileParser.ParseUserOverrides(text, "x.coproj.user");
+            var overrides = ProjectFileParser.ParseUserOverrides(text, "x.cocproj.user");
 
             Assert.Null(overrides.Name);
             Assert.Equal(CocoaProjectPlatform.X86, overrides.Platform);
@@ -242,7 +242,7 @@ anything = goes
         public void ParseUserOverrides_InvalidBoolean_ReportsLineNumber()
         {
             var ex = Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseUserOverrides("[options]\nincremental = maybe", "x.coproj.user"));
+                ProjectFileParser.ParseUserOverrides("[options]\nincremental = maybe", "x.cocproj.user"));
 
             Assert.Contains("invalid boolean", ex.Message);
             Assert.Contains("line 2", ex.Message);
@@ -252,14 +252,14 @@ anything = goes
         public void ParseUserOverrides_InvalidOutput_Throws()
         {
             Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseUserOverrides("output = foo\n", "x.coproj.user"));
+                ProjectFileParser.ParseUserOverrides("output = foo\n", "x.cocproj.user"));
         }
 
         [Fact]
         public void ParseUserOverrides_MalformedSection_Throws()
         {
             Assert.Throws<ProjectFileFormatException>(() =>
-                ProjectFileParser.ParseUserOverrides("[ide", "x.coproj.user"));
+                ProjectFileParser.ParseUserOverrides("[ide", "x.cocproj.user"));
         }
     }
 
@@ -281,7 +281,7 @@ anything = goes
         [Fact]
         public void Load_MergesUserFileWhenPresent()
         {
-            var projectPath = Path.Combine(_directory, "App.coproj");
+            var projectPath = Path.Combine(_directory, "App.cocproj");
             File.WriteAllText(projectPath, "name = App\noutput = executable\nplatform = x64\n\n[sources]\n*.co\n");
             File.WriteAllText(projectPath + ".user", "platform = x86\n\n[options]\nincremental = false\noutputPath = local-bin\n");
 
@@ -298,7 +298,7 @@ anything = goes
         [Fact]
         public void Load_IgnoresUserFileWhenAbsent()
         {
-            var projectPath = Path.Combine(_directory, "App.coproj");
+            var projectPath = Path.Combine(_directory, "App.cocproj");
             File.WriteAllText(projectPath, "name = App\n\n[sources]\n*.co\n");
 
             var project = CocoaProjectFile.Load(projectPath);
@@ -311,7 +311,7 @@ anything = goes
         [Fact]
         public void Load_KeepsSources_WhenUserContainsSources()
         {
-            var projectPath = Path.Combine(_directory, "App.coproj");
+            var projectPath = Path.Combine(_directory, "App.cocproj");
             File.WriteAllText(projectPath, "name = App\n\n[sources]\n*.co\n");
             File.WriteAllText(projectPath + ".user", "[sources]\nignored.co\n");
 

@@ -23,21 +23,21 @@ namespace Cocoa.Tests.Compiler
         {
             var dir = CliTestRunner.NewTempDir("list");
             File.WriteAllText(Path.Combine(dir, "Sol.cosln"),
-                "name = Sol\n\n[projects]\nApp/App.coproj\nLib/Lib.coproj\n");
+                "name = Sol\n\n[projects]\nApp/App.cocproj\nLib/Lib.cocproj\n");
             var (exitCode, stdout, stderr) = CliTestRunner.Run("list projects -p Sol.cosln", dir);
 
             Assert.True(exitCode == 0, stderr);
-            Assert.Contains("App/App.coproj", stdout);
-            Assert.Contains("Lib/Lib.coproj", stdout);
+            Assert.Contains("App/App.cocproj", stdout);
+            Assert.Contains("Lib/Lib.cocproj", stdout);
         }
 
         [Fact]
         public void List_References_ShowsProjectReferences()
         {
             var dir = CliTestRunner.NewTempDir("list");
-            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
                 "name = App\noutput = executable\n\n[sources]\n*.co\n\n[references]\n../Libs/MyLib.cod\nmylib.dll\n");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.coproj", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.cocproj", dir);
 
             Assert.True(exitCode == 0, stderr);
             Assert.Contains("../Libs/MyLib.cod", stdout);
@@ -48,9 +48,9 @@ namespace Cocoa.Tests.Compiler
         public void List_References_ShowsNone_WhenEmpty()
         {
             var dir = CliTestRunner.NewTempDir("list");
-            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
                 "name = App\noutput = executable\n\n[sources]\n*.co\n");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.coproj", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.cocproj", dir);
 
             Assert.True(exitCode == 0, stderr);
             Assert.Contains("(none)", stdout);
@@ -60,11 +60,11 @@ namespace Cocoa.Tests.Compiler
         public void List_Projects_FindsSingleProjectInDirectory()
         {
             var dir = CliTestRunner.NewTempDir("list");
-            File.WriteAllText(Path.Combine(dir, "App.coproj"), "name = App\noutput = executable\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(dir, "App.cocproj"), "name = App\noutput = executable\n\n[sources]\n*.co\n");
             var (exitCode, stdout, stderr) = CliTestRunner.Run("list projects -p .", dir);
 
             Assert.True(exitCode == 0, stderr);
-            Assert.Contains("App.coproj", stdout);
+            Assert.Contains("App.cocproj", stdout);
         }
 
         [Fact]

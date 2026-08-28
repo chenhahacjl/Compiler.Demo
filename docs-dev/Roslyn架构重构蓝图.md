@@ -122,7 +122,7 @@ Cocoa.CodeAnalysis
 ### 6.4 路线图（M1–M3）
 - **M1（P0）✅ 已落地**：绿模型自描述——using 别名 `=`（UsingDirectiveSyntax 加 EqualsToken）、delegate 绿往返源序化（含 `.cs`/`.co` 两形态与参数方言序）；`GreenRoot.ToString() == 源码` 全构造成立（提交 `da79ea9`）。
 - **M2（Language 抽象 + 设计 X 程序集拆分）✅ 已落地**：见 §6.5。
-- **M3**：`coc`/`csc` 薄入口（DLL + apphost）+ `cocoa` 分派（进程内调用共享核心）+ 20 个 `.coproj`→`.cocproj` 迁移 + `.cocproj`/`.cscproj`/`.cosln` 支持 + `new` 模板。
+- **M3**：`coc`/`csc` 薄入口（DLL + apphost）+ `cocoa` 分派（进程内调用共享核心）+ 20 个 `.cocproj`→`.cocproj` 迁移 + `.cocproj`/`.cscproj`/`.cosln` 支持 + `new` 模板。
 
 ### 6.5 M2 落地记录（Language 抽象 + 程序集拆分）
 - **`Language` 抽象**（核心 `CodeAnalysis/Language.cs`）：Name / 共享内建类型名词汇（any/bool/char/string/void）+ 抽象专属词汇 / 解析器工厂（含插值洞子解析）/ 参数拼写策略（`ParametersAreTypeFirst`）；实例经类内注册表（`Language.GetOrThrow`）暴露，新语言 = 新 `Language` 子类 + 解析器。

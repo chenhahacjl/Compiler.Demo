@@ -177,7 +177,7 @@ namespace Cocoa.Tests.Compiler
             var directory = Path.Combine(NewRunDir(run), projectName);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, projectName + ".co"), source);
-            File.WriteAllText(Path.Combine(directory, projectName + ".coproj"), $@"
+            File.WriteAllText(Path.Combine(directory, projectName + ".cocproj"), $@"
 name = {projectName}
 output = executable
 platform = x64
@@ -186,7 +186,7 @@ entry = Main
 [sources]
 *.co
 ");
-            return Path.Combine(directory, projectName + ".coproj");
+            return Path.Combine(directory, projectName + ".cocproj");
         }
 
         private static int IndexOf(byte[] haystack, byte[] needle)

@@ -56,7 +56,7 @@ namespace Cocoa.Tests.Compiler
             var directory = Path.Combine(NewRunDir(run), projectName);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, projectName + ".co"), source);
-            File.WriteAllText(Path.Combine(directory, projectName + ".coproj"), $@"
+            File.WriteAllText(Path.Combine(directory, projectName + ".cocproj"), $@"
 name = {projectName}
 output = executable
 platform = x64
@@ -65,7 +65,7 @@ platform = x64
 *.co
 {extraProjectContent}
 ");
-            return Path.Combine(directory, projectName + ".coproj");
+            return Path.Combine(directory, projectName + ".cocproj");
         }
 
         [Fact]
@@ -130,7 +130,7 @@ platform = x64
             File.WriteAllText(
                 Path.Combine(libDir, "Math.co"),
                 "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libDir, "MyLib.coproj"), @"
+            File.WriteAllText(Path.Combine(libDir, "MyLib.cocproj"), @"
 name = MyLib
 output = cocoa
 platform = x64
@@ -142,7 +142,7 @@ platform = x64
 outputPath = out
 ");
 
-            var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.coproj")}\"");
+            var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.cocproj")}\"");
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
             var codPath = Path.Combine(libDir, "out", "MyLib.cod");
             Assert.True(File.Exists(codPath), $"cod not emitted: {libBuild.Stdout}{libBuild.Stderr}");
@@ -156,7 +156,7 @@ outputPath = out
             File.WriteAllText(
                 Path.Combine(appDir, "App.co"),
                 "using MyLib\nfunction Main()\n{\n    Console.WriteLine(Add(1, 2))\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.coproj"), $@"
+            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), $@"
 name = App
 output = executable
 platform = x64
@@ -168,7 +168,7 @@ platform = x64
 ../MyLib/out/MyLib.cod
 ");
 
-            var appBuild = Run($"build \"{Path.Combine(appDir, "App.coproj")}\"");
+            var appBuild = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\"");
             Assert.NotEqual(0, appBuild.ExitCode);
             var output = appBuild.Stdout + appBuild.Stderr;
             Assert.Contains(".cod version 99", output);
@@ -231,7 +231,7 @@ platform = x64
                 var projectDir = Path.Combine(dir, name);
                 Directory.CreateDirectory(projectDir);
                 File.WriteAllText(Path.Combine(projectDir, name + ".co") + "", $"function Main() {{ Console.WriteLine(\"{name}\") }}");
-                File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"
+                File.WriteAllText(Path.Combine(projectDir, name + ".cocproj"), $@"
 name = {name}
 [sources]
 *.co
@@ -243,8 +243,8 @@ name = {name}
 name = Sln
 
 [projects]
-Core/Core.coproj
-App/App.coproj
+Core/Core.cocproj
+App/App.cocproj
 ");
 
             var (exitCode, stdout, stderr) = Run($"build \"{solutionPath}\"");
@@ -271,7 +271,7 @@ App/App.coproj
             foreach (var name in new[] { "A", "B" })
             {
                 var projectDir = Path.Combine(dir, name);
-                File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"
+                File.WriteAllText(Path.Combine(projectDir, name + ".cocproj"), $@"
 name = {name}
 output = cocoa
 
@@ -284,7 +284,7 @@ output = cocoa
             }
 
             var solutionPath = Path.Combine(dir, "Cycle.cosln");
-            File.WriteAllText(solutionPath, "[projects]\nA/A.coproj\nB/B.coproj\n");
+            File.WriteAllText(solutionPath, "[projects]\nA/A.cocproj\nB/B.cocproj\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{solutionPath}\"");
             Assert.Equal(1, exitCode);
@@ -298,7 +298,7 @@ output = cocoa
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
-            var projectPath = Path.Combine(dir, "Lib.coproj");
+            var projectPath = Path.Combine(dir, "Lib.cocproj");
             File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
@@ -314,7 +314,7 @@ output = cocoa
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "function Main() { }");
-            var projectPath = Path.Combine(dir, "Lib.coproj");
+            var projectPath = Path.Combine(dir, "Lib.cocproj");
             File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
@@ -344,10 +344,10 @@ namespace MyLib
     }
 }
 ");
-            File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libDir, "Lib.cocproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "using MyLib\nfunction Main(): void\n{\n    Console.WriteLine(Triple(3))\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.coproj"), $@"
+            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), $@"
 name = App
 output = executable
 entry = Main
@@ -387,8 +387,8 @@ entry = Main
         public void Build_CodReference_Consume_Runs(string backend)
         {
             var (libDir, appDir) = CreateCodLibraryAndApp("cod-consume-" + backend, backend);
-            var libProject = Path.Combine(libDir, "Lib.coproj");
-            var appProject = Path.Combine(appDir, "App.coproj");
+            var libProject = Path.Combine(libDir, "Lib.cocproj");
+            var appProject = Path.Combine(appDir, "App.cocproj");
 
             var libResult = Run($"build \"{libProject}\"");
             Assert.Equal(0, libResult.ExitCode);
@@ -412,10 +412,10 @@ entry = Main
         public void Build_CodReference_CopiedToOutput()
         {
             var (libDir, appDir) = CreateCodLibraryAndApp("copylocal-cod", "dotnet");
-            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.cocproj")}\"");
             Assert.Equal(0, libResult.ExitCode);
 
-            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\" -b dotnet --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.cod")), "Lib.cod 应复制到 app 输出目录");
         }
@@ -430,16 +430,16 @@ entry = Main
             Directory.CreateDirectory(appDir);
 
             File.WriteAllText(Path.Combine(libDir, "lib.co"), "namespace MyLib\n{\n    public class Util\n    {\n        public function Double(x: i32): i32\n        {\n            return x * 2\n        }\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libDir, "Lib.coproj"), "name = Lib\noutput = library\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libDir, "Lib.cocproj"), "name = Lib\noutput = library\n\n[sources]\n*.co\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    Console.WriteLine(\"hi\")\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.coproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.dll\n");
+            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.dll\n");
 
-            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b dotnet");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.cocproj")}\" -b dotnet");
             Assert.Equal(0, libResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(libDir, "Lib.dll")));
 
-            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\" -b dotnet --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.dll")), "Lib.dll 应复制到 app 输出目录");
         }
@@ -461,7 +461,7 @@ entry = Main
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "App.co"), "function Main() { }");
-            var projectPath = Path.Combine(dir, "App.coproj");
+            var projectPath = Path.Combine(dir, "App.cocproj");
             File.WriteAllText(projectPath, "name = App\n\n[sources]\n*.co\n[options]\nincremental = maybe\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");

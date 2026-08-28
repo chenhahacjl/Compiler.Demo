@@ -8,11 +8,11 @@ namespace Cocoa.Tests.Compiler
         private static string WriteConsoleProject(string dir)
         {
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
                 "name = App\noutput = executable\nplatform = x64\nentry = Main\ndotnetRuntime = net48\n\n[sources]\n*.co\n\n[options]\nincremental = true\ndebug = false\noutputPath = out\n");
             File.WriteAllText(Path.Combine(dir, "main.co"),
                 "function Main()\n{\n    Console.WriteLine(\"run-test-output\")\n}\n");
-            return Path.Combine(dir, "App.coproj");
+            return Path.Combine(dir, "App.cocproj");
         }
 
         [Fact]
@@ -45,11 +45,11 @@ namespace Cocoa.Tests.Compiler
         public void Run_NonExecutableProject_Fails()
         {
             var dir = CliTestRunner.NewTempDir("run");
-            File.WriteAllText(Path.Combine(dir, "Lib.coproj"),
+            File.WriteAllText(Path.Combine(dir, "Lib.cocproj"),
                 "name = Lib\noutput = library\n\n[sources]\n*.co\n");
             File.WriteAllText(Path.Combine(dir, "lib.co"), "function F() { }\n");
 
-            var (exitCode, stdout, stderr) = CliTestRunner.Run($"run -p \"{Path.Combine(dir, "Lib.coproj")}\"", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run($"run -p \"{Path.Combine(dir, "Lib.cocproj")}\"", dir);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("non-executable", stderr);
@@ -59,7 +59,7 @@ namespace Cocoa.Tests.Compiler
         public void Run_MissingProject_Fails()
         {
             var dir = CliTestRunner.NewTempDir("run");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("run -p missing.coproj", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("run -p missing.cocproj", dir);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("doesn't exist", stderr);

@@ -69,13 +69,14 @@ namespace Cocoa.Compiler
                     return 0;
                 }
 
-                if (projectPath.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase))
+                if (projectPath.EndsWith(".cocproj", StringComparison.OrdinalIgnoreCase) ||
+                    projectPath.EndsWith(".cscproj", StringComparison.OrdinalIgnoreCase))
                 {
                     CleanProject(projectPath);
                     return 0;
                 }
 
-                Console.Error.WriteLine($"error: '{projectPath}' is not a .coproj or .cosln file");
+                Console.Error.WriteLine($"error: '{projectPath}' is not a .cocproj/.cscproj or .cosln file");
                 return 1;
             }
             catch (IOException ex)
@@ -145,7 +146,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("usage: cocoa clean [-p <project-or-solution>]");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -p <path>          A .coproj or .cosln file (default: the single project/solution in the current directory)");
+            Console.WriteLine("  -p <path>          A .cocproj/.cscproj or .cosln file (default: the single project/solution in the current directory)");
             Console.WriteLine("  -?, -h, --help     Prints help");
         }
     }

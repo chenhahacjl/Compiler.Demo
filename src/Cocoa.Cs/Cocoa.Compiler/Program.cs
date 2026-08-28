@@ -356,7 +356,7 @@ namespace Cocoa.Compiler
             Console.WriteLine();
             Console.WriteLine("commands:");
             Console.WriteLine("  new <template> [name]  Creates a new project or solution (console, library, cocoa, solution)");
-            Console.WriteLine("  build                  Builds a .coproj project or .cosln solution (see 'cocoa build -h')");
+            Console.WriteLine("  build                  Builds a .cocproj/.cscproj project or .cosln solution (see 'cocoa build -h')");
             Console.WriteLine("  run                    Builds and runs a project or solution");
             Console.WriteLine("  list                   Lists templates, projects, or references");
             Console.WriteLine("  add reference          Adds a reference to a project");

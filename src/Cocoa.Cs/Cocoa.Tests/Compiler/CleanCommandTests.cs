@@ -8,11 +8,11 @@ namespace Cocoa.Tests.Compiler
         private static string WriteConsoleProject(string dir)
         {
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
                 "name = App\noutput = executable\nplatform = x64\nentry = Main\ndotnetRuntime = net48\n\n[sources]\n*.co\n\n[options]\nincremental = true\ndebug = false\noutputPath = out\n");
             File.WriteAllText(Path.Combine(dir, "main.co"),
                 "function Main()\n{\n    Console.WriteLine(\"hi\")\n}\n");
-            return Path.Combine(dir, "App.coproj");
+            return Path.Combine(dir, "App.cocproj");
         }
 
         [Fact]
@@ -31,7 +31,7 @@ namespace Cocoa.Tests.Compiler
             Assert.True(exitCode == 0, stderr);
             Assert.False(Directory.Exists(Path.Combine(dir, ".cocoa")), "cache dir should be removed");
             Assert.False(Directory.Exists(Path.Combine(dir, "out")), "output dir should be removed");
-            Assert.True(File.Exists(Path.Combine(dir, "App.coproj")), "project file must be preserved");
+            Assert.True(File.Exists(Path.Combine(dir, "App.cocproj")), "project file must be preserved");
         }
 
         [Fact]
@@ -39,7 +39,7 @@ namespace Cocoa.Tests.Compiler
         {
             var dir = CliTestRunner.NewTempDir("clean");
             Directory.CreateDirectory(Path.Combine(dir, "App"));
-            File.WriteAllText(Path.Combine(dir, "Sol.cosln"), "name = Sol\n\n[projects]\nApp/App.coproj\n");
+            File.WriteAllText(Path.Combine(dir, "Sol.cosln"), "name = Sol\n\n[projects]\nApp/App.cocproj\n");
             WriteConsoleProject(Path.Combine(dir, "App"));
 
             var build = CliTestRunner.Run($"build -p \"{Path.Combine(dir, "Sol.cosln")}\"", dir);

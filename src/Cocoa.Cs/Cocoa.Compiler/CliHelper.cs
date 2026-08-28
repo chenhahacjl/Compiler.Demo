@@ -36,7 +36,7 @@ namespace Cocoa.Compiler
             return (arg, null);
         }
 
-        /// <summary>默认项目/解决方案解析：当前目录下唯一 .cosln 优先，否则唯一 .coproj。</summary>
+        /// <summary>默认项目/解决方案解析：当前目录下唯一 .cosln 优先，否则唯一 .cocproj/.cscproj。</summary>
         public static string? ResolveProjectPath()
         {
             var cwd = Directory.GetCurrentDirectory();
@@ -46,7 +46,9 @@ namespace Cocoa.Compiler
                 return solutions[0];
             }
 
-            var projects = Directory.GetFiles(cwd, "*.coproj");
+            var projects = Directory.GetFiles(cwd, "*.cocproj")
+                                   .Concat(Directory.GetFiles(cwd, "*.cscproj"))
+                                   .ToArray();
             if (projects.Length == 1)
             {
                 return projects[0];

@@ -132,7 +132,7 @@ namespace Cocoa.Compiler
 
             if (projectPath == null)
             {
-                Console.Error.WriteLine("error: need a project file (.coproj) or solution file (.cosln)");
+                Console.Error.WriteLine("error: need a project file (.cocproj/.cscproj) or solution file (.cosln)");
                 return 1;
             }
 
@@ -213,13 +213,14 @@ namespace Cocoa.Compiler
                 {
                     success = SolutionBuilder.Build(CocoaSolutionFile.Load(projectPath), options, Console.Out);
                 }
-                else if (extension.Equals(".coproj", StringComparison.OrdinalIgnoreCase))
+                else if (extension.Equals(".cocproj", StringComparison.OrdinalIgnoreCase) ||
+                     extension.Equals(".cscproj", StringComparison.OrdinalIgnoreCase))
                 {
                     success = ProjectBuilder.Build(CocoaProjectFile.Load(projectPath), options, Console.Out).Success;
                 }
                 else
                 {
-                    Console.Error.WriteLine($"error: '{projectPath}' is not a .coproj or .cosln file");
+                    Console.Error.WriteLine($"error: '{projectPath}' is not a .cocproj/.cscproj or .cosln file");
                     return 1;
                 }
 
@@ -263,7 +264,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("       cocoa build -p <project-or-solution> [options]");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -p <path>          The path to a .coproj or .cosln file");
+            Console.WriteLine("  -p <path>          The path to a .cocproj/.cscproj or .cosln file");
             Console.WriteLine("  -f <format>        The output format: executable (default), library, cocoa");
             Console.WriteLine("  --platform <arch>  The native target platform: x86 or x64 (default: project setting)");
             Console.WriteLine("  -o <path>          The output file path");

@@ -10,7 +10,7 @@ cocoa build -p samples/samples.cosln -b dotnet     # IL/dotnet 后端
 单个项目构建/运行的通用模板：
 
 ```bash
-cocoa build -p samples/<路径>/<项目>.coproj [-b dotnet]
+cocoa build -p samples/<路径>/<项目>.cocproj [-b dotnet]
 ./samples/<路径>/out/<项目>.exe        # coproj 默认 dotnetRuntime = net48，netfx 产物直接运行
 ```
 
@@ -67,13 +67,13 @@ cocoa build -p samples/<路径>/<项目>.coproj [-b dotnet]
 
 ```bash
 # .NET dll 库（output = library）：CopyLocal 自动复制 dll 到 app 输出目录（仅 dotnet 后端）
-cocoa build -p samples/Libraries/NetLibrary/mylib/MyLib.coproj -b dotnet
-cocoa build -p samples/Libraries/NetLibrary/app/App.coproj -b dotnet
+cocoa build -p samples/Libraries/NetLibrary/mylib/MyLib.cocproj -b dotnet
+cocoa build -p samples/Libraries/NetLibrary/app/App.cocproj -b dotnet
 ./samples/Libraries/NetLibrary/app/out/App.exe
 
 # .cod Cocoa 程序集库（output = cocoa）：编译期 IR 合并，native + dotnet 双后端
-cocoa build -p samples/Libraries/CodLibrary/mylib/MyLib.coproj
-cocoa build -p samples/Libraries/CodLibrary/app/App.coproj -b native
+cocoa build -p samples/Libraries/CodLibrary/mylib/MyLib.cocproj
+cocoa build -p samples/Libraries/CodLibrary/app/App.cocproj -b native
 ./samples/Libraries/CodLibrary/app/out/App.exe
 ```
 

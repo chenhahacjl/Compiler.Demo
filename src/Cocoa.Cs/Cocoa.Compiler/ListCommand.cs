@@ -100,7 +100,8 @@ namespace Cocoa.Compiler
             {
                 var files = Directory.GetFiles(Environment.CurrentDirectory, "*.cosln").Length > 0
                     ? Directory.GetFiles(Environment.CurrentDirectory, "*.cosln")
-                    : Directory.GetFiles(Environment.CurrentDirectory, "*.coproj");
+                    : Directory.GetFiles(Environment.CurrentDirectory, "*.cocproj")
+                               .Concat(Directory.GetFiles(Environment.CurrentDirectory, "*.cscproj")).ToArray();
                 foreach (var file in files)
                 {
                     Console.WriteLine(Path.GetFileName(file));
@@ -112,7 +113,7 @@ namespace Cocoa.Compiler
             if (Directory.Exists(entry))
             {
                 var solutions = Directory.GetFiles(entry, "*.cosln");
-                var projects = Directory.GetFiles(entry, "*.coproj");
+                var projects = Directory.GetFiles(entry, "*.cocproj").Concat(Directory.GetFiles(entry, "*.cscproj")).ToArray();
                 foreach (var file in solutions)
                 {
                     Console.WriteLine(Path.GetFileName(file));
@@ -209,7 +210,7 @@ namespace Cocoa.Compiler
             {
                 isDirectory = true;
                 var solutions = Directory.GetFiles(path, "*.cosln");
-                var projects = Directory.GetFiles(path, "*.coproj");
+                var projects = Directory.GetFiles(path, "*.cocproj").Concat(Directory.GetFiles(path, "*.cscproj")).ToArray();
 
                 if (requireSingle && solutions.Length + projects.Length != 1)
                 {
@@ -231,10 +232,11 @@ namespace Cocoa.Compiler
                 return null;
             }
 
-            if (!path.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase) &&
+            if (!path.EndsWith(".cocproj", StringComparison.OrdinalIgnoreCase) &&
+                !path.EndsWith(".cscproj", StringComparison.OrdinalIgnoreCase) &&
                 !path.EndsWith(".cosln", StringComparison.OrdinalIgnoreCase))
             {
-                Console.Error.WriteLine($"error: '{path}' is not a .coproj or .cosln file");
+                Console.Error.WriteLine($"error: '{path}' is not a .cocproj/.cscproj or .cosln file");
                 return null;
             }
 
@@ -251,7 +253,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("  references            Lists the references of a project or solution");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -p <path>             A .coproj, .cosln, or directory (default: current directory)");
+            Console.WriteLine("  -p <path>             A .cocproj/.cscproj, .cosln, or directory (default: current directory)");
             Console.WriteLine("  -?, -h, --help        Prints help");
         }
     }
