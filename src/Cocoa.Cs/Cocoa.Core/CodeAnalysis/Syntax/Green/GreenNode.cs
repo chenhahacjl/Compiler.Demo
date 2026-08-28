@@ -68,6 +68,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.ElseClause => BuildElseClause(syntaxTree, position),
                 SyntaxKind.VariableDeclaration => BuildVariableDeclaration(syntaxTree, position),
                 SyntaxKind.TypeClause => BuildTypeClause(syntaxTree, position),
+                SyntaxKind.CallExpression => BuildCallExpression(syntaxTree, position),
+                SyntaxKind.TypeArgumentList => BuildTypeArgumentList(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -253,6 +255,53 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var typeIdentifier = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
             return new TypeClauseSyntax(syntaxTree, null, typeIdentifier);
+        }
+
+        private SyntaxNode BuildCallExpression(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            TypeArgumentListSyntax? typeArguments = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.TypeArgumentList)
+            {
+                typeArguments = (TypeArgumentListSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var openParenthesis = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            // 实参槽：openParen 与 closeParen（末槽）之间，node/sep 交替，直构 SeparatedSyntaxList
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            for (var i = slot; i < SlotCount - 1; i++)
+            {
+                nodesAndSeparators.Add(GetSlot(i)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(i)!.Width;
+            }
+
+            var closeParenthesis = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
+            var arguments = new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+            return new CallExpressionSyntax(syntaxTree, identifier, typeArguments, openParenthesis, arguments, closeParenthesis);
+        }
+
+        private SyntaxNode BuildTypeArgumentList(SyntaxTree syntaxTree, int position)
+        {
+            var lessThanToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var argumentsPosition = position + GetSlot(0)!.Width;
+            var arguments = BuildSlotArray<TypeClauseSyntax>(syntaxTree, argumentsPosition, 1, SlotCount - 2);
+            var greaterPosition = argumentsPosition;
+            for (var i = 1; i < SlotCount - 1; i++)
+            {
+                greaterPosition += GetSlot(i)!.Width;
+            }
+
+            var greaterThanToken = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, greaterPosition);
+            return new TypeArgumentListSyntax(syntaxTree, lessThanToken, arguments, greaterThanToken);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>

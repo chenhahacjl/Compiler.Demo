@@ -743,6 +743,26 @@ function Main()
             Assert.NotNull(typedLet.Initializer);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_Call()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    Foo(1, 2)
+    Bar<i32>(1)
+}");
+            var call = tree.Root.DescendantNodes().OfType<CallExpressionSyntax>().First();
+            var typedCall = Assert.IsType<CallExpressionSyntax>(call.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("Foo", typedCall.Identifier.Text);
+            Assert.Equal(2, typedCall.Arguments.Count);
+            Assert.Null(typedCall.TypeArguments);
+
+            var genericCall = tree.Root.DescendantNodes().OfType<CallExpressionSyntax>().First(c => c.Identifier.Text == "Bar");
+            var typedGeneric = Assert.IsType<CallExpressionSyntax>(genericCall.ToGreen().CreateTypedRed(tree));
+            Assert.NotNull(typedGeneric.TypeArguments);
+            Assert.Equal("i32", typedGeneric.TypeArguments!.Arguments[0].Identifier.Text);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
