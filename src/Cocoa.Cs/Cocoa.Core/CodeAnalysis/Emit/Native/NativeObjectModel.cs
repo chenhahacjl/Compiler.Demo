@@ -36,22 +36,32 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         /// <summary>实例字段的存储宽度（字节）。引用类型字段统一 8 字节（x86 高位空洞无副作用）。</summary>
         public static int FieldSize(TypeSymbol type)
         {
-            if (type == TypeSymbol.Boolean || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8)
+            if (type.IsPrimitiveValueType)
             {
-                return 1;
+                if (type == TypeSymbol.Boolean || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8)
+                {
+                    return 1;
+                }
+
+                if (type == TypeSymbol.Char || type == TypeSymbol.UInt16 || type == TypeSymbol.Int16)
+                {
+                    return 2;
+                }
+
+                if (type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 || type == TypeSymbol.Float)
+                {
+                    return 4;
+                }
+
+                return 8; // long/ulong/double/i128/u128
             }
 
-            if (type == TypeSymbol.Char || type == TypeSymbol.UInt16 || type == TypeSymbol.Int16)
-            {
-                return 2;
-            }
-
-            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } || type == TypeSymbol.Int32 || type == TypeSymbol.UInt32 || type == TypeSymbol.Float)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
                 return 4;
             }
 
-            return 8; // long/ulong/double/string/类/any/数组
+            return 8; // string/类/接口/delegate/any/数组/用户 struct
         }
 
         /// <summary>沿继承链（基类在前）计算全部实例字段偏移与实例总尺寸。</summary>
@@ -262,6 +272,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native
             if (type.ElementType != null)
             {
                 return EncodeTypeName(type.ElementType) + "[]";
+            }
+
+            // 基元（含 C3 后作为 NamedTypeSymbol）：保持短名编码，ABI 符号名不随 FullName 变化
+            if (type.IsPrimitiveValueType || type == TypeSymbol.String)
+            {
+                return type.Name;
             }
 
             if (type is NamedTypeSymbol classType)

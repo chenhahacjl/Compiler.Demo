@@ -55,6 +55,19 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>知名 BCL 类型标记（默认 None；基元单例构造时赋值，对齐 Roslyn SpecialType）。</summary>
         public SpecialType SpecialType { get; internal set; } = SpecialType.None;
 
+        /// <summary>基元值类型（bool/数值/char，含 8/16/32/64/128 位；不含 string/void/error/any/null）。
+        /// 引用相等判定——无论实例是轻量 TypeSymbol 还是 NamedTypeSymbol（C3），单例不变故恒成立。</summary>
+        public bool IsPrimitiveValueType =>
+            this == Boolean || this == Int8 || this == Int16 || this == Int32 || this == Int64 ||
+            this == UInt8 || this == UInt16 || this == UInt32 || this == UInt64 ||
+            this == Int128 || this == UInt128 || this == Float || this == Double || this == Char;
+
+        /// <summary>是否为值类型（基元值类型 + 用户 struct/enum；NamedTypeSymbol 覆盖见下）。</summary>
+        public virtual bool IsValueType => IsPrimitiveValueType;
+
+        /// <summary>是否为引用类型（类/接口/delegate/string/any/数组/函数值）。</summary>
+        public bool IsReferenceType => !IsValueType;
+
         /// <summary>是否为整数类型（含有/无符号 8/16/32/64/128 位，不含 bool/char）。</summary>
         public bool IsInteger =>
             this == Int8 || this == Int16 || this == Int32 || this == Int64 ||

@@ -3473,7 +3473,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return 0;
             }
 
-            if (type == TypeSymbol.String || type is NamedTypeSymbol || type.ElementType != null)
+            if (type == TypeSymbol.String || (type is NamedTypeSymbol && !type.IsPrimitiveValueType) || type.ElementType != null)
             {
                 return null!;
             }
@@ -7546,8 +7546,8 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 字面量的合法转换目标。</summary>
         private static bool IsNullableReferenceType(TypeSymbol type)
         {
-            return type is NamedTypeSymbol || type == TypeSymbol.String ||
-                   type == TypeSymbol.Any || type.ElementType != null;
+            return !type.IsValueType && (type is NamedTypeSymbol || type == TypeSymbol.String ||
+                   type == TypeSymbol.Any || type.ElementType != null);
         }
 
         /// <summary>6e-M21 Phase 4/6：可接受范围内常量隐式窄化的目标整型（含 64 位：ulong y = 2 与 C# 同构）。</summary>

@@ -432,7 +432,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
-            type.ElementType != null || (type is NamedTypeSymbol { TypeKind: not TypeKind.Enum }) || type is FunctionTypeSymbol;
+            type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||
+            (type is NamedTypeSymbol { TypeKind: TypeKind.Struct } && !type.IsPrimitiveValueType) || type is FunctionTypeSymbol;
         /// <summary>M4：实例方法/实例构造含隐藏 this 首参（静态成员与顶层函数无）。</summary>
         private static bool HasThisParameter(FunctionSymbol function)
             => function.ContainingClass != null && !function.IsStatic;
@@ -1147,8 +1148,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(address), IrOperand.Reg(value), 0, elementSize));
             }
 
-            // M4：类类型数组元素零值默认（null）——bump 分配器不复位脏页，逐元素清零
-            if (elementType is NamedTypeSymbol && node.Initializers.Length == 0)
+            // M4：引用类型数组元素零值默认（null）——bump 分配器不复位脏页，逐元素清零（值类型数组不在此列）
+            if (elementType is NamedTypeSymbol && !elementType.IsPrimitiveValueType && node.Initializers.Length == 0)
             {
                 EmitZeroFillElements(instructions, array, length, elementSize);
             }
@@ -1726,7 +1727,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BuiltinKind.ObjectGetType:
                 {
                     var receiver = EmitExpression(node.Expression);
-                    if (receiverType is NamedTypeSymbol userClass && !userClass.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } userClass && !userClass.IsFacadeClass)
                     {
                         // 用户类：对象头 [0] 即具体类 vtable（= System.Type 实例）
                         return EmitLoadPointerField(receiver, 0);
@@ -1753,7 +1754,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectToString", 8, receiver);
                     }
 
-                    if (receiverType is NamedTypeSymbol cls && !cls.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } cls && !cls.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1775,7 +1776,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectGetHashCode", 4, WidenTo8(receiver));
                     }
 
-                    if (receiverType is NamedTypeSymbol hcls && !hcls.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } hcls && !hcls.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1798,7 +1799,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectEquals", 4, WidenTo8(receiver), WidenTo8(typeOther));
                     }
 
-                    if (receiverType is NamedTypeSymbol ecl && !ecl.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } ecl && !ecl.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -2050,7 +2051,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     return true;
                 }
 
-                if (type is NamedTypeSymbol || type.ElementType != null)
+                if ((type is NamedTypeSymbol { IsValueType: false }) ||
+                    (type is NamedTypeSymbol { TypeKind: TypeKind.Struct } && !type.IsPrimitiveValueType) ||
+                    type.ElementType != null)
                 {
                     return false;
                 }
@@ -3472,7 +3475,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // M4：类/接口引用转换——同一指针表示，上转/下转均为直通（运行时不做类型检查）
-            if (from is NamedTypeSymbol && to is NamedTypeSymbol)
+            if (from is NamedTypeSymbol { IsValueType: false } && to is NamedTypeSymbol { IsValueType: false })
             {
                 return value;
             }

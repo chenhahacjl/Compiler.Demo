@@ -122,7 +122,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public virtual bool IsAbstract { get; internal set; }
 
         /// <summary>是否为值类型（struct/enum，6e-M26）：对齐 C#，struct 与枚举都是值类型。</summary>
-        public virtual bool IsValueType => TypeKind is TypeKind.Struct or TypeKind.Enum;
+        public override bool IsValueType => TypeKind is TypeKind.Struct or TypeKind.Enum;
 
         public virtual bool IsSealed { get; internal set; }
 

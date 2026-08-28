@@ -33,7 +33,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 否则 Null→any 被通用"非 void→any"吞掉、而 any→Null 会经 ③ 泄漏成合法显式转换。
             if (from == TypeSymbol.Null)
             {
-                if (to == TypeSymbol.Any || to == TypeSymbol.String || to is NamedTypeSymbol || to.ElementType != null)
+                if (to == TypeSymbol.Any || to == TypeSymbol.String || (!to.IsValueType && to is NamedTypeSymbol) || to.ElementType != null)
                 {
                     return Conversion.Implicit;
                 }
@@ -188,7 +188,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Explicit;
             }
 
-            if (from is NamedTypeSymbol fromClass && to is NamedTypeSymbol toClass)
+            if (from is NamedTypeSymbol { IsValueType: false } fromClass && to is NamedTypeSymbol { IsValueType: false } toClass)
             {
                 if (toClass.IsInterface)
                 {

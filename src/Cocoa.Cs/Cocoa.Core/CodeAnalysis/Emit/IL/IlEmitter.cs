@@ -1916,11 +1916,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             => classType.FacadeThisType is NamedTypeSymbol nts ? nts.FullName : classType.FullName;
 
         private static bool IsValueTypeSymbol(TypeSymbol type)
-            => type == TypeSymbol.Boolean || type == TypeSymbol.Int32 || type == TypeSymbol.Int64 || type == TypeSymbol.Char ||
-               type == TypeSymbol.UInt8 || type == TypeSymbol.Double || type is NamedTypeSymbol { TypeKind: TypeKind.Enum } ||
-               type is NamedTypeSymbol { IsFacadeClass: true, TypeKind: TypeKind.Struct } ||
-               type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
-               type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64 || type == TypeSymbol.Float;
+            => type.IsValueType;
 
         /// <summary>
         /// facade BCL 调用时计算实参的 IL 类型序列（用于 FindMethod 形参签名 / 泛型直构 MemberRef）。
