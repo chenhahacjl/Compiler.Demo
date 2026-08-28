@@ -381,28 +381,34 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private ImmutableArray<AssemblySymbol> _referencedAssemblies = ImmutableArray<AssemblySymbol>.Empty;
+        private ImmutableArray<AssemblySymbol> _referencedAssemblies;
 
-        /// <summary>引用的元数据程序集（对齐 Roslyn <c>Compilation.References</c>；本阶段即已加载的 `.cod` 库）。</summary>
+        /// <summary>引用的元数据程序集（对齐 Roslyn <c>Compilation.References</c>）：程序集路径引用 + 已加载的 `.cod` 库；
+        /// <see cref="AssemblySymbol.Display"/> 携带路径，供 Emit 解析 BCL/引用。</summary>
         public ImmutableArray<AssemblySymbol> ReferencedAssemblies
         {
             get
             {
-                if (_referencedAssemblies.Length == 0 && _codLibraries.Length > 0)
+                if (_referencedAssemblies.IsDefault && (_references.Length > 0 || _codLibraries.Length > 0))
                 {
-                    var builder = ImmutableArray.CreateBuilder<AssemblySymbol>(_codLibraries.Length);
+                    var builder = ImmutableArray.CreateBuilder<AssemblySymbol>(_references.Length + _codLibraries.Length);
+                    foreach (var path in _references)
+                    {
+                        builder.Add(new AssemblySymbol(Path.GetFileNameWithoutExtension(path), isSource: false, display: path));
+                    }
+
                     foreach (var library in _codLibraries)
                     {
                         var name = string.IsNullOrEmpty(library.Name)
                             ? Path.GetFileNameWithoutExtension(library.SourcePath ?? "reference")
                             : library.Name;
-                        builder.Add(new AssemblySymbol(name, isSource: false));
+                        builder.Add(new AssemblySymbol(name, isSource: false, display: library.SourcePath));
                     }
 
                     ImmutableInterlocked.InterlockedInitialize(ref _referencedAssemblies, builder.MoveToImmutable());
                 }
 
-                return _referencedAssemblies;
+                return _referencedAssemblies.IsDefault ? ImmutableArray<AssemblySymbol>.Empty : _referencedAssemblies;
             }
         }
 
@@ -510,6 +516,16 @@ namespace Cocoa.CodeAnalysis
 
         public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<MetadataReference> references, string outputPath, IlTarget target)
             => Emit(moduleName, references.Select(r => r.Display).ToArray(), outputPath, target, emitLibrary: false);
+
+        // AssemblySymbol 形态重载（Emit 内部消费 AssemblySymbol：经 Display 派生路径）
+        public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<AssemblySymbol> references, string outputPath)
+            => Emit(moduleName, references.Select(r => r.Display ?? r.Name).ToArray(), outputPath, IlTarget.Default, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<AssemblySymbol> references, string outputPath, IlTarget target)
+            => Emit(moduleName, references.Select(r => r.Display ?? r.Name).ToArray(), outputPath, target, emitLibrary: false);
+
+        public ImmutableArray<Diagnostic> Emit(string moduleName, IReadOnlyList<AssemblySymbol> references, string outputPath, IlTarget target, bool emitLibrary)
+            => Emit(moduleName, references.Select(r => r.Display ?? r.Name).ToArray(), outputPath, target, emitLibrary);
 
         public ImmutableArray<Diagnostic> Emit(string moduleName, string[] references, string outputPath, IlTarget target, bool emitLibrary)
         {

@@ -195,6 +195,19 @@ function Main()
         }
 
         [Fact]
+        public void AssemblySymbols_CarryDisplay_And_EmitConsumes()
+        {
+            var compilation = Compilation.Create(new[] { "System.Core.cod", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse("function Main() {"));
+
+            var foo = compilation.ReferencedAssemblies.FirstOrDefault(a => a.Name == "Foo");
+            Assert.True(foo != null, $"refs={compilation.References.Length} asm={compilation.ReferencedAssemblies.Length} foo={foo?.Display ?? "null"}");
+            Assert.Equal("C:\\libs\\Foo.dll", foo!.Display);
+
+            var viaAssemblies = compilation.Emit("test", compilation.ReferencedAssemblies, "C:\\Temp\\cocoa-asm-out.exe");
+            Assert.Contains(viaAssemblies, d => d.IsError);
+        }
+
+        [Fact]
         public void GetDiagnostics_AggregatesParseAndBinding()
         {
             // 语法错误
