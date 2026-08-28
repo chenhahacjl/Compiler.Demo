@@ -1053,6 +1053,49 @@ namespace Foo.Bar
             Assert.IsType<FunctionDeclarationSyntax>(typedNamespace.Members[0]);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_ClassInterfaceCStyleFor()
+        {
+            var tree = SyntaxTree.Parse(@"public interface IShape
+{
+    public function Area(): i32
+}
+
+public class Box : IShape
+{
+    private _x: i32
+
+    public function Get(): i32
+    {
+        return _x
+    }
+}
+
+function Main()
+{
+    for (var i = 0; i < 10; i++)
+    {
+        var y = i
+    }
+}");
+            var interfaceDeclaration = tree.Root.DescendantNodes().OfType<InterfaceDeclarationSyntax>().First();
+            var typedInterface = Assert.IsType<InterfaceDeclarationSyntax>(interfaceDeclaration.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("IShape", typedInterface.Identifier.Text);
+            Assert.Equal(1, typedInterface.Members.Length);
+
+            var classDeclaration = tree.Root.DescendantNodes().OfType<ClassDeclarationSyntax>().First();
+            var typedClass = Assert.IsType<ClassDeclarationSyntax>(classDeclaration.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("Box", typedClass.Identifier.Text);
+            Assert.Equal(1, typedClass.BaseTypes.Length);
+            Assert.Equal(2, typedClass.Members.Length);
+
+            var cstyleFor = tree.Root.DescendantNodes().OfType<CSStyleForStatementSyntax>().First();
+            var typedFor = Assert.IsType<CSStyleForStatementSyntax>(cstyleFor.ToGreen().CreateTypedRed(tree));
+            Assert.NotNull(typedFor.Init);
+            Assert.NotNull(typedFor.Condition);
+            Assert.NotNull(typedFor.Update);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
