@@ -201,6 +201,20 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return _metadata.DefineMethodRef(resolved.DeclaringType, resolved.Name, returnType, parameterTypes, resolved.IsStatic);
         }
 
+        /// <summary>外部字段动态解析（FindField + 注册 MemberRef）；未找到返回 null。</summary>
+        public IlFieldRef? FindField(string typeFullName, string fieldName)
+        {
+            var resolved = _reader.FindField(typeFullName, fieldName, _metadata);
+            if (resolved == null)
+            {
+                return null;
+            }
+
+            var fieldType = ResolveClassType(resolved.Type);
+            _metadata.RegisterTypeRef(resolved.DeclaringType);
+            return _metadata.DefineFieldRef(resolved.DeclaringType, resolved.Name, fieldType);
+        }
+
         /// <summary>把签名中的 Class TypeRef 解析为带 scope 的注册引用（供签名编码使用）。</summary>
         private IlType ResolveClassType(IlType type)
         {

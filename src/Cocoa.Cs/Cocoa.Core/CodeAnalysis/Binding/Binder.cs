@@ -5545,6 +5545,29 @@ namespace Cocoa.CodeAnalysis.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // facade 属性写：obj.X = v → set_X(this, v)（getter 已降级为 BoundCallExpression，接收者作首参）
+            if (boundTarget is BoundCallExpression facadeGetCall &&
+                facadeGetCall.Function.Name.StartsWith("get_") &&
+                facadeGetCall.Function.ContainingClass is NamedTypeSymbol fc && fc.IsFacadeClass)
+            {
+                var propertyName = facadeGetCall.Function.Name.Substring(4);
+                var property = fc.GetProperty(propertyName);
+                if (property?.Setter != null && syntax.AssignmentToken.Kind == SyntaxKind.EqualsToken)
+                {
+                    if (!IsAccessibleMember(property.Setter.Visibility, property.Setter.ContainingClass!))
+                    {
+                        _diagnostics.ReportCannotAccessMember(syntax.AssignmentToken.Location, propertyName, property.Setter.Visibility);
+                        return new BoundErrorExpression(syntax);
+                    }
+
+                    var converted = BindConversion(syntax.Expression.Location, boundExpression, property.Type);
+                    return new BoundCallExpression(syntax, property.Setter, facadeGetCall.Arguments.Add(converted));
+                }
+
+                _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, propertyName);
+                return new BoundErrorExpression(syntax);
+            }
+
             if (boundTarget is BoundVariableExpression variableTarget)
             {
                 var variable = variableTarget.Variable;
@@ -5959,6 +5982,12 @@ namespace Cocoa.CodeAnalysis.Binding
                         return new BoundErrorExpression(syntax);
                     }
 
+                    if (classType.IsFacadeClass)
+                    {
+                        var thisArg = BindConversion(syntax.IdentifierToken.Location, boundTarget, property.Getter.Parameters[0].Type);
+                        return new BoundCallExpression(syntax, property.Getter, ImmutableArray.Create(thisArg));
+                    }
+
                     return new BoundMemberCallExpression(syntax, boundTarget, property.Getter.Name, ImmutableArray<BoundExpression>.Empty, property.Type, property.Getter);
                 }
 
@@ -6046,6 +6075,16 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (boundExpression.Type is NamedTypeSymbol classType)
             {
+                if (classType.IsFacadeClass)
+                {
+                    var facadeMemberCall = TryBindFacadeMemberCall(syntax, identifier, boundExpression, boundArguments.ToImmutable());
+                    if (facadeMemberCall != null) return facadeMemberCall;
+                    var facadeObjectFace = TryBindObjectFaceMemberCall(syntax, identifier, boundExpression, boundArguments.ToImmutable());
+                    if (facadeObjectFace != null) return facadeObjectFace;
+                    _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
+                    return new BoundErrorExpression(syntax);
+                }
+
                 var method = classType.GetMethod(identifier);
                 if (method != null)
                 {
@@ -6236,6 +6275,13 @@ namespace Cocoa.CodeAnalysis.Binding
             if (fullName == null)
             {
                 return null;
+            }
+
+            // facade 类型自身（含 facade struct：其 FullName 即 BCL 全名、不在 FacadeTargets 中）
+            // 直接返回自身，使其实例成员经 TryBindFacadeMemberCall 重定向到 BCL。
+            if (receiverType is NamedTypeSymbol { IsFacadeClass: true } nts)
+            {
+                return nts;
             }
 
             // 全名映射表为准（cod 注入类不带序列化标记；声明侧/注入侧均已补齐，此处双保险）

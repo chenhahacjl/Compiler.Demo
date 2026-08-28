@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using Xunit;
 
@@ -26,7 +27,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
             return dir!;
         }
 
-        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name)
+        private static (int ExitCode, string Stdout) EmitAndRun(string source, string name, string[]? extraReferences = null)
         {
             var coreDir = Path.Combine(RepoRoot(), "src", "Cocoa.SDK", "System.Core");
             var syntaxTrees = new[]
@@ -35,9 +36,19 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
                 Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source),
             };
 
+            var references = new List<string>
+            {
+                typeof(object).Assembly.Location,
+                typeof(System.Console).Assembly.Location,
+            };
+            if (extraReferences != null)
+            {
+                references.AddRange(extraReferences);
+            }
+
             var compilation = Cocoa.CodeAnalysis.Compilation.Create(
                 "Main",
-                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                references.ToArray(),
                 syntaxTrees);
 
             var exePath = Path.Combine(Path.GetTempPath(), "cocoa-facade-struct-tests", $"{Environment.ProcessId:x}{Interlocked.Increment(ref _exeSeq):x3}-{name}.exe");
@@ -45,7 +56,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
 
             var diagnostics = compilation.Emit(
                 name,
-                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
+                references.ToArray(),
                 exePath,
                 Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
 
@@ -154,6 +165,75 @@ function Main()
 }";
             var (_, stdout) = EmitAndRun(source, "FacadeDateTimeCompare");
             Assert.Equal("-1\r\n", stdout);
+        }
+
+        [Fact]
+        public void FacadeStruct_InstanceMethodRedirect()
+        {
+            var source = @"
+namespace System
+{
+    facade struct DateTime
+    {
+        public constructor(y: i32, m: i32, d: i32) {}
+        public function CompareTo(other: DateTime): i32 { return 0 }
+    }
+}
+
+function Main()
+{
+    var d1 = new DateTime(2024, 1, 1)
+    var d2 = new DateTime(2024, 1, 2)
+    Console.WriteLine(d1.CompareTo(d2))
+}";
+            // BCL DateTime.CompareTo 返回 -1（d1 < d2）
+            var (_, stdout) = EmitAndRun(source, "FacadeDateTimeCompareTo");
+            Assert.Equal("-1\r\n", stdout);
+        }
+
+        [Fact]
+        public void FacadeStruct_PropertyGetRedirect()
+        {
+            var source = @"
+namespace System
+{
+    facade struct DateTime
+    {
+        public constructor(y: i32, m: i32, d: i32) {}
+        public property Ticks: i64 { get }
+    }
+}
+
+function Main()
+{
+    var d = new DateTime(2024, 1, 1)
+    Console.WriteLine(d.Ticks)
+}";
+            var (_, stdout) = EmitAndRun(source, "FacadeDateTimeTicks");
+            Assert.Equal(new DateTime(2024, 1, 1).Ticks.ToString() + "\r\n", stdout);
+        }
+
+        [Fact]
+        public void FacadeStruct_PropertyGetSetRedirect()
+        {
+            var source = @"
+namespace System.Numerics
+{
+    facade struct Vector3
+    {
+        public constructor(x: f32, y: f32, z: f32) {}
+        public property X: f32 { get set }
+    }
+}
+
+function Main()
+{
+    var v = new Vector3(1.0f, 2.0f, 3.0f)
+    v.X = 9.0f
+    Console.WriteLine(v.X)
+}";
+            var (_, stdout) = EmitAndRun(source, "FacadeVector3X", new[] { typeof(System.Numerics.Vector3).Assembly.Location });
+            Assert.Equal("9\r\n", stdout);
         }
     }
 }

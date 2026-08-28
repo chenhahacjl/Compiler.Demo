@@ -216,6 +216,27 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public override int GetHashCode() => System.HashCode.Combine(DeclaringType?.GetHashCode() ?? 0, DeclaringTypeSpec, Name, ReturnType.Kind, ParameterTypes.Count, IsStatic);
     }
 
+    /// <summary>外部字段引用（facade 值类型字段重定向：Vector3.X 等字段支持，对齐 IlMethodRef 的 MemberRef 登记）。</summary>
+    internal sealed class IlFieldRef : IlReference
+    {
+        public IlFieldRef(IlTypeRef declaringType, string name, IlType fieldType)
+        {
+            DeclaringType = declaringType;
+            Name = name;
+            FieldType = fieldType;
+        }
+
+        public IlTypeRef DeclaringType { get; }
+        public string Name { get; }
+        public IlType FieldType { get; }
+
+        public override bool Equals(object? obj) =>
+            obj is IlFieldRef other && other.Name == Name && other.FieldType.Kind == FieldType.Kind &&
+            other.DeclaringType.Equals(DeclaringType);
+
+        public override int GetHashCode() => System.HashCode.Combine(DeclaringType.GetHashCode(), Name, FieldType.Kind);
+    }
+
     /// <summary>TypeSpec：类型规格签名（GENERICINST blob），作为 MemberRef 父（6e-M22 C4-b）。</summary>
     internal sealed class IlTypeSpec : IlReference
     {

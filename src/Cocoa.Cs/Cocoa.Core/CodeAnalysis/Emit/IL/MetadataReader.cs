@@ -43,13 +43,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
     internal sealed class ResolvedFieldInfo
     {
-        public ResolvedFieldInfo(string name, IlType type, bool isPublic)
+        public ResolvedFieldInfo(IlTypeRef declaringType, string name, IlType type, bool isPublic)
         {
+            DeclaringType = declaringType;
             Name = name;
             Type = type;
             IsPublic = isPublic;
         }
 
+        public IlTypeRef DeclaringType { get; }
         public string Name { get; }
         public IlType Type { get; }
         public bool IsPublic { get; }
@@ -159,6 +161,33 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     }
 
                     return new ResolvedMethodInfo(declaringType, methodName, result.ReturnType, parameterTypes, result.IsStatic);
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>按「类型 FullName + 字段名」查找 public 字段（facade 值类型字段重定向：Vector3.X 等）。</summary>
+        public ResolvedFieldInfo? FindField(string typeFullName, string fieldName, MetadataBuilder builder)
+        {
+            foreach (var assembly in _assemblies)
+            {
+                var result = assembly.FindFieldInstance(typeFullName, fieldName);
+                if (result != null)
+                {
+                    var declaringType = FindType(typeFullName, builder);
+                    if (declaringType == null)
+                    {
+                        return null;
+                    }
+
+                    var fieldType = result.Type.Kind == IlTypeKind.Class
+                        ? (FindType(result.Type.Reference!.FullName, builder) is { } resolved
+                            ? IlType.Class(resolved, result.Type.IsValueType)
+                            : result.Type)
+                        : result.Type;
+
+                    return new ResolvedFieldInfo(declaringType, fieldName, fieldType, result.IsPublic);
                 }
             }
 
@@ -801,7 +830,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     {
                         continue; // 仅外部可见 public 字段
                     }
-                    fields.Add(new ResolvedFieldInfo(fieldName, fieldType, isPublic));
+                    fields.Add(new ResolvedFieldInfo(new IlTypeRef(ns, name, null), fieldName, fieldType, isPublic));
                 }
 
                 var methods = new List<ResolvedMethodInfo>();
@@ -838,6 +867,76 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
 
                 return new ResolvedTypeInfo(fullName, (typeFlags & 0x20) != 0, fields, methods);
+            }
+
+            return null;
+        }
+
+        /// <summary>本程序集内扫描 public 字段（facade 值类型字段重定向：Vector3.X 等；与 FindTypeInfo 对称）。</summary>
+        internal ResolvedFieldInfo? FindFieldInstance(string typeFullName, string fieldName)
+        {
+            if (_tableData == null)
+            {
+                return null;
+            }
+
+            var typeDefCount = RowCount(0x02);
+            var fieldDefCount = RowCount(0x04);
+            var fieldListIsBig = fieldDefCount > 0xFFFF;
+
+            for (var i = 0; i < typeDefCount; i++)
+            {
+                var typeDefRow = _tableOffsets[0x02] + i * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                var name = ReadString(ReadRef(_tableData, typeDefRow + 4, _stringIsBig));
+                var ns = ReadString(ReadRef(_tableData, typeDefRow + 4 + (_stringIsBig ? 4 : 2), _stringIsBig));
+                var currentFullName = ns.Length == 0 ? name : ns + "." + name;
+                if (currentFullName != typeFullName)
+                {
+                    continue;
+                }
+
+                var fieldListOffset = typeDefRow + 4 + 2 * (_stringIsBig ? 4 : 2) + (_typeDefOrRefIsBig ? 4 : 2);
+                var fieldList = ReadRef(_tableData, fieldListOffset, fieldListIsBig) - 1;
+                var fieldEnd = fieldDefCount;
+                if (i + 1 < typeDefCount)
+                {
+                    var nextRow = _tableOffsets[0x02] + (i + 1) * RowSize(0x02, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                    fieldEnd = ReadRef(_tableData, nextRow + 4 + 2 * (_stringIsBig ? 4 : 2) + (_typeDefOrRefIsBig ? 4 : 2), fieldListIsBig) - 1;
+                }
+
+                for (var f = fieldList; f < fieldEnd && f < fieldDefCount; f++)
+                {
+                    var fieldRow = _tableOffsets[0x04] + f * RowSize(0x04, _stringIsBig, _blobIsBig, _typeDefOrRefIsBig, _resolutionScopeIsBig);
+                    var fieldFlags = BitConverter.ToUInt16(_tableData, fieldRow);
+                    var currentFieldName = ReadString(ReadRef(_tableData, fieldRow + 2, _stringIsBig));
+                    if (currentFieldName != fieldName)
+                    {
+                        continue;
+                    }
+
+                    if ((fieldFlags & 0x0006) != 0x0006)
+                    {
+                        return null; // 字段存在但非 public，视为不可重定向
+                    }
+
+                    var sigBlobIndex = ReadRef(_tableData, fieldRow + 2 + (_stringIsBig ? 4 : 2), _blobIsBig);
+                    var sigBlob = ReadBlob(sigBlobIndex);
+                    if (sigBlob.Length < 1 || sigBlob[0] != 0x06)
+                    {
+                        return null;
+                    }
+
+                    var pos = 1;
+                    try
+                    {
+                        var fieldType = ParseType(sigBlob, ref pos);
+                        return new ResolvedFieldInfo(new IlTypeRef(ns, name, null), fieldName, fieldType, true);
+                    }
+                    catch (BadImageFormatException)
+                    {
+                        return null;
+                    }
+                }
             }
 
             return null;

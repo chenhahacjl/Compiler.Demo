@@ -155,6 +155,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly List<IlAssemblyRef> _assemblyRefs = new List<IlAssemblyRef>();
         private readonly List<IlTypeDef> _typeDefs = new List<IlTypeDef>();
         private readonly List<IlMethodRef> _memberRefs = new List<IlMethodRef>();
+        private readonly List<IlFieldRef> _fieldRefs = new List<IlFieldRef>();
         private readonly List<IlCustomAttribute> _customAttributes = new List<IlCustomAttribute>();
         private readonly List<IlStandAloneSig> _standAloneSigs = new List<IlStandAloneSig>();
 
@@ -164,6 +165,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         private readonly Dictionary<IlTypeRef, int> _typeRefIndex = new Dictionary<IlTypeRef, int>();
         private readonly Dictionary<IlAssemblyRef, int> _assemblyRefIndex = new Dictionary<IlAssemblyRef, int>();
         private readonly Dictionary<IlMethodRef, int> _memberRefIndex = new Dictionary<IlMethodRef, int>();
+        private readonly Dictionary<IlFieldRef, int> _fieldRefIndex = new Dictionary<IlFieldRef, int>();
         private readonly List<IlTypeSpec> _typeSpecs = new List<IlTypeSpec>();
         private readonly Dictionary<string, int> _strings = new Dictionary<string, int>();
         private readonly Dictionary<string, uint> _userStrings = new Dictionary<string, uint>();
@@ -247,6 +249,19 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             {
                 _memberRefIndex.Add(reference, _memberRefs.Count + 1);
                 _memberRefs.Add(reference);
+            }
+
+            return reference;
+        }
+
+        /// <summary>facade 值类型字段重定向（Vector3.X 等）：外部字段登记为 MemberRef（与 _memberRefs 共用 MemberRef 表连续行号）。</summary>
+        public IlFieldRef DefineFieldRef(IlTypeRef declaringType, string name, IlType fieldType)
+        {
+            var reference = new IlFieldRef(declaringType, name, fieldType);
+            if (!_fieldRefIndex.ContainsKey(reference))
+            {
+                _fieldRefIndex.Add(reference, _fieldRefs.Count + 1);
+                _fieldRefs.Add(reference);
             }
 
             return reference;
@@ -401,6 +416,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             for (var i = 0; i < _memberRefs.Count; i++)
             {
                 map[_memberRefs[i]] = MemberRefTable << 24 | (uint)(i + 1);
+            }
+
+            for (var i = 0; i < _fieldRefs.Count; i++)
+            {
+                map[_fieldRefs[i]] = MemberRefTable << 24 | (uint)(_memberRefs.Count + 1 + i);
             }
 
             for (var i = 0; i < _typeSpecs.Count; i++)
@@ -730,7 +750,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var methodSemanticsCount = _typeDefs.Sum(t => t.Properties.Sum(p => (p.Getter != null ? 1 : 0) + (p.Setter != null ? 1 : 0)));
             var paramCount = methodDefs.Sum(m => m.ParameterTypes.Count);
             var interfaceImplCount = _typeDefs.Sum(t => t.Interfaces.Count);
-            var memberRefCount = _memberRefs.Count;
+            var memberRefCount = _memberRefs.Count + _fieldRefs.Count;
             var typeSpecCount = _typeSpecs.Count;
             var customAttributeCount = _customAttributes.Count;
             var standAloneSigCount = _standAloneSigs.Count;
@@ -1001,6 +1021,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 WriteCoded(parentCoded, memberRefParentIsBig);
                 WriteStringRef(memberRef.Name, stringIsBig);
                 WriteRef(GetOrAddBlob(EncodeMethodSignature(memberRef.ReturnType, memberRef.ParameterTypes, memberRef.IsStatic)), blobIsBig);
+            }
+
+            // ---- MemberRef（字段，facade 值类型字段重定向）----
+            foreach (var fieldRef in _fieldRefs)
+            {
+                var parentCoded = CodedIndexTypeRef(fieldRef.DeclaringType, _typeRefIndex);
+                WriteCoded(parentCoded, memberRefParentIsBig);
+                WriteStringRef(fieldRef.Name, stringIsBig);
+                WriteRef(GetOrAddBlob(EncodeFieldSignature(fieldRef.FieldType)), blobIsBig);
             }
 
             // ---- CustomAttribute（行：Parent(5-bit HasCustomAttribute) + Type(3-bit CustomAttributeType) + Value#）----
