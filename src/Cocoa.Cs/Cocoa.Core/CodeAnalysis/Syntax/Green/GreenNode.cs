@@ -432,17 +432,32 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var slot = 0;
             SyntaxToken? modifier = null;
-            if (IsModifierToken(GetSlot(slot)!.Kind))
+            if (slot < SlotCount && (IsModifierToken(GetSlot(slot)!.Kind) || IsByRefModifierToken(GetSlot(slot)!.Kind)))
             {
                 modifier = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
                 position += GetSlot(slot).Width;
                 slot++;
             }
 
-            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            position += GetSlot(slot).Width;
-            slot++;
-            var type = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            SyntaxToken identifier;
+            TypeClauseSyntax type;
+            if (slot < SlotCount && IsTypeLikeSlot(GetSlot(slot)!.Kind))
+            {
+                // 类型前置（.cs：`int x`）
+                type = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            }
+            else
+            {
+                // 名称前置（.co：`x: i32`）
+                identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                type = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            }
+
             return new ParameterSyntax(syntaxTree, modifier, identifier, type);
         }
 
@@ -528,6 +543,12 @@ namespace Cocoa.CodeAnalysis.Syntax
             SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.ProtectedKeyword
             or SyntaxKind.StaticKeyword or SyntaxKind.AbstractKeyword or SyntaxKind.SealedKeyword
             or SyntaxKind.ExternKeyword or SyntaxKind.ReadonlyKeyword;
+
+        private static bool IsByRefModifierToken(SyntaxKind kind) => kind is
+            SyntaxKind.RefKeyword or SyntaxKind.OutKeyword;
+
+        private static bool IsTypeLikeSlot(SyntaxKind kind) => kind is
+            SyntaxKind.TypeClause or SyntaxKind.ArrayTypeClause or SyntaxKind.GenericTypeClause or SyntaxKind.FunctionType;
 
         private SyntaxNode BuildKeywordStatement(SyntaxTree syntaxTree, int position)
         {
@@ -814,22 +835,61 @@ namespace Cocoa.CodeAnalysis.Syntax
             var delegateKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += GetSlot(slot).Width;
             slot++;
-            var returnType = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            position += GetSlot(slot).Width;
-            slot++;
-            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+
+            // 源序槽布局（与 DelegateDeclarationSyntax.ToGreen 一致）：
+            // .co：delegate 名 ( 参数 ) [: 返回类型]；.cs：delegate 返回类型 名 ( 参数 ) [;]
+            // 判别：`.cs` 前置返回类型槽为类型族；`.co` 恒为标识符
+            var isCoForm = !IsTypeLikeSlot(GetSlot(slot)!.Kind);
+            TypeClauseSyntax? returnType = null;
+            SyntaxToken identifier;
+
+            if (isCoForm)
+            {
+                identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+            else
+            {
+                returnType = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var openParenToken = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += GetSlot(slot).Width;
             slot++;
 
             var parametersBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
-            for (var i = slot; i < SlotCount; i++)
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
             {
-                parametersBuilder.Add(GetSlot(i)!.CreateTypedRed(syntaxTree, position));
-                position += GetSlot(i)!.Width;
+                parametersBuilder.Add(GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var closeParenToken = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            if (isCoForm && slot < SlotCount && IsTypeLikeSlot(GetSlot(slot)!.Kind))
+            {
+                returnType = (TypeClauseSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? semicolonToken = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolonToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
             }
 
             var parameters = new SeparatedSyntaxList<ParameterSyntax>(parametersBuilder.ToImmutable());
-            return new DelegateDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), delegateKeyword, returnType, identifier, parameters);
+            return new DelegateDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), delegateKeyword, returnType, identifier, openParenToken, parameters, closeParenToken, semicolonToken);
         }
 
         private SyntaxNode BuildEventDeclaration(SyntaxTree syntaxTree, int position)
@@ -1171,11 +1231,13 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             // 别名：`using Alias = Foo.Bar` → aliasToken + EqualsToken 前缀
             SyntaxToken? aliasToken = null;
+            SyntaxToken? equalsToken = null;
             if (slot + 1 < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.IdentifierToken && GetSlot(slot + 1)!.Kind == SyntaxKind.EqualsToken)
             {
                 aliasToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
                 position += GetSlot(slot).Width;
                 slot++;
+                equalsToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
                 position += GetSlot(slot).Width;
                 slot++;
             }
@@ -1187,7 +1249,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 position += GetSlot(i)!.Width;
             }
 
-            return new UsingDirectiveSyntax(syntaxTree, usingKeyword, staticKeyword, aliasToken, nameTokens.ToImmutable());
+            return new UsingDirectiveSyntax(syntaxTree, usingKeyword, staticKeyword, aliasToken, equalsToken, nameTokens.ToImmutable());
         }
 
         private static bool IsBaseTypeSlot(SyntaxKind kind) => kind is

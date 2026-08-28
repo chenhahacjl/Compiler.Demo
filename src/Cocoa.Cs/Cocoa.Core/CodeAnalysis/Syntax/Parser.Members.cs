@@ -427,6 +427,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
             SyntaxToken? staticKeyword = null;
             SyntaxToken? aliasToken = null;
+            SyntaxToken? equalsToken = null;
 
             // `using static <name>`：导入类的静态成员（C# 同构）
             if (Current.Kind == SyntaxKind.StaticKeyword)
@@ -440,12 +441,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                 Peek(1).Kind == SyntaxKind.EqualsToken)
             {
                 aliasToken = MatchToken(SyntaxKind.IdentifierToken);
-                MatchToken(SyntaxKind.EqualsToken);
+                equalsToken = MatchToken(SyntaxKind.EqualsToken);
             }
 
             var nameTokens = ParseQualifiedName();
 
-            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, staticKeyword, aliasToken, nameTokens);
+            return new UsingDirectiveSyntax(_syntaxTree, usingKeyword, staticKeyword, aliasToken, equalsToken, nameTokens);
         }
 
         private MemberSyntax ParseNamespaceDeclaration()
@@ -1166,14 +1167,17 @@ namespace Cocoa.CodeAnalysis.Syntax
             SyntaxToken identifier;
             SeparatedSyntaxList<ParameterSyntax> parameters;
             TypeClauseSyntax? returnType = null;
+            SyntaxToken openParenToken;
+            SyntaxToken closeParenToken;
+            SyntaxToken? semicolonToken = null;
 
             if (isCoForm)
             {
                 // .co：`delegate Name(params) [: RetType]`
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
-                MatchToken(SyntaxKind.OpenParenthesisToken);
+                openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                 parameters = ParseParameterList();
-                MatchToken(SyntaxKind.CloseParenthesisToken);
+                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
                 if (Current.Kind == SyntaxKind.ColonToken)
                     returnType = ParseTypeClause();
@@ -1185,19 +1189,15 @@ namespace Cocoa.CodeAnalysis.Syntax
                     returnType = ParsePrefixTypeClause();
 
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
-                MatchToken(SyntaxKind.OpenParenthesisToken);
+                openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                 parameters = ParseParameterList();
-                MatchToken(SyntaxKind.CloseParenthesisToken);
+                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
 
                 if (Current.Kind == SyntaxKind.SemicolonToken)
-                    NextToken();
+                    semicolonToken = MatchToken(SyntaxKind.SemicolonToken);
             }
 
-            returnType ??= new TypeClauseSyntax(_syntaxTree, null,
-                new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, Current.Position, "void", "void",
-                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
-
-            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, parameters);
+            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, openParenToken, parameters, closeParenToken, semicolonToken);
         }
 
         private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)

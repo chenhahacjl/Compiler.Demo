@@ -1221,7 +1221,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// </summary>
         private void BindDelegateDeclaration(DelegateDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
-            var returnType = BindTypeClause(syntax.ReturnType);
+            var returnType = syntax.ReturnType == null ? TypeSymbol.Void : BindTypeClause(syntax.ReturnType);
             if (returnType == null)
                 return;
 
@@ -1261,7 +1261,7 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>顶层（命名空间级）delegate 声明：同 BindDelegateDeclaration 但注册到全局作用域。</summary>
         internal void BindTopLevelDelegateDeclaration(DelegateDeclarationSyntax syntax, string ns)
         {
-            var returnType = BindTypeClause(syntax.ReturnType);
+            var returnType = syntax.ReturnType == null ? TypeSymbol.Void : BindTypeClause(syntax.ReturnType);
             if (returnType == null)
                 return;
 

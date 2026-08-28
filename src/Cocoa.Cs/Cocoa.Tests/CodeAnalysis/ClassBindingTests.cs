@@ -595,6 +595,83 @@ function Main()
         }
 
         [Fact]
+        public void GreenRoot_RoundTrips_UsingAlias()
+        {
+            var code = @"using Alias = System.Collections.List
+
+function Main()
+{
+    var list: Alias = null
+}";
+            var tree = SyntaxTree.Parse(code);
+
+            Assert.Equal(code, tree.GreenRoot.ToString());
+
+            var directive = tree.Root.Members.OfType<UsingDirectiveSyntax>().First();
+            Assert.Equal("System.Collections.List", directive.Name);
+            Assert.Equal("Alias", directive.Alias);
+            Assert.NotNull(directive.EqualsToken);
+            Assert.Equal(SyntaxKind.EqualsToken, directive.EqualsToken!.Kind);
+
+            var typed = Assert.IsType<UsingDirectiveSyntax>(tree.GreenRoot.CreateTypedRed(tree).DescendantNodes().OfType<UsingDirectiveSyntax>().First());
+            Assert.NotNull(typed.EqualsToken);
+            Assert.Equal("=", typed.EqualsToken!.Text);
+        }
+
+        [Fact]
+        public void GreenRoot_RoundTrips_DelegateCoForm()
+        {
+            var code = @"delegate IntTransform(x: i32): i32
+
+delegate Handler(a: i32, b: String)
+
+function Main()
+{
+    var f: IntTransform = null
+}";
+            var tree = SyntaxTree.Parse(code);
+
+            Assert.Equal(code, tree.GreenRoot.ToString());
+
+            var explicitDelegate = tree.Root.Members.OfType<DelegateDeclarationSyntax>().First();
+            Assert.Equal("IntTransform", explicitDelegate.Identifier.Text);
+            Assert.NotNull(explicitDelegate.ReturnType);
+            Assert.NotNull(explicitDelegate.ReturnType!.ColonToken);
+            Assert.NotNull(explicitDelegate.OpenParenToken);
+
+            var implicitDelegate = tree.Root.Members.OfType<DelegateDeclarationSyntax>().ElementAt(1);
+            Assert.Equal("Handler", implicitDelegate.Identifier.Text);
+            Assert.Null(implicitDelegate.ReturnType);
+
+            var typed = Assert.IsType<DelegateDeclarationSyntax>(tree.GreenRoot.CreateTypedRed(tree).DescendantNodes().OfType<DelegateDeclarationSyntax>().First());
+            Assert.Equal("IntTransform", typed.Identifier.Text);
+            Assert.NotNull(typed.ReturnType);
+            Assert.Equal("i32", typed.ReturnType!.Identifier.Text);
+            Assert.NotNull(typed.OpenParenToken);
+            Assert.NotNull(typed.CloseParenToken);
+        }
+
+        [Fact]
+        public void GreenRoot_RoundTrips_DelegateCsForm()
+        {
+            var code = @"public delegate int Transformer(int x);";
+            var tree = SyntaxTree.ParseCs(code);
+
+            Assert.Equal(code, tree.GreenRoot.ToString());
+
+            var delegateDecl = tree.Root.Members.OfType<DelegateDeclarationSyntax>().First();
+            Assert.Equal("Transformer", delegateDecl.Identifier.Text);
+            Assert.NotNull(delegateDecl.ReturnType);
+            Assert.Null(delegateDecl.ReturnType!.ColonToken);
+            Assert.NotNull(delegateDecl.SemicolonToken);
+
+            var typed = Assert.IsType<DelegateDeclarationSyntax>(tree.GreenRoot.CreateTypedRed(tree).DescendantNodes().OfType<DelegateDeclarationSyntax>().First());
+            Assert.Equal("Transformer", typed.Identifier.Text);
+            Assert.Equal("int", typed.ReturnType!.Identifier.Text);
+            Assert.NotNull(typed.SemicolonToken);
+        }
+
+        [Fact]
         public void FromGreen_ReproducesRedTree()
         {
             var code = @"using System
