@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定二元操作符
     /// </summary>
-    internal sealed class BoundBinaryOperator
+    public sealed class BoundBinaryOperator
     {
         private BoundBinaryOperator(SyntaxKind syntaxKind, BoundBinaryOperatorKind kind, TypeSymbol type)
             : this(syntaxKind, kind, type, type, type)

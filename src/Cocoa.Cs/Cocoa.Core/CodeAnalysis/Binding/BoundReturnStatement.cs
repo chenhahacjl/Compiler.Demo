@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundReturnStatement : BoundStatement
+    public sealed class BoundReturnStatement : BoundStatement
     {
         public BoundReturnStatement(SyntaxNode syntax, BoundExpression? expression)
             : base(syntax)

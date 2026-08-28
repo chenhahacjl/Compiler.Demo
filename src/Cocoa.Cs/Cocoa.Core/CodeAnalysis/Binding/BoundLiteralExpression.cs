@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定文字表达式
     /// </summary>
-    internal sealed class BoundLiteralExpression : BoundExpression
+    public sealed class BoundLiteralExpression : BoundExpression
     {
         public BoundLiteralExpression(SyntaxNode syntax, object value)
             : this(syntax, value, InferType(value))

@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// </list>
     /// 类型恒为 <see cref="FunctionTypeSymbol"/>（签名形状，不含接收者）。
     /// </summary>
-    internal sealed class BoundFunctionValueExpression : BoundExpression
+    public sealed class BoundFunctionValueExpression : BoundExpression
     {
         public BoundFunctionValueExpression(SyntaxNode syntax, FunctionSymbol function, BoundExpression? receiver, BoundBlockStatement? body, FunctionTypeSymbol type, NamedTypeSymbol? environmentClass = null)
             : base(syntax)

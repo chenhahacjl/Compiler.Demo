@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 数组索引表达式（读）：a[i]
     /// </summary>
-    internal sealed class BoundElementAccessExpression : BoundExpression
+    public sealed class BoundElementAccessExpression : BoundExpression
     {
         public BoundElementAccessExpression(SyntaxNode syntax, TypeSymbol type, BoundExpression target, BoundExpression index)
             : base(syntax)

@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 对象创建表达式：`new Foo(args)`。
     /// </summary>
-    internal sealed class BoundObjectCreationExpression : BoundExpression
+    public sealed class BoundObjectCreationExpression : BoundExpression
     {
         public BoundObjectCreationExpression(SyntaxNode syntax, NamedTypeSymbol type, ImmutableArray<BoundExpression> arguments)
             : base(syntax)

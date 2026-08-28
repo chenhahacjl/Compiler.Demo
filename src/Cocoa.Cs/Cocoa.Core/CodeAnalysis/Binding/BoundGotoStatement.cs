@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundGotoStatement : BoundStatement
+    public sealed class BoundGotoStatement : BoundStatement
     {
         public BoundGotoStatement(SyntaxNode syntax, BoundLabel label)
             : base(syntax)

@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 成员访问表达式：`arr.Length`、`point._x`。
     /// </summary>
-    internal sealed class BoundMemberAccessExpression : BoundExpression
+    public sealed class BoundMemberAccessExpression : BoundExpression
     {
         public BoundMemberAccessExpression(SyntaxNode syntax, TypeSymbol type, BoundExpression target, string identifier, FieldSymbol? field = null)
             : base(syntax)

@@ -1,6 +1,6 @@
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundConstant
+    public sealed class BoundConstant
     {
         public BoundConstant(object value)
         {

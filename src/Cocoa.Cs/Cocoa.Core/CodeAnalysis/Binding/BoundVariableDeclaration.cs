@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundVariableDeclaration : BoundStatement
+    public sealed class BoundVariableDeclaration : BoundStatement
     {
         public BoundVariableDeclaration(SyntaxNode syntax, VariableSymbol variable, BoundExpression initializer)
             : base(syntax)

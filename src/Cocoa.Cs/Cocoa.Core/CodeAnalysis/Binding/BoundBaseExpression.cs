@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// base 表达式：`base.Method()`（非虚调用基类成员）。
     /// </summary>
-    internal sealed class BoundBaseExpression : BoundExpression
+    public sealed class BoundBaseExpression : BoundExpression
     {
         public BoundBaseExpression(SyntaxNode syntax, NamedTypeSymbol type)
             : base(syntax)

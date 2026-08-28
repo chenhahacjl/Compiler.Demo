@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 字段赋值表达式：`point._x = 5`。
     /// </summary>
-    internal sealed class BoundMemberAssignmentExpression : BoundExpression
+    public sealed class BoundMemberAssignmentExpression : BoundExpression
     {
         public BoundMemberAssignmentExpression(SyntaxNode syntax, BoundExpression target, FieldSymbol field, BoundExpression expression)
             : base(syntax)

@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 数组创建表达式：new int[3] / new int[] {1, 2, 3}
     /// </summary>
-    internal sealed class BoundArrayCreationExpression : BoundExpression
+    public sealed class BoundArrayCreationExpression : BoundExpression
     {
         public BoundArrayCreationExpression(SyntaxNode syntax, TypeSymbol type, BoundExpression length, ImmutableArray<BoundExpression> initializers)
             : base(syntax)

@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal abstract class BoundLoopStatement : BoundStatement
+    public abstract class BoundLoopStatement : BoundStatement
     {
         protected BoundLoopStatement(SyntaxNode syntax, BoundLabel breakLabel, BoundLabel continueLabel)
             : base(syntax)

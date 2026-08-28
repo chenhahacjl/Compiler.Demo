@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundTryStatement : BoundStatement
+    public sealed class BoundTryStatement : BoundStatement
     {
         public BoundTryStatement(SyntaxNode syntax, BoundStatement tryBlock, ImmutableArray<BoundCatchClause> catches, BoundStatement? finallyBlock)
             : base(syntax)

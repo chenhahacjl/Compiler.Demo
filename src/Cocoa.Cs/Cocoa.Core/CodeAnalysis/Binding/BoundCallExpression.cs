@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundCallExpression : BoundExpression
+    public sealed class BoundCallExpression : BoundExpression
     {
         public BoundCallExpression(SyntaxNode syntax, FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
             : base(syntax)

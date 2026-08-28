@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 成员调用表达式：`string.substring(...)`、`point.Distance()`。
     /// </summary>
-    internal sealed class BoundMemberCallExpression : BoundExpression
+    public sealed class BoundMemberCallExpression : BoundExpression
     {
         public BoundMemberCallExpression(SyntaxNode syntax, BoundExpression expression, string identifier, ImmutableArray<BoundExpression> arguments, TypeSymbol type, FunctionSymbol? method = null, bool isBase = false)
             : base(syntax)

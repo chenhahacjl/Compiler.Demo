@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// this 表达式：类方法/构造内对当前实例的引用。
     /// </summary>
-    internal sealed class BoundThisExpression : BoundExpression
+    public sealed class BoundThisExpression : BoundExpression
     {
         public BoundThisExpression(SyntaxNode syntax, NamedTypeSymbol type)
             : base(syntax)

@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 三元条件表达式 `cond ? a : b`（三后端短路求值）
     /// </summary>
-    internal sealed class BoundConditionalExpression : BoundExpression
+    public sealed class BoundConditionalExpression : BoundExpression
     {
         public BoundConditionalExpression(SyntaxNode syntax, BoundExpression condition, BoundExpression whenTrue, BoundExpression whenFalse)
             : base(syntax)

@@ -1,6 +1,6 @@
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundLabel
+    public sealed class BoundLabel
     {
         public BoundLabel(string name)
         {

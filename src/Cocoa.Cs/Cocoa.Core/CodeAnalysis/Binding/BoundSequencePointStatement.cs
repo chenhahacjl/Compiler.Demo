@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Text;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundSequencePointStatement : BoundStatement
+    public sealed class BoundSequencePointStatement : BoundStatement
     {
         public BoundSequencePointStatement(SyntaxNode syntax, BoundStatement statement, TextLocation location)
             : base(syntax)

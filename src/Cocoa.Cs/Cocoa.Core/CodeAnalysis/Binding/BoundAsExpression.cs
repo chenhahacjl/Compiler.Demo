@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 绑定 as 类型转换（6e-M19 M5-b）：运行时转换，失败得 null（类型 = 目标类）。
     /// 静态可判定情形在绑定期折叠/直通，仅严格基类接收者产生动态节点。
     /// </summary>
-    internal sealed class BoundAsExpression : BoundExpression
+    public sealed class BoundAsExpression : BoundExpression
     {
         public BoundAsExpression(SyntaxNode syntax, BoundExpression expression, TypeSymbol targetType)
             : base(syntax)

@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定二元表达式
     /// </summary>
-    internal sealed class BoundBinaryExpression : BoundExpression
+    public sealed class BoundBinaryExpression : BoundExpression
     {
         public BoundBinaryExpression(SyntaxNode syntax, BoundExpression left, BoundBinaryOperator op, BoundExpression right)
             : base(syntax)

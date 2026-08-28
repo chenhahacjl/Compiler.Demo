@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定一元操作符
     /// </summary>
-    internal sealed class BoundUnaryOperator
+    public sealed class BoundUnaryOperator
     {
         private BoundUnaryOperator(SyntaxKind syntaxKind, BoundUnaryOperatorKind kind, TypeSymbol operandType)
             : this(syntaxKind, kind, operandType, operandType)

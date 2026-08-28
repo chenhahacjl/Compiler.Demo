@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 函数值间接调用（6e-M22 C4）：`f(x)` / `obj.handler(x)` —— 被调者为函数类型表达式。
     /// 语义 = 单方法接口 Invoke：求值被调者 → 以其接收者为 this 调用目标方法。
     /// </summary>
-    internal sealed class BoundInvocationExpression : BoundExpression
+    public sealed class BoundInvocationExpression : BoundExpression
     {
         public BoundInvocationExpression(SyntaxNode syntax, BoundExpression callee, ImmutableArray<BoundExpression> arguments, TypeSymbol type)
             : base(syntax)

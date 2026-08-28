@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundBlockStatement : BoundStatement
+    public sealed class BoundBlockStatement : BoundStatement
     {
         public BoundBlockStatement(SyntaxNode syntax, ImmutableArray<BoundStatement> statements)
             : base(syntax)

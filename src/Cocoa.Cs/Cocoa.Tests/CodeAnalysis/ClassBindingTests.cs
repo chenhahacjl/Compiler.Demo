@@ -447,7 +447,7 @@ function Main()
 {
     var c = new Counter()
     var n = c.Count
-    var a = new i32[] {1, 2, 3}
+    var a = new i32[] { 1, 2, 3 }
     var len = a.Length
     c.Count = n + len
 }";
@@ -461,16 +461,16 @@ function Main()
             Assert.Equal(SymbolKind.Property, countSymbol!.Kind);
             Assert.Equal("Count", countSymbol.Name);
 
-            var thisExpr = Descendants(tree.Root).OfType<ThisExpressionSyntax>().First();
-            var thisSymbol = model.GetSymbolInfo(thisExpr);
+            var thisExpression = Descendants(tree.Root).OfType<ThisExpressionSyntax>().First();
+            var thisSymbol = model.GetSymbolInfo(thisExpression);
             Assert.NotNull(thisSymbol);
             Assert.Equal("Counter", thisSymbol!.Name);
 
-            var oneLiteral = Descendants(tree.Root).OfType<LiteralExpressionSyntax>().First(l => l.LiteralToken.Text == "1");
+            var oneLiteral = Descendants(tree.Root).OfType<LiteralExpressionSyntax>().First(l => (int)l.Value == 1);
             Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(oneLiteral));
 
-            var lenAccess = Descendants(tree.Root).OfType<MemberAccessExpressionSyntax>().First(m => m.IdentifierToken.Text == "Length");
-            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(lenAccess));
+            var lengthAccess = Descendants(tree.Root).OfType<MemberAccessExpressionSyntax>().First(m => m.IdentifierToken.Text == "Length");
+            Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(lengthAccess));
 
             Assert.DoesNotContain(model.GetDiagnostics(), d => d.IsError);
         }

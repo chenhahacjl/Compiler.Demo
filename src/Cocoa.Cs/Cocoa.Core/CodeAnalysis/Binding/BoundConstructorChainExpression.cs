@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 构造函数链调用：`base(...)` / `this(...)`（子类构造先调基类/本类构造）。
     /// </summary>
-    internal sealed class BoundConstructorChainExpression : BoundExpression
+    public sealed class BoundConstructorChainExpression : BoundExpression
     {
         public BoundConstructorChainExpression(SyntaxNode syntax, ConstructorInitializerKind initializerKind, FunctionSymbol? constructor, ImmutableArray<BoundExpression> arguments)
             : base(syntax)
@@ -31,7 +31,7 @@ namespace Cocoa.CodeAnalysis.Binding
         public ImmutableArray<BoundExpression> Arguments { get; }
     }
 
-    internal enum ConstructorInitializerKind
+    public enum ConstructorInitializerKind
     {
         Base,
         This,
