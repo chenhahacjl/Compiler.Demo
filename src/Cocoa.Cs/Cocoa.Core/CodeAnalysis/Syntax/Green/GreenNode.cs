@@ -121,6 +121,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.InterpolatedStringText => BuildInterpolatedStringText(syntaxTree, position),
                 SyntaxKind.Interpolation => BuildInterpolation(syntaxTree, position),
                 SyntaxKind.ImportClause => BuildImportClause(syntaxTree, position),
+                SyntaxKind.ExternMetadata => BuildExternMetadata(syntaxTree, position),
+                SyntaxKind.ExternMetadataArgument => BuildExternMetadataArgument(syntaxTree, position),
+                SyntaxKind.ImportBlock => BuildImportBlock(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -1608,6 +1611,108 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return new ImportClauseSyntax(syntaxTree, importKeyword, nameTokens.ToImmutable());
+        }
+
+        private SyntaxNode BuildExternMetadataArgument(SyntaxTree syntaxTree, int position)
+        {
+            var key = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var equalsPosition = position + GetSlot(0)!.Width;
+            var equalsToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, equalsPosition);
+            var valuePosition = equalsPosition + GetSlot(1)!.Width;
+            var value = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, valuePosition);
+            return new ExternMetadataArgumentSyntax(syntaxTree, key, equalsToken, value);
+        }
+
+        private SyntaxNode BuildExternMetadata(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var externKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? openParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<ExternMetadataArgumentSyntax>();
+            while (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.ExternMetadataArgument)
+            {
+                arguments.Add((ExternMetadataArgumentSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? closeParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                closeParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+            }
+
+            return new ExternMetadataSyntax(syntaxTree, externKeyword, openParenthesis, arguments.ToImmutable(), closeParenthesis);
+        }
+
+        private SyntaxNode BuildImportBlock(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var importKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
+            SyntaxToken? openParenthesis = null;
+            SyntaxToken? charsetKey = null;
+            SyntaxToken? charsetValue = null;
+            SyntaxToken? closeParenthesis = null;
+
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.OpenParenthesisToken && GetSlot(slot)!.Kind != SyntaxKind.OpenBraceToken)
+            {
+                nameTokens.Add((SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                if (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
+                {
+                    charsetKey = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                    position += GetSlot(slot).Width;
+                    slot++;
+                    if (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
+                    {
+                        charsetValue = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                        position += GetSlot(slot).Width;
+                        slot++;
+                    }
+                }
+
+                if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+                {
+                    closeParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                    position += GetSlot(slot).Width;
+                    slot++;
+                }
+            }
+
+            var openBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var members = BuildSlotArray<MemberSyntax>(syntaxTree, position, slot, SlotCount - 2);
+            var closePosition = position;
+            for (var i = slot; i < SlotCount - 1; i++)
+            {
+                closePosition += GetSlot(i)!.Width;
+            }
+
+            var closeBrace = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, closePosition);
+            return new ImportBlockSyntax(syntaxTree, importKeyword, nameTokens.ToImmutable(), openParenthesis, charsetKey, charsetValue, closeParenthesis, openBrace, members, closeBrace);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
