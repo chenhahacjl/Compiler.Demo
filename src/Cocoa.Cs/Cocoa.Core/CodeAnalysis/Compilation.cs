@@ -179,58 +179,20 @@ namespace Cocoa.CodeAnalysis
 
             if (type == null)
             {
-                foreach (var declared in GlobalScope.Enums)
+                // 声明的命名类型（源 + 注入的 .cod 库）：经全局命名空间树归组解析（Phase 1-5）
+                var dotIndex = elementName.LastIndexOf('.');
+                var namespaceName = dotIndex < 0 ? "" : elementName.Substring(0, dotIndex);
+                var simpleName = dotIndex < 0 ? elementName : elementName.Substring(dotIndex + 1);
+                var ns = GlobalNamespace.GetNamespace(namespaceName);
+                if (ns != null)
                 {
-                    if (declared.FullName == elementName)
+                    foreach (var member in ns.GetTypeMembers())
                     {
-                        type = declared;
-                        break;
-                    }
-                }
-            }
-
-            if (type == null)
-            {
-                foreach (var declared in GlobalScope.Classes)
-                {
-                    if (declared.FullName == elementName)
-                    {
-                        type = declared;
-                        break;
-                    }
-                }
-            }
-
-            if (type == null)
-            {
-                foreach (var library in _codLibraries)
-                {
-                    foreach (var declared in library.Enums)
-                    {
-                        if (declared.FullName == elementName)
+                        if (member.Name == simpleName)
                         {
-                            type = declared;
+                            type = member;
                             break;
                         }
-                    }
-
-                    if (type != null)
-                    {
-                        break;
-                    }
-
-                    foreach (var declared in library.Classes)
-                    {
-                        if (declared.FullName == elementName)
-                        {
-                            type = declared;
-                            break;
-                        }
-                    }
-
-                    if (type != null)
-                    {
-                        break;
                     }
                 }
             }
