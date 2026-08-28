@@ -258,10 +258,31 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 // 6e-M19 M2-c 前移：无显式基类的非接口类默认继承 System.Object——
-                // 须先于成员绑定，override 签名解析/base 表达式/成员沿链上溯依赖基类链就位（接口不默认）
-                if (!classType.IsInterface && classType.BaseType == null)
+                // 须先于成员绑定，override 签名解析/base 表达式/成员沿链上溯依赖基类链就位（接口不默认）。
+                // facade struct 无 CO 基类（整类映射到 BCL 值类型），跳过默认 Object 基类。
+                if (!classType.IsInterface && classType.BaseType == null &&
+                    !primary.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword))
                 {
                     classType.BaseType = NamedTypeSymbol.SystemObject;
+                }
+
+                // 6e-M26 Phase3：facade struct → 整类映射到 BCL 值类型（FullName 即 BCL 全名，对齐 facade class 约定）：
+                // 不发射 CO TypeDef，类型/成员调用重定向到 BCL（this 为 BCL 值类型，按托管指针传参）。
+                // 可选基类子句（单标识符）作为显式映射目标；缺省则直接用 FullName 解析 BCL 类型。
+                if (classType.TypeKind == TypeKind.Struct && primary.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword))
+                {
+                    classType.IsFacadeClass = true;
+                    if (classType.BaseType != null)
+                    {
+                        if (!classType.BaseType.IsValueType)
+                        {
+                            binder.Diagnostics.ReportError(primary.Identifier.Location, $"facade struct '{classType.Name}' 的基类 '{classType.BaseType.Name}' 必须是值类型（BCL struct）。");
+                        }
+                        else
+                        {
+                            classType.FacadeThisType = classType.BaseType;
+                        }
+                    }
                 }
 
                 // 3.5b：成员绑定
@@ -1049,8 +1070,11 @@ namespace Cocoa.CodeAnalysis.Binding
             var name = primary.Syntax.Identifier.Text;
             var visibility = GetVisibility(primary.Syntax.Modifiers, Visibility.Internal);
 
-            // `facade` 修饰符（6e-M20）：仅类有意义；须命中 FacadeTargets 才被认领为基元成员面载体
+            // `facade` 修饰符（6e-M20）：类须命中 FacadeTargets 才被认领为基元成员面载体；
+            // struct 的 facade 为 6e-M26 Phase3 形态（映射 CO struct 到 BCL 值类型），不要求命中 FacadeTargets。
+            var isStructDecl = primary.Syntax.ClassKeyword.Kind == SyntaxKind.StructKeyword;
             if (primary.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword) &&
+                !isStructDecl &&
                 !FacadeTargets.ContainsKey(primary.Namespace.Length == 0 ? name : primary.Namespace + "." + name))
             {
                 _diagnostics.ReportInvalidFacadeMarker(
@@ -1092,24 +1116,42 @@ namespace Cocoa.CodeAnalysis.Binding
             classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword));
             classType.IsSealed = isStruct || parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.SealedKeyword));
 
-            // struct 约束（MVP）：不可有基类/接口、不可 abstract/facade、不可 partial（v1）
+            // struct 约束（MVP）：常规 struct 不可有基类/接口、不可 abstract、不可 facade；
+            // 但 `facade struct : <BCL值类型>` 是允许的特殊形态（6e-M26 Phase3：映射 CO struct 到 BCL）。
             if (isStruct)
             {
+                var isFacadeStruct = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword));
                 foreach (var (syntax, _) in parts)
                 {
-                    if (syntax.BaseTypes.Length > 0)
-                    {
-                        _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能有基类或实现接口（MVP 阶段仅支持值字段/构造器）。");
-                    }
-
                     if (syntax.Modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword))
                     {
                         _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 abstract。");
                     }
+                }
 
-                    if (syntax.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword))
+                if (isFacadeStruct)
+                {
+                    foreach (var (syntax, _) in parts)
                     {
-                        _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 facade。");
+                        if (syntax.BaseTypes.Length > 1)
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"facade struct '{name}' 至多只能指定一个基类（目标 BCL 值类型）。");
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (var (syntax, _) in parts)
+                    {
+                        if (syntax.BaseTypes.Length > 0)
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能有基类或实现接口（MVP 阶段仅支持值字段/构造器）。");
+                        }
+
+                        if (syntax.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword))
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 facade（除非同时指定 BCL 值类型基类）。");
+                        }
                     }
                 }
             }

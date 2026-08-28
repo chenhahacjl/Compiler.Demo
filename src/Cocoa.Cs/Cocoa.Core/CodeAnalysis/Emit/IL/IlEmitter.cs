@@ -714,21 +714,26 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             if (type is NamedTypeSymbol classType)
             {
-                // facade 类：整类映射到 BCL（非泛型 → TypeRef；泛型实例化 → TypeSpec）
+                // facade 类：整类映射到 BCL（非泛型 → TypeRef；泛型实例化 → TypeSpec）。
+                // struct facade 须发射为 valuetype，并使用 FacadeThisType 提供的 BCL 值类型全名。
                 if (IsFacadeRedirect(classType))
                 {
+                    var isStructFacade = classType.TypeKind == TypeKind.Struct;
+
                     if (classType is InstantiatedTypeSymbol inst)
                     {
                         var def = inst.GenericDefinition!;
-                        var openName = def.FullName + "`" + def.TypeParameters.Length;
+                        var openName = FacadeBclFullName(def) + "`" + def.TypeParameters.Length;
                         var genericDef = _framework.RequireType(openName);
-                        return IlType.GenericInstance(genericDef, inst.TypeArguments.Select(ToIlType).ToArray());
+                        return new IlType(IlTypeKind.GenericInst, genericDef, isValueType: isStructFacade, genericArguments: inst.TypeArguments.Select(ToIlType).ToArray());
                     }
 
-                    var openNameDef = classType.IsGenericDefinition
-                        ? classType.FullName + "`" + classType.TypeParameters.Length
-                        : classType.FullName;
-                    return IlType.Class(_framework.RequireType(openNameDef));
+                    var openNameDef = isStructFacade
+                        ? FacadeBclFullName(classType)
+                        : (classType.IsGenericDefinition
+                            ? classType.FullName + "`" + classType.TypeParameters.Length
+                            : classType.FullName);
+                    return IlType.Class(_framework.RequireType(openNameDef), isValueType: isStructFacade);
                 }
 
                 // 动态链接：cod 容器类 → 指向其库 dll 的 TypeRef
@@ -1905,9 +1910,15 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return false;
         }
 
+        /// <summary>facade 类型运行期映射到的 BCL 全名：优先用 FacadeThisType（struct facade 由此提供 BCL 值类型名；
+        /// class facade 的 FacadeThisType 即 BCL 目标，与自身 FullName 一致，故回退到 FullName 等价）。</summary>
+        private string FacadeBclFullName(NamedTypeSymbol classType)
+            => classType.FacadeThisType is NamedTypeSymbol nts ? nts.FullName : classType.FullName;
+
         private static bool IsValueTypeSymbol(TypeSymbol type)
             => type == TypeSymbol.Boolean || type == TypeSymbol.Int32 || type == TypeSymbol.Int64 || type == TypeSymbol.Char ||
                type == TypeSymbol.UInt8 || type == TypeSymbol.Double || type is NamedTypeSymbol { TypeKind: TypeKind.Enum } ||
+               type is NamedTypeSymbol { IsFacadeClass: true, TypeKind: TypeKind.Struct } ||
                type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16 ||
                type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64 || type == TypeSymbol.Float;
 
@@ -1973,7 +1984,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             else
             {
                 var argTypeNames = GetFacadeArgumentIlTypes(fn, isInstance, methodArgs).Select(t => t.FullName).ToArray();
-                methodRef = _framework.FindMethod(cc.FullName, fn.Name, argTypeNames);
+                methodRef = _framework.FindMethod(FacadeBclFullName(cc), fn.Name, argTypeNames);
             }
 
             if (methodRef == null) return false;
@@ -2011,14 +2022,14 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (classType is InstantiatedTypeSymbol inst)
             {
                 var def = inst.GenericDefinition!;
-                var openName = def.FullName + "`" + def.TypeParameters.Length;
+                var openName = FacadeBclFullName(def) + "`" + def.TypeParameters.Length;
                 var genericDef = _framework.RequireType(openName);
                 var declaringSpec = _metadata.DefineTypeSpec(IlType.GenericInstance(genericDef, inst.TypeArguments.Select(ToIlType).ToArray()));
                 return _metadata.DefineMethodRef(declaringSpec, ".ctor", IlType.Void, paramTypes, isStatic: false);
             }
 
             var parameterNames = arguments.Select(a => ToIlType(a.Type).FullName).ToArray();
-            return _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+            return _framework.FindMethod(FacadeBclFullName(classType), ".ctor", parameterNames);
         }
 
         private IlType ToFacadeIlType(TypeSymbol type, InstantiatedTypeSymbol inst)
@@ -2817,7 +2828,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     }
                     else
                     {
-                        methodRef = _framework.FindMethod(cc.FullName, node.Identifier, paramTypes);
+                        methodRef = _framework.FindMethod(FacadeBclFullName(cc), node.Identifier, paramTypes);
                     }
 
                     if (methodRef != null)
