@@ -346,6 +346,28 @@ function Main()
             Assert.Contains(collector.Nodes.OfType<ClassDeclarationSyntax>(), c => c.Identifier.Text == "Point");
         }
 
+        [Fact]
+        public void SyntaxFactory_GreenTree_RoundTrips()
+        {
+            var left = SyntaxFactory.Identifier("a");
+            var plus = SyntaxFactory.Token(SyntaxKind.PlusToken);
+            var right = SyntaxFactory.Identifier("b");
+            var binary = SyntaxFactory.Node(SyntaxKind.BinaryExpression, left, plus, right);
+
+            Assert.Equal(SyntaxKind.BinaryExpression, binary.Kind);
+            Assert.Equal(3, binary.SlotCount);
+            Assert.Equal(3, binary.Width);
+            Assert.Equal("a+b", binary.ToString());
+            Assert.Same(left, binary.GetSlot(0));
+            Assert.Same(plus, binary.GetSlot(1));
+
+            var spaced = new GreenToken(SyntaxKind.PlusToken, "+",
+                leadingTrivia: ImmutableArray.Create(new GreenTrivia(SyntaxKind.WhitespaceTrivia, " ")),
+                trailingTrivia: ImmutableArray.Create(new GreenTrivia(SyntaxKind.WhitespaceTrivia, " ")));
+            Assert.Equal(" + ", spaced.ToString());
+            Assert.Equal(3, spaced.Width);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
