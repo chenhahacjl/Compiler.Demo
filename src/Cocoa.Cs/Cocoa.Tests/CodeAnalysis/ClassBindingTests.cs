@@ -1123,6 +1123,37 @@ function Main()
             Assert.NotNull(typedProperty.Setter);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_SwitchLambda()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    switch x
+    {
+        case 1:
+            return 1
+        case 2:
+            return 2
+        default:
+            return 0
+    }
+    var f = (a) => a + 1
+}");
+            var switchStatement = tree.Root.DescendantNodes().OfType<SwitchStatementSyntax>().First();
+            var typedSwitch = Assert.IsType<SwitchStatementSyntax>(switchStatement.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(3, typedSwitch.Sections.Length);
+
+            var caseClause = tree.Root.DescendantNodes().OfType<CaseClauseSyntax>().First();
+            var typedCase = Assert.IsType<CaseClauseSyntax>(caseClause.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(1, typedCase.Values.Count);
+            Assert.Equal(SyntaxKind.CaseKeyword, typedCase.CaseKeyword.Kind);
+
+            var lambda = tree.Root.DescendantNodes().OfType<LambdaExpressionSyntax>().First();
+            var typedLambda = Assert.IsType<LambdaExpressionSyntax>(lambda.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(1, typedLambda.Parameters.Count);
+            Assert.Equal(SyntaxKind.FatArrowToken, typedLambda.ArrowToken.Kind);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

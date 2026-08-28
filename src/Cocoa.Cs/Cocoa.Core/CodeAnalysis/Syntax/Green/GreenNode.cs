@@ -114,6 +114,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.CSStyleForStatement => BuildCSStyleForStatement(syntaxTree, position),
                 SyntaxKind.ConstructorDeclaration => BuildConstructorDeclaration(syntaxTree, position),
                 SyntaxKind.PropertyDeclaration => BuildPropertyDeclaration(syntaxTree, position),
+                SyntaxKind.CaseClause => BuildCaseClause(syntaxTree, position),
+                SyntaxKind.SwitchStatement => BuildSwitchStatement(syntaxTree, position),
+                SyntaxKind.LambdaExpression => BuildLambdaExpression(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -1410,6 +1413,123 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var closeBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             return new PropertyDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), propertyKeyword, identifier, type, openBrace, getter, setter, closeBrace);
+        }
+
+        private SyntaxNode BuildCaseClause(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var caseKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var valuesBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.WhenKeyword && GetSlot(slot)!.Kind != SyntaxKind.ColonToken)
+            {
+                valuesBuilder.Add(GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? whenKeyword = null;
+            ExpressionSyntax? whenCondition = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.WhenKeyword)
+            {
+                whenKeyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                if (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.ColonToken)
+                {
+                    whenCondition = (ExpressionSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                    position += GetSlot(slot).Width;
+                    slot++;
+                }
+            }
+
+            var colonToken = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var body = (StatementSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            var values = new SeparatedSyntaxList<ExpressionSyntax>(valuesBuilder.ToImmutable());
+            return new CaseClauseSyntax(syntaxTree, caseKeyword, values, whenKeyword, whenCondition, colonToken, body);
+        }
+
+        private SyntaxNode BuildSwitchStatement(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var keyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? openParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var expression = (ExpressionSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? closeParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                closeParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var openBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var sectionsBuilder = ImmutableArray.CreateBuilder<SwitchSectionSyntax>();
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.CloseBraceToken)
+            {
+                sectionsBuilder.Add((SwitchSectionSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var closeBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            return new SwitchStatementSyntax(syntaxTree, keyword, openParenthesis, expression, closeParenthesis, openBrace, sectionsBuilder.ToImmutable(), closeBrace);
+        }
+
+        private SyntaxNode BuildLambdaExpression(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            SyntaxToken? openParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var parametersBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.FatArrowToken && GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                parametersBuilder.Add(GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? closeParenthesis = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                closeParenthesis = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var arrowToken = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var body = GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            var parameters = new SeparatedSyntaxList<ParameterSyntax>(parametersBuilder.ToImmutable());
+            var hasExplicitParameterTypes = parameters.Count > 0 && parameters[0].Type != null;
+            return new LambdaExpressionSyntax(syntaxTree, openParenthesis, parameters, closeParenthesis, hasExplicitParameterTypes, arrowToken, body);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
