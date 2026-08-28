@@ -112,6 +112,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.ClassDeclaration => BuildClassLikeDeclaration(syntaxTree, position, isInterface: false),
                 SyntaxKind.InterfaceDeclaration => BuildClassLikeDeclaration(syntaxTree, position, isInterface: true),
                 SyntaxKind.CSStyleForStatement => BuildCSStyleForStatement(syntaxTree, position),
+                SyntaxKind.ConstructorDeclaration => BuildConstructorDeclaration(syntaxTree, position),
+                SyntaxKind.PropertyDeclaration => BuildPropertyDeclaration(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -1295,6 +1297,119 @@ namespace Cocoa.CodeAnalysis.Syntax
             slot++;
             var body = (StatementSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             return new CSStyleForStatementSyntax(syntaxTree, keyword, openParen, init, semicolon1, condition, semicolon2, update, closeParen, body);
+        }
+
+        private SyntaxNode BuildConstructorDeclaration(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < SlotCount && IsModifierToken(GetSlot(slot)!.Kind))
+            {
+                modifiers.Add((SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? constructorKeyword = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.ConstructorKeyword)
+            {
+                constructorKeyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var openParenthesis = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var parametersBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
+            while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                parametersBuilder.Add(GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var closeParenthesis = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? initializerKeyword = null;
+            var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.ColonToken)
+            {
+                position += GetSlot(slot).Width;
+                slot++;
+                initializerKeyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                position += GetSlot(slot).Width; // 跳过 initializer openParen
+                slot++;
+                var initArgsBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
+                while (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
+                {
+                    initArgsBuilder.Add(GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                    position += GetSlot(slot).Width;
+                    slot++;
+                }
+
+                position += GetSlot(slot).Width; // 跳过 initializer closeParen
+                slot++;
+                initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(initArgsBuilder.ToImmutable());
+            }
+
+            var body = (BlockStatementSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            var parameters = new SeparatedSyntaxList<ParameterSyntax>(parametersBuilder.ToImmutable());
+            return new ConstructorDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), constructorKeyword, openParenthesis, parameters, closeParenthesis, initializerKeyword, initializerArguments, body);
+        }
+
+        private SyntaxNode BuildPropertyDeclaration(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < SlotCount && IsModifierToken(GetSlot(slot)!.Kind))
+            {
+                modifiers.Add((SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? propertyKeyword = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.PropertyKeyword)
+            {
+                propertyKeyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var type = (TypeClauseSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var openBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            PropertyAccessorSyntax? getter = null;
+            PropertyAccessorSyntax? setter = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.PropertyAccessor)
+            {
+                getter = (PropertyAccessorSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.PropertyAccessor)
+            {
+                setter = (PropertyAccessorSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var closeBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            return new PropertyDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), propertyKeyword, identifier, type, openBrace, getter, setter, closeBrace);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>

@@ -1096,6 +1096,33 @@ function Main()
             Assert.NotNull(typedFor.Update);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_ConstructorAndProperty()
+        {
+            var tree = SyntaxTree.Parse(@"public class Box
+{
+    private _x: i32
+
+    public property Count: i32 { get set }
+
+    public constructor(x: i32)
+    {
+        _x = x
+    }
+}");
+            var ctor = tree.Root.DescendantNodes().OfType<ConstructorDeclarationSyntax>().First();
+            var typedCtor = Assert.IsType<ConstructorDeclarationSyntax>(ctor.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.ConstructorKeyword, typedCtor.ConstructorKeyword!.Kind);
+            Assert.Equal(1, typedCtor.Parameters.Count);
+
+            var property = tree.Root.DescendantNodes().OfType<PropertyDeclarationSyntax>().First();
+            var typedProperty = Assert.IsType<PropertyDeclarationSyntax>(property.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("Count", typedProperty.Identifier.Text);
+            Assert.Equal("i32", typedProperty.Type.Identifier.Text);
+            Assert.NotNull(typedProperty.Getter);
+            Assert.NotNull(typedProperty.Setter);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
