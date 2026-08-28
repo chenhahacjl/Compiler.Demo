@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis.Text;
+using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
@@ -95,6 +96,19 @@ namespace Cocoa.CodeAnalysis.Syntax
                     yield return token;
                 }
             }
+        }
+
+        /// <summary>红→绿：把本红节点（含全部后代）转为不可变绿树（Phase 4 桥接）。Token 经
+        /// <see cref="SyntaxToken.ToGreen"/>（保留文本/值/trivia）；复合节点经 <see cref="GetChildren"/> 递归。</summary>
+        public virtual GreenNode ToGreen()
+        {
+            var slots = ImmutableArray.CreateBuilder<GreenNode?>();
+            foreach (var child in GetChildren())
+            {
+                slots.Add(child.ToGreen());
+            }
+
+            return new GreenNodeWithChildren(Kind, slots.ToImmutable());
         }
 
         public SyntaxToken GetLastToken()

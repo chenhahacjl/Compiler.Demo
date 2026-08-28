@@ -29,6 +29,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ImmutableArray<Diagnostic> Diagnostics { get; }
         public CompilationUnitSyntax Root { get; }
 
+        private GreenNode? _greenRoot;
+
+        /// <summary>红树的不可变绿形式（Phase 4 桥接：经 <see cref="SyntaxNode.ToGreen"/> 惰性转换，可跨树共享）。</summary>
+        public GreenNode GreenRoot => _greenRoot ??= Root.ToGreen();
+
         /// <summary>解析本语法树所用的语言方言（6e-M21：CO 简写 / C# 原名类型词汇分流依据）。</summary>
         public LanguageDialect Dialect { get; }
 

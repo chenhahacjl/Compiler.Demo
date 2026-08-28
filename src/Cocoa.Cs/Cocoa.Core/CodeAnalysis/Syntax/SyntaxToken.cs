@@ -50,5 +50,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             return Array.Empty<SyntaxNode>();
         }
+
+        /// <summary>红→绿：转为不可变 <see cref="GreenToken"/>，保留文本/值/前后 trivia。</summary>
+        public override GreenNode ToGreen()
+        {
+            var leading = LeadingTrivia.Select(t => new GreenTrivia(t.Kind, t.Text)).ToImmutableArray();
+            var trailing = TrailingTrivia.Select(t => new GreenTrivia(t.Kind, t.Text)).ToImmutableArray();
+            return new GreenToken(Kind, Text, Value, leading, trailing);
+        }
     }
 }

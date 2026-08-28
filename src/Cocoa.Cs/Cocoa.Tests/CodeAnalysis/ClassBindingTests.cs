@@ -575,6 +575,25 @@ function Main()
             Assert.Equal(3, spaced.Width);
         }
 
+        [Fact]
+        public void GreenRoot_RoundTripsToSource()
+        {
+            var code = @"using System
+
+function Main()
+{
+    Console.WriteLine(""hello"")
+}";
+            var tree = SyntaxTree.Parse(code);
+
+            var green = tree.GreenRoot;
+            Assert.NotNull(green);
+            Assert.Equal(SyntaxKind.CompilationUnit, green.Kind);
+
+            Assert.Equal(code, green.ToString());
+            Assert.Same(green, tree.GreenRoot);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
