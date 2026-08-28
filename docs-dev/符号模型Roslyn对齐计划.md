@@ -37,6 +37,11 @@
 ## 阶段二（C）：基元 NamedTypeSymbol 化 + SpecialType
 > 大、核心重构、单独成章。明确目标与里程碑，实施时每完成一个子步跑全量验证。
 
+### 进展（2026-08-28）
+- **已交付 C1+C2**（`d74f5a7`）：新增 `Symbols/SpecialType.cs` 枚举、`TypeSymbol.SpecialType` 属性（默认 `None`），行为中性、全量 41626 绿。
+- **C3 已暂停/回退**：实测把基元单例改为 `NamedTypeSymbol`（设 `TypeKind=Struct`+`SpecialType`）后，定向 `Primitive`/`Conversion`/`Operator` 出现 **16 处回归**（原生后端 + Evaluator）。根因：原生后端/求值器用 `type is NamedTypeSymbol` 来判定「引用型」，基元变 `NamedTypeSymbol` 后 `==`/`!=` 被发射成 `ReferenceEquals/ReferenceNotEquals`（`EmitLongBinary` 报 `Unexpected long binary operator`），且 `IsValueType` 翻为 `true` 改变 struct-约束/复制/装箱语义。
+- **前置依赖（必做，独立工作流）**：在落地 C3 前，需先把所有「引用型判定」从 `type is NamedTypeSymbol` 改为 `IsValueType` 感知逻辑（基元在 `NamedTypeSymbol` 下应视为值型，而非引用型）。覆盖点含：原生后端引用相等/复制/装箱发射、`BoundTreeToIr`、Evaluator 的类型分类分支。该改造体量不小，应单列排期。
+
 ### 目标（向 Roslyn 对齐）
 - 基元（`int`/`string`/…）从「轻量 `TypeSymbol` 单例」变为 **`NamedTypeSymbol`**（Roslyn 里 `int` 就是 `System.Int32` 命名类型），带 `SpecialType` 标记与 `TypeKind.Struct`（值类型语义修正）。
 - facade 与基元**合二为一**：当前 `System.Core\Int32.co` 声明 facade `Int32`，经 `FacadeTargets` 字典（Binder.cs:3307-3310）挂 `IsFacadeClass`/`FacadeThisType`；阶段二让该 facade 直接落在基元 `TypeSymbol.Int32` 这个**同一 `NamedTypeSymbol`** 上，消除双符号。
