@@ -69,6 +69,9 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.VariableDeclaration => BuildVariableDeclaration(syntaxTree, position),
                 SyntaxKind.TypeClause => BuildTypeClause(syntaxTree, position),
                 SyntaxKind.CallExpression => BuildCallExpression(syntaxTree, position),
+                SyntaxKind.MemberCallExpression => BuildMemberCallExpression(syntaxTree, position),
+                SyntaxKind.ObjectCreationExpression => BuildObjectCreationExpression(syntaxTree, position),
+                SyntaxKind.ElementAccessExpression => BuildElementAccessExpression(syntaxTree, position),
                 SyntaxKind.TypeArgumentList => BuildTypeArgumentList(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
@@ -302,6 +305,76 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var greaterThanToken = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, greaterPosition);
             return new TypeArgumentListSyntax(syntaxTree, lessThanToken, arguments, greaterThanToken);
+        }
+
+        private SyntaxNode BuildMemberCallExpression(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var expression = (ExpressionSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var dotToken = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var callTail = BuildCallTail(syntaxTree, position, slot);
+            return new MemberCallExpressionSyntax(syntaxTree, expression, dotToken, identifier, callTail.TypeArguments, callTail.OpenParenthesis, callTail.Arguments, callTail.CloseParenthesis);
+        }
+
+        private SyntaxNode BuildObjectCreationExpression(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var newKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var callTail = BuildCallTail(syntaxTree, position, slot);
+            return new ObjectCreationExpressionSyntax(syntaxTree, newKeyword, identifier, callTail.TypeArguments, callTail.OpenParenthesis, callTail.Arguments, callTail.CloseParenthesis);
+        }
+
+        private SyntaxNode BuildElementAccessExpression(SyntaxTree syntaxTree, int position)
+        {
+            var expression = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var openPosition = position + GetSlot(0)!.Width;
+            var openBracket = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, openPosition);
+            var indexPosition = openPosition + GetSlot(1)!.Width;
+            var index = (ExpressionSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, indexPosition);
+            var closePosition = indexPosition + GetSlot(2)!.Width;
+            var closeBracket = (SyntaxToken)GetSlot(3)!.CreateTypedRed(syntaxTree, closePosition);
+            return new ElementAccessExpressionSyntax(syntaxTree, expression, openBracket, index, closeBracket);
+        }
+
+        /// <summary>调用尾段（typeArgs? + openParen + 实参 SeparatedSyntaxList + closeParen）——Call/MemberCall/ObjectCreation 共用。</summary>
+        private (TypeArgumentListSyntax? TypeArguments, SyntaxToken OpenParenthesis, SeparatedSyntaxList<ExpressionSyntax> Arguments, SyntaxToken CloseParenthesis) BuildCallTail(
+            SyntaxTree syntaxTree, int position, int slot)
+        {
+            TypeArgumentListSyntax? typeArguments = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.TypeArgumentList)
+            {
+                typeArguments = (TypeArgumentListSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var openParenthesis = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            for (var i = slot; i < SlotCount - 1; i++)
+            {
+                nodesAndSeparators.Add(GetSlot(i)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(i)!.Width;
+            }
+
+            var closeParenthesis = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
+            return (typeArguments, openParenthesis, new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable()), closeParenthesis);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>

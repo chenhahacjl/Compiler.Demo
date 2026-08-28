@@ -763,6 +763,33 @@ function Main()
             Assert.Equal("i32", typedGeneric.TypeArguments!.Arguments[0].Identifier.Text);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_MemberCall_ObjectCreation_ElementAccess()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    Console.WriteLine(1 + 2)
+    var x = new Foo(1)
+    var y = a[0]
+}");
+            var memberCall = tree.Root.DescendantNodes().OfType<MemberCallExpressionSyntax>().First();
+            var typedMemberCall = Assert.IsType<MemberCallExpressionSyntax>(memberCall.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("WriteLine", typedMemberCall.IdentifierToken.Text);
+            Assert.Equal(1, typedMemberCall.Arguments.Count);
+            Assert.Equal(SyntaxKind.OpenParenthesisToken, typedMemberCall.OpenParenthesisToken.Kind);
+
+            var objectCreation = tree.Root.DescendantNodes().OfType<ObjectCreationExpressionSyntax>().First();
+            var typedCreation = Assert.IsType<ObjectCreationExpressionSyntax>(objectCreation.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("Foo", typedCreation.Identifier.Text);
+            Assert.Equal(SyntaxKind.NewKeyword, typedCreation.NewKeyword.Kind);
+            Assert.Equal(1, typedCreation.Arguments.Count);
+
+            var elementAccess = tree.Root.DescendantNodes().OfType<ElementAccessExpressionSyntax>().First();
+            var typedAccess = Assert.IsType<ElementAccessExpressionSyntax>(elementAccess.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.OpenBracketToken, typedAccess.OpenBracketToken.Kind);
+            Assert.Equal(SyntaxKind.CloseBracketToken, typedAccess.CloseBracketToken.Kind);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
