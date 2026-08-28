@@ -56,6 +56,40 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public ImmutableArray<TypeSymbol> GetTypeMembers() => _typeMembers;
 
+        /// <summary>按点分全名在本命名空间树中定位命名类型（不含泛型元数/实例化 mangle）；未命中返回 null。
+        /// 统一「命名空间.简单名」解析（Binder 全名定位 / Compilation.GetTypeByMetadataName 共用）。</summary>
+        public TypeSymbol? TryGetType(string fullName)
+        {
+            var dotIndex = fullName.LastIndexOf('.');
+            NamespaceSymbol ns;
+            string simpleName;
+            if (dotIndex < 0)
+            {
+                ns = this;
+                simpleName = fullName;
+            }
+            else
+            {
+                ns = GetNamespace(fullName.Substring(0, dotIndex));
+                if (ns == null)
+                {
+                    return null;
+                }
+
+                simpleName = fullName.Substring(dotIndex + 1);
+            }
+
+            foreach (var member in ns.GetTypeMembers())
+            {
+                if (member.Name == simpleName)
+                {
+                    return member;
+                }
+            }
+
+            return null;
+        }
+
         public ImmutableArray<FunctionSymbol> GetFunctionMembers() => _functionMembers;
 
         /// <summary>按点分全名查找命名空间成员（相对本节点；空名返回本节点，未命中返回 null）。</summary>

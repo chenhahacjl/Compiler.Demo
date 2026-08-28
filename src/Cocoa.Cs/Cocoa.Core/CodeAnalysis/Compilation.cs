@@ -301,22 +301,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>经全局命名空间树按「命名空间.简单名」定位声明类型。</summary>
         private TypeSymbol? ResolveDeclaredType(string elementName)
         {
-            var dotIndex = elementName.LastIndexOf('.');
-            var namespaceName = dotIndex < 0 ? "" : elementName.Substring(0, dotIndex);
-            var simpleName = dotIndex < 0 ? elementName : elementName.Substring(dotIndex + 1);
-            var ns = GlobalNamespace.GetNamespace(namespaceName);
-            if (ns != null)
-            {
-                foreach (var member in ns.GetTypeMembers())
-                {
-                    if (member.Name == simpleName)
-                    {
-                        return member;
-                    }
-                }
-            }
-
-            return null;
+            return GlobalNamespace.TryGetType(elementName);
         }
 
         private NamespaceSymbol? _globalNamespace;

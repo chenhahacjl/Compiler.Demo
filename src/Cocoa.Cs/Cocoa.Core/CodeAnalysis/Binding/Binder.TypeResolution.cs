@@ -377,45 +377,12 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>经全局命名空间树按全名定位命名类型（类或枚举，按 wantEnum 过滤）；树不可用或未命中返回 null。</summary>
         private NamedTypeSymbol? ResolveDeclaredTypeByFullName(string fullName, bool wantEnum)
         {
-            if (_globalNamespace == null)
+            if (_globalNamespace?.TryGetType(fullName) is NamedTypeSymbol named)
             {
-                return null;
-            }
-
-            var dotIndex = fullName.LastIndexOf('.');
-            NamespaceSymbol ns;
-            string simpleName;
-            if (dotIndex < 0)
-            {
-                ns = _globalNamespace;
-                simpleName = fullName;
-            }
-            else
-            {
-                var resolved = _globalNamespace.GetNamespace(fullName.Substring(0, dotIndex));
-                if (resolved == null)
+                var isEnum = named.TypeKind == TypeKind.Enum;
+                if (isEnum == wantEnum)
                 {
-                    return null;
-                }
-
-                ns = resolved;
-                simpleName = fullName.Substring(dotIndex + 1);
-            }
-
-            foreach (var member in ns.GetTypeMembers())
-            {
-                if (member.Name != simpleName)
-                {
-                    continue;
-                }
-
-                if (member is NamedTypeSymbol named)
-                {
-                    var isEnum = named.TypeKind == TypeKind.Enum;
-                    if (isEnum == wantEnum)
-                    {
-                        return named;
-                    }
+                    return named;
                 }
             }
 
