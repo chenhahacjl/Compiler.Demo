@@ -818,6 +818,72 @@ function Main()
             Assert.IsType<ReturnStatementSyntax>(fn.Body.Statements[2]);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_ControlFlowStatements()
+        {
+            var tree = SyntaxTree.Parse(@"function Main(): i32
+{
+    var i = 0
+    do
+    {
+        i = i + 1
+        if i > 5
+        {
+            break
+        }
+        continue
+    }
+    while i < 10
+    return i
+}");
+            var doWhile = tree.Root.DescendantNodes().OfType<DoWhileStatementSyntax>().First();
+            var typedDoWhile = Assert.IsType<DoWhileStatementSyntax>(doWhile.ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.DoKeyword, typedDoWhile.DoKeyword.Kind);
+            Assert.Equal(SyntaxKind.LessToken, Assert.IsType<BinaryExpressionSyntax>(typedDoWhile.Condition).OperatorToken.Kind);
+
+            var breakStmt = tree.Root.DescendantNodes().OfType<BreakStatementSyntax>().First();
+            Assert.IsType<BreakStatementSyntax>(breakStmt.ToGreen().CreateTypedRed(tree));
+
+            var continueStmt = tree.Root.DescendantNodes().OfType<ContinueStatementSyntax>().First();
+            Assert.IsType<ContinueStatementSyntax>(continueStmt.ToGreen().CreateTypedRed(tree));
+        }
+
+        [Fact]
+        public void TypedRed_FromGreen_CastIsAsPostfix()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    var x = (i32)1
+    var b = x is i32
+    var c = x as i32
+    x++
+}");
+            var cast = tree.Root.DescendantNodes().OfType<CastExpressionSyntax>().First();
+            Assert.Equal("i32", Assert.IsType<CastExpressionSyntax>(cast.ToGreen().CreateTypedRed(tree)).TypeName.Text);
+
+            var isExpression = tree.Root.DescendantNodes().OfType<IsExpressionSyntax>().First();
+            Assert.IsType<IsExpressionSyntax>(isExpression.ToGreen().CreateTypedRed(tree));
+
+            var asExpression = tree.Root.DescendantNodes().OfType<AsExpressionSyntax>().First();
+            Assert.IsType<AsExpressionSyntax>(asExpression.ToGreen().CreateTypedRed(tree));
+
+            var postfix = tree.Root.DescendantNodes().OfType<PostfixIncrementExpressionSyntax>().First();
+            Assert.IsType<PostfixIncrementExpressionSyntax>(postfix.ToGreen().CreateTypedRed(tree));
+        }
+
+        [Fact]
+        public void TypedRed_FromGreen_Enum()
+        {
+            var tree = SyntaxTree.Parse("public enum Color { Red, Green = 2 }");
+            var enumRed = tree.Root.DescendantNodes().OfType<EnumDeclarationSyntax>().First();
+            var typedEnum = Assert.IsType<EnumDeclarationSyntax>(enumRed.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("Color", typedEnum.Identifier.Text);
+            Assert.Equal(2, typedEnum.Members.Count);
+            Assert.Equal("Red", typedEnum.Members[0].Identifier.Text);
+            Assert.Equal("Green", typedEnum.Members[1].Identifier.Text);
+            Assert.NotNull(typedEnum.Members[1].EqualsToken);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();

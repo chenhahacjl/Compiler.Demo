@@ -76,6 +76,20 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.Parameter => BuildParameter(syntaxTree, position),
                 SyntaxKind.FunctionDeclaration => BuildFunctionDeclaration(syntaxTree, position),
                 SyntaxKind.CompilationUnit => BuildCompilationUnit(syntaxTree, position),
+                SyntaxKind.BreakStatement => BuildKeywordStatement(syntaxTree, position),
+                SyntaxKind.ContinueStatement => BuildKeywordStatement(syntaxTree, position),
+                SyntaxKind.ThrowStatement => BuildThrowStatement(syntaxTree, position),
+                SyntaxKind.DoWhileStatement => BuildDoWhileStatement(syntaxTree, position),
+                SyntaxKind.ThisExpression => BuildKeywordExpression(syntaxTree, position),
+                SyntaxKind.BaseExpression => BuildKeywordExpression(syntaxTree, position),
+                SyntaxKind.CastExpression => BuildCastExpression(syntaxTree, position),
+                SyntaxKind.AsExpression => BuildAsIsExpression(syntaxTree, position, isAs: true),
+                SyntaxKind.IsExpression => BuildAsIsExpression(syntaxTree, position, isAs: false),
+                SyntaxKind.PostfixIncrementExpression => BuildPostfixIncrementExpression(syntaxTree, position),
+                SyntaxKind.ByRefArgument => BuildByRefArgumentExpression(syntaxTree, position),
+                SyntaxKind.EnumDeclaration => BuildEnumDeclaration(syntaxTree, position),
+                SyntaxKind.EnumMember => BuildEnumMember(syntaxTree, position),
+                SyntaxKind.GlobalStatement => BuildGlobalStatement(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -480,6 +494,136 @@ namespace Cocoa.CodeAnalysis.Syntax
             SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.ProtectedKeyword
             or SyntaxKind.StaticKeyword or SyntaxKind.AbstractKeyword or SyntaxKind.SealedKeyword
             or SyntaxKind.ExternKeyword or SyntaxKind.ReadonlyKeyword;
+
+        private SyntaxNode BuildKeywordStatement(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return Kind == SyntaxKind.BreakStatement
+                ? new BreakStatementSyntax(syntaxTree, keyword)
+                : new ContinueStatementSyntax(syntaxTree, keyword);
+        }
+
+        private SyntaxNode BuildKeywordExpression(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return Kind == SyntaxKind.ThisExpression
+                ? new ThisExpressionSyntax(syntaxTree, keyword)
+                : new BaseExpressionSyntax(syntaxTree, keyword);
+        }
+
+        private SyntaxNode BuildThrowStatement(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var expressionPosition = position + GetSlot(0)!.Width;
+            var expression = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, expressionPosition);
+            return new ThrowStatementSyntax(syntaxTree, keyword, expression);
+        }
+
+        private SyntaxNode BuildDoWhileStatement(SyntaxTree syntaxTree, int position)
+        {
+            var doKeyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var bodyPosition = position + GetSlot(0)!.Width;
+            var body = (StatementSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, bodyPosition);
+            var whilePosition = bodyPosition + GetSlot(1)!.Width;
+            var whileKeyword = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, whilePosition);
+            var conditionPosition = whilePosition + GetSlot(2)!.Width;
+            var condition = (ExpressionSyntax)GetSlot(3)!.CreateTypedRed(syntaxTree, conditionPosition);
+            return new DoWhileStatementSyntax(syntaxTree, doKeyword, body, whileKeyword, condition);
+        }
+
+        private SyntaxNode BuildCastExpression(SyntaxTree syntaxTree, int position)
+        {
+            var openParenthesis = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var typePosition = position + GetSlot(0)!.Width;
+            var typeName = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, typePosition);
+            var closePosition = typePosition + GetSlot(1)!.Width;
+            var closeParenthesis = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, closePosition);
+            var expressionPosition = closePosition + GetSlot(2)!.Width;
+            var expression = (ExpressionSyntax)GetSlot(3)!.CreateTypedRed(syntaxTree, expressionPosition);
+            return new CastExpressionSyntax(syntaxTree, openParenthesis, typeName, closeParenthesis, expression);
+        }
+
+        private SyntaxNode BuildAsIsExpression(SyntaxTree syntaxTree, int position, bool isAs)
+        {
+            var expression = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var keywordPosition = position + GetSlot(0)!.Width;
+            var keyword = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, keywordPosition);
+            var typePosition = keywordPosition + GetSlot(1)!.Width;
+            var typeName = (SyntaxToken)GetSlot(2)!.CreateTypedRed(syntaxTree, typePosition);
+            return isAs
+                ? new AsExpressionSyntax(syntaxTree, expression, keyword, typeName)
+                : new IsExpressionSyntax(syntaxTree, expression, keyword, typeName);
+        }
+
+        private SyntaxNode BuildPostfixIncrementExpression(SyntaxTree syntaxTree, int position)
+        {
+            var operand = (ExpressionSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var operatorPosition = position + GetSlot(0)!.Width;
+            var operatorToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, operatorPosition);
+            return new PostfixIncrementExpressionSyntax(syntaxTree, operand, operatorToken);
+        }
+
+        private SyntaxNode BuildByRefArgumentExpression(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var expressionPosition = position + GetSlot(0)!.Width;
+            var expression = (ExpressionSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, expressionPosition);
+            return new ByRefArgumentExpressionSyntax(syntaxTree, keyword, expression);
+        }
+
+        private SyntaxNode BuildEnumDeclaration(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < SlotCount && IsModifierToken(GetSlot(slot)!.Kind))
+            {
+                modifiers.Add((SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var enumKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var identifier = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var openBrace = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            for (var i = slot; i < SlotCount - 1; i++)
+            {
+                nodesAndSeparators.Add(GetSlot(i)!.CreateTypedRed(syntaxTree, position));
+                position += GetSlot(i)!.Width;
+            }
+
+            var closeBrace = (SyntaxToken)GetSlot(SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
+            var members = new SeparatedSyntaxList<EnumMemberSyntax>(nodesAndSeparators.ToImmutable());
+            return new EnumDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), enumKeyword, identifier, openBrace, members, closeBrace);
+        }
+
+        private SyntaxNode BuildEnumMember(SyntaxTree syntaxTree, int position)
+        {
+            var identifier = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? value = null;
+            if (SlotCount > 1)
+            {
+                var equalsPosition = position + GetSlot(0)!.Width;
+                equalsToken = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, equalsPosition);
+                value = (ExpressionSyntax)GetSlot(2)!.CreateTypedRed(syntaxTree, equalsPosition + GetSlot(1)!.Width);
+            }
+
+            return new EnumMemberSyntax(syntaxTree, identifier, equalsToken, value);
+        }
+
+        private SyntaxNode BuildGlobalStatement(SyntaxTree syntaxTree, int position)
+        {
+            var statement = (StatementSyntax)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return new GlobalStatementSyntax(syntaxTree, statement);
+        }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>
         private ImmutableArray<T> BuildSlotArray<T>(SyntaxTree syntaxTree, int startPosition, int startIndex, int endIndex)
