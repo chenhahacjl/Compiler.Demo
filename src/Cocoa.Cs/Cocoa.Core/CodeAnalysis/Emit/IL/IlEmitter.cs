@@ -135,6 +135,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     IsAbstract = classType.IsAbstract,
                     IsSealed = classType.IsSealed,
                     IsInterface = classType.IsInterface,
+                    IsValueType = classType.IsValueType,
                 };
                 _classTypeDefs.Add(classType, typeDef);
                 _metadata.AddTypeDef(typeDef);
@@ -308,6 +309,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var returnType = _entryFunction == function && function.ReturnType == TypeSymbol.Void
                 ? ToIlType(TypeSymbol.Int32)
                 : ToIlType(function.ReturnType);
+            var isInstance = function.ContainingClass != null && !function.IsStatic;
             var parameterTypes = new List<IlType>();
             foreach (var parameter in function.Parameters)
             {
@@ -322,7 +324,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 _ => IlCallingConvention.Winapi,
             };
 
-            var isInstance = function.ContainingClass != null && !function.IsStatic;
             // 顶层函数：命名空间限定名（EmitName）；重载组内追加参数类型后缀保证同一 TypeDef 内元数据方法名唯一
             var name = function.IsConstructor ? (function.IsStatic ? ".cctor" : ".ctor") : function.EmitName;
             if (function.ContainingClass == null && !function.IsConstructor &&
@@ -344,6 +345,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember,
                 IsAbstract = function.IsAbstract,
                 IsSealed = function.IsSealed,
+                IsExplicitThis = false,
             };
             _methods.Add(function, method);
 
@@ -397,6 +399,10 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             else if (baseTypeDef != null)
             {
                 typeDef.SetBase(null, baseTypeDef);
+            }
+            else if (classType.IsValueType)
+            {
+                typeDef.SetBase(_framework.ValueType, null);
             }
             else
             {
@@ -747,7 +753,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     return IlType.Class(_framework.RequireType("System.Type"));
                 }
 
-                return IlType.Class(_classTypeDefs[classType]);
+                return IlType.Class(_classTypeDefs[classType], isValueType: classType.IsValueType);
             }
 
             if (type.ElementType != null)
@@ -928,6 +934,16 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitVariableDeclaration(IlAssembler il, BoundVariableDeclaration node)
         {
+            // 6e-M26：值类型默认（形如 `var p: Point` 未显式初始化）用 initobj 清零，不可 ldnull
+            // （ldnull 存入 valuetype 局部 = 类型不匹配 → InvalidProgram）。仅当初始化器确为 null 字面量时才走此分支，
+            // 否则（如 `var p = new Point(...)` 的对象创建）须正常发射初始化器。
+            if (node.Initializer is BoundLiteralExpression { ConstantValue.Value: null } && node.Variable.Type is NamedTypeSymbol { IsValueType: true })
+            {
+                il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)_locals[node.Variable]);
+                il.Emit(IlOpCodeTable.Get("Initobj"), ToIlType(node.Variable.Type));
+                return;
+            }
+
             EmitExpression(il, node.Initializer);
 
             // 6e-M22 C5-c：捕获变量声明 → 初始化值写入环境字段
@@ -1854,9 +1870,22 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            var isStructInstance = node.Function.ContainingClass is { IsValueType: true } && !node.Function.IsStatic
+                && node.Arguments.Length > 0 && node.Function.Parameters.Length > 0;
             foreach (var argument in node.Arguments)
             {
-                EmitExpression(il, argument);
+                if (isStructInstance && argument == node.Arguments[0])
+                {
+                    // struct 实例方法：this 按托管指针传参（ldarga/ldloca 或临时局部取址）
+                    var receiverLocal = AllocateTemporaryLocal(argument, argument.Type);
+                    EmitExpression(il, argument);
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)receiverLocal);
+                    il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)receiverLocal);
+                }
+                else
+                {
+                    EmitExpression(il, argument);
+                }
             }
 
             var methodDefinition = _methods[node.Function];
@@ -2634,6 +2663,43 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
         }
 
+        /// <summary>
+        /// struct 字段访问/赋值取址（6e-M26 值语义）：把值类型接收者压为托管指针——
+        /// 变量 → ldarga/ldloca；this → ldarga.0；嵌套字段 → 递归取址 + ldflda。
+        /// 仅支持可寻址 lvalue（MVP：局部/参数/this/字段链）。
+        /// </summary>
+        private void EmitValueTypeReceiverAddress(IlAssembler il, BoundExpression target)
+        {
+            switch (target)
+            {
+                case BoundVariableExpression variable:
+                    if (variable.Variable is ParameterSymbol parameter)
+                    {
+                        var argIndex = parameter.Ordinal + (_currentMethodIsInstance ? 1 : 0);
+                        il.Emit(IlOpCodeTable.Get("Ldarga"), (ushort)argIndex);
+                    }
+                    else
+                    {
+                        il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)_locals[variable.Variable]);
+                    }
+
+                    return;
+
+                case BoundThisExpression:
+                    // struct 实例方法：this 已是托管指针（Point&），直接加载即可（不可 ldarga，否则变 Point&*）
+                    il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
+                    return;
+
+                case BoundMemberAccessExpression member when member.Field != null:
+                    EmitValueTypeReceiverAddress(il, member.Target);
+                    il.Emit(IlOpCodeTable.Get("Ldflda"), _fieldDefs[member.Field]);
+                    return;
+
+                default:
+                    throw new System.Exception($"struct 字段访问的接收者必须可寻址：{target.Kind}");
+            }
+        }
+
         private void EmitMemberAccessExpression(IlAssembler il, BoundMemberAccessExpression node)
         {
             if (node.Field != null && node.Field.IsStatic)
@@ -2642,13 +2708,23 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
-            EmitExpression(il, node.Target);
-
             if (node.Field != null)
             {
+                if (node.Field.ContainingClass!.IsValueType)
+                {
+                    EmitValueTypeReceiverAddress(il, node.Target);
+                }
+                else
+                {
+                    EmitExpression(il, node.Target);
+                }
+
                 il.Emit(IlOpCodeTable.Get("Ldfld"), _fieldDefs[node.Field]);
                 return;
             }
+
+            // 非字段成员访问（如数组 Length、string 属性）：接收者须先入栈
+            EmitExpression(il, node.Target);
 
             if (node.Target.Type == TypeSymbol.String)
             {
@@ -2831,6 +2907,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
+            if (node.Field.ContainingClass!.IsValueType)
+            {
+                EmitValueTypeReceiverAddress(il, node.Target);
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Dup"));
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
+                il.Emit(IlOpCodeTable.Get("Stfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
+                return;
+            }
+
             EmitExpression(il, node.Target);
             EmitExpression(il, node.Expression);
             il.Emit(IlOpCodeTable.Get("Dup"));
@@ -2857,6 +2944,27 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
                     return;
                 }
+            }
+
+            if (classType.IsValueType)
+            {
+                // 6e-M26 值语义：临时局部 + ldloca + call .ctor + ldloc（非 newobj）
+                var tempLocal = AllocateTemporaryLocal(node, classType);
+                il.Emit(IlOpCodeTable.Get("Ldloca"), (ushort)tempLocal);
+                foreach (var argument in node.Arguments)
+                {
+                    EmitExpression(il, argument);
+                }
+
+                var vtCtor = classType.GetMethod(classType.Name);
+                if (vtCtor == null)
+                {
+                    throw new System.Exception($"struct {classType.Name} has no constructor.");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Call"), _methods[vtCtor]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)tempLocal);
+                return;
             }
 
             foreach (var argument in node.Arguments)
@@ -2893,6 +3001,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
         private void EmitThisExpression(IlAssembler il, BoundThisExpression node)
         {
+            // this 恒为 arg.0：引用类型=对象引用(O)；struct 实例方法=托管指针(Point&)（调用端按 ref 传参）
             il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
         }
 

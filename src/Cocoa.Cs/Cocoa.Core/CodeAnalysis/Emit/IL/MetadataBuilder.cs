@@ -41,6 +41,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public bool IsAbstract { get; set; }
         public bool IsSealed { get; set; }
         public bool IsInterface { get; set; }
+        public bool IsValueType { get; set; }
         public List<IlInterfaceImpl> Interfaces { get; } = new List<IlInterfaceImpl>();
         public List<IlFieldDef> Fields { get; }
         public List<IlPropertyDef> Properties { get; } = new List<IlPropertyDef>();
@@ -122,6 +123,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlCallingConvention CallingConvention { get; }
         /// <summary>实例方法（含 this，签名 HAS_THIS）。</summary>
         public bool IsStatic { get; internal set; }
+
+        /// <summary>值类型实例方法：this 以 EXPLICITTHIS 显式给出（首位 byref 参数）。</summary>
+        public bool IsExplicitThis { get; internal set; }
 
         /// <summary>P/Invoke 编码格式（ImplMap CharSet 位）。6e-M17 Step 5。</summary>
         public CharSet CharSet { get; }
@@ -476,11 +480,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         // 签名编码
         // ------------------------------------------------------------------
 
-        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true)
+        public byte[] EncodeMethodSignature(IlType returnType, IReadOnlyList<IlType> parameterTypes, bool isStatic = true, bool explicitThis = false)
         {
             using var stream = new MemoryStream();
             // 注意：Extern 方法的签名必须使用默认调用约定（0x00），本机调用约定由 ImplMap 的 MappingFlags 表达。
-            stream.WriteByte((byte)(isStatic ? 0x00 : 0x20)); // Method(0) | HAS_THIS=0x20 | 默认调用约定
+            // 值类型实例方法：this 为托管指针，须用 EXPLICITTHIS（0x40）并在参数首位显式给出 byref<T>（HASTHIS 不足以表达 byref this）。
+            var convention = isStatic ? 0x00 : 0x20; // Method(0) | HAS_THIS=0x20（值类型 this 隐式为托管指针）
+            stream.WriteByte((byte)convention);
             WriteCompressedInteger(stream, parameterTypes.Count);
             EncodeType(stream, returnType);
             foreach (var parameterType in parameterTypes)
@@ -866,6 +872,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 {
                     flags |= 0x00000080u; // Abstract
                 }
+                if (typeDef.IsValueType)
+                {
+                    // 值类型无独立标志位：以 extends System.ValueType 标识；加 SequentialLayout（0x08）默认布局。
+                    flags |= 0x00000008u; // SequentialLayout
+                }
                 if (typeDef.IsSealed)
                 {
                     flags |= 0x00000100u; // Sealed
@@ -927,7 +938,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
                 writer.Write(methodFlags);
                 WriteStringRef(method.Name, stringIsBig); // Name（MethodDef 行缺 Name 曾导致后续表全部偏移 2 字节）
-                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, method.IsStatic));
+                var methodSigBlob = GetOrAddBlob(EncodeMethodSignature(method.ReturnType, method.ParameterTypes, method.IsStatic, method.IsExplicitThis));
                 WriteRef(methodSigBlob, blobIsBig);
                 WriteRef(paramRow, paramIsBig);
                 paramRow += method.ParameterTypes.Count;

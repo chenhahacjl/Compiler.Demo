@@ -19,6 +19,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _reader = new MetadataReader(references);
 
             ObjectType = RequireType("System.Object");
+            ValueType = RequireType("System.ValueType");
             StringType = RequireType("System.String");
             ConsoleKeyInfoType = RequireType("System.ConsoleKeyInfo");
             Int32Type = RequireType("System.Int32");
@@ -100,6 +101,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         public IlTypeRef ObjectType { get; }
+        public IlTypeRef ValueType { get; }
         public IlTypeRef StringType { get; }
         public IlTypeRef ConsoleKeyInfoType { get; }
         public IlTypeRef Int32Type { get; }
