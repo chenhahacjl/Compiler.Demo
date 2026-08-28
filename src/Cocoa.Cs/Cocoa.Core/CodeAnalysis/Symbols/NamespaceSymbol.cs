@@ -13,6 +13,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     {
         private ImmutableArray<NamespaceSymbol> _namespaces = ImmutableArray<NamespaceSymbol>.Empty;
         private ImmutableArray<TypeSymbol> _typeMembers = ImmutableArray<TypeSymbol>.Empty;
+        private ImmutableArray<FunctionSymbol> _functionMembers = ImmutableArray<FunctionSymbol>.Empty;
 
         private NamespaceSymbol(string name, NamespaceSymbol? containingNamespace)
             : base(name)
@@ -54,6 +55,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         public ImmutableArray<NamespaceSymbol> GetNamespaceMembers() => _namespaces;
 
         public ImmutableArray<TypeSymbol> GetTypeMembers() => _typeMembers;
+
+        public ImmutableArray<FunctionSymbol> GetFunctionMembers() => _functionMembers;
 
         /// <summary>按点分全名查找命名空间成员（相对本节点；空名返回本节点，未命中返回 null）。</summary>
         public NamespaceSymbol? GetNamespace(string fullName)
@@ -125,6 +128,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         internal void AddTypeMember(TypeSymbol type)
         {
             _typeMembers = _typeMembers.Add(type);
+        }
+
+        internal void AddFunctionMember(FunctionSymbol function)
+        {
+            _functionMembers = _functionMembers.Add(function);
         }
     }
 }

@@ -136,6 +136,29 @@ function Main()
         }
 
         [Fact]
+        public void GlobalNamespace_GroupsNamespacedFunctions()
+        {
+            var code = @"using System
+
+namespace Utils
+{
+    public function Helper(): i32 { return 1 }
+}
+
+function Main()
+{
+}";
+            var compilation = Compilation.Create(SyntaxTree.Parse(code));
+
+            var utils = compilation.GetNamespace("Utils");
+            Assert.NotNull(utils);
+            Assert.Contains(utils!.GetFunctionMembers(), f => f.Name == "Helper");
+
+            // namespaced functions live under their namespace, not the global root
+            Assert.DoesNotContain(compilation.GlobalNamespace.GetFunctionMembers(), f => f.Name == "Helper");
+        }
+
+        [Fact]
         public void Class_MethodCall_Binds()
         {
             var code = @"using System

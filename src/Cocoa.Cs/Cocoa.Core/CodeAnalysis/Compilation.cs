@@ -219,6 +219,8 @@ namespace Cocoa.CodeAnalysis
                 AddTypesToNamespace(tree, GlobalScope.Classes);
                 AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Enums));
                 AddTypesToNamespace(tree, _codLibraries.SelectMany(l => l.Classes));
+                AddFunctionsToNamespace(tree, GlobalScope.Functions.Where(f => f.ContainingClass == null));
+                AddFunctionsToNamespace(tree, _codLibraries.SelectMany(l => l.Functions).Where(f => f.ContainingClass == null));
                 Interlocked.CompareExchange(ref _globalNamespace, tree, null);
                 return _globalNamespace;
             }
@@ -236,6 +238,15 @@ namespace Cocoa.CodeAnalysis
             {
                 var ns = NamespaceSymbol.GetOrCreateNamespace(root, type.Namespace);
                 ns.AddTypeMember(type);
+            }
+        }
+
+        private static void AddFunctionsToNamespace(NamespaceSymbol root, IEnumerable<FunctionSymbol> functions)
+        {
+            foreach (var function in functions)
+            {
+                var ns = NamespaceSymbol.GetOrCreateNamespace(root, function.Namespace);
+                ns.AddFunctionMember(function);
             }
         }
 
