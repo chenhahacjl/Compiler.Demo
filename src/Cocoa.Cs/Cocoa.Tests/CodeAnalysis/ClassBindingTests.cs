@@ -790,6 +790,34 @@ function Main()
             Assert.Equal(SyntaxKind.CloseBracketToken, typedAccess.CloseBracketToken.Kind);
         }
 
+        [Fact]
+        public void TypedRed_WholeFile_RoundTrips()
+        {
+            var code = @"function Main(): i32
+{
+    var x = 1
+    if x == 1
+    {
+        return 1
+    }
+    return 0
+}";
+            var tree = SyntaxTree.Parse(code);
+            var typed = tree.GreenRoot.CreateTypedRed(tree);
+
+            var unit = Assert.IsType<CompilationUnitSyntax>(typed);
+            Assert.Equal(1, unit.Members.Length);
+            var fn = Assert.IsType<FunctionDeclarationSyntax>(unit.Members[0]);
+            Assert.Equal("Main", fn.Identifier.Text);
+            Assert.NotNull(fn.Type);
+            Assert.Equal("i32", fn.Type!.Identifier.Text);
+            Assert.NotNull(fn.Body);
+            Assert.Equal(3, fn.Body!.Statements.Length);
+            Assert.IsType<VariableDeclarationSyntax>(fn.Body.Statements[0]);
+            Assert.IsType<IfStatementSyntax>(fn.Body.Statements[1]);
+            Assert.IsType<ReturnStatementSyntax>(fn.Body.Statements[2]);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
