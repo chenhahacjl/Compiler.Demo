@@ -117,6 +117,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.CaseClause => BuildCaseClause(syntaxTree, position),
                 SyntaxKind.SwitchStatement => BuildSwitchStatement(syntaxTree, position),
                 SyntaxKind.LambdaExpression => BuildLambdaExpression(syntaxTree, position),
+                SyntaxKind.InterpolatedStringExpression => BuildInterpolatedStringExpression(syntaxTree, position),
+                SyntaxKind.InterpolatedStringText => BuildInterpolatedStringText(syntaxTree, position),
+                SyntaxKind.Interpolation => BuildInterpolation(syntaxTree, position),
+                SyntaxKind.ImportClause => BuildImportClause(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -1530,6 +1534,80 @@ namespace Cocoa.CodeAnalysis.Syntax
             var parameters = new SeparatedSyntaxList<ParameterSyntax>(parametersBuilder.ToImmutable());
             var hasExplicitParameterTypes = parameters.Count > 0 && parameters[0].Type != null;
             return new LambdaExpressionSyntax(syntaxTree, openParenthesis, parameters, closeParenthesis, hasExplicitParameterTypes, arrowToken, body);
+        }
+
+        private SyntaxNode BuildInterpolatedStringExpression(SyntaxTree syntaxTree, int position)
+        {
+            var interpolatedToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var contents = ImmutableArray.CreateBuilder<InterpolatedStringContentSyntax>();
+            var contentPosition = position + GetSlot(0)!.Width;
+            for (var i = 1; i < SlotCount; i++)
+            {
+                contents.Add((InterpolatedStringContentSyntax)GetSlot(i)!.CreateTypedRed(syntaxTree, contentPosition));
+                contentPosition += GetSlot(i)!.Width;
+            }
+
+            return new InterpolatedStringExpressionSyntax(syntaxTree, interpolatedToken, contents.ToImmutable());
+        }
+
+        private SyntaxNode BuildInterpolatedStringText(SyntaxTree syntaxTree, int position)
+        {
+            var textToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return new InterpolatedStringTextSyntax(syntaxTree, textToken);
+        }
+
+        private SyntaxNode BuildInterpolation(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var expression = (ExpressionSyntax)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            SyntaxToken? commaToken = null;
+            ExpressionSyntax? alignment = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.CommaToken)
+            {
+                commaToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                if (slot < SlotCount && GetSlot(slot)!.Kind != SyntaxKind.ColonToken)
+                {
+                    alignment = (ExpressionSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                    position += GetSlot(slot).Width;
+                    slot++;
+                }
+            }
+
+            SyntaxToken? colonToken = null;
+            SyntaxToken? formatToken = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.ColonToken)
+            {
+                colonToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+                if (slot < SlotCount)
+                {
+                    formatToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                }
+            }
+
+            return new InterpolationSyntax(syntaxTree, expression, commaToken, alignment, colonToken, formatToken);
+        }
+
+        private SyntaxNode BuildImportClause(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var importKeyword = (SyntaxToken)GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
+            for (var i = slot; i < SlotCount; i++)
+            {
+                nameTokens.Add((SyntaxToken)GetSlot(i).CreateTypedRed(syntaxTree, position));
+                position += GetSlot(i)!.Width;
+            }
+
+            return new ImportClauseSyntax(syntaxTree, importKeyword, nameTokens.ToImmutable());
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>

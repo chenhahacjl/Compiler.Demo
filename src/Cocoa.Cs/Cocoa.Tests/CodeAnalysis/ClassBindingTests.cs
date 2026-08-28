@@ -1154,6 +1154,26 @@ function Main()
             Assert.Equal(SyntaxKind.FatArrowToken, typedLambda.ArrowToken.Kind);
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_InterpolatedAndImport()
+        {
+            var tree = SyntaxTree.Parse(@"import System.Runtime
+
+function Main()
+{
+    var name = ""world""
+    var msg = $""hello {name}!""
+}");
+            var import = tree.Root.DescendantNodes().OfType<ImportClauseSyntax>().First();
+            var typedImport = Assert.IsType<ImportClauseSyntax>(import.ToGreen().CreateTypedRed(tree));
+            Assert.Equal("System", typedImport.NameTokens[0].Text);
+
+            var interpolated = tree.Root.DescendantNodes().OfType<InterpolatedStringExpressionSyntax>().First();
+            var typedInterpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(interpolated.ToGreen().CreateTypedRed(tree));
+            Assert.True(typedInterpolated.Contents.Length > 0);
+            Assert.Contains(typedInterpolated.Contents, c => c is InterpolationSyntax);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
