@@ -3,9 +3,9 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>
-    /// 绑定节点
+    /// 绑定节点（A-4 公开化：供 SemanticModel.GetOperation 等对外暴露绑定树；具体节点类仍 internal）。
     /// </summary>
-    internal abstract class BoundNode
+    public abstract class BoundNode
     {
         protected BoundNode(SyntaxNode syntax)
         {

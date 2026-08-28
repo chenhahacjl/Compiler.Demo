@@ -3,7 +3,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定节点类型
     /// </summary>
-    internal enum BoundNodeKind
+    public enum BoundNodeKind
     {
         // Statement
         BlockStatement,
