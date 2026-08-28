@@ -712,7 +712,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 类字段访问：point._x
-            if (boundTarget.Type is NamedTypeSymbol classType && !classType.IsPrimitiveValueType)
+            if (boundTarget.Type is NamedTypeSymbol classType && classType != TypeSymbol.String && !classType.IsPrimitiveValueType)
             {
                 var field = classType.GetField(identifier);
                 if (field != null)
@@ -834,7 +834,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(BindExpression(argument));
             }
 
-            if (boundExpression.Type is NamedTypeSymbol classType && !classType.IsPrimitiveValueType)
+            if (boundExpression.Type is NamedTypeSymbol classType && classType != TypeSymbol.String && !classType.IsPrimitiveValueType)
             {
                 if (classType.IsFacadeClass)
                 {

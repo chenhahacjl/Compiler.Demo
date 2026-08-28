@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly TypeSymbol Double = new NamedTypeSymbol("double", "", Visibility.Public, null) { SpecialType = SpecialType.System_Double, TypeKind = TypeKind.Struct };
         public static readonly TypeSymbol Float = new NamedTypeSymbol("float", "", Visibility.Public, null) { SpecialType = SpecialType.System_Single, TypeKind = TypeKind.Struct };
         public static readonly TypeSymbol Char = new NamedTypeSymbol("char", "", Visibility.Public, null) { SpecialType = SpecialType.System_Char, TypeKind = TypeKind.Struct };
-        public static readonly TypeSymbol String = new TypeSymbol("string");
+        public static readonly TypeSymbol String = new NamedTypeSymbol("string", "", Visibility.Public, null) { SpecialType = SpecialType.System_String, TypeKind = TypeKind.Class };
         public static readonly TypeSymbol Void = new TypeSymbol("void");
         public static readonly TypeSymbol Int128 = new TypeSymbol("i128");
         public static readonly TypeSymbol UInt128 = new TypeSymbol("u128");

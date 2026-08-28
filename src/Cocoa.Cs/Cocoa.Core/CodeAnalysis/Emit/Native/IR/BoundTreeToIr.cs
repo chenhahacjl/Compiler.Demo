@@ -1727,7 +1727,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BuiltinKind.ObjectGetType:
                 {
                     var receiver = EmitExpression(node.Expression);
-                    if (receiverType is NamedTypeSymbol { IsValueType: false } userClass && !userClass.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } userClass && receiverType != TypeSymbol.String && !userClass.IsFacadeClass)
                     {
                         // 用户类：对象头 [0] 即具体类 vtable（= System.Type 实例）
                         return EmitLoadPointerField(receiver, 0);
@@ -1754,7 +1754,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectToString", 8, receiver);
                     }
 
-                    if (receiverType is NamedTypeSymbol { IsValueType: false } cls && !cls.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } cls && receiverType != TypeSymbol.String && !cls.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1776,7 +1776,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectGetHashCode", 4, WidenTo8(receiver));
                     }
 
-                    if (receiverType is NamedTypeSymbol { IsValueType: false } hcls && !hcls.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } hcls && receiverType != TypeSymbol.String && !hcls.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {
@@ -1799,7 +1799,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         return EmitStackRuntimeCall("ObjectEquals", 4, WidenTo8(receiver), WidenTo8(typeOther));
                     }
 
-                    if (receiverType is NamedTypeSymbol { IsValueType: false } ecl && !ecl.IsFacadeClass)
+                    if (receiverType is NamedTypeSymbol { IsValueType: false } ecl && receiverType != TypeSymbol.String && !ecl.IsFacadeClass)
                     {
                         if (node.IsBase)
                         {

@@ -139,6 +139,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 条件：双侧均为类（含 System.Object/接口/外部类），且存在继承关系（同型或一侧可隐式转换到另一侧）。
             // string/值类型/any 走既有值比较表，不受影响。
             if (leftType is NamedTypeSymbol { IsValueType: false } leftClass && rightType is NamedTypeSymbol { IsValueType: false } rightClass &&
+                leftType != TypeSymbol.String && rightType != TypeSymbol.String &&
                 (leftClass == rightClass || leftClass.IsBaseOf(rightClass) || rightClass.IsBaseOf(leftClass)))
             {
                 var referenceKind = syntaxKind switch
