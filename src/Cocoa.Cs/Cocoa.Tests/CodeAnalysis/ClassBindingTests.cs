@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Generic;
@@ -381,6 +382,35 @@ function Main()
             Assert.Equal(SymbolKind.Function, getSymbol!.Kind);
             Assert.Equal("Get", getSymbol.Name);
             Assert.Equal(TypeSymbol.Int32, model.GetTypeInfo(getCall));
+        }
+
+        [Fact]
+        public void SemanticModel_GetOperation_ReturnsBoundNode()
+        {
+            var code = @"using System
+
+function Add(a: i32, b: i32): i32
+{
+    return a + b
+}
+
+function Main()
+{
+    var x = Add(1, 2)
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var addCall = Descendants(tree.Root).OfType<CallExpressionSyntax>().First(c => c.Identifier.Text == "Add");
+            var operation = model.GetOperation(addCall);
+            Assert.NotNull(operation);
+            Assert.IsType<BoundCallExpression>(operation);
+
+            var aUse = Descendants(tree.Root).OfType<NameExpressionSyntax>().First(n => n.IdentifierToken.Text == "a");
+            var aOperation = model.GetOperation(aUse);
+            Assert.NotNull(aOperation);
+            Assert.IsType<BoundVariableExpression>(aOperation);
         }
 
         [Fact]

@@ -172,6 +172,18 @@ namespace Cocoa.CodeAnalysis
 
         private NamespaceSymbol GlobalNamespace => _compilation.GlobalNamespace;
 
+        /// <summary>绑定树操作（A-4 起点，对齐 Roslyn <c>SemanticModel.GetOperation</c>）：返回语法节点对应的绑定节点。
+        /// <see cref="BoundNode"/> 为内部类型，本 API 供编译器内部工具/测试使用；公开化（IOperation 形态）需另行设计。</summary>
+        internal BoundNode? GetOperation(SyntaxNode node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            return BoundBySyntax.TryGetValue(node, out var bound) ? bound : null;
+        }
+
         /// <summary>表达式对应符号（对齐 Roslyn <c>SemanticModel.GetSymbolInfo</c>）。
         /// 优先绑定树（局部变量/参数/实例成员等返回真实绑定符号）；未命中回落名称/成员解析。</summary>
         public Symbol? GetSymbolInfo(SyntaxNode node)
