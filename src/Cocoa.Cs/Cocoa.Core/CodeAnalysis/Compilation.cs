@@ -143,8 +143,22 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
+        /// <summary>本编译的全部诊断（对齐 Roslyn <c>Compilation.GetDiagnostics</c>）：语法解析 +
+        /// 全局声明 + 函数体绑定；声明有错时短路（体绑定无意义）。</summary>
+        public ImmutableArray<Diagnostic> GetDiagnostics()
+        {
+            var builder = ImmutableArray.CreateBuilder<Diagnostic>();
+            builder.AddRange(GlobalScope.Diagnostics);
+            if (!GlobalScope.Diagnostics.HasErrors())
+            {
+                builder.AddRange(GetProgram().Diagnostics);
+            }
+
+            return builder.ToImmutable();
+        }
+
         /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。
-        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局作用域声明（源 + 注入的 .cod 库）类与枚举；
+        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .cod 库）类与枚举；
         /// 缺失返回 null。支持后置 [] 数组全名（如 <c>"System.Int32[]"</c>）。</summary>
         public TypeSymbol? GetTypeByMetadataName(string fullyQualifiedName)
         {

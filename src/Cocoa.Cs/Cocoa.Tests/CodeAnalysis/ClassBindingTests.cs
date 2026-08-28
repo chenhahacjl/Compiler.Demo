@@ -136,6 +136,22 @@ function Main()
         }
 
         [Fact]
+        public void GetDiagnostics_AggregatesParseAndBinding()
+        {
+            // 语法错误
+            var parse = Compilation.Create(SyntaxTree.Parse("function Main() { var x =  "));
+            Assert.Contains(parse.GetDiagnostics(), d => d.IsError);
+
+            // 绑定错误：未定义类型
+            var binding = Compilation.Create(SyntaxTree.Parse("function Main() { var x: NoSuchType = 1 }"));
+            Assert.Contains(binding.GetDiagnostics(), d => d.IsError);
+
+            // 干净程序
+            var clean = Compilation.Create(SyntaxTree.Parse("function Main() {}"));
+            Assert.DoesNotContain(clean.GetDiagnostics(), d => d.IsError);
+        }
+
+        [Fact]
         public void GlobalNamespace_GroupsNamespacedFunctions()
         {
             var code = @"using System
