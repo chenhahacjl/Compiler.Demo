@@ -215,7 +215,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
 
             // 数组：元素编码 + [] 后缀（[] 非标识符字符，注入安全）
-            if (type.ElementType != null && type.Kind == SymbolKind.Type)
+            if (type is ArrayTypeSymbol)
             {
                 return Encode(type.ElementType) + "[]";
             }

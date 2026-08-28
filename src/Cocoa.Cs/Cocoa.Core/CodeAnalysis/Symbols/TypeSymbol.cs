@@ -47,7 +47,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public static TypeSymbol ArrayOf(TypeSymbol elementType)
         {
-            return _arrayTypes.GetOrAdd(elementType, static e => new TypeSymbol(e));
+            return _arrayTypes.GetOrAdd(elementType, static e => new ArrayTypeSymbol(e));
         }
 
         public override SymbolKind Kind => SymbolKind.Type;

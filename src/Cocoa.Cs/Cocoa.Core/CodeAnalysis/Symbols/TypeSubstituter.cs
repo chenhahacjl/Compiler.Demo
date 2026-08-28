@@ -31,8 +31,8 @@ namespace Cocoa.CodeAnalysis.Symbols
                 return map.TryGetValue(parameter, out var substituted) ? substituted : type;
             }
 
-            // 数组类型：基元符号类无独立数组子类，ElementType 非空即数组
-            if (type.ElementType != null && type.Kind == SymbolKind.Type)
+            // 数组类型：独立 ArrayTypeSymbol；元素替换后重建
+            if (type is ArrayTypeSymbol)
             {
                 return TypeSymbol.ArrayOf(Substitute(type.ElementType, map));
             }

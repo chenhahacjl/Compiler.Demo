@@ -22,6 +22,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                     WriteParameterTo((ParameterSymbol)symbol, writer);
                     break;
                 case SymbolKind.Type:
+                case SymbolKind.ArrayType:
                     WriteTypeTo((TypeSymbol)symbol, writer);
                     break;
                 case SymbolKind.TypeParameter:

@@ -358,7 +358,7 @@ namespace Cocoa.CodeAnalysis.Binding
                         break;
 
                     default:
-                        if (type?.ElementType != null && type.Kind == SymbolKind.Type)
+                        if (type is ArrayTypeSymbol)
                         {
                             Collect(type.ElementType, sink);
                         }

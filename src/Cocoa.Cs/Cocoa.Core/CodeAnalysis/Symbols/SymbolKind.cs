@@ -7,6 +7,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         LocalVariable,
         Parameter,
         Type,
+        ArrayType,
         TypeParameter,
         NamedType,
         Field,

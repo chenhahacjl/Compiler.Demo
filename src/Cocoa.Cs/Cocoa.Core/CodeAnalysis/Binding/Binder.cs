@@ -2540,8 +2540,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 数组元素递归
-            if (implementationType.ElementType != null && interfaceType.ElementType != null &&
-                implementationType.Kind == SymbolKind.Type && interfaceType.Kind == SymbolKind.Type)
+            if (implementationType is ArrayTypeSymbol && interfaceType is ArrayTypeSymbol)
             {
                 return TypesMatchForInterfaceImplementation(implementationType.ElementType, interfaceType.ElementType);
             }
@@ -4217,7 +4216,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return true;
             }
 
-            if (type.ElementType != null && type.Kind == SymbolKind.Type)
+            if (type is ArrayTypeSymbol)
             {
                 return true;
             }
