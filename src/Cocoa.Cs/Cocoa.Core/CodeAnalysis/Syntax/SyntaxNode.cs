@@ -60,6 +60,43 @@ namespace Cocoa.CodeAnalysis.Syntax
             return AncestorsAndSelf().Skip(1);
         }
 
+        /// <summary>全部后代节点（Phase 4 红树遍历基础设施；深度优先、先序）。</summary>
+        public IEnumerable<SyntaxNode> DescendantNodes()
+        {
+            foreach (var child in GetChildren())
+            {
+                yield return child;
+
+                foreach (var nested in child.DescendantNodes())
+                {
+                    yield return nested;
+                }
+            }
+        }
+
+        /// <summary>本节点 + 全部后代节点。</summary>
+        public IEnumerable<SyntaxNode> DescendantNodesAndSelf()
+        {
+            yield return this;
+
+            foreach (var descendant in DescendantNodes())
+            {
+                yield return descendant;
+            }
+        }
+
+        /// <summary>全部后代 Token（含本节点内含的 Token）。</summary>
+        public IEnumerable<SyntaxToken> DescendantTokens()
+        {
+            foreach (var node in DescendantNodesAndSelf())
+            {
+                if (node is SyntaxToken token)
+                {
+                    yield return token;
+                }
+            }
+        }
+
         public SyntaxToken GetLastToken()
         {
             if (this is SyntaxToken token)

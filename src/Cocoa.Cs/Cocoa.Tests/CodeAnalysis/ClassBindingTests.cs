@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
@@ -315,6 +316,47 @@ function Main()
             Assert.NotNull(symbol);
             Assert.Equal(SymbolKind.Function, symbol!.Kind);
             Assert.Equal("Twice", symbol.Name);
+        }
+
+        [Fact]
+        public void SyntaxTraversal_DescendantsAndWalker()
+        {
+            var code = @"using System
+
+public class Point
+{
+    public function Get(): i32 { return 0 }
+}
+
+function Main()
+{
+    var n: i32 = 1
+}";
+            var tree = SyntaxTree.Parse(code);
+
+            var typeClauses = tree.Root.DescendantNodes().OfType<TypeClauseSyntax>().ToList();
+            Assert.Equal(2, typeClauses.Count);
+
+            Assert.Contains(tree.Root, tree.Root.DescendantNodesAndSelf());
+            Assert.Contains(tree.Root.DescendantTokens(), t => t.Text == "var");
+
+            var collector = new CollectingWalker();
+            collector.Visit(tree.Root);
+            Assert.True(collector.Count > 0);
+            Assert.Contains(collector.Nodes.OfType<ClassDeclarationSyntax>(), c => c.Identifier.Text == "Point");
+        }
+
+        private sealed class CollectingWalker : SyntaxWalker
+        {
+            public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
+
+            public int Count => Nodes.Count;
+
+            protected override void VisitCore(SyntaxNode node)
+            {
+                Nodes.Add(node);
+                base.VisitCore(node);
+            }
         }
 
         private static IEnumerable<SyntaxNode> Descendants(SyntaxNode root)
