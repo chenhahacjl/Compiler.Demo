@@ -66,6 +66,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                 SyntaxKind.BlockStatement => BuildBlockStatement(syntaxTree, position),
                 SyntaxKind.IfStatement => BuildIfStatement(syntaxTree, position),
                 SyntaxKind.ElseClause => BuildElseClause(syntaxTree, position),
+                SyntaxKind.VariableDeclaration => BuildVariableDeclaration(syntaxTree, position),
+                SyntaxKind.TypeClause => BuildTypeClause(syntaxTree, position),
                 _ => CreateRed(syntaxTree, position),
             };
         }
@@ -197,6 +199,60 @@ namespace Cocoa.CodeAnalysis.Syntax
             var statementPosition = position + GetSlot(0)!.Width;
             var elseStatement = (StatementSyntax)GetSlot(1)!.CreateTypedRed(syntaxTree, statementPosition);
             return new ElseClauseSyntax(syntaxTree, elseKeyword, elseStatement);
+        }
+
+        private SyntaxNode BuildVariableDeclaration(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            SyntaxToken? keyword = null;
+            if (GetSlot(slot)!.Kind is SyntaxKind.VarKeyword or SyntaxKind.LetKeyword)
+            {
+                keyword = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            var identifier = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+            position += GetSlot(slot).Width;
+            slot++;
+
+            TypeClauseSyntax? typeClause = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.TypeClause)
+            {
+                typeClause = (TypeClauseSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? equalsToken = null;
+            if (slot < SlotCount && GetSlot(slot)!.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = (SyntaxToken)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += GetSlot(slot).Width;
+                slot++;
+            }
+
+            ExpressionSyntax? initializer = null;
+            if (slot < SlotCount)
+            {
+                initializer = (ExpressionSyntax)GetSlot(slot).CreateTypedRed(syntaxTree, position);
+            }
+
+            return new VariableDeclarationSyntax(syntaxTree, keyword, identifier, typeClause, equalsToken, initializer);
+        }
+
+        private SyntaxNode BuildTypeClause(SyntaxTree syntaxTree, int position)
+        {
+            if (SlotCount == 2)
+            {
+                var colonToken = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+                var identifierPosition = position + GetSlot(0)!.Width;
+                var identifier = (SyntaxToken)GetSlot(1)!.CreateTypedRed(syntaxTree, identifierPosition);
+                return new TypeClauseSyntax(syntaxTree, colonToken, identifier);
+            }
+
+            var typeIdentifier = (SyntaxToken)GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            return new TypeClauseSyntax(syntaxTree, null, typeIdentifier);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>

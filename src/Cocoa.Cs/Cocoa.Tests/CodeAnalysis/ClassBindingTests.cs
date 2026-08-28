@@ -718,6 +718,31 @@ function Main()
             Assert.IsType<BlockStatementSyntax>(blockRed.ToGreen().CreateTypedRed(tree));
         }
 
+        [Fact]
+        public void TypedRed_FromGreen_VariableDeclaration()
+        {
+            var tree = SyntaxTree.Parse(@"function Main()
+{
+    var x: i32 = 1
+    let y = 2
+}");
+            var declared = tree.Root.DescendantNodes().OfType<VariableDeclarationSyntax>().ToList();
+            Assert.Equal(2, declared.Count);
+
+            var typedWithType = Assert.IsType<VariableDeclarationSyntax>(declared[0].ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.VarKeyword, typedWithType.Keyword!.Kind);
+            Assert.Equal("x", typedWithType.Identifier.Text);
+            Assert.NotNull(typedWithType.TypeClause);
+            Assert.Equal("i32", typedWithType.TypeClause!.Identifier.Text);
+            Assert.NotNull(typedWithType.Initializer);
+
+            var typedLet = Assert.IsType<VariableDeclarationSyntax>(declared[1].ToGreen().CreateTypedRed(tree));
+            Assert.Equal(SyntaxKind.LetKeyword, typedLet.Keyword!.Kind);
+            Assert.Equal("y", typedLet.Identifier.Text);
+            Assert.Null(typedLet.TypeClause);
+            Assert.NotNull(typedLet.Initializer);
+        }
+
         private sealed class CollectingWalker : SyntaxWalker
         {
             public List<SyntaxNode> Nodes { get; } = new List<SyntaxNode>();
