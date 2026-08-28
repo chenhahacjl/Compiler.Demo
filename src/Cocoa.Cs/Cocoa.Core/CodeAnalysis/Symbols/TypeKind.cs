@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     /// <summary>
     /// 命名类型类别（6e-M26，对齐 Roslyn <see cref="Microsoft.CodeAnalysis.TypeKind"/>）：
-    /// class/struct/interface/enum 共用同一 <see cref="NamedTypeSymbol"/>，以本枚举判别。
+    /// class/struct/interface/enum/delegate 共用同一 <see cref="NamedTypeSymbol"/>，以本枚举判别。
     /// </summary>
     public enum TypeKind
     {

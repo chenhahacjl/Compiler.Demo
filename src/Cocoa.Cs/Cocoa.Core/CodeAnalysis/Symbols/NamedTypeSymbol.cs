@@ -28,16 +28,13 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>是否为内建 MulticastDelegate 单例。</summary>
         public bool IsSystemMulticastDelegate => this == SystemMulticastDelegate;
 
-        /// <summary>是否为 delegate 声明合成的类（BaseType = MulticastDelegate）。</summary>
-        public bool IsDelegateClass => BaseType == SystemMulticastDelegate;
+        /// <summary>delegate 声明的 Invoke 方法（TypeKind.Delegate 时存在，否则 null）。</summary>
+        public FunctionSymbol? DelegateInvokeMethod => TypeKind == TypeKind.Delegate ? GetMethod("Invoke") : null;
 
         /// <summary>提取 delegate 类的 Invoke 方法签名对应的函数类型（非 delegate 类返回 null）。</summary>
-        public FunctionTypeSymbol? GetDelegateSignature()
+        public FunctionTypeSymbol? DelegateSignature()
         {
-            if (!IsDelegateClass)
-                return null;
-
-            var invoke = GetMethod("Invoke");
+            var invoke = DelegateInvokeMethod;
             if (invoke == null)
                 return null;
 
@@ -74,7 +71,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             _properties = ImmutableArray.CreateBuilder<PropertySymbol>();
         }
 
-        public override SymbolKind Kind => SymbolKind.Class;
+        public override SymbolKind Kind => SymbolKind.NamedType;
 
         public string Namespace { get; }
 

@@ -703,9 +703,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
 
             // 6e-M22 D-B：delegate 类 → Func`N 等价类型（运行期表示与函数值一致）
-            if (type is NamedTypeSymbol { IsDelegateClass: true } delegateClassType)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateClassType)
             {
-                var sig = delegateClassType.GetDelegateSignature();
+                var sig = delegateClassType.DelegateSignature();
                 if (sig != null)
                 {
                     return _delegateShapes.Resolve(sig, ToIlType).Type;
@@ -1113,7 +1113,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             var functionType = node.Callee.Type switch
             {
                 FunctionTypeSymbol ft => ft,
-                NamedTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
+                NamedTypeSymbol { TypeKind: TypeKind.Delegate } dc => dc.DelegateSignature()!,
                 _ => throw new System.Exception($"Unexpected callee type {node.Callee.Type}"),
             };
             var shape = _delegateShapes.Resolve(functionType, ToIlType);

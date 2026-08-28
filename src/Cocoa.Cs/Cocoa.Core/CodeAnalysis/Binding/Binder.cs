@@ -526,7 +526,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 // 6e-M22 D-B：delegate 合成类不进发射（运行期表示 = Func/Action 对象，非自定义类）
                 emittedClasses = emittedClasses
-                    .Where(c => !c.IsDelegateClass)
+                    .Where(c => c.TypeKind != TypeKind.Delegate)
                     .Concat(environmentClasses)
                     .ToImmutableArray();
             }
@@ -1591,9 +1591,9 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 resolvedHandler = fts;
             }
-            else if (handlerType is NamedTypeSymbol { IsDelegateClass: true } dc)
+            else if (handlerType is NamedTypeSymbol { TypeKind: TypeKind.Delegate } dc)
             {
-                var sig = dc.GetDelegateSignature();
+                var sig = dc.DelegateSignature();
                 if (sig == null)
                 {
                     _diagnostics.ReportError(syntax.Identifier.Location, $"delegate 类 '{dc.Name}' 缺少 Invoke 方法。");
@@ -1697,7 +1697,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var boundHandler = BindExpression(syntax.Expression);
             var handlerType = boundHandler.Type switch
             {
-                NamedTypeSymbol { IsDelegateClass: true } delegateClass => delegateClass.GetDelegateSignature(),
+                NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateClass => delegateClass.DelegateSignature(),
                 var other => other,
             };
 
@@ -2054,6 +2054,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 BaseType = NamedTypeSymbol.SystemMulticastDelegate,
                 IsSealed = true,
+                TypeKind = TypeKind.Delegate,
             };
 
             // Invoke 方法签名匹配 delegate 声明
@@ -2092,6 +2093,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 BaseType = NamedTypeSymbol.SystemMulticastDelegate,
                 IsSealed = true,
+                TypeKind = TypeKind.Delegate,
             };
 
             var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
@@ -6637,7 +6639,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 FunctionTypeSymbol? calleeFnType = calleeVariable.Type switch
                 {
                     FunctionTypeSymbol ft => ft,
-                    NamedTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature(),
+                    NamedTypeSymbol { TypeKind: TypeKind.Delegate } dc => dc.DelegateSignature(),
                     _ => null,
                 };
 
@@ -6923,9 +6925,9 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 6e-M22 D-A：目标为 delegate 类时提取 Invoke 签名作为函数类型（复用函数值管道）
-            if (type is NamedTypeSymbol { IsDelegateClass: true } delegateClass)
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateClass)
             {
-                var delegateSignature = delegateClass.GetDelegateSignature();
+                var delegateSignature = delegateClass.DelegateSignature();
                 if (delegateSignature == null)
                 {
                     _diagnostics.ReportError(syntax.Location, $"delegate 类 '{delegateClass.Name}' 缺少 Invoke 方法。");
@@ -7029,8 +7031,8 @@ namespace Cocoa.CodeAnalysis.Binding
         private BoundExpression BindConversion(TextLocation diagnosticLocation, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)
         {
             // 6e-M22 D-A：delegate 类目标——函数值与 delegate 类型的结构兼容（同表示，类型身份编译期）
-            if (type is NamedTypeSymbol { IsDelegateClass: true } delegateTarget &&
-                expression.Type == delegateTarget.GetDelegateSignature())
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateTarget &&
+                expression.Type == delegateTarget.DelegateSignature())
             {
                 return expression;
             }

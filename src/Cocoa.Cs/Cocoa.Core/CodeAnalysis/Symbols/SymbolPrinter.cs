@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 case SymbolKind.TypeParameter:
                     writer.WriteIdentifier(symbol.Name);
                     break;
-                case SymbolKind.Class:
+                case SymbolKind.NamedType:
                     writer.WriteIdentifier(symbol.Name);
                     break;
                 case SymbolKind.Field:

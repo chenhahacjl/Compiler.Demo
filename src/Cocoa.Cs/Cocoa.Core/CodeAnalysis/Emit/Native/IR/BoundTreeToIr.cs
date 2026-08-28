@@ -1577,7 +1577,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var functionType = node.Callee.Type switch
             {
                 FunctionTypeSymbol ft => ft,
-                NamedTypeSymbol { IsDelegateClass: true } dc => dc.GetDelegateSignature()!,
+                NamedTypeSymbol { TypeKind: TypeKind.Delegate } dc => dc.DelegateSignature()!,
                 _ => throw new Exception($"Unexpected callee type {node.Callee.Type}"),
             };
 
