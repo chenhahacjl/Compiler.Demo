@@ -104,6 +104,54 @@ namespace Cocoa.CodeAnalysis
 
         private NamespaceSymbol GlobalNamespace => _compilation.GlobalNamespace;
 
+        /// <summary>解析名称表达式对应的符号（对齐 Roslyn <c>SemanticModel.GetSymbolInfo</c>）：
+        /// 按名解析——类型（关键字/元数据全名）优先，其次全局变量，其次函数；其余/null 返回 null。
+        /// 支持 NameExpression（变量/类型用法）与 CallExpression（函数调用，名字存于 Identifier token）。
+        /// 基于编译级解析（非逐节点绑定），局部变量/成员访问等暂不支持。</summary>
+        public Symbol? GetSymbolInfo(SyntaxNode node)
+        {
+            string? text = node switch
+            {
+                NameExpressionSyntax nameExpression => nameExpression.IdentifierToken.Text,
+                CallExpressionSyntax callExpression => callExpression.Identifier.Text,
+                null => null,
+                _ => null,
+            };
+
+            return text == null ? null : ResolveName(text);
+        }
+
+        private Symbol? ResolveName(string text)
+        {
+            if (ResolveBuiltin(text) is { } builtin)
+            {
+                return builtin;
+            }
+
+            if (_compilation.GetTypeByMetadataName(text) is { } type)
+            {
+                return type;
+            }
+
+            foreach (var variable in _compilation.Variables)
+            {
+                if (variable.Name == text)
+                {
+                    return variable;
+                }
+            }
+
+            foreach (var function in _compilation.Functions)
+            {
+                if (function.Name == text)
+                {
+                    return function;
+                }
+            }
+
+            return null;
+        }
+
         private static IEnumerable<NamespaceSymbol> EnumerateNamespaces(NamespaceSymbol root)
         {
             yield return root;

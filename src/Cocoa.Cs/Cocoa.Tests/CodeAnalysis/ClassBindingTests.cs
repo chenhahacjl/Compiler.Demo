@@ -252,6 +252,46 @@ function Main()
             Assert.Null(model.GetDeclaredSymbol(tree.Root));
         }
 
+        [Fact]
+        public void SemanticModel_GetSymbolInfo_ResolvesNames()
+        {
+            var code = @"using System
+
+public class Point
+{
+    public function Get(): i32 { return 0 }
+}
+
+var G: i32 = 5
+
+function Compute(): i32 { return 1 }
+
+function Main()
+{
+    Console.WriteLine(G)
+    Console.WriteLine(Compute())
+}";
+            var tree = SyntaxTree.Parse(code);
+            var compilation = Compilation.Create(tree);
+            var model = compilation.GetSemanticModel(tree);
+
+            var nameExpressions = Descendants(tree.Root).OfType<NameExpressionSyntax>().ToList();
+            var gExpression = nameExpressions.First(n => n.IdentifierToken.Text == "G");
+            var computeCall = Descendants(tree.Root).OfType<CallExpressionSyntax>().First(c => c.Identifier.Text == "Compute");
+
+            var gSymbol = model.GetSymbolInfo(gExpression);
+            Assert.NotNull(gSymbol);
+            Assert.Equal(SymbolKind.GlobalVariable, gSymbol!.Kind);
+            Assert.Equal("G", gSymbol.Name);
+
+            var computeSymbol = model.GetSymbolInfo(computeCall);
+            Assert.NotNull(computeSymbol);
+            Assert.Equal(SymbolKind.Function, computeSymbol!.Kind);
+            Assert.Equal("Compute", computeSymbol.Name);
+
+            Assert.Null(model.GetSymbolInfo(tree.Root));
+        }
+
         private static IEnumerable<SyntaxNode> Descendants(SyntaxNode root)
         {
             foreach (var child in root.GetChildren())
