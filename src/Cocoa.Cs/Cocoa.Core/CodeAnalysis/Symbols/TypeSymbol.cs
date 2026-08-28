@@ -52,6 +52,9 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public override SymbolKind Kind => SymbolKind.Type;
 
+        /// <summary>知名 BCL 类型标记（默认 None；基元单例构造时赋值，对齐 Roslyn SpecialType）。</summary>
+        public SpecialType SpecialType { get; internal set; } = SpecialType.None;
+
         /// <summary>是否为整数类型（含有/无符号 8/16/32/64/128 位，不含 bool/char）。</summary>
         public bool IsInteger =>
             this == Int8 || this == Int16 || this == Int32 || this == Int64 ||
