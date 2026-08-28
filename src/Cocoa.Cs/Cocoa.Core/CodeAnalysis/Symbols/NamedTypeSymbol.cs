@@ -119,6 +119,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>facade 承载的类型（Int32→i32、String→string；null = 自身，用于 Object/Type facade）。</summary>
         public TypeSymbol? FacadeThisType { get; internal set; }
 
+        /// <summary>facade 合并（Phase 1-3）：基元符号在类型表中以 facade 全名登记后，成员面经此委托到
+        /// `<c>System.Int32</c>`` 等 facade 类（System.Core 缓存实例，进程内共享，赋值幂等）。</summary>
+        public NamedTypeSymbol? FacadeCompanion { get; internal set; }
+
         public virtual bool IsAbstract { get; internal set; }
 
         /// <summary>是否为值类型（struct/enum，6e-M26）：对齐 C#，struct 与枚举都是值类型。</summary>
@@ -186,7 +190,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                     if (e.Name == name) return e;
                 }
             }
-            return null;
+            return FacadeCompanion?.GetEvent(name);
         }
 
         /// <summary>类直接实现的接口（`class C: I` 的基类型列表中的接口）。</summary>
@@ -302,7 +306,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 }
             }
 
-            return null;
+            return FacadeCompanion?.GetIndexer();
         }
 
         /// <summary>属性查找（沿继承链向上，含接口继承链）。</summary>
@@ -339,7 +343,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 }
             }
 
-            return null;
+            return FacadeCompanion?.GetProperty(name);
         }
 
         /// <summary>本类直接声明的字段（不含基类）。</summary>
@@ -385,7 +389,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 }
             }
 
-            return null;
+            return FacadeCompanion?.GetField(name);
         }
 
         /// <summary>方法查找（沿继承链向上，含接口继承链）。</summary>
@@ -420,7 +424,8 @@ namespace Cocoa.CodeAnalysis.Symbols
                 }
             }
 
-            return null;
+            // facade 合并：基元成员面委托到 facade 类（Int32.Parse 等）
+            return FacadeCompanion?.GetMethod(name);
         }
 
         /// <summary>全部同名方法（含重载，沿继承链向上）：静态容器类方法调用按参数类型解析重载（6e-M18）。</summary>
@@ -452,6 +457,11 @@ namespace Cocoa.CodeAnalysis.Symbols
                 {
                     builder.AddRange(type.GetInterfaceInheritedMethods(name));
                 }
+            }
+
+            if (builder.Count == 0 && FacadeCompanion != null)
+            {
+                return FacadeCompanion.GetMethods(name);
             }
 
             return builder.ToImmutable();

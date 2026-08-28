@@ -3308,7 +3308,17 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (!classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
                     {
                         classType.IsFacadeClass = true;
-                        classType.FacadeThisType = FacadeTargets[classType.FullName];
+
+                        // Phase 1-3 facade 合并：基元用类型表登记为 facade 全名（System.Int32 → TypeSymbol.Int32），
+                        // 成员面经 FacadeCompanion 委托到本类（System.Core 缓存实例，进程内共享，赋值幂等）。
+                        var target = FacadeTargets[classType.FullName];
+                        classType.FacadeThisType = target;
+                        if (target is NamedTypeSymbol primitiveTarget)
+                        {
+                            primitiveTarget.FacadeCompanion = classType;
+                            scope.TryDeclareClass(primitiveTarget);
+                            continue;
+                        }
                     }
 
                     scope.TryDeclareClass(classType);
