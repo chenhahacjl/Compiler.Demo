@@ -15,6 +15,7 @@ namespace Cocoa.CodeAnalysis
         private BoundGlobalScope? _globalScope;
         private readonly string _entryPointName;
         private readonly string[] _references;
+        private readonly ImmutableArray<MetadataReference> _metadataReferences;
         private readonly ImmutableArray<CodProgram> _codLibraries;
 
         /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
@@ -29,6 +30,9 @@ namespace Cocoa.CodeAnalysis
             _references = (references ?? Array.Empty<string>())
                 .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
+            _metadataReferences = (references ?? Array.Empty<string>())
+                .Select(r => new MetadataReference(r))
+                .ToImmutableArray();
             _codLibraries = LoadCodLibraries(references);
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
@@ -354,6 +358,9 @@ namespace Cocoa.CodeAnalysis
                 ns.AddFunctionMember(function);
             }
         }
+
+        /// <summary>引用的元数据引用（对齐 Roslyn <c>Compilation.References</c>；含 .cod 库与程序集路径，保持传入顺序）。</summary>
+        public ImmutableArray<MetadataReference> References => _metadataReferences;
 
         private AssemblySymbol? _sourceAssembly;
 

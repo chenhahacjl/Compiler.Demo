@@ -171,6 +171,18 @@ function Main()
         }
 
         [Fact]
+        public void Compilation_References_ExposeMetadataReferences()
+        {
+            var code = @"function Main() {}";
+            var compilation = Compilation.Create(new[] { "System.Core.cod", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse(code));
+
+            var references = compilation.References;
+            Assert.Equal(2, references.Length);
+            Assert.Equal("System.Core.cod", references[0].Display);
+            Assert.Equal("C:\\libs\\Foo.dll", references[1].Display);
+        }
+
+        [Fact]
         public void GetDiagnostics_AggregatesParseAndBinding()
         {
             // 语法错误
