@@ -648,7 +648,13 @@ namespace Cocoa.CodeAnalysis
         /// </summary>
         private static bool IsPureContainerClass(NamedTypeSymbol classType)
         {
-            if (classType.IsInterface || (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot) || classType.Fields.Any(f => !f.IsStatic))
+            if (classType.IsInterface)
+            {
+                // 6e-G7/M0-1a：接口声明放行——仅抽象方法签名（无体），无字段/属性/实现代码，可入 .cod
+                return classType.Fields.Length == 0 && classType.Properties.Length == 0;
+            }
+
+            if ((classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot) || classType.Fields.Any(f => !f.IsStatic))
             {
                 return false;
             }

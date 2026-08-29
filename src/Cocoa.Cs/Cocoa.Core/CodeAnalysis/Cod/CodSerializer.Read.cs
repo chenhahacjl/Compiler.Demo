@@ -252,6 +252,20 @@ namespace Cocoa.CodeAnalysis.Cod
                 throw new InvalidDataException($"Unknown visibility '{visibilityText}' on class '{fullName}'");
             }
 
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（向后兼容：旧版 .cod 无 iface 字段 → 默认非接口、无实现）
+            var isInterface = false;
+            var interfaceRefs = new string[0];
+            if (reader.PeekRaw().StartsWith("iface:", StringComparison.Ordinal))
+            {
+                isInterface = ParseBoolWord(ReadLabeledField(reader, "iface:"));
+                var ifaceCount = ReadCountField(reader, "ifaces:");
+                interfaceRefs = new string[ifaceCount];
+                for (var i = 0; i < ifaceCount; i++)
+                {
+                    interfaceRefs[i] = reader.ExpectString();
+                }
+            }
+
             var methodCount = ReadCountField(reader, "methods:");
             // 鏂规硶鍚嶄粎渚涢槄璇伙紝鏂规硶绗﹀彿鐢卞悇 fn 鏉＄洰鐨?owner 瀛楁鍥炲～
             for (var i = 0; i < methodCount; i++)
@@ -262,6 +276,17 @@ namespace Cocoa.CodeAnalysis.Cod
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
             // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.cod v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
             classType.BaseType = NamedTypeSymbol.SystemObject;
+            // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填
+            if (isInterface)
+            {
+                classType.TypeKind = TypeKind.Interface;
+            }
+
+            foreach (var interfaceRef in interfaceRefs)
+            {
+                classType.AddInterface((NamedTypeSymbol)ResolveTypeRef(interfaceRef, context));
+            }
+
             context.Classes.Add(classType);
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
@@ -281,6 +306,20 @@ namespace Cocoa.CodeAnalysis.Cod
             if (!Enum.TryParse<Visibility>(visibilityText, ignoreCase: true, out var visibility))
             {
                 throw new InvalidDataException($"Unknown visibility '{visibilityText}' on generic class '{fullName}'");
+            }
+
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（开放参数引用须待 tpar 注册后解析，见本方法尾部；旧版 .cod 缺字段则默认）
+            var isInterface = false;
+            var interfaceRefs = new string[0];
+            if (reader.PeekRaw().StartsWith("iface:", StringComparison.Ordinal))
+            {
+                isInterface = ParseBoolWord(ReadLabeledField(reader, "iface:"));
+                var ifaceCount = ReadCountField(reader, "ifaces:");
+                interfaceRefs = new string[ifaceCount];
+                for (var i = 0; i < ifaceCount; i++)
+                {
+                    interfaceRefs[i] = reader.ExpectString();
+                }
             }
 
             var typeParameterCount = ReadCountField(reader, "tparams:");
@@ -366,6 +405,17 @@ namespace Cocoa.CodeAnalysis.Cod
             for (var i = 0; i < methodCount; i++)
             {
                 reader.ExpectString();
+            }
+
+            // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填（tpar 已注册，开放参数引用可解）
+            if (isInterface)
+            {
+                classType.TypeKind = TypeKind.Interface;
+            }
+
+            foreach (var interfaceRef in interfaceRefs)
+            {
+                classType.AddInterface((NamedTypeSymbol)ResolveTypeRef(interfaceRef, context));
             }
 
             context.Classes.Add(classType);

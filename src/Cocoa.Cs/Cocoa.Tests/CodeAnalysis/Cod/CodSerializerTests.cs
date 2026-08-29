@@ -161,6 +161,41 @@ namespace MyLib
         }
 
         [Fact]
+        public void G7_InterfaceDeclaration_RoundTrips_ImplementsList()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace MyLib
+{
+    public interface IMarker
+    {
+    }
+
+    public class Box extends IMarker
+    {
+        public static function Describe(): string
+        {
+            return ""box""
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var text = File.ReadAllText(output);
+            Assert.True(text.Contains("iface:true"), "cod 缺少接口位，实际：\n" + text.Substring(0, Math.Min(600, text.Length)));
+            Assert.Contains("iface:false", text);
+            Assert.Contains("ifaces:1", text);
+
+            var loaded = CodSerializer.Load(output);
+            var shape = loaded.Classes.Single(c => c.FullName == "MyLib.IMarker");
+            Assert.True(shape.IsInterface, "IMarker 应反序列化为接口");
+            var box = loaded.Classes.Single(c => c.FullName == "MyLib.Box");
+            Assert.False(box.IsInterface);
+            var iface = Assert.Single(box.Interfaces);
+            Assert.Equal("MyLib.IMarker", iface.FullName);
+        }
+
+        [Fact]
         public void Cod_Emit_WritesFile()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);

@@ -845,6 +845,14 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("cls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（供消费方 IsInterface 判定与接口成员沿 Interfaces 链解析）
+            w.Field("iface:" + BoolWord(classType.IsInterface));
+            var interfaces = classType.Interfaces;
+            w.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var iface in interfaces)
+            {
+                w.Field(TypeRef(iface));
+            }
             // 搴忓垪鍖栧叏閮ㄩ潤鎬佹柟娉曠鍚嶏紙6e-M18锛氬鍣ㄧ被鍏佽甯︿綋闈欐€佹柟娉曪紝濡?Console.WriteLine/Math.Max锛泂yscall/extern 浜︿负闈欐€侊級銆?
             // 鏂规硶鏈綋鐢卞悇鑷?fn 鏉＄洰鎼哄甫锛坥wner 瀛楁鍥炲～绫诲綊灞烇級锛岃繖閲屽垪 Name[鍙傛暟绫诲瀷] 渚涢槄璇伙紙鏃犲弬鐪佺暐鏂规嫭鍙凤級銆?
             var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
@@ -878,6 +886,14 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("gcls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（开放参数经 TypeRef `!属主.名` 编码，如 `List<T>: IEnumerable<!List.T>`）
+            w.Field("iface:" + BoolWord(classType.IsInterface));
+            var interfaces = classType.Interfaces;
+            w.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var iface in interfaces)
+            {
+                w.Field(TypeRef(iface));
+            }
 
             var typeParameters = classType.TypeParameters;
             w.Field("tparams:" + typeParameters.Length.ToString(CultureInfo.InvariantCulture));
@@ -1499,6 +1515,11 @@ namespace Cocoa.CodeAnalysis.Cod
                 // （fn 的 ret/par 引用 !开放参数，读侧需先经 gcls 注册限定键）；连带注册非开放类型依赖
                 if (classType.IsGenericDefinition)
                 {
+                    foreach (var iface in classType.Interfaces)
+                    {
+                        RegisterType(iface);
+                    }
+
                     Emitters.Add((w, r) => EmitGenericClassSymbol(w, r, classType));
 
                     foreach (var typeParameter in classType.TypeParameters)
@@ -1520,6 +1541,11 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
 
                     return;
+                }
+
+                foreach (var iface in classType.Interfaces)
+                {
+                    RegisterType(iface);
                 }
 
                 Emitters.Add((w, r) => EmitClassSymbol(w, r, classType));
