@@ -653,6 +653,11 @@ namespace Cocoa.CodeAnalysis.Syntax
             // import 块（6e-M17 Step 4）：`import kernel32.dll { static extern ... }` —— 块内成员只允许 extern 函数声明
             if (Current.Kind == SyntaxKind.ImportKeyword)
             {
+                if (!AllowClassImportBlock())
+                {
+                    ReportError(Current.Location, "C# 方言不支持 import 块；请用 `using` 指令 + extern P/Invoke（如 `[DllImport(\"kernel32.dll\")]`）。");
+                }
+
                 return ParseImportBlock();
             }
 
@@ -738,6 +743,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         /// <summary>C# 方言是否允许 Cocoa 式字段 `name: Type`（Cocoa 为 true，C# 为 false）。</summary>
         protected virtual bool AllowCocoaStyleField() => true;
+
+        /// <summary>C# 方言是否允许类内 import 块（Cocoa 为 true，C# 为 false，须用 using + P/Invoke）。</summary>
+        protected virtual bool AllowClassImportBlock() => true;
 
         /// <summary>C# 方言是否允许 `extends` 继承关键字（Cocoa 为 true，C# 为 false，须用冒号 `:`）。</summary>
         protected virtual bool AllowExtendsKeyword() => true;

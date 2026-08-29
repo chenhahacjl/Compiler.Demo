@@ -29,6 +29,8 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override bool AllowExtendsKeyword() => false;
 
+        protected override bool AllowClassImportBlock() => false;
+
         protected override bool AllowCocoaInterfaceKeywords() => false;
 
         /// <summary>6e-M22 C2：`.cs` 无箭头函数类型——回调类型走 Func/Action/Predicate 家族（C3 接入）。</summary>
