@@ -233,3 +233,15 @@ Cocoa.CodeAnalysis
   - **规范 IR 契约校验 `Lowering/CanonicalIr`（DEBUG）**：接入 `Compilation.GetProgram` 消费漏斗，断言 `program.Functions` 各体无高节点；经全量 41704 例验证成立（契约本身还暴露并修正了"误检 GlobalScope.Statements 原始体"的实现偏差——原始体属中间输入，非规范输出）。
   - 验收：全量绿（41704 通过 / 2 skip / 1 环境锁）；插值 29 例全绿。高节点在规范化后即消失，cod/三后端/求值零感知。
 - 待续（按 §6.7.8 修订）：F2-F4 改为"共享绑定服务"（随 A3/B2 binder 分叉落地）；F6 高/规范节点分离。
+
+#### 6.7.10 A3 起点：节点层语言归属三分类 + 拆分路线
+
+**现状证据（代码事实）**：共享节点模型中，**明确互斥的节点 kind 对目前仅 `ForStatement`（CO 次数循环 `for i=0 to n [step k]`）/ `CSStyleForStatement`（C# `for(;;)`）**——`CocoaParser.ParseForStatement`（CocoaParser.cs:90）拒绝 C 风格、`CSharpParser.ParseForStatement`（CSharpParser.cs:89）拒绝次数循环；其余方言差异落在**词法/解析标志层**（CO 专属关键字 function/let/property/constructor/extends/facade/syscall/import/to/step；CocoaParser `AllowCSharpStyle*` 关闭；C# 拒绝 CO 拼写），节点层基本共享。这印证 Y 触发条件（结构分叉）尚未充分成立。
+
+**A3-0 ✅（契约锁定，作为拆分基线）**：`SyntaxLanguageOwnershipTests` 4 例——有效 CO 树不含 `CSStyleForStatement`、有效 C# 树不含 `ForStatement`、C# 拒绝 CO 专属关键字、CO 解析自有形态（extends/property/constructor）合法。
+
+**A3 拆分路线**：
+1. A3-1 显式化 CO 专属 kind 集（`ForStatement` 及后续随 CO 特性新增者），建 `SyntaxKindLanguageOwnership` 归属表。
+2. A3-2 `CocoaParser` 自足：CO 形态一等公民（`ParseRangeForStatement` 等为 CO 原生声明，不再靠"关 C#"反转）。
+3. A3-3 `CocoaBinder` 显式化 + F2-F4 共享绑定服务抽取（binder 分叉时两语言复用）。
+4. A3-4 命名空间拆分：`Cocoa.Core.Cocoa`（L1）程序集就位。
