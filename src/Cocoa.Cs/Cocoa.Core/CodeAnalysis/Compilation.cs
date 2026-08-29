@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
         private readonly bool _linkCodDynamically;
 
-        private Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
+        protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
             Previous = previous;
@@ -63,39 +63,51 @@ namespace Cocoa.CodeAnalysis
 
         public static Compilation Create(params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references: null, syntaxTrees: syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references: null, linkCodDynamically: false, syntaxTrees);
         }
 
         public static Compilation Create(string[] references, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references, syntaxTrees: syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically: false, syntaxTrees);
         }
 
         /// <summary>动态链接变体（阶段 A2）：dotnet 后端消费 `.cod` 时不内联，运行期依赖各库 dll。</summary>
         public static Compilation Create(string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically, syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName, references: null, syntaxTrees: syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName, references: null, linkCodDynamically: false, syntaxTrees);
         }
 
         public static Compilation Create(string entryPointName, string[] references, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName, references, syntaxTrees: syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically: false, syntaxTrees);
         }
 
         /// <summary>动态链接变体（阶段 A2）：带入口名的 dotnet 消费方，`.cod` 库以外部 dll 依赖接入。</summary>
         public static Compilation Create(string entryPointName, string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically, syntaxTrees);
+            return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically, syntaxTrees);
         }
 
         public static Compilation CreateScript(Compilation? previous, params SyntaxTree[] syntaxTrees)
         {
-            return new Compilation(isScript: true, previous, entryPointName: "Main", references: null, syntaxTrees: syntaxTrees);
+            return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: null, linkCodDynamically: false, syntaxTrees);
+        }
+
+        /// <summary>
+        /// 按首棵语法树语言分派子类（Y §6.7 A0）：CO → <see cref="CocoaCompilation"/>，C# → <see cref="CSharpCompilation"/>。
+        /// 空语法树/脚本沿用语言缺省为 Cocoa。行为等价（公开 API 面不变）。
+        /// </summary>
+        private static Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
+        {
+            var isCocoa = syntaxTrees.Length == 0 || syntaxTrees[0].Language == Language.Cocoa;
+            return isCocoa
+                ? new CocoaCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees)
+                : new CSharpCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
         }
 
         public bool IsScript { get; }

@@ -119,6 +119,8 @@ Cocoa.CodeAnalysis
 
 **触发条件（明确记录）**：C# 方言确定长出 CO 树装不下的语法形状时，按 Roslyn 做法上 Y；X 的 `Language` 抽象 + 程序集拆分是 Y 的地基，届时在现有基础上演进，不推倒重来。
 
+> **2026-08-29 决议：启动 Y（完整定稿见 §6.7）**。依据"与 Roslyn 实际一致"：按 Roslyn 官方边界（语言形态每语言独立、语言中性归 Core 共享、IL/PE 模块在 Core），本项目采用「**每语言独立节点层级 + 双 Binder 前端 + 共享规范 IR 作模块层**」形态；**CO 先行、CS 后补**（`Cocoa.Core.Cocoa` / `Cocoa.Core.CSharp` / 共享 `Cocoa.Core` 三舱）。
+
 ### 6.4 路线图（M1–M3）
 - **M1（P0）✅ 已落地**：绿模型自描述——using 别名 `=`（UsingDirectiveSyntax 加 EqualsToken）、delegate 绿往返源序化（含 `.cs`/`.co` 两形态与参数方言序）；`GreenRoot.ToString() == 源码` 全构造成立（提交 `da79ea9`）。
 - **M2（Language 抽象 + 设计 X 程序集拆分）✅ 已落地**：见 §6.5。
@@ -138,3 +140,55 @@ Cocoa.CodeAnalysis
 - **Binder 去方言**：删 `_dialect` 字段与 `LookupBuiltinType` 方言分支（收敛至 `_language.LookupBuiltinType`），`LanguageDialect` 枚举删除；28 处引用全部落位。
 - **注册种子**：`Program.cs`（CLI）与 `Cocoa.Tests`（`[ModuleInitializer] LanguageSeeding`）各自触达 `CSharpLanguage.Instance`，`SyntaxTree.Load(.cs)`/`ParseCs` 经 `Language.GetOrThrow("csharp")` 定型。
 - **验证**：行为等价全量绿（41670 通过 / 2 skip / 仅既知 `e2e-string-oob` 环境锁失败）。
+
+### 6.7 Y 启动决议：每语言独立节点层级 + 双前端（2026-08-29 定稿，Roslyn 双分落地）
+
+> 决议：按"与 Roslyn 实际一致"推进 Y（§6.3 原列为"形状分叉触发后执行"，现决定启动，逐项已确认：共享规范 IR 作模块层 / CO 先行 CS 后补 / 三舱布局 / 旧共享节点集过渡充任 CS 侧 / 首发增量 A0+A1）。
+> Roslyn 官方边界已核实（`src/Compilers` 七舱：CSharp / VisualBasic / Core / Shared / Extension / Server / Test）：**语言形态**（Syntax/Lexer/Parser/Binder/Compilation 子类/高 Bound）每语言独立；**语言中性**（Diagnostic / 符号抽象 / Green 基 / **PE·元数据读写**）归 Core 共享；连"发射"也是各语言各自 ILBuilder，但 PE 打包（PEModule/MetadataWriter）在 Core。
+> 本项目映射：**cod 文本格式 + 规范化 IR = 本项目的"IL/PE 模块层"**——跨语言互操作的必然解（`.cs` 工程必须能引用 Cocoa 编出的 System.Core.cod）。
+
+#### 6.7.1 目标五层
+| 层 | 内容 | 分/合 |
+|---|---|---|
+| L1 语言形态 | Syntax（节点/Kind/Green/Factory/Printer/往返）· 词法 · 解析 · 绑定 · **高 Bound**（语言专属语法糖） | **双分**（Cocoa / CSharp 各一套） |
+| L2 共享规范 IR | 现 Bound 层改造为语言无关规范 IR；两 Bind 前端统一降低到这里 | 单分 |
+| L3 模块 + 发射 | cod 文本格式 + checksum（= IL/PE 类比）+ IL / native / Evaluator 三后端 | 单分 |
+| L4 共享 Core | Diagnostic / 符号基 / Green·SyntaxTree 基 / MetadataReference / 构建 · CLI · SystemLibrary | 单分 |
+| L5 机器层 | IL 汇编器 / PE 写出 / native IR→x64/x86 | 单分 |
+
+#### 6.7.2 程序集三舱（Roslyn Core/CSharp/VisualBasic 对称）
+- `Cocoa.Core`：共享 L4 + L2 规范 IR + L3 模块/三后端 + L5。
+- `Cocoa.Core.Cocoa`（新增）：L1 Cocoa（Cocoa.Syntax / CocoaParser / CocoaBinder / CO 高 Bound）。
+- `Cocoa.Core.CSharp`（既有）：L1 C#（CSharp.Syntax / CSharpParser / CSharpBinder / CS 高 Bound）。
+
+#### 6.7.3 关键不变式与过渡承诺
+- **高 Bound 双分、规范 IR 单分**——跨语言 cod 互操作与三后端共享的锚。
+- A 阶段 `.cs` 走旧共享节点集（**临时充任 CS 侧集**）→ 全程同位绿；B1 换正式 C# 集。
+- CO 新特性缺 IR 形状 → 反向回补 L2（共享层为语言服务）。
+
+#### 6.7.4 分阶段（每 P 全量回归绿为关卡）
+- **Phase A（CO 先行，立即解锁 CO 演进）**：
+  - **A0** 边界冻结 + 双 `Compilation` 子类骨架（`CocoaCompilation`/`CSharpCompilation`，行为等价）。
+  - **A1** 语义标志解耦（首发，见 6.7.5）。
+  - **A2** 高 Bound / 规范 IR 切分（行为等价最大重构，分多次提交）：现实现 = CO 高 Bound；抽共享规范化降低 → 规范 IR；cod 序列化为 IR；三后端/eval 消费 IR。
+  - **A3** CO 显式化：Cocoa 独立 Kind/节点类、CocoaParser 自足（CO 形态一等公民）、现 Binder → `CocoaBinder`。
+  - **A4** CO 特性演进（for-to-step 专属节点等），每特性独立提交。
+- **Phase B（CS 后补，不阻塞 A）**：**B1** C# 节点层 + 自足 C# Parser（`.cs` 换正式 C# 集）→ **B2** C#Binder + 高 Bound（复用规范 IR）→ **B3** CS 特性补全 + CS 侧测试/工具路由。
+- **Phase C（稳定）**：42k 全量 + 跨语言 cod 互操作双向验证。
+
+#### 6.7.5 首发增量 A0 + A1（首个提交）
+- **A0**：本 §6.7 定稿；`CocoaCompilation`/`CSharpCompilation : Compilation` 子类骨架，`Compilation.Create` 按 `syntaxTrees[0].Language` 返回对应子类，公开成员行为不变 → 全量绿。
+- **A1 语义标志解耦（零行为变化）**：
+  - `FunctionSymbol` 新增 `IsLambda` / `IsPropertyAccessor`（复用或新增 `IsConstructor`）。
+  - 替换 8 处 `function.Syntax is XxxSyntax` 类别探测 → 语义标志：`Binder.Expressions.cs:175`、`Binder.cs:661/668/675/694/759`、`IlEmitter.cs:353`、`BoundTreeToIr.cs:186/499/538`、`BoundTreeToIr.Expressions.cs:341`。
+  - ⚠️ **cod 读侧回填**：`CodSerializer.Read.cs`（~1857 符号重建）为 `Declaration==null` 的库符号写回同样标志（否则库函数丢语义判定）；补 CodSerializerTests 往返断言：λ/构造/访问器的 `Is*` 在"语法态"与"cod 形态"一致。
+  - `SemanticModel.cs` 21 处具体语法类型收敛（经共享抽象/标志）。
+- 验收：全量绿；新增 ≥1 断言验证上述往返一致。
+
+#### 6.7.6 规模与风险（诚实声明）
+- 新增量：C# 侧完整 Syntax + 词法 + Parser + Binder + 高 Bound（各估算数千行）+ A2 把共享 Bound/发射管重构为"高-规范 IR"两层 ≈ **2.5-3 万行级、数月级工程**，此后两前端永久并行维护。
+- 最高风险：**A2**（共享 Bound/发射管行为漂移）与 Phase C 的 42k 测试——须"行为等价重构先行"，每提交全量绿兜底。
+- 护栏：`dotnet test -p:UseSharedCompilation=false` 全量（基线 41692 通过 / 2 skip / 1 环境锁）；**A2 前必须 A1 完成**（"类名"先从共享语义层摘除）。
+
+#### 6.7.7 落地记录
+- **A0 ✅**：`Compilation` 构造改 `protected`；`Compilation.Create`/`CreateScript` 收敛至私有 `CreateCompilation`，按 `syntaxTrees[0].Language` 分派 `CocoaCompilation` / `CSharpCompilation`（空树回落 Cocoa）；新增 `CompilationLanguageDispatchTests` 5 例（CO→CocoaCompilation / C#→CSharpCompilation / 空树回落 / Evaluate·GetSemanticModel 在子类可用）。行为等价全量绿（41697 通过 / 2 skip / 1 环境锁 `e2e-string-oob`）。
