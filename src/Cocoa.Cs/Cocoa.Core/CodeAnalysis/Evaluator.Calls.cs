@@ -71,15 +71,16 @@ namespace Cocoa.CodeAnalysis
             }
             finally
             {
-                RunByRefWriteBacks(byRefMarker);
-                _byRefSlotScope = savedSlots;
+                // byref 写回须在弹出被调者帧之后执行，否则 Assign 落进将丢弃的帧（6e-M23 R5 隐性缺陷修复）
+                _locals.Pop();
 
                 if (pushedEnvironment != null)
                 {
                     _closureEnvironments.Pop();
                 }
 
-                _locals.Pop();
+                _byRefSlotScope = savedSlots;
+                RunByRefWriteBacks(byRefMarker);
             }
 
             return result;

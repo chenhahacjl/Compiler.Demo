@@ -222,8 +222,17 @@ namespace Cocoa.CodeAnalysis
                 case BoundBinaryOperatorKind.LogicalOr:
                     return (bool)left || (bool)right;
                 case BoundBinaryOperatorKind.Equals:
+                    // f64/f32 走 IEEE 相等性（NaN != NaN）；其余走装箱值相等
+                    if (binary.Op.LeftType == TypeSymbol.Double)
+                        return (double)left == (double)right;
+                    if (binary.Op.LeftType == TypeSymbol.Float)
+                        return (float)left == (float)right;
                     return Equals(left, right);
                 case BoundBinaryOperatorKind.NotEquals:
+                    if (binary.Op.LeftType == TypeSymbol.Double)
+                        return (double)left != (double)right;
+                    if (binary.Op.LeftType == TypeSymbol.Float)
+                        return (float)left != (float)right;
                     return !Equals(left, right);
 
                 // 6e-M19 M2-c锛氱被绫诲瀷寮曠敤鐩哥瓑锛圕# 瀵归綈锛涘€艰涔変笉鍙楀奖鍝嶏級

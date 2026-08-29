@@ -275,7 +275,7 @@ callee 侧：InitParam 将指针槽照常拷入形参寄存器槽；此后对该
 
 ### 9.1 Int32/Int64.TryParse（纯 Cocoa，零新 syscall）
 
-> **落地记录（R9）**：`System.Core\Int32.co` facade 已实现 ToString/CompareTo/**Parse**（复用 Runtime.ParseInt64 原语 + i32 值域校验）/**TryParse**（i64 累加 + 上界预检防溢出，±边界含 -2147483648）。**边界**：`Array.Resize<T>(ref)` 等「泛型 × byref」stdlib 成员待 G7 泛型 `.cod` 序列化落地后纳入（实测泛型方法进 cod 即加载失败）；Int64.TryParse 同法后续补齐；Double.TryParse 需指数扫描，第二批。
+> **落地记录（R9）**：`System.Core\Int32.co` facade 已实现 ToString/CompareTo/**Parse**（复用 Runtime.ParseInt64 原语 + i32 值域校验）/**TryParse**（i64 累加 + 上界预检防溢出，±边界含 -2147483648）。**边界**：`Array.Resize<T>(ref)` 等「泛型 × byref」stdlib 成员待 G7 泛型 `.cod` 序列化落地后纳入（实测泛型方法进 cod 即加载失败）。**批3（2026-08-29）**：Int64/UInt64/Double 补齐 TryParse/Parse/IsNaN·IsInfinity·IsFinite（M0-4 批3，ParseMembersTests ×三后端）；同批修复 Evaluator byref 回写帧序与 f64/f32 IEEE 相等性两处隐性缺陷，ByRef 矩阵补 Evaluator 腿（详见自举缺口分析 §6）。
 ```cocoa
 namespace System
 {
@@ -308,7 +308,7 @@ namespace System
 ```
 
 - 十进制 v1；u64 累加 + 上界预检实现防溢出（依赖 unchecked 回绕测试锁定，见自举缺口分析 §5.2）；
-- `Int64.TryParse` 同法（上界 2^63）；`Double.TryParse` 第二批（小数/指数扫描，可先抛异常版 ParseDouble 过渡）；
+- `Int64.TryParse` 同法（上界 2^63）；`Double.TryParse` 第二批（小数/指数扫描）——均已落地（M0-4 批3）；
 - `Parse` 抛异常版 = 找不到数字即 throw，用户 try/catch（异常体系 §21 已落地）。
 
 ### 9.2 Array.Resize(ref arr, n)（ref 第一真实用户）

@@ -89,6 +89,7 @@ function Main(): void
 
         public static IEnumerable<object[]> GetBackends()
         {
+            yield return new object[] { "evaluator" };
             yield return new object[] { "native-x64" };
             yield return new object[] { "native-x86" };
             yield return new object[] { "il" };
@@ -99,6 +100,28 @@ function Main(): void
         public void ByRef_Matrix_ThreeBackends(string backend)
         {
             const string expected = "6\n99\n3\n8\n0\n12345\nrej\n";
+
+            if (backend == "evaluator")
+            {
+                var original = System.Console.Out;
+                try
+                {
+                    using var writer = new System.IO.StringWriter();
+                    System.Console.SetOut(writer);
+
+                    var tree = SyntaxTree.Parse(MatrixProgram);
+                    var compilation = Compilation.Create(tree);
+                    var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+                    Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                    Assert.Equal(expected, writer.ToString().Replace("\r\n", "\n"));
+                }
+                finally
+                {
+                    System.Console.SetOut(original);
+                }
+
+                return;
+            }
 
             if (backend == "il")
             {

@@ -427,11 +427,6 @@ namespace Cocoa.CodeAnalysis
             }
             finally
             {
-                if (byRefMarker >= 0)
-                {
-                    RunByRefWriteBacks(byRefMarker);
-                }
-
                 if (thisReceiver != null)
                 {
                     _thisStack.Pop();
@@ -442,7 +437,13 @@ namespace Cocoa.CodeAnalysis
                     _closureEnvironments.Pop();
                 }
 
+                // byref 写回须在弹出本函数帧之后执行，否则 Assign 落进将丢弃的帧（6e-M23 R5 隐性缺陷修复）
                 _locals.Pop();
+
+                if (byRefMarker >= 0)
+                {
+                    RunByRefWriteBacks(byRefMarker);
+                }
             }
         }
 
