@@ -5,6 +5,8 @@ VisualStudioVersion = 18.5.11709.299
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core", "Cocoa.Core\Cocoa.Core.csproj", "{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core.Cocoa", "Cocoa.Core.Cocoa\Cocoa.Core.Cocoa.csproj", "{63D5569F-94EF-4A20-BC78-E35A54DB4473}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core.CSharp", "Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj", "{2803E3BB-717C-45E5-A27A-FE51784CD5D3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa.CoCompiler", "Cocoa.CoCompiler\Cocoa.CoCompiler.csproj", "{FE64E33C-3823-4795-92D8-F25BA787324D}"
@@ -32,6 +34,10 @@ Global
 		{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{48FB2F14-0B1B-4B62-90C0-1132087FDE0D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{63D5569F-94EF-4A20-BC78-E35A54DB4473}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63D5569F-94EF-4A20-BC78-E35A54DB4473}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63D5569F-94EF-4A20-BC78-E35A54DB4473}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63D5569F-94EF-4A20-BC78-E35A54DB4473}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2803E3BB-717C-45E5-A27A-FE51784CD5D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2803E3BB-717C-45E5-A27A-FE51784CD5D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2803E3BB-717C-45E5-A27A-FE51784CD5D3}.Release|Any CPU.ActiveCfg = Release|Any CPU

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
+    <ProjectReference Include="..\Cocoa.Core.Cocoa\Cocoa.Core.Cocoa.csproj" />
     <ProjectReference Include="..\Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj" />
   </ItemGroup>
 

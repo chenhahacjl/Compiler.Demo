@@ -54,5 +54,24 @@ namespace Cocoa.Tests.CodeAnalysis
             var result = compilation.Evaluate(new System.Collections.Generic.Dictionary<VariableSymbol, object>());
             Assert.True(!result.Diagnostics.HasErrors());
         }
+
+        [Fact]
+        public void CocoaLanguage_LivesInCocoaCoreCocoaAssembly()
+        {
+            // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.Core.Cocoa；核心经 Language.Cocoa 反射装载解析
+            var cocoa = Language.Cocoa;
+            Assert.Equal("Cocoa.Core.Cocoa", cocoa.GetType().Assembly.GetName().Name);
+            Assert.NotEqual(typeof(SyntaxTree).Assembly.GetName().Name, cocoa.GetType().Assembly.GetName().Name);
+        }
+
+        [Fact]
+        public void LanguageCocoa_Resolves_AndParses()
+        {
+            // Y-A3-4 接缝：Language.Cocoa 解析到新程序集且默认 CO 解析路径可用
+            var cocoa = Language.Cocoa;
+            var tree = SyntaxTree.Parse("function Main(): i32 { return 0 }");
+            Assert.NotNull(tree.Root);
+            Assert.Same(cocoa, tree.Language);
+        }
     }
 }

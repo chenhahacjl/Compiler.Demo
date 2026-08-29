@@ -6,8 +6,8 @@ namespace Cocoa.CodeAnalysis
 {
     /// <summary>
     /// C# 方言语言（M2 设计 X）：位于独立程序集 Cocoa.Core.CSharp，核心零改动即可挂载。
-    /// 内建类型原名映射（int/long/short/.../float/double；与 <see cref="CocoaLanguage"/> 的简写表
-    /// 解耦为两套词汇，同一 TypeSymbol）。实例经 <see cref="Language"/> 注册表暴露（"csharp"），
+    /// 内建类型原名映射（int/long/short/.../float/double；与 CO 的简写表（Cocoa.Core.Cocoa 的
+    /// CocoaLanguage）解耦为两套词汇，同一 TypeSymbol）。实例经 <see cref="Language"/> 注册表暴露（"csharp"），
     /// 由 <see cref="Syntax.SyntaxTree.Load"/>（.cs 扩展名）/ <c>ParseCs</c> 消费。
     /// </summary>
     public sealed class CSharpLanguage : Language

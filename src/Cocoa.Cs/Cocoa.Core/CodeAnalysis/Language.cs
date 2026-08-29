@@ -9,8 +9,9 @@ namespace Cocoa.CodeAnalysis
     /// 语言（M2 设计 X）：对标 Roslyn 语言前端抽象。每门语言一个实例，承载
     /// 名字 / 内建类型名词汇 / 解析器工厂 / 参数拼写策略；
     /// 语言专属实现以 <see cref="Language"/> 子类落入各自程序集。
-    /// CO 作为宿主默认语言内置于核心（<see cref="CocoaLanguage"/>）；
-    /// C# 方言全套位于独立程序集 Cocoa.Core.CSharp（<see cref="Cocoa.CodeAnalysis.CSharpLanguage"/>）。
+    /// C# 方言全套位于独立程序集 Cocoa.Core.CSharp（<see cref="Cocoa.CodeAnalysis.CSharpLanguage"/>）；
+    /// CO 宿主语言 CocoaLanguage（Y-A3-4）迁入独立程序集 Cocoa.Core.Cocoa，
+    /// 核心经 <see cref="Cocoa"/> 反射装载并触达之（默认解析路径依赖 Cocoa.Core.Cocoa 在应用目录）。
     /// 新语言 = 新增 Language 子类（含解析器），核心零改动（设计 X §6.3）。
     /// </summary>
     public abstract class Language
@@ -26,8 +27,23 @@ namespace Cocoa.CodeAnalysis
 
         public string Name { get; }
 
-        /// <summary>Cocoa 宿主语言（默认，`.co`；核心内置，供 <see cref="Syntax.SyntaxTree.Parse(string)"/> 等默认路径）。</summary>
-        public static Language Cocoa => _cocoa ??= CocoaLanguage.Instance;
+        /// <summary>Cocoa 宿主语言（默认，`.co`）：实例位于 Cocoa.Core.Cocoa，此处经注册表 / 反射装载解析。</summary>
+        public static Language Cocoa => _cocoa ??= CreateCocoa();
+
+        private static Language CreateCocoa()
+        {
+            if (_registered.TryGetValue("cocoa", out var language))
+            {
+                return language;
+            }
+
+            // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.Core.Cocoa；反射装载并触达 Instance（静态初始化经 base("cocoa") 注册）。
+            var assembly = System.Reflection.Assembly.Load("Cocoa.Core.Cocoa");
+            var instance = assembly.GetType("Cocoa.CodeAnalysis.CocoaLanguage")!
+                .GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
+                .GetValue(null);
+            return (Language)instance!;
+        }
 
         public static bool TryGet(string name, out Language language)
         {
@@ -66,43 +82,5 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>按本语言创建解析器（预词法 token，插值洞子解析用）。</summary>
         internal abstract ParserCore CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens);
-    }
-
-    /// <summary>
-    /// Cocoa 宿主语言（默认，`.co`）：内建类型简写 i8/u8/i16/u16/i32/u32/i64/u64/f32/f64
-    /// （+ i128/u128/f128 占位；C# 原名映射见 <see cref="Cocoa.CodeAnalysis.CSharpLanguage"/>）。
-    /// 保留于核心 = 核心即 CO 工具链本体（承载默认 Language 语义，避免默认解析依赖外部程序集注册空窗）。
-    /// </summary>
-    public sealed class CocoaLanguage : Language
-    {
-        public static readonly CocoaLanguage Instance = new CocoaLanguage();
-
-        private CocoaLanguage()
-            : base("cocoa")
-        {
-        }
-
-        protected override TypeSymbol? LookupSpecificBuiltinType(string name) => name switch
-        {
-            "i8" => TypeSymbol.Int8,
-            "u8" => TypeSymbol.UInt8,
-            "i16" => TypeSymbol.Int16,
-            "u16" => TypeSymbol.UInt16,
-            "i32" => TypeSymbol.Int32,
-            "u32" => TypeSymbol.UInt32,
-            "i64" => TypeSymbol.Int64,
-            "u64" => TypeSymbol.UInt64,
-            "f32" => TypeSymbol.Float,
-            "f64" => TypeSymbol.Double,
-            "i128" => TypeSymbol.Int128,
-            "u128" => TypeSymbol.UInt128,
-            "f128" => TypeSymbol.Float128,
-            _ => null,
-        };
-
-        internal override ParserCore CreateParser(SyntaxTree syntaxTree) => new CocoaParser(syntaxTree);
-
-        internal override ParserCore CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
-            => new CocoaParser(syntaxTree, tokens);
     }
 }
