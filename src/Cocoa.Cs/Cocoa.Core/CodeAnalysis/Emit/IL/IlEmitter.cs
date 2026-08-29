@@ -130,7 +130,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             // 依赖序无法仅按基类链排序——壳先行入表，Extends/字段随后填充）
             foreach (var classType in classes)
             {
-                var typeDef = new IlTypeDef(classType.Name, classType.Namespace, null, isPublic: _publishPublicSurface || classType.Visibility == Visibility.Public, baseTypeDef: null)
+                var typeDef = new IlTypeDef(classType.Name, classType.Namespace, null, isPublic: _publishPublicSurface || classType.Visibility == Visibility.Public || IsClosureEnvironmentClass(classType), baseTypeDef: null)
                 {
                     IsAbstract = classType.IsAbstract,
                     IsSealed = classType.IsSealed,
@@ -341,7 +341,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
 
             var method = new IlMethodDef(name, returnType, parameterTypes, null, function.IsExtern ? function.DllName : null, function.EntryPoint, callingConvention, isStatic: !isInstance, charSet: function.CharSet ?? CharSet.Unicode)
             {
-                Visibility = _publishPublicSurface ? Visibility.Public : function.Visibility,
+                Visibility = _publishPublicSurface || (function.IsLambda && function.EnvironmentClass != null) ? Visibility.Public : function.Visibility,
                 IsVirtual = function.IsVirtual || function.IsOverride || implementsInterfaceMember,
                 IsAbstract = function.IsAbstract,
                 IsSealed = function.IsSealed,

@@ -198,4 +198,5 @@ Cocoa.CodeAnalysis
   - `SemanticFunctionFlagTests` 4 例：访问器 `IsPropertyAccessor` 直接断言（get_X/set_X）、普通函数负断言、类型化无捕获 lambda IL 往返、**捕获型 lambda native x64 往返**（env-first 路径，真锁 `IsLambda`）。
   - **cod 读侧回填暂缓**：cod 当前拒绝 lambda 体（泛型设计 §12 边界"lambda/函数值取数表达式体已拒"），`IsLambda` 仅走源码路径；待 lambda 体入 cod（A2/6b 函值节点承载）时再持久化。
   - **测试暴露的既有缺口（非 A1 引入，列为后续）**：IL 路径**捕获型 lambda 无 e2e 覆盖且当前运行 NRE**（`let f = () => n+2; f()` 捕获环境），native 捕获路径正常（本步已锁）——待 IL emitter 捕获环境接线专项跟进。
+  - **IL 闭包可见性修复 ✅（跟进小提交）**：合成闭包环境类（`__Env_*`，符号 Private）被发射为 private 顶层类、lambda 方法为 private ——CLR 跨类型建委托被拒（`MethodAccessException`）。已强制合成闭包物 public 发射（`IlEmitter` TypeDef isPublic + 方法 Visibility），**参数捕获型 lambda 的 IL 端到端解通**（新增 `CapturingLambda_Parameter_RoundTrips_Il` 锁定）。**残余**：局部捕获（`var n=40` 由 lambda 捕获）的 IL 仍 NRE——经 dump 证实 Make/Main 的 IL 与局部签名均正确，疑点收窄到元数据字段/方法令牌解析层，独立跟进。
   - 验收：行为等价全量绿（41701 通过 / 2 skip / 1 环境锁 `e2e-string-oob`）。
