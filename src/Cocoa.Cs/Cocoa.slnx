@@ -4,7 +4,7 @@
   </Folder>
   <Project Path="Cocoa.Core/Cocoa.Core.csproj" />
   <Project Path="Cocoa.Core.CSharp/Cocoa.Core.CSharp.csproj" />
-  <Project Path="Cocoa.CocCompiler/Cocoa.CocCompiler.csproj" />
+  <Project Path="Cocoa.CoCompiler/Cocoa.CoCompiler.csproj" />
   <Project Path="Cocoa.CsCompiler/Cocoa.CsCompiler.csproj" />
   <Project Path="Cocoa.Compiler/Cocoa.Compiler.csproj" />
   <Project Path="Cocoa.Generators/Cocoa.Generators.csproj" />

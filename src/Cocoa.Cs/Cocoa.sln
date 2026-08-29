@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core", "Cocoa.Core\Co
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cocoa.Core.CSharp", "Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj", "{2803E3BB-717C-45E5-A27A-FE51784CD5D3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa.CocCompiler", "Cocoa.CocCompiler\Cocoa.CocCompiler.csproj", "{FE64E33C-3823-4795-92D8-F25BA787324D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa.CoCompiler", "Cocoa.CoCompiler\Cocoa.CoCompiler.csproj", "{FE64E33C-3823-4795-92D8-F25BA787324D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cocoa.CsCompiler", "Cocoa.CsCompiler\Cocoa.CsCompiler.csproj", "{72DAE114-D653-43B2-A81D-75FF7BE4B37F}"
 EndProject

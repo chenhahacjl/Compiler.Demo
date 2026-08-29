@@ -98,7 +98,7 @@ Cocoa.CodeAnalysis
 |---|---|
 | 驱动 / 平台 CLI（对标 dotnet） | `cocoa` |
 | 语言 | Cocoa（`coc`）/ C# 方言（`csc`） |
-| 编译器入口（托管 DLL + apphost exe，对标 csc.dll） | Cocoa.CocCompiler / Cocoa.CsCompiler |
+| 编译器入口（托管 DLL + apphost exe，对标 csc.dll） | Cocoa.CoCompiler / Cocoa.CsCompiler |
 | 项目文件 | `.cocproj` / `.cscproj` |
 | 解决方案 | `.cosln` |
 | 共享核心 | `Cocoa.CodeAnalysis` |
@@ -126,7 +126,7 @@ Cocoa.CodeAnalysis
 
 ### 6.6 M3 落地记录（coc/csc 薄入口 + 项目扩展名迁移）
 - **扩展名迁移**：`.coproj` → **`.cocproj`**（Cocoa 项目）；C# 方言项目 = **`.cscproj`**；解决方案 `.cosln` 不变。CLI 全链路（build/clean/list/run/add·remove reference/CliHelper 默认项目解析）接受 `.cocproj`/`.cscproj`；`cocoa new csharp` 产出 `{name}.cscproj`，其余模板 `.cocproj`；18 个样例 `.coproj` git rename → `.cocproj`，`samples.cosln`/样例 README/全库 `.md`/README 引用同步（核心 `ProjectFileParser` 不校验扩展名，解析零改动）。
-- **coc / csc 薄入口**：新项目 `Cocoa.CocCompiler`（AssemblyName `coc`）/ `Cocoa.CsCompiler`（AssemblyName `csc`）——强制指定 `Language.Cocoa` / `Language.GetOrThrow("csharp")` 解析全部源文件，复用 `Cocoa.Compiler.Program.CompileForLanguage(args, language)`（原 `Compile` 抽分母 `CompileImpl(args, createTree)`）；编译核心仍在共享 `Cocoa.CodeAnalysis`，三后端零改动。
+- **coc / csc 薄入口**：新项目 `Cocoa.CoCompiler`（AssemblyName `coc`）/ `Cocoa.CsCompiler`（AssemblyName `csc`）——强制指定 `Language.Cocoa` / `Language.GetOrThrow("csharp")` 解析全部源文件，复用 `Cocoa.Compiler.Program.CompileForLanguage(args, language)`（原 `Compile` 抽分母 `CompileImpl(args, createTree)`）；编译核心仍在共享 `Cocoa.CodeAnalysis`，三后端零改动。
 - **分派语义**：`cocoa build` 按源文件扩展名经 `SyntaxTree.Load` 分派语言（`.cs`→C# / `.co`→Cocoa），**进程内**调用共享核心（对齐 MSBuild 进程内加载 csc.dll），不 spawn 子进程；`coc`/`csc` 为独立薄编译器 exe（DLL + apphost）供直接调用与未来桥/IDE 使用。
 - **验证**：`coc` 编译运行 `.co`、`csc` 编译运行 `.cs` 双冒烟通过；`.cscproj`（new csharp → build → list → run）端到端通过；SampleSmokeTests 3/3 全绿。
 

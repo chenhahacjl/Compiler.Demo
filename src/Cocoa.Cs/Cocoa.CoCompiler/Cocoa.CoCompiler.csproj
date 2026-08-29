@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <AssemblyName>coc</AssemblyName>
-    <RootNamespace>Cocoa.CocCompiler</RootNamespace>
+    <RootNamespace>Cocoa.CoCompiler</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

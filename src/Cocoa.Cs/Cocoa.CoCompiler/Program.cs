@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis;
 
-namespace Cocoa.CocCompiler
+namespace Cocoa.CoCompiler
 {
     /// <summary>
     /// `coc` — Cocoa 语言薄编译器入口（M3，对标 Roslyn csc 的独立编译器 exe，产出 DLL + apphost）。
