@@ -57,6 +57,24 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
+        public void CapturingLambda_Local_RoundTrips_Il()
+        {
+            var source = "using System\n\nfunction Make(): () -> i32\n{\n    var n = 40\n    let f = () => n + 2\n    return f\n}\n\nfunction Main(): i32\n{\n    let g = Make()\n    System.Console.WriteLine(g())\n    return 0\n}";
+            using var run = EmitAndRun(source, IlTarget.Parse("net9.0"), "lambda", il: true);
+            Assert.Equal(0, run.ExitCode);
+            Assert.Equal("42\n", run.Stdout);
+        }
+
+        [Fact]
+        public void CapturingLambda_LocalReassigned_RoundTrips_Il()
+        {
+            var source = "using System\n\nfunction Make(): () -> i32\n{\n    var n = 40\n    n = 50\n    let f = () => n + 2\n    return f\n}\n\nfunction Main(): i32\n{\n    let g = Make()\n    System.Console.WriteLine(g())\n    return 0\n}";
+            using var run = EmitAndRun(source, IlTarget.Parse("net9.0"), "lambda", il: true);
+            Assert.Equal(0, run.ExitCode);
+            Assert.Equal("52\n", run.Stdout);
+        }
+
+        [Fact]
         public void CapturingLambda_Parameter_RoundTrips_Il()
         {
             var source = "using System\n\nfunction Make(n: i32): () -> i32\n{\n    let f = () => n + 2\n    return f\n}\n\nfunction Main(): i32\n{\n    let g = Make(40)\n    System.Console.WriteLine(g())\n    return 0\n}";

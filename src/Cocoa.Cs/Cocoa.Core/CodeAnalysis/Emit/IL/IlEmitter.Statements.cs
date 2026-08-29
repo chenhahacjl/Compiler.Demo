@@ -73,15 +73,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
-            EmitExpression(il, node.Initializer);
-
-            // 6e-M22 C5-c：捕获变量声明 → 初始化值写入环境字段
+            // 6e-M22 C5-c：捕获变量声明 → 初始化值写入环境字段（目标先入栈，对齐 stfld [obj, value] 语义；
+            // 原实现"值在目标之前"→ 栈为 [value, obj]，CLR 误把 env 当值、int 当对象 → NRE）
             if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)
             {
                 il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex.Value);
+                EmitExpression(il, node.Initializer);
                 il.Emit(IlOpCodeTable.Get("Stfld"), _closureFieldDefs![node.Variable.Name]);
                 return;
             }
+
+            EmitExpression(il, node.Initializer);
 
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_locals[node.Variable]);
         }
@@ -688,11 +690,17 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 return;
             }
 
-            // 6e-M22 C5-c：捕获变量写环境字段（值同时在栈顶作为表达式结果）
+            // 6e-M22 C5-c：捕获变量写环境字段（目标先入栈 + 值 = [env, v]，与 stfld 语义一致；
+            // 用临时局部保表达式结果——原实现缺值入栈致 [env] 欠栈 InvalidProgram/NRE）
             if (node.Variable.IsCaptured && _closureEnvLocalIndex.HasValue)
             {
+                var temporaryLocal = AllocateTemporaryLocal(node);
+                EmitExpression(il, node.Expression);
+                il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
                 il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex.Value);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
                 il.Emit(IlOpCodeTable.Get("Stfld"), _closureFieldDefs![node.Variable.Name]);
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
                 return;
             }
 
