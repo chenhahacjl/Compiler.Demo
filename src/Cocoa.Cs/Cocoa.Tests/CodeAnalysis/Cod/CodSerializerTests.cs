@@ -196,6 +196,43 @@ namespace MyLib
         }
 
         [Fact]
+        public void G7_FunctionType_RoundTrips_FntyRef()
+        {
+            var dir = NewDir();
+            var source = @"
+namespace MyLib
+{
+    function Wrap(f: (i32) -> i32, n: i32): i32
+    {
+        return n
+    }
+
+    function HighOrder(g: ((i32) -> i32) -> i32): i32
+    {
+        return 0
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var text = File.ReadAllText(output);
+            Assert.True(text.Contains("fnty{"), "cod 缺少 fnty 节点，实际：\n" + text.Substring(0, Math.Min(600, text.Length)));
+
+            var loaded = CodSerializer.Load(output);
+            var wrap = loaded.Functions.Single(f => f.Name == "Wrap");
+            var fType = Assert.IsType<FunctionTypeSymbol>(wrap.Parameters[0].Type);
+            Assert.Single(fType.ParameterTypes);
+            Assert.Same(TypeSymbol.Int32, fType.ParameterTypes[0]);
+            Assert.Same(TypeSymbol.Int32, fType.ReturnType);
+
+            var high = loaded.Functions.Single(f => f.Name == "HighOrder");
+            var hType = Assert.IsType<FunctionTypeSymbol>(high.Parameters[0].Type);
+            Assert.Same(TypeSymbol.Int32, hType.ReturnType);
+            var inner = Assert.IsType<FunctionTypeSymbol>(Assert.Single(hType.ParameterTypes));
+            Assert.Same(TypeSymbol.Int32, inner.ParameterTypes[0]);
+            Assert.Same(TypeSymbol.Int32, inner.ReturnType);
+        }
+
+        [Fact]
         public void Cod_Emit_WritesFile()
         {
             var output = EmitLibrary(NewDir(), LibrarySource);

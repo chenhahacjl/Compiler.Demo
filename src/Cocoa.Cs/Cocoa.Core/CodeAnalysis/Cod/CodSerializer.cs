@@ -1119,6 +1119,28 @@ namespace Cocoa.CodeAnalysis.Cod
                 return classType.FullName;
             }
 
+            // 6e-M22/M0-1b：函数类型 `fnty{参数,;返回}`（递归 TypeRef；参数逗号分隔、分号接返回、{} 嵌套——
+            // .cod 词法仅以空白与 () 切分，故嵌套用 {} 避开结构括号）
+            if (type is FunctionTypeSymbol functionType)
+            {
+                var builder = new System.Text.StringBuilder();
+                builder.Append("fnty{");
+                for (var i = 0; i < functionType.ParameterTypes.Length; i++)
+                {
+                    if (i > 0)
+                    {
+                        builder.Append(',');
+                    }
+
+                    builder.Append(TypeRef(functionType.ParameterTypes[i]));
+                }
+
+                builder.Append(';');
+                builder.Append(TypeRef(functionType.ReturnType));
+                builder.Append('}');
+                return builder.ToString();
+            }
+
             return type.Name;
         }
 

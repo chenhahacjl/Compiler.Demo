@@ -676,6 +676,12 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static TypeSymbol ResolveTypeRef(string reference, ReadContext context)
         {
+            // 6e-M22/M0-1b：函数类型 `fnty{...}`（递归解析，{} 内参数/返回可能再含 fnty）
+            if (reference.StartsWith("fnty{", StringComparison.Ordinal))
+            {
+                return ParseFunctionTypeRef(reference, context);
+            }
+
             var baseName = reference;
             var dims = 0;
             while (baseName.EndsWith("[]", StringComparison.Ordinal))
@@ -691,6 +697,75 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             return core;
+        }
+
+        /// <summary>6e-M22/M0-1b：解析 `fnty{参数,;返回}`（参数/返回递归 ResolveTypeRef，{} 深度感知）。</summary>
+        private static TypeSymbol ParseFunctionTypeRef(string reference, ReadContext context)
+        {
+            var position = "fnty{".Length;
+            var parameterTypes = ImmutableArray.CreateBuilder<TypeSymbol>();
+
+            while (true)
+            {
+                var (part, next) = ReadUntilTopLevel(reference, position, ',', ';');
+                parameterTypes.Add(ResolveTypeRef(part, context));
+                position = next;
+
+                if (position >= reference.Length || (reference[position] != ',' && reference[position] != ';'))
+                {
+                    throw new InvalidDataException($"Malformed function type ref '{reference}'");
+                }
+
+                if (reference[position] == ';')
+                {
+                    position++;
+                    break;
+                }
+
+                position++; // 跳过 ','
+            }
+
+            var (returnPart, end) = ReadUntilTopLevel(reference, position, '}', '}');
+            if (end >= reference.Length || reference[end] != '}')
+            {
+                throw new InvalidDataException($"Malformed function type ref '{reference}'");
+            }
+
+            var returnType = ResolveTypeRef(returnPart, context);
+            return FunctionTypeSymbol.Get(parameterTypes.ToImmutable(), returnType);
+        }
+
+        /// <summary>从 position 读到深度 0 处 stop1/stop2 之一（或外层 `}`），返回 (子串, 停止位置)。</summary>
+        private static (string Part, int Next) ReadUntilTopLevel(string text, int position, char stop1, char stop2)
+        {
+            var start = position;
+            var depth = 0;
+
+            while (position < text.Length)
+            {
+                var c = text[position];
+                if (c == '{')
+                {
+                    depth++;
+                }
+                else if (c == '}')
+                {
+                    if (depth == 0)
+                    {
+                        break;
+                    }
+
+                    depth--;
+                }
+                else if (depth == 0 && (c == stop1 || c == stop2))
+                {
+                    break;
+                }
+
+                position++;
+            }
+
+            return (text.Substring(start, position - start), position);
         }
 
         private static TypeSymbol ResolveNamedType(string name, ReadContext context)
