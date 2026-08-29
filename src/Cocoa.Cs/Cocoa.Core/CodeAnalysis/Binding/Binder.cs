@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定器
     /// </summary>
-    internal sealed partial class Binder
+    internal partial class Binder
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;
@@ -689,42 +689,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 body = (BoundBlockStatement)binder.BindStatement(bodySyntax);
             }
 
-            // 构造函数链：`base(...)` / `this(...)` → 函数体开头
-            var prefixStatements = ImmutableArray<BoundStatement>.Empty;
-            if (function.Syntax is ConstructorDeclarationSyntax chainCtor && chainCtor.InitializerKeyword != null)
-            {
-                var chain = binder.BindConstructorChain(chainCtor, function.ContainingClass!);
-                if (chain != null)
-                {
-                    prefixStatements = ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(chainCtor, chain));
-                }
-            }
-            // 隐式 base()：实例构造无显式链（含隐式默认构造），且基类有 0 参构造
-            else if (function.IsConstructor && !function.IsStatic &&
-                     function.ContainingClass != null && function.ContainingClass.BaseType != null)
-            {
-                var baseCtor = function.ContainingClass.BaseType.Methods.FirstOrDefault(m => m.IsConstructor && !m.IsStatic && m.Parameters.Length == 0);
-                if (baseCtor != null)
-                {
-                    var chain = new BoundConstructorChainExpression(function.Syntax ?? function.Declaration!, ConstructorInitializerKind.Base, baseCtor, ImmutableArray<BoundExpression>.Empty);
-                    prefixStatements = ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(function.Syntax ?? function.Declaration!, chain));
-                }
-            }
-
-            // 字段初始化器：实例字段 → 每个实例构造函数（构造链之后）；静态字段 → .cctor（body 即初始化语句）
-            if (function.IsConstructor && function.ContainingClass != null)
-            {
-                var fieldInits = BindFieldInitializerStatements(binder, function.ContainingClass, function.IsStatic);
-                if (fieldInits.Length > 0)
-                {
-                    prefixStatements = prefixStatements.AddRange(fieldInits);
-                }
-            }
-
-            if (!prefixStatements.IsEmpty)
-            {
-                body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, prefixStatements.AddRange(body.Statements));
-            }
+            // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
+            body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
 
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
                 ? (function.Declaration != null ? function.Declaration.Identifier.Location : bodyLocation.Location)
@@ -768,7 +734,6 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             BoundBlockStatement body;
-            var prefixStatements = ImmutableArray<BoundStatement>.Empty;
 
             if (function.Syntax is PropertyAccessorSyntax accessorSyntax)
             {
@@ -787,6 +752,27 @@ namespace Cocoa.CodeAnalysis.Binding
                 body = (BoundBlockStatement)binder.BindStatement(bodySyntax);
             }
 
+            // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
+            body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
+
+            var returnCheckLocation = function.ReturnType != TypeSymbol.Void
+                ? (TextLocation?)bodyLocation.Location
+                : null;
+            var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);
+
+            return (loweredBody, binder.Diagnostics.ToImmutableArray());
+        }
+
+        /// <summary>
+        /// F2 共享绑定服务（Y-A3-3）：构造前缀——显式构造链 `base(...)`/`this(...)` + 字段初始化器，
+        /// 依序置于函数体开头。此算法是绑定期语义决策（需作用域/类型上下文），在两方言 binder 分叉
+        /// （CocoaBinder/CSharpBinder）时复用，不随方言复制。实例字段初始化器 → 每个实例构造函数；
+        /// 静态字段初始化器 → .cctor（body 即初始化语句）。
+        /// </summary>
+        internal static BoundBlockStatement BuildConstructorPrefix(Binder binder, FunctionSymbol function, SyntaxNode wrapSyntax, BoundBlockStatement body)
+        {
+            var prefixStatements = ImmutableArray<BoundStatement>.Empty;
+
             // 构造链：`base(...)` / `this(...)` → 函数体开头
             if (function.Syntax is ConstructorDeclarationSyntax chainCtor && chainCtor.InitializerKeyword != null)
             {
@@ -796,6 +782,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     prefixStatements = ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(chainCtor, chain));
                 }
             }
+            // 隐式 base()：实例构造无显式链（含隐式默认构造），且基类有 0 参构造
             else if (function.IsConstructor && !function.IsStatic &&
                      function.ContainingClass != null && function.ContainingClass.BaseType != null)
             {
@@ -807,7 +794,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
-            // 字段初始化器：实例字段 → 每个实例构造函数；静态字段 → .cctor
+            // 字段初始化器：实例字段 → 每个实例构造函数（构造链之后）；静态字段 → .cctor（body 即初始化语句）
             if (function.IsConstructor && function.ContainingClass != null)
             {
                 var fieldInits = BindFieldInitializerStatements(binder, function.ContainingClass, function.IsStatic);
@@ -819,15 +806,10 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (!prefixStatements.IsEmpty)
             {
-                body = new BoundBlockStatement(bodySyntax ?? function.Syntax!, prefixStatements.AddRange(body.Statements));
+                return new BoundBlockStatement(wrapSyntax, prefixStatements.AddRange(body.Statements));
             }
 
-            var returnCheckLocation = function.ReturnType != TypeSymbol.Void
-                ? (TextLocation?)bodyLocation.Location
-                : null;
-            var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);
-
-            return (loweredBody, binder.Diagnostics.ToImmutableArray());
+            return body;
         }
 
     }

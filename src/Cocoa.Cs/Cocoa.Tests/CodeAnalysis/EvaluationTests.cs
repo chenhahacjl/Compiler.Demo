@@ -2301,6 +2301,60 @@ function Main(): i32
         }
 
         [Fact]
+        public void Evaluator_Oop_F2SharedService_Generic_Chain_FieldInits()
+        {
+            // Y-A3-3 F2 共享绑定服务回归（BuildConstructorPrefix）：显式 base(...) 链 + 实例字段初始化器
+            // + 静态字段初始化器，经泛型基类触发单态化路径（普通/单态化两调用点同源）
+            var text = @"using System
+
+public class Base<T>
+{
+    protected _tag: string = ""b""
+
+    public constructor(t: string)
+    {
+        _tag = _tag + t
+    }
+
+    public function Tag(): string
+    {
+        return _tag
+    }
+}
+
+public class Derived extends Base<i32>
+{
+    private _v: i32 = 7
+    public static _count: i32 = 0
+
+    public constructor(s: string) extends base(s)
+    {
+        _count = _count + 1
+        _v = _v + 1
+    }
+
+    public function V(): i32
+    {
+        return _v
+    }
+}
+
+function Main(): i32
+{
+    var d1 = new Derived(""x"")
+    if d1.Tag() != ""bx"" return 1
+    var d2 = new Derived(""y"")
+    if d2.Tag() != ""by"" return 2
+    if d1.Tag() != ""bx"" return 3
+    if Derived._count != 2 return 4
+    if d1.V() != 8 return 5
+    return 0
+}";
+
+            AssertRunsClean(text);
+        }
+
+        [Fact]
         public void Evaluator_Oop_StaticField_And_Cctor_LazyInit()
         {
             // 6e-M19 M3-c：静态字段初始化器（.cctor）惰性触发 + 静态方法/静态字段读写
