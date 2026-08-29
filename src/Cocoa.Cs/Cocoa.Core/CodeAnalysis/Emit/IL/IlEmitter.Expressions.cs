@@ -156,10 +156,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 }
                 case BuiltinKind.FileCopy:
                 {
-                    // File.Copy(src, dst, overwrite=true)
-                    var src = _framework.ResolveMethod("System.IO.File", "Copy", new[] { "System.String", "System.String", "System.Boolean" });
-                    if (src == null) throw new Exception("System.IO.File.Copy not found in framework references");
-                    il.Emit(IlOpCodeTable.Get("Call"), src);
+                    // 与 stdlib 2 参形态 Copy(src, dst) 匹配（无 overwrite；目标已存在则抛 IOException）。
+                    // 此前误解析 3 参 Copy(string,string,bool) 而只压 2 实参 → 栈欠载 InvalidProgramException。
+                    var m = _framework.ResolveMethod("System.IO.File", "Copy", new[] { "System.String", "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.Copy not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
                 case BuiltinKind.DirectoryExists:
