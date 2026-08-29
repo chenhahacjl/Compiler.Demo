@@ -43,9 +43,10 @@ ElementAssignmentExpression,
 MemberAccessExpression,
 MemberCallExpression,
 MemberAssignmentExpression,
-ConstructorChainExpression,
-FormatExpression,
-IsExpression,
+        ConstructorChainExpression,
+        FormatExpression,
+        InterpolatedStringExpression,   // 插值字符串高 Bound（Y A2-F1：绑定后、规范化前的临时形态）
+        IsExpression,
 AsExpression,
 FunctionValueExpression,   // 函数值：lambda 字面量 / 方法组（6e-M22 C4）
 InvocationExpression,      // 函数值间接调用 f(x)（6e-M22 C4）

@@ -97,6 +97,9 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.FormatExpression:
                     WriteFormatExpression((BoundFormatExpression)node, writer);
                     break;
+                case BoundNodeKind.InterpolatedStringExpression:
+                    WriteInterpolatedStringExpression((BoundInterpolatedStringExpression)node, writer);
+                    break;
                 case BoundNodeKind.IsExpression:
                     WriteIsExpression((BoundIsExpression)node, writer);
                     break;
@@ -500,6 +503,24 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WriteIdentifier(node.Type.Name);
             writer.WritePunctuation(SyntaxKind.OpenParenthesisToken);
             node.Expression.WriteTo(writer);
+            writer.WritePunctuation(SyntaxKind.CloseParenthesisToken);
+        }
+
+        private static void WriteInterpolatedStringExpression(BoundInterpolatedStringExpression node, IndentedTextWriter writer)
+        {
+            writer.WriteIdentifier("interp");
+            writer.WritePunctuation(SyntaxKind.OpenParenthesisToken);
+            for (var i = 0; i < node.Items.Length; i++)
+            {
+                if (i > 0)
+                {
+                    writer.WritePunctuation(SyntaxKind.CommaToken);
+                    writer.WriteSpace();
+                }
+
+                node.Items[i].Value.WriteTo(writer);
+            }
+
             writer.WritePunctuation(SyntaxKind.CloseParenthesisToken);
         }
 

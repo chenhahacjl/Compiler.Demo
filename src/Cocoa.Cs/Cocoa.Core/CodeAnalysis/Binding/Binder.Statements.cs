@@ -1777,20 +1777,20 @@ namespace Cocoa.CodeAnalysis.Binding
         /// <summary>插值字符串 → 字符串 <c>+</c> 链（每洞转 string；含对齐/格式时包 BoundFormatExpression）；常量折叠天然不启用（转换/格式节点无 ConstantValue）。</summary>
         private BoundExpression BindInterpolatedStringExpression(InterpolatedStringExpressionSyntax syntax)
         {
-            BoundExpression? result = null;
-
+            // Y A2-F1：产"高 Bound"（文本段 + 已绑定洞），由共享规范化 pass 降至 format/拼接。
+            // 洞的绑定、对齐常量校验、无格式洞的 string 转换仍在 Binder 完成（行为与旧内联一致）。
+            var items = ImmutableArray.CreateBuilder<BoundInterpolationItem>();
             foreach (var content in syntax.Contents)
             {
                 if (content is InterpolatedStringTextSyntax text)
                 {
                     var value = (string)text.TextToken.Value!;
-                    result = AppendInterpolation(result, new BoundLiteralExpression(text, value), text);
+                    items.Add(new BoundInterpolationItem(new BoundLiteralExpression(text, value), isHole: false, width: null, format: null, syntax: text));
                 }
                 else if (content is InterpolationSyntax interpolation)
                 {
                     var bound = BindExpression(interpolation.Expression);
 
-                    BoundExpression formatted;
                     if (interpolation.Alignment != null || interpolation.FormatToken != null)
                     {
                         int? width = null;
@@ -1800,45 +1800,35 @@ namespace Cocoa.CodeAnalysis.Binding
                             if (!TryGetIntConstant(boundAlignment, out var intValue))
                             {
                                 _diagnostics.ReportError(interpolation.Alignment.Location, "插值洞的对齐宽度必须为整数常量。");
-                                formatted = new BoundErrorExpression(interpolation.Alignment);
+                                items.Add(new BoundInterpolationItem(new BoundErrorExpression(interpolation.Alignment), isHole: true, width: null, format: FormatOf(interpolation), syntax: interpolation));
+                                continue;
                             }
-                            else
-                            {
-                                width = intValue;
-                                formatted = new BoundFormatExpression(interpolation, bound, width, FormatOf(interpolation));
-                            }
+
+                            width = intValue;
                         }
-                        else
-                        {
-                            formatted = new BoundFormatExpression(interpolation, bound, null, FormatOf(interpolation));
-                        }
+
+                        items.Add(new BoundInterpolationItem(bound, isHole: true, width: width, format: FormatOf(interpolation), syntax: interpolation));
                     }
                     else
                     {
-                        formatted = BindConversion(interpolation.Expression.Location, bound, TypeSymbol.String, allowExplicit: true);
+                        var converted = BindConversion(interpolation.Expression.Location, bound, TypeSymbol.String, allowExplicit: true);
+                        items.Add(new BoundInterpolationItem(converted, isHole: true, width: null, format: null, syntax: interpolation));
                     }
-
-                    result = AppendInterpolation(result, formatted, interpolation);
                 }
             }
 
-            return result ?? new BoundLiteralExpression(syntax, "");
+            if (items.Count == 1 && !items[0].IsHole)
+            {
+                // 纯单个文本段：直接返回字面量（与旧 AppendInterpolation(left==null → right) 一致）
+                return items[0].Value;
+            }
+
+            return new BoundInterpolatedStringExpression(syntax, items.ToImmutable());
         }
 
         private static string? FormatOf(InterpolationSyntax interpolation)
         {
             return interpolation.FormatToken == null ? null : (string)interpolation.FormatToken.Value!;
-        }
-
-        private static BoundExpression AppendInterpolation(BoundExpression? left, BoundExpression right, SyntaxNode syntax)
-        {
-            if (left == null)
-            {
-                return right;
-            }
-
-            var op = BoundBinaryOperator.Bind(SyntaxKind.PlusToken, TypeSymbol.String, TypeSymbol.String)!;
-            return new BoundBinaryExpression(syntax, left, op, right);
         }
 
         private BoundExpression BindParenthesizedExpression(ParenthesizedExpressionSyntax syntax)

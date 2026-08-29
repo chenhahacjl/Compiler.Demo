@@ -1027,6 +1027,8 @@ namespace Cocoa.CodeAnalysis
                     return new[] { ((BoundMemberAssignmentExpression)node).Expression };
                 case BoundNodeKind.FormatExpression:
                     return new[] { ((BoundFormatExpression)node).Value };
+                case BoundNodeKind.InterpolatedStringExpression:
+                    return ((BoundInterpolatedStringExpression)node).Items.Select(i => i.Value);
                 case BoundNodeKind.IsExpression:
                     return new[] { ((BoundIsExpression)node).Expression };
                 case BoundNodeKind.AsExpression:

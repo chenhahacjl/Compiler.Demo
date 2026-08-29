@@ -220,3 +220,13 @@ Cocoa.CodeAnalysis
 **迁移顺序（每步行为等价全量绿）**：F1 插值降级迁出（:1778-1842）→ F2 构造链/字段初始化前缀迁出（Binder.cs:692-722）→ F3 is/as 静态折叠迁出（:242-309）→ F4 foreach→while 迁出（:1068-1250，含枚举器模式，最敏感）→ F5 facade 降级形态收敛 → F6 高/规范节点类型分离（BoundNodeKind 增删 + 签名身份核对）。
 
 **风险与护栏**：F1-F5 各步可能改变绑定顺序/诊断身份 → 一律行为等价重构 + 每提交全量绿兜底；IR 形态不变则 cod 兼容性天然保持；A2 前 A1 已完成（类名已摘除）。
+
+#### 6.7.9 A2 落地记录
+- **A2 设计 ✅**：§6.7.8 定稿（F1-F6 清单 + 三层 + 契约）。
+- **F1 ✅（插值降级迁出，行为等价）**：
+  - 新高节点 `BoundInterpolatedStringExpression` + `BoundInterpolationItem`（文本段/已绑定洞 + 对齐/格式），`BoundNodeKind.InterpolatedStringExpression`。
+  - Binder 改产高节点（洞绑定/对齐常量校验/无格式洞 string 转换仍在 Binder，语义与旧内联一致）；旧 `AppendInterpolation` 移除。
+  - 共享规范化 pass `Lowering/InterpolationNormalizer`：高节点 → `BoundFormatExpression` / string 拼接（+），在**最终体收集边界**统一接入——`BuildFunctionBody` / `BuildFunctionBodyForMonomorphization`（LoweringPipeline 前）与脚本/Main-global 体（直接 `Lowerer.Lower` 前）三处。
+  - 配套：`BoundTreeRewriter.RewriteInterpolatedStringExpression`（泛型替换经基类）、`Compilation.BoundChildren`（捕获分析）、`BoundNodePrinter`。
+  - 验收：全量绿（41704 通过 / 2 skip / 1 环境锁）；插值 29 例全绿。高节点在规范化后即消失，cod/三后端/求值零感知。
+- 待续：F2 构造链/字段初始化前缀、F3 is/as 静态折叠、F4 foreach→while、F5 facade 降级形态、F6 高/规范节点分离。

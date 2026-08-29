@@ -545,7 +545,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (globalScope.MainFunction != null && globalScope.Statements.Any())
             {
-                var body = Lowerer.Lower(globalScope.MainFunction, new BoundBlockStatement(compilationUnit!, globalScope.Statements));
+                var body = Lowerer.Lower(globalScope.MainFunction, InterpolationNormalizer.Rewrite(new BoundBlockStatement(compilationUnit!, globalScope.Statements)));
 
                 functionBodies.Add(globalScope.MainFunction, body);
             }
@@ -566,7 +566,7 @@ namespace Cocoa.CodeAnalysis.Binding
                     statements = statements.Add(new BoundReturnStatement(compilationUnit!, nullValue));
                 }
 
-                var body = Lowerer.Lower(globalScope.ScriptFunction, new BoundBlockStatement(compilationUnit!, statements));
+                var body = Lowerer.Lower(globalScope.ScriptFunction, InterpolationNormalizer.Rewrite(new BoundBlockStatement(compilationUnit!, statements)));
 
                 functionBodies.Add(globalScope.ScriptFunction, body);
             }
@@ -729,7 +729,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
                 ? (function.Declaration != null ? function.Declaration.Identifier.Location : bodyLocation.Location)
                 : (TextLocation?)null;
-            var loweredBody = LoweringPipeline.Lower(function, body, binder._diagnostics, returnCheckLocation);
+            var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);
 
             // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参
             DefiniteAssignmentAnalysis.Analyze(
@@ -825,7 +825,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void
                 ? (TextLocation?)bodyLocation.Location
                 : null;
-            var loweredBody = LoweringPipeline.Lower(function, body, binder._diagnostics, returnCheckLocation);
+            var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);
 
             return (loweredBody, binder.Diagnostics.ToImmutableArray());
         }

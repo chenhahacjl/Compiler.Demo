@@ -342,6 +342,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteFormatExpression((BoundFormatExpression)node);
                 }
+                case BoundNodeKind.InterpolatedStringExpression:
+                {
+                    return RewriteInterpolatedStringExpression((BoundInterpolatedStringExpression)node);
+                }
                 case BoundNodeKind.IsExpression:
                 {
                     return RewriteIsExpression((BoundIsExpression)node);
@@ -650,6 +654,30 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundFormatExpression(node.Syntax, value, node.Width, node.Format);
+        }
+
+        /// <summary>插值高 Bound（Y A2-F1）：仅重写洞的 Value（泛型替换/其它重写场景；规范化另行处理）。</summary>
+        protected virtual BoundExpression RewriteInterpolatedStringExpression(BoundInterpolatedStringExpression node)
+        {
+            var items = ImmutableArray.CreateBuilder<BoundInterpolationItem>();
+            var changed = false;
+            foreach (var item in node.Items)
+            {
+                var value = RewriteExpression(item.Value);
+                if (value != item.Value)
+                {
+                    changed = true;
+                }
+
+                items.Add(new BoundInterpolationItem(value, item.IsHole, item.Width, item.Format, item.Syntax));
+            }
+
+            if (!changed)
+            {
+                return node;
+            }
+
+            return new BoundInterpolatedStringExpression(node.Syntax, items.ToImmutable());
         }
 
         protected virtual BoundExpression RewriteIsExpression(BoundIsExpression node)
