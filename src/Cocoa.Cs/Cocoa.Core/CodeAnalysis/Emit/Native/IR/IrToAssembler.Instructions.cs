@@ -1906,6 +1906,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     }
                 }
 
+                if (argCount >= 6)
+                {
+                    // 第 6 参落在 shadow 尾（[RSP+0x28]），0x30 帧恰好容纳（48≡0 mod 16）
+                    if (_sysArgs.Count > 5)
+                    {
+                        LoadSlot(X64Register.EAX, _sysArgs[5], RegisterSize(_sysArgs[5]));
+                        _a.Mov(ToSize(RegisterSize(_sysArgs[5])), new X64MemoryOperand(X64Register.RSP, 0x28), X64Register.RAX);
+                    }
+                    else
+                    {
+                        _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RSP, 0x28), 0);
+                    }
+                }
+
                 _a.CallRip(importSlot);
                 _a.Add(X64Size.Qword, X64Register.RSP, 0x30);
                 _stackDepth -= 6;
@@ -1920,6 +1934,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             {
                 // 约定：stdcall（运行时所/默认）被调方清栈；cdecl（用户 extern 声明）调用方清栈
                 var pushed = 0;
+                if (argCount >= 6)
+                {
+                    if (_sysArgs.Count > 5)
+                    {
+                        LoadSlot(X64Register.EAX, _sysArgs[5], RegisterSize(_sysArgs[5]));
+                        _a.Push(X64Register.EAX);
+                    }
+                    else
+                    {
+                        _a.Push(0);
+                    }
+                    pushed++;
+                }
+
                 if (argCount >= 5)
                 {
                     if (_sysArgs.Count > 4)

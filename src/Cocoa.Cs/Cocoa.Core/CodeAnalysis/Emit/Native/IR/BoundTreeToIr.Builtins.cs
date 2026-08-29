@@ -124,18 +124,80 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     throw new Exception("StringFromChars native runtime lands in the next batch (G7-③a follow-up)");
                 }
                 case BuiltinKind.FileReadAllText:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("FileReadAllText"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.FileWriteAllText:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var text = EmitExpression(arguments[1]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(text)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("FileWriteAllText"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.FileExists:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("FileExists"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.FileDelete:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("FileDelete"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.FileCopy:
+                {
+                    var src = EmitExpression(arguments[0]);
+                    var dst = EmitExpression(arguments[1]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(src)));
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(dst)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("FileCopy"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.DirectoryExists:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DirectoryExists"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.GetEnvironmentVariable:
+                {
+                    var name = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(name)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetEnvironmentVariable"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.GetCurrentDirectory:
+                {
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetCurrentDirectory"), IrOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.SetCurrentDirectory:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("SetCurrentDirectory"), IrOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.GetExecutablePath:
                 {
-                    // 6e-G7 ④：文件 IO / 环境 syscall native 接入下一批
-                    throw new Exception($"Builtin '{function.BuiltinKind}' native runtime lands in a follow-up batch (G7-④)");
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetExecutablePath"), IrOperand.Constant(0)));
+                    return result;
                 }
                 case BuiltinKind.ParseInt64:
                 {

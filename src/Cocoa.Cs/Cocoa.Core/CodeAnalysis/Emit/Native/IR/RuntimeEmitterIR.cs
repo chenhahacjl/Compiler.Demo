@@ -17,6 +17,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
+            // Y-P0-1：文件 IO / 环境 syscall（G7-④ 补齐；文件读写经 msvcrt 低参 API，避开 6-7 参 ABI 上限）
+            "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
+            "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
+            "MultiByteToWideChar", "WideCharToMultiByte",
+        };
+
+        /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）。</summary>
+        private static readonly string[] UcrtImports =
+        {
+            "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64",
         };
 
         public static void Append(IrProgram program, TargetPlatform platform)
@@ -43,7 +53,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
+                _fileBuffer = "", _fileBuffer2 = "", _rbMode = "", _wbMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "";
@@ -218,6 +228,27 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 EmitSleep();
                 _ = BeginFunction("Beep", 4, 4);
                 EmitBeep();
+                // Y-P0-1：文件 IO / 环境 syscall（G7-④ 补齐）
+                _ = BeginFunction("FileExists", 8);
+                EmitFileExists();
+                _ = BeginFunction("DirectoryExists", 8);
+                EmitDirectoryExists();
+                _ = BeginFunction("FileDelete", 8);
+                EmitFileDelete();
+                _ = BeginFunction("FileCopy", 8, 8);
+                EmitFileCopy();
+                _ = BeginFunction("GetEnvironmentVariable", 8);
+                EmitGetEnvironmentVariable();
+                _ = BeginFunction("GetCurrentDirectory");
+                EmitGetCurrentDirectory();
+                _ = BeginFunction("GetExecutablePath");
+                EmitGetExecutablePath();
+                _ = BeginFunction("SetCurrentDirectory", 8);
+                EmitSetCurrentDirectory();
+                _ = BeginFunction("FileReadAllText", 8);
+                EmitFileReadAllText();
+                _ = BeginFunction("FileWriteAllText", 8, 8);
+                EmitFileWriteAllText();
 
                 var divByZero = BeginFunction("DivByZero");
                 EmitError(_divZeroMessage);
@@ -236,6 +267,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _heapEnd = _program.AddData(IrDataItem.Pointer(Prefix + "HeapEnd"));
                 _rngState = _program.AddData(IrDataItem.Int32(Prefix + "RngState", 0));
                 _inputBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "InputBuffer", new byte[0x2000]));
+                _fileBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
+                _fileBuffer2 = _program.AddData(IrDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
+                // C 风格 null 结尾宽串（IrDataItem.Utf16 是长度前缀的 CO 串，不能直接作 LPCWSTR）
+                _rbMode = _program.AddData(IrDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
+                _wbMode = _program.AddData(IrDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
                 _emptyString = _program.AddData(IrDataItem.Utf16(Prefix + "EmptyString", ""));
                 _divZeroMessage = _program.AddData(IrDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
                 _stackOverflowMessage = _program.AddData(IrDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
@@ -258,6 +294,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 _program.Imports.AddRange(Kernel32Imports.Select(n => new IrImport("kernel32.dll", n, false)));
                 _program.Imports.Add(new IrImport("kernel32.dll", _tickCountImport, false));
+                _program.Imports.AddRange(UcrtImports.Select(n => new IrImport("ucrtbase.dll", n, true)));
             }
 
             // ------------------------------------------------------------------
@@ -434,6 +471,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             private void SysCall(IrVirtualRegister? dst, string import, int argCount, params IrVirtualRegister?[] args)
             {
+                SysCallDll(dst, "kernel32.dll", import, argCount, false, args);
+            }
+
+            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 IrToAssembler.SysCall 负责。</summary>
+            private void SysCallDll(IrVirtualRegister? dst, string dll, string import, int argCount, bool cdecl, params IrVirtualRegister?[] args)
+            {
                 for (var i = 0; i < args.Length; i++)
                 {
                     if (args[i] != null)
@@ -442,7 +485,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     }
                 }
 
-                Add(IrOpCode.SysCall, dst, IrOperand.Import(new IrImport("kernel32.dll", import, false)), IrOperand.Constant(argCount));
+                Add(IrOpCode.SysCall, dst, IrOperand.Import(new IrImport(dll, import, cdecl)), IrOperand.Constant(argCount));
             }
 
             /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）。</summary>

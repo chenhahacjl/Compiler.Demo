@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.Tests.CodeAnalysis.Emit.Native;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -14,10 +15,11 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// 自举缺口 P0-1/P0-2，M0-4 批2：文件 IO / 环境 syscall 双后端锁定（Evaluator/IL）。
+    /// 自举缺口 P0-1/P0-2，M0-4 批2：文件 IO / 环境 syscall 三后端锁定（Evaluator/IL/native）。
     /// 经 stdlib 注入的 System.Core.cod（System.IO.File / System.Environment，builtin 背书 syscall）消费。
-    /// 注：native 侧整个文件/环境 syscall 族尚未接入（BoundTreeToIr.Builtins "G7-④ follow-up batch" 编译期拒绝），
-    /// 待后续批次；本测试同时锁住 IL File.Copy 实参/方法签名失配修复（原 3 参解析只压 2 实参 → InvalidProgramException）。
+    /// Y-P0-1 补齐 native 腿（BoundTreeToIr.Builtins 原 "G7-④ follow-up batch" 编译期拒绝 → 运行时 helper 接入）：
+    /// 文件读写经 ucrtbase 低参 API（_wfopen/fread/fwrite/fclose）+ 手动 UTF-8 编码 / MultiByteToWideChar 解码，
+    /// 路径复制补 null 结尾（CO 串无 null 终止）；本测试同时锁住 IL File.Copy 实参/方法签名失配修复。
     /// </summary>
     public class FileIoSyscallThreeBackendTests
     {
@@ -188,6 +190,102 @@ function Main(): i32
             finally
             {
                 Environment.SetEnvironmentVariable("__G7_FIO3__", null);
+            }
+        }
+
+        private static void RunNativeFileRoundTrip(string target)
+        {
+            // Y-P0-1：native 腿（G7-④ 补齐）——与 Evaluator/IL 同源程序、同期望、同清理
+            var path = NewTestPath();
+            var source = FileProgram(path);
+            TargetPlatform.TryParse(target, out var platform);
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(source));
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-fio3", "fio-native-" + Guid.NewGuid().ToString("N") + "-" + target + ".exe");
+            Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
+
+            var diagnostics = compilation.EmitNative("fio", exePath, platform);
+            Assert.Empty(string.Join("\n", diagnostics));
+            Assert.True(File.Exists(exePath));
+
+            var stdout = NativeEmitTests.Run(exePath);
+            Assert.Equal(FileExpected, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
+            Assert.False(File.Exists(path));
+            Assert.False(File.Exists(path + ".bak"));
+        }
+
+        private static void RunNativeEnvironment(string target)
+        {
+            Environment.SetEnvironmentVariable("__G7_FIO3__", "hello_env3");
+            try
+            {
+                TargetPlatform.TryParse(target, out var platform);
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(EnvironmentProgram));
+                var exePath = Path.Combine(Path.GetTempPath(), "cocoa-fio3", "fio-env-native-" + Guid.NewGuid().ToString("N") + "-" + target + ".exe");
+                Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
+
+                var diagnostics = compilation.EmitNative("fioenv", exePath, platform);
+                Assert.Empty(string.Join("\n", diagnostics));
+
+                var stdout = NativeEmitTests.Run(exePath);
+                Assert.Equal(EnvironmentExpected, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable("__G7_FIO3__", null);
+            }
+        }
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_FileRoundTrip(string target) => RunNativeFileRoundTrip(target);
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_Environment(string target) => RunNativeEnvironment(target);
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_Utf8RoundTrip(string target)
+        {
+            // Y-P0-1：UTF-8↔UTF-16 编码路径（MultiByteToWideChar / WideCharToMultiByte）
+            var dir = Path.Combine(Path.GetTempPath(), "cocoa-fio3", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "u.txt").Replace("\\", "/");
+            var source = @"using System
+using System.IO
+
+function Main(): i32
+{
+    let p = """ + path + @"""
+    File.WriteAllText(p, ""你好 Cocoa 世界！"" + ""\n"" + ""line2"")
+    let content = File.ReadAllText(p)
+    System.Console.WriteLine(content == ""你好 Cocoa 世界！\nline2"")
+    return 0
+}";
+            try
+            {
+                TargetPlatform.TryParse(target, out var platform);
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(source));
+                var exePath = Path.Combine(Path.GetTempPath(), "cocoa-fio3", "fio-utf8-" + Guid.NewGuid().ToString("N") + "-" + target + ".exe");
+                Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
+
+                var diagnostics = compilation.EmitNative("fioutf8", exePath, platform);
+                Assert.Empty(string.Join("\n", diagnostics));
+
+                var stdout = NativeEmitTests.Run(exePath);
+                Assert.Equal("True\n", stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
+            }
+            finally
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                Directory.Delete(dir, recursive: true);
             }
         }
     }
