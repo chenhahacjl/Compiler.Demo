@@ -338,7 +338,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var function = node.Function;
 
             var environmentFirst = node.Receiver != null ||
-                                   function.Syntax is LambdaExpressionSyntax ||
+                                   function.IsLambda ||
                                    HasThisParameter(function);
             var targetIr = environmentFirst
                 ? _functionMap[function]

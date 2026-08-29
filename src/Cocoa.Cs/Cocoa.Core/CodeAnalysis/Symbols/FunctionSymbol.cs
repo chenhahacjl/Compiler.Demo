@@ -93,6 +93,15 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>提升 lambda 专有：调用时须把 Receiver（环境对象）压入环境栈。</summary>
         public bool IsLambdaWithEnvironment { get; internal set; }
 
+        /// <summary>
+        /// 语义标志：本函数是否源自 lambda 提升（Y §6.7 A1——把"语法类名探测"从共享语义层摘除，
+        /// 供 IL/native 发射器判定 env-first 形态；cod 读侧恢复时亦按此标志，勿再依赖 <c>function.Syntax</c> 类别）。
+        /// </summary>
+        public bool IsLambda { get; internal set; }
+
+        /// <summary>语义标志：本函数是否为属性访问器（get_/set_ 隐式体、auto-property 判定用；A1 注入，供未来共享层消费）。</summary>
+        public bool IsPropertyAccessor { get; internal set; }
+
         /// <summary>合成环境类（6e-M22 C5）：宿主函数与其体内捕获 lambda 共享同一类（发射布局用）。</summary>
         internal NamedTypeSymbol? EnvironmentClass { get; set; }
     }

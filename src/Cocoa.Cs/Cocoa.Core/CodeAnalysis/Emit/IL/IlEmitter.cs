@@ -350,7 +350,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             _methods.Add(function, method);
 
             // 6e-M22 C5-c：捕获 lambda 声明为环境类的实例方法（this = 环境对象，经委托 target 传入）
-            if (function.EnvironmentClass != null && function.Syntax is LambdaExpressionSyntax)
+            if (function.EnvironmentClass != null && function.IsLambda)
             {
                 method.IsStatic = false;
                 _metadata.AddMethodDef(_classTypeDefs[function.EnvironmentClass], method);

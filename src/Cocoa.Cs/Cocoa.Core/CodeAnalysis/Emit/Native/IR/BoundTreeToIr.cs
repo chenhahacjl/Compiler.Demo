@@ -183,7 +183,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 // 6e-M22 C4-c：提升 lambda 统一 env-first 形态（前置 8 字节环境槽）——
                 // 函数值对象调用约定恒为 (env, args...)；lambda 体不读该槽
                 var parameters = CreateParameters(function);
-                if (function.IsStatic && function.Syntax is LambdaExpressionSyntax)
+                if (function.IsStatic && function.IsLambda)
                 {
                     parameters.Insert(0, new IrParameter("__env", 0));
                     for (var p = 0; p < parameters.Count; p++)
@@ -496,7 +496,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _closureRegister = null;
             _closureClass = function.EnvironmentClass;
 
-            if (_closureClass != null && function.Syntax is LambdaExpressionSyntax)
+            if (_closureClass != null && function.IsLambda)
             {
                 // lambda：隐藏 __env 首参（IrParameter 已在创建时前置）即环境对象
                 _closureRegister = AllocateRegister(8);
@@ -535,7 +535,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // 宿主函数：入口处创建环境对象（清零 + 捕获参数播种）
-            if (_closureClass != null && function.Syntax is not LambdaExpressionSyntax)
+            if (_closureClass != null && !function.IsLambda)
             {
                 var (envOffsets, envSize) = NativeObjectModel.BuildLayout(_closureClass);
                 var pointerSize = _isX64 ? 8 : 4;

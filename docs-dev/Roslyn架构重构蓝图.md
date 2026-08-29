@@ -192,3 +192,10 @@ Cocoa.CodeAnalysis
 
 #### 6.7.7 落地记录
 - **A0 ✅**：`Compilation` 构造改 `protected`；`Compilation.Create`/`CreateScript` 收敛至私有 `CreateCompilation`，按 `syntaxTrees[0].Language` 分派 `CocoaCompilation` / `CSharpCompilation`（空树回落 Cocoa）；新增 `CompilationLanguageDispatchTests` 5 例（CO→CocoaCompilation / C#→CSharpCompilation / 空树回落 / Evaluate·GetSemanticModel 在子类可用）。行为等价全量绿（41697 通过 / 2 skip / 1 环境锁 `e2e-string-oob`）。
+- **A1 ✅（语义标志解耦，零行为变化）**：
+  - `FunctionSymbol` 新增 `IsLambda` / `IsPropertyAccessor`（`IsConstructor` 已有）；设定于 lambda 提升（`Binder.Expressions.cs` λ 合成点）与属性访问器四处创建（接口+类 ×getter/setter）。
+  - 分类探测改标志：共享层 9 处 `function.Syntax is (not) LambdaExpressionSyntax` → `IsLambda`（`Binder.cs` ×2、`Binder.Expressions.cs:175`、`IlEmitter.cs:353`、`BoundTreeToIr.cs:186/499/538`、`BoundTreeToIr.Expressions.cs:341`）。
+  - `SemanticFunctionFlagTests` 4 例：访问器 `IsPropertyAccessor` 直接断言（get_X/set_X）、普通函数负断言、类型化无捕获 lambda IL 往返、**捕获型 lambda native x64 往返**（env-first 路径，真锁 `IsLambda`）。
+  - **cod 读侧回填暂缓**：cod 当前拒绝 lambda 体（泛型设计 §12 边界"lambda/函数值取数表达式体已拒"），`IsLambda` 仅走源码路径；待 lambda 体入 cod（A2/6b 函值节点承载）时再持久化。
+  - **测试暴露的既有缺口（非 A1 引入，列为后续）**：IL 路径**捕获型 lambda 无 e2e 覆盖且当前运行 NRE**（`let f = () => n+2; f()` 捕获环境），native 捕获路径正常（本步已锁）——待 IL emitter 捕获环境接线专项跟进。
+  - 验收：行为等价全量绿（41701 通过 / 2 skip / 1 环境锁 `e2e-string-oob`）。

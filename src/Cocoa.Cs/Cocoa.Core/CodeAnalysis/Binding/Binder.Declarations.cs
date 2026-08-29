@@ -1565,6 +1565,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     IsAbstract = true,
                     IsVirtual = true,
+                    IsPropertyAccessor = true,
                 };
                 interfaceType.AddMethod(getter);
                 classFunctions.Add(getter);
@@ -1580,6 +1581,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     IsAbstract = true,
                     IsVirtual = true,
+                    IsPropertyAccessor = true,
                 };
                 interfaceType.AddMethod(setter);
                 classFunctions.Add(setter);
@@ -1807,7 +1809,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 getter = new FunctionSymbol(isIndexer ? "get_Item" : "get_" + syntax.Identifier.Text, getterParams, propertyType, null,
-                    syntax: syntax.Getter, containingClass: classType, visibility: getterVisibility) { IsStatic = isStatic || lower };
+                    syntax: syntax.Getter, containingClass: classType, visibility: getterVisibility) { IsStatic = isStatic || lower, IsPropertyAccessor = true };
                 classType.AddMethod(getter);
                 classFunctions.Add(getter);
             }
@@ -1825,7 +1827,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
 
                 setter = new FunctionSymbol(isIndexer ? "set_Item" : "set_" + syntax.Identifier.Text, setterParams, TypeSymbol.Void, null,
-                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic || lower };
+                    syntax: syntax.Setter, containingClass: classType, visibility: setterVisibility) { IsStatic = isStatic || lower, IsPropertyAccessor = true };
                 classType.AddMethod(setter);
                 classFunctions.Add(setter);
             }

@@ -665,7 +665,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
-            if (function.Syntax is not LambdaExpressionSyntax)
+            if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
                 binder._environmentOwner = function;
@@ -756,7 +756,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
-            if (function.Syntax is not LambdaExpressionSyntax)
+            if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
                 binder._environmentOwner = function;

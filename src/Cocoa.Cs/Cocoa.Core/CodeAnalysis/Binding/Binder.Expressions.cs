@@ -172,7 +172,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 environmentOwner = _environmentOwner ?? _function;
 
-                if (environmentOwner == null || environmentOwner.Syntax is LambdaExpressionSyntax)
+                if (environmentOwner == null || environmentOwner.IsLambda)
                 {
                     _diagnostics.ReportError(syntax.Location, "lambda 捕获需要宿主函数上下文（顶层脚本暂不支持）。");
                     return new BoundErrorExpression(syntax);
@@ -210,6 +210,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 IsStatic = true,
                 EnvironmentOwner = environmentOwner,
                 IsLambdaWithEnvironment = environmentClass != null,
+                IsLambda = true,
                 EnvironmentClass = environmentClass,
             };
 
