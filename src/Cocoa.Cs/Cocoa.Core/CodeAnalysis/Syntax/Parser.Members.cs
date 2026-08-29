@@ -117,8 +117,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// <summary>方言是否允许类成员中的 C# 式声明 `type name ...`（字段/属性/方法/构造函数；Cocoa 为 false，C# 为 true）。</summary>
         protected virtual bool AllowCSharpStyleMember() => true;
 
-        /// <summary>方言是否允许 C# 式局部变量 `type name [= expr]`（无 var/let/const；Cocoa 为 false，C# 为 true）。</summary>
-        protected virtual bool AllowCSharpStyleVariableDeclaration() => true;
+        /// <summary>方言原生"无关键字"语句：C# 类型前置局部变量 `type name`；CO 无此形态（遇 C# 式局部变量报错恢复，否则回落表达式语句）。</summary>
+        protected virtual StatementSyntax ParseDialectNativeStatement()
+        {
+            return ParseExpressionStatement();
+        }
 
         /// <summary>方言是否允许冒号 `:` 基类型/基接口（Cocoa 为 false，须用 extends；C# 为 true）。</summary>
         protected virtual bool AllowColonInheritance() => true;
@@ -1415,29 +1418,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new SeparatedSyntaxList<ParameterSyntax>(nodesAndSeparators.ToImmutable());
         }
 
-        protected virtual ParameterSyntax ParseParameter()
-        {
-            // 双语法参数：Cocoa `name: Type` | C# `Type name`；可带 out/ref 修饰符（6e-M23 R1）
-            SyntaxToken? modifier = null;
-            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword)
-            {
-                modifier = MatchToken(Current.Kind);
-            }
-
-            if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
-                Peek(1).Kind == SyntaxKind.ColonToken)
-            {
-                var identifier = MatchToken(SyntaxKind.IdentifierToken);
-                var type = ParseTypeClause();
-
-                return new ParameterSyntax(_syntaxTree, modifier, identifier, type);
-            }
-
-            var csType = ParsePrefixTypeClause();
-            var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
-
-            return new ParameterSyntax(_syntaxTree, modifier, csIdentifier, csType);
-        }
+        /// <summary>方言原生参数（CocoaParser：`名称: 类型` 类型后置；CSharpParser：`类型 名称` 类型前置；均带 out/ref）。</summary>
+        protected abstract ParameterSyntax ParseParameter();
 
     }
 }

@@ -242,6 +242,6 @@ Cocoa.CodeAnalysis
 
 **A3 拆分路线**：
 1. **A3-1 ✅（归属表单一真相源）**：`SyntaxKindLanguageOwnership` 归属表就位——`SyntaxLanguageOwnership`（Shared/CocoaOnly/CSharpOnly）+ `Ownership(kind)`；CocoaOnly 集 = `ForStatement` + 12 个 CO 专属关键字（function/let/property/constructor/extends/facade/syscall/import/to/step/cdecl/stdcall），CSharpOnly 集 = `CSStyleForStatement`。补 C# 方言缺口：类内 import 块原未设门禁，新增 `AllowClassImportBlock`（Parser.Members.cs，Cocoa=true / CSharp=false）。`SyntaxLanguageOwnershipTests` 扩至 10 例：表锁（互斥对不相交、12 关键字全 CocoaOnly、共享 kind 抽查）+ 表与各方言解析器行为一致性（每个 CocoaOnly 关键字在 C# 惯用位置必报错）。
-2. A3-2 `CocoaParser` 自足：CO 形态一等公民（`ParseRangeForStatement` 等为 CO 原生声明，不再靠"关 C#"反转）。
+2. **A3-2 ✅（基类去 C# 偏置）**：`CocoaParser` 自足化——原被双方言覆写的 4 个 C# 偏置默认体（`ParseForStatement`/`ParseForeachStatement`/`ParseVariableDeclaration`/`ParseParameter`）改为**抽象**，各方言必须在自文件声明原生形态（CO 次数循环/`var/let/const` 类型后置/`名称: 类型`；C# 对偶）。`ParseStatement` 默认分支去 C# 偏置：新增 `ParseDialectNativeStatement` 钩子（C# 原生类型前置局部变量；CO 无此形态，遇 C# 式局部变量报错后按 C# 恢复），移除 `AllowCSharpStyleVariableDeclaration` 反转标志；`ParseExpressionStatement` 升 protected 供方言复用。共享恢复/形状探测助手（`ParseRangeForStatement`/`ParseCSStyleForStatement`/`IsCSStyleForHeader`/`ParseCSharpStyleVariableDeclaration`）保留于基类。
 3. A3-3 `CocoaBinder` 显式化 + F2-F4 共享绑定服务抽取（binder 分叉时两语言复用）。
 4. A3-4 命名空间拆分：`Cocoa.Core.Cocoa`（L1）程序集就位。

@@ -80,22 +80,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     statement = ParseTryStatement();
                     break;
                 default:
-                    // C# 式局部变量：`type name [= expr]`
-                    if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
-                        Peek(1).Kind == SyntaxKind.IdentifierToken)
-                    {
-                        if (!AllowCSharpStyleVariableDeclaration())
-                        {
-                            ReportError(Current.Location, "Cocoa 局部变量须用 var/let/const 声明且类型后置，不支持 C# 式 `类型 名称`。");
-                        }
-
-                        statement = ParseCSharpStyleVariableDeclaration();
-                    }
-                    else
-                    {
-                        statement = ParseExpressionStatement();
-                    }
-
+                    // 方言原生"无关键字"语句（CSharpParser：类型前置局部变量 `int x`；CocoaParser：无此形态，遇 C# 式局部变量报错恢复，否则回落表达式语句）
+                    statement = ParseDialectNativeStatement();
                     break;
             }
 
@@ -166,36 +152,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new BlockStatementSyntax(_syntaxTree, openBraceToken, statements.ToImmutable(), closeBraceToken);
         }
 
-        protected virtual StatementSyntax ParseVariableDeclaration()
-        {
-            var expected = Current.Kind == SyntaxKind.LetKeyword ? SyntaxKind.LetKeyword
-                         : Current.Kind == SyntaxKind.ConstKeyword ? SyntaxKind.ConstKeyword
-                         : SyntaxKind.VarKeyword;
-            var keyword = MatchToken(expected);            // C# 式：`const int x = 10;`（类型前置；const 才有此形式，let/var 无 C# 对应写法）
-            if (keyword.Kind == SyntaxKind.ConstKeyword &&
-                Current.Kind == SyntaxKind.IdentifierToken &&
-                Peek(1).Kind == SyntaxKind.IdentifierToken)
-            {
-                var csType = ParsePrefixTypeClause();
-                var csIdentifier = MatchToken(SyntaxKind.IdentifierToken);
-                SyntaxToken? csEquals = null;
-                ExpressionSyntax? csInitializer = null;
-                if (Current.Kind == SyntaxKind.EqualsToken)
-                {
-                    csEquals = MatchToken(SyntaxKind.EqualsToken);
-                    csInitializer = ParseExpression();
-                }
-
-                return new VariableDeclarationSyntax(_syntaxTree, keyword, csIdentifier, csType, csEquals, csInitializer);
-            }
-
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            var typeClause = ParseOptionalTypeClause();
-            var equals = Current.Kind == SyntaxKind.EqualsToken ? MatchToken(SyntaxKind.EqualsToken) : null;
-            var initializer = equals == null ? null : ParseExpression();
-
-            return new VariableDeclarationSyntax(_syntaxTree, keyword, identifier, typeClause, equals, initializer);
-        }
+        /// <summary>方言原生局部变量声明（CocoaParser：`var/let/const` 类型后置；CSharpParser：`var`/`const 类型 名称`）。</summary>
+        protected abstract StatementSyntax ParseVariableDeclaration();
 
         protected TypeClauseSyntax? ParseOptionalTypeClause()
         {
@@ -742,18 +700,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new DoWhileStatementSyntax(_syntaxTree, doKeyword, body, whileKeyword, condition);
         }
 
-        protected virtual StatementSyntax ParseForStatement()
-        {
-            var keyword = MatchToken(SyntaxKind.ForKeyword);
-
-            // for (init; cond; update) —— C 风格（括号内以顶层 ; 分隔）
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCSStyleForHeader())
-            {
-                return ParseCSStyleForStatement(keyword);
-            }
-
-            return ParseRangeForStatement(keyword);
-        }
+        /// <summary>方言原生 for 语句（CocoaParser：次数循环 `for i = 0 to n [step k]`；CSharpParser：C 风格 `for(;;)`）。</summary>
+        protected abstract StatementSyntax ParseForStatement();
 
         /// <summary>for 头初始化钩子：Cocoa 支持 `var/let/const` 声明与表达式；C# 方言追加类型前置声明并拒绝 `let`。</summary>
         protected virtual StatementSyntax? ParseForInitializer()
@@ -895,45 +843,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new CSStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
         }
 
-        protected virtual StatementSyntax ParseForeachStatement()
-        {
-            var keyword = MatchToken(SyntaxKind.ForeachKeyword);
-
-            SyntaxToken? openParenToken = null;
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
-            {
-                openParenToken = NextToken();
-            }
-
-            // 循环变量声明关键字：仅 var 合法；let/const 报错后按 var 恢复继续解析
-            SyntaxToken? varKeyword = null;
-            if (Current.Kind == SyntaxKind.VarKeyword ||
-                Current.Kind == SyntaxKind.LetKeyword ||
-                Current.Kind == SyntaxKind.ConstKeyword)
-            {
-                var keywordToken = NextToken();
-                if (keywordToken.Kind != SyntaxKind.VarKeyword)
-                {
-                    _diagnostics.ReportError(keywordToken.Location, $"foreach 循环变量只能用 var 声明（不能用 {keywordToken.Text}）。");
-                }
-
-                varKeyword = keywordToken;
-            }
-
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            var inKeyword = MatchToken(SyntaxKind.InKeyword);
-            var collection = ParseExpression();
-
-            SyntaxToken? closeParenToken = null;
-            if (openParenToken != null)
-            {
-                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-            }
-
-            var body = ParseStatement();
-
-            return new ForeachStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, inKeyword, collection, closeParenToken, body);
-        }
+        /// <summary>方言原生 foreach 语句（两方言均要求 `var` 循环变量；C# 强制括号，CO 允许省略）。</summary>
+        protected abstract StatementSyntax ParseForeachStatement();
 
         protected virtual StatementSyntax ParseSwitchStatement()
         {
@@ -1054,7 +965,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new ReturnStatementSyntax(_syntaxTree, keyword, expression);
         }
 
-        private StatementSyntax ParseExpressionStatement()
+        protected StatementSyntax ParseExpressionStatement()
         {
             var expression = ParseExpression();
 

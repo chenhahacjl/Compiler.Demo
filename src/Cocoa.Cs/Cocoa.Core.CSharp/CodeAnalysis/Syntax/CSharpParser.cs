@@ -21,6 +21,18 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override bool AllowLetKeyword() => false;
 
+        protected override StatementSyntax ParseDialectNativeStatement()
+        {
+            // C# 原生无关键字语句：类型前置局部变量 `int x = 1;`
+            if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                return ParseCSharpStyleVariableDeclaration();
+            }
+
+            return ParseExpressionStatement();
+        }
+
         protected override bool AllowCocoaFunctionKeywords() => false;
 
         protected override bool AllowCocoaClassMemberKeywords() => false;

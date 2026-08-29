@@ -24,9 +24,20 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         protected override bool AllowCSharpStyleMember() => false;
 
-        protected override bool AllowCSharpStyleVariableDeclaration() => false;
-
         protected override bool AllowColonInheritance() => false;
+
+        protected override StatementSyntax ParseDialectNativeStatement()
+        {
+            // Cocoa 无"无关键字"语句；类型前置局部变量 `int x` 是 C# 形态：报错后按 C# 恢复（保留干净语法树）
+            if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
+                Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                ReportError(Current.Location, "Cocoa 局部变量须用 var/let/const 声明且类型后置，不支持 C# 式 `类型 名称`。");
+                return ParseCSharpStyleVariableDeclaration();
+            }
+
+            return ParseExpressionStatement();
+        }
 
         protected override ParameterSyntax ParseParameter()
         {
