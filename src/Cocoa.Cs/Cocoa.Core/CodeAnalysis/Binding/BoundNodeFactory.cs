@@ -91,6 +91,11 @@ namespace Cocoa.CodeAnalysis.Binding
             return Binary(syntax, left, SyntaxKind.LessOrEqualsToken, right);
         }
 
+        public static BoundBinaryExpression GreaterOrEqual(SyntaxNode syntax, BoundExpression left, BoundExpression right)
+        {
+            return Binary(syntax, left, SyntaxKind.GreaterOrEqualsToken, right);
+        }
+
         public static BoundExpressionStatement Increment(SyntaxNode syntax, BoundVariableExpression variable)
         {
             var increment = Add(syntax, variable, Literal(syntax, 1));

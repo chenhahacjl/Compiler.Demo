@@ -995,16 +995,16 @@ namespace Cocoa.CodeAnalysis.Binding
             var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Int32);
             var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Int32);
 
-            // 可选步长：V1 仅支持常量正整数（负步长会破坏 `i <= upper` 条件语义）
+            // 可选步长：仅支持常量非零整数——正数升序、负数降序（零会死循环，运行期不可判）
             BoundExpression? step = null;
             if (syntax.Step != null)
             {
                 step = BindExpression(syntax.Step, TypeSymbol.Int32);
                 if (step.ConstantValue == null ||
                     step.ConstantValue.Value is not int stepValue ||
-                    stepValue <= 0)
+                    stepValue == 0)
                 {
-                    _diagnostics.ReportError(syntax.Step.Location, "for 循环的 step 必须为常量正整数。");
+                    _diagnostics.ReportError(syntax.Step.Location, "for 循环的 step 必须为常量非零整数（正数升序、负数降序）。");
                 }
             }
 

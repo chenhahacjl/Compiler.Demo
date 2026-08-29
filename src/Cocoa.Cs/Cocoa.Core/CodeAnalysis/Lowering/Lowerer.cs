@@ -207,7 +207,7 @@ namespace Cocoa.CodeAnalysis.Lowering
 
         protected override BoundStatement RewriteForStatement(BoundForStatement node)
         {
-            // for <var> = <lower> to <upper>
+            // for <var> = <lower> to <upper> [step <n>]
             //     <body>
             //
             // ---->
@@ -215,16 +215,23 @@ namespace Cocoa.CodeAnalysis.Lowering
             // {
             //     var <var> = <lower>
             //     let upperBound = <upper>
-            //     while (<var> <= upperBound)
+            //     while (<var> <= upperBound)              // 升序（step > 0 或缺省）
+            //     while (<var> >= upperBound)              // 降序（step < 0）
             //     {
             //         <body>
             //         continue:
-            //         <var> = <var> + 1
+            //         <var> = <var> + <step>               // 降序时 step 为负即递减
             //     }
             // }
 
             var lowerBound = VariableDeclaration(node.Syntax, node.Variable, node.LowerBound);
             var upperBound = ConstantDeclaration(node.Syntax, "upperBound", node.UpperBound);
+
+            // 步长方向：负数 → 降序（i >= upper 继续）；非负或缺省 → 升序（i <= upper 继续）
+            var descending = node.Step?.ConstantValue?.Value is int stepValue && stepValue < 0;
+            var condition = descending
+                ? GreaterOrEqual(node.Syntax, Variable(node.Syntax, lowerBound), Variable(node.Syntax, upperBound))
+                : LessOrEqual(node.Syntax, Variable(node.Syntax, lowerBound), Variable(node.Syntax, upperBound));
 
             // 步长：有 step 时 `i = i + step`，否则 `i = i + 1`
             BoundExpressionStatement increment;
@@ -247,11 +254,7 @@ namespace Cocoa.CodeAnalysis.Lowering
                 lowerBound,
                 upperBound,
                 While(node.Syntax,
-                    LessOrEqual(
-                        node.Syntax,
-                        Variable(node.Syntax, lowerBound),
-                        Variable(node.Syntax, upperBound)
-                    ),
+                    condition,
                     Block(
                         node.Syntax,
                         node.Body,

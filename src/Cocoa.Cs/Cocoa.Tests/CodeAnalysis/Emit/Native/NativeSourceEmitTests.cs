@@ -331,6 +331,41 @@ function Main()
         [Theory]
         [InlineData(X64)]
         [InlineData(X86)]
+        public void NativeSource_RangeFor_DescendingStep(string target)
+        {
+            // Y-A4-1：range-for 负常量 step（降序）端到端
+            var output = CompileAndRun(@"using System
+
+function Main()
+{
+    var total = 0
+    for var i = 10 to 1 step -1
+    {
+        total = total + i
+    }
+    Console.WriteLine(total)
+
+    var evens = 0
+    for var i = 10 to 1 step -2
+    {
+        evens = evens + i
+    }
+    Console.WriteLine(evens)
+
+    var skipped = 0
+    for var i = 0 to 5 step -1
+    {
+        skipped = skipped + 1
+    }
+    Console.WriteLine(skipped)
+}", "src-range-for-descending", target);
+
+            Assert.Equal("55\r\n30\r\n0\r\n", output);
+        }
+
+        [Theory]
+        [InlineData(X64)]
+        [InlineData(X86)]
         public void NativeSource_CSStyleFor_PostfixIncrement(string target)
         {
             var output = CompileAndRun(@"using System;

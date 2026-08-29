@@ -123,7 +123,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var upper = EmitExpression(statement.UpperBound);
                         var less = AllocateRegister(4);
                         Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(variable), IrOperand.Reg(upper)));
-                        Add(instructions, new IrInstruction(IrOpCode.Setcc, less, IrOperand.Constant((int)IrCond.Less)));
+                        // 步长方向：负数 → 降序（i > upper 继续）；非负或缺省 → 升序（i < upper 继续）
+                        var descending = statement.Step?.ConstantValue?.Value is int stepConst && stepConst < 0;
+                        Add(instructions, new IrInstruction(IrOpCode.Setcc, less, IrOperand.Constant((int)(descending ? IrCond.Greater : IrCond.Less))));
                         Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(less), IrOperand.Constant(0)));
                         Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(doneLabel)));
 

@@ -466,6 +466,40 @@ function Main()
         }
 
         [Fact]
+        public void Run_CocoaProgram_RangeForDescendingStep_OnDotnetHost()
+        {
+            // Y-A4-1：range-for 负常量 step（降序）端到端——升序/降序/步长/单次迭代边界
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    var total = 0
+    for var i = 10 to 1 step -1
+    {
+        total = total + i
+    }
+    Console.WriteLine(total)
+
+    var evens = 0
+    for var i = 10 to 1 step -2
+    {
+        evens = evens + i
+    }
+    Console.WriteLine(evens)
+
+    var skipped = 0
+    for var i = 0 to 5 step -1
+    {
+        skipped = skipped + 1
+    }
+    Console.WriteLine(skipped)
+}", "e2e-range-for-descending");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("55\r\n30\r\n0\r\n", stdout);
+        }
+
+        [Fact]
         public void Run_CocoaProgram_WithWideCallAndLongConcat_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System
