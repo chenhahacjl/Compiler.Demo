@@ -231,5 +231,117 @@ namespace System
             result[index] = this.substring(start, this.Length - start)
             return result
         }
+
+        // ------------------------------------------------------------------
+        // M0-4 第一批补齐（自举缺口 P0-6 高频成员）
+        // ------------------------------------------------------------------
+
+        public function IndexOf(c: char): i32
+        {
+            var i = 0
+            while i < this.Length
+            {
+                if this[i] == c
+                {
+                    return i
+                }
+                i = i + 1
+            }
+            return -1
+        }
+
+        public function LastIndexOf(sub: string): i32
+        {
+            if sub.Length == 0
+            {
+                return this.Length
+            }
+            var i = this.Length - sub.Length
+            while i >= 0
+            {
+                if this.substring(i, sub.Length) == sub
+                {
+                    return i
+                }
+                i = i - 1
+            }
+            return -1
+        }
+
+        public function LastIndexOf(c: char): i32
+        {
+            var i = this.Length - 1
+            while i >= 0
+            {
+                if this[i] == c
+                {
+                    return i
+                }
+                i = i - 1
+            }
+            return -1
+        }
+
+        public function TrimStart(c: char): string
+        {
+            var start = 0
+            while start < this.Length && this[start] == c
+            {
+                start = start + 1
+            }
+            if start >= this.Length
+            {
+                return ""
+            }
+            return this.substring(start, this.Length - start)
+        }
+
+        public function TrimEnd(c: char): string
+        {
+            var end = this.Length
+            while end > 0 && this[end - 1] == c
+            {
+                end = end - 1
+            }
+            return this.substring(0, end)
+        }
+
+        public function ToCharArray(): char[]
+        {
+            var result = new char[this.Length]
+            var i = 0
+            while i < this.Length
+            {
+                result[i] = this[i]
+                i = i + 1
+            }
+            return result
+        }
+
+        public function Remove(start: i32, count: i32): string
+        {
+            return this.substring(0, start) + this.substring(start + count, this.Length - start - count)
+        }
+
+        public function Insert(index: i32, text: string): string
+        {
+            return this.substring(0, index) + text + this.substring(index, this.Length - index)
+        }
+
+        public static function Join(sep: string, parts: string[]): string
+        {
+            var result = ""
+            var i = 0
+            while i < parts.Length
+            {
+                if i > 0
+                {
+                    result = result + sep
+                }
+                result = result + parts[i]
+                i = i + 1
+            }
+            return result
+        }
     }
 }
