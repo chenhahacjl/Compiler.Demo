@@ -1,0 +1,490 @@
+// Cocoa mini-Lexer —— 自举翻译第 ⑦ 步开工（mini-Lexer 里程碑）：
+// 紧凑词法器覆盖核心 token 面（对齐自举缺口分析 §6 验收口径的子集）：
+//   标识符/关键字、数字（十进制 + 0x 十六进制 + 含指数 double）、
+//   字符串（含 \ 转义）、字符字面量、注释（// 与 /* */）、
+//   运算符/标点（最长匹配，含两字符算子）、EOF，并携带行号/列号。
+// 依赖：string.substring(start, length)（特殊成员，跨三后端）、Char.* 成员面、System.Console。
+
+namespace MiniLexer
+{
+    class Lexer
+    {
+        private _src: string
+        private _pos: i32
+        private _line: i32
+        private _col: i32
+
+        public constructor()
+        {
+            _src = ""
+            _pos = 0
+            _line = 1
+            _col = 1
+        }
+
+        public static function Create(source: string): Lexer
+        {
+            var lex = new Lexer()
+            lex._src = source
+            lex._pos = 0
+            lex._line = 1
+            lex._col = 1
+            return lex
+        }
+
+        private function AtEnd(): bool
+        {
+            return _pos >= _src.Length
+        }
+
+        private function Current(): char
+        {
+            return _src[_pos]
+        }
+
+        private function Peek(offset: i32): char
+        {
+            if _pos + offset >= _src.Length
+            {
+                return char(0)
+            }
+
+            return _src[_pos + offset]
+        }
+
+        private function Advance(): void
+        {
+            if AtEnd()
+            {
+                return
+            }
+
+            if _src[_pos] == '\n'
+            {
+                _line = _line + 1
+                _col = 1
+            }
+            else
+            {
+                _col = _col + 1
+            }
+
+            _pos = _pos + 1
+        }
+
+        /// <summary>下一个 token，格式 `KIND text line:col`；无剩余时返回 `EOF`。</summary>
+        public function Next(): string
+        {
+            SkipTrivia()
+            if AtEnd()
+            {
+                return "EOF"
+            }
+
+            let startLine = _line
+            let startCol = _col
+            let c = Current()
+            if IsIdentStart(c)
+            {
+                return ReadIdent(startLine, startCol)
+            }
+
+            if Char.IsDigit(c)
+            {
+                return ReadNumber(startLine, startCol)
+            }
+
+            if c == '"'
+            {
+                return ReadString(startLine, startCol)
+            }
+
+            if c == '\''
+            {
+                return ReadChar(startLine, startCol)
+            }
+
+            return ReadSymbol(startLine, startCol)
+        }
+
+        private function SkipTrivia(): void
+        {
+            while !AtEnd()
+            {
+                let c = Current()
+                if c == ' ' || c == '\t' || c == '\r' || c == '\n'
+                {
+                    Advance()
+                }
+                else if c == '/' && Peek(1) == '/'
+                {
+                    while !AtEnd()
+                    {
+                        let d = Current()
+                        if d == '\n'
+                        {
+                            break
+                        }
+
+                        Advance()
+                    }
+                }
+                else if c == '/' && Peek(1) == '*'
+                {
+                    Advance()
+                    Advance()
+                    while !AtEnd()
+                    {
+                        let d = Current()
+                        if d == '*' && Peek(1) == '/'
+                        {
+                            Advance()
+                            Advance()
+                            break
+                        }
+
+                        Advance()
+                    }
+                }
+                else
+                {
+                    break
+                }
+            }
+        }
+
+        private function IsIdentStart(c: char): bool
+        {
+            if Char.IsLetter(c)
+            {
+                return true
+            }
+
+            if c == '_'
+            {
+                return true
+            }
+
+            return false
+        }
+
+        private function IsIdentPart(c: char): bool
+        {
+            if Char.IsLetterOrDigit(c)
+            {
+                return true
+            }
+
+            if c == '_'
+            {
+                return true
+            }
+
+            return false
+        }
+
+        /// <summary>十六进制字符判断（内联实现：Char.IsHexDigit 非 .NET 公开成员，避免 IL 重定向缺口）。</summary>
+        private function IsHexChar(c: char): bool
+        {
+            let v = i32(c)
+            if v >= 48 && v <= 57
+            {
+                return true
+            }
+
+            if v >= 65 && v <= 70
+            {
+                return true
+            }
+
+            if v >= 97 && v <= 102
+            {
+                return true
+            }
+
+            return false
+        }
+
+        private function ReadIdent(startLine: i32, startCol: i32): string
+        {
+            let start = _pos
+            Advance()
+            while !AtEnd()
+            {
+                let c = Current()
+                if IsIdentPart(c)
+                {
+                    Advance()
+                }
+                else
+                {
+                    break
+                }
+            }
+
+            let text = _src.substring(start, _pos - start)
+            if IsKeyword(text)
+            {
+                return "Keyword " + text + " " + string(startLine) + ":" + string(startCol)
+            }
+
+            return "Identifier " + text + " " + string(startLine) + ":" + string(startCol)
+        }
+
+        private function ReadNumber(startLine: i32, startCol: i32): string
+        {
+            let start = _pos
+            let first = Current()
+            if first == '0' && (Peek(1) == 'x' || Peek(1) == 'X')
+            {
+                Advance()
+                Advance()
+                while !AtEnd()
+                {
+                    let c = Current()
+                    if IsHexChar(c)
+                    {
+                        Advance()
+                    }
+                    else
+                    {
+                        break
+                    }
+                }
+            }
+            else
+            {
+                while !AtEnd()
+                {
+                    let c = Current()
+                    if Char.IsDigit(c)
+                    {
+                        Advance()
+                    }
+                    else
+                    {
+                        break
+                    }
+                }
+
+                if !AtEnd()
+                {
+                    let dot = Current() == '.'
+                    if dot
+                    {
+                        Advance()
+                        while !AtEnd()
+                        {
+                            let c = Current()
+                            if Char.IsDigit(c)
+                            {
+                                Advance()
+                            }
+                            else
+                            {
+                                break
+                            }
+                        }
+                    }
+                }
+
+                if !AtEnd()
+                {
+                    let c = Current()
+                    let isE = c == 'e' || c == 'E'
+                    if isE
+                    {
+                        let p1 = Peek(1)
+                        var expStart = Char.IsDigit(p1)
+                        if p1 == '+' || p1 == '-'
+                        {
+                            expStart = Char.IsDigit(Peek(2))
+                        }
+
+                        if expStart
+                        {
+                            Advance()
+                            if !AtEnd()
+                            {
+                                let s = Current()
+                                if s == '+' || s == '-'
+                                {
+                                    Advance()
+                                }
+                            }
+
+                            while !AtEnd()
+                            {
+                                let d = Current()
+                                if Char.IsDigit(d)
+                                {
+                                    Advance()
+                                }
+                                else
+                                {
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            let text = _src.substring(start, _pos - start)
+            return "Number " + text + " " + string(startLine) + ":" + string(startCol)
+        }
+
+        private function ReadString(startLine: i32, startCol: i32): string
+        {
+            let start = _pos
+            Advance()
+            while !AtEnd()
+            {
+                let c = Current()
+                if c == '"'
+                {
+                    Advance()
+                    break
+                }
+
+                if c == '\\'
+                {
+                    Advance()
+                    if !AtEnd()
+                    {
+                        Advance()
+                    }
+                }
+                else
+                {
+                    Advance()
+                }
+            }
+
+            let text = _src.substring(start, _pos - start)
+            return "String " + text + " " + string(startLine) + ":" + string(startCol)
+        }
+
+        private function ReadChar(startLine: i32, startCol: i32): string
+        {
+            let start = _pos
+            Advance()
+            if !AtEnd()
+            {
+                let c = Current()
+                if c == '\\'
+                {
+                    Advance()
+                    if !AtEnd()
+                    {
+                        Advance()
+                    }
+                }
+                else
+                {
+                    Advance()
+                }
+            }
+
+            if !AtEnd()
+            {
+                let c = Current()
+                if c == '\''
+                {
+                    Advance()
+                }
+            }
+
+            let text = _src.substring(start, _pos - start)
+            return "Char " + text + " " + string(startLine) + ":" + string(startCol)
+        }
+
+        private function ReadSymbol(startLine: i32, startCol: i32): string
+        {
+            let start = _pos
+            let two = TwoCharSymbol()
+            if two.Length > 0
+            {
+                Advance()
+                Advance()
+                let text = _src.substring(start, _pos - start)
+                return "Symbol " + text + " " + string(startLine) + ":" + string(startCol)
+            }
+
+            Advance()
+            let one = _src.substring(start, _pos - start)
+            return "Symbol " + one + " " + string(startLine) + ":" + string(startCol)
+        }
+
+        private function TwoCharSymbol(): string
+        {
+            let a = Current()
+            let b = Peek(1)
+            if a == '=' && b == '=' { return "==" }
+            if a == '!' && b == '=' { return "!=" }
+            if a == '<' && b == '=' { return "<=" }
+            if a == '>' && b == '=' { return ">=" }
+            if a == '&' && b == '&' { return "&&" }
+            if a == '|' && b == '|' { return "||" }
+            if a == '<' && b == '<' { return "<<" }
+            if a == '>' && b == '>' { return ">>" }
+            if a == '+' && b == '+' { return "++" }
+            if a == '-' && b == '-' { return "--" }
+            if a == '+' && b == '=' { return "+=" }
+            if a == '-' && b == '=' { return "-=" }
+            if a == '*' && b == '=' { return "*=" }
+            if a == '/' && b == '=' { return "/=" }
+            if a == '%' && b == '=' { return "%=" }
+            if a == ':' && b == ':' { return "::" }
+            if a == '=' && b == '>' { return "=>" }
+            return ""
+        }
+
+        private function IsKeyword(text: string): bool
+        {
+            if text == "function" { return true }
+            if text == "class" { return true }
+            if text == "interface" { return true }
+            if text == "struct" { return true }
+            if text == "enum" { return true }
+            if text == "namespace" { return true }
+            if text == "using" { return true }
+            if text == "public" { return true }
+            if text == "private" { return true }
+            if text == "internal" { return true }
+            if text == "protected" { return true }
+            if text == "static" { return true }
+            if text == "var" { return true }
+            if text == "let" { return true }
+            if text == "const" { return true }
+            if text == "if" { return true }
+            if text == "else" { return true }
+            if text == "while" { return true }
+            if text == "for" { return true }
+            if text == "foreach" { return true }
+            if text == "in" { return true }
+            if text == "return" { return true }
+            if text == "break" { return true }
+            if text == "continue" { return true }
+            if text == "new" { return true }
+            if text == "this" { return true }
+            if text == "base" { return true }
+            if text == "true" { return true }
+            if text == "false" { return true }
+            if text == "null" { return true }
+            if text == "out" { return true }
+            if text == "ref" { return true }
+            if text == "syscall" { return true }
+            if text == "throw" { return true }
+            if text == "try" { return true }
+            if text == "catch" { return true }
+            if text == "finally" { return true }
+            if text == "is" { return true }
+            if text == "as" { return true }
+            if text == "delegate" { return true }
+            if text == "event" { return true }
+            if text == "where" { return true }
+            return false
+        }
+    }
+}
