@@ -201,3 +201,22 @@ Cocoa.CodeAnalysis
   - **IL 闭包可见性修复 ✅（跟进小提交）**：合成闭包环境类（`__Env_*`，符号 Private）被发射为 private 顶层类、lambda 方法为 private ——CLR 跨类型建委托被拒（`MethodAccessException`）。已强制合成闭包物 public 发射（`IlEmitter` TypeDef isPublic + 方法 Visibility），**参数捕获型 lambda 的 IL 端到端解通**（新增 `CapturingLambda_Parameter_RoundTrips_Il` 锁定）。
   - **捕获变量 IL 栈序修复 ✅（同跟进）**：dump 证实 Make/Main 的 IL、局部签名、MethodDef/FieldDef 令牌全部正确后，逐字节对比参数捕获（prologue 播种 `Ldloc env→Ldarg n→Stfld` = `[obj,value]`）与局部捕获（声明处播种先求值再 `Ldloc env` = `[value,obj]`）→ **`stfld` 栈序反置**，CLR 把 env 当值、int 当对象 → NRE。修复声明处（目标先入栈）与捕获赋值路径（临时局部保表达式结果，对齐 byref 先例）。**局部捕获（var/let/const）与捕获后重赋值（n=50）的 IL 端到端全部解通**（新增 `CapturingLambda_Local_RoundTrips_Il` / `_LocalReassigned_RoundTrips_Il` / `_Parameter_RoundTrips_Il` 锁定）。
   - 验收：行为等价全量绿（41701 通过 / 2 skip / 1 环境锁 `e2e-string-oob`）。
+
+#### 6.7.8 A2 设计：高 Bound → 共享规范 IR 切分（行为等价，分多次提交）
+
+**目标**：把 Binder 内联的"语法糖合成"重构为 `高 Bound（含糖）→ 规范化 pass → 规范 IR` 两段；cod / 三后端 / Evaluator 只消费规范 IR。为"A3 CO 显式化 / B2 C#Binder"提供语言中性交汇层。
+
+**现状（代码事实）**：Binder 直接产出近最终 Bound——`BuildFunctionBody`（Binder.cs:656）内联合成：foreach→while（Binder.Statements.cs:1068-1250，含 `BindEnumeratorForeach` 枚举器模式）、lambda 提升（Binder.Expressions.cs:37-218，合成 `__Lambda$N` + 捕获环境类）、构造链/字段初始化前缀（Binder.cs:692-722）、is/as 静态折叠（Binder.Statements.cs:242-309）、facade 实例方法→静态降级（Binder.Declarations.cs:2086-2092 / 1796-1831 / 调用侧 1033-1071）、插值（Binder.Statements.cs:1778-1842）。`LoweringPipeline.Lower`（Binder.cs:732；`Lowering/Lowerer.cs`）→ goto/CFG + 死代码 + 明确赋值 DA。A1 后语义层零语法类依赖。
+
+**切分设计**：
+| 层 | 内容 | 产者 |
+|---|---|---|
+| 高 Bound | 保留糖的高层绑定（foreach / 插值 / 构造链 / 字段初始化 / is-as / facade 调用形态），语言专属语义在此落地 | 语言 Binder（CO/C#） |
+| 规范化 pass（共享） | "糖→核心 Bound"纯函数序列（顺序固定、方言无关），字面把 F1-F5 从 Binder 迁出 | 共享 |
+| 规范 IR | `LoweringPipeline`（goto/CFG/死代码/DA）为唯一 IR 生产点；cod/IL/native/Evaluator 只消费它 | 共享 |
+
+**契约（关键不变量）**：规范 IR 的 **Bound 节点形态不变**（仅把"合成时机"从绑定期移到规范化期），故 cod 文本格式 / 读侧 / 三后端输出全部保持不变——每步只验证"行为等价 + 全量绿"，无需动 cod 版本。
+
+**迁移顺序（每步行为等价全量绿）**：F1 插值降级迁出（:1778-1842）→ F2 构造链/字段初始化前缀迁出（Binder.cs:692-722）→ F3 is/as 静态折叠迁出（:242-309）→ F4 foreach→while 迁出（:1068-1250，含枚举器模式，最敏感）→ F5 facade 降级形态收敛 → F6 高/规范节点类型分离（BoundNodeKind 增删 + 签名身份核对）。
+
+**风险与护栏**：F1-F5 各步可能改变绑定顺序/诊断身份 → 一律行为等价重构 + 每提交全量绿兜底；IR 形态不变则 cod 兼容性天然保持；A2 前 A1 已完成（类名已摘除）。
