@@ -217,7 +217,9 @@ Cocoa.CodeAnalysis
 
 **契约（关键不变量）**：规范 IR 的 **Bound 节点形态不变**（仅把"合成时机"从绑定期移到规范化期），故 cod 文本格式 / 读侧 / 三后端输出全部保持不变——每步只验证"行为等价 + 全量绿"，无需动 cod 版本。
 
-**迁移顺序（每步行为等价全量绿）**：F1 插值降级迁出（:1778-1842）→ F2 构造链/字段初始化前缀迁出（Binder.cs:692-722）→ F3 is/as 静态折叠迁出（:242-309）→ F4 foreach→while 迁出（:1068-1250，含枚举器模式，最敏感）→ F5 facade 降级形态收敛 → F6 高/规范节点类型分离（BoundNodeKind 增删 + 签名身份核对）。
+**迁移顺序（每步行为等价全量绿）**：F1 插值降级迁出（:1778-1842）✅ → F2 构造链/字段初始化前缀迁出（Binder.cs:692-722）→ F3 is/as 静态折叠迁出（:242-309）→ F4 foreach→while 迁出（:1068-1250，含枚举器模式，最敏感）→ F5 facade 降级形态收敛 → F6 高/规范节点类型分离（BoundNodeKind 增删 + 签名身份核对）。
+
+> **计划修订（2026-08-29，基于实现验证）**：F2-F4 与 F1 不同——构造链/字段初始化/is-as/foreach 都是**绑定期语义决策**（需作用域/类型上下文：解析基类构造、绑定字段初始化表达式、枚举器模式探测），**不能**像 F1 迁到"绑定后 pass"。其 A2 待遇改为：**共享绑定服务抽取**（binder 分叉 A3/B2 时作为两语言 Binder 共用的语言中性算法），F1 的"纯组装迁移"模式仅适用于 F6 的高/规范节点分离。当前即后续 F 的执行顺序与形式以本修订为准。
 
 **风险与护栏**：F1-F5 各步可能改变绑定顺序/诊断身份 → 一律行为等价重构 + 每提交全量绿兜底；IR 形态不变则 cod 兼容性天然保持；A2 前 A1 已完成（类名已摘除）。
 
@@ -228,5 +230,6 @@ Cocoa.CodeAnalysis
   - Binder 改产高节点（洞绑定/对齐常量校验/无格式洞 string 转换仍在 Binder，语义与旧内联一致）；旧 `AppendInterpolation` 移除。
   - 共享规范化 pass `Lowering/InterpolationNormalizer`：高节点 → `BoundFormatExpression` / string 拼接（+），在**最终体收集边界**统一接入——`BuildFunctionBody` / `BuildFunctionBodyForMonomorphization`（LoweringPipeline 前）与脚本/Main-global 体（直接 `Lowerer.Lower` 前）三处。
   - 配套：`BoundTreeRewriter.RewriteInterpolatedStringExpression`（泛型替换经基类）、`Compilation.BoundChildren`（捕获分析）、`BoundNodePrinter`。
+  - **规范 IR 契约校验 `Lowering/CanonicalIr`（DEBUG）**：接入 `Compilation.GetProgram` 消费漏斗，断言 `program.Functions` 各体无高节点；经全量 41704 例验证成立（契约本身还暴露并修正了"误检 GlobalScope.Statements 原始体"的实现偏差——原始体属中间输入，非规范输出）。
   - 验收：全量绿（41704 通过 / 2 skip / 1 环境锁）；插值 29 例全绿。高节点在规范化后即消失，cod/三后端/求值零感知。
-- 待续：F2 构造链/字段初始化前缀、F3 is/as 静态折叠、F4 foreach→while、F5 facade 降级形态、F6 高/规范节点分离。
+- 待续（按 §6.7.8 修订）：F2-F4 改为"共享绑定服务"（随 A3/B2 binder 分叉落地）；F6 高/规范节点分离。

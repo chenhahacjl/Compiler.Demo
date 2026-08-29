@@ -428,7 +428,12 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            return Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : SyntaxTrees[0].Language, _linkCodDynamically, GlobalNamespace);
+            var program = Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : SyntaxTrees[0].Language, _linkCodDynamically, GlobalNamespace);
+
+            // Y A2-F1：规范 IR 契约（DEBUG）——消费边界不得有高 Bound 节点泄漏
+            Lowering.CanonicalIr.Verify(program);
+
+            return program;
         }
 
         /// <summary>
