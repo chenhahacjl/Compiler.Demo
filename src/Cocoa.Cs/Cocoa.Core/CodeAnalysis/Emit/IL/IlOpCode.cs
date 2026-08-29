@@ -136,7 +136,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             Define("Conv_I2", 0x68, IlOperandType.InlineNone);
             Define("Conv_I4", 0x69, IlOperandType.InlineNone);
             Define("Conv_U1", 0xD2, IlOperandType.InlineNone);
-            Define("Conv_U2", 0xD4, IlOperandType.InlineNone);
+            Define("Conv_U2", 0xD1, IlOperandType.InlineNone);
             Define("Conv_I8", 0x6A, IlOperandType.InlineNone);
             Define("Conv_R4", 0x6B, IlOperandType.InlineNone);
             Define("Conv_R8", 0x6C, IlOperandType.InlineNone);

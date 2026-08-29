@@ -285,7 +285,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case 0x6D: // Conv_U4
                 case 0x6E: // Conv_U8
                 case 0xD2: // Conv_U1
-                case 0xD4: // Conv_U2
+                case 0xD1: // Conv_U2
                     return 0;
                 case 0xFE01: // Ceq
                 case 0xFE02: // Cgt
