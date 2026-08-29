@@ -995,7 +995,13 @@ namespace Cocoa.CodeAnalysis.Binding
             var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Int32);
             var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Int32);
 
-            // 可选步长：仅支持常量非零整数——正数升序、负数降序（零会死循环，运行期不可判）
+            // 方向（Y-A4-2）：两界为编译期常量时按比较自动定方向（lower > upper → 降序，如 `10 to 1`）；
+            // 否则以显式 step 符号为准（A4-1：负 step 降序）；缺省升序。
+            var lowerConst = lowerBound.ConstantValue?.Value is int lv ? lv : (int?)null;
+            var upperConst = upperBound.ConstantValue?.Value is int uv ? uv : (int?)null;
+            var autoDescending = lowerConst != null && upperConst != null && lowerConst > upperConst;
+
+            // 可选步长：仅支持常量非零整数——按幅值（方向由边界比较 / 负号决定，内部以带符号 step 表达）
             BoundExpression? step = null;
             if (syntax.Step != null)
             {
@@ -1004,8 +1010,19 @@ namespace Cocoa.CodeAnalysis.Binding
                     step.ConstantValue.Value is not int stepValue ||
                     stepValue == 0)
                 {
-                    _diagnostics.ReportError(syntax.Step.Location, "for 循环的 step 必须为常量非零整数（正数升序、负数降序）。");
+                    _diagnostics.ReportError(syntax.Step.Location, "for 循环的 step 必须为常量非零整数。");
                 }
+                else
+                {
+                    var magnitude = Math.Abs(stepValue);
+                    var descending = autoDescending || stepValue < 0;
+                    step = new BoundLiteralExpression(syntax.Step, descending ? -magnitude : magnitude);
+                }
+            }
+            else if (autoDescending)
+            {
+                // 降序缺省步长 → -1
+                step = new BoundLiteralExpression(syntax.LowerBound, -1);
             }
 
             _scope = new BoundScope(_scope);

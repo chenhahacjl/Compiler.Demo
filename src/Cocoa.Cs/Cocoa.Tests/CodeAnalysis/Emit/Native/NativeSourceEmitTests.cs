@@ -358,9 +358,23 @@ function Main()
         skipped = skipped + 1
     }
     Console.WriteLine(skipped)
+
+    var autoTotal = 0
+    for var i = 10 to 1
+    {
+        autoTotal = autoTotal + i
+    }
+    Console.WriteLine(autoTotal)
+
+    var autoStep = 0
+    for var i = 10 to 1 step 2
+    {
+        autoStep = autoStep + i
+    }
+    Console.WriteLine(autoStep)
 }", "src-range-for-descending", target);
 
-            Assert.Equal("55\r\n30\r\n0\r\n", output);
+            Assert.Equal("55\r\n30\r\n0\r\n55\r\n30\r\n", output);
         }
 
         [Theory]

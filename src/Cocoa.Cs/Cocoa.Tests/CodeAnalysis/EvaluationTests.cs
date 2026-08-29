@@ -85,6 +85,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var result = 0 for var i = 10 to 1 step -2 { result = result + i } return result }", 30)]
         [InlineData("{ var result = 0 for var i = 0 to 5 step -1 { result = result + 1 } return result }", 0)]
         [InlineData("{ var result = 0 for var i = 5 to 9 step 2 { result = result + i } return result }", 21)]
+        [InlineData("{ var result = 0 for var i = 10 to 1 { result = result + i } return result }", 55)]
+        [InlineData("{ var result = 0 for var i = 10 to 1 step 2 { result = result + i } return result }", 30)]
         [InlineData("{ var a = 0 do a = a + 1 while a < 10 return a}", 10)]
         [InlineData("{ var i = 0 while i < 5 { i = i + 1 if i == 5 continue } return i }", 5)]
         [InlineData("{ var i = 0 do { i = i + 1 if i == 5 continue } while i < 5 return i }", 5)]
@@ -159,7 +161,7 @@ namespace Cocoa.Tests.CodeAnalysis
             ";
 
             var diagnostics = @"
-                for 循环的 step 必须为常量非零整数（正数升序、负数降序）。
+                for 循环的 step 必须为常量非零整数。
             ";
 
             AssertDiagnostics(text, diagnostics);
@@ -169,7 +171,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void Evaluator_ForStep_Zero_ReportsError()
         {
             var text = "for (var i = 0 to 10 step [0]) { }";
-            var diagnostics = "for 循环的 step 必须为常量非零整数（正数升序、负数降序）。";
+            var diagnostics = "for 循环的 step 必须为常量非零整数。";
             AssertDiagnostics(text, diagnostics);
         }
 
@@ -988,7 +990,7 @@ function Main()
         [InlineData("{ var sum = 0 for var i = 1 to 4 { if i == 2 continue sum = sum + i } return sum }", 8)]
         [InlineData("{ var result = 0 for (var i = 5 to 5) { result = result + 1 } return result }", 1)]
         [InlineData("{ var total = 0 for var i = 1 to 3 { total = total + i i = i + 1 } return total }", 4)]
-        [InlineData("{ var result = 0 for (var i = 10 to 1) { result = result + 1 } return result }", 0)]
+        [InlineData("{ var result = 0 for (var i = 10 to 1) { result = result + 1 } return result }", 10)]
         public void Evaluator_RangeForForms_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);

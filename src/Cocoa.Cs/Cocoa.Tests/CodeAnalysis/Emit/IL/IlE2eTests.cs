@@ -493,10 +493,24 @@ function Main()
         skipped = skipped + 1
     }
     Console.WriteLine(skipped)
+
+    var autoTotal = 0
+    for var i = 10 to 1
+    {
+        autoTotal = autoTotal + i
+    }
+    Console.WriteLine(autoTotal)
+
+    var autoStep = 0
+    for var i = 10 to 1 step 2
+    {
+        autoStep = autoStep + i
+    }
+    Console.WriteLine(autoStep)
 }", "e2e-range-for-descending");
 
             Assert.Equal(0, exitCode);
-            Assert.Equal("55\r\n30\r\n0\r\n", stdout);
+            Assert.Equal("55\r\n30\r\n0\r\n55\r\n30\r\n", stdout);
         }
 
         [Fact]
