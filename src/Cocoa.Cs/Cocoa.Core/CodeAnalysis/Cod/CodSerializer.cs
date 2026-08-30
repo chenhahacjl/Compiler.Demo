@@ -1052,11 +1052,12 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field("entry:" + (fn.EntryPoint != null ? Str(fn.EntryPoint) : "-"));
             w.Field("charset:" + (fn.CharSet != null ? fn.CharSet.Value.ToString().ToLowerInvariant() : "-"));
 
-            // 6e-G7 S2：泛型定义属主的方法携带静态位（容器类全静态隐含 true；顶层函数恒 static；gcls 实例方法需显式 false）
-            if (fn.ContainingClass is { IsGenericDefinition: true })
+            // 6e-G7 S2：属主方法携带静态/构造/访问器位（泛型定义与 6b facade 实例类显式区分；容器类全静态=显式 true）
+            if (fn.ContainingClass != null)
             {
                 w.Field("static:" + BoolWord(fn.IsStatic));
                 w.Field("ctor:" + BoolWord(fn.IsConstructor));
+                w.Field("acc:" + BoolWord(fn.IsPropertyAccessor));
             }
 
             w.Field("params:" + fn.Parameters.Length.ToString(CultureInfo.InvariantCulture));
@@ -1275,8 +1276,9 @@ namespace Cocoa.CodeAnalysis.Cod
             switch (value)
             {
                 case null: return "n:"; // 6e-M19 M5-a锛歯ull 甯搁噺
-                case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
-                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8锛歩64 甯搁噺
+case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
+                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8：i64 常量
+                case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b：u64 常量（M0-4 批4 TryParse 引入）
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
                 case byte u: return "u:" + u.ToString(CultureInfo.InvariantCulture);
@@ -1299,6 +1301,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 case 'b': return rest == "1";
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'u': return (byte)int.Parse(rest, CultureInfo.InvariantCulture);
+                case 'U': return ulong.Parse(rest, CultureInfo.InvariantCulture); // 6b：u64 常量
                 case 'd': return double.Parse(rest, NumberStyles.Float, CultureInfo.InvariantCulture);
                 case 's': return Unescape(rest);
                 default:

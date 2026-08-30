@@ -466,13 +466,15 @@ namespace Cocoa.CodeAnalysis.Cod
             var entryText = ReadLabeledField(reader, "entry:");
             var charSetText = ReadLabeledField(reader, "charset:");
 
-            // 6e-G7 S2：泛型属主方法的显式静态/构造位（旧文件无此字段，按默认推断）
+            // 6e-G7 S2：属主方法的显式静态/构造/访问器位（旧文件无此字段，按默认：容器类全静态推断）
             bool? explicitIsStatic = null;
             var explicitIsConstructor = false;
+            var explicitIsAccessor = false;
             if (reader.PeekRaw().StartsWith("static:", StringComparison.Ordinal))
             {
                 explicitIsStatic = ParseBoolWord(ReadLabeledField(reader, "static:"));
                 explicitIsConstructor = ParseBoolWord(ReadLabeledField(reader, "ctor:"));
+                explicitIsAccessor = ParseBoolWord(ReadLabeledField(reader, "acc:"));
             }
 
 
@@ -601,13 +603,14 @@ namespace Cocoa.CodeAnalysis.Cod
 
             // 绫绘柟娉曞洖濉細鍚被褰掑睘鐨?fn 褰掑叆鍏剁被锛?e-M18锛氬鍣ㄧ被鍏ㄩ潤鎬佲€斺€攕yscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪級銆?
             // 鍐呭缓鍗曚緥锛圫ystem.Object/System.Type锛孧2-c锛夋垚鍛樺凡鐢?Ensure 娉ㄥ叆锛岃烦杩囧洖濉槻閲嶅/闃茶鏍?static
+            // 6e-G7 S2 + 6b：属主方法按显式位还原（泛型定义/facade 实例类显式区分；容器类隐含全静态）
             if (containingClass != null && !SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
-                // 6e-G7 S2：泛型定义属主按显式位还原（实例方法 false / .ctor true）；容器类隐含全静态
                 function.IsStatic = explicitIsStatic ?? true;
                 if (explicitIsStatic.HasValue)
                 {
                     function.IsConstructor = explicitIsConstructor;
+                    function.IsPropertyAccessor = explicitIsAccessor;
                 }
 
                 containingClass.AddMethod(function);

@@ -1,718 +1,759 @@
 (cod COCOD 1
   (symbols
-    (cls System.Array internal methods:16 Sum[int[]] Sum[double[]] Min[int[]] Min[double[]] Max[int[]] Max[double[]] Average[int[]] Average[double[]] Contains[int[],int] Contains[double[],double] IndexOf[int[],int] IndexOf[double[],double] Reverse[int[]] Reverse[double[]] Sort[int[]] Sort[double[]])
-    (cls System.Boolean public methods:7 ToString[bool] Parse[string] Parse[string,bool] Equals[bool,bool] GetHashCode[bool] ToString[bool,string] TryParse[string,out:bool])
-    (cls System.Byte public methods:7 ToString[byte] CompareTo[byte,byte] Parse[string] Equals[byte,byte] GetHashCode[byte] ToString[byte,string] TryParse[string,out:byte])
-    (cls System.Char public methods:17 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char] IsLetterOrDigit[char] IsControl[char] IsHexDigit[char] IsUpper[char] IsLower[char] Equals[char,char] GetHashCode[char] ToString[char,string] TryParse[string,out:char])
-    (cls System.Console internal methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
-    (cls System.Double public methods:10 ToString[double] CompareTo[double,double] Equals[double,double] GetHashCode[double] ToString[double,string] TryParse[string,out:double] Parse[string] IsNaN[double] IsInfinity[double] IsFinite[double])
-    (cls System.Environment internal methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
-    (cls System.IO.File internal methods:5 ReadAllText[string] WriteAllText[string,string] Exists[string] Copy[string,string] Delete[string])
-    (cls System.Int16 public methods:7 ToString[short] CompareTo[short,short] Parse[string] Equals[short,short] GetHashCode[short] ToString[short,string] TryParse[string,out:short])
-    (cls System.Int32 public methods:7 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int] Equals[int,int] GetHashCode[int] ToString[int,string])
-    (cls System.Int64 public methods:7 ToString[long] CompareTo[long,long] Parse[string] Equals[long,long] GetHashCode[long] ToString[long,string] TryParse[string,out:long])
-    (cls System.Math internal methods:21 Max[int,int] Max[double,double] Min[int,int] Min[double,double] Abs[int] Abs[double] Clamp[int,int,int] Clamp[double,double,double] Sign[int] Sign[double] IsEven[int] IsOdd[int] Pow[int,int] Factorial[int] Gcd[int,int] Lcm[int,int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double])
-    (cls System.Runtime internal methods:22 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]])
-    (cls System.SByte public methods:7 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string] Equals[sbyte,sbyte] GetHashCode[sbyte] ToString[sbyte,string] TryParse[string,out:sbyte])
-    (cls System.Single public methods:9 ToString[float] Equals[float,float] GetHashCode[float] ToString[float,string] TryParse[string,out:float] Parse[string] IsNaN[float] IsInfinity[float] IsFinite[float])
-    (cls System.String public methods:14 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Trim[string] Replace[string,string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char])
-    (cls System.UInt16 public methods:7 ToString[ushort] CompareTo[ushort,ushort] Parse[string] Equals[ushort,ushort] GetHashCode[ushort] ToString[ushort,string] TryParse[string,out:ushort])
-    (cls System.UInt32 public methods:7 ToString[uint] CompareTo[uint,uint] Parse[string] Equals[uint,uint] GetHashCode[uint] ToString[uint,string] TryParse[string,out:uint])
-    (cls System.UInt64 public methods:6 ToString[ulong] CompareTo[ulong,ulong] Equals[ulong,ulong] GetHashCode[ulong] ToString[ulong,string] TryParse[string,out:ulong])
-    (fn System.Array.Sum[int[]] name:Sum ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (cls System.Array internal iface:false ifaces:0 methods:16 Sum[int[]] Sum[double[]] Min[int[]] Min[double[]] Max[int[]] Max[double[]] Average[int[]] Average[double[]] Contains[int[],int] Contains[double[],double] IndexOf[int[],int] IndexOf[double[],double] Reverse[int[]] Reverse[double[]] Sort[int[]] Sort[double[]])
+    (cls System.Boolean public iface:false ifaces:0 methods:7 ToString[bool] Parse[string] Parse[string,bool] Equals[bool,bool] GetHashCode[bool] ToString[bool,string] TryParse[string,out:bool])
+    (cls System.Byte public iface:false ifaces:0 methods:7 ToString[byte] CompareTo[byte,byte] Parse[string] Equals[byte,byte] GetHashCode[byte] ToString[byte,string] TryParse[string,out:byte])
+    (cls System.Char public iface:false ifaces:0 methods:17 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char] IsLetterOrDigit[char] IsControl[char] IsHexDigit[char] IsUpper[char] IsLower[char] Equals[char,char] GetHashCode[char] ToString[char,string] TryParse[string,out:char])
+    (cls System.Console internal iface:false ifaces:0 methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
+    (cls System.Double public iface:false ifaces:0 methods:10 ToString[double] CompareTo[double,double] Equals[double,double] GetHashCode[double] ToString[double,string] TryParse[string,out:double] Parse[string] IsNaN[double] IsInfinity[double] IsFinite[double])
+    (cls System.Environment internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
+    (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception])
+    (cls System.IO.File internal iface:false ifaces:0 methods:5 ReadAllText[string] WriteAllText[string,string] Exists[string] Copy[string,string] Delete[string])
+    (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[short] CompareTo[short,short] Parse[string] Equals[short,short] GetHashCode[short] ToString[short,string] TryParse[string,out:short])
+    (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int] Equals[int,int] GetHashCode[int] ToString[int,string])
+    (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[long] CompareTo[long,long] Parse[string] Equals[long,long] GetHashCode[long] ToString[long,string] TryParse[string,out:long])
+    (cls System.Math internal iface:false ifaces:0 methods:21 Max[int,int] Max[double,double] Min[int,int] Min[double,double] Abs[int] Abs[double] Clamp[int,int,int] Clamp[double,double,double] Sign[int] Sign[double] IsEven[int] IsOdd[int] Pow[int,int] Factorial[int] Gcd[int,int] Lcm[int,int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double])
+    (cls System.Runtime internal iface:false ifaces:0 methods:22 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]])
+    (cls System.SByte public iface:false ifaces:0 methods:7 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string] Equals[sbyte,sbyte] GetHashCode[sbyte] ToString[sbyte,string] TryParse[string,out:sbyte])
+    (cls System.Single public iface:false ifaces:0 methods:9 ToString[float] Equals[float,float] GetHashCode[float] ToString[float,string] TryParse[string,out:float] Parse[string] IsNaN[float] IsInfinity[float] IsFinite[float])
+    (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Trim[string] Replace[string,string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char] IndexOf[string,char] LastIndexOf[string,string] LastIndexOf[string,char] TrimStart[string,char] TrimEnd[string,char] ToCharArray[string] Remove[string,int,int] Insert[string,int,string] Join[string,string[]])
+    (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[ushort] CompareTo[ushort,ushort] Parse[string] Equals[ushort,ushort] GetHashCode[ushort] ToString[ushort,string] TryParse[string,out:ushort])
+    (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[uint] CompareTo[uint,uint] Parse[string] Equals[uint,uint] GetHashCode[uint] ToString[uint,string] TryParse[string,out:uint])
+    (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[ulong] CompareTo[ulong,ulong] Equals[ulong,ulong] GetHashCode[ulong] ToString[ulong,string] TryParse[string,out:ulong])
+    (fn System.Array.Sum[int[]] name:Sum ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Sum[int[]]/a a int[] 0 - -)
     )
-    (fn System.Array.Sum[double[]] name:Sum ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Sum[double[]] name:Sum ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Sum[double[]]/a a double[] 0 - -)
     )
-    (fn System.Array.Min[int[]] name:Min ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Min[int[]] name:Min ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Min[int[]]/a a int[] 0 - -)
     )
-    (fn System.Array.Min[double[]] name:Min ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Min[double[]] name:Min ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Min[double[]]/a a double[] 0 - -)
     )
-    (fn System.Array.Max[int[]] name:Max ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Max[int[]] name:Max ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Max[int[]]/a a int[] 0 - -)
     )
-    (fn System.Array.Max[double[]] name:Max ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Max[double[]] name:Max ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Max[double[]]/a a double[] 0 - -)
     )
-    (fn System.Array.Average[int[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Average[int[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Average[int[]]/a a int[] 0 - -)
     )
-    (fn System.Array.Average[double[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Average[double[]] name:Average ret:double ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Average[double[]]/a a double[] 0 - -)
     )
-    (fn System.Array.Contains[int[],int] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Array.Contains[int[],int] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Array.Contains[int[],int]/a a int[] 0 - -)
       (par System.Array.Contains[int[],int]/v v int 1 - -)
     )
-    (fn System.Array.Contains[double[],double] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Array.Contains[double[],double] name:Contains ret:bool ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Array.Contains[double[],double]/a a double[] 0 - -)
       (par System.Array.Contains[double[],double]/v v double 1 - -)
     )
-    (fn System.Array.IndexOf[int[],int] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Array.IndexOf[int[],int] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Array.IndexOf[int[],int]/a a int[] 0 - -)
       (par System.Array.IndexOf[int[],int]/v v int 1 - -)
     )
-    (fn System.Array.IndexOf[double[],double] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Array.IndexOf[double[],double] name:IndexOf ret:int ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Array.IndexOf[double[],double]/a a double[] 0 - -)
       (par System.Array.IndexOf[double[],double]/v v double 1 - -)
     )
-    (fn System.Array.Reverse[int[]] name:Reverse ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Reverse[int[]] name:Reverse ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Reverse[int[]]/a a int[] 0 - -)
     )
-    (fn System.Array.Reverse[double[]] name:Reverse ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Reverse[double[]] name:Reverse ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Reverse[double[]]/a a double[] 0 - -)
     )
-    (fn System.Array.Sort[int[]] name:Sort ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Sort[int[]] name:Sort ret:int[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Sort[int[]]/a a int[] 0 - -)
     )
-    (fn System.Array.Sort[double[]] name:Sort ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Array.Sort[double[]] name:Sort ret:double[] ns:- owner:System.Array extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Array.Sort[double[]]/a a double[] 0 - -)
     )
-    (fn System.Boolean.ToString[bool] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Boolean.ToString[bool] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Boolean.ToString[bool]/this this bool 0 - this)
     )
-    (fn System.Boolean.Parse[string] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Boolean.Parse[string] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Boolean.Parse[string]/s s string 0 - -)
     )
-    (fn System.Boolean.Parse[string,bool] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Boolean.Parse[string,bool] name:Parse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Boolean.Parse[string,bool]/s s string 0 - -)
       (par System.Boolean.Parse[string,bool]/ignoreCase ignoreCase bool 1 - -)
     )
-    (fn System.Boolean.Equals[bool,bool] name:Equals ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Boolean.Equals[bool,bool] name:Equals ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Boolean.Equals[bool,bool]/this this bool 0 - this)
       (par System.Boolean.Equals[bool,bool]/value value bool 1 - -)
     )
-    (fn System.Boolean.GetHashCode[bool] name:GetHashCode ret:int ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Boolean.GetHashCode[bool] name:GetHashCode ret:int ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Boolean.GetHashCode[bool]/this this bool 0 - this)
     )
-    (fn System.Boolean.ToString[bool,string] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Boolean.ToString[bool,string] name:ToString ret:string ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Boolean.ToString[bool,string]/this this bool 0 - this)
       (par System.Boolean.ToString[bool,string]/format format string 1 - -)
     )
-    (fn System.Boolean.TryParse[string,out:bool] name:TryParse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Boolean.TryParse[string,out:bool] name:TryParse ret:bool ns:- owner:System.Boolean extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Boolean.TryParse[string,out:bool]/s s string 0 - -)
       (par System.Boolean.TryParse[string,out:bool]/result result bool 1 out -)
     )
-    (fn System.Byte.ToString[byte] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Byte.ToString[byte] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Byte.ToString[byte]/this this byte 0 - this)
     )
-    (fn System.Byte.CompareTo[byte,byte] name:CompareTo ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Byte.CompareTo[byte,byte] name:CompareTo ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Byte.CompareTo[byte,byte]/this this byte 0 - this)
       (par System.Byte.CompareTo[byte,byte]/value value byte 1 - -)
     )
-    (fn System.Byte.Parse[string] name:Parse ret:byte ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Byte.Parse[string] name:Parse ret:byte ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Byte.Parse[string]/s s string 0 - -)
     )
-    (fn System.Byte.Equals[byte,byte] name:Equals ret:bool ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Byte.Equals[byte,byte] name:Equals ret:bool ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Byte.Equals[byte,byte]/this this byte 0 - this)
       (par System.Byte.Equals[byte,byte]/value value byte 1 - -)
     )
-    (fn System.Byte.GetHashCode[byte] name:GetHashCode ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Byte.GetHashCode[byte] name:GetHashCode ret:int ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Byte.GetHashCode[byte]/this this byte 0 - this)
     )
-    (fn System.Byte.ToString[byte,string] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Byte.ToString[byte,string] name:ToString ret:string ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Byte.ToString[byte,string]/this this byte 0 - this)
       (par System.Byte.ToString[byte,string]/format format string 1 - -)
     )
-    (fn System.Byte.TryParse[string,out:byte] name:TryParse ret:bool ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Byte.TryParse[string,out:byte] name:TryParse ret:bool ns:- owner:System.Byte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Byte.TryParse[string,out:byte]/s s string 0 - -)
       (par System.Byte.TryParse[string,out:byte]/result result byte 1 out -)
     )
-    (fn System.Char.ToString[char] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.ToString[char] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.ToString[char]/this this char 0 - this)
     )
-    (fn System.Char.Parse[string] name:Parse ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.Parse[string] name:Parse ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.Parse[string]/s s string 0 - -)
     )
-    (fn System.Char.CompareTo[char,char] name:CompareTo ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Char.CompareTo[char,char] name:CompareTo ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Char.CompareTo[char,char]/this this char 0 - this)
       (par System.Char.CompareTo[char,char]/value value char 1 - -)
     )
-    (fn System.Char.IsDigit[char] name:IsDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsDigit[char] name:IsDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsDigit[char]/c c char 0 - -)
     )
-    (fn System.Char.IsLetter[char] name:IsLetter ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsLetter[char] name:IsLetter ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsLetter[char]/c c char 0 - -)
     )
-    (fn System.Char.IsWhiteSpace[char] name:IsWhiteSpace ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsWhiteSpace[char] name:IsWhiteSpace ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsWhiteSpace[char]/c c char 0 - -)
     )
-    (fn System.Char.ToUpper[char] name:ToUpper ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.ToUpper[char] name:ToUpper ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.ToUpper[char]/c c char 0 - -)
     )
-    (fn System.Char.ToLower[char] name:ToLower ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.ToLower[char] name:ToLower ret:char ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.ToLower[char]/c c char 0 - -)
     )
-    (fn System.Char.IsLetterOrDigit[char] name:IsLetterOrDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsLetterOrDigit[char] name:IsLetterOrDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsLetterOrDigit[char]/c c char 0 - -)
     )
-    (fn System.Char.IsControl[char] name:IsControl ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsControl[char] name:IsControl ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsControl[char]/c c char 0 - -)
     )
-    (fn System.Char.IsHexDigit[char] name:IsHexDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsHexDigit[char] name:IsHexDigit ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsHexDigit[char]/c c char 0 - -)
     )
-    (fn System.Char.IsUpper[char] name:IsUpper ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsUpper[char] name:IsUpper ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsUpper[char]/c c char 0 - -)
     )
-    (fn System.Char.IsLower[char] name:IsLower ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.IsLower[char] name:IsLower ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.IsLower[char]/c c char 0 - -)
     )
-    (fn System.Char.Equals[char,char] name:Equals ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Char.Equals[char,char] name:Equals ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Char.Equals[char,char]/this this char 0 - this)
       (par System.Char.Equals[char,char]/value value char 1 - -)
     )
-    (fn System.Char.GetHashCode[char] name:GetHashCode ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Char.GetHashCode[char] name:GetHashCode ret:int ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Char.GetHashCode[char]/this this char 0 - this)
     )
-    (fn System.Char.ToString[char,string] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Char.ToString[char,string] name:ToString ret:string ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Char.ToString[char,string]/this this char 0 - this)
       (par System.Char.ToString[char,string]/format format string 1 - -)
     )
-    (fn System.Char.TryParse[string,out:char] name:TryParse ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Char.TryParse[string,out:char] name:TryParse ret:bool ns:- owner:System.Char extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Char.TryParse[string,out:char]/s s string 0 - -)
       (par System.Char.TryParse[string,out:char]/result result char 1 out -)
     )
-    (fn System.Console.WriteLine[] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
-    (fn System.Console.WriteLine[string] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Console.WriteLine[string] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[string]/text text string 0 - -)
     )
-    (fn System.Console.WriteLine[int] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[int] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[int]/text text int 0 - -)
     )
-    (fn System.Console.WriteLine[double] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[double] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[double]/text text double 0 - -)
     )
-    (fn System.Console.WriteLine[bool] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[bool] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[bool]/text text bool 0 - -)
     )
-    (fn System.Console.WriteLine[char] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[char] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[char]/text text char 0 - -)
     )
-    (fn System.Console.WriteLine[byte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[byte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[byte]/text text byte 0 - -)
     )
-    (fn System.Console.WriteLine[long] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[long] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[long]/text text long 0 - -)
     )
-    (fn System.Console.WriteLine[sbyte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[sbyte] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[sbyte]/text text sbyte 0 - -)
     )
-    (fn System.Console.WriteLine[short] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[short] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[short]/text text short 0 - -)
     )
-    (fn System.Console.WriteLine[ushort] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[ushort] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[ushort]/text text ushort 0 - -)
     )
-    (fn System.Console.WriteLine[uint] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[uint] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[uint]/text text uint 0 - -)
     )
-    (fn System.Console.WriteLine[ulong] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[ulong] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[ulong]/text text ulong 0 - -)
     )
-    (fn System.Console.WriteLine[float] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.WriteLine[float] name:WriteLine ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.WriteLine[float]/text text float 0 - -)
     )
-    (fn System.Console.Write[string] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[string] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[string]/text text string 0 - -)
     )
-    (fn System.Console.Write[int] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[int] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[int]/text text int 0 - -)
     )
-    (fn System.Console.Write[double] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[double] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[double]/text text double 0 - -)
     )
-    (fn System.Console.Write[bool] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[bool] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[bool]/text text bool 0 - -)
     )
-    (fn System.Console.Write[char] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[char] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[char]/text text char 0 - -)
     )
-    (fn System.Console.Write[byte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[byte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[byte]/text text byte 0 - -)
     )
-    (fn System.Console.Write[long] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[long] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[long]/text text long 0 - -)
     )
-    (fn System.Console.Write[sbyte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[sbyte] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[sbyte]/text text sbyte 0 - -)
     )
-    (fn System.Console.Write[short] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[short] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[short]/text text short 0 - -)
     )
-    (fn System.Console.Write[ushort] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[ushort] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[ushort]/text text ushort 0 - -)
     )
-    (fn System.Console.Write[uint] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[uint] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[uint]/text text uint 0 - -)
     )
-    (fn System.Console.Write[ulong] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[ulong] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[ulong]/text text ulong 0 - -)
     )
-    (fn System.Console.Write[float] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.Write[float] name:Write ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.Write[float]/text text float 0 - -)
     )
-    (fn System.Console.ReadLine[] name:ReadLine ret:string ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:0)
-    (fn System.Console.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Console.ReadLine[] name:ReadLine ret:string ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Console.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Console.ReadKey[bool]/intercept intercept bool 0 - -)
     )
-    (fn System.Console.Beep[int,int] name:Beep ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Console.Beep[int,int] name:Beep ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Console.Beep[int,int]/frequency frequency int 0 - -)
       (par System.Console.Beep[int,int]/duration duration int 1 - -)
     )
-    (fn System.Double.ToString[double] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Double.ToString[double] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.ToString[double]/this this double 0 - this)
     )
-    (fn System.Double.CompareTo[double,double] name:CompareTo ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Double.CompareTo[double,double] name:CompareTo ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Double.CompareTo[double,double]/this this double 0 - this)
       (par System.Double.CompareTo[double,double]/value value double 1 - -)
     )
-    (fn System.Double.Equals[double,double] name:Equals ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Double.Equals[double,double] name:Equals ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Double.Equals[double,double]/this this double 0 - this)
       (par System.Double.Equals[double,double]/value value double 1 - -)
     )
-    (fn System.Double.GetHashCode[double] name:GetHashCode ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Double.GetHashCode[double] name:GetHashCode ret:int ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.GetHashCode[double]/this this double 0 - this)
     )
-    (fn System.Double.ToString[double,string] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Double.ToString[double,string] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Double.ToString[double,string]/this this double 0 - this)
       (par System.Double.ToString[double,string]/format format string 1 - -)
     )
-    (fn System.Double.TryParse[string,out:double] name:TryParse ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Double.TryParse[string,out:double] name:TryParse ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Double.TryParse[string,out:double]/s s string 0 - -)
       (par System.Double.TryParse[string,out:double]/result result double 1 out -)
     )
-    (fn System.Double.Parse[string] name:Parse ret:double ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Double.Parse[string] name:Parse ret:double ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.Parse[string]/s s string 0 - -)
     )
-    (fn System.Double.IsNaN[double] name:IsNaN ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Double.IsNaN[double] name:IsNaN ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.IsNaN[double]/x x double 0 - -)
     )
-    (fn System.Double.IsInfinity[double] name:IsInfinity ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Double.IsInfinity[double] name:IsInfinity ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.IsInfinity[double]/x x double 0 - -)
     )
-    (fn System.Double.IsFinite[double] name:IsFinite ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Double.IsFinite[double] name:IsFinite ret:bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.IsFinite[double]/x x double 0 - -)
     )
-    (fn System.Environment.GetEnvironmentVariable[string] name:GetEnvironmentVariable ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- params:1
+    (fn System.Environment.GetEnvironmentVariable[string] name:GetEnvironmentVariable ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Environment.GetEnvironmentVariable[string]/name name string 0 - -)
     )
-    (fn System.Environment.GetCurrentDirectory[] name:GetCurrentDirectory ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetCurrentDirectory entry:- charset:- params:0)
-    (fn System.Environment.SetCurrentDirectory[string] name:SetCurrentDirectory ret:void ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:SetCurrentDirectory entry:- charset:- params:1
+    (fn System.Environment.GetCurrentDirectory[] name:GetCurrentDirectory ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetCurrentDirectory entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Environment.SetCurrentDirectory[string] name:SetCurrentDirectory ret:void ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:SetCurrentDirectory entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Environment.SetCurrentDirectory[string]/path path string 0 - -)
     )
-    (fn System.Environment.GetExecutablePath[] name:GetExecutablePath ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- params:0)
-    (fn System.IO.File.ReadAllText[string] name:ReadAllText ret:string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- params:1
+    (fn System.Environment.GetExecutablePath[] name:GetExecutablePath ret:string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Exception.get_Message[System.Exception] name:get_Message ret:string ns:- owner:System.Exception extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:1
+      (par System.Exception.get_Message[System.Exception]/this this System.Exception 0 - this)
+    )
+    (fn System.IO.File.ReadAllText[string] name:ReadAllText ret:string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- static:true ctor:false acc:false params:1
       (par System.IO.File.ReadAllText[string]/path path string 0 - -)
     )
-    (fn System.IO.File.WriteAllText[string,string] name:WriteAllText ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- params:2
+    (fn System.IO.File.WriteAllText[string,string] name:WriteAllText ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- static:true ctor:false acc:false params:2
       (par System.IO.File.WriteAllText[string,string]/path path string 0 - -)
       (par System.IO.File.WriteAllText[string,string]/text text string 1 - -)
     )
-    (fn System.IO.File.Exists[string] name:Exists ret:bool ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- params:1
+    (fn System.IO.File.Exists[string] name:Exists ret:bool ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- static:true ctor:false acc:false params:1
       (par System.IO.File.Exists[string]/path path string 0 - -)
     )
-    (fn System.IO.File.Copy[string,string] name:Copy ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileCopy entry:- charset:- params:2
+    (fn System.IO.File.Copy[string,string] name:Copy ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileCopy entry:- charset:- static:true ctor:false acc:false params:2
       (par System.IO.File.Copy[string,string]/src src string 0 - -)
       (par System.IO.File.Copy[string,string]/dst dst string 1 - -)
     )
-    (fn System.IO.File.Delete[string] name:Delete ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- params:1
+    (fn System.IO.File.Delete[string] name:Delete ret:void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- static:true ctor:false acc:false params:1
       (par System.IO.File.Delete[string]/path path string 0 - -)
     )
-    (fn System.Int16.ToString[short] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int16.ToString[short] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int16.ToString[short]/this this short 0 - this)
     )
-    (fn System.Int16.CompareTo[short,short] name:CompareTo ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int16.CompareTo[short,short] name:CompareTo ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int16.CompareTo[short,short]/this this short 0 - this)
       (par System.Int16.CompareTo[short,short]/value value short 1 - -)
     )
-    (fn System.Int16.Parse[string] name:Parse ret:short ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int16.Parse[string] name:Parse ret:short ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int16.Parse[string]/s s string 0 - -)
     )
-    (fn System.Int16.Equals[short,short] name:Equals ret:bool ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int16.Equals[short,short] name:Equals ret:bool ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int16.Equals[short,short]/this this short 0 - this)
       (par System.Int16.Equals[short,short]/value value short 1 - -)
     )
-    (fn System.Int16.GetHashCode[short] name:GetHashCode ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int16.GetHashCode[short] name:GetHashCode ret:int ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int16.GetHashCode[short]/this this short 0 - this)
     )
-    (fn System.Int16.ToString[short,string] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int16.ToString[short,string] name:ToString ret:string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int16.ToString[short,string]/this this short 0 - this)
       (par System.Int16.ToString[short,string]/format format string 1 - -)
     )
-    (fn System.Int16.TryParse[string,out:short] name:TryParse ret:bool ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int16.TryParse[string,out:short] name:TryParse ret:bool ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int16.TryParse[string,out:short]/s s string 0 - -)
       (par System.Int16.TryParse[string,out:short]/result result short 1 out -)
     )
-    (fn System.Int32.ToString[int] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int32.ToString[int] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int32.ToString[int]/this this int 0 - this)
     )
-    (fn System.Int32.CompareTo[int,int] name:CompareTo ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int32.CompareTo[int,int] name:CompareTo ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int32.CompareTo[int,int]/this this int 0 - this)
       (par System.Int32.CompareTo[int,int]/value value int 1 - -)
     )
-    (fn System.Int32.Parse[string] name:Parse ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int32.Parse[string] name:Parse ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int32.Parse[string]/s s string 0 - -)
     )
-    (fn System.Int32.TryParse[string,out:int] name:TryParse ret:bool ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int32.TryParse[string,out:int] name:TryParse ret:bool ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int32.TryParse[string,out:int]/s s string 0 - -)
       (par System.Int32.TryParse[string,out:int]/result result int 1 out -)
     )
-    (fn System.Int32.Equals[int,int] name:Equals ret:bool ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int32.Equals[int,int] name:Equals ret:bool ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int32.Equals[int,int]/this this int 0 - this)
       (par System.Int32.Equals[int,int]/value value int 1 - -)
     )
-    (fn System.Int32.GetHashCode[int] name:GetHashCode ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int32.GetHashCode[int] name:GetHashCode ret:int ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int32.GetHashCode[int]/this this int 0 - this)
     )
-    (fn System.Int32.ToString[int,string] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int32.ToString[int,string] name:ToString ret:string ns:- owner:System.Int32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int32.ToString[int,string]/this this int 0 - this)
       (par System.Int32.ToString[int,string]/format format string 1 - -)
     )
-    (fn System.Int64.ToString[long] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int64.ToString[long] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int64.ToString[long]/this this long 0 - this)
     )
-    (fn System.Int64.CompareTo[long,long] name:CompareTo ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int64.CompareTo[long,long] name:CompareTo ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int64.CompareTo[long,long]/this this long 0 - this)
       (par System.Int64.CompareTo[long,long]/value value long 1 - -)
     )
-    (fn System.Int64.Parse[string] name:Parse ret:long ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int64.Parse[string] name:Parse ret:long ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int64.Parse[string]/s s string 0 - -)
     )
-    (fn System.Int64.Equals[long,long] name:Equals ret:bool ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int64.Equals[long,long] name:Equals ret:bool ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int64.Equals[long,long]/this this long 0 - this)
       (par System.Int64.Equals[long,long]/value value long 1 - -)
     )
-    (fn System.Int64.GetHashCode[long] name:GetHashCode ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Int64.GetHashCode[long] name:GetHashCode ret:int ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Int64.GetHashCode[long]/this this long 0 - this)
     )
-    (fn System.Int64.ToString[long,string] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int64.ToString[long,string] name:ToString ret:string ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int64.ToString[long,string]/this this long 0 - this)
       (par System.Int64.ToString[long,string]/format format string 1 - -)
     )
-    (fn System.Int64.TryParse[string,out:long] name:TryParse ret:bool ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Int64.TryParse[string,out:long] name:TryParse ret:bool ns:- owner:System.Int64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Int64.TryParse[string,out:long]/s s string 0 - -)
       (par System.Int64.TryParse[string,out:long]/result result long 1 out -)
     )
-    (fn System.Math.Max[int,int] name:Max ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Max[int,int] name:Max ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Max[int,int]/a a int 0 - -)
       (par System.Math.Max[int,int]/b b int 1 - -)
     )
-    (fn System.Math.Max[double,double] name:Max ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Max[double,double] name:Max ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Max[double,double]/a a double 0 - -)
       (par System.Math.Max[double,double]/b b double 1 - -)
     )
-    (fn System.Math.Min[int,int] name:Min ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Min[int,int] name:Min ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Min[int,int]/a a int 0 - -)
       (par System.Math.Min[int,int]/b b int 1 - -)
     )
-    (fn System.Math.Min[double,double] name:Min ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Min[double,double] name:Min ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Min[double,double]/a a double 0 - -)
       (par System.Math.Min[double,double]/b b double 1 - -)
     )
-    (fn System.Math.Abs[int] name:Abs ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Abs[int] name:Abs ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Abs[int]/x x int 0 - -)
     )
-    (fn System.Math.Abs[double] name:Abs ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Abs[double] name:Abs ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Abs[double]/x x double 0 - -)
     )
-    (fn System.Math.Clamp[int,int,int] name:Clamp ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
+    (fn System.Math.Clamp[int,int,int] name:Clamp ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
       (par System.Math.Clamp[int,int,int]/v v int 0 - -)
       (par System.Math.Clamp[int,int,int]/lo lo int 1 - -)
       (par System.Math.Clamp[int,int,int]/hi hi int 2 - -)
     )
-    (fn System.Math.Clamp[double,double,double] name:Clamp ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
+    (fn System.Math.Clamp[double,double,double] name:Clamp ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
       (par System.Math.Clamp[double,double,double]/v v double 0 - -)
       (par System.Math.Clamp[double,double,double]/lo lo double 1 - -)
       (par System.Math.Clamp[double,double,double]/hi hi double 2 - -)
     )
-    (fn System.Math.Sign[int] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Sign[int] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Sign[int]/x x int 0 - -)
     )
-    (fn System.Math.Sign[double] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Sign[double] name:Sign ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Sign[double]/x x double 0 - -)
     )
-    (fn System.Math.IsEven[int] name:IsEven ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.IsEven[int] name:IsEven ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.IsEven[int]/n n int 0 - -)
     )
-    (fn System.Math.IsOdd[int] name:IsOdd ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.IsOdd[int] name:IsOdd ret:bool ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.IsOdd[int]/n n int 0 - -)
     )
-    (fn System.Math.Pow[int,int] name:Pow ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Pow[int,int] name:Pow ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Pow[int,int]/x x int 0 - -)
       (par System.Math.Pow[int,int]/exp exp int 1 - -)
     )
-    (fn System.Math.Factorial[int] name:Factorial ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Factorial[int] name:Factorial ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Factorial[int]/n n int 0 - -)
     )
-    (fn System.Math.Gcd[int,int] name:Gcd ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Gcd[int,int] name:Gcd ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Gcd[int,int]/a a int 0 - -)
       (par System.Math.Gcd[int,int]/b b int 1 - -)
     )
-    (fn System.Math.Lcm[int,int] name:Lcm ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Math.Lcm[int,int] name:Lcm ret:int ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Math.Lcm[int,int]/a a int 0 - -)
       (par System.Math.Lcm[int,int]/b b int 1 - -)
     )
-    (fn System.Math.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Sqrt[double]/x x double 0 - -)
     )
-    (fn System.Math.Floor[double] name:Floor ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Floor[double] name:Floor ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Floor[double]/x x double 0 - -)
     )
-    (fn System.Math.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Ceiling[double]/x x double 0 - -)
     )
-    (fn System.Math.Truncate[double] name:Truncate ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Truncate[double] name:Truncate ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Truncate[double]/x x double 0 - -)
     )
-    (fn System.Math.Round[double] name:Round ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Math.Round[double] name:Round ret:double ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Math.Round[double]/x x double 0 - -)
     )
-    (fn System.Runtime.WriteLine[any] name:WriteLine ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:WriteLine entry:- charset:- params:1
+    (fn System.Runtime.WriteLine[any] name:WriteLine ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:WriteLine entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.WriteLine[any]/text text any 0 - -)
     )
-    (fn System.Runtime.Write[any] name:Write ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Write entry:- charset:- params:1
+    (fn System.Runtime.Write[any] name:Write ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Write entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Write[any]/text text any 0 - -)
     )
-    (fn System.Runtime.ReadLine[] name:ReadLine ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadLine entry:- charset:- params:0)
-    (fn System.Runtime.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadKey entry:- charset:- params:1
+    (fn System.Runtime.ReadLine[] name:ReadLine ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadLine entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Runtime.ReadKey[bool] name:ReadKey ret:char ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadKey entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.ReadKey[bool]/intercept intercept bool 0 - -)
     )
-    (fn System.Runtime.Random[int] name:Random ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Random entry:- charset:- params:1
+    (fn System.Runtime.Random[int] name:Random ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Random entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Random[int]/max max int 0 - -)
     )
-    (fn System.Runtime.Sleep[int] name:Sleep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sleep entry:- charset:- params:1
+    (fn System.Runtime.Sleep[int] name:Sleep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sleep entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Sleep[int]/ms ms int 0 - -)
     )
-    (fn System.Runtime.TickCount[] name:TickCount ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:TickCount entry:- charset:- params:0)
-    (fn System.Runtime.Exit[int] name:Exit ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Exit entry:- charset:- params:1
+    (fn System.Runtime.TickCount[] name:TickCount ret:int ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:TickCount entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Runtime.Exit[int] name:Exit ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Exit entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Exit[int]/code code int 0 - -)
     )
-    (fn System.Runtime.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- params:1
+    (fn System.Runtime.Sqrt[double] name:Sqrt ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Sqrt[double]/x x double 0 - -)
     )
-    (fn System.Runtime.Floor[double] name:Floor ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Floor entry:- charset:- params:1
+    (fn System.Runtime.Floor[double] name:Floor ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Floor entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Floor[double]/x x double 0 - -)
     )
-    (fn System.Runtime.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Ceiling entry:- charset:- params:1
+    (fn System.Runtime.Ceiling[double] name:Ceiling ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Ceiling entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Ceiling[double]/x x double 0 - -)
     )
-    (fn System.Runtime.Truncate[double] name:Truncate ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Truncate entry:- charset:- params:1
+    (fn System.Runtime.Truncate[double] name:Truncate ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Truncate entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Truncate[double]/x x double 0 - -)
     )
-    (fn System.Runtime.Round[double] name:Round ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Round entry:- charset:- params:1
+    (fn System.Runtime.Round[double] name:Round ret:double ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Round entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Round[double]/x x double 0 - -)
     )
-    (fn System.Runtime.Beep[int,int] name:Beep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Beep entry:- charset:- params:2
+    (fn System.Runtime.Beep[int,int] name:Beep ret:void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Beep entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Runtime.Beep[int,int]/frequency frequency int 0 - -)
       (par System.Runtime.Beep[int,int]/duration duration int 1 - -)
     )
-    (fn System.Runtime.Int32ToString[int] name:Int32ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int32ToString entry:- charset:- params:1
+    (fn System.Runtime.Int32ToString[int] name:Int32ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int32ToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Int32ToString[int]/value value int 0 - -)
     )
-    (fn System.Runtime.Int64ToString[long] name:Int64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int64ToString entry:- charset:- params:1
+    (fn System.Runtime.Int64ToString[long] name:Int64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int64ToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.Int64ToString[long]/value value long 0 - -)
     )
-    (fn System.Runtime.DoubleToString[double] name:DoubleToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- params:1
+    (fn System.Runtime.DoubleToString[double] name:DoubleToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.DoubleToString[double]/value value double 0 - -)
     )
-    (fn System.Runtime.BooleanToString[bool] name:BooleanToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:BooleanToString entry:- charset:- params:1
+    (fn System.Runtime.BooleanToString[bool] name:BooleanToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:BooleanToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.BooleanToString[bool]/value value bool 0 - -)
     )
-    (fn System.Runtime.CharToString[char] name:CharToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:CharToString entry:- charset:- params:1
+    (fn System.Runtime.CharToString[char] name:CharToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:CharToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.CharToString[char]/value value char 0 - -)
     )
-    (fn System.Runtime.ParseInt64[string] name:ParseInt64 ret:long ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ParseInt64 entry:- charset:- params:1
+    (fn System.Runtime.ParseInt64[string] name:ParseInt64 ret:long ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ParseInt64 entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.ParseInt64[string]/s s string 0 - -)
     )
-    (fn System.Runtime.UInt64ToString[ulong] name:UInt64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:UInt64ToString entry:- charset:- params:1
+    (fn System.Runtime.UInt64ToString[ulong] name:UInt64ToString ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:UInt64ToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.UInt64ToString[ulong]/value value ulong 0 - -)
     )
-    (fn System.Runtime.StringFromChars[char[]] name:StringFromChars ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- params:1
+    (fn System.Runtime.StringFromChars[char[]] name:StringFromChars ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.StringFromChars[char[]]/chars chars char[] 0 - -)
     )
-    (fn System.SByte.ToString[sbyte] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.SByte.ToString[sbyte] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.SByte.ToString[sbyte]/this this sbyte 0 - this)
     )
-    (fn System.SByte.CompareTo[sbyte,sbyte] name:CompareTo ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.SByte.CompareTo[sbyte,sbyte] name:CompareTo ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.SByte.CompareTo[sbyte,sbyte]/this this sbyte 0 - this)
       (par System.SByte.CompareTo[sbyte,sbyte]/value value sbyte 1 - -)
     )
-    (fn System.SByte.Parse[string] name:Parse ret:sbyte ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.SByte.Parse[string] name:Parse ret:sbyte ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.SByte.Parse[string]/s s string 0 - -)
     )
-    (fn System.SByte.Equals[sbyte,sbyte] name:Equals ret:bool ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.SByte.Equals[sbyte,sbyte] name:Equals ret:bool ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.SByte.Equals[sbyte,sbyte]/this this sbyte 0 - this)
       (par System.SByte.Equals[sbyte,sbyte]/value value sbyte 1 - -)
     )
-    (fn System.SByte.GetHashCode[sbyte] name:GetHashCode ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.SByte.GetHashCode[sbyte] name:GetHashCode ret:int ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.SByte.GetHashCode[sbyte]/this this sbyte 0 - this)
     )
-    (fn System.SByte.ToString[sbyte,string] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.SByte.ToString[sbyte,string] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.SByte.ToString[sbyte,string]/this this sbyte 0 - this)
       (par System.SByte.ToString[sbyte,string]/format format string 1 - -)
     )
-    (fn System.SByte.TryParse[string,out:sbyte] name:TryParse ret:bool ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.SByte.TryParse[string,out:sbyte] name:TryParse ret:bool ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.SByte.TryParse[string,out:sbyte]/s s string 0 - -)
       (par System.SByte.TryParse[string,out:sbyte]/result result sbyte 1 out -)
     )
-    (fn System.Single.ToString[float] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Single.ToString[float] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Single.ToString[float]/this this float 0 - this)
     )
-    (fn System.Single.Equals[float,float] name:Equals ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Single.Equals[float,float] name:Equals ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Single.Equals[float,float]/this this float 0 - this)
       (par System.Single.Equals[float,float]/value value float 1 - -)
     )
-    (fn System.Single.GetHashCode[float] name:GetHashCode ret:int ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Single.GetHashCode[float] name:GetHashCode ret:int ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Single.GetHashCode[float]/this this float 0 - this)
     )
-    (fn System.Single.ToString[float,string] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Single.ToString[float,string] name:ToString ret:string ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Single.ToString[float,string]/this this float 0 - this)
       (par System.Single.ToString[float,string]/format format string 1 - -)
     )
-    (fn System.Single.TryParse[string,out:float] name:TryParse ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.Single.TryParse[string,out:float] name:TryParse ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Single.TryParse[string,out:float]/s s string 0 - -)
       (par System.Single.TryParse[string,out:float]/result result float 1 out -)
     )
-    (fn System.Single.Parse[string] name:Parse ret:float ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Single.Parse[string] name:Parse ret:float ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Single.Parse[string]/s s string 0 - -)
     )
-    (fn System.Single.IsNaN[float] name:IsNaN ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Single.IsNaN[float] name:IsNaN ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Single.IsNaN[float]/x x float 0 - -)
     )
-    (fn System.Single.IsInfinity[float] name:IsInfinity ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Single.IsInfinity[float] name:IsInfinity ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Single.IsInfinity[float]/x x float 0 - -)
     )
-    (fn System.Single.IsFinite[float] name:IsFinite ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.Single.IsFinite[float] name:IsFinite ret:bool ns:- owner:System.Single extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Single.IsFinite[float]/x x float 0 - -)
     )
-    (fn System.String.IsNullOrEmpty[string] name:IsNullOrEmpty ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.String.IsNullOrEmpty[string] name:IsNullOrEmpty ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.String.IsNullOrEmpty[string]/s s string 0 - -)
     )
-    (fn System.String.ToUpper[string] name:ToUpper ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.String.ToUpper[string] name:ToUpper ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.String.ToUpper[string]/this this string 0 - this)
     )
-    (fn System.String.ToLower[string] name:ToLower ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.String.ToLower[string] name:ToLower ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.String.ToLower[string]/this this string 0 - this)
     )
-    (fn System.String.StartsWith[string,string] name:StartsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.StartsWith[string,string] name:StartsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.StartsWith[string,string]/this this string 0 - this)
       (par System.String.StartsWith[string,string]/prefix prefix string 1 - -)
     )
-    (fn System.String.EndsWith[string,string] name:EndsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.EndsWith[string,string] name:EndsWith ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.EndsWith[string,string]/this this string 0 - this)
       (par System.String.EndsWith[string,string]/suffix suffix string 1 - -)
     )
-    (fn System.String.Contains[string,string] name:Contains ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.Contains[string,string] name:Contains ret:bool ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.Contains[string,string]/this this string 0 - this)
       (par System.String.Contains[string,string]/sub sub string 1 - -)
     )
-    (fn System.String.IndexOf[string,string] name:IndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.IndexOf[string,string] name:IndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.IndexOf[string,string]/this this string 0 - this)
       (par System.String.IndexOf[string,string]/sub sub string 1 - -)
     )
-    (fn System.String.Trim[string] name:Trim ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.String.Trim[string] name:Trim ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.String.Trim[string]/this this string 0 - this)
     )
-    (fn System.String.Replace[string,string,string] name:Replace ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
+    (fn System.String.Replace[string,string,string] name:Replace ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
       (par System.String.Replace[string,string,string]/this this string 0 - this)
       (par System.String.Replace[string,string,string]/old old string 1 - -)
       (par System.String.Replace[string,string,string]/replacement replacement string 2 - -)
     )
-    (fn System.String.PadLeft[string,int,char] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
+    (fn System.String.PadLeft[string,int,char] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
       (par System.String.PadLeft[string,int,char]/this this string 0 - this)
       (par System.String.PadLeft[string,int,char]/totalWidth totalWidth int 1 - -)
       (par System.String.PadLeft[string,int,char]/padChar padChar char 2 - -)
     )
-    (fn System.String.PadLeft[string,int] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.PadLeft[string,int] name:PadLeft ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.PadLeft[string,int]/this this string 0 - this)
       (par System.String.PadLeft[string,int]/totalWidth totalWidth int 1 - -)
     )
-    (fn System.String.PadRight[string,int,char] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:3
+    (fn System.String.PadRight[string,int,char] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
       (par System.String.PadRight[string,int,char]/this this string 0 - this)
       (par System.String.PadRight[string,int,char]/totalWidth totalWidth int 1 - -)
       (par System.String.PadRight[string,int,char]/padChar padChar char 2 - -)
     )
-    (fn System.String.PadRight[string,int] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.PadRight[string,int] name:PadRight ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.PadRight[string,int]/this this string 0 - this)
       (par System.String.PadRight[string,int]/totalWidth totalWidth int 1 - -)
     )
-    (fn System.String.Split[string,char] name:Split ret:string[] ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.String.Split[string,char] name:Split ret:string[] ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.String.Split[string,char]/this this string 0 - this)
       (par System.String.Split[string,char]/sep sep char 1 - -)
     )
-    (fn System.UInt16.ToString[ushort] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.String.IndexOf[string,char] name:IndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.String.IndexOf[string,char]/this this string 0 - this)
+      (par System.String.IndexOf[string,char]/c c char 1 - -)
+    )
+    (fn System.String.LastIndexOf[string,string] name:LastIndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.String.LastIndexOf[string,string]/this this string 0 - this)
+      (par System.String.LastIndexOf[string,string]/sub sub string 1 - -)
+    )
+    (fn System.String.LastIndexOf[string,char] name:LastIndexOf ret:int ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.String.LastIndexOf[string,char]/this this string 0 - this)
+      (par System.String.LastIndexOf[string,char]/c c char 1 - -)
+    )
+    (fn System.String.TrimStart[string,char] name:TrimStart ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.String.TrimStart[string,char]/this this string 0 - this)
+      (par System.String.TrimStart[string,char]/c c char 1 - -)
+    )
+    (fn System.String.TrimEnd[string,char] name:TrimEnd ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.String.TrimEnd[string,char]/this this string 0 - this)
+      (par System.String.TrimEnd[string,char]/c c char 1 - -)
+    )
+    (fn System.String.ToCharArray[string] name:ToCharArray ret:char[] ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.String.ToCharArray[string]/this this string 0 - this)
+    )
+    (fn System.String.Remove[string,int,int] name:Remove ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
+      (par System.String.Remove[string,int,int]/this this string 0 - this)
+      (par System.String.Remove[string,int,int]/start start int 1 - -)
+      (par System.String.Remove[string,int,int]/count count int 2 - -)
+    )
+    (fn System.String.Insert[string,int,string] name:Insert ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:3
+      (par System.String.Insert[string,int,string]/this this string 0 - this)
+      (par System.String.Insert[string,int,string]/index index int 1 - -)
+      (par System.String.Insert[string,int,string]/text text string 2 - -)
+    )
+    (fn System.String.Join[string,string[]] name:Join ret:string ns:- owner:System.String extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.String.Join[string,string[]]/sep sep string 0 - -)
+      (par System.String.Join[string,string[]]/parts parts string[] 1 - -)
+    )
+    (fn System.UInt16.ToString[ushort] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt16.ToString[ushort]/this this ushort 0 - this)
     )
-    (fn System.UInt16.CompareTo[ushort,ushort] name:CompareTo ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt16.CompareTo[ushort,ushort] name:CompareTo ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt16.CompareTo[ushort,ushort]/this this ushort 0 - this)
       (par System.UInt16.CompareTo[ushort,ushort]/value value ushort 1 - -)
     )
-    (fn System.UInt16.Parse[string] name:Parse ret:ushort ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt16.Parse[string] name:Parse ret:ushort ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt16.Parse[string]/s s string 0 - -)
     )
-    (fn System.UInt16.Equals[ushort,ushort] name:Equals ret:bool ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt16.Equals[ushort,ushort] name:Equals ret:bool ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt16.Equals[ushort,ushort]/this this ushort 0 - this)
       (par System.UInt16.Equals[ushort,ushort]/value value ushort 1 - -)
     )
-    (fn System.UInt16.GetHashCode[ushort] name:GetHashCode ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt16.GetHashCode[ushort] name:GetHashCode ret:int ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt16.GetHashCode[ushort]/this this ushort 0 - this)
     )
-    (fn System.UInt16.ToString[ushort,string] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt16.ToString[ushort,string] name:ToString ret:string ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt16.ToString[ushort,string]/this this ushort 0 - this)
       (par System.UInt16.ToString[ushort,string]/format format string 1 - -)
     )
-    (fn System.UInt16.TryParse[string,out:ushort] name:TryParse ret:bool ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt16.TryParse[string,out:ushort] name:TryParse ret:bool ns:- owner:System.UInt16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt16.TryParse[string,out:ushort]/s s string 0 - -)
       (par System.UInt16.TryParse[string,out:ushort]/result result ushort 1 out -)
     )
-    (fn System.UInt32.ToString[uint] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt32.ToString[uint] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt32.ToString[uint]/this this uint 0 - this)
     )
-    (fn System.UInt32.CompareTo[uint,uint] name:CompareTo ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt32.CompareTo[uint,uint] name:CompareTo ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt32.CompareTo[uint,uint]/this this uint 0 - this)
       (par System.UInt32.CompareTo[uint,uint]/value value uint 1 - -)
     )
-    (fn System.UInt32.Parse[string] name:Parse ret:uint ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt32.Parse[string] name:Parse ret:uint ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt32.Parse[string]/s s string 0 - -)
     )
-    (fn System.UInt32.Equals[uint,uint] name:Equals ret:bool ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt32.Equals[uint,uint] name:Equals ret:bool ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt32.Equals[uint,uint]/this this uint 0 - this)
       (par System.UInt32.Equals[uint,uint]/value value uint 1 - -)
     )
-    (fn System.UInt32.GetHashCode[uint] name:GetHashCode ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt32.GetHashCode[uint] name:GetHashCode ret:int ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt32.GetHashCode[uint]/this this uint 0 - this)
     )
-    (fn System.UInt32.ToString[uint,string] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt32.ToString[uint,string] name:ToString ret:string ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt32.ToString[uint,string]/this this uint 0 - this)
       (par System.UInt32.ToString[uint,string]/format format string 1 - -)
     )
-    (fn System.UInt32.TryParse[string,out:uint] name:TryParse ret:bool ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt32.TryParse[string,out:uint] name:TryParse ret:bool ns:- owner:System.UInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt32.TryParse[string,out:uint]/s s string 0 - -)
       (par System.UInt32.TryParse[string,out:uint]/result result uint 1 out -)
     )
-    (fn System.UInt64.ToString[ulong] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt64.ToString[ulong] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt64.ToString[ulong]/this this ulong 0 - this)
     )
-    (fn System.UInt64.CompareTo[ulong,ulong] name:CompareTo ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt64.CompareTo[ulong,ulong] name:CompareTo ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt64.CompareTo[ulong,ulong]/this this ulong 0 - this)
       (par System.UInt64.CompareTo[ulong,ulong]/value value ulong 1 - -)
     )
-    (fn System.UInt64.Equals[ulong,ulong] name:Equals ret:bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt64.Equals[ulong,ulong] name:Equals ret:bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt64.Equals[ulong,ulong]/this this ulong 0 - this)
       (par System.UInt64.Equals[ulong,ulong]/value value ulong 1 - -)
     )
-    (fn System.UInt64.GetHashCode[ulong] name:GetHashCode ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:1
+    (fn System.UInt64.GetHashCode[ulong] name:GetHashCode ret:int ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.UInt64.GetHashCode[ulong]/this this ulong 0 - this)
     )
-    (fn System.UInt64.ToString[ulong,string] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt64.ToString[ulong,string] name:ToString ret:string ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt64.ToString[ulong,string]/this this ulong 0 - this)
       (par System.UInt64.ToString[ulong,string]/format format string 1 - -)
     )
-    (fn System.UInt64.TryParse[string,out:ulong] name:TryParse ret:bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- params:2
+    (fn System.UInt64.TryParse[string,out:ulong] name:TryParse ret:bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.UInt64.TryParse[string,out:ulong]/s s string 0 - -)
       (par System.UInt64.TryParse[string,out:ulong]/result result ulong 1 out -)
     )
@@ -762,6 +803,30 @@
     (loc System.Char.IsHexDigit[char]/v false int)
     (loc System.Char.IsUpper[char]/v false int)
     (loc System.Char.IsLower[char]/v false int)
+    (loc System.Double.TryParse[string,out:double]/len true int)
+    (loc System.Double.TryParse[string,out:double]/index false int)
+    (loc System.Double.TryParse[string,out:double]/negative false bool)
+    (loc System.Double.TryParse[string,out:double]/first true char)
+    (loc System.Double.TryParse[string,out:double]/value false double)
+    (loc System.Double.TryParse[string,out:double]/fracDigits false int)
+    (loc System.Double.TryParse[string,out:double]/exp10 false int)
+    (loc System.Double.TryParse[string,out:double]/hasDigit false bool)
+    (loc System.Double.TryParse[string,out:double]/c true char)
+    (loc System.Double.TryParse[string,out:double]/dot true bool)
+    (loc System.Double.TryParse[string,out:double]/c#2 true char)
+    (loc System.Double.TryParse[string,out:double]/hasExponent false bool)
+    (loc System.Double.TryParse[string,out:double]/c#3 true char)
+    (loc System.Double.TryParse[string,out:double]/expNegative false bool)
+    (loc System.Double.TryParse[string,out:double]/c#4 true char)
+    (loc System.Double.TryParse[string,out:double]/sign true bool)
+    (loc System.Double.TryParse[string,out:double]/expValue false int)
+    (loc System.Double.TryParse[string,out:double]/hasExpDigits false bool)
+    (loc System.Double.TryParse[string,out:double]/c#5 true char)
+    (loc System.Double.TryParse[string,out:double]/finalExp true int)
+    (loc System.Double.TryParse[string,out:double]/scaled false double)
+    (loc System.Double.TryParse[string,out:double]/pow false double)
+    (loc System.Double.TryParse[string,out:double]/i false int)
+    (loc System.Double.Parse[string]/r false double)
     (loc System.Int32.Parse[string]/v true long)
     (loc System.Int32.TryParse[string,out:int]/len true int)
     (loc System.Int32.TryParse[string,out:int]/index false int)
@@ -769,6 +834,13 @@
     (loc System.Int32.TryParse[string,out:int]/first true char)
     (loc System.Int32.TryParse[string,out:int]/acc false long)
     (loc System.Int32.TryParse[string,out:int]/c true char)
+    (loc System.Int64.TryParse[string,out:long]/len true int)
+    (loc System.Int64.TryParse[string,out:long]/index false int)
+    (loc System.Int64.TryParse[string,out:long]/negative false bool)
+    (loc System.Int64.TryParse[string,out:long]/first true char)
+    (loc System.Int64.TryParse[string,out:long]/acc false ulong)
+    (loc System.Int64.TryParse[string,out:long]/c true char)
+    (loc System.Int64.TryParse[string,out:long]/d true ulong)
     (loc System.Math.Pow[int,int]/result false int)
     (loc System.Math.Pow[int,int]/i false int)
     (loc System.Math.Factorial[int]/result false int)
@@ -797,10 +869,25 @@
     (loc System.String.Split[string,char]/result false string[])
     (loc System.String.Split[string,char]/start false int)
     (loc System.String.Split[string,char]/index false int)
+    (loc System.String.IndexOf[string,char]/i false int)
+    (loc System.String.LastIndexOf[string,string]/i false int)
+    (loc System.String.LastIndexOf[string,char]/i false int)
+    (loc System.String.TrimStart[string,char]/start false int)
+    (loc System.String.TrimEnd[string,char]/end false int)
+    (loc System.String.ToCharArray[string]/result false char[])
+    (loc System.String.ToCharArray[string]/i false int)
+    (loc System.String.Join[string,string[]]/result false string)
+    (loc System.String.Join[string,string[]]/i false int)
     (loc System.UInt16.CompareTo[ushort,ushort]/a false int)
     (loc System.UInt16.CompareTo[ushort,ushort]/b false int)
     (loc System.UInt32.CompareTo[uint,uint]/a false long)
     (loc System.UInt32.CompareTo[uint,uint]/b false long)
+    (loc System.UInt64.TryParse[string,out:ulong]/len true int)
+    (loc System.UInt64.TryParse[string,out:ulong]/index false int)
+    (loc System.UInt64.TryParse[string,out:ulong]/first true char)
+    (loc System.UInt64.TryParse[string,out:ulong]/acc false ulong)
+    (loc System.UInt64.TryParse[string,out:ulong]/c true char)
+    (loc System.UInt64.TryParse[string,out:ulong]/d true ulong)
   )
   (bodies
     (body System.Array.Sum[int[]]
@@ -2937,7 +3024,7 @@
       )
     )
     (body System.Double.TryParse[string,out:double]
-      (block 2
+      (block 134
         (exprstmt
           (assign System.Double.TryParse[string,out:double]/result
             (conv double
@@ -2945,38 +3032,706 @@
             )
           )
         )
+        (vardecl System.Double.TryParse[string,out:double]/len
+          (memberacc int Length
+            (var System.Double.TryParse[string,out:double]/s)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop == int int)
+            (var System.Double.TryParse[string,out:double]/len)
+            (lit int i:0)
+          ) false
+        )
         (return
           (lit bool b:0)
+        )
+        (label Label1)
+        (vardecl System.Double.TryParse[string,out:double]/index
+          (lit int i:0)
+        )
+        (vardecl System.Double.TryParse[string,out:double]/negative
+          (lit bool b:0)
+        )
+        (vardecl System.Double.TryParse[string,out:double]/first
+          (elem char
+            (var System.Double.TryParse[string,out:double]/s)
+            (lit int i:0)
+          )
+        )
+        (cgoto Label2
+          (binary
+            (bop == char char)
+            (var System.Double.TryParse[string,out:double]/first)
+            (lit char c:43)
+          ) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (lit int i:1)
+          )
+        )
+        (goto Label3)
+        (label Label2)
+        (cgoto Label4
+          (binary
+            (bop == char char)
+            (var System.Double.TryParse[string,out:double]/first)
+            (lit char c:45)
+          ) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/negative
+            (lit bool b:1)
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (lit int i:1)
+          )
+        )
+        (label Label4)
+        (label Label3)
+        (cgoto Label5
+          (binary
+            (bop >= int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label5)
+        (vardecl System.Double.TryParse[string,out:double]/value
+          (conv double
+            (lit int i:0)
+          )
+        )
+        (vardecl System.Double.TryParse[string,out:double]/fracDigits
+          (lit int i:0)
+        )
+        (vardecl System.Double.TryParse[string,out:double]/exp10
+          (lit int i:0)
+        )
+        (vardecl System.Double.TryParse[string,out:double]/hasDigit
+          (lit bool b:0)
+        )
+        (goto continue1)
+        (label Label6)
+        (vardecl System.Double.TryParse[string,out:double]/c
+          (elem char
+            (var System.Double.TryParse[string,out:double]/s)
+            (var System.Double.TryParse[string,out:double]/index)
+          )
+        )
+        (cgoto Label7
+          (unary
+            (uop ! bool)
+            (membercall bool IsDigit System.Char.IsDigit[char] 1
+              (statictype System.Char)
+              (var System.Double.TryParse[string,out:double]/c)
+            )
+          ) false
+        )
+        (goto break1)
+        (label Label7)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/value
+            (binary
+              (bop + double double)
+              (binary
+                (bop * double double)
+                (var System.Double.TryParse[string,out:double]/value)
+                (conv double
+                  (lit int i:10)
+                )
+              )
+              (conv double
+                (binary
+                  (bop - int int)
+                  (conv int
+                    (var System.Double.TryParse[string,out:double]/c)
+                  )
+                  (lit int i:48)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/hasDigit
+            (lit bool b:1)
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label6
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) true
+        )
+        (label break1)
+        (cgoto Label8
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) false
+        )
+        (vardecl System.Double.TryParse[string,out:double]/dot
+          (binary
+            (bop == char char)
+            (elem char
+              (var System.Double.TryParse[string,out:double]/s)
+              (var System.Double.TryParse[string,out:double]/index)
+            )
+            (lit char c:46)
+          )
+        )
+        (cgoto Label9
+          (var System.Double.TryParse[string,out:double]/dot) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (goto continue2)
+        (label Label10)
+        (vardecl System.Double.TryParse[string,out:double]/c#2
+          (elem char
+            (var System.Double.TryParse[string,out:double]/s)
+            (var System.Double.TryParse[string,out:double]/index)
+          )
+        )
+        (cgoto Label11
+          (unary
+            (uop ! bool)
+            (membercall bool IsDigit System.Char.IsDigit[char] 1
+              (statictype System.Char)
+              (var System.Double.TryParse[string,out:double]/c#2)
+            )
+          ) false
+        )
+        (goto break2)
+        (label Label11)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/value
+            (binary
+              (bop + double double)
+              (binary
+                (bop * double double)
+                (var System.Double.TryParse[string,out:double]/value)
+                (conv double
+                  (lit int i:10)
+                )
+              )
+              (conv double
+                (binary
+                  (bop - int int)
+                  (conv int
+                    (var System.Double.TryParse[string,out:double]/c#2)
+                  )
+                  (lit int i:48)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/fracDigits
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/fracDigits)
+              (lit int i:1)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/hasDigit
+            (lit bool b:1)
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label10
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) true
+        )
+        (label break2)
+        (label Label9)
+        (label Label8)
+        (vardecl System.Double.TryParse[string,out:double]/hasExponent
+          (lit bool b:0)
+        )
+        (cgoto Label12
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) false
+        )
+        (vardecl System.Double.TryParse[string,out:double]/c#3
+          (elem char
+            (var System.Double.TryParse[string,out:double]/s)
+            (var System.Double.TryParse[string,out:double]/index)
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/hasExponent
+            (binary
+              (bop || bool bool)
+              (binary
+                (bop == char char)
+                (var System.Double.TryParse[string,out:double]/c#3)
+                (lit char c:101)
+              )
+              (binary
+                (bop == char char)
+                (var System.Double.TryParse[string,out:double]/c#3)
+                (lit char c:69)
+              )
+            )
+          )
+        )
+        (label Label12)
+        (cgoto Label13
+          (var System.Double.TryParse[string,out:double]/hasExponent) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (vardecl System.Double.TryParse[string,out:double]/expNegative
+          (lit bool b:0)
+        )
+        (cgoto Label14
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) false
+        )
+        (vardecl System.Double.TryParse[string,out:double]/c#4
+          (elem char
+            (var System.Double.TryParse[string,out:double]/s)
+            (var System.Double.TryParse[string,out:double]/index)
+          )
+        )
+        (vardecl System.Double.TryParse[string,out:double]/sign
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop == char char)
+              (var System.Double.TryParse[string,out:double]/c#4)
+              (lit char c:43)
+            )
+            (binary
+              (bop == char char)
+              (var System.Double.TryParse[string,out:double]/c#4)
+              (lit char c:45)
+            )
+          )
+        )
+        (cgoto Label15
+          (var System.Double.TryParse[string,out:double]/sign) false
+        )
+        (cgoto Label16
+          (binary
+            (bop == char char)
+            (var System.Double.TryParse[string,out:double]/c#4)
+            (lit char c:45)
+          ) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/expNegative
+            (lit bool b:1)
+          )
+        )
+        (label Label16)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (label Label15)
+        (label Label14)
+        (vardecl System.Double.TryParse[string,out:double]/expValue
+          (lit int i:0)
+        )
+        (vardecl System.Double.TryParse[string,out:double]/hasExpDigits
+          (lit bool b:0)
+        )
+        (goto continue3)
+        (label Label17)
+        (vardecl System.Double.TryParse[string,out:double]/c#5
+          (elem char
+            (var System.Double.TryParse[string,out:double]/s)
+            (var System.Double.TryParse[string,out:double]/index)
+          )
+        )
+        (cgoto Label18
+          (unary
+            (uop ! bool)
+            (membercall bool IsDigit System.Char.IsDigit[char] 1
+              (statictype System.Char)
+              (var System.Double.TryParse[string,out:double]/c#5)
+            )
+          ) false
+        )
+        (goto break3)
+        (label Label18)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/expValue
+            (binary
+              (bop + int int)
+              (binary
+                (bop * int int)
+                (var System.Double.TryParse[string,out:double]/expValue)
+                (lit int i:10)
+              )
+              (binary
+                (bop - int int)
+                (conv int
+                  (var System.Double.TryParse[string,out:double]/c#5)
+                )
+                (lit int i:48)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/hasExpDigits
+            (lit bool b:1)
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/index
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue3)
+        (cgoto Label17
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) true
+        )
+        (label break3)
+        (cgoto Label19
+          (unary
+            (uop ! bool)
+            (var System.Double.TryParse[string,out:double]/hasExpDigits)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label19)
+        (cgoto Label20
+          (var System.Double.TryParse[string,out:double]/expNegative) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/exp10
+            (binary
+              (bop - int int)
+              (var System.Double.TryParse[string,out:double]/exp10)
+              (var System.Double.TryParse[string,out:double]/expValue)
+            )
+          )
+        )
+        (goto Label21)
+        (label Label20)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/exp10
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/exp10)
+              (var System.Double.TryParse[string,out:double]/expValue)
+            )
+          )
+        )
+        (label Label21)
+        (label Label13)
+        (cgoto Label22
+          (unary
+            (uop ! bool)
+            (var System.Double.TryParse[string,out:double]/hasDigit)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label22)
+        (cgoto Label23
+          (binary
+            (bop != int int)
+            (var System.Double.TryParse[string,out:double]/index)
+            (var System.Double.TryParse[string,out:double]/len)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label23)
+        (vardecl System.Double.TryParse[string,out:double]/finalExp
+          (binary
+            (bop - int int)
+            (var System.Double.TryParse[string,out:double]/exp10)
+            (var System.Double.TryParse[string,out:double]/fracDigits)
+          )
+        )
+        (vardecl System.Double.TryParse[string,out:double]/scaled
+          (var System.Double.TryParse[string,out:double]/value)
+        )
+        (cgoto Label24
+          (binary
+            (bop != int int)
+            (var System.Double.TryParse[string,out:double]/finalExp)
+            (lit int i:0)
+          ) false
+        )
+        (vardecl System.Double.TryParse[string,out:double]/pow
+          (conv double
+            (lit int i:1)
+          )
+        )
+        (vardecl System.Double.TryParse[string,out:double]/i
+          (lit int i:0)
+        )
+        (cgoto Label25
+          (binary
+            (bop > int int)
+            (var System.Double.TryParse[string,out:double]/finalExp)
+            (lit int i:0)
+          ) false
+        )
+        (goto continue4)
+        (label Label27)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/pow
+            (binary
+              (bop * double double)
+              (var System.Double.TryParse[string,out:double]/pow)
+              (lit double d:10)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/i
+            (binary
+              (bop + int int)
+              (var System.Double.TryParse[string,out:double]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue4)
+        (cgoto Label27
+          (binary
+            (bop < int int)
+            (var System.Double.TryParse[string,out:double]/i)
+            (var System.Double.TryParse[string,out:double]/finalExp)
+          ) true
+        )
+        (label break4)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/scaled
+            (binary
+              (bop * double double)
+              (var System.Double.TryParse[string,out:double]/value)
+              (var System.Double.TryParse[string,out:double]/pow)
+            )
+          )
+        )
+        (goto Label26)
+        (label Label25)
+        (goto continue5)
+        (label Label28)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/pow
+            (binary
+              (bop * double double)
+              (var System.Double.TryParse[string,out:double]/pow)
+              (lit double d:10)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/i
+            (binary
+              (bop - int int)
+              (var System.Double.TryParse[string,out:double]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue5)
+        (cgoto Label28
+          (binary
+            (bop > int int)
+            (var System.Double.TryParse[string,out:double]/i)
+            (var System.Double.TryParse[string,out:double]/finalExp)
+          ) true
+        )
+        (label break5)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/scaled
+            (binary
+              (bop / double double)
+              (var System.Double.TryParse[string,out:double]/value)
+              (var System.Double.TryParse[string,out:double]/pow)
+            )
+          )
+        )
+        (label Label26)
+        (label Label24)
+        (cgoto Label29
+          (var System.Double.TryParse[string,out:double]/negative) false
+        )
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/scaled
+            (unary
+              (uop - double)
+              (var System.Double.TryParse[string,out:double]/scaled)
+            )
+          )
+        )
+        (label Label29)
+        (exprstmt
+          (assign System.Double.TryParse[string,out:double]/result
+            (var System.Double.TryParse[string,out:double]/scaled)
+          )
+        )
+        (return
+          (lit bool b:1)
         )
       )
     )
     (body System.Double.Parse[string]
-      (block 1
-        (return
+      (block 5
+        (vardecl System.Double.Parse[string]/r
           (conv double
             (lit int i:0)
           )
+        )
+        (cgoto Label1
+          (unary
+            (uop ! bool)
+            (membercall bool TryParse System.Double.TryParse[string,out:double] 2
+              (statictype System.Double)
+              (var System.Double.Parse[string]/s)
+              (byrefarg out
+                (var System.Double.Parse[string]/r)
+              )
+            )
+          ) false
+        )
+        (exprstmt
+          (membercall void Exit System.Runtime.Exit[int] 1
+            (statictype System.Runtime)
+            (lit int i:1)
+          )
+        )
+        (label Label1)
+        (return
+          (var System.Double.Parse[string]/r)
         )
       )
     )
     (body System.Double.IsNaN[double]
       (block 1
         (return
-          (lit bool b:0)
+          (binary
+            (bop != double double)
+            (var System.Double.IsNaN[double]/x)
+            (var System.Double.IsNaN[double]/x)
+          )
         )
       )
     )
     (body System.Double.IsInfinity[double]
       (block 1
         (return
-          (lit bool b:0)
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop > double double)
+              (var System.Double.IsInfinity[double]/x)
+              (lit double d:1.7976931348623157E+308)
+            )
+            (binary
+              (bop < double double)
+              (var System.Double.IsInfinity[double]/x)
+              (unary
+                (uop - double)
+                (lit double d:1.7976931348623157E+308)
+              )
+            )
+          )
         )
       )
     )
     (body System.Double.IsFinite[double]
       (block 1
         (return
-          (lit bool b:0)
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop <= double double)
+              (var System.Double.IsFinite[double]/x)
+              (lit double d:1.7976931348623157E+308)
+            )
+            (binary
+              (bop >= double double)
+              (var System.Double.IsFinite[double]/x)
+              (unary
+                (uop - double)
+                (lit double d:1.7976931348623157E+308)
+              )
+            )
+          )
         )
       )
     )
@@ -2991,6 +3746,13 @@
     )
     (body System.Environment.GetExecutablePath[]
       (block 0)
+    )
+    (body System.Exception.get_Message[System.Exception]
+      (block 1
+        (return
+          (lit string s:)
+        )
+      )
     )
     (body System.IO.File.ReadAllText[string]
       (block 0)
@@ -3505,7 +4267,7 @@
       )
     )
     (body System.Int64.TryParse[string,out:long]
-      (block 2
+      (block 54
         (exprstmt
           (assign System.Int64.TryParse[string,out:long]/result
             (conv long
@@ -3513,8 +4275,235 @@
             )
           )
         )
+        (vardecl System.Int64.TryParse[string,out:long]/len
+          (memberacc int Length
+            (var System.Int64.TryParse[string,out:long]/s)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop == int int)
+            (var System.Int64.TryParse[string,out:long]/len)
+            (lit int i:0)
+          ) false
+        )
         (return
           (lit bool b:0)
+        )
+        (label Label1)
+        (vardecl System.Int64.TryParse[string,out:long]/index
+          (lit int i:0)
+        )
+        (vardecl System.Int64.TryParse[string,out:long]/negative
+          (lit bool b:0)
+        )
+        (vardecl System.Int64.TryParse[string,out:long]/first
+          (elem char
+            (var System.Int64.TryParse[string,out:long]/s)
+            (lit int i:0)
+          )
+        )
+        (cgoto Label2
+          (binary
+            (bop == char char)
+            (var System.Int64.TryParse[string,out:long]/first)
+            (lit char c:43)
+          ) false
+        )
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/index
+            (lit int i:1)
+          )
+        )
+        (goto Label3)
+        (label Label2)
+        (cgoto Label4
+          (binary
+            (bop == char char)
+            (var System.Int64.TryParse[string,out:long]/first)
+            (lit char c:45)
+          ) false
+        )
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/negative
+            (lit bool b:1)
+          )
+        )
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/index
+            (lit int i:1)
+          )
+        )
+        (label Label4)
+        (label Label3)
+        (cgoto Label5
+          (binary
+            (bop >= int int)
+            (var System.Int64.TryParse[string,out:long]/index)
+            (var System.Int64.TryParse[string,out:long]/len)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label5)
+        (vardecl System.Int64.TryParse[string,out:long]/acc
+          (conv ulong
+            (lit int i:0)
+          )
+        )
+        (goto continue1)
+        (label Label6)
+        (vardecl System.Int64.TryParse[string,out:long]/c
+          (elem char
+            (var System.Int64.TryParse[string,out:long]/s)
+            (var System.Int64.TryParse[string,out:long]/index)
+          )
+        )
+        (cgoto Label7
+          (membercall bool IsDigit System.Char.IsDigit[char] 1
+            (statictype System.Char)
+            (var System.Int64.TryParse[string,out:long]/c)
+          ) false
+        )
+        (vardecl System.Int64.TryParse[string,out:long]/d
+          (conv ulong
+            (binary
+              (bop - int int)
+              (conv int
+                (var System.Int64.TryParse[string,out:long]/c)
+              )
+              (lit int i:48)
+            )
+          )
+        )
+        (cgoto Label9
+          (binary
+            (bop > ulong ulong)
+            (var System.Int64.TryParse[string,out:long]/acc)
+            (binary
+              (bop / ulong ulong)
+              (binary
+                (bop - ulong ulong)
+                (lit ulong U:9223372036854775808)
+                (var System.Int64.TryParse[string,out:long]/d)
+              )
+              (lit ulong U:10)
+            )
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label9)
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/acc
+            (binary
+              (bop + ulong ulong)
+              (binary
+                (bop * ulong ulong)
+                (var System.Int64.TryParse[string,out:long]/acc)
+                (lit ulong U:10)
+              )
+              (var System.Int64.TryParse[string,out:long]/d)
+            )
+          )
+        )
+        (goto Label8)
+        (label Label7)
+        (return
+          (lit bool b:0)
+        )
+        (label Label8)
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/index
+            (binary
+              (bop + int int)
+              (var System.Int64.TryParse[string,out:long]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label6
+          (binary
+            (bop < int int)
+            (var System.Int64.TryParse[string,out:long]/index)
+            (var System.Int64.TryParse[string,out:long]/len)
+          ) true
+        )
+        (label break1)
+        (cgoto Label10
+          (var System.Int64.TryParse[string,out:long]/negative) false
+        )
+        (cgoto Label11
+          (binary
+            (bop == ulong ulong)
+            (var System.Int64.TryParse[string,out:long]/acc)
+            (lit ulong U:9223372036854775808)
+          ) false
+        )
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/result
+            (binary
+              (bop - long long)
+              (unary
+                (uop - long)
+                (lit long l:9223372036854775807)
+              )
+              (lit long l:1)
+            )
+          )
+        )
+        (return
+          (lit bool b:1)
+        )
+        (label Label11)
+        (cgoto Label12
+          (binary
+            (bop > ulong ulong)
+            (var System.Int64.TryParse[string,out:long]/acc)
+            (lit ulong U:9223372036854775807)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label12)
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/result
+            (unary
+              (uop - long)
+              (conv long
+                (var System.Int64.TryParse[string,out:long]/acc)
+              )
+            )
+          )
+        )
+        (return
+          (lit bool b:1)
+        )
+        (label Label10)
+        (cgoto Label13
+          (binary
+            (bop > ulong ulong)
+            (var System.Int64.TryParse[string,out:long]/acc)
+            (lit ulong U:9223372036854775807)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label13)
+        (exprstmt
+          (assign System.Int64.TryParse[string,out:long]/result
+            (conv long
+              (var System.Int64.TryParse[string,out:long]/acc)
+            )
+          )
+        )
+        (return
+          (lit bool b:1)
         )
       )
     )
@@ -5177,6 +6166,475 @@
         )
       )
     )
+    (body System.String.IndexOf[string,char]
+      (block 11
+        (vardecl System.String.IndexOf[string,char]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop == char char)
+            (elem char
+              (var System.String.IndexOf[string,char]/this)
+              (var System.String.IndexOf[string,char]/i)
+            )
+            (var System.String.IndexOf[string,char]/c)
+          ) false
+        )
+        (return
+          (var System.String.IndexOf[string,char]/i)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.String.IndexOf[string,char]/i
+            (binary
+              (bop + int int)
+              (var System.String.IndexOf[string,char]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < int int)
+            (var System.String.IndexOf[string,char]/i)
+            (memberacc int Length
+              (var System.String.IndexOf[string,char]/this)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (unary
+            (uop - int)
+            (lit int i:1)
+          )
+        )
+      )
+    )
+    (body System.String.LastIndexOf[string,string]
+      (block 14
+        (cgoto Label1
+          (binary
+            (bop == int int)
+            (memberacc int Length
+              (var System.String.LastIndexOf[string,string]/sub)
+            )
+            (lit int i:0)
+          ) false
+        )
+        (return
+          (memberacc int Length
+            (var System.String.LastIndexOf[string,string]/this)
+          )
+        )
+        (label Label1)
+        (vardecl System.String.LastIndexOf[string,string]/i
+          (binary
+            (bop - int int)
+            (memberacc int Length
+              (var System.String.LastIndexOf[string,string]/this)
+            )
+            (memberacc int Length
+              (var System.String.LastIndexOf[string,string]/sub)
+            )
+          )
+        )
+        (goto continue1)
+        (label Label2)
+        (cgoto Label3
+          (binary
+            (bop == string string)
+            (membercall string substring - 2
+              (var System.String.LastIndexOf[string,string]/this)
+              (var System.String.LastIndexOf[string,string]/i)
+              (memberacc int Length
+                (var System.String.LastIndexOf[string,string]/sub)
+              )
+            )
+            (var System.String.LastIndexOf[string,string]/sub)
+          ) false
+        )
+        (return
+          (var System.String.LastIndexOf[string,string]/i)
+        )
+        (label Label3)
+        (exprstmt
+          (assign System.String.LastIndexOf[string,string]/i
+            (binary
+              (bop - int int)
+              (var System.String.LastIndexOf[string,string]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop >= int int)
+            (var System.String.LastIndexOf[string,string]/i)
+            (lit int i:0)
+          ) true
+        )
+        (label break1)
+        (return
+          (unary
+            (uop - int)
+            (lit int i:1)
+          )
+        )
+      )
+    )
+    (body System.String.LastIndexOf[string,char]
+      (block 11
+        (vardecl System.String.LastIndexOf[string,char]/i
+          (binary
+            (bop - int int)
+            (memberacc int Length
+              (var System.String.LastIndexOf[string,char]/this)
+            )
+            (lit int i:1)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop == char char)
+            (elem char
+              (var System.String.LastIndexOf[string,char]/this)
+              (var System.String.LastIndexOf[string,char]/i)
+            )
+            (var System.String.LastIndexOf[string,char]/c)
+          ) false
+        )
+        (return
+          (var System.String.LastIndexOf[string,char]/i)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.String.LastIndexOf[string,char]/i
+            (binary
+              (bop - int int)
+              (var System.String.LastIndexOf[string,char]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop >= int int)
+            (var System.String.LastIndexOf[string,char]/i)
+            (lit int i:0)
+          ) true
+        )
+        (label break1)
+        (return
+          (unary
+            (uop - int)
+            (lit int i:1)
+          )
+        )
+      )
+    )
+    (body System.String.TrimStart[string,char]
+      (block 11
+        (vardecl System.String.TrimStart[string,char]/start
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (assign System.String.TrimStart[string,char]/start
+            (binary
+              (bop + int int)
+              (var System.String.TrimStart[string,char]/start)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop < int int)
+              (var System.String.TrimStart[string,char]/start)
+              (memberacc int Length
+                (var System.String.TrimStart[string,char]/this)
+              )
+            )
+            (binary
+              (bop == char char)
+              (elem char
+                (var System.String.TrimStart[string,char]/this)
+                (var System.String.TrimStart[string,char]/start)
+              )
+              (var System.String.TrimStart[string,char]/c)
+            )
+          ) true
+        )
+        (label break1)
+        (cgoto Label2
+          (binary
+            (bop >= int int)
+            (var System.String.TrimStart[string,char]/start)
+            (memberacc int Length
+              (var System.String.TrimStart[string,char]/this)
+            )
+          ) false
+        )
+        (return
+          (lit string s:)
+        )
+        (label Label2)
+        (return
+          (membercall string substring - 2
+            (var System.String.TrimStart[string,char]/this)
+            (var System.String.TrimStart[string,char]/start)
+            (binary
+              (bop - int int)
+              (memberacc int Length
+                (var System.String.TrimStart[string,char]/this)
+              )
+              (var System.String.TrimStart[string,char]/start)
+            )
+          )
+        )
+      )
+    )
+    (body System.String.TrimEnd[string,char]
+      (block 8
+        (vardecl System.String.TrimEnd[string,char]/end
+          (memberacc int Length
+            (var System.String.TrimEnd[string,char]/this)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (assign System.String.TrimEnd[string,char]/end
+            (binary
+              (bop - int int)
+              (var System.String.TrimEnd[string,char]/end)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop > int int)
+              (var System.String.TrimEnd[string,char]/end)
+              (lit int i:0)
+            )
+            (binary
+              (bop == char char)
+              (elem char
+                (var System.String.TrimEnd[string,char]/this)
+                (binary
+                  (bop - int int)
+                  (var System.String.TrimEnd[string,char]/end)
+                  (lit int i:1)
+                )
+              )
+              (var System.String.TrimEnd[string,char]/c)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (membercall string substring - 2
+            (var System.String.TrimEnd[string,char]/this)
+            (lit int i:0)
+            (var System.String.TrimEnd[string,char]/end)
+          )
+        )
+      )
+    )
+    (body System.String.ToCharArray[string]
+      (block 10
+        (vardecl System.String.ToCharArray[string]/result
+          (arrnew char[]
+            (memberacc int Length
+              (var System.String.ToCharArray[string]/this)
+            ) 0
+          )
+        )
+        (vardecl System.String.ToCharArray[string]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.String.ToCharArray[string]/result)
+              (var System.String.ToCharArray[string]/i)
+            )
+            (elem char
+              (var System.String.ToCharArray[string]/this)
+              (var System.String.ToCharArray[string]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.String.ToCharArray[string]/i
+            (binary
+              (bop + int int)
+              (var System.String.ToCharArray[string]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < int int)
+            (var System.String.ToCharArray[string]/i)
+            (memberacc int Length
+              (var System.String.ToCharArray[string]/this)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (var System.String.ToCharArray[string]/result)
+        )
+      )
+    )
+    (body System.String.Remove[string,int,int]
+      (block 1
+        (return
+          (binary
+            (bop + string string)
+            (membercall string substring - 2
+              (var System.String.Remove[string,int,int]/this)
+              (lit int i:0)
+              (var System.String.Remove[string,int,int]/start)
+            )
+            (membercall string substring - 2
+              (var System.String.Remove[string,int,int]/this)
+              (binary
+                (bop + int int)
+                (var System.String.Remove[string,int,int]/start)
+                (var System.String.Remove[string,int,int]/count)
+              )
+              (binary
+                (bop - int int)
+                (binary
+                  (bop - int int)
+                  (memberacc int Length
+                    (var System.String.Remove[string,int,int]/this)
+                  )
+                  (var System.String.Remove[string,int,int]/start)
+                )
+                (var System.String.Remove[string,int,int]/count)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.String.Insert[string,int,string]
+      (block 1
+        (return
+          (binary
+            (bop + string string)
+            (binary
+              (bop + string string)
+              (membercall string substring - 2
+                (var System.String.Insert[string,int,string]/this)
+                (lit int i:0)
+                (var System.String.Insert[string,int,string]/index)
+              )
+              (var System.String.Insert[string,int,string]/text)
+            )
+            (membercall string substring - 2
+              (var System.String.Insert[string,int,string]/this)
+              (var System.String.Insert[string,int,string]/index)
+              (binary
+                (bop - int int)
+                (memberacc int Length
+                  (var System.String.Insert[string,int,string]/this)
+                )
+                (var System.String.Insert[string,int,string]/index)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.String.Join[string,string[]]
+      (block 13
+        (vardecl System.String.Join[string,string[]]/result
+          (lit string s:)
+        )
+        (vardecl System.String.Join[string,string[]]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop > int int)
+            (var System.String.Join[string,string[]]/i)
+            (lit int i:0)
+          ) false
+        )
+        (exprstmt
+          (assign System.String.Join[string,string[]]/result
+            (binary
+              (bop + string string)
+              (var System.String.Join[string,string[]]/result)
+              (var System.String.Join[string,string[]]/sep)
+            )
+          )
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.String.Join[string,string[]]/result
+            (binary
+              (bop + string string)
+              (var System.String.Join[string,string[]]/result)
+              (elem string
+                (var System.String.Join[string,string[]]/parts)
+                (var System.String.Join[string,string[]]/i)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.String.Join[string,string[]]/i
+            (binary
+              (bop + int int)
+              (var System.String.Join[string,string[]]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < int int)
+            (var System.String.Join[string,string[]]/i)
+            (memberacc int Length
+              (var System.String.Join[string,string[]]/parts)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (var System.String.Join[string,string[]]/result)
+        )
+      )
+    )
     (body System.UInt16.ToString[ushort]
       (block 1
         (return
@@ -5461,7 +6919,7 @@
       )
     )
     (body System.UInt64.TryParse[string,out:ulong]
-      (block 2
+      (block 38
         (exprstmt
           (assign System.UInt64.TryParse[string,out:ulong]/result
             (conv ulong
@@ -5469,8 +6927,161 @@
             )
           )
         )
+        (vardecl System.UInt64.TryParse[string,out:ulong]/len
+          (memberacc int Length
+            (var System.UInt64.TryParse[string,out:ulong]/s)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop == int int)
+            (var System.UInt64.TryParse[string,out:ulong]/len)
+            (lit int i:0)
+          ) false
+        )
         (return
           (lit bool b:0)
+        )
+        (label Label1)
+        (vardecl System.UInt64.TryParse[string,out:ulong]/index
+          (lit int i:0)
+        )
+        (vardecl System.UInt64.TryParse[string,out:ulong]/first
+          (elem char
+            (var System.UInt64.TryParse[string,out:ulong]/s)
+            (lit int i:0)
+          )
+        )
+        (cgoto Label2
+          (binary
+            (bop == char char)
+            (var System.UInt64.TryParse[string,out:ulong]/first)
+            (lit char c:43)
+          ) false
+        )
+        (exprstmt
+          (assign System.UInt64.TryParse[string,out:ulong]/index
+            (lit int i:1)
+          )
+        )
+        (goto Label3)
+        (label Label2)
+        (cgoto Label4
+          (binary
+            (bop == char char)
+            (var System.UInt64.TryParse[string,out:ulong]/first)
+            (lit char c:45)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label4)
+        (label Label3)
+        (cgoto Label5
+          (binary
+            (bop >= int int)
+            (var System.UInt64.TryParse[string,out:ulong]/index)
+            (var System.UInt64.TryParse[string,out:ulong]/len)
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label5)
+        (vardecl System.UInt64.TryParse[string,out:ulong]/acc
+          (conv ulong
+            (lit int i:0)
+          )
+        )
+        (goto continue1)
+        (label Label6)
+        (vardecl System.UInt64.TryParse[string,out:ulong]/c
+          (elem char
+            (var System.UInt64.TryParse[string,out:ulong]/s)
+            (var System.UInt64.TryParse[string,out:ulong]/index)
+          )
+        )
+        (cgoto Label7
+          (membercall bool IsDigit System.Char.IsDigit[char] 1
+            (statictype System.Char)
+            (var System.UInt64.TryParse[string,out:ulong]/c)
+          ) false
+        )
+        (vardecl System.UInt64.TryParse[string,out:ulong]/d
+          (conv ulong
+            (binary
+              (bop - int int)
+              (conv int
+                (var System.UInt64.TryParse[string,out:ulong]/c)
+              )
+              (lit int i:48)
+            )
+          )
+        )
+        (cgoto Label9
+          (binary
+            (bop > ulong ulong)
+            (var System.UInt64.TryParse[string,out:ulong]/acc)
+            (binary
+              (bop / ulong ulong)
+              (binary
+                (bop - ulong ulong)
+                (lit ulong U:18446744073709551615)
+                (var System.UInt64.TryParse[string,out:ulong]/d)
+              )
+              (lit ulong U:10)
+            )
+          ) false
+        )
+        (return
+          (lit bool b:0)
+        )
+        (label Label9)
+        (exprstmt
+          (assign System.UInt64.TryParse[string,out:ulong]/acc
+            (binary
+              (bop + ulong ulong)
+              (binary
+                (bop * ulong ulong)
+                (var System.UInt64.TryParse[string,out:ulong]/acc)
+                (lit ulong U:10)
+              )
+              (var System.UInt64.TryParse[string,out:ulong]/d)
+            )
+          )
+        )
+        (goto Label8)
+        (label Label7)
+        (return
+          (lit bool b:0)
+        )
+        (label Label8)
+        (exprstmt
+          (assign System.UInt64.TryParse[string,out:ulong]/index
+            (binary
+              (bop + int int)
+              (var System.UInt64.TryParse[string,out:ulong]/index)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label6
+          (binary
+            (bop < int int)
+            (var System.UInt64.TryParse[string,out:ulong]/index)
+            (var System.UInt64.TryParse[string,out:ulong]/len)
+          ) true
+        )
+        (label break1)
+        (exprstmt
+          (assign System.UInt64.TryParse[string,out:ulong]/result
+            (var System.UInt64.TryParse[string,out:ulong]/acc)
+          )
+        )
+        (return
+          (lit bool b:1)
         )
       )
     )
@@ -5481,4 +7092,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:bff94b35da75f461d43956f767df5f12801b68d6194932dd5c280c9bf2c58094)
+(checksum sha256:d3606b6fa1e15417ca561e83598a38860a7df45a9da5848ca023c18898d1825d)

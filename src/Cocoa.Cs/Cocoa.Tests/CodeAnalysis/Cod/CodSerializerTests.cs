@@ -753,5 +753,70 @@ function Main(): i32
                 Directory.Delete(dir, true);
             }
         }
+
+        [Fact]
+        public void FacadeInstanceClass_RoundTrips_MemberFlags()
+        {
+            // 6b：facade 实例类（映射 BCL、体内不经 cod 执行）按符号序列化——属性访问器（acc 位）往返一致；
+            // facade 构造器不经 cod（绑定期经 facade→BCL 合成），IsFacadeClass 由注入侧按 FacadeTargets 补齐。
+            // 换门即 System.Core.cod（含 Exception.co）重建成功、消费方 `new Exception(...)` 可绑定。
+            var dir = NewDir();
+            var source = @"
+namespace System
+{
+    public facade class Exception
+    {
+        public constructor(message: string)
+        {
+        }
+
+        public property Message: string
+        {
+            get
+            {
+                return """"
+            }
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+
+            var loaded = CodSerializer.Load(output);
+            var facadeClass = loaded.Classes.Single(c => c.FullName == "System.Exception");
+            Assert.False(facadeClass.IsInterface);
+
+            var accessor = loaded.Functions.SingleOrDefault(f => f.ContainingClass == facadeClass && f.IsPropertyAccessor);
+            Assert.NotNull(accessor);
+            Assert.True(accessor.IsPropertyAccessor);
+            Assert.Equal("get_Message", accessor.Name);
+        }
+
+        [Fact]
+        public void FacadeException_NewBinds_AgainstRebuiltCoreCod()
+        {
+            // 6b E2E：消费方程序以 `using System` 绑定 `new Exception(...)` + catch——依赖重建后的
+            // System.Core.cod 提供 Exception facade 类壳（throw/catch 绑定期经 FacadeTargets 合成构造器）。
+            // 注：Evaluator 不支持 try/catch（TryStatement 未实现），此处仅验证绑定无错误。
+            var compilation = Compilation.Create(SyntaxTree.Parse(@"using System
+
+function Main(): i32
+{
+    var thrown = false
+    try
+    {
+        throw new Exception(""boom"")
+        thrown = true
+    }
+    catch (e: Exception)
+    {
+        System.Console.WriteLine(""caught"")
+    }
+    if thrown != false return 1
+    return 0
+}"));
+            var errors = compilation.GlobalScope.Diagnostics.Where(d => d.IsError).ToArray();
+            Assert.True(errors.Length == 0, string.Join("\n", errors.Select(d => d.Message)));
+        }
     }
 }

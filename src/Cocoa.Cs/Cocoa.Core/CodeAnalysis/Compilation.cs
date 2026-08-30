@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Binding;
+﻿using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Cod;
 using Cocoa.CodeAnalysis.Emit;
 using Cocoa.CodeAnalysis.Emit.IL;
@@ -663,6 +663,23 @@ namespace Cocoa.CodeAnalysis
         /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
         /// 不涉对象模型。
         /// </summary>
+        private static bool IsCodSerializableClass(NamedTypeSymbol classType)
+        {
+            return IsPureContainerClass(classType) || classType.IsFacadeClass || DeclaredFacade(classType);
+        }
+
+        /// <summary>类声明是否带 `facade` 修饰符（未命中 FacadeTargets 的 facade 类映射 BCL 前也按符号序列化）。</summary>
+        private static bool DeclaredFacade(NamedTypeSymbol classType)
+        {
+            // 部分类任一部分声明含 facade 关键字即算；Declaration 为 null（纯 cod 重建/外部类）按 IsFacadeClass 判定
+            if (classType.Declaration is ClassDeclarationSyntax synthDecl)
+            {
+                return synthDecl.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword);
+            }
+
+            return false;
+        }
+
         private static bool IsPureContainerClass(NamedTypeSymbol classType)
         {
             if (classType.IsInterface)
@@ -754,14 +771,15 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "output = cocoa 的库不允许入口函数（Main/script）"));
             }
 
-            // 校验 2：无内部 OOP（.cod 6e-M17 起放行纯容器类：仅 syscall/extern 静态方法；实例类仍 6b 后置）
+            // 校验 2：无内部 OOP（.cod 6e-M17 起放行纯容器类：仅 syscall/extern 静态方法；6b 起放行 facade 实例类
+            // ——facade 映射 BCL（System.Exception 等），体内不经 cod 执行，仅需符号+成员签名；非 facade 实例类仍 6b 后置）
             if (program.Classes.Length > 0)
             {
-                var offendingClass = program.Classes.FirstOrDefault(c => !IsPureContainerClass(c));
+                var offendingClass = program.Classes.FirstOrDefault(c => !IsCodSerializableClass(c));
                 if (offendingClass != null)
                 {
                     var location = offendingClass.Declaration?.Identifier.Location ?? ZeroLocation;
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.cod 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类已支持"));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.cod 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类与 facade 类已支持"));
                 }
             }
 
@@ -797,7 +815,7 @@ namespace Cocoa.CodeAnalysis
                 .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
                 .ToImmutableArray();
 
-            var containerClasses = program.Classes.Where(IsPureContainerClass).ToImmutableArray();
+            var containerClasses = program.Classes.Where(IsCodSerializableClass).ToImmutableArray();
 
             var codProgram = new CodProgram(
                 functions,
