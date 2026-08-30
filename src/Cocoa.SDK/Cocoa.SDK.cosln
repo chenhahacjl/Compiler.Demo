@@ -2,4 +2,3 @@ name = Cocoa.SDK
 
 [projects]
 System.Core/System.Core.coproj
-

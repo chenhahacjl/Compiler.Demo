@@ -28,6 +28,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 return Conversion.Identity;
             }
 
+            // 6b/M0-1c：泛型定义与其自身开放实例化（含定义自有开放类型参数）在开放体上下文等价
+            // （如 `this` 类型为泛型定义 List，实参形参为开放实例化 List<T>，同一符号体）。
+            if (to is InstantiatedTypeSymbol toInst && from == toInst.GenericDefinition)
+            {
+                return Conversion.Identity;
+            }
+
+            if (from is InstantiatedTypeSymbol fromInst && to == fromInst.GenericDefinition)
+            {
+                return Conversion.Identity;
+            }
+
             // 6e-M19 M5-a：null 字面量 → 可空引用型（any/类/接口/string/数组）隐式；
             // 其余目标（数值/bool/char/void）不存在转换。必须置于 any 双向规则之前，
             // 否则 Null→any 被通用"非 void→any"吞掉、而 any→Null 会经 ③ 泄漏成合法显式转换。

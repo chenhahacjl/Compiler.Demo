@@ -855,7 +855,7 @@ namespace MyLib
 
             var loaded = CodSerializer.Load(output);
             Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Wrapper");
-            Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Enumerator");
+Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Enumerator");
         }
     }
 }

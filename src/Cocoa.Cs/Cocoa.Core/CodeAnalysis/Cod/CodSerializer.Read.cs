@@ -366,7 +366,7 @@ namespace Cocoa.CodeAnalysis.Cod
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
             classType.BaseType = NamedTypeSymbol.SystemObject;
 
-            var pendingConstraints = new (TypeParameterSymbol Parameter, int Count)[typeParameterCount];
+            var pendingConstraints = new (TypeParameterSymbol Parameter, string[] ConstraintRefs)[typeParameterCount];
             for (var i = 0; i < typeParameterCount; i++)
             {
                 reader.Expect("tpar");
@@ -399,27 +399,27 @@ namespace Cocoa.CodeAnalysis.Cod
 
                 classType.TypeParameters = classType.TypeParameters.Add(parameter);
                 context.OpenTypeParametersByKey["!" + fullName + "." + parameterName] = parameter;
-                pendingConstraints[i] = (parameter, constraintCount);
+
+                // 约束原文引用在 pass1 读入以推进到下一 tpar（多 tpar 须消费本 tpar 尾部）；
+                // pass2 待兄弟参数注册后再 ResolveTypeRef 解析（!限定键可解析）。
+                var constraintRefs = new string[constraintCount];
+                for (var c = 0; c < constraintCount; c++)
+                {
+                    constraintRefs[c] = reader.ExpectString();
+                }
+
+                reader.End();
+                pendingConstraints[i] = (parameter, constraintRefs);
             }
 
             // 约束第二趟：兄弟参数已全部注册，!限定键可解析
             for (var i = 0; i < typeParameterCount; i++)
             {
-                var (parameter, constraintCount) = pendingConstraints[i];
-                if (constraintCount == 0)
+                var (parameter, constraintRefs) = pendingConstraints[i];
+                if (constraintRefs.Length > 0)
                 {
-                    reader.End();
-                    continue;
+                    parameter.ConstraintTypes = constraintRefs.Select(r => ResolveTypeRef(r, context)).ToImmutableArray();
                 }
-
-                var constraints = ImmutableArray.CreateBuilder<TypeSymbol>(constraintCount);
-                for (var c = 0; c < constraintCount; c++)
-                {
-                    constraints.Add(ResolveTypeRef(reader.ExpectString(), context));
-                }
-
-                parameter.ConstraintTypes = constraints.ToImmutable();
-                reader.End();
             }
 
             var fieldCount = ReadCountField(reader, "fields:");

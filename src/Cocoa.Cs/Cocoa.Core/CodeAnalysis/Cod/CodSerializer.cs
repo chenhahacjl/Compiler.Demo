@@ -818,7 +818,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     }
                 default:
-                    throw new NotSupportedException($"[cod] Unserializable expression kind '{expression.Kind}' at {expression.Syntax}");
+                    throw new NotSupportedException($"[cod] Unserializable expression kind '{expression.Kind}' in fn '{registry.CurrentFunctionName}' at {expression.Syntax}");
             }
         }
 
@@ -1184,6 +1184,12 @@ namespace Cocoa.CodeAnalysis.Cod
                 return builder.ToString();
             }
 
+            if (type.ElementType != null)
+            {
+                // 数组：递归元素 TypeRef（元素为开放类型参数时限定为 !属主.名，如 K[] → !System.Collections.Generic.Dictionary.K[]）
+                return TypeRef(type.ElementType) + "[]";
+            }
+
             return type.Name;
         }
 
@@ -1224,10 +1230,12 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static void WriteBodyEntry(Writer w, Registry registry, Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>> labelsByFunction, FunctionSymbol fn, BoundBlockStatement body)
         {
+            registry.CurrentFunctionName = fn.Name + (fn.ContainingClass != null ? " (" + fn.ContainingClass.FullName + ")" : "");
             w.Open("body");
             w.Field(registry.FnKey(fn));
             WriteStatement(w, registry, labelsByFunction[fn], body);
             w.End();
+            registry.CurrentFunctionName = null;
         }
 
         private static string BoolWord(bool value)
@@ -1517,6 +1525,9 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             private readonly List<(VariableSymbol Symbol, FunctionSymbol? Owner)> _variables = new();
             private readonly Dictionary<FunctionSymbol, string> _fnKeys = new(ReferenceEqualityComparer.Instance);
             private readonly Dictionary<object, string> _varKeys = new(ReferenceEqualityComparer.Instance);
+
+            /// <summary>调试：当前序列化函数名（WriteBodyEntry 设置，供 Unserializable 错误定位）。</summary>
+            public string? CurrentFunctionName { get; set; }
 
             public List<Action<Writer, Registry>> Emitters { get; } = new();
 

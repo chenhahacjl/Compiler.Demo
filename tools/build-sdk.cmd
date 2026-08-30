@@ -17,10 +17,8 @@ REM Collect to central store src\Cocoa.Cs\libs (committed; Directory.Build.targe
 REM to project bins on build, SystemLibrary walk-up probe covers pre-build gap)
 set "LIBS=%ROOT%\src\Cocoa.Cs\libs"
 if not exist "%LIBS%" mkdir "%LIBS%"
+REM Collect all modules (System.Core + System.Collections; collections serializable since 6b/M0-1c)
 copy /y "%OUT%\System.Core.cod" "%LIBS%\System.Core.cod" >nul
-REM 托管 dll 不预生成：消费方构建时按需从 cod 再生（lazy，见 ProjectBuilder.EnsureManagedDlls）
-REM 注：System.Collections 等泛型密集模块（List<T>/Dictionary<K,V> 含 `new T[]`）当前 .cod 序列化
-REM 尚不支持开放泛型数组创建（G7 待补），暂以“源码方式”集成（见 CollectionFacadeTests），不纳入 .cod 构建。
-
-echo System.Core.cod built: %OUT%\System.Core.cod (collected to src\Cocoa.Cs\libs)
+if exist "%OUT%\System.Collections.cod" copy /y "%OUT%\System.Collections.cod" "%LIBS%\System.Collections.cod" >nul
+REM Managed dll not prebuilt: consumers regenerate lazily from cod (ProjectBuilder.EnsureManagedDlls)
 endlocal
