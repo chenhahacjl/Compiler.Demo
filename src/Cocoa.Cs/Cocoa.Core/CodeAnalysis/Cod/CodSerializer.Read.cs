@@ -1315,6 +1315,19 @@ namespace Cocoa.CodeAnalysis.Cod
 
                         return new BoundArrayCreationExpression(null, type, length, initializers.ToImmutable());
                     }
+                case "objnew":
+                    {
+                        // M0-1c：对象创建 `new Foo(args)`——构造器由类型+元数重解析
+                        var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                        var argCount = reader.ExpectInt();
+                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                        for (var i = 0; i < argCount; i++)
+                        {
+                            arguments.Add(ReadExpression(reader, context, labels));
+                        }
+
+                        return new BoundObjectCreationExpression(null, type, arguments.ToImmutable());
+                    }
                 case "elem":
                     {
                         var type = ResolveTypeRef(reader.ExpectString(), context);

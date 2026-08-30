@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Binding;
+﻿using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -10,28 +10,28 @@ using System.Text;
 namespace Cocoa.CodeAnalysis.Cod
 {
     /// <summary>
-    /// `.cod` 璇箟灞傚簭鍒楀寲鍣細绗﹀彿琛?+ 闄嶇骇 BoundProgram锛堝嚱鏁颁綋锛夋枃鏈?round-trip銆?
-    /// 鍙屽悗绔叡鐢紙native 鈫?BoundTreeToIr锛孖L 鈫?IlEmitter锛夛紱璇硶鑺傜偣锛圫yntax锛変笉搴忓垪鍖栵紙缃?null锛夈€?
+    /// `.cod` 鐠囶厺绠熺仦鍌氱碍閸掓瀵查崳顭掔窗缁楋箑褰跨悰?+ 闂勫秶楠?BoundProgram閿涘牆鍤遍弫棰佺秼閿涘鏋冮張?round-trip閵?
+    /// 閸欏苯鎮楃粩顖氬彙閻㈩煉绱檔ative 閳?BoundTreeToIr閿涘瓥L 閳?IlEmitter閿涘绱辩拠顓熺《閼哄倻鍋ｉ敍鍦珁ntax閿涘绗夋惔蹇撳灙閸栨牭绱欑純?null閿涘鈧?
     ///
-    /// 鏂囨湰鏍煎紡锛堝彲璇讳紭鍏堬紝绫诲瀷/鍑芥暟/鍙橀噺涓€寰嬫寜鍚嶅瓧寮曠敤锛屼笉鐢ㄦ暟瀛?id锛夛細
-    ///   (type)     鍐呭缓/鏁扮粍绫诲瀷鍐呰仈涓哄悕瀛楀紩鐢細int / int[] / int[][]锛涚被/鏋氫妇鐢ㄥ叏鍚?System.Console
+    /// 閺傚洦婀伴弽鐓庣础閿涘牆褰茬拠璁崇喘閸忓牞绱濈猾璇茬€?閸戣姤鏆?閸欐﹢鍣烘稉鈧瀣瘻閸氬秴鐡у鏇犳暏閿涘奔绗夐悽銊︽殶鐎?id閿涘绱?
+    ///   (type)     閸愬懎缂?閺佹壆绮嶇猾璇茬€烽崘鍛颁粓娑撳搫鎮曠€涙绱╅悽顭掔窗int / int[] / int[][]閿涙稓琚?閺嬫矮濡囬悽銊ュ弿閸?System.Console
     ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
-    ///   (systype)  (systype System.Object)鈥斺€斿唴寤哄崟渚嬫寜鍏ㄥ悕鏄犲皠
-    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)鈥斺€旀柟娉曞垪 Name[鍙傛暟绫诲瀷] 绛惧悕
+    ///   (systype)  (systype System.Object)閳ユ柡鈧柨鍞村鍝勫礋娓氬瀵滈崗銊ユ倳閺勭姴鐨?
+    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)閳ユ柡鈧梹鏌熷▔鏇炲灙 Name[閸欏倹鏆熺猾璇茬€穄 缁涙儳鎮?
     ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
     ///               params:2 (par MyLib.Add/a a i32 0) ...)
-    ///              鍑芥暟閿?= [鍛藉悕绌洪棿鎴栧涓荤被.]鍑芥暟鍚?鍙傛暟绫诲瀷鍒楄〃)锛岄噸杞介潬鍙傛暟绫诲瀷鍖哄垎
+    ///              閸戣姤鏆熼柨?= [閸涜棄鎮曠粚娲？閹存牕顔栨稉鑽よ.]閸戣姤鏆熼崥?閸欏倹鏆熺猾璇茬€烽崚妤勩€?閿涘矂鍣告潪浠嬫浆閸欏倹鏆熺猾璇茬€烽崠鍝勫瀻
     ///   (glb/loc)  (glb global:version true i32 (const i:1)) / (loc MyLib.Factorial/result false i32)
-    ///              鍙橀噺閿細鍏ㄥ眬 global:鍚嶅瓧锛涘眬閮?鍙傛暟 鍑芥暟閿?鍚嶅瓧锛堝悓鍚嶅啿绐佸姞 #2銆?3 鍚庣紑锛?
-    ///   杩愮畻绗?     鏂囨湰璁板彿 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
-    ///   甯冨皵/鏋氫妇璇? true false锛沺ublic internal protected private锛泈inapi cdecl stdcall锛泆nicode ansi auto
+    ///              閸欐﹢鍣洪柨顕嗙窗閸忋劌鐪?global:閸氬秴鐡ч敍娑樼湰闁?閸欏倹鏆?閸戣姤鏆熼柨?閸氬秴鐡ч敍鍫濇倱閸氬秴鍟跨粣浣稿 #2閵?3 閸氬海绱戦敍?
+    ///   鏉╂劗鐣荤粭?     閺傚洦婀扮拋鏉垮娇 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
+    ///   鐢啫鐨?閺嬫矮濡囩拠? true false閿涙埠ublic internal protected private閿涙硤inapi cdecl stdcall閿涙硢nicode ansi auto
     /// </summary>
     internal static partial class CodSerializer
     {
         public const string Magic = "COCOD";
         public const int Version = 1;
 
-        /// <summary>瀹屾暣鎬ф牎楠岋細鏂囦欢鏈 `(checksum sha256:&lt;hex&gt;)` 瑕嗙洊鍏跺墠鍏ㄩ儴瀛楄妭锛圲TF-8锛夛紱璇讳晶寮哄埗鏍￠獙銆?/summary>
+        /// <summary>鐎瑰本鏆ｉ幀褎鐗庢宀嬬窗閺傚洣娆㈤張顐ヮ攽 `(checksum sha256:&lt;hex&gt;)` 鐟曞棛娲婇崗璺哄閸忋劑鍎寸€涙濡敍鍦睺F-8閿涘绱辩拠璁虫櫠瀵搫鍩楅弽锟犵崣閵?/summary>
         private const string ChecksumTag = "sha256:";
 
         // ---------------------------------------------------------------- write
@@ -41,12 +41,12 @@ namespace Cocoa.CodeAnalysis.Cod
             var registry = new Registry();
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
 
-            // 鏀堕泦绗﹀彿鈥斺€斿嚱鏁颁綋鎸?Functions锛堝０鏄庡簭锛夐亶鍘嗭紝淇濊瘉纭畾鎬э紙ImmutableDictionary 杩唬搴忎笉绋冲畾锛?
+            // 閺€鍫曟肠缁楋箑褰块垾鏂衡偓鏂垮毐閺侀缍嬮幐?Functions閿涘牆锛愰弰搴＄碍閿涘浜堕崢鍡礉娣囨繆鐦夌涵顔肩暰閹嶇礄ImmutableDictionary 鏉╊厺鍞惔蹇庣瑝缁嬪啿鐣鹃敍?
             foreach (var e in program.Enums)
             {
                 registry.RegisterType(e);
             }
-            // 6e-G7 S1：泛型定义在枚举后、类/函数前注册——gcls 条目须先于引用 !开放参数 的 fn 条目落盘
+            // 6e-G7 S1锛氭硾鍨嬪畾涔夊湪鏋氫妇鍚庛€佺被/鍑芥暟鍓嶆敞鍐屸€斺€攇cls 鏉＄洰椤诲厛浜庡紩鐢?!寮€鏀惧弬鏁?鐨?fn 鏉＄洰钀界洏
             foreach (var g in program.GenericDefinitions)
             {
                 registry.RegisterType(g);
@@ -75,7 +75,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 labelsByFunction[fn] = labels;
             }
 
-            // 6e-G7 S2：泛型定义方法的开放绑定体同样收集（显式清单，不触碰 stdlib 注入体）
+            // 6e-G7 S2锛氭硾鍨嬪畾涔夋柟娉曠殑寮€鏀剧粦瀹氫綋鍚屾牱鏀堕泦锛堟樉寮忔竻鍗曪紝涓嶈Е纰?stdlib 娉ㄥ叆浣擄級
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
@@ -83,7 +83,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 labelsByFunction[pair.Key] = labels;
             }
 
-            // 鍏ㄩ儴绗﹀彿鏀堕泦瀹屾瘯鍚庡啀瀹氬悕锛堝彉閲忛敭闇€瑕佸嚱鏁伴敭锛屼笖瑕佽法绗﹀彿娑堥噸锛?
+            // 閸忋劑鍎寸粭锕€褰块弨鍫曟肠鐎瑰本鐦崥搴″晙鐎规艾鎮曢敍鍫濆綁闁插繘鏁棁鈧憰浣稿毐閺佷即鏁敍灞肩瑬鐟曚浇娉曠粭锕€褰垮☉鍫ュ櫢閿?
             registry.Seal();
 
             var buffer = new StringWriter();
@@ -92,7 +92,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field(Magic);
             w.Field(Version);
 
-            // 绗﹀彿琛紙鎸夋敞鍐屽簭锛?
+            // 缁楋箑褰跨悰顭掔礄閹稿鏁為崘灞界碍閿?
             w.Open("symbols");
             foreach (var emitter in registry.Emitters)
             {
@@ -100,11 +100,11 @@ namespace Cocoa.CodeAnalysis.Cod
             }
             w.End();
 
-            // 鍑芥暟浣?
+            // 閸戣姤鏆熸担?
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
-                // 6e-G7 S2：泛型定义属主的方法体（开放绑定体）随库携带；其余实例方法不在容器序列化范围，跳过
+                // 6e-G7 S2锛氭硾鍨嬪畾涔夊睘涓荤殑鏂规硶浣擄紙寮€鏀剧粦瀹氫綋锛夐殢搴撴惡甯︼紱鍏朵綑瀹炰緥鏂规硶涓嶅湪瀹瑰櫒搴忓垪鍖栬寖鍥达紝璺宠繃
                 if (fn.ContainingClass != null && !fn.IsStatic && !fn.ContainingClass.IsGenericDefinition)
                 {
                     continue;
@@ -118,14 +118,14 @@ namespace Cocoa.CodeAnalysis.Cod
                 WriteBodyEntry(w, registry, labelsByFunction, fn, body);
             }
 
-            // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入体
+            // 6e-G7 S2锛氬紑鏀剧粦瀹氫綋锛堟硾鍨嬪畾涔夋柟娉曪級鈥斺€旀樉寮忛亶鍘嗭紝閬垮厤鍗峰叆 stdlib 娉ㄥ叆浣?
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 WriteBodyEntry(w, registry, labelsByFunction, pair.Key, pair.Value);
             }
             w.End();
 
-            // 渚濊禆娓呭崟
+            // 娓氭繆绂嗗〒鍛礋
             w.Open("manifest");
             w.Open("requires");
             w.Field(RequirementName(program.Requires));
@@ -165,7 +165,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End(); // cod
             buffer.WriteLine();
 
-            // 瀹屾暣鎬ф牎楠岋細瀵规鏂囧叏閮ㄥ瓧鑺傦紙UTF-8锛夊彇 SHA256锛岃拷鍔犱负鏂囦欢鏈锛堣渚у己鍒舵牎楠岋紝缂哄け/涓嶇鎷掕浇锛?
+            // 鐎瑰本鏆ｉ幀褎鐗庢宀嬬窗鐎佃顒滈弬鍥у弿闁劌鐡ч懞鍌︾礄UTF-8閿涘褰?SHA256閿涘矁鎷烽崝鐘辫礋閺傚洣娆㈤張顐ヮ攽閿涘牐顕版笟褍宸遍崚鑸电墡妤犲矉绱濈紓鍝勩亼/娑撳秶顑侀幏鎺曟祰閿?
             var payload = buffer.ToString();
             writer.Write(payload);
             writer.WriteLine("(checksum " + ChecksumTag + ComputeChecksum(payload) + ")");
@@ -365,6 +365,17 @@ namespace Cocoa.CodeAnalysis.Cod
                         }
                         break;
                     }
+                case BoundNodeKind.ObjectCreationExpression:
+                    {
+                        // M0-1c锛氬紑鏀句綋瀵硅薄鍒涘缓 `new Foo(args)`鈥斺€旀瀯閫犲櫒鐢辩被鍨?鍏冩暟閲嶈В鏋愶紝浠呴渶绫诲瀷 + 瀹炲弬
+                        var n = (BoundObjectCreationExpression)expression;
+                        registry.RegisterType(n.Type);
+                        foreach (var arg in n.Arguments)
+                        {
+                            CollectExpression(registry, owner, arg, labels);
+                        }
+                        break;
+                    }
                 case BoundNodeKind.ElementAccessExpression:
                     {
                         var n = (BoundElementAccessExpression)expression;
@@ -546,11 +557,11 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     }
                 case BoundNodeKind.SequencePointStatement:
-                    // 璋冭瘯淇℃伅闄嶇骇锛氫粎搴忓垪鍖栧唴灞傝澶?
+                    // 鐠嬪啳鐦穱鈩冧紖闂勫秶楠囬敍姘矌鎼村繐鍨崠鏍у敶鐏炲倽婢?
                     WriteStatement(w, registry, labels, ((BoundSequencePointStatement)statement).Statement);
                     break;
                 default:
-                    // 6e-G7 S2：杜绝静默产出损坏流——未覆盖节点显式失败
+                    // 6e-G7 S2锛氭潨缁濋潤榛樹骇鍑烘崯鍧忔祦鈥斺€旀湭瑕嗙洊鑺傜偣鏄惧紡澶辫触
                     throw new NotSupportedException($"[cod] Unserializable statement kind '{statement.Kind}'");
             }
         }
@@ -711,6 +722,20 @@ namespace Cocoa.CodeAnalysis.Cod
                         w.End();
                         break;
                     }
+                case BoundNodeKind.ObjectCreationExpression:
+                    {
+                        // M0-1c锛氬璞″垱寤?`new Foo(args)`鈥斺€旀瀯閫犲櫒鐢辩被鍨?鍏冩暟閲嶈В鏋愶紝浠呴渶绫诲瀷 + 瀹炲弬
+                        var n = (BoundObjectCreationExpression)expression;
+                        w.Open("objnew");
+                        w.Field(TypeRef(n.Type));
+                        w.Field(n.Arguments.Length);
+                        foreach (var arg in n.Arguments)
+                        {
+                            WriteExpression(w, registry, labels, arg);
+                        }
+                        w.End();
+                        break;
+                    }
                 case BoundNodeKind.ElementAccessExpression:
                     {
                         var n = (BoundElementAccessExpression)expression;
@@ -733,7 +758,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
                 case BoundNodeKind.MemberAccessExpression:
                     {
-                        // 6e-G7：字段访问随 gcls/fld 携带（Field 经 FnKey 式名字回填）；仅数组/字符串 `.Length` 时 Field == null
+                        // 6e-G7锛氬瓧娈佃闂殢 gcls/fld 鎼哄甫锛團ield 缁?FnKey 寮忓悕瀛楀洖濉級锛涗粎鏁扮粍/瀛楃涓?`.Length` 鏃?Field == null
                         var n = (BoundMemberAccessExpression)expression;
                         w.Open("memberacc");
                         w.Field(TypeRef(n.Type));
@@ -781,7 +806,7 @@ namespace Cocoa.CodeAnalysis.Cod
                     }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
-                        // 6e-G7 S2：字段赋值（开放体携带）：target 表达式 + 字段名/类型/静态位 + 值
+                        // 6e-G7 S2锛氬瓧娈佃祴鍊硷紙寮€鏀句綋鎼哄甫锛夛細target 琛ㄨ揪寮?+ 瀛楁鍚?绫诲瀷/闈欐€佷綅 + 鍊?
                         var n = (BoundMemberAssignmentExpression)expression;
                         w.Open("memberassign");
                         WriteExpression(w, registry, labels, n.Target);
@@ -793,7 +818,7 @@ namespace Cocoa.CodeAnalysis.Cod
                         break;
                     }
                 default:
-                    throw new NotSupportedException($"[cod] Unserializable expression kind '{expression.Kind}'（开放体节点覆盖缺口）");
+                    throw new NotSupportedException($"[cod] Unserializable expression kind '{expression.Kind}' at {expression.Syntax}");
             }
         }
 
@@ -832,7 +857,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End();
         }
 
-        /// <summary>6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛夋寜鍏ㄥ悕搴忓垪鍖栵紝璇讳晶鏄犲皠鍥炲崟渚嬨€?/summary>
+        /// <summary>6e-M19 M2-c閿涙艾鍞村鍝勫礋娓氬绱橲ystem.Object/System.Type閿涘瀵滈崗銊ユ倳鎼村繐鍨崠鏍电礉鐠囪鏅堕弰鐘茬殸閸ョ偛宕熸笟瀣ㄢ偓?/summary>
         private static void EmitBuiltinSystemClass(Writer w, Registry registry, NamedTypeSymbol classType)
         {
             w.Open("systype");
@@ -845,7 +870,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("cls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
-            // 6e-G7/M0-1a：接口位 + 实现接口列表（供消费方 IsInterface 判定与接口成员沿 Interfaces 链解析）
+            // 6e-G7/M0-1a锛氭帴鍙ｄ綅 + 瀹炵幇鎺ュ彛鍒楄〃锛堜緵娑堣垂鏂?IsInterface 鍒ゅ畾涓庢帴鍙ｆ垚鍛樻部 Interfaces 閾捐В鏋愶級
             w.Field("iface:" + BoolWord(classType.IsInterface));
             var interfaces = classType.Interfaces;
             w.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
@@ -853,15 +878,15 @@ namespace Cocoa.CodeAnalysis.Cod
             {
                 w.Field(TypeRef(iface));
             }
-            // 搴忓垪鍖栧叏閮ㄩ潤鎬佹柟娉曠鍚嶏紙6e-M18锛氬鍣ㄧ被鍏佽甯︿綋闈欐€佹柟娉曪紝濡?Console.WriteLine/Math.Max锛泂yscall/extern 浜︿负闈欐€侊級銆?
-            // 鏂规硶鏈綋鐢卞悇鑷?fn 鏉＄洰鎼哄甫锛坥wner 瀛楁鍥炲～绫诲綊灞烇級锛岃繖閲屽垪 Name[鍙傛暟绫诲瀷] 渚涢槄璇伙紙鏃犲弬鐪佺暐鏂规嫭鍙凤級銆?
+            // 鎼村繐鍨崠鏍у弿闁劑娼ら幀浣规煙濞夋洜顒烽崥宥忕礄6e-M18閿涙艾顔愰崳銊ц閸忎浇顔忕敮锔跨秼闂堟瑦鈧焦鏌熷▔鏇礉婵?Console.WriteLine/Math.Max閿涙硞yscall/extern 娴滐缚璐熼棃娆愨偓渚婄礆閵?
+            // 閺傝纭堕張顑跨秼閻㈠崬鎮囬懛?fn 閺夛紕娲伴幖鍝勭敨閿涘潵wner 鐎涙顔岄崶鐐诧綖缁缍婄仦鐑囩礆閿涘矁绻栭柌灞藉灙 Name[閸欏倹鏆熺猾璇茬€穄 娓氭盯妲勭拠浼欑礄閺冪姴寮惇浣烘殣閺傝瀚崣鍑ょ礆閵?
             var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
                 w.Field(MethodSignature(method));
             }
-            // 6b：facade 实例类属性声明（getter/setter 访问器为独立 fn `get_X`/`set_X`，读侧 fns 回填后挂接）
+            // 6b锛歠acade 瀹炰緥绫诲睘鎬у０鏄庯紙getter/setter 璁块棶鍣ㄤ负鐙珛 fn `get_X`/`set_X`锛岃渚?fns 鍥炲～鍚庢寕鎺ワ級
             var properties = classType.Properties;
             if (properties.Length > 0)
             {
@@ -881,10 +906,10 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End();
         }
 
-        /// <summary>鏂规硶绛惧悕鐭敭锛歂ame 鎴?Name[鍙傛暟绫诲瀷鍒楄〃]锛堥噸杞介潬鍙傛暟绫诲瀷鍖哄垎锛夈€?/summary>
+        /// <summary>閺傝纭剁粵鎯ф倳閻參鏁敍姝俛me 閹?Name[閸欏倹鏆熺猾璇茬€烽崚妤勩€僝閿涘牓鍣告潪浠嬫浆閸欏倹鏆熺猾璇茬€烽崠鍝勫瀻閿涘鈧?/summary>
         private static string MethodSignature(FunctionSymbol method)
         {
-            // 6e-M23 R8锛氫粎宸?out/ref 鐨勯噸杞介敭椤讳笉鍚岋紙淇グ绗﹀叆绛惧悕锛?
+            // 6e-M23 R8閿涙矮绮庡?out/ref 閻ㄥ嫰鍣告潪浠嬫暛妞よ绗夐崥宀嬬礄娣囶噣銈扮粭锕€鍙嗙粵鎯ф倳閿?
             return method.Parameters.Length == 0
                 ? method.Name
                 : method.Name + "[" + string.Join(",", method.Parameters.Select(p =>
@@ -892,8 +917,8 @@ namespace Cocoa.CodeAnalysis.Cod
         }
 
         /// <summary>
-        /// 泛型定义类节点（6e-G7 S1）：类型参数（含约束）+ 字段 + 静态方法签名。
-        /// 成员类型经 TypeRef 携带开放参数（!属主.名）与实例化 mangle；开放绑定体由 bodies 区按 FnKey 携带（S2）。
+        /// 娉涘瀷瀹氫箟绫昏妭鐐癸紙6e-G7 S1锛夛細绫诲瀷鍙傛暟锛堝惈绾︽潫锛? 瀛楁 + 闈欐€佹柟娉曠鍚嶃€?
+        /// 鎴愬憳绫诲瀷缁?TypeRef 鎼哄甫寮€鏀惧弬鏁帮紙!灞炰富.鍚嶏級涓庡疄渚嬪寲 mangle锛涘紑鏀剧粦瀹氫綋鐢?bodies 鍖烘寜 FnKey 鎼哄甫锛圫2锛夈€?
         /// </summary>
         private static void EmitGenericClassSymbol(Writer w, Registry registry, NamedTypeSymbol classType)
         {
@@ -903,7 +928,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Open("gcls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
-            // 6e-G7/M0-1a：接口位 + 实现接口列表（开放参数经 TypeRef `!属主.名` 编码，如 `List<T>: IEnumerable<!List.T>`）
+            // 6e-G7/M0-1a锛氭帴鍙ｄ綅 + 瀹炵幇鎺ュ彛鍒楄〃锛堝紑鏀惧弬鏁扮粡 TypeRef `!灞炰富.鍚峘 缂栫爜锛屽 `List<T>: IEnumerable<!List.T>`锛?
             w.Field("iface:" + BoolWord(classType.IsInterface));
             var interfaces = classType.Interfaces;
             w.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
@@ -942,7 +967,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End();
         }
 
-        /// <summary>tpar/ftp 子节点共用写出（6e-G7 S1）：名 / 序号 / 约束标志 / 显式约束类型列表。</summary>
+        /// <summary>tpar/ftp 瀛愯妭鐐瑰叡鐢ㄥ啓鍑猴紙6e-G7 S1锛夛細鍚?/ 搴忓彿 / 绾︽潫鏍囧織 / 鏄惧紡绾︽潫绫诲瀷鍒楄〃銆?/summary>
         private static void WriteTypeParameter(Writer w, TypeParameterSymbol typeParameter)
         {
             w.Open("tpar");
@@ -974,7 +999,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.End();
         }
 
-        /// <summary>约束标志解析（gcls.tpar 与 fn.tps 共用，6e-G7 S1）。</summary>
+        /// <summary>绾︽潫鏍囧織瑙ｆ瀽锛坓cls.tpar 涓?fn.tps 鍏辩敤锛?e-G7 S1锛夈€?/summary>
         private static void ApplyTypeParameterFlags(TypeParameterSymbol parameter, string flagsText)
         {
             if (flagsText == "-")
@@ -1002,8 +1027,8 @@ namespace Cocoa.CodeAnalysis.Cod
         }
 
         /// <summary>
-        /// tpar/ftp 子节点读取（6e-G7 S1）：构造符号 + 应用标志 + 登记开放键（类级=限定键 !属主.名；
-        /// 方法级=裸键 !名）+ 暂存约束数。返回 (参数, 约束数)，约束由第二趟解析。
+        /// tpar/ftp 瀛愯妭鐐硅鍙栵紙6e-G7 S1锛夛細鏋勯€犵鍙?+ 搴旂敤鏍囧織 + 鐧昏寮€鏀鹃敭锛堢被绾?闄愬畾閿?!灞炰富.鍚嶏紱
+        /// 鏂规硶绾?瑁搁敭 !鍚嶏級+ 鏆傚瓨绾︽潫鏁般€傝繑鍥?(鍙傛暟, 绾︽潫鏁?锛岀害鏉熺敱绗簩瓒熻В鏋愩€?
         /// </summary>
         private static (TypeParameterSymbol Parameter, int ConstraintCount) ReadTypeParameter(Reader reader, ReadContext context, string? ownerFullName)
         {
@@ -1024,7 +1049,7 @@ namespace Cocoa.CodeAnalysis.Cod
             return (parameter, constraintCount);
         }
 
-        /// <summary>约束第二趟：兄弟参数已全部注册后解析显式约束类型。</summary>
+        /// <summary>绾︽潫绗簩瓒燂細鍏勫紵鍙傛暟宸插叏閮ㄦ敞鍐屽悗瑙ｆ瀽鏄惧紡绾︽潫绫诲瀷銆?/summary>
         private static void ResolveDeferredConstraints(Reader reader, TypeParameterSymbol parameter, int constraintCount, ReadContext context)
         {
             if (constraintCount == 0)
@@ -1049,7 +1074,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field(registry.FnKey(fn));
             w.Field("name:" + Str(fn.Name));
 
-            // 6e-G7 S1：方法级类型参数（顶层泛型函数）——裸键 !名（无属主类）
+            // 6e-G7 S1锛氭柟娉曠骇绫诲瀷鍙傛暟锛堥《灞傛硾鍨嬪嚱鏁帮級鈥斺€旇８閿?!鍚嶏紙鏃犲睘涓荤被锛?
             if (fn.TypeParameters.Length > 0)
             {
                 w.Field("tps:" + fn.TypeParameters.Length.ToString(CultureInfo.InvariantCulture));
@@ -1069,7 +1094,7 @@ namespace Cocoa.CodeAnalysis.Cod
             w.Field("entry:" + (fn.EntryPoint != null ? Str(fn.EntryPoint) : "-"));
             w.Field("charset:" + (fn.CharSet != null ? fn.CharSet.Value.ToString().ToLowerInvariant() : "-"));
 
-            // 6e-G7 S2：属主方法携带静态/构造/访问器位（泛型定义与 6b facade 实例类显式区分；容器类全静态=显式 true）
+            // 6e-G7 S2锛氬睘涓绘柟娉曟惡甯﹂潤鎬?鏋勯€?璁块棶鍣ㄤ綅锛堟硾鍨嬪畾涔変笌 6b facade 瀹炰緥绫绘樉寮忓尯鍒嗭紱瀹瑰櫒绫诲叏闈欐€?鏄惧紡 true锛?
             if (fn.ContainingClass != null)
             {
                 w.Field("static:" + BoolWord(fn.IsStatic));
@@ -1110,11 +1135,11 @@ namespace Cocoa.CodeAnalysis.Cod
 
         // ---------------------------------------------------------------- write: naming
 
-        /// <summary>绫诲瀷鐨勬枃鏈紩鐢細鍐呭缓/鏁扮粍鐢ㄧ煭鍚嶏紙int / int[][]锛夛紝绫?鏋氫妇鐢ㄥ叏鍚嶃€?/summary>
+        /// <summary>缁鐎烽惃鍕瀮閺堫剙绱╅悽顭掔窗閸愬懎缂?閺佹壆绮嶉悽銊х叚閸氬稄绱檌nt / int[][]閿涘绱濈猾?閺嬫矮濡囬悽銊ュ弿閸氬秲鈧?/summary>
         private static string TypeRef(TypeSymbol type)
         {
-            // 6e-G7 S1：开放类型参数 → 限定权威键 `!属主全名.参数名`（方法级无属主回落裸名）；
-            // 实例化类型 → Encode v3 完整 mangle（backtick 元数 + # + $ 分隔递归实参）
+            // 6e-G7 S1锛氬紑鏀剧被鍨嬪弬鏁?鈫?闄愬畾鏉冨▉閿?`!灞炰富鍏ㄥ悕.鍙傛暟鍚峘锛堟柟娉曠骇鏃犲睘涓诲洖钀借８鍚嶏級锛?
+            // 瀹炰緥鍖栫被鍨?鈫?Encode v3 瀹屾暣 mangle锛坆acktick 鍏冩暟 + # + $ 鍒嗛殧閫掑綊瀹炲弬锛?
             if (type is TypeParameterSymbol openParameter)
             {
                 return openParameter.OwningClass != null
@@ -1137,8 +1162,8 @@ namespace Cocoa.CodeAnalysis.Cod
                 return classType.FullName;
             }
 
-            // 6e-M22/M0-1b：函数类型 `fnty{参数,;返回}`（递归 TypeRef；参数逗号分隔、分号接返回、{} 嵌套——
-            // .cod 词法仅以空白与 () 切分，故嵌套用 {} 避开结构括号）
+            // 6e-M22/M0-1b锛氬嚱鏁扮被鍨?`fnty{鍙傛暟,;杩斿洖}`锛堥€掑綊 TypeRef锛涘弬鏁伴€楀彿鍒嗛殧銆佸垎鍙锋帴杩斿洖銆亄} 宓屽鈥斺€?
+            // .cod 璇嶆硶浠呬互绌虹櫧涓?() 鍒囧垎锛屾晠宓屽鐢?{} 閬垮紑缁撴瀯鎷彿锛?
             if (type is FunctionTypeSymbol functionType)
             {
                 var builder = new System.Text.StringBuilder();
@@ -1163,9 +1188,9 @@ namespace Cocoa.CodeAnalysis.Cod
         }
 
         /// <summary>
-        /// 实例化类型的 .cod 编码（6e-G7 S1）：定义全名 + backtick 元数 + # + $ 分隔实参。
-        /// 实参递归走 <see cref="TypeRef"/>——开放参数为限定键 !属主.名（区别于 mangle 缓存键的裸 !T），
-        /// 保证跨定义无歧义且读侧可独立解析；基元/类用平名（不含 $、`、#，分隔安全）；嵌套实例化递归。
+        /// 瀹炰緥鍖栫被鍨嬬殑 .cod 缂栫爜锛?e-G7 S1锛夛細瀹氫箟鍏ㄥ悕 + backtick 鍏冩暟 + # + $ 鍒嗛殧瀹炲弬銆?
+        /// 瀹炲弬閫掑綊璧?<see cref="TypeRef"/>鈥斺€斿紑鏀惧弬鏁颁负闄愬畾閿?!灞炰富.鍚嶏紙鍖哄埆浜?mangle 缂撳瓨閿殑瑁?!T锛夛紝
+        /// 淇濊瘉璺ㄥ畾涔夋棤姝т箟涓旇渚у彲鐙珛瑙ｆ瀽锛涘熀鍏?绫荤敤骞冲悕锛堜笉鍚?$銆乣銆?锛屽垎闅斿畨鍏級锛涘祵濂楀疄渚嬪寲閫掑綊銆?
         /// </summary>
         private static string EncodeInstantiatedTypeRef(InstantiatedTypeSymbol instantiated)
         {
@@ -1188,8 +1213,8 @@ namespace Cocoa.CodeAnalysis.Cod
             return builder.ToString();
         }
 
-        /// <summary>6e-G7 S2：单条 body 条目（FnKey + 语句块）。</summary>
-        /// <summary>6e-M26：泛型开放绑定体确定性排序键（GenericOpenBodies 为 ImmutableDictionary，枚举不稳定）。</summary>
+        /// <summary>6e-G7 S2锛氬崟鏉?body 鏉＄洰锛團nKey + 璇彞鍧楋級銆?/summary>
+        /// <summary>6e-M26锛氭硾鍨嬪紑鏀剧粦瀹氫綋纭畾鎬ф帓搴忛敭锛圙enericOpenBodies 涓?ImmutableDictionary锛屾灇涓句笉绋冲畾锛夈€?/summary>
         private static string GenericOpenSortKey(FunctionSymbol function)
         {
             var owner = function.ContainingClass?.FullName ?? "";
@@ -1292,10 +1317,10 @@ namespace Cocoa.CodeAnalysis.Cod
         {
             switch (value)
             {
-                case null: return "n:"; // 6e-M19 M5-a锛歯ull 甯搁噺
+                case null: return "n:"; // 6e-M19 M5-a閿涙ull 鐢悂鍣?
 case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
-                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8：i64 常量
-                case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b：u64 常量（M0-4 批4 TryParse 引入）
+                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8锛歩64 甯搁噺
+                case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b锛歶64 甯搁噺锛圡0-4 鎵? TryParse 寮曞叆锛?
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
                 case byte u: return "u:" + u.ToString(CultureInfo.InvariantCulture);
@@ -1312,13 +1337,13 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             var rest = token.Substring(2);
             switch (kind)
             {
-                case 'n': return null!; // 6e-M19 M5-a锛歯ull 甯搁噺
+                case 'n': return null!; // 6e-M19 M5-a閿涙ull 鐢悂鍣?
                 case 'i': return int.Parse(rest, CultureInfo.InvariantCulture);
-                case 'l': return long.Parse(rest, CultureInfo.InvariantCulture); // 6e-M23 R8锛歩64 甯搁噺
+                case 'l': return long.Parse(rest, CultureInfo.InvariantCulture); // 6e-M23 R8閿涙64 鐢悂鍣?
                 case 'b': return rest == "1";
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'u': return (byte)int.Parse(rest, CultureInfo.InvariantCulture);
-                case 'U': return ulong.Parse(rest, CultureInfo.InvariantCulture); // 6b：u64 常量
+                case 'U': return ulong.Parse(rest, CultureInfo.InvariantCulture); // 6b锛歶64 甯搁噺
                 case 'd': return double.Parse(rest, NumberStyles.Float, CultureInfo.InvariantCulture);
                 case 's': return Unescape(rest);
                 default:
@@ -1429,7 +1454,7 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             {
                 if (_hasChild.Count > 0)
                 {
-                    // 鏍囪鐖惰妭鐐瑰惈瀛愯妭鐐癸細鍏堕棴鎷彿鎹㈣缂╄繘锛岃€岄潪琛屽唴闂悎
+                    // 閺嶅洩顔囬悥鎯板Ν閻愮懓鎯堢€涙劘濡悙鐧哥窗閸忓爼妫撮幏顒€褰块幑銏ｎ攽缂傗晞绻橀敍宀冣偓宀勬姜鐞涘苯鍞撮梻顓炴値
                     _hasChild[_hasChild.Count - 1] = true;
                 }
 
@@ -1456,17 +1481,17 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
 
                 if (hasChild && !_lineStart)
                 {
-                    // 澶氳鑺傜偣锛氬厛鍥炲埌琛岄锛岄棴鎷彿涓庡紑鎷彿鍚屽垪
+                    // 婢舵俺顢戦懞鍌滃仯閿涙艾鍘涢崶鐐插煂鐞涘矂顩婚敍宀勬４閹奉剙褰挎稉搴＄磻閹奉剙褰块崥灞藉灙
                     _w.WriteLine();
                     _w.Write(new string(' ', _depth * 2));
                 }
 
-                // 琛屽唴闂悎锛堟棤瀛愯妭鐐癸級鎴栧畾浣嶅悗闂悎鍧囦笉涓诲姩鎹㈣鈥斺€旂敱涓嬩竴娆?Open/Field/End 鎸夐渶瀹氫綅
+                // 鐞涘苯鍞撮梻顓炴値閿涘牊妫ょ€涙劘濡悙鐧哥礆閹存牕鐣炬担宥呮倵闂傤厼鎮庨崸鍥︾瑝娑撹濮╅幑銏ｎ攽閳ユ柡鈧梻鏁辨稉瀣╃濞?Open/Field/End 閹稿娓剁€规矮缍?
                 _w.Write(')');
                 _lineStart = false;
             }
 
-            /// <summary>瀛愯妭鐐瑰紑鎷彿鍓嶅畾浣嶅埌涓嬩竴琛岀缉杩涘垪锛堝凡鍦ㄨ棣栧垯涓嶅啀鎹㈣锛夈€?/summary>
+            /// <summary>鐎涙劘濡悙鐟扮磻閹奉剙褰块崜宥呯暰娴ｅ秴鍩屾稉瀣╃鐞涘瞼缂夋潻娑樺灙閿涘牆鍑￠崷銊攽妫ｆ牕鍨稉宥呭晙閹广垼顢戦敍澶堚偓?/summary>
             private void Indent()
             {
                 if (_depth == 0)
@@ -1484,7 +1509,7 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             }
         }
 
-        /// <summary>鍐欎晶绗﹀彿娉ㄥ唽琛細鍘婚噸 + 鍙戝皠椤哄簭锛坕d 浠呯敤浜庢帓搴忥紝涓嶅啓鍏ユ枃浠讹級銆?/summary>
+        /// <summary>閸愭瑤鏅剁粭锕€褰垮▔銊ュ斀鐞涱煉绱伴崢濠氬櫢 + 閸欐垵鐨犳い鍝勭碍閿涘潟d 娴犲懐鏁ゆ禍搴㈠笓鎼村骏绱濇稉宥呭晸閸忋儲鏋冩禒璁圭礆閵?/summary>
         private sealed class Registry
         {
             private readonly Dictionary<object, int> _ids = new(ReferenceEqualityComparer.Instance);
@@ -1497,8 +1522,8 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
 
             public string FnKey(FunctionSymbol fn)
         {
-            // 6e-G7：开放体携带后，部分符号（如 cod 注入链上的实例化副本）不经 RegisterFunction——
-            // 缺键时回退动态计算（公式与 Seal 一致），读写两侧对称即自洽
+            // 6e-G7锛氬紑鏀句綋鎼哄甫鍚庯紝閮ㄥ垎绗﹀彿锛堝 cod 娉ㄥ叆閾句笂鐨勫疄渚嬪寲鍓湰锛変笉缁?RegisterFunction鈥斺€?
+            // 缂洪敭鏃跺洖閫€鍔ㄦ€佽绠楋紙鍏紡涓?Seal 涓€鑷达級锛岃鍐欎袱渚у绉板嵆鑷唇
             return _fnKeys.TryGetValue(fn, out var key) ? key : ComputeFnKey(fn);
         }
 
@@ -1511,13 +1536,13 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                     return;
                 }
 
-                // 6e-G7 S1：开放类型参数自描述（gcls 内 tpar 声明 + !属主.名 引用），无独立条目
+                // 6e-G7 S1锛氬紑鏀剧被鍨嬪弬鏁拌嚜鎻忚堪锛坓cls 鍐?tpar 澹版槑 + !灞炰富.鍚?寮曠敤锛夛紝鏃犵嫭绔嬫潯鐩?
                 if (type is TypeParameterSymbol)
                 {
                     return;
                 }
 
-                // 6e-G7 S1：实例化类型 → 注册泛型定义与全部实参（依赖先行）；本体无独立条目（引用处 mangle 自描述）
+                // 6e-G7 S1锛氬疄渚嬪寲绫诲瀷 鈫?娉ㄥ唽娉涘瀷瀹氫箟涓庡叏閮ㄥ疄鍙傦紙渚濊禆鍏堣锛夛紱鏈綋鏃犵嫭绔嬫潯鐩紙寮曠敤澶?mangle 鑷弿杩帮級
                 if (type is InstantiatedTypeSymbol instantiated)
                 {
                     _ids[type] = _ids.Count;
@@ -1540,21 +1565,21 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 {
                     Emitters.Add((w, r) => EmitEnumSymbol(w, r, enumType));
                 }
-                // 鍏朵綑锛堝唴寤?鏁扮粍锛夎嚜鎻忚堪锛屾棤闇€鐙珛鏉＄洰
+                // 閸忔湹缍戦敍鍫濆敶瀵?閺佹壆绮嶉敍澶庡殰閹诲繗鍫敍灞炬￥闂団偓閻欘剛鐝涢弶锛勬窗
             }
 
             private void RegisterClassCore(NamedTypeSymbol classType)
             {
-                // 6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛変笉鍙?cls鈥斺€旇渚т細閫犲嚭鏂扮被鐮村潖鍗曚緥鍚屼竴鎬э紱
-                // 鍙?systype 鎸夊叏鍚嶆槧灏勫洖鍗曚緥锛堟垚鍛橀潰鐢?Ensure 鍐呭缓娉ㄥ叆锛屼笉搴忓垪鍖栵級
+                // 6e-M19 M2-c閿涙艾鍞村鍝勫礋娓氬绱橲ystem.Object/System.Type閿涘绗夐崣?cls閳ユ柡鈧棁顕版笟褌绱伴柅鐘插毉閺傛壆琚惍鏉戞綎閸楁洑绶ラ崥灞肩閹嶇幢
+                // 閸?systype 閹稿鍙忛崥宥嗘Ё鐏忓嫬娲栭崡鏇氱伐閿涘牊鍨氶崨姗€娼伴悽?Ensure 閸愬懎缂撳▔銊ュ弳閿涘奔绗夋惔蹇撳灙閸栨牭绱?
                 if (SystemObjectMembers.IsBuiltinSystemClass(classType))
                 {
                     Emitters.Add((w, r) => EmitBuiltinSystemClass(w, r, classType));
                     return;
                 }
 
-                // 6e-G7 S1：泛型定义走 gcls 专属节点；gcls 必须先于其静态方法 fn 落盘
-                // （fn 的 ret/par 引用 !开放参数，读侧需先经 gcls 注册限定键）；连带注册非开放类型依赖
+                // 6e-G7 S1锛氭硾鍨嬪畾涔夎蛋 gcls 涓撳睘鑺傜偣锛沢cls 蹇呴』鍏堜簬鍏堕潤鎬佹柟娉?fn 钀界洏
+                // 锛坒n 鐨?ret/par 寮曠敤 !寮€鏀惧弬鏁帮紝璇讳晶闇€鍏堢粡 gcls 娉ㄥ唽闄愬畾閿級锛涜繛甯︽敞鍐岄潪寮€鏀剧被鍨嬩緷璧?
                 if (classType.IsGenericDefinition)
                 {
                     foreach (var iface in classType.Interfaces)
@@ -1600,9 +1625,9 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                     return;
                 }
 
-                // 绫绘柟娉曪細瀹瑰櫒绫诲叏闈欐€侊紙syscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪紝6e-M18锛変綔涓虹嫭绔?fn 搴忓垪鍖栵紱瀹炰緥鏂规硶/鏋勯€犵敱绫诲３杩囨护銆?
-                // 渚嬪锛歄bject 鍐呭缓鏂规硶锛圡2-c锛夊甫 BuiltinKind锛岃渚х粡鍗曚緥澶嶇敤閲嶅缓锛岄』闅忓紩鐢ㄥ簭鍒楀寲
-                // 6e-G7 S1/S2：泛型定义的实例方法/构造也随库携带（消费方单态化素材）；其余实例方法仍由类壳过滤
+                // 缁粯鏌熷▔鏇窗鐎圭懓娅掔猾璇插弿闂堟瑦鈧緤绱檚yscall/extern 閸欏﹤鐢担鎾绘饯閹焦鏌熷▔鏇礉6e-M18閿涘缍旀稉铏瑰缁?fn 鎼村繐鍨崠鏍电幢鐎圭偘绶ラ弬瑙勭《/閺嬪嫰鈧姷鏁辩猾璇诧紦鏉╁洦鎶ら妴?
+                // 娓氬顦婚敍姝刡ject 閸愬懎缂撻弬瑙勭《閿涘湣2-c閿涘鐢?BuiltinKind閿涘矁顕版笟褏绮￠崡鏇氱伐婢跺秶鏁ら柌宥呯紦閿涘矂銆忛梾蹇撶穿閻劌绨崚妤€瀵?
+                // 6e-G7 S1/S2锛氭硾鍨嬪畾涔夌殑瀹炰緥鏂规硶/鏋勯€犱篃闅忓簱鎼哄甫锛堟秷璐规柟鍗曟€佸寲绱犳潗锛夛紱鍏朵綑瀹炰緥鏂规硶浠嶇敱绫诲３杩囨护
                 if (fn.ContainingClass != null && !fn.IsStatic &&
                     !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass) &&
                     !fn.ContainingClass.IsGenericDefinition)
@@ -1642,8 +1667,8 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 Emitters.Add((w, r) => EmitVariableSymbol(w, r, v));
             }
 
-            /// <summary>鏀堕泦瀹屾垚鍚庣粺涓€鍛藉悕锛氬嚱鏁伴敭涓庡彉閲忛敭锛堝叏灞€ global:鍚嶅瓧锛涘眬閮?鍙傛暟 鍑芥暟閿?鍚嶅瓧锛涘啿绐佸姞 #2/#3锛夈€?/summary>
-            /// <summary>FnKey 计算（6e-G7 抽取）：owner/ns 前缀 + 名 + [参数类型]；仅差 out/ref 的重载键不同。</summary>
+            /// <summary>閺€鍫曟肠鐎瑰本鍨氶崥搴ｇ埠娑撯偓閸涜棄鎮曢敍姘毐閺佷即鏁稉搴″綁闁插繘鏁敍鍫濆弿鐏炩偓 global:閸氬秴鐡ч敍娑樼湰闁?閸欏倹鏆?閸戣姤鏆熼柨?閸氬秴鐡ч敍娑樺暱缁愪礁濮?#2/#3閿涘鈧?/summary>
+            /// <summary>FnKey 璁＄畻锛?e-G7 鎶藉彇锛夛細owner/ns 鍓嶇紑 + 鍚?+ [鍙傛暟绫诲瀷]锛涗粎宸?out/ref 鐨勯噸杞介敭涓嶅悓銆?/summary>
             private static string ComputeFnKey(FunctionSymbol fn)
             {
                 var paramTypes = string.Join(",", fn.Parameters.Select(p =>
@@ -1682,7 +1707,7 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
 
         // ---------------------------------------------------------------- read
 
-        /// <summary>浠?`.cod` 鏂囦欢鍔犺浇绋嬪簭闆嗐€?/summary>
+        /// <summary>娴?`.cod` 閺傚洣娆㈤崝鐘烘祰缁嬪绨梿鍡愨偓?/summary>
         public static CodProgram Load(string path)
         {
             return Read(File.ReadAllText(path));

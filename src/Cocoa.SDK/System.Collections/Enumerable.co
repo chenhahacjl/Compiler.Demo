@@ -75,16 +75,19 @@ namespace System.Collections.Generic
         function TryGetValue(key: TKey, out value: TValue): bool
     }
 
-    // CO 无 struct，故用 class。只读属性 + 构造器初始化。
+    // CO 无 struct，故用 class。只读属性经后备字段暴露（不可在构造器给只读属性赋值）。
     public class KeyValuePair<TKey, TValue>
     {
-        public property Key: TKey { get; }
-        public property Value: TValue { get; }
+        private _key: TKey
+        private _value: TValue
+
+        public property Key: TKey { get { return _key } }
+        public property Value: TValue { get { return _value } }
 
         public function KeyValuePair(key: TKey, value: TValue)
         {
-            Key = key
-            Value = value
+            _key = key
+            _value = value
         }
     }
 }

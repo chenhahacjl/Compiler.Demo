@@ -823,5 +823,39 @@ function Main(): i32
             var errors = compilation.GlobalScope.Diagnostics.Where(d => d.IsError).ToArray();
             Assert.True(errors.Length == 0, string.Join("\n", errors.Select(d => d.Message)));
         }
+
+        [Fact]
+        public void GenericOpenBody_ObjectCreation_RoundTrips()
+        {
+            // M0-1c：开放泛型体内的对象创建 `new Foo<T>(...)`（BoundObjectCreationExpression）随库携带——
+            // 序列化为 objnew 节点（类类型 + 实参），读侧按类型+元数重解析构造器。
+            var dir = NewDir();
+            var source = @"
+namespace MyLib
+{
+    public class Enumerator<T>
+    {
+        public function Enumerator(v: T)
+        {
+        }
+    }
+
+    public class Wrapper<T>
+    {
+        public function Make(v: T): Enumerator<T>
+        {
+            return new Enumerator<T>(v)
+        }
+    }
+}
+";
+            var output = EmitLibrary(dir, source);
+            var text = File.ReadAllText(output);
+            Assert.Contains("(objnew", text);
+
+            var loaded = CodSerializer.Load(output);
+            Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Wrapper");
+            Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Enumerator");
+        }
     }
 }
