@@ -855,7 +855,50 @@ namespace MyLib
 
             var loaded = CodSerializer.Load(output);
             Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Wrapper");
-Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Enumerator");
+            Assert.Contains(loaded.GenericDefinitions, g => g.FullName == "MyLib.Enumerator");
+        }
+
+        [Fact]
+        public void GenericIface_TypeParam_NotConflated()
+        {
+            // 泛型基接口实例化不得串味到其他类同类参数名：HashSet<T> extends ICollection<T>
+            // 的 iface 实参必须限定为 !Test.HashSet.T（IList<T> 共存时 IList.T 不得被复用）。
+            var dir = NewDir();
+            var source = @"
+namespace Test
+{
+    public interface ICollection<T>
+    {
+        function Add(item: T): bool
+    }
+
+    public interface IList<T> extends ICollection<T>
+    {
+        function Get(i: i32): T
+    }
+
+    public class HashSet<T> extends ICollection<T>
+    {
+        public function Add(item: T): bool
+        {
+            return true
+        }
+    }
+}
+";
+            var libPath = Path.Combine(dir, "Lib.co");
+            File.WriteAllText(libPath, source);
+            var compilation = Compilation.Create(SyntaxTree.Load(libPath));
+            var output = Path.Combine(dir, "Lib.cod");
+            var diagnostics = compilation.EmitCocoa("Lib", output);
+            Assert.True(diagnostics.Length == 0, string.Join("; ", diagnostics.Select(d => d.Message)));
+
+            var text = File.ReadAllText(output);
+            var hashIdx = text.IndexOf("(gcls Test.HashSet");
+            var tparIdx = text.IndexOf("tparams:", hashIdx);
+            var header = text.Substring(hashIdx, tparIdx - hashIdx);
+            Assert.Contains("Test.ICollection`1#!Test.HashSet.T", header);
+            Assert.DoesNotContain("!Test.IList.T", header);
         }
     }
 }

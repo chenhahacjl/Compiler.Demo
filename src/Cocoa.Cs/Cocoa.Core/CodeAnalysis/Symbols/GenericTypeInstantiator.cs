@@ -208,10 +208,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>类型实参编码（mangle 与缓存键共用）：`!` 权威实体 / FullName 点保留 / 数组 `[]` 后缀 / 嵌套实例化递归。</summary>
         public static string Encode(TypeSymbol type)
         {
-            // 开放类型参数（定义期壳）：! + 裸名
+            // 开放类型参数（定义期壳）：! + 属主全名.名（对齐 CodSerializer.TypeRef；裸名会致不同属主同类参数同键串味）
             if (type is TypeParameterSymbol parameter)
             {
-                return "!" + parameter.Name;
+                return parameter.OwningClass != null
+                    ? "!" + parameter.OwningClass.FullName + "." + parameter.Name
+                    : "!" + parameter.Name;
             }
 
             // 数组：元素编码 + [] 后缀（[] 非标识符字符，注入安全）
