@@ -7,7 +7,9 @@
     (cls System.Console internal iface:false ifaces:0 methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
     (cls System.Double public iface:false ifaces:0 methods:10 ToString[double] CompareTo[double,double] Equals[double,double] GetHashCode[double] ToString[double,string] TryParse[string,out:double] Parse[string] IsNaN[double] IsInfinity[double] IsFinite[double])
     (cls System.Environment internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
-    (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception])
+    (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception] props:1
+      (prop Message string true false public false)
+    )
     (cls System.IO.File internal iface:false ifaces:0 methods:5 ReadAllText[string] WriteAllText[string,string] Exists[string] Copy[string,string] Delete[string])
     (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[short] CompareTo[short,short] Parse[string] Equals[short,short] GetHashCode[short] ToString[short,string] TryParse[string,out:short])
     (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int] Equals[int,int] GetHashCode[int] ToString[int,string])
@@ -7092,4 +7094,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:d3606b6fa1e15417ca561e83598a38860a7df45a9da5848ca023c18898d1825d)
+(checksum sha256:6151b1730317253806286772a223c84cd97ed61449ffb10cc34efd2d7efd7208)

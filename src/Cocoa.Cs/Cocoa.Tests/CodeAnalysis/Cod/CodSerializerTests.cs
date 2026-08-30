@@ -790,13 +790,18 @@ namespace System
             Assert.NotNull(accessor);
             Assert.True(accessor.IsPropertyAccessor);
             Assert.Equal("get_Message", accessor.Name);
+
+            var message = facadeClass.GetProperty("Message");
+            Assert.NotNull(message);
+            Assert.Same(Cocoa.CodeAnalysis.Symbols.TypeSymbol.String, message.Type);
+            Assert.Same(accessor, message.Getter);
         }
 
         [Fact]
         public void FacadeException_NewBinds_AgainstRebuiltCoreCod()
         {
-            // 6b E2E：消费方程序以 `using System` 绑定 `new Exception(...)` + catch——依赖重建后的
-            // System.Core.cod 提供 Exception facade 类壳（throw/catch 绑定期经 FacadeTargets 合成构造器）。
+            // 6b E2E：消费方程序以 `using System` 绑定 `new Exception(...)` + catch + `e.Message`——依赖重建后的
+            // System.Core.cod 提供 Exception facade 类壳（构造器经 FacadeTargets 合成、Message 属性经 props 序列化挂接 get_Message）。
             // 注：Evaluator 不支持 try/catch（TryStatement 未实现），此处仅验证绑定无错误。
             var compilation = Compilation.Create(SyntaxTree.Parse(@"using System
 
@@ -810,7 +815,7 @@ function Main(): i32
     }
     catch (e: Exception)
     {
-        System.Console.WriteLine(""caught"")
+        System.Console.WriteLine(e.Message)
     }
     if thrown != false return 1
     return 0

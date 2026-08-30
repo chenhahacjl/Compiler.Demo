@@ -83,6 +83,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 {
                     case "symbols":
                         ReadSymbols(reader, context);
+                        ApplyPendingProperties(context);
                         break;
                     case "bodies":
                         ReadBodies(reader, context, bodies);
@@ -161,6 +162,9 @@ namespace Cocoa.CodeAnalysis.Cod
             /// <summary>6e-G7 S1：泛型定义类（gcls 读入）。</summary>
             public ImmutableArray<NamedTypeSymbol>.Builder GenericDefinitions { get; } = ImmutableArray.CreateBuilder<NamedTypeSymbol>();
 
+            /// <summary>6b：facade 类属性待挂接声明（访问器 fns 读毕后重建 PropertySymbol）。</summary>
+            public List<(NamedTypeSymbol ClassType, string Name, TypeSymbol Type, bool HasGet, bool HasSet, Visibility Visibility, bool IsStatic)> PendingProperties { get; } = new();
+
             public void AddNamedType(string fullName, TypeSymbol type)
             {
                 TypesByName[fullName] = type;
@@ -200,6 +204,19 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             reader.End();
+        }
+
+        /// <summary>6b：facade 类属性回填——访问器 fns（`get_X`/`set_X`，静态 + this 参）已读入类方法，据名挂接重建 PropertySymbol。</summary>
+        private static void ApplyPendingProperties(ReadContext context)
+        {
+            foreach (var (classType, name, type, hasGet, hasSet, visibility, isStatic) in context.PendingProperties)
+            {
+                FunctionSymbol? getter = hasGet ? classType.GetDeclaredMethod("get_" + name) : null;
+                FunctionSymbol? setter = hasSet ? classType.GetDeclaredMethod("set_" + name) : null;
+                classType.AddProperty(new PropertySymbol(name, type, classType, getter, setter, visibility, isStatic));
+            }
+
+            context.PendingProperties.Clear();
         }
 
         private static void ReadEnum(Reader reader, ReadContext context)
@@ -290,6 +307,29 @@ namespace Cocoa.CodeAnalysis.Cod
             context.Classes.Add(classType);
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
+
+            // 6b：facade 类属性声明解析（访问器 `get_X`/`set_X` 为独立 fn，读毕后回填挂接）
+            if (reader.PeekRaw().StartsWith("props:", StringComparison.Ordinal))
+            {
+                var propertyCount = ReadCountField(reader, "props:");
+                for (var i = 0; i < propertyCount; i++)
+                {
+                    reader.Expect("prop");
+                    var propertyName = Unescape(reader.ExpectString());
+                    var propertyType = ResolveTypeRef(reader.ExpectString(), context);
+                    var hasGet = ParseBoolWord(reader.ExpectString());
+                    var hasSet = ParseBoolWord(reader.ExpectString());
+                    if (!Enum.TryParse<Visibility>(reader.ExpectString(), ignoreCase: true, out var propertyVisibility))
+                    {
+                        propertyVisibility = Visibility.Public;
+                    }
+
+                    var isStatic = ParseBoolWord(reader.ExpectString());
+                    context.PendingProperties.Add((classType, propertyName, propertyType, hasGet, hasSet, propertyVisibility, isStatic));
+                    reader.End();
+                }
+            }
+
             reader.End();
         }
 

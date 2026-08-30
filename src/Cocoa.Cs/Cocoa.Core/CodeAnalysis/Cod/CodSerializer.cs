@@ -861,6 +861,23 @@ namespace Cocoa.CodeAnalysis.Cod
             {
                 w.Field(MethodSignature(method));
             }
+            // 6b：facade 实例类属性声明（getter/setter 访问器为独立 fn `get_X`/`set_X`，读侧 fns 回填后挂接）
+            var properties = classType.Properties;
+            if (properties.Length > 0)
+            {
+                w.Field("props:" + properties.Length.ToString(CultureInfo.InvariantCulture));
+                foreach (var property in properties)
+                {
+                    w.Open("prop");
+                    w.Field(Str(property.Name));
+                    w.Field(TypeRef(property.Type));
+                    w.Field(BoolWord(property.Getter != null));
+                    w.Field(BoolWord(property.Setter != null));
+                    w.Field(property.Visibility.ToString().ToLowerInvariant());
+                    w.Field(BoolWord(property.IsStatic));
+                    w.End();
+                }
+            }
             w.End();
         }
 
