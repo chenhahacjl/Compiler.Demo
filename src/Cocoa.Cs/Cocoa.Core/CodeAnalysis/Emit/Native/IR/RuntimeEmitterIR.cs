@@ -249,6 +249,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 EmitFileReadAllText();
                 _ = BeginFunction("FileWriteAllText", 8, 8);
                 EmitFileWriteAllText();
+                _ = BeginFunction("StringFromChars", 8);
+                EmitStringFromChars();
 
                 var divByZero = BeginFunction("DivByZero");
                 EmitError(_divZeroMessage);

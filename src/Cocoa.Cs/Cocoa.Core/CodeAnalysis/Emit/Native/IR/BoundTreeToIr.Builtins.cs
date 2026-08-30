@@ -120,8 +120,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 }
                 case BuiltinKind.StringFromChars:
                 {
-                    // 6e-G7 ③a：native 运行时实现下一批接入（Evaluator/IL 已可用）
-                    throw new Exception("StringFromChars native runtime lands in the next batch (G7-③a follow-up)");
+                    // 6e-G7 ③a：char[] → string（运行时复制 UTF-16 数据区）
+                    var chars = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(chars)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("StringFromChars"), IrOperand.Constant(0)));
+                    return result;
                 }
                 case BuiltinKind.FileReadAllText:
                 {

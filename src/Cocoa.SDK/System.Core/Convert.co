@@ -1,0 +1,164 @@
+﻿// Cocoa 绯荤粺鏍囧噯搴?路 System.Core 閫昏緫灞傦紙namespace System锛?// class Convert 鈥斺€?缂栫爜鍘熻锛?e-G7 鈶 鑷寘鍚細绾?Cocoa 瀹炵幇锛屼笁鍚庣澶╃劧鍙敤锛屼笉渚濊禆 BCL crypto锛夈€?// hex锛氬瓧鑺?鈫?鍗佸叚杩涘埗瀛楃涓诧紙澶у啓锛夛紱base64锛氬瓧鑺?鈫?Base64 瀛楃涓诧紙RFC 4648锛屾爣鍑嗗瓧姣嶈〃 + '=' 濉厖锛夈€?// 娉細涓夊悗绔?`&&`/`||` 闈炵煭璺眰鍊硷紝鏁呭惊鐜敤鍗曟潯浠?+ break 瑙勯伩瓒婄晫銆?
+namespace System
+{
+    public static class Convert
+    {
+        // ----------------------------------------------------------------
+        // 鍗佸叚杩涘埗
+        // ----------------------------------------------------------------
+
+        /// <summary>瀛楄妭鏁扮粍 鈫?澶у啓鍗佸叚杩涘埗瀛楃涓诧紙"0F2A..."锛夈€?/summary>
+        public static function ToHexString(bytes: u8[]): string
+        {
+            if bytes.Length == 0 return ""
+            var chars = new char[bytes.Length * 2]
+            const HEX = "0123456789ABCDEF"
+            var i = 0
+            while i < bytes.Length
+            {
+                var b: i32 = bytes[i]
+                chars[i * 2] = HEX[b / 16]
+                chars[i * 2 + 1] = HEX[b % 16]
+                i = i + 1
+            }
+            return Runtime.StringFromChars(chars)
+        }
+
+        /// <summary>鍗佸叚杩涘埗瀛楃涓诧紙澶у啓/灏忓啓鍧囧彲锛夆啋 瀛楄妭鏁扮粍锛涘鏁伴暱搴︽垨闈炴硶瀛楃 鈫?绌烘暟缁勩€?/summary>
+        public static function FromHexString(s: string): u8[]
+        {
+            if s.Length % 2 != 0 return new u8[0]
+            var result = new u8[s.Length / 2]
+            var i = 0
+            while i < s.Length
+            {
+                var hi = HexValue(s[i])
+                var lo = HexValue(s[i + 1])
+                if hi < 0 || lo < 0 return new u8[0]
+                result[i / 2] = (u8)(hi * 16 + lo)
+                i = i + 2
+            }
+            return result
+        }
+
+        private static function HexValue(c: char): i32
+        {
+            if i32(c) >= i32('0') && i32(c) <= i32('9') return i32(c) - i32('0')
+            if i32(c) >= i32('a') && i32(c) <= i32('f') return i32(c) - i32('a') + 10
+            if i32(c) >= i32('A') && i32(c) <= i32('F') return i32(c) - i32('A') + 10
+            return -1
+        }
+
+        // ----------------------------------------------------------------
+        // Base64锛圧FC 4648锛?        // ----------------------------------------------------------------
+
+        private static function Base64Alphabet(): string
+        {
+            return "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+        }
+
+        /// <summary>瀛楄妭鏁扮粍 鈫?Base64 瀛楃涓诧紙'=' 濉厖锛夈€?/summary>
+        public static function ToBase64String(bytes: u8[]): string
+        {
+            if bytes.Length == 0 return ""
+            var full = bytes.Length / 3
+            var rem = bytes.Length % 3
+            var outLen = full * 4 + (rem == 0 ? 0 : 4)
+            var chars = new char[outLen]
+            var abc = Base64Alphabet()
+            var o = 0
+            var i = 0
+            while i < full * 3
+            {
+                var b0: i32 = bytes[i]
+                var b1: i32 = bytes[i + 1]
+                var b2: i32 = bytes[i + 2]
+                chars[o] = abc[b0 >> 2]
+                chars[o + 1] = abc[((b0 & 0x03) << 4) | (b1 >> 4)]
+                chars[o + 2] = abc[((b1 & 0x0F) << 2) | (b2 >> 6)]
+                chars[o + 3] = abc[b2 & 0x3F]
+                o = o + 4
+                i = i + 3
+            }
+            if rem == 1
+            {
+                var r0: i32 = bytes[full * 3]
+                chars[o] = abc[r0 >> 2]
+                chars[o + 1] = abc[(r0 & 0x03) << 4]
+                chars[o + 2] = '='
+                chars[o + 3] = '='
+            }
+            else if rem == 2
+            {
+                var s0: i32 = bytes[full * 3]
+                var s1: i32 = bytes[full * 3 + 1]
+                chars[o] = abc[s0 >> 2]
+                chars[o + 1] = abc[((s0 & 0x03) << 4) | (s1 >> 4)]
+                chars[o + 2] = abc[(s1 & 0x0F) << 2]
+                chars[o + 3] = '='
+            }
+            return Runtime.StringFromChars(chars)
+        }
+
+        /// <summary>Base64 瀛楃涓?鈫?瀛楄妭鏁扮粍锛涢潪娉曞瓧绗?闀垮害 鈫?绌烘暟缁勩€?/summary>
+        public static function FromBase64String(s: string): u8[]
+        {
+            var pad = 0
+            var i = s.Length - 1
+            while i >= 0 && s[i] == '='
+            {
+                pad = pad + 1
+                i = i - 1
+            }
+            var dataLen = s.Length - pad
+            if dataLen % 4 == 1 return new u8[0]
+            var full = dataLen / 4
+            var rem = dataLen % 4
+            var outLen = full * 3 + (rem == 2 ? 1 : rem == 3 ? 2 : 0)
+            if outLen < 0 return new u8[0]
+            var result = new u8[outLen]
+            var o = 0
+            var j = 0
+            while j < full * 4
+            {
+                var v0 = Base64Value(s[j])
+                var v1 = Base64Value(s[j + 1])
+                var v2 = Base64Value(s[j + 2])
+                var v3 = Base64Value(s[j + 3])
+                if v0 < 0 || v1 < 0 || v2 < 0 || v3 < 0 return new u8[0]
+                result[o] = (u8)((v0 << 2) | (v1 >> 4))
+                result[o + 1] = (u8)(((v1 & 0x0F) << 4) | (v2 >> 2))
+                result[o + 2] = (u8)(((v2 & 0x03) << 6) | v3)
+                o = o + 3
+                j = j + 4
+            }
+            if rem == 2
+            {
+                var r0 = Base64Value(s[j])
+                var r1 = Base64Value(s[j + 1])
+                if r0 < 0 || r1 < 0 return new u8[0]
+                result[o] = (u8)((r0 << 2) | (r1 >> 4))
+            }
+            else if rem == 3
+            {
+                var q0 = Base64Value(s[j])
+                var q1 = Base64Value(s[j + 1])
+                var q2 = Base64Value(s[j + 2])
+                if q0 < 0 || q1 < 0 || q2 < 0 return new u8[0]
+                result[o] = (u8)((q0 << 2) | (q1 >> 4))
+                result[o + 1] = (u8)(((q1 & 0x0F) << 4) | (q2 >> 2))
+            }
+            return result
+        }
+
+        private static function Base64Value(c: char): i32
+        {
+            if i32(c) >= i32('A') && i32(c) <= i32('Z') return i32(c) - i32('A')
+            if i32(c) >= i32('a') && i32(c) <= i32('z') return i32(c) - i32('a') + 26
+            if i32(c) >= i32('0') && i32(c) <= i32('9') return i32(c) - i32('0') + 52
+            if i32(c) == i32('+') return 62
+            if i32(c) == i32('/') return 63
+            return -1
+        }
+    }
+}

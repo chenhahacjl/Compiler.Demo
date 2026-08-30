@@ -5,6 +5,7 @@
     (cls System.Byte public iface:false ifaces:0 methods:7 ToString[byte] CompareTo[byte,byte] Parse[string] Equals[byte,byte] GetHashCode[byte] ToString[byte,string] TryParse[string,out:byte])
     (cls System.Char public iface:false ifaces:0 methods:17 ToString[char] Parse[string] CompareTo[char,char] IsDigit[char] IsLetter[char] IsWhiteSpace[char] ToUpper[char] ToLower[char] IsLetterOrDigit[char] IsControl[char] IsHexDigit[char] IsUpper[char] IsLower[char] Equals[char,char] GetHashCode[char] ToString[char,string] TryParse[string,out:char])
     (cls System.Console internal iface:false ifaces:0 methods:30 WriteLine WriteLine[string] WriteLine[int] WriteLine[double] WriteLine[bool] WriteLine[char] WriteLine[byte] WriteLine[long] WriteLine[sbyte] WriteLine[short] WriteLine[ushort] WriteLine[uint] WriteLine[ulong] WriteLine[float] Write[string] Write[int] Write[double] Write[bool] Write[char] Write[byte] Write[long] Write[sbyte] Write[short] Write[ushort] Write[uint] Write[ulong] Write[float] ReadLine ReadKey[bool] Beep[int,int])
+    (cls System.Convert public iface:false ifaces:0 methods:7 ToHexString[byte[]] FromHexString[string] HexValue[char] Base64Alphabet ToBase64String[byte[]] FromBase64String[string] Base64Value[char])
     (cls System.Double public iface:false ifaces:0 methods:10 ToString[double] CompareTo[double,double] Equals[double,double] GetHashCode[double] ToString[double,string] TryParse[string,out:double] Parse[string] IsNaN[double] IsInfinity[double] IsFinite[double])
     (cls System.Environment internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[string] GetCurrentDirectory SetCurrentDirectory[string] GetExecutablePath)
     (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception] props:1
@@ -15,7 +16,7 @@
     (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[int] CompareTo[int,int] Parse[string] TryParse[string,out:int] Equals[int,int] GetHashCode[int] ToString[int,string])
     (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[long] CompareTo[long,long] Parse[string] Equals[long,long] GetHashCode[long] ToString[long,string] TryParse[string,out:long])
     (cls System.Math internal iface:false ifaces:0 methods:21 Max[int,int] Max[double,double] Min[int,int] Min[double,double] Abs[int] Abs[double] Clamp[int,int,int] Clamp[double,double,double] Sign[int] Sign[double] IsEven[int] IsOdd[int] Pow[int,int] Factorial[int] Gcd[int,int] Lcm[int,int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double])
-    (cls System.Runtime internal iface:false ifaces:0 methods:22 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]])
+    (cls System.Runtime internal iface:false ifaces:0 methods:23 WriteLine[any] Write[any] ReadLine ReadKey[bool] Random[int] Sleep[int] TickCount Exit[int] Sqrt[double] Floor[double] Ceiling[double] Truncate[double] Round[double] Beep[int,int] Int32ToString[int] Int64ToString[long] DoubleToString[double] BooleanToString[bool] CharToString[char] ParseInt64[string] UInt64ToString[ulong] StringFromChars[char[]] Sha256Hash[byte[]])
     (cls System.SByte public iface:false ifaces:0 methods:7 ToString[sbyte] CompareTo[sbyte,sbyte] Parse[string] Equals[sbyte,sbyte] GetHashCode[sbyte] ToString[sbyte,string] TryParse[string,out:sbyte])
     (cls System.Single public iface:false ifaces:0 methods:9 ToString[float] Equals[float,float] GetHashCode[float] ToString[float,string] TryParse[string,out:float] Parse[string] IsNaN[float] IsInfinity[float] IsFinite[float])
     (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[string] ToUpper[string] ToLower[string] StartsWith[string,string] EndsWith[string,string] Contains[string,string] IndexOf[string,string] Trim[string] Replace[string,string,string] PadLeft[string,int,char] PadLeft[string,int] PadRight[string,int,char] PadRight[string,int] Split[string,char] IndexOf[string,char] LastIndexOf[string,string] LastIndexOf[string,char] TrimStart[string,char] TrimEnd[string,char] ToCharArray[string] Remove[string,int,int] Insert[string,int,string] Join[string,string[]])
@@ -265,6 +266,25 @@
     (fn System.Console.Beep[int,int] name:Beep ret:void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Console.Beep[int,int]/frequency frequency int 0 - -)
       (par System.Console.Beep[int,int]/duration duration int 1 - -)
+    )
+    (fn System.Convert.ToHexString[byte[]] name:ToHexString ret:string ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Convert.ToHexString[byte[]]/bytes bytes byte[] 0 - -)
+    )
+    (fn System.Convert.FromHexString[string] name:FromHexString ret:byte[] ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Convert.FromHexString[string]/s s string 0 - -)
+    )
+    (fn System.Convert.HexValue[char] name:HexValue ret:int ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Convert.HexValue[char]/c c char 0 - -)
+    )
+    (fn System.Convert.Base64Alphabet[] name:Base64Alphabet ret:string ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Convert.ToBase64String[byte[]] name:ToBase64String ret:string ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Convert.ToBase64String[byte[]]/bytes bytes byte[] 0 - -)
+    )
+    (fn System.Convert.FromBase64String[string] name:FromBase64String ret:byte[] ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Convert.FromBase64String[string]/s s string 0 - -)
+    )
+    (fn System.Convert.Base64Value[char] name:Base64Value ret:int ns:- owner:System.Convert extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Convert.Base64Value[char]/c c char 0 - -)
     )
     (fn System.Double.ToString[double] name:ToString ret:string ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Double.ToString[double]/this this double 0 - this)
@@ -540,6 +560,9 @@
     (fn System.Runtime.StringFromChars[char[]] name:StringFromChars ret:string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Runtime.StringFromChars[char[]]/chars chars char[] 0 - -)
     )
+    (fn System.Runtime.Sha256Hash[byte[]] name:Sha256Hash ret:byte[] ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sha256Hash entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Runtime.Sha256Hash[byte[]]/data data byte[] 0 - -)
+    )
     (fn System.SByte.ToString[sbyte] name:ToString ret:string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.SByte.ToString[sbyte]/this this sbyte 0 - this)
     )
@@ -805,6 +828,47 @@
     (loc System.Char.IsHexDigit[char]/v false int)
     (loc System.Char.IsUpper[char]/v false int)
     (loc System.Char.IsLower[char]/v false int)
+    (loc System.Convert.ToHexString[byte[]]/chars false char[])
+    (loc System.Convert.ToHexString[byte[]]/HEX true string
+      (const s:0123456789ABCDEF)
+    )
+    (loc System.Convert.ToHexString[byte[]]/i false int)
+    (loc System.Convert.ToHexString[byte[]]/b false int)
+    (loc System.Convert.FromHexString[string]/result false byte[])
+    (loc System.Convert.FromHexString[string]/i false int)
+    (loc System.Convert.FromHexString[string]/hi false int)
+    (loc System.Convert.FromHexString[string]/lo false int)
+    (loc System.Convert.ToBase64String[byte[]]/full false int)
+    (loc System.Convert.ToBase64String[byte[]]/rem false int)
+    (loc System.Convert.ToBase64String[byte[]]/outLen false int)
+    (loc System.Convert.ToBase64String[byte[]]/chars false char[])
+    (loc System.Convert.ToBase64String[byte[]]/abc false string)
+    (loc System.Convert.ToBase64String[byte[]]/o false int)
+    (loc System.Convert.ToBase64String[byte[]]/i false int)
+    (loc System.Convert.ToBase64String[byte[]]/b0 false int)
+    (loc System.Convert.ToBase64String[byte[]]/b1 false int)
+    (loc System.Convert.ToBase64String[byte[]]/b2 false int)
+    (loc System.Convert.ToBase64String[byte[]]/r0 false int)
+    (loc System.Convert.ToBase64String[byte[]]/s0 false int)
+    (loc System.Convert.ToBase64String[byte[]]/s1 false int)
+    (loc System.Convert.FromBase64String[string]/pad false int)
+    (loc System.Convert.FromBase64String[string]/i false int)
+    (loc System.Convert.FromBase64String[string]/dataLen false int)
+    (loc System.Convert.FromBase64String[string]/full false int)
+    (loc System.Convert.FromBase64String[string]/rem false int)
+    (loc System.Convert.FromBase64String[string]/outLen false int)
+    (loc System.Convert.FromBase64String[string]/result false byte[])
+    (loc System.Convert.FromBase64String[string]/o false int)
+    (loc System.Convert.FromBase64String[string]/j false int)
+    (loc System.Convert.FromBase64String[string]/v0 false int)
+    (loc System.Convert.FromBase64String[string]/v1 false int)
+    (loc System.Convert.FromBase64String[string]/v2 false int)
+    (loc System.Convert.FromBase64String[string]/v3 false int)
+    (loc System.Convert.FromBase64String[string]/r0 false int)
+    (loc System.Convert.FromBase64String[string]/r1 false int)
+    (loc System.Convert.FromBase64String[string]/q0 false int)
+    (loc System.Convert.FromBase64String[string]/q1 false int)
+    (loc System.Convert.FromBase64String[string]/q2 false int)
     (loc System.Double.TryParse[string,out:double]/len true int)
     (loc System.Double.TryParse[string,out:double]/index false int)
     (loc System.Double.TryParse[string,out:double]/negative false bool)
@@ -2956,6 +3020,1532 @@
         (return -)
       )
     )
+    (body System.Convert.ToHexString[byte[]]
+      (block 16
+        (cgoto Label1
+          (binary
+            (bop == int int)
+            (memberacc int Length
+              (var System.Convert.ToHexString[byte[]]/bytes)
+            )
+            (lit int i:0)
+          ) false
+        )
+        (return
+          (lit string s:)
+        )
+        (label Label1)
+        (vardecl System.Convert.ToHexString[byte[]]/chars
+          (arrnew char[]
+            (binary
+              (bop * int int)
+              (memberacc int Length
+                (var System.Convert.ToHexString[byte[]]/bytes)
+              )
+              (lit int i:2)
+            ) 0
+          )
+        )
+        (vardecl System.Convert.ToHexString[byte[]]/HEX
+          (lit string s:0123456789ABCDEF)
+        )
+        (vardecl System.Convert.ToHexString[byte[]]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label2)
+        (vardecl System.Convert.ToHexString[byte[]]/b
+          (conv int
+            (elem byte
+              (var System.Convert.ToHexString[byte[]]/bytes)
+              (var System.Convert.ToHexString[byte[]]/i)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToHexString[byte[]]/chars)
+              (binary
+                (bop * int int)
+                (var System.Convert.ToHexString[byte[]]/i)
+                (lit int i:2)
+              )
+            )
+            (elem char
+              (var System.Convert.ToHexString[byte[]]/HEX)
+              (binary
+                (bop / int int)
+                (var System.Convert.ToHexString[byte[]]/b)
+                (lit int i:16)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToHexString[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (binary
+                  (bop * int int)
+                  (var System.Convert.ToHexString[byte[]]/i)
+                  (lit int i:2)
+                )
+                (lit int i:1)
+              )
+            )
+            (elem char
+              (var System.Convert.ToHexString[byte[]]/HEX)
+              (binary
+                (bop % int int)
+                (var System.Convert.ToHexString[byte[]]/b)
+                (lit int i:16)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.ToHexString[byte[]]/i
+            (binary
+              (bop + int int)
+              (var System.Convert.ToHexString[byte[]]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < int int)
+            (var System.Convert.ToHexString[byte[]]/i)
+            (memberacc int Length
+              (var System.Convert.ToHexString[byte[]]/bytes)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (membercall string StringFromChars System.Runtime.StringFromChars[char[]] 1
+            (statictype System.Runtime)
+            (var System.Convert.ToHexString[byte[]]/chars)
+          )
+        )
+      )
+    )
+    (body System.Convert.FromHexString[string]
+      (block 18
+        (cgoto Label1
+          (binary
+            (bop != int int)
+            (binary
+              (bop % int int)
+              (memberacc int Length
+                (var System.Convert.FromHexString[string]/s)
+              )
+              (lit int i:2)
+            )
+            (lit int i:0)
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label1)
+        (vardecl System.Convert.FromHexString[string]/result
+          (arrnew byte[]
+            (binary
+              (bop / int int)
+              (memberacc int Length
+                (var System.Convert.FromHexString[string]/s)
+              )
+              (lit int i:2)
+            ) 0
+          )
+        )
+        (vardecl System.Convert.FromHexString[string]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label2)
+        (vardecl System.Convert.FromHexString[string]/hi
+          (membercall int HexValue System.Convert.HexValue[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromHexString[string]/s)
+              (var System.Convert.FromHexString[string]/i)
+            )
+          )
+        )
+        (vardecl System.Convert.FromHexString[string]/lo
+          (membercall int HexValue System.Convert.HexValue[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromHexString[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromHexString[string]/i)
+                (lit int i:1)
+              )
+            )
+          )
+        )
+        (cgoto Label3
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop < int int)
+              (var System.Convert.FromHexString[string]/hi)
+              (lit int i:0)
+            )
+            (binary
+              (bop < int int)
+              (var System.Convert.FromHexString[string]/lo)
+              (lit int i:0)
+            )
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label3)
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromHexString[string]/result)
+              (binary
+                (bop / int int)
+                (var System.Convert.FromHexString[string]/i)
+                (lit int i:2)
+              )
+            )
+            (conv byte
+              (binary
+                (bop + int int)
+                (binary
+                  (bop * int int)
+                  (var System.Convert.FromHexString[string]/hi)
+                  (lit int i:16)
+                )
+                (var System.Convert.FromHexString[string]/lo)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.FromHexString[string]/i
+            (binary
+              (bop + int int)
+              (var System.Convert.FromHexString[string]/i)
+              (lit int i:2)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < int int)
+            (var System.Convert.FromHexString[string]/i)
+            (memberacc int Length
+              (var System.Convert.FromHexString[string]/s)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (var System.Convert.FromHexString[string]/result)
+        )
+      )
+    )
+    (body System.Convert.HexValue[char]
+      (block 10
+        (cgoto Label1
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:48)
+              )
+            )
+            (binary
+              (bop <= int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:57)
+              )
+            )
+          ) false
+        )
+        (return
+          (binary
+            (bop - int int)
+            (conv int
+              (var System.Convert.HexValue[char]/c)
+            )
+            (conv int
+              (lit char c:48)
+            )
+          )
+        )
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:97)
+              )
+            )
+            (binary
+              (bop <= int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:102)
+              )
+            )
+          ) false
+        )
+        (return
+          (binary
+            (bop + int int)
+            (binary
+              (bop - int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:97)
+              )
+            )
+            (lit int i:10)
+          )
+        )
+        (label Label2)
+        (cgoto Label3
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:65)
+              )
+            )
+            (binary
+              (bop <= int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:70)
+              )
+            )
+          ) false
+        )
+        (return
+          (binary
+            (bop + int int)
+            (binary
+              (bop - int int)
+              (conv int
+                (var System.Convert.HexValue[char]/c)
+              )
+              (conv int
+                (lit char c:65)
+              )
+            )
+            (lit int i:10)
+          )
+        )
+        (label Label3)
+        (return
+          (unary
+            (uop - int)
+            (lit int i:1)
+          )
+        )
+      )
+    )
+    (body System.Convert.Base64Alphabet[]
+      (block 1
+        (return
+          (lit string s:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/)
+        )
+      )
+    )
+    (body System.Convert.ToBase64String[byte[]]
+      (block 42
+        (cgoto Label1
+          (binary
+            (bop == int int)
+            (memberacc int Length
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+            )
+            (lit int i:0)
+          ) false
+        )
+        (return
+          (lit string s:)
+        )
+        (label Label1)
+        (vardecl System.Convert.ToBase64String[byte[]]/full
+          (binary
+            (bop / int int)
+            (memberacc int Length
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+            )
+            (lit int i:3)
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/rem
+          (binary
+            (bop % int int)
+            (memberacc int Length
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+            )
+            (lit int i:3)
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/outLen
+          (binary
+            (bop + int int)
+            (binary
+              (bop * int int)
+              (var System.Convert.ToBase64String[byte[]]/full)
+              (lit int i:4)
+            )
+            (cond
+              (binary
+                (bop == int int)
+                (var System.Convert.ToBase64String[byte[]]/rem)
+                (lit int i:0)
+              )
+              (lit int i:0)
+              (lit int i:4)
+            )
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/chars
+          (arrnew char[]
+            (var System.Convert.ToBase64String[byte[]]/outLen) 0
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/abc
+          (membercall string Base64Alphabet System.Convert.Base64Alphabet[] 0
+            (this System.Convert)
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/o
+          (lit int i:0)
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/i
+          (lit int i:0)
+        )
+        (goto continue1)
+        (label Label2)
+        (vardecl System.Convert.ToBase64String[byte[]]/b0
+          (conv int
+            (elem byte
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+              (var System.Convert.ToBase64String[byte[]]/i)
+            )
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/b1
+          (conv int
+            (elem byte
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/i)
+                (lit int i:1)
+              )
+            )
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/b2
+          (conv int
+            (elem byte
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/i)
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (var System.Convert.ToBase64String[byte[]]/o)
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop >> int int)
+                (var System.Convert.ToBase64String[byte[]]/b0)
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:1)
+              )
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (binary
+                    (bop & int int)
+                    (var System.Convert.ToBase64String[byte[]]/b0)
+                    (lit int i:3)
+                  )
+                  (lit int i:4)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.ToBase64String[byte[]]/b1)
+                  (lit int i:4)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:2)
+              )
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (binary
+                    (bop & int int)
+                    (var System.Convert.ToBase64String[byte[]]/b1)
+                    (lit int i:15)
+                  )
+                  (lit int i:2)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.ToBase64String[byte[]]/b2)
+                  (lit int i:6)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:3)
+              )
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop & int int)
+                (var System.Convert.ToBase64String[byte[]]/b2)
+                (lit int i:63)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.ToBase64String[byte[]]/o
+            (binary
+              (bop + int int)
+              (var System.Convert.ToBase64String[byte[]]/o)
+              (lit int i:4)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.ToBase64String[byte[]]/i
+            (binary
+              (bop + int int)
+              (var System.Convert.ToBase64String[byte[]]/i)
+              (lit int i:3)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < int int)
+            (var System.Convert.ToBase64String[byte[]]/i)
+            (binary
+              (bop * int int)
+              (var System.Convert.ToBase64String[byte[]]/full)
+              (lit int i:3)
+            )
+          ) true
+        )
+        (label break1)
+        (cgoto Label3
+          (binary
+            (bop == int int)
+            (var System.Convert.ToBase64String[byte[]]/rem)
+            (lit int i:1)
+          ) false
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/r0
+          (conv int
+            (elem byte
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+              (binary
+                (bop * int int)
+                (var System.Convert.ToBase64String[byte[]]/full)
+                (lit int i:3)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (var System.Convert.ToBase64String[byte[]]/o)
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop >> int int)
+                (var System.Convert.ToBase64String[byte[]]/r0)
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:1)
+              )
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop << int int)
+                (binary
+                  (bop & int int)
+                  (var System.Convert.ToBase64String[byte[]]/r0)
+                  (lit int i:3)
+                )
+                (lit int i:4)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:2)
+              )
+            )
+            (lit char c:61)
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:3)
+              )
+            )
+            (lit char c:61)
+          )
+        )
+        (goto Label4)
+        (label Label3)
+        (cgoto Label5
+          (binary
+            (bop == int int)
+            (var System.Convert.ToBase64String[byte[]]/rem)
+            (lit int i:2)
+          ) false
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/s0
+          (conv int
+            (elem byte
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+              (binary
+                (bop * int int)
+                (var System.Convert.ToBase64String[byte[]]/full)
+                (lit int i:3)
+              )
+            )
+          )
+        )
+        (vardecl System.Convert.ToBase64String[byte[]]/s1
+          (conv int
+            (elem byte
+              (var System.Convert.ToBase64String[byte[]]/bytes)
+              (binary
+                (bop + int int)
+                (binary
+                  (bop * int int)
+                  (var System.Convert.ToBase64String[byte[]]/full)
+                  (lit int i:3)
+                )
+                (lit int i:1)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (var System.Convert.ToBase64String[byte[]]/o)
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop >> int int)
+                (var System.Convert.ToBase64String[byte[]]/s0)
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:1)
+              )
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (binary
+                    (bop & int int)
+                    (var System.Convert.ToBase64String[byte[]]/s0)
+                    (lit int i:3)
+                  )
+                  (lit int i:4)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.ToBase64String[byte[]]/s1)
+                  (lit int i:4)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:2)
+              )
+            )
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/abc)
+              (binary
+                (bop << int int)
+                (binary
+                  (bop & int int)
+                  (var System.Convert.ToBase64String[byte[]]/s1)
+                  (lit int i:15)
+                )
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign char
+            (elem char
+              (var System.Convert.ToBase64String[byte[]]/chars)
+              (binary
+                (bop + int int)
+                (var System.Convert.ToBase64String[byte[]]/o)
+                (lit int i:3)
+              )
+            )
+            (lit char c:61)
+          )
+        )
+        (label Label5)
+        (label Label4)
+        (return
+          (membercall string StringFromChars System.Runtime.StringFromChars[char[]] 1
+            (statictype System.Runtime)
+            (var System.Convert.ToBase64String[byte[]]/chars)
+          )
+        )
+      )
+    )
+    (body System.Convert.FromBase64String[string]
+      (block 60
+        (vardecl System.Convert.FromBase64String[string]/pad
+          (lit int i:0)
+        )
+        (vardecl System.Convert.FromBase64String[string]/i
+          (binary
+            (bop - int int)
+            (memberacc int Length
+              (var System.Convert.FromBase64String[string]/s)
+            )
+            (lit int i:1)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (assign System.Convert.FromBase64String[string]/pad
+            (binary
+              (bop + int int)
+              (var System.Convert.FromBase64String[string]/pad)
+              (lit int i:1)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.FromBase64String[string]/i
+            (binary
+              (bop - int int)
+              (var System.Convert.FromBase64String[string]/i)
+              (lit int i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (var System.Convert.FromBase64String[string]/i)
+              (lit int i:0)
+            )
+            (binary
+              (bop == char char)
+              (elem char
+                (var System.Convert.FromBase64String[string]/s)
+                (var System.Convert.FromBase64String[string]/i)
+              )
+              (lit char c:61)
+            )
+          ) true
+        )
+        (label break1)
+        (vardecl System.Convert.FromBase64String[string]/dataLen
+          (binary
+            (bop - int int)
+            (memberacc int Length
+              (var System.Convert.FromBase64String[string]/s)
+            )
+            (var System.Convert.FromBase64String[string]/pad)
+          )
+        )
+        (cgoto Label2
+          (binary
+            (bop == int int)
+            (binary
+              (bop % int int)
+              (var System.Convert.FromBase64String[string]/dataLen)
+              (lit int i:4)
+            )
+            (lit int i:1)
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label2)
+        (vardecl System.Convert.FromBase64String[string]/full
+          (binary
+            (bop / int int)
+            (var System.Convert.FromBase64String[string]/dataLen)
+            (lit int i:4)
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/rem
+          (binary
+            (bop % int int)
+            (var System.Convert.FromBase64String[string]/dataLen)
+            (lit int i:4)
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/outLen
+          (binary
+            (bop + int int)
+            (binary
+              (bop * int int)
+              (var System.Convert.FromBase64String[string]/full)
+              (lit int i:3)
+            )
+            (cond
+              (binary
+                (bop == int int)
+                (var System.Convert.FromBase64String[string]/rem)
+                (lit int i:2)
+              )
+              (lit int i:1)
+              (cond
+                (binary
+                  (bop == int int)
+                  (var System.Convert.FromBase64String[string]/rem)
+                  (lit int i:3)
+                )
+                (lit int i:2)
+                (lit int i:0)
+              )
+            )
+          )
+        )
+        (cgoto Label3
+          (binary
+            (bop < int int)
+            (var System.Convert.FromBase64String[string]/outLen)
+            (lit int i:0)
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label3)
+        (vardecl System.Convert.FromBase64String[string]/result
+          (arrnew byte[]
+            (var System.Convert.FromBase64String[string]/outLen) 0
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/o
+          (lit int i:0)
+        )
+        (vardecl System.Convert.FromBase64String[string]/j
+          (lit int i:0)
+        )
+        (goto continue2)
+        (label Label4)
+        (vardecl System.Convert.FromBase64String[string]/v0
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (var System.Convert.FromBase64String[string]/j)
+            )
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/v1
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/j)
+                (lit int i:1)
+              )
+            )
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/v2
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/j)
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/v3
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/j)
+                (lit int i:3)
+              )
+            )
+          )
+        )
+        (cgoto Label5
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop || bool bool)
+              (binary
+                (bop || bool bool)
+                (binary
+                  (bop < int int)
+                  (var System.Convert.FromBase64String[string]/v0)
+                  (lit int i:0)
+                )
+                (binary
+                  (bop < int int)
+                  (var System.Convert.FromBase64String[string]/v1)
+                  (lit int i:0)
+                )
+              )
+              (binary
+                (bop < int int)
+                (var System.Convert.FromBase64String[string]/v2)
+                (lit int i:0)
+              )
+            )
+            (binary
+              (bop < int int)
+              (var System.Convert.FromBase64String[string]/v3)
+              (lit int i:0)
+            )
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label5)
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromBase64String[string]/result)
+              (var System.Convert.FromBase64String[string]/o)
+            )
+            (conv byte
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (var System.Convert.FromBase64String[string]/v0)
+                  (lit int i:2)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.FromBase64String[string]/v1)
+                  (lit int i:4)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromBase64String[string]/result)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/o)
+                (lit int i:1)
+              )
+            )
+            (conv byte
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (binary
+                    (bop & int int)
+                    (var System.Convert.FromBase64String[string]/v1)
+                    (lit int i:15)
+                  )
+                  (lit int i:4)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.FromBase64String[string]/v2)
+                  (lit int i:2)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromBase64String[string]/result)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/o)
+                (lit int i:2)
+              )
+            )
+            (conv byte
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (binary
+                    (bop & int int)
+                    (var System.Convert.FromBase64String[string]/v2)
+                    (lit int i:3)
+                  )
+                  (lit int i:6)
+                )
+                (var System.Convert.FromBase64String[string]/v3)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.FromBase64String[string]/o
+            (binary
+              (bop + int int)
+              (var System.Convert.FromBase64String[string]/o)
+              (lit int i:3)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Convert.FromBase64String[string]/j
+            (binary
+              (bop + int int)
+              (var System.Convert.FromBase64String[string]/j)
+              (lit int i:4)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label4
+          (binary
+            (bop < int int)
+            (var System.Convert.FromBase64String[string]/j)
+            (binary
+              (bop * int int)
+              (var System.Convert.FromBase64String[string]/full)
+              (lit int i:4)
+            )
+          ) true
+        )
+        (label break2)
+        (cgoto Label6
+          (binary
+            (bop == int int)
+            (var System.Convert.FromBase64String[string]/rem)
+            (lit int i:2)
+          ) false
+        )
+        (vardecl System.Convert.FromBase64String[string]/r0
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (var System.Convert.FromBase64String[string]/j)
+            )
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/r1
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/j)
+                (lit int i:1)
+              )
+            )
+          )
+        )
+        (cgoto Label8
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop < int int)
+              (var System.Convert.FromBase64String[string]/r0)
+              (lit int i:0)
+            )
+            (binary
+              (bop < int int)
+              (var System.Convert.FromBase64String[string]/r1)
+              (lit int i:0)
+            )
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label8)
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromBase64String[string]/result)
+              (var System.Convert.FromBase64String[string]/o)
+            )
+            (conv byte
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (var System.Convert.FromBase64String[string]/r0)
+                  (lit int i:2)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.FromBase64String[string]/r1)
+                  (lit int i:4)
+                )
+              )
+            )
+          )
+        )
+        (goto Label7)
+        (label Label6)
+        (cgoto Label9
+          (binary
+            (bop == int int)
+            (var System.Convert.FromBase64String[string]/rem)
+            (lit int i:3)
+          ) false
+        )
+        (vardecl System.Convert.FromBase64String[string]/q0
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (var System.Convert.FromBase64String[string]/j)
+            )
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/q1
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/j)
+                (lit int i:1)
+              )
+            )
+          )
+        )
+        (vardecl System.Convert.FromBase64String[string]/q2
+          (membercall int Base64Value System.Convert.Base64Value[char] 1
+            (this System.Convert)
+            (elem char
+              (var System.Convert.FromBase64String[string]/s)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/j)
+                (lit int i:2)
+              )
+            )
+          )
+        )
+        (cgoto Label10
+          (binary
+            (bop || bool bool)
+            (binary
+              (bop || bool bool)
+              (binary
+                (bop < int int)
+                (var System.Convert.FromBase64String[string]/q0)
+                (lit int i:0)
+              )
+              (binary
+                (bop < int int)
+                (var System.Convert.FromBase64String[string]/q1)
+                (lit int i:0)
+              )
+            )
+            (binary
+              (bop < int int)
+              (var System.Convert.FromBase64String[string]/q2)
+              (lit int i:0)
+            )
+          ) false
+        )
+        (return
+          (arrnew byte[]
+            (lit int i:0) 0
+          )
+        )
+        (label Label10)
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromBase64String[string]/result)
+              (var System.Convert.FromBase64String[string]/o)
+            )
+            (conv byte
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (var System.Convert.FromBase64String[string]/q0)
+                  (lit int i:2)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.FromBase64String[string]/q1)
+                  (lit int i:4)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (elemassign byte
+            (elem byte
+              (var System.Convert.FromBase64String[string]/result)
+              (binary
+                (bop + int int)
+                (var System.Convert.FromBase64String[string]/o)
+                (lit int i:1)
+              )
+            )
+            (conv byte
+              (binary
+                (bop | int int)
+                (binary
+                  (bop << int int)
+                  (binary
+                    (bop & int int)
+                    (var System.Convert.FromBase64String[string]/q1)
+                    (lit int i:15)
+                  )
+                  (lit int i:4)
+                )
+                (binary
+                  (bop >> int int)
+                  (var System.Convert.FromBase64String[string]/q2)
+                  (lit int i:2)
+                )
+              )
+            )
+          )
+        )
+        (label Label9)
+        (label Label7)
+        (return
+          (var System.Convert.FromBase64String[string]/result)
+        )
+      )
+    )
+    (body System.Convert.Base64Value[char]
+      (block 16
+        (cgoto Label1
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:65)
+              )
+            )
+            (binary
+              (bop <= int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:90)
+              )
+            )
+          ) false
+        )
+        (return
+          (binary
+            (bop - int int)
+            (conv int
+              (var System.Convert.Base64Value[char]/c)
+            )
+            (conv int
+              (lit char c:65)
+            )
+          )
+        )
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:97)
+              )
+            )
+            (binary
+              (bop <= int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:122)
+              )
+            )
+          ) false
+        )
+        (return
+          (binary
+            (bop + int int)
+            (binary
+              (bop - int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:97)
+              )
+            )
+            (lit int i:26)
+          )
+        )
+        (label Label2)
+        (cgoto Label3
+          (binary
+            (bop && bool bool)
+            (binary
+              (bop >= int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:48)
+              )
+            )
+            (binary
+              (bop <= int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:57)
+              )
+            )
+          ) false
+        )
+        (return
+          (binary
+            (bop + int int)
+            (binary
+              (bop - int int)
+              (conv int
+                (var System.Convert.Base64Value[char]/c)
+              )
+              (conv int
+                (lit char c:48)
+              )
+            )
+            (lit int i:52)
+          )
+        )
+        (label Label3)
+        (cgoto Label4
+          (binary
+            (bop == int int)
+            (conv int
+              (var System.Convert.Base64Value[char]/c)
+            )
+            (conv int
+              (lit char c:43)
+            )
+          ) false
+        )
+        (return
+          (lit int i:62)
+        )
+        (label Label4)
+        (cgoto Label5
+          (binary
+            (bop == int int)
+            (conv int
+              (var System.Convert.Base64Value[char]/c)
+            )
+            (conv int
+              (lit char c:47)
+            )
+          ) false
+        )
+        (return
+          (lit int i:63)
+        )
+        (label Label5)
+        (return
+          (unary
+            (uop - int)
+            (lit int i:1)
+          )
+        )
+      )
+    )
     (body System.Double.ToString[double]
       (block 1
         (return
@@ -5069,6 +6659,9 @@
     (body System.Runtime.StringFromChars[char[]]
       (block 0)
     )
+    (body System.Runtime.Sha256Hash[byte[]]
+      (block 0)
+    )
     (body System.SByte.ToString[sbyte]
       (block 1
         (return
@@ -7094,4 +8687,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:6151b1730317253806286772a223c84cd97ed61449ffb10cc34efd2d7efd7208)
+(checksum sha256:1213edfbf6c55da17f927496846e7ee96415bc730dc1fcabcbc311a5a9e0f304)

@@ -110,8 +110,13 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Newobj"), _framework.StringCtorCharArray);
                     break;
                 case BuiltinKind.Sha256Hash:
-                    // 6e-G7 ⑤a：native+IL 接入待 IlFramework 惰性引用基础设施就绪
-                    throw new Exception("Sha256Hash IL emission requires lazy framework references (G7-⑤a follow-up)");
+                {
+                    // 6e-G7 ⑤a：惰性引用（ResolveMethod 按需反射）接入 SHA256.HashData
+                    var m = _framework.ResolveMethod("System.Security.Cryptography.SHA256", "HashData", new[] { "System.Byte[]" });
+                    if (m == null) throw new Exception("System.Security.Cryptography.SHA256.HashData not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.FileReadAllText:
                 {
                     var m = _framework.ResolveMethod("System.IO.File", "ReadAllText", new[] { "System.String" });

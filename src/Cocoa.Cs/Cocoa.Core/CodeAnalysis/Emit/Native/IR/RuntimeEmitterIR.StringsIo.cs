@@ -1571,6 +1571,25 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             /// <summary>复制到主缓冲（单路径场景）。</summary>
             private IrVirtualRegister WidePtrZ(IrVirtualRegister s) => WidePtrZInto(s, _fileBuffer);
 
+            // StringFromChars(chars:8 char[]) → string（6e-G7 ③a）：
+            // char[] 布局 [len:4][元素区@8（8 字节对齐，char 2 字节）] → CO 串 [len:4][chars:2×len]，
+            // 直接复制 UTF-16 数据区（AllocStringFromBuf 顺带补 null 结尾）。
+            private void EmitStringFromChars()
+            {
+                var arr = _args[0];
+                var arrLen = NewReg(4);
+                Load(arrLen, arr, 0, 4);
+                var lenBytes = NewReg(4);
+                Mov(lenBytes, arrLen);
+                Shl(lenBytes, lenBytes, 1);
+                var src = NewReg(8);
+                Lea(src, arr, 8);
+                var result = NewReg(8);
+                CallRuntime(result, "AllocStringFromBuf", src, lenBytes);
+                StoreRet(result);
+                EndFunction(_currentFunction!, 8);
+            }
+
             // FileExists(path:8) → bool：GetFileAttributesW != INVALID_FILE_ATTRIBUTES(0xFFFFFFFF)
             private void EmitFileExists()
             {

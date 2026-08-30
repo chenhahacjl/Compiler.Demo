@@ -28,5 +28,6 @@ namespace System
         syscall function ParseInt64(s: string): i64
         syscall function UInt64ToString(value: u64): string
         syscall function StringFromChars(chars: char[]): string
+        syscall function Sha256Hash(data: u8[]): u8[]
     }
 }
