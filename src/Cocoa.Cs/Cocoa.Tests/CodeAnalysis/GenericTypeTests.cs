@@ -26,7 +26,7 @@ namespace Cocoa.Tests.CodeAnalysis
             var instantiated = GenericTypeInstantiator.Instantiate(definition, ImmutableArray.Create<TypeSymbol>(TypeSymbol.Int32));
 
             Assert.IsType<InstantiatedTypeSymbol>(instantiated);
-            Assert.Equal("Test.Box`1#!System.Int32", instantiated.Name);
+            Assert.Equal("Test.Box`1#@i32", instantiated.Name);
             Assert.Equal(definition, Assert.IsType<InstantiatedTypeSymbol>(instantiated).GenericDefinition);
         }
 
@@ -40,7 +40,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
             Assert.Same(first, second);
             Assert.NotSame(first, other);
-            Assert.Equal("Test.Box`1#!System.String", other.Name);
+            Assert.Equal("Test.Box`1#@string", other.Name);
         }
 
         [Fact]
@@ -108,8 +108,8 @@ namespace Cocoa.Tests.CodeAnalysis
             // Wrapper<Box<T>> + T=int → Wrapper`1#Box`1#!System.Int32（实参递归替换）
             var nestedField = instantiated.GetDeclaredField("_nested")!;
             var nested = Assert.IsType<InstantiatedTypeSymbol>(nestedField.Type);
-            Assert.Equal("Test.Wrapper`1#Test.Box`1#!System.Int32", nested.Name);
-            Assert.Equal("Test.Box`1#!System.Int32", Assert.IsType<InstantiatedTypeSymbol>(Assert.Single(nested.TypeArguments)).Name);
+            Assert.Equal("Test.Wrapper`1#Test.Box`1#@i32", nested.Name);
+            Assert.Equal("Test.Box`1#@i32", Assert.IsType<InstantiatedTypeSymbol>(Assert.Single(nested.TypeArguments)).Name);
         }
 
         [Fact]
@@ -123,7 +123,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
             var next = nodeInt.GetDeclaredField("_next")!;
             Assert.Equal(nodeInt, next.Type);
-            Assert.Equal("Test.Node`1#!System.Int32", next.Type.Name);
+            Assert.Equal("Test.Node`1#@i32", next.Type.Name);
         }
 
         [Fact]
@@ -131,14 +131,14 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var (boxDef, boxT) = DeclareGeneric("Box");
 
-            // Box<int[]> → Box`1#!System.Int32[]
+            // Box<int[]> → Box`1#@i32[]
             var boxOfArray = GenericTypeInstantiator.Instantiate(boxDef, ImmutableArray.Create<TypeSymbol>(TypeSymbol.ArrayOf(TypeSymbol.Int32)));
-            Assert.Equal("Test.Box`1#!System.Int32[]", boxOfArray.Name);
+            Assert.Equal("Test.Box`1#@i32[]", boxOfArray.Name);
 
-            // Box<Box<int>> → Box`1#Box`1#!System.Int32
+            // Box<Box<int>> → Box`1#Box`1#@i32
             var boxOfBox = GenericTypeInstantiator.Instantiate(boxDef, ImmutableArray.Create<TypeSymbol>(
                 GenericTypeInstantiator.Instantiate(boxDef, ImmutableArray.Create<TypeSymbol>(TypeSymbol.Int32))));
-            Assert.Equal("Test.Box`1#Test.Box`1#!System.Int32", boxOfBox.Name);
+            Assert.Equal("Test.Box`1#Test.Box`1#@i32", boxOfBox.Name);
         }
 
         [Fact]

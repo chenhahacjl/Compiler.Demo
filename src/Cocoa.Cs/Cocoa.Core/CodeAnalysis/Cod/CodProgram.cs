@@ -22,7 +22,9 @@ namespace Cocoa.CodeAnalysis.Cod
             ImmutableArray<string> codReferences,
             ImmutableArray<string> namespaces,
             ImmutableArray<NamedTypeSymbol> genericDefinitions = default,
-            ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
+            ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null,
+            ImmutableDictionary<string, FunctionSymbol>? functionKeys = null,
+            ImmutableDictionary<string, TypeSymbol>? typesByName = null)
         {
             Functions = functions;
             Globals = globals;
@@ -37,6 +39,8 @@ namespace Cocoa.CodeAnalysis.Cod
             Namespaces = namespaces;
             GenericDefinitions = genericDefinitions.IsDefault ? ImmutableArray<NamedTypeSymbol>.Empty : genericDefinitions;
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
+            FunctionKeys = functionKeys ?? ImmutableDictionary<string, FunctionSymbol>.Empty;
+            TypesByName = typesByName ?? ImmutableDictionary<string, TypeSymbol>.Empty;
         }
 
         /// <summary>库的顶层函数（含 extern 声明，无入口点）。</summary>
@@ -77,6 +81,18 @@ namespace Cocoa.CodeAnalysis.Cod
 
         /// <summary>库声明的命名空间。</summary>
         public ImmutableArray<string> Namespaces { get; }
+
+        /// <summary>
+        /// 函数键（含库维度前缀）→ 函数符号索引。读侧构建，供跨库符号合并（external 库复用实例）与
+        /// 消费方发射定位；写侧序列化用。6e 跨库里程碑。
+        /// </summary>
+        public ImmutableDictionary<string, FunctionSymbol> FunctionKeys { get; }
+
+        /// <summary>
+        /// 库内命名类型表（类/枚举/泛型定义 全名 → 符号）。读侧构建，供跨库类型解析
+        /// （external 库的 `TypesByName` 并入消费方类型表）。6e 跨库里程碑。
+        /// </summary>
+        public ImmutableDictionary<string, TypeSymbol> TypesByName { get; }
 
         /// <summary>
         /// 库的程序集名（文件基名，如 "MyLib"）。Load 时由文件名回填、EmitCocoa 构造时为模块名；

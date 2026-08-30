@@ -176,24 +176,31 @@ namespace Cocoa.CodeAnalysis.Symbols
             return builder.ToString();
         }
 
-        /// <summary>基元内建 → facade 全限定权威映射（`!` 前缀 = 编译器权威身份标记）。</summary>
+        /// <summary>
+        /// 基元内建 → `@` 权威记法（`@` 前缀 = 编译器权威身份标记，非标识符字符与用户类型结构性隔离）。
+        /// Rust/LLVM 式位宽名（i8/i16/i32/i64/u8/u16/u32/u64/f32/f64），`@` 前缀仅在 `.cod` 内部使用。
+        /// </summary>
         private static readonly Dictionary<TypeSymbol, string> PrimitiveEncodeNames = new Dictionary<TypeSymbol, string>
         {
-            [TypeSymbol.Int8] = "!System.SByte",
-            [TypeSymbol.Int16] = "!System.Int16",
-            [TypeSymbol.Int32] = "!System.Int32",
-            [TypeSymbol.Int64] = "!System.Int64",
-            [TypeSymbol.UInt8] = "!System.Byte",
-            [TypeSymbol.UInt16] = "!System.UInt16",
-            [TypeSymbol.UInt32] = "!System.UInt32",
-            [TypeSymbol.UInt64] = "!System.UInt64",
-            [TypeSymbol.Float] = "!System.Single",
-            [TypeSymbol.Double] = "!System.Double",
-            [TypeSymbol.Boolean] = "!System.Boolean",
-            [TypeSymbol.Char] = "!System.Char",
-            [TypeSymbol.String] = "!System.String",
-            [TypeSymbol.Any] = "!System.Object",
-            [TypeSymbol.Void] = "!System.Void",
+            [TypeSymbol.Int8] = "@i8",
+            [TypeSymbol.Int16] = "@i16",
+            [TypeSymbol.Int32] = "@i32",
+            [TypeSymbol.Int64] = "@i64",
+            [TypeSymbol.UInt8] = "@u8",
+            [TypeSymbol.UInt16] = "@u16",
+            [TypeSymbol.UInt32] = "@u32",
+            [TypeSymbol.UInt64] = "@u64",
+            [TypeSymbol.Float] = "@f32",
+            [TypeSymbol.Double] = "@f64",
+            [TypeSymbol.Boolean] = "@bool",
+            [TypeSymbol.Char] = "@char",
+            [TypeSymbol.String] = "@string",
+            [TypeSymbol.Any] = "@any",
+            [TypeSymbol.Void] = "@void",
+            [TypeSymbol.Null] = "@null",
+            [TypeSymbol.Int128] = "@i128",
+            [TypeSymbol.UInt128] = "@u128",
+            [TypeSymbol.Float128] = "@f128",
         };
 
         /// <summary>基元权威编码反解（6e-G7 S1：.cod 类型流读侧）。</summary>
@@ -203,6 +210,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         internal static bool TryDecodePrimitive(string encoded, out TypeSymbol type)
         {
             return PrimitiveDecodeNames.TryGetValue(encoded, out type!);
+        }
+
+        /// <summary>基元 `@` 权威记法（供 CodSerializer.TypeRef 共用；引用相等键，单例稳定）。</summary>
+        internal static bool TryGetPrimitiveName(TypeSymbol type, out string name)
+        {
+            return PrimitiveEncodeNames.TryGetValue(type, out name!);
         }
 
         /// <summary>类型实参编码（mangle 与缓存键共用）：`!` 权威实体 / FullName 点保留 / 数组 `[]` 后缀 / 嵌套实例化递归。</summary>

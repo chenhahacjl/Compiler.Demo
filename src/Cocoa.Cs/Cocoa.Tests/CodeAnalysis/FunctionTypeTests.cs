@@ -37,7 +37,7 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var type = FunctionTypeSymbol.Get(ImmutableArray.Create<TypeSymbol>(TypeSymbol.Int32, TypeSymbol.String), TypeSymbol.Boolean);
 
-            Assert.Equal("Func$!System.Int32$!System.String__!System.Boolean", type.Name);
+            Assert.Equal("Func$@i32$@string__@bool", type.Name);
         }
 
         [Fact]

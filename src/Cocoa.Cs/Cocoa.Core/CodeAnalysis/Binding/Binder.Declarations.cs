@@ -1312,16 +1312,28 @@ namespace Cocoa.CodeAnalysis.Binding
         /// 6e-G7 S6：种子收集辅助 binder 注册 cod 库的泛型定义类名——
         /// 使 BindGenericTypeNameForExpansion 能解析消费方站点的 `Box&lt;i32&gt;` 为实例化类型。
         /// </summary>
+        /// <summary>注册本编译声明的泛型定义（源码优先于 cod：同名占位后 cod 注册静默跳过）。</summary>
+        internal void RegisterSourceGenericDefinitionsForSeed(BoundGlobalScope globalScope)
+        {
+            foreach (var classType in globalScope.Classes)
+            {
+                if (classType.IsGenericDefinition)
+                {
+                    _scope.TryDeclareClass(classType);
+                }
+            }
+        }
+
         internal void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CodProgram> libraries)
         {
+            // 6e 跨库里程碑：cod 泛型定义注册为单态化种子解析候选（源码同名泛型定义已先注册占位，
+            // TryDeclareClass 同名静默跳过——源码优先于 cod，源内联集合测试不被打扰；
+            // cod 仅兜底源码未声明的泛型集合，跨库消费方 seed 经此发现 HashSet/Dictionary 等）。
             foreach (var library in libraries)
             {
-                foreach (var classType in library.Classes)
+                foreach (var genericDefinition in library.GenericDefinitions)
                 {
-                    if (classType.IsGenericDefinition)
-                    {
-                        _scope.TryDeclareClass(classType);
-                    }
+                    _scope.TryDeclareClass(genericDefinition);
                 }
             }
         }
@@ -1818,8 +1830,14 @@ namespace Cocoa.CodeAnalysis.Binding
             FunctionSymbol? setter = null;
             if (syntax.Setter != null)
             {
+                // 6e 跨库里程碑：setter 克隆索引参数（独立 ParameterSymbol 实例）——否则与 getter 共享
+                // 同一 `index` 参数，Registry `_varKeys` 冲突（get_Item 的参数键误落 set_Item 名下），
+                // 读侧 body 变量解析错位（cod 泛型集合索引器求值 KeyNotFound）。
+                var setterIndexParams = isIndexer
+                    ? indexParams.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray()
+                    : indexParams;
                 var valueParameter = new ParameterSymbol("value", propertyType, isIndexer ? indexParams.Length : 0);
-                var setterParams = isIndexer ? indexParams.Add(valueParameter) : ImmutableArray.Create(valueParameter);
+                var setterParams = isIndexer ? setterIndexParams.Add(valueParameter) : ImmutableArray.Create(valueParameter);
                 if (lower)
                 {
                     var thisParam = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0, isThis: true);
@@ -2492,6 +2510,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 // 容器类注入（6e-M17）：类壳注册进类型表；其方法已随 Functions 注入（ContainingClass 指向本类）
                 foreach (var classType in library.Classes)
                 {
+                    // 6e 跨库里程碑：跳过泛型定义（gcls）——其入 scope 会泄漏进发射清单
+                    // （IL/native 遇开放类型参数抛 Unexpected type K），且遮蔽源码同名集合类；
+                    // 泛型定义经 GlobalNamespace 树 + Monomorphizer 种子消费。
+                    if (classType.IsGenericDefinition)
+                    {
+                        continue;
+                    }
+
                     // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐
                     if (!classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
                     {

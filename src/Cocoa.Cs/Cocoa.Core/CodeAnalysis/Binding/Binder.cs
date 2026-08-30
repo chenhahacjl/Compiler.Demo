@@ -755,7 +755,9 @@ namespace Cocoa.CodeAnalysis.Binding
             // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
             body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
 
-            var returnCheckLocation = function.ReturnType != TypeSymbol.Void
+            // 6e 跨库里程碑：cod 库泛型开放体经 Monomorphizer 重绑时 function 无 Declaration/Syntax
+            // （bodyLocation 为 null）——返回位置诊断留空即可，不影响降级。
+            var returnCheckLocation = function.ReturnType != TypeSymbol.Void && bodyLocation != null
                 ? (TextLocation?)bodyLocation.Location
                 : null;
             var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);

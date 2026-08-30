@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         public static void Write(TextWriter writer, CodProgram program)
         {
-            var registry = new Registry();
+            var registry = new Registry(program.Name);
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
 
             // 閺€鍫曟肠缁楋箑褰块垾鏂衡偓鏂垮毐閺侀缍嬮幐?Functions閿涘牆锛愰弰搴＄碍閿涘浜堕崢鍡礉娣囨繆鐦夌涵顔肩暰閹嶇礄ImmutableDictionary 鏉╊厺鍞惔蹇庣瑝缁嬪啿鐣鹃敍?
@@ -964,6 +964,24 @@ namespace Cocoa.CodeAnalysis.Cod
                 w.Field(MethodSignature(method));
             }
 
+            // 6e 跨库里程碑：泛型定义类属性声明（访问器 get_X/set_X 为独立 fn，读侧 fns 回填后挂接）。
+            var properties = classType.Properties;
+            if (properties.Length > 0)
+            {
+                w.Field("props:" + properties.Length.ToString(CultureInfo.InvariantCulture));
+                foreach (var property in properties)
+                {
+                    w.Open("prop");
+                    w.Field(Str(property.Name));
+                    w.Field(TypeRef(property.Type));
+                    w.Field(BoolWord(property.Getter != null));
+                    w.Field(BoolWord(property.Setter != null));
+                    w.Field(property.Visibility.ToString().ToLowerInvariant());
+                    w.Field(BoolWord(property.IsStatic));
+                    w.End();
+                }
+            }
+
             w.End();
         }
 
@@ -1138,6 +1156,12 @@ namespace Cocoa.CodeAnalysis.Cod
         /// <summary>缁鐎烽惃鍕瀮閺堫剙绱╅悽顭掔窗閸愬懎缂?閺佹壆绮嶉悽銊х叚閸氬稄绱檌nt / int[][]閿涘绱濈猾?閺嬫矮濡囬悽銊ュ弿閸氬秲鈧?/summary>
         private static string TypeRef(TypeSymbol type)
         {
+            // 6e 跨库里程碑：基元内建 → `@` 权威记法（@i32/@string/@bool…，Rust/LLVM 式位宽名）。
+            // 引用相等键（单例稳定），先于 NamedTypeSymbol 分支命中，避免输出 C# 短名 int/string。
+            if (GenericTypeInstantiator.TryGetPrimitiveName(type, out var primitiveName))
+            {
+                return primitiveName;
+            }
             // 6e-G7 S1锛氬紑鏀剧被鍨嬪弬鏁?鈫?闄愬畾鏉冨▉閿?`!灞炰富鍏ㄥ悕.鍙傛暟鍚峘锛堟柟娉曠骇鏃犲睘涓诲洖钀借８鍚嶏級锛?
             // 瀹炰緥鍖栫被鍨?鈫?Encode v3 瀹屾暣 mangle锛坆acktick 鍏冩暟 + # + $ 鍒嗛殧閫掑綊瀹炲弬锛?
             if (type is TypeParameterSymbol openParameter)
@@ -1526,6 +1550,14 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             private readonly Dictionary<FunctionSymbol, string> _fnKeys = new(ReferenceEqualityComparer.Instance);
             private readonly Dictionary<object, string> _varKeys = new(ReferenceEqualityComparer.Instance);
 
+            /// <summary>当前模块名（`.cod` 库名）：FnKey 库维度前缀的回退归属（符号未带 ContainingLibrary 时）。</summary>
+            private readonly string _moduleName;
+
+            public Registry(string moduleName)
+            {
+                _moduleName = moduleName;
+            }
+
             /// <summary>调试：当前序列化函数名（WriteBodyEntry 设置，供 Unserializable 错误定位）。</summary>
             public string? CurrentFunctionName { get; set; }
 
@@ -1636,6 +1668,14 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                     return;
                 }
 
+                // 6e 跨库里程碑：非本库符号不入本库 fn 条目——跨库 callee 由依赖库（external）提供符号，
+                // 本库只引用其键；避免重复声明致符号身份分裂（Binder 按引用相等合并函数体）。
+                if (fn.ContainingLibrary != null &&
+                    !string.Equals(fn.ContainingLibrary, _moduleName, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
                 // 缁粯鏌熷▔鏇窗鐎圭懓娅掔猾璇插弿闂堟瑦鈧緤绱檚yscall/extern 閸欏﹤鐢担鎾绘饯閹焦鏌熷▔鏇礉6e-M18閿涘缍旀稉铏瑰缁?fn 鎼村繐鍨崠鏍电幢鐎圭偘绶ラ弬瑙勭《/閺嬪嫰鈧姷鏁辩猾璇诧紦鏉╁洦鎶ら妴?
                 // 娓氬顦婚敍姝刡ject 閸愬懎缂撻弬瑙勭《閿涘湣2-c閿涘鐢?BuiltinKind閿涘矁顕版笟褏绮￠崡鏇氱伐婢跺秶鏁ら柌宥呯紦閿涘矂銆忛梾蹇撶穿閻劌绨崚妤€瀵?
                 // 6e-G7 S1/S2锛氭硾鍨嬪畾涔夌殑瀹炰緥鏂规硶/鏋勯€犱篃闅忓簱鎼哄甫锛堟秷璐规柟鍗曟€佸寲绱犳潗锛夛紱鍏朵綑瀹炰緥鏂规硶浠嶇敱绫诲３杩囨护
@@ -1680,14 +1720,17 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
 
             /// <summary>閺€鍫曟肠鐎瑰本鍨氶崥搴ｇ埠娑撯偓閸涜棄鎮曢敍姘毐閺佷即鏁稉搴″綁闁插繘鏁敍鍫濆弿鐏炩偓 global:閸氬秴鐡ч敍娑樼湰闁?閸欏倹鏆?閸戣姤鏆熼柨?閸氬秴鐡ч敍娑樺暱缁愪礁濮?#2/#3閿涘鈧?/summary>
             /// <summary>FnKey 璁＄畻锛?e-G7 鎶藉彇锛夛細owner/ns 鍓嶇紑 + 鍚?+ [鍙傛暟绫诲瀷]锛涗粎宸?out/ref 鐨勯噸杞介敭涓嶅悓銆?/summary>
-            private static string ComputeFnKey(FunctionSymbol fn)
+            private string ComputeFnKey(FunctionSymbol fn)
             {
                 var paramTypes = string.Join(",", fn.Parameters.Select(p =>
                     (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type)));
                 var head = fn.ContainingClass != null
                     ? fn.ContainingClass.FullName + "." + fn.Name
                     : fn.Namespace.Length > 0 ? fn.Namespace + "." + fn.Name : fn.Name;
-                return head + "[" + paramTypes + "]";
+                // 6e 跨库里程碑：FnKey 带库维度前缀（`库名!head[...]`）。归属 = 符号带库名则用其库名
+                // （跨库 callee：从其库加载的符号），否则回退当前模块名（本库声明的函数/编译期单例）。
+                var library = fn.ContainingLibrary ?? _moduleName;
+                return (library.Length > 0 ? library + "!" : "") + head + "[" + paramTypes + "]";
             }
 
             public void Seal()
@@ -1719,9 +1762,11 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
         // ---------------------------------------------------------------- read
 
         /// <summary>娴?`.cod` 閺傚洣娆㈤崝鐘烘祰缁嬪绨梿鍡愨偓?/summary>
-        public static CodProgram Load(string path)
+        /// <summary>Load `.cod` 文件。库名由文件名回填；`external` 为已加载的依赖库（供跨库符号合并）。</summary>
+        public static CodProgram Load(string path, ImmutableArray<CodProgram>? external = null)
         {
-            return Read(File.ReadAllText(path));
+            var moduleName = Path.GetFileNameWithoutExtension(path);
+            return Read(File.ReadAllText(path), moduleName, external ?? ImmutableArray<CodProgram>.Empty);
         }
 
     }

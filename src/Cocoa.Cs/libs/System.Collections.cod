@@ -1,0 +1,3473 @@
+(cod COCOD 1
+  (symbols
+    (gcls System.Collections.Generic.Dictionary public iface:false ifaces:0 tparams:2
+      (tpar K 0 - c:0)
+      (tpar V 1 - c:0) fields:5
+      (fld _keys !System.Collections.Generic.Dictionary.K[] private false false)
+      (fld _values !System.Collections.Generic.Dictionary.V[] private false false)
+      (fld _next @i32[] private false false)
+      (fld _buckets @i32[] private false false)
+      (fld _count @i32 private false false) methods:0 props:4
+      (prop Count @i32 true false public false)
+      (prop Keys !System.Collections.Generic.Dictionary.K[] true false public false)
+      (prop Values !System.Collections.Generic.Dictionary.V[] true false public false)
+      (prop Item !System.Collections.Generic.Dictionary.V true true public false)
+    )
+    (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
+      (tpar TKey 0 - c:0)
+      (tpar TValue 1 - c:0) fields:2
+      (fld _key !System.Collections.Generic.KeyValuePair.TKey private false false)
+      (fld _value !System.Collections.Generic.KeyValuePair.TValue private false false) methods:0 props:2
+      (prop Key !System.Collections.Generic.KeyValuePair.TKey true false public false)
+      (prop Value !System.Collections.Generic.KeyValuePair.TValue true false public false)
+    )
+    (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0 props:2
+      (prop Count @i32 true false public false)
+      (prop IsReadOnly @bool true false public false)
+    )
+    (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0
+    )
+    (gcls System.Collections.Generic.HashSet public iface:false ifaces:2 System.Collections.Generic.ICollection`1#!System.Collections.Generic.HashSet.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.HashSet.T tparams:1
+      (tpar T 0 - c:0) fields:2
+      (fld _items !System.Collections.Generic.HashSet.T[] private false false)
+      (fld _count @i32 private false false) methods:0 props:2
+      (prop Count @i32 true false public false)
+      (prop IsReadOnly @bool true false public false)
+    )
+    (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
+    )
+    (gcls System.Collections.Generic.HashSetEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.HashSetEnumerator.T tparams:1
+      (tpar T 0 - c:0) fields:3
+      (fld _items !System.Collections.Generic.HashSetEnumerator.T[] private false false)
+      (fld _count @i32 private false false)
+      (fld _index @i32 private false false) methods:0 props:1
+      (prop Current !System.Collections.Generic.HashSetEnumerator.T true false public false)
+    )
+    (gcls System.Collections.Generic.IList public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (prop Item !System.Collections.Generic.IList.T true true public false)
+    )
+    (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (prop Item !System.Collections.Generic.IReadOnlyList.T true false public false)
+    )
+    (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (prop Count @i32 true false public false)
+    )
+    (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T tparams:1
+      (tpar T 0 - c:0) fields:2
+      (fld _items !System.Collections.Generic.List.T[] private false false)
+      (fld _count @i32 private false false) methods:0 props:4
+      (prop Count @i32 true false public false)
+      (prop IsReadOnly @bool true false public false)
+      (prop Capacity @i32 true false public false)
+      (prop Item !System.Collections.Generic.List.T true true public false)
+    )
+    (gcls System.Collections.Generic.ListEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.ListEnumerator.T tparams:1
+      (tpar T 0 - c:0) fields:2
+      (fld _list System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T private false false)
+      (fld _index @i32 private false false) methods:0 props:1
+      (prop Current !System.Collections.Generic.ListEnumerator.T true false public false)
+    )
+    (gcls System.Collections.Generic.Queue public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Queue.T tparams:1
+      (tpar T 0 - c:0) fields:4
+      (fld _items !System.Collections.Generic.Queue.T[] private false false)
+      (fld _count @i32 private false false)
+      (fld _head @i32 private false false)
+      (fld _capacity @i32 private false false) methods:0 props:1
+      (prop Count @i32 true false public false)
+    )
+    (gcls System.Collections.Generic.QueueEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.QueueEnumerator.T tparams:1
+      (tpar T 0 - c:0) fields:5
+      (fld _items !System.Collections.Generic.QueueEnumerator.T[] private false false)
+      (fld _head @i32 private false false)
+      (fld _count @i32 private false false)
+      (fld _capacity @i32 private false false)
+      (fld _index @i32 private false false) methods:0 props:1
+      (prop Current !System.Collections.Generic.QueueEnumerator.T true false public false)
+    )
+    (gcls System.Collections.Generic.Stack public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Stack.T tparams:1
+      (tpar T 0 - c:0) fields:2
+      (fld _items !System.Collections.Generic.Stack.T[] private false false)
+      (fld _count @i32 private false false) methods:0 props:1
+      (prop Count @i32 true false public false)
+    )
+    (gcls System.Collections.Generic.StackEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.StackEnumerator.T tparams:1
+      (tpar T 0 - c:0) fields:3
+      (fld _items !System.Collections.Generic.StackEnumerator.T[] private false false)
+      (fld _count @i32 private false false)
+      (fld _index @i32 private false false) methods:0 props:1
+      (prop Current !System.Collections.Generic.StackEnumerator.T true false public false)
+    )
+    (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0
+    )
+    (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 tparams:2
+      (tpar TKey 0 - c:0)
+      (tpar TValue 1 - c:0) fields:0 methods:0 props:5
+      (prop Item !System.Collections.Generic.IDictionary.TValue true true public false)
+      (prop Keys System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey true false public false)
+      (prop Values System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue true false public false)
+      (prop Count @i32 true false public false)
+      (prop IsReadOnly @bool true false public false)
+    )
+    (fn System.Collections!System.Collections.Generic.IEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.IEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.IEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.IEnumerator.T ns:- owner:System.Collections.Generic.IEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.IEnumerable.GetEnumerator[] name:GetEnumerator ret:System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.IEnumerable.T ns:- owner:System.Collections.Generic.IEnumerable extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.ICollection.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.ICollection.get_IsReadOnly[] name:get_IsReadOnly ret:@bool ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.ICollection.Add[!System.Collections.Generic.ICollection.T] name:Add ret:@bool ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ICollection.Add[!System.Collections.Generic.ICollection.T]/item item !System.Collections.Generic.ICollection.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ICollection.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.ICollection.Contains[!System.Collections.Generic.ICollection.T] name:Contains ret:@bool ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ICollection.Contains[!System.Collections.Generic.ICollection.T]/item item !System.Collections.Generic.ICollection.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ICollection.CopyTo[!System.Collections.Generic.ICollection.T[],@i32] name:CopyTo ret:@void ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.ICollection.CopyTo[!System.Collections.Generic.ICollection.T[],@i32]/array array !System.Collections.Generic.ICollection.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.ICollection.CopyTo[!System.Collections.Generic.ICollection.T[],@i32]/arrayIndex arrayIndex @i32 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ICollection.Remove[!System.Collections.Generic.ICollection.T] name:Remove ret:@bool ns:- owner:System.Collections.Generic.ICollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ICollection.Remove[!System.Collections.Generic.ICollection.T]/item item !System.Collections.Generic.ICollection.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IList.get_Item[@i32] name:get_Item ret:!System.Collections.Generic.IList.T ns:- owner:System.Collections.Generic.IList extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.Collections!System.Collections.Generic.IList.set_Item[@i32,!System.Collections.Generic.IList.T]/index index @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IList.set_Item[@i32,!System.Collections.Generic.IList.T] name:set_Item ret:@void ns:- owner:System.Collections.Generic.IList extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:2
+      (par System.Collections!System.Collections.Generic.IList.set_Item[@i32,!System.Collections.Generic.IList.T]/index index @i32 0 - -)
+      (par System.Collections!System.Collections.Generic.IList.set_Item[@i32,!System.Collections.Generic.IList.T]/value value !System.Collections.Generic.IList.T 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IList.IndexOf[!System.Collections.Generic.IList.T] name:IndexOf ret:@i32 ns:- owner:System.Collections.Generic.IList extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.IList.IndexOf[!System.Collections.Generic.IList.T]/item item !System.Collections.Generic.IList.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IList.Insert[@i32,!System.Collections.Generic.IList.T] name:Insert ret:@void ns:- owner:System.Collections.Generic.IList extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.IList.Insert[@i32,!System.Collections.Generic.IList.T]/index index @i32 0 - -)
+      (par System.Collections!System.Collections.Generic.IList.Insert[@i32,!System.Collections.Generic.IList.T]/item item !System.Collections.Generic.IList.T 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IList.RemoveAt[@i32] name:RemoveAt ret:@void ns:- owner:System.Collections.Generic.IList extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.IList.RemoveAt[@i32]/index index @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IReadOnlyCollection.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.IReadOnlyCollection extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.IReadOnlyList.get_Item[@i32] name:get_Item ret:!System.Collections.Generic.IReadOnlyList.T ns:- owner:System.Collections.Generic.IReadOnlyList extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.Collections!System.Collections.Generic.IReadOnlyList.get_Item[@i32]/index index @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:UnionWith ret:@void ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:IntersectWith ret:@void ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:ExceptWith ret:@void ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:SymmetricExceptWith ret:@void ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:IsSubsetOf ret:@bool ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:IsSupersetOf ret:@bool ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:IsProperSubsetOf ret:@bool ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:IsProperSupersetOf ret:@bool ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:Overlaps ret:@bool ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ISet.SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] name:SetEquals ret:@bool ns:- owner:System.Collections.Generic.ISet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.ISet.SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]/other other System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.get_Item[!System.Collections.Generic.IDictionary.TKey] name:get_Item ret:!System.Collections.Generic.IDictionary.TValue ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.Collections!System.Collections.Generic.IDictionary.set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]/key key !System.Collections.Generic.IDictionary.TKey 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue] name:set_Item ret:@void ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:2
+      (par System.Collections!System.Collections.Generic.IDictionary.set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]/key key !System.Collections.Generic.IDictionary.TKey 0 - -)
+      (par System.Collections!System.Collections.Generic.IDictionary.set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]/value value !System.Collections.Generic.IDictionary.TValue 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.get_Keys[] name:get_Keys ret:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.IDictionary.get_Values[] name:get_Values ret:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.IDictionary.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.IDictionary.get_IsReadOnly[] name:get_IsReadOnly ret:@bool ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.IDictionary.Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue] name:Add ret:@void ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.IDictionary.Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]/key key !System.Collections.Generic.IDictionary.TKey 0 - -)
+      (par System.Collections!System.Collections.Generic.IDictionary.Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]/value value !System.Collections.Generic.IDictionary.TValue 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.IDictionary.ContainsKey[!System.Collections.Generic.IDictionary.TKey] name:ContainsKey ret:@bool ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.IDictionary.ContainsKey[!System.Collections.Generic.IDictionary.TKey]/key key !System.Collections.Generic.IDictionary.TKey 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.Contains[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue] name:Contains ret:@bool ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.IDictionary.Contains[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue]/item item System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32] name:CopyTo ret:@void ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.IDictionary.CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32]/array array System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[] 0 - -)
+      (par System.Collections!System.Collections.Generic.IDictionary.CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32]/arrayIndex arrayIndex @i32 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.Remove[!System.Collections.Generic.IDictionary.TKey] name:Remove ret:@bool ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.IDictionary.Remove[!System.Collections.Generic.IDictionary.TKey]/key key !System.Collections.Generic.IDictionary.TKey 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.IDictionary.TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue] name:TryGetValue ret:@bool ns:- owner:System.Collections.Generic.IDictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.IDictionary.TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue]/key key !System.Collections.Generic.IDictionary.TKey 0 - -)
+      (par System.Collections!System.Collections.Generic.IDictionary.TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue]/value value !System.Collections.Generic.IDictionary.TValue 1 out -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.Dictionary[] name:Dictionary ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Dictionary.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.Dictionary.get_Keys[] name:get_Keys ret:!System.Collections.Generic.Dictionary.K[] ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.Dictionary.get_Values[] name:get_Values ret:!System.Collections.Generic.Dictionary.V[] ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K] name:get_Item ret:!System.Collections.Generic.Dictionary.V ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V] name:set_Item ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:2
+      (par System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+      (par System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/value value !System.Collections.Generic.Dictionary.V 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V] name:Add ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+      (par System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/value value !System.Collections.Generic.Dictionary.V 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.ContainsKey[!System.Collections.Generic.Dictionary.K] name:ContainsKey ret:@bool ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.ContainsKey[!System.Collections.Generic.Dictionary.K]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V] name:TryGetValue ret:@bool ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+      (par System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/value value !System.Collections.Generic.Dictionary.V 1 out -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K] name:Remove ret:@bool ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K] name:FindEntry ret:@i32 ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K] name:BucketOf ret:@i32 ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.HashCode[!System.Collections.Generic.Dictionary.K] name:HashCode ret:@i32 ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.HashCode[!System.Collections.Generic.Dictionary.K]/key key !System.Collections.Generic.Dictionary.K 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K] name:SameKey ret:@bool ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]/a a !System.Collections.Generic.Dictionary.K 0 - -)
+      (par System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]/b b !System.Collections.Generic.Dictionary.K 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32] name:Rehash ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen newLen @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.KeyValuePair.get_Key[] name:get_Key ret:!System.Collections.Generic.KeyValuePair.TKey ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.KeyValuePair.get_Value[] name:get_Value ret:!System.Collections.Generic.KeyValuePair.TValue ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue] name:KeyValuePair ret:@void ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]/key key !System.Collections.Generic.KeyValuePair.TKey 0 - -)
+      (par System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]/value value !System.Collections.Generic.KeyValuePair.TValue 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSet.HashSet[] name:HashSet ret:@void ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.HashSet.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.HashSet.get_IsReadOnly[] name:get_IsReadOnly ret:@bool ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.HashSet.Add[!System.Collections.Generic.HashSet.T] name:Add ret:@bool ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.HashSet.Add[!System.Collections.Generic.HashSet.T]/item item !System.Collections.Generic.HashSet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T] name:Contains ret:@bool ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/item item !System.Collections.Generic.HashSet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T] name:Remove ret:@bool ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/item item !System.Collections.Generic.HashSet.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSet.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32] name:CopyTo ret:@void ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/array array !System.Collections.Generic.HashSet.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/arrayIndex arrayIndex @i32 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSet.GetEnumerator[] name:GetEnumerator ret:System.Collections.Generic.HashSetEnumerator`1#!System.Collections.Generic.HashSet.T ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32] name:EnsureCapacity ret:@void ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/cap cap @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T] name:SameItem ret:@bool ns:- owner:System.Collections.Generic.HashSet extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]/a a !System.Collections.Generic.HashSet.T 0 - -)
+      (par System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]/b b !System.Collections.Generic.HashSet.T 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSetEnumerator.HashSetEnumerator[!System.Collections.Generic.HashSetEnumerator.T[],@i32] name:HashSetEnumerator ret:@void ns:- owner:System.Collections.Generic.HashSetEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Collections!System.Collections.Generic.HashSetEnumerator.HashSetEnumerator[!System.Collections.Generic.HashSetEnumerator.T[],@i32]/items items !System.Collections.Generic.HashSetEnumerator.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.HashSetEnumerator.HashSetEnumerator[!System.Collections.Generic.HashSetEnumerator.T[],@i32]/count count @i32 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.HashSetEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.HashSetEnumerator.T ns:- owner:System.Collections.Generic.HashSetEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.HashSetEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.HashSetEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.HashSetEnumerator.Reset[] name:Reset ret:@void ns:- owner:System.Collections.Generic.HashSetEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.List.List[] name:List ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.List.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.List.get_IsReadOnly[] name:get_IsReadOnly ret:@bool ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.List.get_Capacity[] name:get_Capacity ret:@i32 ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.List.get_Item[@i32] name:get_Item ret:!System.Collections.Generic.List.T ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.Collections!System.Collections.Generic.List.get_Item[@i32]/index index @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.set_Item[@i32,!System.Collections.Generic.List.T] name:set_Item ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:2
+      (par System.Collections!System.Collections.Generic.List.set_Item[@i32,!System.Collections.Generic.List.T]/index index @i32 0 - -)
+      (par System.Collections!System.Collections.Generic.List.set_Item[@i32,!System.Collections.Generic.List.T]/value value !System.Collections.Generic.List.T 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.Add[!System.Collections.Generic.List.T] name:Add ret:@bool ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.List.Add[!System.Collections.Generic.List.T]/item item !System.Collections.Generic.List.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T] name:Insert ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/index index @i32 0 - -)
+      (par System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/item item !System.Collections.Generic.List.T 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.RemoveAt[@i32] name:RemoveAt ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/index index @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T] name:IndexOf ret:@i32 ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/item item !System.Collections.Generic.List.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T] name:SameItem ret:@bool ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]/a a !System.Collections.Generic.List.T 0 - -)
+      (par System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]/b b !System.Collections.Generic.List.T 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.Contains[!System.Collections.Generic.List.T] name:Contains ret:@bool ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.List.Contains[!System.Collections.Generic.List.T]/item item !System.Collections.Generic.List.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T] name:Remove ret:@bool ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]/item item !System.Collections.Generic.List.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.ToArray[] name:ToArray ret:!System.Collections.Generic.List.T[] ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32] name:CopyTo ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/array array !System.Collections.Generic.List.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/arrayIndex arrayIndex @i32 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.List.GetEnumerator[] name:GetEnumerator ret:System.Collections.Generic.ListEnumerator`1#!System.Collections.Generic.List.T ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32] name:EnsureCapacity ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/required required @i32 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T] name:ListEnumerator ret:@void ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T]/list list System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.ListEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.ListEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.ListEnumerator.T ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.Queue.Queue[] name:Queue ret:@void ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Queue.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T] name:Enqueue ret:@void ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/item item !System.Collections.Generic.Queue.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Queue.Dequeue[] name:Dequeue ret:!System.Collections.Generic.Queue.T ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Queue.Peek[] name:Peek ret:!System.Collections.Generic.Queue.T ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Queue.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Queue.GetEnumerator[] name:GetEnumerator ret:System.Collections.Generic.QueueEnumerator`1#!System.Collections.Generic.Queue.T ns:- owner:System.Collections.Generic.Queue extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32] name:QueueEnumerator ret:@void ns:- owner:System.Collections.Generic.QueueEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:4
+      (par System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/items items !System.Collections.Generic.QueueEnumerator.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/head head @i32 1 - -)
+      (par System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/count count @i32 2 - -)
+      (par System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/capacity capacity @i32 3 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.QueueEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.QueueEnumerator.T ns:- owner:System.Collections.Generic.QueueEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.QueueEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.QueueEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.QueueEnumerator.Reset[] name:Reset ret:@void ns:- owner:System.Collections.Generic.QueueEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Stack.Stack[] name:Stack ret:@void ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Stack.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T] name:Push ret:@void ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/item item !System.Collections.Generic.Stack.T 0 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.Stack.Pop[] name:Pop ret:!System.Collections.Generic.Stack.T ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Stack.Peek[] name:Peek ret:!System.Collections.Generic.Stack.T ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Stack.Clear[] name:Clear ret:@void ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.Stack.GetEnumerator[] name:GetEnumerator ret:System.Collections.Generic.StackEnumerator`1#!System.Collections.Generic.Stack.T ns:- owner:System.Collections.Generic.Stack extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.StackEnumerator.StackEnumerator[!System.Collections.Generic.StackEnumerator.T[],@i32] name:StackEnumerator ret:@void ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Collections!System.Collections.Generic.StackEnumerator.StackEnumerator[!System.Collections.Generic.StackEnumerator.T[],@i32]/items items !System.Collections.Generic.StackEnumerator.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.StackEnumerator.StackEnumerator[!System.Collections.Generic.StackEnumerator.T[],@i32]/count count @i32 1 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.StackEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.StackEnumerator.T ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Collections!System.Collections.Generic.StackEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.StackEnumerator.Reset[] name:Reset ret:@void ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (loc System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Clear[]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Dictionary[]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/b false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i false @i32)
+    (fn System.Collections!System.Object.GetHashCode[] name:GetHashCode ret:@i32 ns:- owner:System.Object extern:false dll:- cc:winapi builtin:ObjectGetHashCode entry:- charset:- static:false ctor:false acc:false params:0)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newKeys false !System.Collections.Generic.Dictionary.K[])
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newValues false !System.Collections.Generic.Dictionary.V[])
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newNext false @i32[])
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newBuckets false @i32[])
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/b false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/prev false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/lb false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/j false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni false @i32)
+    (fn System.Collections!System.Object.Equals[@any] name:Equals ret:@bool ns:- owner:System.Object extern:false dll:- cc:winapi builtin:ObjectEquals entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Collections!System.Object.Equals[@any]/other other @any 0 - -)
+    )
+    (loc System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/idx false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K]/idx false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/result false !System.Collections.Generic.Dictionary.K[])
+    (loc System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.get_Values[]/copy false !System.Collections.Generic.Dictionary.V[])
+    (loc System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/b false @i32)
+    (loc System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/newItems false !System.Collections.Generic.HashSet.T[])
+    (loc System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/last false @i32)
+    (loc System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/newLen false @i32)
+    (loc System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/grown false !System.Collections.Generic.List.T[])
+    (loc System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]/index false @i32)
+    (loc System.Collections!System.Collections.Generic.List.ToArray[]/copy false !System.Collections.Generic.List.T[])
+    (loc System.Collections!System.Collections.Generic.List.ToArray[]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Queue.Dequeue[]/item false !System.Collections.Generic.Queue.T)
+    (loc System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newCap false @i32)
+    (loc System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newItems false !System.Collections.Generic.Queue.T[])
+    (loc System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i false @i32)
+    (loc System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/tail false @i32)
+    (loc System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/newItems false !System.Collections.Generic.Stack.T[])
+    (loc System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i false @i32)
+  )
+  (bodies
+    (body System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]
+      (block 5
+        (cgoto Label1
+          (membercall @bool ContainsKey System.Collections!System.Collections.Generic.Dictionary.ContainsKey[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key)
+          ) false
+        )
+        (return -)
+        (label Label1)
+        (exprstmt
+          (membercall @void set_Item System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V] 2
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key)
+            (var System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/value)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]
+      (block 5
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b
+          (binary
+            (bop % @i32 @i32)
+            (membercall @i32 HashCode System.Collections!System.Collections.Generic.Dictionary.HashCode[!System.Collections.Generic.Dictionary.K] 1
+              (this System.Collections.Generic.Dictionary)
+              (var System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/key)
+            )
+            (memberacc @i32 Length
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b)
+            (lit @i32 i:0)
+          ) false
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b)
+              (memberacc @i32 Length
+                (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                  (this System.Collections.Generic.Dictionary)
+                )
+              )
+            )
+          )
+        )
+        (label Label1)
+        (return
+          (var System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.Clear[]
+      (block 10
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Clear[]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Clear[]/i)
+            )
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Clear[]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Clear[]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Clear[]/i)
+            (memberacc @i32 Length
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+          ) true
+        )
+        (label break1)
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.ContainsKey[!System.Collections.Generic.Dictionary.K]
+      (block 1
+        (return
+          (binary
+            (bop >= @i32 @i32)
+            (membercall @i32 FindEntry System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K] 1
+              (this System.Collections.Generic.Dictionary)
+              (var System.Collections!System.Collections.Generic.Dictionary.ContainsKey[!System.Collections.Generic.Dictionary.K]/key)
+            )
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.Dictionary[]
+      (block 13
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_keys !System.Collections.Generic.Dictionary.K[] false
+            (arrnew !System.Collections.Generic.Dictionary.K[]
+              (lit @i32 i:16) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_values !System.Collections.Generic.Dictionary.V[] false
+            (arrnew !System.Collections.Generic.Dictionary.V[]
+              (lit @i32 i:16) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_next @i32[] false
+            (arrnew @i32[]
+              (lit @i32 i:16) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_buckets @i32[] false
+            (arrnew @i32[]
+              (lit @i32 i:16) 0
+            )
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Dictionary[]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Dictionary[]/i)
+            )
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Dictionary[]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Dictionary[]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Dictionary[]/i)
+            (lit @i32 i:16)
+          ) true
+        )
+        (label break1)
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]
+      (block 12
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/b
+          (membercall @i32 BucketOf System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/key)
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i
+          (elem @i32
+            (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/b)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (membercall @bool SameKey System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K] 2
+            (this System.Collections.Generic.Dictionary)
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/key)
+          ) false
+        )
+        (return
+          (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K]/i)
+            (lit @i32 i:0)
+          ) true
+        )
+        (label break1)
+        (return
+          (unary
+            (uop - @i32)
+            (lit @i32 i:1)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.HashCode[!System.Collections.Generic.Dictionary.K]
+      (block 1
+        (return
+          (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+            (var System.Collections!System.Collections.Generic.Dictionary.HashCode[!System.Collections.Generic.Dictionary.K]/key)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]
+      (block 32
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newKeys
+          (arrnew !System.Collections.Generic.Dictionary.K[]
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newValues
+          (arrnew !System.Collections.Generic.Dictionary.V[]
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newNext
+          (arrnew @i32[]
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newBuckets
+          (arrnew @i32[]
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newBuckets)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/i)
+            )
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/i)
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen)
+          ) true
+        )
+        (label break1)
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j
+          (lit @i32 i:0)
+        )
+        (goto continue2)
+        (label Label2)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.K
+            (elem !System.Collections.Generic.Dictionary.K
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newKeys)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+            )
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.V
+            (elem !System.Collections.Generic.Dictionary.V
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newValues)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+            )
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+            )
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b
+          (binary
+            (bop % @i32 @i32)
+            (membercall @i32 HashCode System.Collections!System.Collections.Generic.Dictionary.HashCode[!System.Collections.Generic.Dictionary.K] 1
+              (this System.Collections.Generic.Dictionary)
+              (elem !System.Collections.Generic.Dictionary.K
+                (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newKeys)
+                (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+              )
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen)
+          )
+        )
+        (cgoto Label3
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b)
+            (lit @i32 i:0)
+          ) false
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen)
+            )
+          )
+        )
+        (label Label3)
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newNext)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+            )
+            (elem @i32
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newBuckets)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newBuckets)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/b)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label2
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/j)
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+          ) true
+        )
+        (label break2)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_keys !System.Collections.Generic.Dictionary.K[] false
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newKeys)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_values !System.Collections.Generic.Dictionary.V[] false
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newValues)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_next @i32[] false
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newNext)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_buckets @i32[] false
+            (var System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newBuckets)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]
+      (block 58
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/b
+          (membercall @i32 BucketOf System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/key)
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i
+          (elem @i32
+            (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/b)
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/prev
+          (unary
+            (uop - @i32)
+            (lit @i32 i:1)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (membercall @bool SameKey System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K] 2
+            (this System.Collections.Generic.Dictionary)
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/key)
+          ) false
+        )
+        (cgoto Label3
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/prev)
+            (lit @i32 i:0)
+          ) false
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/b)
+            )
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+          )
+        )
+        (goto Label4)
+        (label Label3)
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/prev)
+            )
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+          )
+        )
+        (label Label4)
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (cgoto Label5
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+          ) false
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.K
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.V
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+            )
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/lb
+          (membercall @i32 BucketOf System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/j
+          (elem @i32
+            (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/lb)
+          )
+        )
+        (goto continue2)
+        (label Label6)
+        (cgoto Label7
+          (binary
+            (bop == @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/j)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+          ) false
+        )
+        (goto break2)
+        (label Label7)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/j
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/j)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label6
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/j)
+            (lit @i32 i:0)
+          ) true
+        )
+        (label break2)
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi
+          (lit @i32 i:0)
+        )
+        (goto continue3)
+        (label Label8)
+        (cgoto Label9
+          (binary
+            (bop == @i32 @i32)
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+          ) false
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+          )
+        )
+        (label Label9)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue3)
+        (cgoto Label8
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/bi)
+            (memberacc @i32 Length
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+          ) true
+        )
+        (label break3)
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni
+          (lit @i32 i:0)
+        )
+        (goto continue4)
+        (label Label10)
+        (cgoto Label11
+          (binary
+            (bop == @i32 @i32)
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/last)
+          ) false
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+          )
+        )
+        (label Label11)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue4)
+        (cgoto Label10
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/ni)
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+          ) true
+        )
+        (label break4)
+        (label Label5)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_count @i32 false
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/prev
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.Remove[!System.Collections.Generic.Dictionary.K]/i)
+            (lit @i32 i:0)
+          ) true
+        )
+        (label break1)
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]
+      (block 1
+        (return
+          (binary
+            (bop && @bool @bool)
+            (binary
+              (bop == @i32 @i32)
+              (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+                (var System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]/a)
+              )
+              (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+                (var System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]/b)
+              )
+            )
+            (membercall @bool Equals System.Collections!System.Object.Equals[@any] 1
+              (var System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]/a)
+              (conv @any
+                (var System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K]/b)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]
+      (block 7
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/idx
+          (membercall @i32 FindEntry System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/key)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/idx)
+            (lit @i32 i:0)
+          ) false
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/value
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/idx)
+            )
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+        (label Label1)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.TryGetValue[!System.Collections.Generic.Dictionary.K,out:!System.Collections.Generic.Dictionary.V]/value
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (lit @i32 i:0)
+            )
+          )
+        )
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.get_Count[]
+      (block 1
+        (return
+          (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+            (this System.Collections.Generic.Dictionary)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K]
+      (block 2
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K]/idx
+          (membercall @i32 FindEntry System.Collections!System.Collections.Generic.Dictionary.FindEntry[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K]/key)
+          )
+        )
+        (return
+          (elem !System.Collections.Generic.Dictionary.V
+            (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.get_Item[!System.Collections.Generic.Dictionary.K]/idx)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.get_Keys[]
+      (block 10
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/result
+          (arrnew !System.Collections.Generic.Dictionary.K[]
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            ) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.K
+            (elem !System.Collections.Generic.Dictionary.K
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/result)
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i)
+            )
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (var System.Collections!System.Collections.Generic.Dictionary.get_Keys[]/result)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.get_Values[]
+      (block 10
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.get_Values[]/copy
+          (arrnew !System.Collections.Generic.Dictionary.V[]
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            ) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.V
+            (elem !System.Collections.Generic.Dictionary.V
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Values[]/copy)
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i)
+            )
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.get_Values[]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (var System.Collections!System.Collections.Generic.Dictionary.get_Values[]/copy)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]
+      (block 22
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/b
+          (membercall @i32 BucketOf System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K] 1
+            (this System.Collections.Generic.Dictionary)
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key)
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i
+          (elem @i32
+            (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/b)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (membercall @bool SameKey System.Collections!System.Collections.Generic.Dictionary.SameKey[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.K] 2
+            (this System.Collections.Generic.Dictionary)
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key)
+          ) false
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.V
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i)
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/value)
+          )
+        )
+        (return -)
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/i)
+            (lit @i32 i:0)
+          ) true
+        )
+        (label break1)
+        (cgoto Label3
+          (binary
+            (bop >= @i32 @i32)
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (memberacc @i32 Length
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+          ) false
+        )
+        (exprstmt
+          (membercall @void Rehash System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32] 1
+            (this System.Collections.Generic.Dictionary)
+            (binary
+              (bop * @i32 @i32)
+              (memberacc @i32 Length
+                (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                  (this System.Collections.Generic.Dictionary)
+                )
+              )
+              (lit @i32 i:2)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/b
+            (membercall @i32 BucketOf System.Collections!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K] 1
+              (this System.Collections.Generic.Dictionary)
+              (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key)
+            )
+          )
+        )
+        (label Label3)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.K
+            (elem !System.Collections.Generic.Dictionary.K
+              (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/key)
+          )
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.Dictionary.V
+            (elem !System.Collections.Generic.Dictionary.V
+              (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+            (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/value)
+          )
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _next owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+            )
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/b)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @i32
+            (elem @i32
+              (memberacc @i32[] _buckets owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (var System.Collections!System.Collections.Generic.Dictionary.set_Item[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]/b)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Dictionary) name:_count @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+                (this System.Collections.Generic.Dictionary)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSetEnumerator.HashSetEnumerator[!System.Collections.Generic.HashSetEnumerator.T[],@i32]
+      (block 4
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSetEnumerator) name:_items !System.Collections.Generic.HashSetEnumerator.T[] false
+            (var System.Collections!System.Collections.Generic.HashSetEnumerator.HashSetEnumerator[!System.Collections.Generic.HashSetEnumerator.T[],@i32]/items)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSetEnumerator) name:_count @i32 false
+            (var System.Collections!System.Collections.Generic.HashSetEnumerator.HashSetEnumerator[!System.Collections.Generic.HashSetEnumerator.T[],@i32]/count)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSetEnumerator) name:_index @i32 false
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSetEnumerator.MoveNext[]
+      (block 5
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSetEnumerator) name:_index @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _index owner:System.Collections.Generic.HashSetEnumerator
+                (this System.Collections.Generic.HashSetEnumerator)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _index owner:System.Collections.Generic.HashSetEnumerator
+              (this System.Collections.Generic.HashSetEnumerator)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSetEnumerator
+              (this System.Collections.Generic.HashSetEnumerator)
+            )
+          ) false
+        )
+        (return
+          (lit @bool b:1)
+        )
+        (label Label1)
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSetEnumerator.Reset[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSetEnumerator) name:_index @i32 false
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSetEnumerator.get_Current[]
+      (block 1
+        (return
+          (elem !System.Collections.Generic.HashSetEnumerator.T
+            (memberacc !System.Collections.Generic.HashSetEnumerator.T[] _items owner:System.Collections.Generic.HashSetEnumerator
+              (this System.Collections.Generic.HashSetEnumerator)
+            )
+            (memberacc @i32 _index owner:System.Collections.Generic.HashSetEnumerator
+              (this System.Collections.Generic.HashSetEnumerator)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.Add[!System.Collections.Generic.HashSet.T]
+      (block 9
+        (cgoto Label1
+          (membercall @bool Contains System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T] 1
+            (this System.Collections.Generic.HashSet)
+            (var System.Collections!System.Collections.Generic.HashSet.Add[!System.Collections.Generic.HashSet.T]/item)
+          ) false
+        )
+        (return
+          (lit @bool b:0)
+        )
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop >= @i32 @i32)
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+            (memberacc @i32 Length
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+            )
+          ) false
+        )
+        (exprstmt
+          (membercall @void EnsureCapacity System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32] 1
+            (this System.Collections.Generic.HashSet)
+            (binary
+              (bop * @i32 @i32)
+              (memberacc @i32 Length
+                (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                  (this System.Collections.Generic.HashSet)
+                )
+              )
+              (lit @i32 i:2)
+            )
+          )
+        )
+        (label Label2)
+        (exprstmt
+          (elemassign !System.Collections.Generic.HashSet.T
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+            )
+            (var System.Collections!System.Collections.Generic.HashSet.Add[!System.Collections.Generic.HashSet.T]/item)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSet) name:_count @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.Clear[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSet) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]
+      (block 11
+        (vardecl System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (membercall @bool SameItem System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T] 2
+            (this System.Collections.Generic.HashSet)
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (var System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/i)
+            )
+            (var System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/item)
+          ) false
+        )
+        (return
+          (lit @bool b:1)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.HashSet.Contains[!System.Collections.Generic.HashSet.T]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]
+      (block 12
+        (cgoto Label1
+          (binary
+            (bop == !System.Collections.Generic.HashSet.T[] @null)
+            (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/array)
+            (lit @null n:)
+          ) false
+        )
+        (return -)
+        (label Label1)
+        (vardecl System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label2)
+        (exprstmt
+          (elemassign !System.Collections.Generic.HashSet.T
+            (elem !System.Collections.Generic.HashSet.T
+              (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/array)
+              (binary
+                (bop + @i32 @i32)
+                (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/arrayIndex)
+                (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i)
+              )
+            )
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.HashSet.CopyTo[!System.Collections.Generic.HashSet.T[],@i32]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+          ) true
+        )
+        (label break1)
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]
+      (block 11
+        (vardecl System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/newItems
+          (arrnew !System.Collections.Generic.HashSet.T[]
+            (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/cap) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.HashSet.T
+            (elem !System.Collections.Generic.HashSet.T
+              (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/newItems)
+              (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i)
+            )
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+          ) true
+        )
+        (label break1)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSet) name:_items !System.Collections.Generic.HashSet.T[] false
+            (var System.Collections!System.Collections.Generic.HashSet.EnsureCapacity[@i32]/newItems)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.GetEnumerator[]
+      (block 1
+        (return
+          (objnew System.Collections.Generic.HashSetEnumerator`1#!System.Collections.Generic.HashSet.T 2
+            (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.HashSet[]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSet) name:_items !System.Collections.Generic.HashSet.T[] false
+            (arrnew !System.Collections.Generic.HashSet.T[]
+              (lit @i32 i:4) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSet) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]
+      (block 16
+        (vardecl System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (membercall @bool SameItem System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T] 2
+            (this System.Collections.Generic.HashSet)
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i)
+            )
+            (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/item)
+          ) false
+        )
+        (vardecl System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/last
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (cgoto Label3
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i)
+            (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/last)
+          ) false
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.HashSet.T
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i)
+            )
+            (elem !System.Collections.Generic.HashSet.T
+              (memberacc !System.Collections.Generic.HashSet.T[] _items owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/last)
+            )
+          )
+        )
+        (label Label3)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.HashSet) name:_count @i32 false
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+                (this System.Collections.Generic.HashSet)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.HashSet.Remove[!System.Collections.Generic.HashSet.T]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+              (this System.Collections.Generic.HashSet)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]
+      (block 1
+        (return
+          (binary
+            (bop && @bool @bool)
+            (binary
+              (bop == @i32 @i32)
+              (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+                (var System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]/a)
+              )
+              (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+                (var System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]/b)
+              )
+            )
+            (membercall @bool Equals System.Collections!System.Object.Equals[@any] 1
+              (var System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]/a)
+              (conv @any
+                (var System.Collections!System.Collections.Generic.HashSet.SameItem[!System.Collections.Generic.HashSet.T,!System.Collections.Generic.HashSet.T]/b)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.get_Count[]
+      (block 1
+        (return
+          (memberacc @i32 _count owner:System.Collections.Generic.HashSet
+            (this System.Collections.Generic.HashSet)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.HashSet.get_IsReadOnly[]
+      (block 1
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.KeyValuePair) name:_key !System.Collections.Generic.KeyValuePair.TKey false
+            (var System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]/key)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.KeyValuePair) name:_value !System.Collections.Generic.KeyValuePair.TValue false
+            (var System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]/value)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.KeyValuePair.get_Key[]
+      (block 1
+        (return
+          (memberacc !System.Collections.Generic.KeyValuePair.TKey _key owner:System.Collections.Generic.KeyValuePair
+            (this System.Collections.Generic.KeyValuePair)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.KeyValuePair.get_Value[]
+      (block 1
+        (return
+          (memberacc !System.Collections.Generic.KeyValuePair.TValue _value owner:System.Collections.Generic.KeyValuePair
+            (this System.Collections.Generic.KeyValuePair)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.ListEnumerator) name:_list System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T false
+            (var System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T]/list)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.ListEnumerator) name:_index @i32 false
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.ListEnumerator.MoveNext[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.ListEnumerator) name:_index @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _index owner:System.Collections.Generic.ListEnumerator
+                (this System.Collections.Generic.ListEnumerator)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _index owner:System.Collections.Generic.ListEnumerator
+              (this System.Collections.Generic.ListEnumerator)
+            )
+            (membercall @i32 get_Count System.Collections!System.Collections.Generic.System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T.get_Count[] 0
+              (memberacc System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T _list owner:System.Collections.Generic.ListEnumerator
+                (this System.Collections.Generic.ListEnumerator)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.ListEnumerator.get_Current[]
+      (block 1
+        (return
+          (membercall !System.Collections.Generic.ListEnumerator.T get_Item System.Collections!System.Collections.Generic.System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T.get_Item[@i32] 1
+            (memberacc System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T _list owner:System.Collections.Generic.ListEnumerator
+              (this System.Collections.Generic.ListEnumerator)
+            )
+            (memberacc @i32 _index owner:System.Collections.Generic.ListEnumerator
+              (this System.Collections.Generic.ListEnumerator)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.Add[!System.Collections.Generic.List.T]
+      (block 4
+        (exprstmt
+          (membercall @void EnsureCapacity System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32] 1
+            (this System.Collections.Generic.List)
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+            )
+            (var System.Collections!System.Collections.Generic.List.Add[!System.Collections.Generic.List.T]/item)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_count @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.Clear[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.Contains[!System.Collections.Generic.List.T]
+      (block 1
+        (return
+          (binary
+            (bop >= @i32 @i32)
+            (membercall @i32 IndexOf System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T] 1
+              (this System.Collections.Generic.List)
+              (var System.Collections!System.Collections.Generic.List.Contains[!System.Collections.Generic.List.T]/item)
+            )
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]
+      (block 9
+        (vardecl System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (var System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/array)
+              (binary
+                (bop + @i32 @i32)
+                (var System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/arrayIndex)
+                (var System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i)
+              )
+            )
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.CopyTo[!System.Collections.Generic.List.T[],@i32]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+          ) true
+        )
+        (label break1)
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]
+      (block 21
+        (cgoto Label1
+          (binary
+            (bop <= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/required)
+            (memberacc @i32 Length
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+            )
+          ) false
+        )
+        (return -)
+        (label Label1)
+        (vardecl System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/newLen
+          (binary
+            (bop * @i32 @i32)
+            (memberacc @i32 Length
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+            )
+            (lit @i32 i:2)
+          )
+        )
+        (goto continue1)
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/newLen
+            (binary
+              (bop * @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/newLen)
+              (lit @i32 i:2)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/newLen)
+            (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/required)
+          ) true
+        )
+        (label break1)
+        (vardecl System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/grown
+          (arrnew !System.Collections.Generic.List.T[]
+            (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/newLen) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i
+          (lit @i32 i:0)
+        )
+        (goto continue2)
+        (label Label3)
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/grown)
+              (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i)
+            )
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label3
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+          ) true
+        )
+        (label break2)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_items !System.Collections.Generic.List.T[] false
+            (var System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/grown)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.GetEnumerator[]
+      (block 1
+        (return
+          (objnew System.Collections.Generic.ListEnumerator`1#!System.Collections.Generic.List.T 1
+            (this System.Collections.Generic.List)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]
+      (block 11
+        (vardecl System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (cgoto Label2
+          (membercall @bool SameItem System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T] 2
+            (this System.Collections.Generic.List)
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i)
+            )
+            (var System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/item)
+          ) false
+        )
+        (return
+          (var System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i)
+        )
+        (label Label2)
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (unary
+            (uop - @i32)
+            (lit @i32 i:1)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]
+      (block 12
+        (exprstmt
+          (membercall @void EnsureCapacity System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32] 1
+            (this System.Collections.Generic.List)
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i
+          (memberacc @i32 _count owner:System.Collections.Generic.List
+            (this System.Collections.Generic.List)
+          )
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i)
+            )
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (binary
+                (bop - @i32 @i32)
+                (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i)
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i
+            (binary
+              (bop - @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop > @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/i)
+            (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/index)
+          ) true
+        )
+        (label break1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/index)
+            )
+            (var System.Collections!System.Collections.Generic.List.Insert[@i32,!System.Collections.Generic.List.T]/item)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_count @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.List[]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_items !System.Collections.Generic.List.T[] false
+            (arrnew !System.Collections.Generic.List.T[]
+              (lit @i32 i:4) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.RemoveAt[@i32]
+      (block 10
+        (vardecl System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i
+          (var System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/index)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i)
+            )
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (binary
+                (bop + @i32 @i32)
+                (var System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i)
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.RemoveAt[@i32]/i)
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (lit @i32 i:1)
+            )
+          ) true
+        )
+        (label break1)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.List) name:_count @i32 false
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]
+      (block 6
+        (vardecl System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]/index
+          (membercall @i32 IndexOf System.Collections!System.Collections.Generic.List.IndexOf[!System.Collections.Generic.List.T] 1
+            (this System.Collections.Generic.List)
+            (var System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]/item)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]/index)
+            (lit @i32 i:0)
+          ) false
+        )
+        (exprstmt
+          (membercall @void RemoveAt System.Collections!System.Collections.Generic.List.RemoveAt[@i32] 1
+            (this System.Collections.Generic.List)
+            (var System.Collections!System.Collections.Generic.List.Remove[!System.Collections.Generic.List.T]/index)
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+        (label Label1)
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]
+      (block 1
+        (return
+          (binary
+            (bop && @bool @bool)
+            (binary
+              (bop == @i32 @i32)
+              (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+                (var System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]/a)
+              )
+              (membercall @i32 GetHashCode System.Collections!System.Object.GetHashCode[] 0
+                (var System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]/b)
+              )
+            )
+            (membercall @bool Equals System.Collections!System.Object.Equals[@any] 1
+              (var System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]/a)
+              (conv @any
+                (var System.Collections!System.Collections.Generic.List.SameItem[!System.Collections.Generic.List.T,!System.Collections.Generic.List.T]/b)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.ToArray[]
+      (block 10
+        (vardecl System.Collections!System.Collections.Generic.List.ToArray[]/copy
+          (arrnew !System.Collections.Generic.List.T[]
+            (memberacc @i32 _count owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            ) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.List.ToArray[]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (var System.Collections!System.Collections.Generic.List.ToArray[]/copy)
+              (var System.Collections!System.Collections.Generic.List.ToArray[]/i)
+            )
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.ToArray[]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.List.ToArray[]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.List.ToArray[]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label1
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.List.ToArray[]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+          ) true
+        )
+        (label break1)
+        (return
+          (var System.Collections!System.Collections.Generic.List.ToArray[]/copy)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.get_Capacity[]
+      (block 1
+        (return
+          (memberacc @i32 Length
+            (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.get_Count[]
+      (block 1
+        (return
+          (memberacc @i32 _count owner:System.Collections.Generic.List
+            (this System.Collections.Generic.List)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.get_IsReadOnly[]
+      (block 1
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.get_Item[@i32]
+      (block 1
+        (return
+          (elem !System.Collections.Generic.List.T
+            (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+            (var System.Collections!System.Collections.Generic.List.get_Item[@i32]/index)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.List.set_Item[@i32,!System.Collections.Generic.List.T]
+      (block 2
+        (exprstmt
+          (elemassign !System.Collections.Generic.List.T
+            (elem !System.Collections.Generic.List.T
+              (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+                (this System.Collections.Generic.List)
+              )
+              (var System.Collections!System.Collections.Generic.List.set_Item[@i32,!System.Collections.Generic.List.T]/index)
+            )
+            (var System.Collections!System.Collections.Generic.List.set_Item[@i32,!System.Collections.Generic.List.T]/value)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.QueueEnumerator.MoveNext[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_index @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _index owner:System.Collections.Generic.QueueEnumerator
+                (this System.Collections.Generic.QueueEnumerator)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _index owner:System.Collections.Generic.QueueEnumerator
+              (this System.Collections.Generic.QueueEnumerator)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.QueueEnumerator
+              (this System.Collections.Generic.QueueEnumerator)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]
+      (block 6
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_items !System.Collections.Generic.QueueEnumerator.T[] false
+            (var System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/items)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_head @i32 false
+            (var System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/head)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_count @i32 false
+            (var System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/count)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_capacity @i32 false
+            (var System.Collections!System.Collections.Generic.QueueEnumerator.QueueEnumerator[!System.Collections.Generic.QueueEnumerator.T[],@i32,@i32,@i32]/capacity)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_index @i32 false
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.QueueEnumerator.Reset[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.QueueEnumerator) name:_index @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.QueueEnumerator.get_Current[]
+      (block 1
+        (return
+          (elem !System.Collections.Generic.QueueEnumerator.T
+            (memberacc !System.Collections.Generic.QueueEnumerator.T[] _items owner:System.Collections.Generic.QueueEnumerator
+              (this System.Collections.Generic.QueueEnumerator)
+            )
+            (binary
+              (bop % @i32 @i32)
+              (binary
+                (bop + @i32 @i32)
+                (memberacc @i32 _head owner:System.Collections.Generic.QueueEnumerator
+                  (this System.Collections.Generic.QueueEnumerator)
+                )
+                (memberacc @i32 _index owner:System.Collections.Generic.QueueEnumerator
+                  (this System.Collections.Generic.QueueEnumerator)
+                )
+              )
+              (memberacc @i32 _capacity owner:System.Collections.Generic.QueueEnumerator
+                (this System.Collections.Generic.QueueEnumerator)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.Clear[]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_head @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.Dequeue[]
+      (block 4
+        (vardecl System.Collections!System.Collections.Generic.Queue.Dequeue[]/item
+          (elem !System.Collections.Generic.Queue.T
+            (memberacc !System.Collections.Generic.Queue.T[] _items owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (memberacc @i32 _head owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_head @i32 false
+            (binary
+              (bop % @i32 @i32)
+              (binary
+                (bop + @i32 @i32)
+                (memberacc @i32 _head owner:System.Collections.Generic.Queue
+                  (this System.Collections.Generic.Queue)
+                )
+                (lit @i32 i:1)
+              )
+              (memberacc @i32 _capacity owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_count @i32 false
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (var System.Collections!System.Collections.Generic.Queue.Dequeue[]/item)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]
+      (block 19
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (memberacc @i32 _count owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (memberacc @i32 _capacity owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+          ) false
+        )
+        (vardecl System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newCap
+          (binary
+            (bop * @i32 @i32)
+            (memberacc @i32 _capacity owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (lit @i32 i:2)
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newItems
+          (arrnew !System.Collections.Generic.Queue.T[]
+            (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newCap) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label2)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Queue.T
+            (elem !System.Collections.Generic.Queue.T
+              (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newItems)
+              (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i)
+            )
+            (elem !System.Collections.Generic.Queue.T
+              (memberacc !System.Collections.Generic.Queue.T[] _items owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+              (binary
+                (bop % @i32 @i32)
+                (binary
+                  (bop + @i32 @i32)
+                  (memberacc @i32 _head owner:System.Collections.Generic.Queue
+                    (this System.Collections.Generic.Queue)
+                  )
+                  (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i)
+                )
+                (memberacc @i32 _capacity owner:System.Collections.Generic.Queue
+                  (this System.Collections.Generic.Queue)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+          ) true
+        )
+        (label break1)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_items !System.Collections.Generic.Queue.T[] false
+            (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newItems)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_capacity @i32 false
+            (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/newCap)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_head @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (label Label1)
+        (vardecl System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/tail
+          (binary
+            (bop % @i32 @i32)
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _head owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+            )
+            (memberacc @i32 _capacity owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign !System.Collections.Generic.Queue.T
+            (elem !System.Collections.Generic.Queue.T
+              (memberacc !System.Collections.Generic.Queue.T[] _items owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+              (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/tail)
+            )
+            (var System.Collections!System.Collections.Generic.Queue.Enqueue[!System.Collections.Generic.Queue.T]/item)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_count @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Queue
+                (this System.Collections.Generic.Queue)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.GetEnumerator[]
+      (block 1
+        (return
+          (objnew System.Collections.Generic.QueueEnumerator`1#!System.Collections.Generic.Queue.T 4
+            (memberacc !System.Collections.Generic.Queue.T[] _items owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (memberacc @i32 _head owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (memberacc @i32 _capacity owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.Peek[]
+      (block 1
+        (return
+          (elem !System.Collections.Generic.Queue.T
+            (memberacc !System.Collections.Generic.Queue.T[] _items owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+            (memberacc @i32 _head owner:System.Collections.Generic.Queue
+              (this System.Collections.Generic.Queue)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.Queue[]
+      (block 5
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_capacity @i32 false
+            (lit @i32 i:4)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_items !System.Collections.Generic.Queue.T[] false
+            (arrnew !System.Collections.Generic.Queue.T[]
+              (lit @i32 i:4) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Queue) name:_head @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Queue.get_Count[]
+      (block 1
+        (return
+          (memberacc @i32 _count owner:System.Collections.Generic.Queue
+            (this System.Collections.Generic.Queue)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.StackEnumerator.MoveNext[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.StackEnumerator) name:_index @i32 false
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _index owner:System.Collections.Generic.StackEnumerator
+                (this System.Collections.Generic.StackEnumerator)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (binary
+            (bop >= @i32 @i32)
+            (memberacc @i32 _index owner:System.Collections.Generic.StackEnumerator
+              (this System.Collections.Generic.StackEnumerator)
+            )
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.StackEnumerator.Reset[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.StackEnumerator) name:_index @i32 false
+            (memberacc @i32 _count owner:System.Collections.Generic.StackEnumerator
+              (this System.Collections.Generic.StackEnumerator)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.StackEnumerator.StackEnumerator[!System.Collections.Generic.StackEnumerator.T[],@i32]
+      (block 4
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.StackEnumerator) name:_items !System.Collections.Generic.StackEnumerator.T[] false
+            (var System.Collections!System.Collections.Generic.StackEnumerator.StackEnumerator[!System.Collections.Generic.StackEnumerator.T[],@i32]/items)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.StackEnumerator) name:_count @i32 false
+            (var System.Collections!System.Collections.Generic.StackEnumerator.StackEnumerator[!System.Collections.Generic.StackEnumerator.T[],@i32]/count)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.StackEnumerator) name:_index @i32 false
+            (memberacc @i32 _count owner:System.Collections.Generic.StackEnumerator
+              (this System.Collections.Generic.StackEnumerator)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.StackEnumerator.get_Current[]
+      (block 1
+        (return
+          (elem !System.Collections.Generic.StackEnumerator.T
+            (memberacc !System.Collections.Generic.StackEnumerator.T[] _items owner:System.Collections.Generic.StackEnumerator
+              (this System.Collections.Generic.StackEnumerator)
+            )
+            (memberacc @i32 _index owner:System.Collections.Generic.StackEnumerator
+              (this System.Collections.Generic.StackEnumerator)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.Clear[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Stack) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.GetEnumerator[]
+      (block 1
+        (return
+          (objnew System.Collections.Generic.StackEnumerator`1#!System.Collections.Generic.Stack.T 2
+            (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.Peek[]
+      (block 1
+        (return
+          (elem !System.Collections.Generic.Stack.T
+            (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.Pop[]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Stack) name:_count @i32 false
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return
+          (elem !System.Collections.Generic.Stack.T
+            (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]
+      (block 15
+        (cgoto Label1
+          (binary
+            (bop >= @i32 @i32)
+            (memberacc @i32 _count owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+            (memberacc @i32 Length
+              (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+            )
+          ) false
+        )
+        (vardecl System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/newItems
+          (arrnew !System.Collections.Generic.Stack.T[]
+            (binary
+              (bop * @i32 @i32)
+              (memberacc @i32 Length
+                (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+                  (this System.Collections.Generic.Stack)
+                )
+              )
+              (lit @i32 i:2)
+            ) 0
+          )
+        )
+        (vardecl System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i
+          (lit @i32 i:0)
+        )
+        (goto continue1)
+        (label Label2)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Stack.T
+            (elem !System.Collections.Generic.Stack.T
+              (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/newItems)
+              (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i)
+            )
+            (elem !System.Collections.Generic.Stack.T
+              (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+              (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i
+            (binary
+              (bop + @i32 @i32)
+              (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop < @i32 @i32)
+            (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i)
+            (memberacc @i32 _count owner:System.Collections.Generic.Stack
+              (this System.Collections.Generic.Stack)
+            )
+          ) true
+        )
+        (label break1)
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Stack) name:_items !System.Collections.Generic.Stack.T[] false
+            (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/newItems)
+          )
+        )
+        (label Label1)
+        (exprstmt
+          (elemassign !System.Collections.Generic.Stack.T
+            (elem !System.Collections.Generic.Stack.T
+              (memberacc !System.Collections.Generic.Stack.T[] _items owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+              (memberacc @i32 _count owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+            )
+            (var System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/item)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Stack) name:_count @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _count owner:System.Collections.Generic.Stack
+                (this System.Collections.Generic.Stack)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.Stack[]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Stack) name:_items !System.Collections.Generic.Stack.T[] false
+            (arrnew !System.Collections.Generic.Stack.T[]
+              (lit @i32 i:4) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.Stack) name:_count @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (return -)
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Stack.get_Count[]
+      (block 1
+        (return
+          (memberacc @i32 _count owner:System.Collections.Generic.Stack
+            (this System.Collections.Generic.Stack)
+          )
+        )
+      )
+    )
+  )
+  (manifest
+    (requires any)
+    (ns System.Collections.Generic)
+  )
+)
+(checksum sha256:ff3ed7887b383fce58c3439e934cddcc19189ff71562d3052476f50515216087)

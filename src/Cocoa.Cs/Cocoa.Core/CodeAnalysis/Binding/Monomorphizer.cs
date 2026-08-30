@@ -29,6 +29,9 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
             var helperBinder = new Binder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            // 6e 跨库里程碑：源码泛型定义先注册（同名占位，cod 后注册静默跳过）——保证源内联集合类
+            // 优先于 System.Collections.cod 同名 gcls。
+            helperBinder.RegisterSourceGenericDefinitionsForSeed(globalScope);
             helperBinder.RegisterCodGenericDefinitionsForSeed(codLibraries);
             var seeded = new HashSet<InstantiatedTypeSymbol>();
             var methodSeeds = new List<(FunctionSymbol Instantiated, FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)>();
@@ -173,6 +176,13 @@ namespace Cocoa.CodeAnalysis.Binding
                         continue;
                     }
 
+                    // 6e 跨库里程碑：instantiated.Methods 与 definition.Methods 可能异序（Populate 先方法后
+                    // 属性访问器，与 cod 读侧 fn 条目序不同）——按「方法名 + 元数 + 类」重定位定义方法，
+                    // 避免索引错配（cod=get_Count 落到 inst=Add）。
+                    definitionMethod = FindDefinitionMethod(definition, instantiatedMethod)
+                        ?? definition.Methods.FirstOrDefault(m => SameMethodSignature(m, instantiatedMethod))
+                        ?? definitionMethod;
+
                     // 6e-G7 S5/S6：cod 来源定义（无语法树）→ 用库携带的开放绑定体做替换展开
                     if (definition.Declaration == null)
                     {
@@ -210,19 +220,36 @@ namespace Cocoa.CodeAnalysis.Binding
                     if (definitionProperty.Getter != null && instantiatedProperty.Getter != null &&
                         !instantiatedProperty.Getter.IsExtern && !instantiatedProperty.Getter.IsAbstract)
                     {
-                        var (getterBody, getterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                            isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, dialect, typeArgumentsByName);
-                        functionBodies[instantiatedProperty.Getter] = getterBody;
-                        diagnostics.AddRange(getterDiagnostics);
+                        // 6e 跨库里程碑：cod 库属性访问器（getter 无 Declaration/Syntax）→ 与 177-194 同款捷径：
+                        // 用库携带的开放绑定体做替换展开，避免 BuildFunctionBodyForMonomorphization 在 null 语法上 NRE。
+                        if (TrySubstituteCodAccessor(definitionProperty.Getter, definition, instantiated, instantiatedProperty.Getter, codLibraries, out var codGetterBody))
+                        {
+                            functionBodies[instantiatedProperty.Getter] = codGetterBody;
+                        }
+                        else
+                        {
+                            var (getterBody, getterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
+                                isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, dialect, typeArgumentsByName);
+                            functionBodies[instantiatedProperty.Getter] = getterBody;
+                            diagnostics.AddRange(getterDiagnostics);
+                        }
                     }
 
                     if (definitionProperty.Setter != null && instantiatedProperty.Setter != null &&
                         !instantiatedProperty.Setter.IsExtern && !instantiatedProperty.Setter.IsAbstract)
                     {
-                        var (setterBody, setterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                            isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, dialect, typeArgumentsByName);
-                        functionBodies[instantiatedProperty.Setter] = setterBody;
-                        diagnostics.AddRange(setterDiagnostics);
+                        // 同上：cod 库 setter 开放体替换捷径
+                        if (TrySubstituteCodAccessor(definitionProperty.Setter, definition, instantiated, instantiatedProperty.Setter, codLibraries, out var codSetterBody))
+                        {
+                            functionBodies[instantiatedProperty.Setter] = codSetterBody;
+                        }
+                        else
+                        {
+                            var (setterBody, setterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
+                                isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, dialect, typeArgumentsByName);
+                            functionBodies[instantiatedProperty.Setter] = setterBody;
+                            diagnostics.AddRange(setterDiagnostics);
+                        }
                     }
                 }
             }
@@ -237,9 +264,76 @@ namespace Cocoa.CodeAnalysis.Binding
             return (builder.ToImmutable(), genericDefinitions);
         }
 
+        /// <summary>
+        /// 6e 跨库里程碑：cod 库属性访问器（getter/setter，无 Declaration/Syntax）开放体替换捷径——
+        /// 从库携带的 Bodies 取定义访问器开放体，经 BoundTreeSubstituter 替换为实例化访问器体。
+        /// 与 176-194 方法分支同款逻辑；cod 来源定义走捷径避免 BuildFunctionBodyForMonomorphization NRE。
+        /// </summary>
+        private static bool TrySubstituteCodAccessor(
+            FunctionSymbol definitionAccessor,
+            NamedTypeSymbol definition,
+            InstantiatedTypeSymbol instantiated,
+            FunctionSymbol instantiatedAccessor,
+            ImmutableArray<CodProgram> codLibraries,
+            out BoundBlockStatement body)
+        {
+            body = null!;
+
+            // cod 来源定义（无语法树）
+            if (definitionAccessor.Declaration != null)
+            {
+                return false;
+            }
+
+            foreach (var library in codLibraries)
+            {
+                if (library.Bodies.TryGetValue(definitionAccessor, out var openBody))
+                {
+                    body = BoundTreeSubstituter.SubstituteMethodBody(openBody, definition, instantiated, instantiatedAccessor, definitionAccessor);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static ImmutableArray<NamedTypeSymbol> FilterDeclaredClasses(BoundGlobalScope globalScope)
         {
             return globalScope.Classes.Where(c => !c.IsGenericDefinition).ToImmutableArray();
+        }
+
+        /// <summary>
+        /// 6e 跨库里程碑：在定义类方法集中定位实例化方法的对应定义（名称 + 元数匹配；
+        /// 构造器按身份匹配——实例化构造器名被 Populate 改为 mangle 名）。索引错配兜底。
+        /// </summary>
+        private static FunctionSymbol? FindDefinitionMethod(NamedTypeSymbol definition, FunctionSymbol instantiatedMethod)
+        {
+            if (instantiatedMethod.IsConstructor)
+            {
+                foreach (var candidate in definition.Methods)
+                {
+                    if (candidate.IsConstructor)
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            foreach (var candidate in definition.Methods)
+            {
+                if (candidate.Name == instantiatedMethod.Name &&
+                    candidate.Parameters.Length == instantiatedMethod.Parameters.Length)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool SameMethodSignature(FunctionSymbol a, FunctionSymbol b)
+        {
+            return a.Name == b.Name && a.Parameters.Length == b.Parameters.Length;
         }
 
         /// <summary>定义类型参数名 → 实例化实参。实参若仍为类型参数（嵌套泛型上下文）暂不支持重绑，报明确诊断。</summary>

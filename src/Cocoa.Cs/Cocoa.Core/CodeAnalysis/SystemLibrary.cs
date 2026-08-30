@@ -18,7 +18,8 @@ namespace Cocoa.CodeAnalysis
     /// 多程序集模型（仿 .NET 共享框架）：核心实现集中单一 `System.Core.cod`（Object/String/Math/
     /// Console 等，对应 C# System.Private.CoreLib）；未来大功能模块（System.Net.cod / System.Json.cod，
     /// 对应 C# System.Net.Http / System.Text.Json）作为独立实现程序集放入目录即自动加载。
-    /// 约束：库体内禁止跨 `.cod` 调用（各模块须自包含；跨库符号调和为独立里程碑）。
+    /// 6e 跨库里程碑：各模块可跨库调用——加载按依赖序（System.Core 首位），后续库以已加载库为
+    /// external 合并符号表（复用实例），FnKey 带库维度前缀消歧。
     /// </summary>
     internal static class SystemLibrary
     {
@@ -49,7 +50,7 @@ namespace Cocoa.CodeAnalysis
             // COCOA_STDLIB 指向单个文件 → 仅加载该文件（Step 2 语义向后兼容）
             if (!string.IsNullOrEmpty(env) && File.Exists(env))
             {
-                if (TryLoad(env, out var single))
+                if (TryLoad(env, ImmutableArray<CodProgram>.Empty, out var single))
                 {
                     builder.Add(single);
                 }
@@ -73,26 +74,29 @@ namespace Cocoa.CodeAnalysis
                 files.Insert(0, core);
             }
 
+            // 6e 跨库里程碑：累加式加载——已加载库作为 external 传给后续文件（跨库符号合并复用实例）
+            var loaded = new List<CodProgram>();
             foreach (var file in files)
             {
-                if (TryLoad(file, out var program))
+                if (TryLoad(file, loaded.ToImmutableArray(), out var program))
                 {
                     // 程序集名 = 库名 + .Managed 后缀（动态链接 AssemblyRef 与按需生成部署依据，阶段 A）
                     var baseName = Path.GetFileNameWithoutExtension(file);
                     program.Name = Cod.CodAssemblyNaming.ManagedAssemblyName(baseName);
                     program.SourcePath = Path.GetFullPath(file);
                     builder.Add(program);
+                    loaded.Add(program);
                 }
             }
 
             return builder.ToImmutable();
         }
 
-        private static bool TryLoad(string path, out CodProgram program)
+        private static bool TryLoad(string path, ImmutableArray<CodProgram> external, out CodProgram program)
         {
             try
             {
-                program = CodSerializer.Load(path);
+                program = CodSerializer.Load(path, external);
                 return true;
             }
             catch (Exception)

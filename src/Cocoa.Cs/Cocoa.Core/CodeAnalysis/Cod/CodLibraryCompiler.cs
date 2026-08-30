@@ -22,13 +22,26 @@ namespace Cocoa.CodeAnalysis.Cod
         /// <summary>从内存中的 CodProgram 发射托管库 dll。</summary>
         public static ImmutableArray<Diagnostic> EmitManagedDll(CodProgram cod, string dllPath, IlTarget target)
         {
+            // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
+            // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。
+            var functionsBuilder = ImmutableDictionary.CreateBuilder<CodeAnalysis.Symbols.FunctionSymbol, BoundBlockStatement>();
+            foreach (var pair in cod.Bodies)
+            {
+                if (pair.Key.ContainingClass?.IsGenericDefinition == true || pair.Key.IsGenericMethod)
+                {
+                    continue;
+                }
+
+                functionsBuilder.Add(pair);
+            }
+
             // 无入口的纯库程序集：Main/Script 均空，emitLibrary 走库 PE 形态
             var program = new BoundProgram(
                 previous: null,
                 diagnostics: ImmutableArray<Diagnostic>.Empty,
                 mainFunction: null,
                 scriptFunction: null,
-                functions: cod.Bodies,
+                functions: functionsBuilder.ToImmutable(),
                 classes: cod.Classes);
 
             var moduleName = Path.GetFileNameWithoutExtension(dllPath);

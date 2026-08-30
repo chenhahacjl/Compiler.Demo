@@ -28,7 +28,17 @@ namespace Cocoa.CodeAnalysis.Cod
     /// </summary>
     internal static partial class CodSerializer
     {
+        /// <summary>读 `.cod` 文本（兼容入口：无库名/无 external，跨库符号解析留空）。</summary>
         public static CodProgram Read(string text)
+        {
+            return Read(text, moduleName: "", external: ImmutableArray<CodProgram>.Empty);
+        }
+
+        /// <summary>
+        /// 读 `.cod` 文本。`moduleName` 为库名（读入符号的 ContainingLibrary 回填，FnKey 库前缀来源）；
+        /// `external` 为已加载的依赖库（System.Core 先行），供跨库符号合并解析（复用实例，非复制）。
+        /// </summary>
+        public static CodProgram Read(string text, string moduleName, ImmutableArray<CodProgram> external)
         {
             // 瀹屾暣鎬ф牎楠屽墠缃細缂哄け鎴栦笉鍖归厤鍗虫嫆杞斤紙闃茶鏀?鎹熷潖锛涜搫鎰忎吉閫犻渶绛惧悕鏈哄埗锛屼笉鍦?v1 鑼冨洿锛?
             var marker = "(checksum " + ChecksumTag;
@@ -68,7 +78,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 throw new InvalidDataException($".cod version {version} is not supported (expected {Version}); rebuild the library");
             }
 
-            var context = new ReadContext();
+            var context = new ReadContext(moduleName, external);
             var bodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var requires = CodRequirement.Any;
             var platforms = ImmutableArray.CreateBuilder<string>();
@@ -121,7 +131,13 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
             }
 
-            return new CodProgram(
+            // 6e 跨库里程碑：库名回填——优先取传入 moduleName；兼容入口（空）从本库 fn 键前缀恢复
+            // （保证 read→write round-trip 稳定，重写时 RegisterFunction 跨库过滤不误伤本库函数）。
+            var programName = moduleName.Length > 0
+                ? moduleName
+                : RecoverLibraryFromKeys(context.LocalFunctionKeys.Keys);
+
+            var program = new CodProgram(
                 context.Functions.ToImmutable(),
                 context.Globals.ToImmutable(),
                 context.Enums.ToImmutable(),
@@ -133,20 +149,82 @@ namespace Cocoa.CodeAnalysis.Cod
                 imports.ToImmutable(),
                 codRefs.ToImmutable(),
                 namespaces.ToImmutable(),
-                context.GenericDefinitions.ToImmutable());
+                context.GenericDefinitions.ToImmutable(),
+                functionKeys: context.LocalFunctionKeys.ToImmutableDictionary(),
+                typesByName: context.LocalTypesByName.ToImmutableDictionary())
+            {
+                Name = programName,
+            };
+
+            return program;
+        }
+
+        /// <summary>6e 跨库里程碑：从本库 fn 键集合恢复库名（首键前缀 `库名!`；无则空）。</summary>
+        private static string RecoverLibraryFromKeys(IEnumerable<string> keys)
+        {
+            foreach (var key in keys)
+            {
+                var bangIndex = key.IndexOf('!');
+                if (bangIndex > 0 && key.IndexOf('[') > bangIndex)
+                {
+                    return key.Substring(0, bangIndex);
+                }
+            }
+
+            return "";
         }
 
         /// <summary>璇讳晶鍏变韩鐘舵€侊細鎸夊悕瀛?閿储寮曠殑绗﹀彿琛?+ 绋嬪簭闆嗙鍙锋竻鍗曘€?/summary>
         private sealed class ReadContext
         {
+            /// <summary>当前库名（读入符号的 ContainingLibrary 回填；FnKey 库前缀）。6e 跨库里程碑。</summary>
+            public string ModuleName { get; }
+
+            /// <summary>外部队列：已加载的依赖库（System.Core 先行），符号经 FunctionKeys/TypesByName 合并复用实例。</summary>
+            public ImmutableArray<CodProgram> ExternalLibraries { get; }
+
+            public ReadContext(string moduleName, ImmutableArray<CodProgram> external)
+            {
+                ModuleName = moduleName;
+                ExternalLibraries = external;
+
+                // 6e 跨库里程碑：预播种 external 库的符号表（复用实例，非复制）——
+                // FunctionsByKey（键含库前缀）/TypesByName（全名）。本地注册（indexer 赋值）优先。
+                foreach (var library in external)
+                {
+                    foreach (var pair in library.FunctionKeys)
+                    {
+                        if (!FunctionsByKey.ContainsKey(pair.Key))
+                        {
+                            FunctionsByKey[pair.Key] = pair.Value;
+                        }
+                    }
+
+                    foreach (var pair in library.TypesByName)
+                    {
+                        if (!TypesByName.ContainsKey(pair.Key))
+                        {
+                            TypesByName[pair.Key] = pair.Value;
+                        }
+                    }
+                }
+            }
+
             /// <summary>绫?鏋氫妇鍏ㄥ悕 鈫?绫诲瀷绗﹀彿锛堝唴寤虹被鍨嬩笉缁忔琛紝鐩存帴瑙ｆ瀽锛夈€?/summary>
             public Dictionary<string, TypeSymbol> TypesByName { get; } = new(StringComparer.Ordinal);
+
+            /// <summary>6e 跨库里程碑：本库自持类型表（全名 → 符号）——CodProgram.TypesByName 导出源，
+            /// 供其他库读侧 external 合并。与 TypesByName 的区别：不含预播种的 external 符号。</summary>
+            public Dictionary<string, TypeSymbol> LocalTypesByName { get; } = new(StringComparer.Ordinal);
 
             /// <summary>6e-G7 S1：开放类型参数限定键（!属主全名.参数名）→ 符号。文件级平铺——限定键天然无碰撞。</summary>
             public Dictionary<string, TypeParameterSymbol> OpenTypeParametersByKey { get; } = new(StringComparer.Ordinal);
 
             /// <summary>鍑芥暟閿?鈫?鍑芥暟绗﹀彿銆?/summary>
             public Dictionary<string, FunctionSymbol> FunctionsByKey { get; } = new(StringComparer.Ordinal);
+
+            /// <summary>6e 跨库里程碑：本库自持函数键（含库前缀）→ 符号——CodProgram.FunctionKeys 导出源。</summary>
+            public Dictionary<string, FunctionSymbol> LocalFunctionKeys { get; } = new(StringComparer.Ordinal);
 
             /// <summary>鍙橀噺閿?鈫?鍙橀噺/鍙傛暟绗﹀彿銆?/summary>
             public Dictionary<string, VariableSymbol> VariablesByKey { get; } = new(StringComparer.Ordinal);
@@ -168,6 +246,7 @@ namespace Cocoa.CodeAnalysis.Cod
             public void AddNamedType(string fullName, TypeSymbol type)
             {
                 TypesByName[fullName] = type;
+                LocalTypesByName[fullName] = type;
             }
         }
 
@@ -213,7 +292,9 @@ namespace Cocoa.CodeAnalysis.Cod
             {
                 FunctionSymbol? getter = hasGet ? classType.GetDeclaredMethod("get_" + name) : null;
                 FunctionSymbol? setter = hasSet ? classType.GetDeclaredMethod("set_" + name) : null;
-                classType.AddProperty(new PropertySymbol(name, type, classType, getter, setter, visibility, isStatic));
+                // 6e 跨库里程碑：索引器属性（绑定侧统一命名 `Item`）重建时须带 isIndexer 位，
+                // 否则实例化类型 GetIndexer() 命不中 → 元素访问回落数组判定报错。
+                classType.AddProperty(new PropertySymbol(name, type, classType, getter, setter, visibility, isStatic, isIndexer: name == "Item"));
             }
 
             context.PendingProperties.Clear();
@@ -458,9 +539,33 @@ namespace Cocoa.CodeAnalysis.Cod
                 classType.AddInterface((NamedTypeSymbol)ResolveTypeRef(interfaceRef, context));
             }
 
-            context.Classes.Add(classType);
+            // 6e 跨库里程碑：gcls 一律只入 GenericDefinitions，不入 Classes——否则 CodLibraryCompiler 生成
+            // Managed dll 时把开放类型参数类当普通类发射（IL Unexpected type K）。类型注入经 GenericDefinitions。
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
+
+            // 6e 跨库里程碑：泛型定义类属性声明解析（访问器 `get_X`/`set_X` 为独立 fn，读毕后回填挂接）。
+            if (reader.PeekRaw().StartsWith("props:", StringComparison.Ordinal))
+            {
+                var propertyCount = ReadCountField(reader, "props:");
+                for (var i = 0; i < propertyCount; i++)
+                {
+                    reader.Expect("prop");
+                    var propertyName = Unescape(reader.ExpectString());
+                    var propertyType = ResolveTypeRef(reader.ExpectString(), context);
+                    var hasGet = ParseBoolWord(reader.ExpectString());
+                    var hasSet = ParseBoolWord(reader.ExpectString());
+                    if (!Enum.TryParse<Visibility>(reader.ExpectString(), ignoreCase: true, out var propertyVisibility))
+                    {
+                        propertyVisibility = Visibility.Public;
+                    }
+
+                    var isStatic = ParseBoolWord(reader.ExpectString());
+                    context.PendingProperties.Add((classType, propertyName, propertyType, hasGet, hasSet, propertyVisibility, isStatic));
+                    reader.End();
+                }
+            }
+
             reader.End();
         }
 
@@ -596,6 +701,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 {
                     context.Functions.Add(singleton);
                     context.FunctionsByKey[key] = singleton;
+                    context.LocalFunctionKeys[key] = singleton;
                     reader.End();
                     return;
                 }
@@ -632,8 +738,13 @@ namespace Cocoa.CodeAnalysis.Cod
                     charSet: charSet);
             }
 
+            // 6e 跨库里程碑：库名回填（优先从 fn 键前缀提取——兼容入口无 moduleName 时仍能恢复库名，
+            // 保证 round-trip 稳定；回退 context.ModuleName）。
+            function.ContainingLibrary = ExtractLibraryFromKey(key, context);
+
             context.Functions.Add(function);
             context.FunctionsByKey[key] = function;
+            context.LocalFunctionKeys[key] = function;
 
             // 6e-G7 S1：方法级类型参数回填（顶层泛型函数）
             if (typeParameters.Length > 0)
@@ -834,6 +945,17 @@ namespace Cocoa.CodeAnalysis.Cod
                 throw new InvalidDataException($"Unknown open type parameter '{name}'");
             }
 
+            // 6e 跨库里程碑：基元 `@` 权威记法（@i32/@string/@bool…，Rust/LLVM 式位宽名）。
+            if (name.StartsWith("@", StringComparison.Ordinal))
+            {
+                if (GenericTypeInstantiator.TryDecodePrimitive(name, out var primitive))
+                {
+                    return primitive;
+                }
+
+                throw new InvalidDataException($"Unknown primitive type '{name}'");
+            }
+
             // 6e-G7 S1：实例化类型 mangle（backtick 元数 + # + $ 分隔递归实参）
             if (name.Contains('`') && name.Contains('#'))
             {
@@ -885,7 +1007,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static TypeSymbol ParseEncodedType(string text, ref int position, ReadContext context)
         {
-            // ! 前缀：开放类型参数限定键 / 基元权威编码
+            // ! 前缀：开放类型参数限定键
             if (position < text.Length && text[position] == '!')
             {
                 var start = position;
@@ -907,6 +1029,25 @@ namespace Cocoa.CodeAnalysis.Cod
                 }
 
                 throw new InvalidDataException($"Unknown encoded type '{key}' in '{text}'");
+            }
+
+            // 6e 跨库里程碑：@ 前缀 —— 基元权威记法（@i32/@string…，mangle 实参）。
+            if (position < text.Length && text[position] == '@')
+            {
+                var start = position;
+                position++;
+                while (position < text.Length && (char.IsLetterOrDigit(text[position])))
+                {
+                    position++;
+                }
+
+                var key = text.Substring(start, position - start);
+                if (GenericTypeInstantiator.TryDecodePrimitive(key, out var primitive))
+                {
+                    return ConsumeArraySuffixes(key, primitive, text, ref position);
+                }
+
+                throw new InvalidDataException($"Unknown primitive '{key}' in '{text}'");
             }
 
             // 名字段：字母数字._ （实例化头在此处截断于 backtick）
@@ -988,12 +1129,74 @@ namespace Cocoa.CodeAnalysis.Cod
 
         private static NamedTypeSymbol ResolveOwnerClass(string fullName, ReadContext context)
         {
+            // 6e-M19 M2-c：内建系统类（System.Object/System.Type）按单例解析（不从 cod 类型表读）。
+            if (fullName == "System.Object")
+            {
+                return NamedTypeSymbol.SystemObject;
+            }
+
+            if (fullName == "System.Type")
+            {
+                return NamedTypeSymbol.SystemType;
+            }
+
             if (!context.TypesByName.TryGetValue(fullName, out var type) || type is not NamedTypeSymbol classType)
             {
                 throw new InvalidDataException($"Unknown owner class '{fullName}'");
             }
 
             return classType;
+        }
+
+        /// <summary>
+        /// 6e 跨库里程碑：从成员键的属主段解析定义类。属主段可为：
+        /// 普通全名（`System.Collections.Generic.List`）或实例化副本 mangle 双缀
+        /// （`Lib!...System.Collections.Generic.List`1#...T`，InstanceTypeSymbol.FullName = ns + mangle）。
+        /// 从 TypesByName（含 external 预播种）按「最长匹配 key + backtick」反解泛型定义类。
+        /// </summary>
+        private static NamedTypeSymbol? ResolveOwnerClassFromHead(string ownerText, ReadContext context)
+        {
+            if (ownerText == "System.Object")
+            {
+                return NamedTypeSymbol.SystemObject;
+            }
+
+            if (ownerText == "System.Type")
+            {
+                return NamedTypeSymbol.SystemType;
+            }
+
+            if (context.TypesByName.TryGetValue(ownerText, out var direct))
+            {
+                return direct as NamedTypeSymbol;
+            }
+
+            if (ownerText.Contains('`'))
+            {
+                // 实例化副本 mangle 双缀：找 TypesByName 中「最长 key + backtick」为 ownerText 子串
+                // （InstanceTypeSymbol.FullName = ns + mangle，定义全名出现在 mangle 头部）。
+                string? bestKey = null;
+                foreach (var key in context.TypesByName.Keys)
+                {
+                    if (key.IndexOf('`') >= 0)
+                    {
+                        continue;
+                    }
+
+                    if (ownerText.Contains(key + "`", StringComparison.Ordinal) &&
+                        (bestKey == null || key.Length > bestKey.Length))
+                    {
+                        bestKey = key;
+                    }
+                }
+
+                if (bestKey != null && context.TypesByName.TryGetValue(bestKey, out var best) && best is NamedTypeSymbol bestClass)
+                {
+                    return bestClass;
+                }
+            }
+
+            return null;
         }
 
         private static VariableSymbol ResolveVariable(string key, ReadContext context)
@@ -1013,25 +1216,64 @@ namespace Cocoa.CodeAnalysis.Cod
                 return function;
             }
 
-            // 6e-G7 回退：开放体内对同类实例成员的调用，键可能携带实例化副本前缀
-            // （如 `MyLib.MyLib.Box`1#!T.Get[]`——inst.FullName 双缀 + 实参 mangle）。
-            // 按「方法名 + 元数」在已注册函数中归一到定义符号（消费方替换期再映射回实例化副本）。
-            var bracketIndex = key.LastIndexOf('[');
+            // 6e 跨库里程碑：键带库前缀（`库名!head[...]`）——先剥离前缀，再按方法名+元数在
+            // 本库 + external 库函数集中归一（消费方替换期再映射回实例化副本）。
+            var searchKey = key;
+            var bangIndex = key.IndexOf('!');
+            if (bangIndex > 0 && key.IndexOf('[') > bangIndex)
+            {
+                searchKey = key.Substring(bangIndex + 1);
+            }
+
+            var bracketIndex = searchKey.LastIndexOf('[');
             if (bracketIndex > 0)
             {
-                var head = key.Substring(0, bracketIndex);
+                var head = searchKey.Substring(0, bracketIndex);
                 var dotIndex = head.LastIndexOf('.');
                 if (dotIndex > 0)
                 {
                     var methodName = head.Substring(dotIndex + 1);
-                    var parameterCountText = key.Substring(bracketIndex + 1, key.Length - bracketIndex - 2);
+                    var parameterCountText = searchKey.Substring(bracketIndex + 1, searchKey.Length - bracketIndex - 2);
                     var parameterCount = parameterCountText.Length == 0
                         ? 0
                         : parameterCountText.Split(',').Length;
 
+                    // 6e 跨库里程碑：优先按属主类精确解析——head 的 backtick 前段即泛型定义全名
+                    // （实例化副本键 `Lib!...List`1#...T.get_Count[]`），在 TypesByName（含 external 预播种）
+                    // 定义类内按名+元数匹配。避免全集搜索歧义（多个类同签名方法时非唯一）。
+                    var ownerText = head.Substring(0, dotIndex);
+                    var ownerClass = ResolveOwnerClassFromHead(ownerText, context);
+
+                    if (ownerClass != null)
+                    {
+                        var ownerCandidates = ownerClass.Methods.Where(m =>
+                            m.Name == methodName &&
+                            m.Parameters.Length == parameterCount).ToList();
+
+                        if (ownerCandidates.Count == 1)
+                        {
+                            return ownerCandidates[0];
+                        }
+
+                        if (ownerCandidates.Count > 1)
+                        {
+                            throw new InvalidDataException($"Ambiguous owner-class method '{key}'");
+                        }
+                    }
+
                     var candidates = context.Functions.Where(f =>
                         f.Name == methodName &&
                         f.Parameters.Length == parameterCount).ToList();
+
+                    if (candidates.Count == 0)
+                    {
+                        foreach (var library in context.ExternalLibraries)
+                        {
+                            candidates.AddRange(library.Functions.Where(f =>
+                                f.Name == methodName &&
+                                f.Parameters.Length == parameterCount));
+                        }
+                    }
 
                     if (candidates.Count == 1)
                     {
@@ -1082,6 +1324,19 @@ namespace Cocoa.CodeAnalysis.Cod
         {
             var lastDot = fullName.LastIndexOf('.');
             return lastDot < 0 ? ("", fullName) : (fullName.Substring(0, lastDot), fullName.Substring(lastDot + 1));
+        }
+
+        /// <summary>6e 跨库里程碑：从 fn 键提取库名（键格式 `库名!head[...]`；`!` 界符在 `[` 之前）。
+        /// 兼容旧格式（无 `!`）与兼容入口（moduleName 为空）：回退 moduleName。</summary>
+        private static string ExtractLibraryFromKey(string key, ReadContext context)
+        {
+            var bangIndex = key.IndexOf('!');
+            if (bangIndex > 0 && key.IndexOf('[') > bangIndex)
+            {
+                return key.Substring(0, bangIndex);
+            }
+
+            return context.ModuleName;
         }
 
         /// <summary>鍙橀噺閿繕鍘熺湡瀹炵鍙峰悕锛氬幓鎺?global:/鍑芥暟閿墠缂€涓?#N 鍐茬獊鍚庣紑銆?/summary>

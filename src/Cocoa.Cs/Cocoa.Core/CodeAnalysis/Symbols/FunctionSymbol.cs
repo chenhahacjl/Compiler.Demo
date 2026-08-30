@@ -56,6 +56,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>所属命名空间（顶层函数；类方法由 <see cref="ContainingClass"/> 承载）。</summary>
         public string Namespace { get; }
 
+        /// <summary>
+        /// 所属 `.cod` 库名（程序集维度；跨库 FnKey 前缀）。仅从 `.cod` 加载的符号有值；
+        /// 编译期注入/用户源码符号为 null（序列化时回退当前模块名）。6e 跨库里程碑。
+        /// </summary>
+        public string? ContainingLibrary { get; internal set; }
+
         /// <summary>发射名：命名空间限定（`ns.name`），IL 元数据方法名用此保证唯一。</summary>
         public string EmitName => Namespace.Length == 0 ? Name : Namespace + "." + Name;
 
