@@ -1875,10 +1875,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (_isX64)
             {
-                // fastcall + shadow space：对齐补丁后 sub 0x30（shadow 0x20 + 第 5 参数槽 0x08，48≡0 mod 16）
+                // fastcall + shadow space：0x20 shadow + argCount-4 栈槽；向上取整到 0x20 对齐
+                var stackSlots = argCount > 4 ? Math.Max(2, argCount - 4) : 2;
+                var frameSize = 0x20 + stackSlots * 8;
                 var aligned = EmitAlign(0);
-                _a.Sub(X64Size.Qword, X64Register.RSP, 0x30);
-                _stackDepth += 6;
+                _a.Sub(X64Size.Qword, X64Register.RSP, frameSize);
+                _stackDepth += frameSize / 8;
 
                 for (var i = 0; i < Math.Min(argCount, 4) && i < _sysArgs.Count; i++)
                 {
@@ -1920,9 +1922,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     }
                 }
 
+                if (argCount >= 7)
+                {
+                    if (_sysArgs.Count > 6)
+                    {
+                        LoadSlot(X64Register.EAX, _sysArgs[6], RegisterSize(_sysArgs[6]));
+                        _a.Mov(ToSize(RegisterSize(_sysArgs[6])), new X64MemoryOperand(X64Register.RSP, 0x30), X64Register.RAX);
+                    }
+                    else
+                    {
+                        _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RSP, 0x30), 0);
+                    }
+                }
+
                 _a.CallRip(importSlot);
-                _a.Add(X64Size.Qword, X64Register.RSP, 0x30);
-                _stackDepth -= 6;
+                _a.Add(X64Size.Qword, X64Register.RSP, frameSize);
+                _stackDepth -= frameSize / 8;
 
                 if (aligned)
                 {

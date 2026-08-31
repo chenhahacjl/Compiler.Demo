@@ -2263,6 +2263,198 @@ Store(obj, 0, lenChars, 4);
             }
 
             // ------------------------------------------------------------------
+            // Sha256Hash(data:8) → u8[] (32 bytes)
+            // Uses one-shot BCryptHash (Win10 1803+): BCryptHash(alg, NULL, 0, pbData, cbData, pbOutput, cbOutput)
+            // Array layout: [0..4) length; [8..) element data (8-byte aligned)
+            // ------------------------------------------------------------------
+
+            private void EmitSha256Hash()
+            {
+                var data = _args[0];
+                var errLabel = NewLabel();
+                var doneLabel = NewLabel();
+                var zero32 = C(4, 0);
+
+                // ---- BCryptOpenAlgorithmProvider (using LeaSlot for output param) ----
+                var algoStrData = _program.AddData(IrDataItem.ByteArray(Prefix + "Sha256Algo", new byte[] {
+                    0x53, 0x00, 0x48, 0x00, 0x41, 0x00, 0x32, 0x00, 0x35, 0x00, 0x36, 0x00, 0x00, 0x00 }));
+                var algoStr = NewReg(8);
+                LeaData(algoStr, algoStrData);
+
+                var algCache = NewReg(8);
+                LeaData(algCache, _bcryptAlg);
+                var cachedAlg = NewReg(_isX64 ? 8 : 4);
+                Load(cachedAlg, algCache, 0, _isX64 ? 8 : 4);
+                var algCached = NewLabel();
+                Cmp(cachedAlg, 0);
+                Jcc(IrCond.NotEqual, algCached);
+
+                // Use LeaSlot buffer for output param (same pattern as ReadConsoleW's writtenAddr)
+                var algSlot = NewReg(_isX64 ? 8 : 4);
+                var algAddr = NewReg(8);
+                LeaSlot(algAddr, algSlot);
+                var nullPtr = NewReg(_isX64 ? 8 : 4);
+                Const(nullPtr, 0);
+                SysCallDll(null, "bcrypt.dll", "BCryptOpenAlgorithmProvider",
+                    4, false, algAddr, algoStr, nullPtr, zero32);
+                Load(cachedAlg, algAddr, 0, _isX64 ? 8 : 4);
+                Store(algCache, 0, cachedAlg, _isX64 ? 8 : 4);
+
+                Mark(algCached);
+
+                // ---- BCryptCreateHash ----
+                var hashSlot = NewReg(_isX64 ? 8 : 4);
+                var hashAddr = NewReg(8);
+                LeaSlot(hashAddr, hashSlot);
+                var nullPtr2 = NewReg(_isX64 ? 8 : 4);
+                Const(nullPtr2, 0);
+                SysCallDll(null, "bcrypt.dll", "BCryptCreateHash",
+                    6, false, cachedAlg, hashAddr, nullPtr2, zero32, nullPtr2, zero32);
+
+                var hashVal = NewReg(_isX64 ? 8 : 4);
+                Load(hashVal, hashAddr, 0, _isX64 ? 8 : 4);
+                Cmp(hashVal, 0);
+                Jcc(IrCond.Equal, errLabel);
+
+                // ---- BCryptHashData ----
+                var dataLen = NewReg(4);
+                Load(dataLen, data, 0, 4);
+                var dataPtr = NewReg(8);
+                Lea(dataPtr, data, 8);
+                SysCallDll(null, "bcrypt.dll", "BCryptHashData",
+                    4, false, hashVal, dataPtr, dataLen, zero32);
+
+                // ---- VirtualAlloc 32 bytes ----
+                var buf32 = NewReg(8);
+                SysCall(buf32, "VirtualAlloc", 4, C(4, 0), C(4, 32), C(4, 0x3000), C(4, 0x04));
+                Cmp(buf32, 0);
+                Jcc(IrCond.Equal, errLabel);
+
+                // ---- BCryptFinishHash ----
+                SysCallDll(null, "bcrypt.dll", "BCryptFinishHash",
+                    4, false, hashVal, buf32, C(4, 32), zero32);
+
+                // ---- BCryptDestroyHash ----
+                SysCallDll(null, "bcrypt.dll", "BCryptDestroyHash",
+                    1, false, hashVal);
+
+                // ---- Copy hash to u8[32] array ----
+                var arr = NewReg(8);
+                CallRuntime(arr, "NewArray", C(4, 32), C(4, 1));
+                Cmp(arr, 0);
+                Jcc(IrCond.Equal, errLabel);
+
+                var ci = NewReg(4);
+                Const(ci, 0);
+                var copyLoop = NewLabel();
+                var copyDone = NewLabel();
+                Mark(copyLoop);
+                Cmp(ci, C(4, 32));
+                Jcc(IrCond.GreaterOrEqual, copyDone);
+                var tb = NewReg(4);
+                Load(tb, buf32, 0, 1);
+                var arrDst = NewReg(8);
+                Lea(arrDst, arr, 8);
+                var arrOff = NewReg(8);
+                Mov(arrOff, ci);
+                Add(arrDst, arrDst, arrOff);
+                Store(arrDst, 0, tb, 1);
+                AddI(buf32, buf32, 1);
+                AddI(ci, ci, 1);
+                Jmp(copyLoop);
+
+                Mark(copyDone);
+
+                // Free temp buffer
+                SysCallDll(null, "kernel32.dll", "VirtualFree", 3, false, buf32, zero32, C(4, 0x8000));
+
+                StoreRet(arr);
+                Jmp(doneLabel);
+
+                Mark(errLabel);
+                var zero = C(8, 0);
+                StoreRet(zero);
+
+                Mark(doneLabel);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // LaunchProcess(path:8, args:8) → i32 exit code
+            // Uses _wsystem(path + " " + args) from ucrtbase.dll
+            private void EmitLaunchProcess()
+            {
+                var errLabel = NewLabel();
+                var doneLabel = NewLabel();
+
+                var path = _args[0];
+                var args = _args[1];
+
+                // Build command line: path + " " + args
+                var space = NewReg(8);
+                LeaData(space, _emptyString);
+                var cmdConcat1 = NewReg(8);
+                CallRuntime(cmdConcat1, "Concat", path, space);
+                var cmdLine = NewReg(8);
+                CallRuntime(cmdLine, "Concat", cmdConcat1, args);
+
+                // Copy CO string chars to wchar buffer with null termination
+                // CO string layout: [len:4][chars:2*len]
+                var cmdWbuf = NewReg(8);
+                LeaData(cmdWbuf, _fileBuffer2);
+                var strLen = NewReg(4);
+                Load(strLen, cmdLine, 0, 4);
+                var di = NewReg(4);
+                Const(di, 0);
+                var copyLoop = NewLabel();
+                var copyDone = NewLabel();
+                Mark(copyLoop);
+                Cmp(di, strLen);
+                Jcc(IrCond.GreaterOrEqual, copyDone);
+                // src = cmdLine + 4 + di*2
+                var ch = NewReg(4);
+                var srcOff = NewReg(8);
+                Mov(srcOff, di);
+                AddI(srcOff, srcOff, 2);
+                var srcAddr = NewReg(8);
+                Lea(srcAddr, cmdLine, 4);
+                Add(srcAddr, srcAddr, srcOff);
+                Load(ch, srcAddr, 0, 2);
+                // dst = cmdWbuf + di*2
+                var dstAddr = NewReg(8);
+                Lea(dstAddr, cmdWbuf, 0);
+                var diBytes = NewReg(8);
+                Mov(diBytes, di);
+                AddI(diBytes, diBytes, 2);
+                Add(dstAddr, dstAddr, diBytes);
+                Store(dstAddr, 0, ch, 2);
+                AddI(di, di, 1);
+                Jmp(copyLoop);
+                Mark(copyDone);
+                // null-terminate
+                var nullCh = C(4, 0);
+                var termAddr = NewReg(8);
+                Lea(termAddr, cmdWbuf, 0);
+                var termBytes = NewReg(8);
+                Mov(termBytes, di);
+                Add(termAddr, termAddr, termBytes);
+                Add(termAddr, termAddr, termBytes);
+                Store(termAddr, 0, nullCh, 2);
+
+                // _wsystem(cmdWbuf) — synchronous, returns exit code
+                var exitCode = NewReg(4);
+                SysCallDll(exitCode, "ucrtbase.dll", "_wsystem", 1, true, cmdWbuf);
+
+                StoreRet(exitCode);
+                Jmp(doneLabel);
+
+                Mark(errLabel);
+                StoreRet(C(4, -1));
+
+                Mark(doneLabel);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
         }
     }
 }

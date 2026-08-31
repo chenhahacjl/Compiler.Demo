@@ -227,33 +227,13 @@ namespace Cocoa.CodeAnalysis
                     return null;
                 case BuiltinKind.Sqrt:
                     return System.Math.Sqrt((double)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.Floor:
-                    return System.Math.Floor((double)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.Ceiling:
-                    return System.Math.Ceiling((double)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.Truncate:
-                    return System.Math.Truncate((double)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.Round:
-                    return System.Math.Round((double)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.Beep:
                     var frequency = (int)EvaluateExpression(arguments[0])!;
                     var duration = (int)EvaluateExpression(arguments[1])!;
                     Console.Beep(frequency, duration);
                     return null;
-                case BuiltinKind.Int32ToString:
-                    return Convert.ToString((int)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.Int64ToString:
-                    return Convert.ToString((long)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.DoubleToString:
                     return Convert.ToString((double)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.BooleanToString:
-                    return (bool)EvaluateExpression(arguments[0])! ? "True" : "False";
-                case BuiltinKind.CharToString:
-                    return new string((char)EvaluateExpression(arguments[0])!, 1);
-                case BuiltinKind.ParseInt64:
-                    return Convert.ToInt64((string)EvaluateExpression(arguments[0])!);
-                case BuiltinKind.UInt64ToString:
-                    return Convert.ToString((ulong)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.StringFromChars:
                 {
                     // 6e-G7 ③a：char[] 在 Evaluator 中为 .NET char[] 或 object[]（装箱元素）
@@ -307,26 +287,51 @@ namespace Cocoa.CodeAnalysis
                 case BuiltinKind.Sha256Hash:
                 {
                     var data = EvaluateExpression(arguments[0]);
+                    byte[] raw;
                     if (data is byte[] bytes)
                     {
-                        return System.Security.Cryptography.SHA256.HashData(bytes);
+                        raw = bytes;
                     }
-
-                    if (data is object[] boxed)
+                    else if (data is object[] boxed)
                     {
-                        var raw = new byte[boxed.Length];
+                        raw = new byte[boxed.Length];
                         for (var bi = 0; bi < boxed.Length; bi++)
                         {
                             raw[bi] = (byte)boxed[bi]!;
                         }
-
-                        return System.Security.Cryptography.SHA256.HashData(raw);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Sha256Hash: unexpected input type {data?.GetType().Name}");
                     }
 
-                    throw new InvalidOperationException($"Sha256Hash: unexpected input type {data?.GetType().Name}");
+                    var result = System.Security.Cryptography.SHA256.HashData(raw);
+                    var boxedResult = new object[result.Length];
+                    for (var ri = 0; ri < result.Length; ri++)
+                    {
+                        boxedResult[ri] = result[ri];
+                    }
+
+                    return boxedResult;
+                }
+                case BuiltinKind.LaunchProcess:
+                {
+                    var path = (string)EvaluateExpression(arguments[0])!;
+                    var args = (string)EvaluateExpression(arguments[1])!;
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = path,
+                        Arguments = args,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                    };
+                    using var proc = System.Diagnostics.Process.Start(psi);
+                    proc!.WaitForExit();
+                    return proc.ExitCode;
                 }
 
-                // 6e-M19 M2-c锛歋ystem.Object 闈欐€佹柟娉曪紙CLR 鐩撮€氾級
+                // 6e-M19 M2-c锛歋ystem.Object 闈闈欐€佹柟娉曪紙CLR 鐩撮€氾級
                 case BuiltinKind.ObjectStaticEquals:
                     var equalsLeft = EvaluateExpression(arguments[0]);
                     var equalsRight = EvaluateExpression(arguments[1]);
@@ -336,7 +341,7 @@ namespace Cocoa.CodeAnalysis
                     var refRight = EvaluateExpression(arguments[1]);
                     return object.ReferenceEquals(refLeft, refRight);
                 default:
-                    throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
+                    throw new InvalidOperationException($"Evaluator 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }
         }
 
@@ -469,7 +474,7 @@ namespace Cocoa.CodeAnalysis
                 }
 
                 // 鏃犵鍙峰瓧鑺傛埅鏂紝涓?(byte)300 == 44 璇箟涓€鑷?
-                return unchecked((byte)Convert.ToInt32(value));
+                return unchecked((byte)Binding.NumericBox.ToUnsigned64(value));
             }
             else if (node.Type == TypeSymbol.Int8)
             {

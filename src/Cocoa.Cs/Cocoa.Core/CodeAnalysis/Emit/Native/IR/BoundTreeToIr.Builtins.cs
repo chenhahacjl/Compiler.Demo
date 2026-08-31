@@ -70,24 +70,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Beep"), IrOperand.Constant(0)));
                     return VoidResult();
                 }
-                case BuiltinKind.Int32ToString:
-                {
-                    // int → 字符串：复用打印通道的 IntToString 运行时 helper
-                    var value = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
-                    return result;
-                }
-                case BuiltinKind.Int64ToString:
-                {
-                    // long → 字符串：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器，SetArg64 统一）
-                    var value = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));
-                    return result;
-                }
                 case BuiltinKind.DoubleToString:
                 {
                     var value = EmitExpression(arguments[0]);
@@ -103,19 +85,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     }
 
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
-                    return result;
-                }
-                case BuiltinKind.BooleanToString:
-                {
-                    var value = EmitExpression(arguments[0]);
-                    return EmitSelectString("True", "False", value);
-                }
-                case BuiltinKind.CharToString:
-                {
-                    var value = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.StringFromChars:
@@ -203,24 +172,6 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetExecutablePath"), IrOperand.Constant(0)));
                     return result;
                 }
-                case BuiltinKind.ParseInt64:
-                {
-                    // string → long：ParseInt64（返回 8 字节，x64 RAX / x86 EDX:EAX）
-                    var value = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ParseInt64"), IrOperand.Constant(0)));
-                    return result;
-                }
-                case BuiltinKind.UInt64ToString:
-                {
-                    // ulong → 字符串：UInt64ToString（无符号十进制，SetArg64 统一双架构）
-                    var value = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
-                    return result;
-                }
                 case BuiltinKind.ObjectStaticEquals:
                 case BuiltinKind.ObjectReferenceEquals:
                 {
@@ -241,26 +192,32 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     return VoidResult();
                 }
                 case BuiltinKind.Sqrt:
-                case BuiltinKind.Floor:
-                case BuiltinKind.Ceiling:
-                case BuiltinKind.Truncate:
-                case BuiltinKind.Round:
                 {
                     var x = EmitExpression(arguments[0]);
                     var result = AllocateRegister(8);
-                    var op = function.BuiltinKind switch
-                    {
-                        BuiltinKind.Sqrt => IrOpCode.FSqrt,
-                        BuiltinKind.Floor => IrOpCode.FFloor,
-                        BuiltinKind.Ceiling => IrOpCode.FCeiling,
-                        BuiltinKind.Truncate => IrOpCode.FTruncate,
-                        _ => IrOpCode.FRound,
-                    };
-                    Add(instructions, new IrInstruction(op, result, IrOperand.Reg(x)));
+                    Add(instructions, new IrInstruction(IrOpCode.FSqrt, result, IrOperand.Reg(x)));
+                    return result;
+                }
+                case BuiltinKind.Sha256Hash:
+                {
+                    var data = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(data)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Sha256Hash"), IrOperand.Constant(1)));
+                    return result;
+                }
+                case BuiltinKind.LaunchProcess:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var args = EmitExpression(arguments[1]);
+                    var result = AllocateRegister(4);
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
+                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(args)));
+                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("LaunchProcess"), IrOperand.Constant(0)));
                     return result;
                 }
                 default:
-                    throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
+                    throw new InvalidOperationException($"native 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }
         }
 

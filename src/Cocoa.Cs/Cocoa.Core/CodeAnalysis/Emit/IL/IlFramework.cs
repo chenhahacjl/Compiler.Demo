@@ -22,9 +22,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ValueType = RequireType("System.ValueType");
             StringType = RequireType("System.String");
             ConsoleKeyInfoType = RequireType("System.ConsoleKeyInfo");
-            Int32Type = RequireType("System.Int32");
-            Int64Type = RequireType("System.Int64");
-            UInt64Type = RequireType("System.UInt64");
 
             ObjectEquals = RequireMethod("System.Object", "Equals", new[] { "System.Object", "System.Object" });
             ObjectToString = RequireMethod("System.Object", "ToString", Array.Empty<string>());
@@ -50,9 +47,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             ConvertToInt64 = RequireMethod("System.Convert", "ToInt64", new[] { "System.Object" });
             ConvertToString = RequireMethod("System.Convert", "ToString", new[] { "System.Object" });
             ConvertToStringDouble = RequireMethod("System.Convert", "ToString", new[] { "System.Double" });
-            ConvertToStringBoolean = RequireMethod("System.Convert", "ToString", new[] { "System.Boolean" });
-            ConvertToStringChar = RequireMethod("System.Convert", "ToString", new[] { "System.Char" });
-            ConvertToInt64FromString = RequireMethod("System.Convert", "ToInt64", new[] { "System.String" });
         StringCtorCharArray = RequireMethod("System.String", ".ctor", new[] { "System.Char[]" });
 
             StringChars = RequireMethod("System.String", "get_Chars", new[] { "System.Int32" });
@@ -67,10 +61,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             DebuggableAttributeCtor = RequireMethod("System.Diagnostics.DebuggableAttribute", ".ctor", new[] { "System.Boolean", "System.Boolean" });
             StringFormat = RequireMethod("System.String", "Format", new[] { "System.String", "System.Object" });
             MathSqrt = RequireMethod("System.Math", "Sqrt", new[] { "System.Double" });
-            MathFloor = RequireMethod("System.Math", "Floor", new[] { "System.Double" });
-            MathCeiling = RequireMethod("System.Math", "Ceiling", new[] { "System.Double" });
-            MathTruncate = RequireMethod("System.Math", "Truncate", new[] { "System.Double" });
-            MathRound = RequireMethod("System.Math", "Round", new[] { "System.Double" });
             ConsoleBeep = RequireMethod("System.Console", "Beep", new[] { "System.Int32", "System.Int32" });
         }
 
@@ -104,9 +94,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlTypeRef ValueType { get; }
         public IlTypeRef StringType { get; }
         public IlTypeRef ConsoleKeyInfoType { get; }
-        public IlTypeRef Int32Type { get; }
-        public IlTypeRef Int64Type { get; }
-        public IlTypeRef UInt64Type { get; }
         public IlMethodRef ObjectCtor { get; }
         public IlMethodRef ObjectEquals { get; }
 
@@ -135,9 +122,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef ConvertToInt64 { get; }
         public IlMethodRef ConvertToString { get; }
         public IlMethodRef ConvertToStringDouble { get; }
-        public IlMethodRef ConvertToStringBoolean { get; }
-        public IlMethodRef ConvertToStringChar { get; }
-        public IlMethodRef ConvertToInt64FromString { get; }
         public IlMethodRef StringCtorCharArray { get; }
 
         // 6e-G7 ④：文件 IO / 环境
@@ -155,10 +139,6 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         public IlMethodRef DebuggableAttributeCtor { get; }
         public IlMethodRef StringFormat { get; }
         public IlMethodRef MathSqrt { get; }
-        public IlMethodRef MathFloor { get; }
-        public IlMethodRef MathCeiling { get; }
-        public IlMethodRef MathTruncate { get; }
-        public IlMethodRef MathRound { get; }
         public IlMethodRef ConsoleBeep { get; }
 
         /// <summary>类型引用解析 + 缓存（消发射路径上重复解析，如 Box 类型）。</summary>

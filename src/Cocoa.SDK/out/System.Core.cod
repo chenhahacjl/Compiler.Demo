@@ -16,7 +16,7 @@
     (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string])
     (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64])
     (cls System.Math internal iface:false ifaces:0 methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64])
-    (cls System.Runtime internal iface:false ifaces:0 methods:23 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Random[@i32] Sleep[@i32] TickCount Exit[@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Beep[@i32,@i32] Int32ToString[@i32] Int64ToString[@i64] DoubleToString[@f64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] StringFromChars[@char[]] Sha256Hash[@u8[]])
+    (cls System.Runtime internal iface:false ifaces:0 methods:24 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Random[@i32] Sleep[@i32] TickCount Exit[@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Beep[@i32,@i32] Int32ToString[@i32] Int64ToString[@i64] DoubleToString[@f64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] StringFromChars[@char[]] Sha256Hash[@u8[]] LaunchProcess[@string,@string])
     (cls System.SByte public iface:false ifaces:0 methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8])
     (cls System.Single public iface:false ifaces:0 methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32])
     (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]])
@@ -520,41 +520,41 @@
     (fn System.Core!System.Runtime.Sqrt[@f64] name:Sqrt ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Sqrt[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.Runtime.Floor[@f64] name:Floor ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Floor entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.Floor[@f64] name:Floor ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Floor[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.Runtime.Ceiling[@f64] name:Ceiling ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Ceiling entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.Ceiling[@f64] name:Ceiling ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Ceiling[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.Runtime.Truncate[@f64] name:Truncate ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Truncate entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.Truncate[@f64] name:Truncate ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Truncate[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.Runtime.Round[@f64] name:Round ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Round entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.Round[@f64] name:Round ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Round[@f64]/x x @f64 0 - -)
     )
     (fn System.Core!System.Runtime.Beep[@i32,@i32] name:Beep ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Beep entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Core!System.Runtime.Beep[@i32,@i32]/frequency frequency @i32 0 - -)
       (par System.Core!System.Runtime.Beep[@i32,@i32]/duration duration @i32 1 - -)
     )
-    (fn System.Core!System.Runtime.Int32ToString[@i32] name:Int32ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int32ToString entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.Int32ToString[@i32] name:Int32ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Int32ToString[@i32]/value value @i32 0 - -)
     )
-    (fn System.Core!System.Runtime.Int64ToString[@i64] name:Int64ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Int64ToString entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.Int64ToString[@i64] name:Int64ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Int64ToString[@i64]/value value @i64 0 - -)
     )
     (fn System.Core!System.Runtime.DoubleToString[@f64] name:DoubleToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.DoubleToString[@f64]/value value @f64 0 - -)
     )
-    (fn System.Core!System.Runtime.BooleanToString[@bool] name:BooleanToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:BooleanToString entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.BooleanToString[@bool] name:BooleanToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.BooleanToString[@bool]/value value @bool 0 - -)
     )
-    (fn System.Core!System.Runtime.CharToString[@char] name:CharToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:CharToString entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.CharToString[@char] name:CharToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.CharToString[@char]/value value @char 0 - -)
     )
-    (fn System.Core!System.Runtime.ParseInt64[@string] name:ParseInt64 ret:@i64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ParseInt64 entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.ParseInt64[@string] name:ParseInt64 ret:@i64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.ParseInt64[@string]/s s @string 0 - -)
     )
-    (fn System.Core!System.Runtime.UInt64ToString[@u64] name:UInt64ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:UInt64ToString entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Runtime.UInt64ToString[@u64] name:UInt64ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.UInt64ToString[@u64]/value value @u64 0 - -)
     )
     (fn System.Core!System.Runtime.StringFromChars[@char[]] name:StringFromChars ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
@@ -562,6 +562,10 @@
     )
     (fn System.Core!System.Runtime.Sha256Hash[@u8[]] name:Sha256Hash ret:@u8[] ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sha256Hash entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Sha256Hash[@u8[]]/data data @u8[] 0 - -)
+    )
+    (fn System.Core!System.Runtime.LaunchProcess[@string,@string] name:LaunchProcess ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:LaunchProcess entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Runtime.LaunchProcess[@string,@string]/path path @string 0 - -)
+      (par System.Core!System.Runtime.LaunchProcess[@string,@string]/args args @string 1 - -)
     )
     (fn System.Core!System.SByte.ToString[@i8] name:ToString ret:@string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.SByte.ToString[@i8]/this this @i8 0 - this)
@@ -914,6 +918,48 @@
     (loc System.Core!System.Math.Gcd[@i32,@i32]/x false @i32)
     (loc System.Core!System.Math.Gcd[@i32,@i32]/y false @i32)
     (loc System.Core!System.Math.Gcd[@i32,@i32]/t false @i32)
+    (loc System.Core!System.Runtime.Floor[@f64]/t false @i64)
+    (loc System.Core!System.Runtime.Ceiling[@f64]/t false @i64)
+    (loc System.Core!System.Runtime.Round[@f64]/t false @i64)
+    (loc System.Core!System.Runtime.Round[@f64]/f false @f64)
+    (loc System.Core!System.Runtime.Round[@f64]/af false @f64)
+    (loc System.Core!System.Runtime.Round[@f64]/mod2 false @i64)
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/v false @i64)
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/negative false @bool)
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/DIGITS true @string
+      (const s:0123456789)
+    )
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/buf false @char[])
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/i false @i32)
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/len false @i32)
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/chars false @char[])
+    (loc System.Core!System.Runtime.Int32ToString[@i32]/j false @i32)
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/v false @i64)
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/negative false @bool)
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/DIGITS true @string
+      (const s:0123456789)
+    )
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/buf false @char[])
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/i false @i32)
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/len false @i32)
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/chars false @char[])
+    (loc System.Core!System.Runtime.Int64ToString[@i64]/j false @i32)
+    (loc System.Core!System.Runtime.CharToString[@char]/chars false @char[])
+    (loc System.Core!System.Runtime.ParseInt64[@string]/len true @i32)
+    (loc System.Core!System.Runtime.ParseInt64[@string]/index false @i32)
+    (loc System.Core!System.Runtime.ParseInt64[@string]/negative false @bool)
+    (loc System.Core!System.Runtime.ParseInt64[@string]/first true @char)
+    (loc System.Core!System.Runtime.ParseInt64[@string]/acc false @u64)
+    (loc System.Core!System.Runtime.ParseInt64[@string]/ch true @i32)
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/v false @u64)
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/DIGITS true @string
+      (const s:0123456789)
+    )
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/buf false @char[])
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/i false @i32)
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/len false @i32)
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/chars false @char[])
+    (loc System.Core!System.Runtime.UInt64ToString[@u64]/j false @i32)
     (loc System.Core!System.String.ToUpper[@string]/result false @string)
     (loc System.Core!System.String.ToUpper[@string]/i false @i32)
     (loc System.Core!System.String.ToUpper[@string]/v false @i32)
@@ -6621,45 +6667,1010 @@
       (block 0)
     )
     (body System.Core!System.Runtime.Floor[@f64]
-      (block 0)
+      (block 5
+        (vardecl System.Core!System.Runtime.Floor[@f64]/t
+          (conv @i64
+            (var System.Core!System.Runtime.Floor[@f64]/x)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop < @f64 @f64)
+            (var System.Core!System.Runtime.Floor[@f64]/x)
+            (conv @f64
+              (var System.Core!System.Runtime.Floor[@f64]/t)
+            )
+          ) false
+        )
+        (return
+          (conv @f64
+            (binary
+              (bop - @i64 @i64)
+              (var System.Core!System.Runtime.Floor[@f64]/t)
+              (conv @i64
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (label Label1)
+        (return
+          (conv @f64
+            (var System.Core!System.Runtime.Floor[@f64]/t)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.Ceiling[@f64]
-      (block 0)
+      (block 5
+        (vardecl System.Core!System.Runtime.Ceiling[@f64]/t
+          (conv @i64
+            (var System.Core!System.Runtime.Ceiling[@f64]/x)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop > @f64 @f64)
+            (var System.Core!System.Runtime.Ceiling[@f64]/x)
+            (conv @f64
+              (var System.Core!System.Runtime.Ceiling[@f64]/t)
+            )
+          ) false
+        )
+        (return
+          (conv @f64
+            (binary
+              (bop + @i64 @i64)
+              (var System.Core!System.Runtime.Ceiling[@f64]/t)
+              (conv @i64
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (label Label1)
+        (return
+          (conv @f64
+            (var System.Core!System.Runtime.Ceiling[@f64]/t)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.Truncate[@f64]
-      (block 0)
+      (block 1
+        (return
+          (conv @f64
+            (conv @i64
+              (var System.Core!System.Runtime.Truncate[@f64]/x)
+            )
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.Round[@f64]
-      (block 0)
+      (block 23
+        (vardecl System.Core!System.Runtime.Round[@f64]/t
+          (conv @i64
+            (var System.Core!System.Runtime.Round[@f64]/x)
+          )
+        )
+        (vardecl System.Core!System.Runtime.Round[@f64]/f
+          (binary
+            (bop - @f64 @f64)
+            (var System.Core!System.Runtime.Round[@f64]/x)
+            (conv @f64
+              (var System.Core!System.Runtime.Round[@f64]/t)
+            )
+          )
+        )
+        (vardecl System.Core!System.Runtime.Round[@f64]/af
+          (var System.Core!System.Runtime.Round[@f64]/f)
+        )
+        (cgoto Label1
+          (binary
+            (bop < @f64 @f64)
+            (var System.Core!System.Runtime.Round[@f64]/af)
+            (conv @f64
+              (lit @i32 i:0)
+            )
+          ) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Round[@f64]/af
+            (unary
+              (uop - @f64)
+              (var System.Core!System.Runtime.Round[@f64]/af)
+            )
+          )
+        )
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop < @f64 @f64)
+            (var System.Core!System.Runtime.Round[@f64]/af)
+            (lit @f64 d:0.5)
+          ) false
+        )
+        (return
+          (conv @f64
+            (var System.Core!System.Runtime.Round[@f64]/t)
+          )
+        )
+        (label Label2)
+        (cgoto Label3
+          (binary
+            (bop > @f64 @f64)
+            (var System.Core!System.Runtime.Round[@f64]/af)
+            (lit @f64 d:0.5)
+          ) false
+        )
+        (cgoto Label4
+          (binary
+            (bop > @f64 @f64)
+            (var System.Core!System.Runtime.Round[@f64]/f)
+            (conv @f64
+              (lit @i32 i:0)
+            )
+          ) false
+        )
+        (return
+          (conv @f64
+            (binary
+              (bop + @i64 @i64)
+              (var System.Core!System.Runtime.Round[@f64]/t)
+              (conv @i64
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (label Label4)
+        (return
+          (conv @f64
+            (binary
+              (bop - @i64 @i64)
+              (var System.Core!System.Runtime.Round[@f64]/t)
+              (conv @i64
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (label Label3)
+        (vardecl System.Core!System.Runtime.Round[@f64]/mod2
+          (binary
+            (bop % @i64 @i64)
+            (var System.Core!System.Runtime.Round[@f64]/t)
+            (conv @i64
+              (lit @i32 i:2)
+            )
+          )
+        )
+        (cgoto Label5
+          (binary
+            (bop == @i64 @i64)
+            (var System.Core!System.Runtime.Round[@f64]/mod2)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          ) false
+        )
+        (return
+          (conv @f64
+            (var System.Core!System.Runtime.Round[@f64]/t)
+          )
+        )
+        (label Label5)
+        (cgoto Label6
+          (binary
+            (bop > @f64 @f64)
+            (var System.Core!System.Runtime.Round[@f64]/f)
+            (conv @f64
+              (lit @i32 i:0)
+            )
+          ) false
+        )
+        (return
+          (conv @f64
+            (binary
+              (bop + @i64 @i64)
+              (var System.Core!System.Runtime.Round[@f64]/t)
+              (conv @i64
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (label Label6)
+        (return
+          (conv @f64
+            (binary
+              (bop - @i64 @i64)
+              (var System.Core!System.Runtime.Round[@f64]/t)
+              (conv @i64
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.Beep[@i32,@i32]
       (block 0)
     )
     (body System.Core!System.Runtime.Int32ToString[@i32]
-      (block 0)
+      (block 35
+        (cgoto Label1
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/value)
+            (lit @i32 i:0)
+          ) false
+        )
+        (return
+          (lit @string s:0)
+        )
+        (label Label1)
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/v
+          (conv @i64
+            (var System.Core!System.Runtime.Int32ToString[@i32]/value)
+          )
+        )
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/negative
+          (binary
+            (bop < @i64 @i64)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/v)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          )
+        )
+        (cgoto Label2
+          (var System.Core!System.Runtime.Int32ToString[@i32]/negative) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int32ToString[@i32]/v
+            (unary
+              (uop - @i64)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/v)
+            )
+          )
+        )
+        (label Label2)
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/DIGITS
+          (lit @string s:0123456789)
+        )
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/buf
+          (arrnew @char[]
+            (lit @i32 i:21) 0
+          )
+        )
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/i
+          (lit @i32 i:20)
+        )
+        (goto continue1)
+        (label Label3)
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.Int32ToString[@i32]/buf)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/i)
+            )
+            (elem @char
+              (var System.Core!System.Runtime.Int32ToString[@i32]/DIGITS)
+              (conv @i32
+                (binary
+                  (bop % @i64 @i64)
+                  (var System.Core!System.Runtime.Int32ToString[@i32]/v)
+                  (conv @i64
+                    (lit @i32 i:10)
+                  )
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int32ToString[@i32]/v
+            (binary
+              (bop / @i64 @i64)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/v)
+              (conv @i64
+                (lit @i32 i:10)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int32ToString[@i32]/i
+            (binary
+              (bop - @i32 @i32)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label3
+          (binary
+            (bop > @i64 @i64)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/v)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          ) true
+        )
+        (label break1)
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/len
+          (binary
+            (bop - @i32 @i32)
+            (lit @i32 i:20)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/i)
+          )
+        )
+        (cgoto Label4
+          (var System.Core!System.Runtime.Int32ToString[@i32]/negative) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int32ToString[@i32]/len
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/len)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.Int32ToString[@i32]/buf)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/i)
+            )
+            (lit @char c:45)
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int32ToString[@i32]/i
+            (binary
+              (bop - @i32 @i32)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label Label4)
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/chars
+          (arrnew @char[]
+            (var System.Core!System.Runtime.Int32ToString[@i32]/len) 0
+          )
+        )
+        (vardecl System.Core!System.Runtime.Int32ToString[@i32]/j
+          (lit @i32 i:0)
+        )
+        (goto continue2)
+        (label Label5)
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.Int32ToString[@i32]/chars)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/j)
+            )
+            (elem @char
+              (var System.Core!System.Runtime.Int32ToString[@i32]/buf)
+              (binary
+                (bop + @i32 @i32)
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.Runtime.Int32ToString[@i32]/i)
+                  (lit @i32 i:1)
+                )
+                (var System.Core!System.Runtime.Int32ToString[@i32]/j)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int32ToString[@i32]/j
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.Int32ToString[@i32]/j)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label5
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/j)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/len)
+          ) true
+        )
+        (label break2)
+        (return
+          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
+            (this System.Runtime)
+            (var System.Core!System.Runtime.Int32ToString[@i32]/chars)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.Int64ToString[@i64]
-      (block 0)
+      (block 38
+        (cgoto Label1
+          (binary
+            (bop == @i64 @i64)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/value)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          ) false
+        )
+        (return
+          (lit @string s:0)
+        )
+        (label Label1)
+        (cgoto Label2
+          (binary
+            (bop == @i64 @i64)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/value)
+            (binary
+              (bop - @i64 @i64)
+              (unary
+                (uop - @i64)
+                (lit @i64 l:9223372036854775807)
+              )
+              (lit @i64 l:1)
+            )
+          ) false
+        )
+        (return
+          (lit @string s:-9223372036854775808)
+        )
+        (label Label2)
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/v
+          (var System.Core!System.Runtime.Int64ToString[@i64]/value)
+        )
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/negative
+          (binary
+            (bop < @i64 @i64)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/v)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          )
+        )
+        (cgoto Label3
+          (var System.Core!System.Runtime.Int64ToString[@i64]/negative) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int64ToString[@i64]/v
+            (unary
+              (uop - @i64)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/v)
+            )
+          )
+        )
+        (label Label3)
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/DIGITS
+          (lit @string s:0123456789)
+        )
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/buf
+          (arrnew @char[]
+            (lit @i32 i:21) 0
+          )
+        )
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/i
+          (lit @i32 i:20)
+        )
+        (goto continue1)
+        (label Label4)
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.Int64ToString[@i64]/buf)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/i)
+            )
+            (elem @char
+              (var System.Core!System.Runtime.Int64ToString[@i64]/DIGITS)
+              (conv @i32
+                (binary
+                  (bop % @i64 @i64)
+                  (var System.Core!System.Runtime.Int64ToString[@i64]/v)
+                  (conv @i64
+                    (lit @i32 i:10)
+                  )
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int64ToString[@i64]/v
+            (binary
+              (bop / @i64 @i64)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/v)
+              (conv @i64
+                (lit @i32 i:10)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int64ToString[@i64]/i
+            (binary
+              (bop - @i32 @i32)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label4
+          (binary
+            (bop > @i64 @i64)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/v)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          ) true
+        )
+        (label break1)
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/len
+          (binary
+            (bop - @i32 @i32)
+            (lit @i32 i:20)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/i)
+          )
+        )
+        (cgoto Label5
+          (var System.Core!System.Runtime.Int64ToString[@i64]/negative) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int64ToString[@i64]/len
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/len)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.Int64ToString[@i64]/buf)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/i)
+            )
+            (lit @char c:45)
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int64ToString[@i64]/i
+            (binary
+              (bop - @i32 @i32)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label Label5)
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/chars
+          (arrnew @char[]
+            (var System.Core!System.Runtime.Int64ToString[@i64]/len) 0
+          )
+        )
+        (vardecl System.Core!System.Runtime.Int64ToString[@i64]/j
+          (lit @i32 i:0)
+        )
+        (goto continue2)
+        (label Label6)
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.Int64ToString[@i64]/chars)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/j)
+            )
+            (elem @char
+              (var System.Core!System.Runtime.Int64ToString[@i64]/buf)
+              (binary
+                (bop + @i32 @i32)
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.Runtime.Int64ToString[@i64]/i)
+                  (lit @i32 i:1)
+                )
+                (var System.Core!System.Runtime.Int64ToString[@i64]/j)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.Int64ToString[@i64]/j
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.Int64ToString[@i64]/j)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label6
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/j)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/len)
+          ) true
+        )
+        (label break2)
+        (return
+          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
+            (this System.Runtime)
+            (var System.Core!System.Runtime.Int64ToString[@i64]/chars)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.DoubleToString[@f64]
       (block 0)
     )
     (body System.Core!System.Runtime.BooleanToString[@bool]
-      (block 0)
+      (block 4
+        (cgoto Label1
+          (var System.Core!System.Runtime.BooleanToString[@bool]/value) false
+        )
+        (return
+          (lit @string s:True)
+        )
+        (label Label1)
+        (return
+          (lit @string s:False)
+        )
+      )
     )
     (body System.Core!System.Runtime.CharToString[@char]
-      (block 0)
+      (block 3
+        (vardecl System.Core!System.Runtime.CharToString[@char]/chars
+          (arrnew @char[]
+            (lit @i32 i:1) 0
+          )
+        )
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.CharToString[@char]/chars)
+              (lit @i32 i:0)
+            )
+            (var System.Core!System.Runtime.CharToString[@char]/value)
+          )
+        )
+        (return
+          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
+            (this System.Runtime)
+            (var System.Core!System.Runtime.CharToString[@char]/chars)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.ParseInt64[@string]
-      (block 0)
+      (block 39
+        (vardecl System.Core!System.Runtime.ParseInt64[@string]/len
+          (memberacc @i32 Length
+            (var System.Core!System.Runtime.ParseInt64[@string]/s)
+          )
+        )
+        (cgoto Label1
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.Runtime.ParseInt64[@string]/len)
+            (lit @i32 i:0)
+          ) false
+        )
+        (return
+          (conv @i64
+            (lit @i32 i:0)
+          )
+        )
+        (label Label1)
+        (vardecl System.Core!System.Runtime.ParseInt64[@string]/index
+          (lit @i32 i:0)
+        )
+        (vardecl System.Core!System.Runtime.ParseInt64[@string]/negative
+          (lit @bool b:0)
+        )
+        (vardecl System.Core!System.Runtime.ParseInt64[@string]/first
+          (elem @char
+            (var System.Core!System.Runtime.ParseInt64[@string]/s)
+            (lit @i32 i:0)
+          )
+        )
+        (cgoto Label2
+          (binary
+            (bop == @char @char)
+            (var System.Core!System.Runtime.ParseInt64[@string]/first)
+            (lit @char c:43)
+          ) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/index
+            (lit @i32 i:1)
+          )
+        )
+        (goto Label3)
+        (label Label2)
+        (cgoto Label4
+          (binary
+            (bop == @char @char)
+            (var System.Core!System.Runtime.ParseInt64[@string]/first)
+            (lit @char c:45)
+          ) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/negative
+            (lit @bool b:1)
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/index
+            (lit @i32 i:1)
+          )
+        )
+        (label Label4)
+        (label Label3)
+        (vardecl System.Core!System.Runtime.ParseInt64[@string]/acc
+          (conv @u64
+            (lit @i32 i:0)
+          )
+        )
+        (goto continue1)
+        (label Label5)
+        (vardecl System.Core!System.Runtime.ParseInt64[@string]/ch
+          (conv @i32
+            (elem @char
+              (var System.Core!System.Runtime.ParseInt64[@string]/s)
+              (var System.Core!System.Runtime.ParseInt64[@string]/index)
+            )
+          )
+        )
+        (cgoto Label6
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Runtime.ParseInt64[@string]/ch)
+            (lit @i32 i:48)
+          ) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/index
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.ParseInt64[@string]/index)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (goto Label7)
+        (label Label6)
+        (cgoto Label8
+          (binary
+            (bop > @i32 @i32)
+            (var System.Core!System.Runtime.ParseInt64[@string]/ch)
+            (lit @i32 i:57)
+          ) false
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/index
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.ParseInt64[@string]/index)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (goto Label9)
+        (label Label8)
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/acc
+            (binary
+              (bop + @u64 @u64)
+              (binary
+                (bop * @u64 @u64)
+                (var System.Core!System.Runtime.ParseInt64[@string]/acc)
+                (lit @u64 U:10)
+              )
+              (conv @u64
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.Core!System.Runtime.ParseInt64[@string]/ch)
+                  (lit @i32 i:48)
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.ParseInt64[@string]/index
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.ParseInt64[@string]/index)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label Label9)
+        (label Label7)
+        (label continue1)
+        (cgoto Label5
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Runtime.ParseInt64[@string]/index)
+            (var System.Core!System.Runtime.ParseInt64[@string]/len)
+          ) true
+        )
+        (label break1)
+        (cgoto Label10
+          (var System.Core!System.Runtime.ParseInt64[@string]/negative) false
+        )
+        (return
+          (unary
+            (uop - @i64)
+            (conv @i64
+              (var System.Core!System.Runtime.ParseInt64[@string]/acc)
+            )
+          )
+        )
+        (label Label10)
+        (return
+          (conv @i64
+            (var System.Core!System.Runtime.ParseInt64[@string]/acc)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.UInt64ToString[@u64]
-      (block 0)
+      (block 26
+        (cgoto Label1
+          (binary
+            (bop == @u64 @u64)
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/value)
+            (lit @u64 U:0)
+          ) false
+        )
+        (return
+          (lit @string s:0)
+        )
+        (label Label1)
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/v
+          (var System.Core!System.Runtime.UInt64ToString[@u64]/value)
+        )
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/DIGITS
+          (lit @string s:0123456789)
+        )
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/buf
+          (arrnew @char[]
+            (lit @i32 i:21) 0
+          )
+        )
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/i
+          (lit @i32 i:20)
+        )
+        (goto continue1)
+        (label Label2)
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/buf)
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/i)
+            )
+            (elem @char
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/DIGITS)
+              (conv @i32
+                (conv @i64
+                  (binary
+                    (bop % @u64 @u64)
+                    (var System.Core!System.Runtime.UInt64ToString[@u64]/v)
+                    (lit @u64 U:10)
+                  )
+                )
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.UInt64ToString[@u64]/v
+            (binary
+              (bop / @u64 @u64)
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/v)
+              (lit @u64 U:10)
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.UInt64ToString[@u64]/i
+            (binary
+              (bop - @i32 @i32)
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/i)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue1)
+        (cgoto Label2
+          (binary
+            (bop > @u64 @u64)
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/v)
+            (lit @u64 U:0)
+          ) true
+        )
+        (label break1)
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/len
+          (binary
+            (bop - @i32 @i32)
+            (lit @i32 i:20)
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/i)
+          )
+        )
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/chars
+          (arrnew @char[]
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/len) 0
+          )
+        )
+        (vardecl System.Core!System.Runtime.UInt64ToString[@u64]/j
+          (lit @i32 i:0)
+        )
+        (goto continue2)
+        (label Label3)
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/chars)
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/j)
+            )
+            (elem @char
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/buf)
+              (binary
+                (bop + @i32 @i32)
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.Runtime.UInt64ToString[@u64]/i)
+                  (lit @i32 i:1)
+                )
+                (var System.Core!System.Runtime.UInt64ToString[@u64]/j)
+              )
+            )
+          )
+        )
+        (exprstmt
+          (assign System.Core!System.Runtime.UInt64ToString[@u64]/j
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.Runtime.UInt64ToString[@u64]/j)
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (label continue2)
+        (cgoto Label3
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/j)
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/len)
+          ) true
+        )
+        (label break2)
+        (return
+          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
+            (this System.Runtime)
+            (var System.Core!System.Runtime.UInt64ToString[@u64]/chars)
+          )
+        )
+      )
     )
     (body System.Core!System.Runtime.StringFromChars[@char[]]
       (block 0)
     )
     (body System.Core!System.Runtime.Sha256Hash[@u8[]]
+      (block 0)
+    )
+    (body System.Core!System.Runtime.LaunchProcess[@string,@string]
       (block 0)
     )
     (body System.Core!System.SByte.ToString[@i8]
@@ -8687,4 +9698,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:1a95d6885dcab824cfa1edc10d53962e2f18eabf5247b7303d9c329e41e4d8ea)
+(checksum sha256:5cebcf5e9819384059df907fa32cb026dedc401ce0ffbe30fa6a583ea42adb92)

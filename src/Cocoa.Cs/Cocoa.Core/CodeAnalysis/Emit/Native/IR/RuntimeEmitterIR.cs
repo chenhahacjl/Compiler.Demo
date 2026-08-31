@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
     {
         private static readonly string[] Kernel32Imports =
         {
-            "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc",
+            "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
             // Y-P0-1：文件 IO / 环境 syscall（G7-④ 补齐；文件读写经 msvcrt 低参 API，避开 6-7 参 ABI 上限）
@@ -26,7 +26,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）。</summary>
         private static readonly string[] UcrtImports =
         {
-            "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64",
+            "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64", "_wsystem",
+        };
+
+        private static readonly string[] BcryptImports =
+        {
+            "BCryptOpenAlgorithmProvider", "BCryptCreateHash", "BCryptHashData",
+            "BCryptFinishHash", "BCryptCloseAlgorithmProvider", "BCryptDestroyHash",
+            "BCryptHash",
         };
 
         public static void Append(IrProgram program, TargetPlatform platform)
@@ -56,7 +63,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _fileBuffer = "", _fileBuffer2 = "", _rbMode = "", _wbMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
-                _formatZero = "", _formatHalf = "";
+                _formatZero = "", _formatHalf = "",
+                _bcryptAlg = "", _bcryptHash = "";
 
             public RuntimeFunctionEmitter(IrProgram program, TargetPlatform platform)
             {
@@ -252,6 +260,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _ = BeginFunction("StringFromChars", 8);
                 EmitStringFromChars();
 
+                _ = BeginFunction("Sha256Hash", 8);
+                EmitSha256Hash();
+
+                _ = BeginFunction("LaunchProcess", 8, 8);
+                EmitLaunchProcess();
+
                 var divByZero = BeginFunction("DivByZero");
                 EmitError(_divZeroMessage);
                 var stackOverflow = BeginFunction("StackOverflow");
@@ -293,10 +307,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _formatFalse = _program.AddData(IrDataItem.Utf16(Prefix + "FormatFalse", "False"));
                 _formatZero = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatZero", DoubleBits(0.0)));
                 _formatHalf = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatHalf", DoubleBits(0.5)));
+                _bcryptAlg = _program.AddData(IrDataItem.Pointer(Prefix + "BcryptAlg"));
+                _bcryptHash = _program.AddData(IrDataItem.Pointer(Prefix + "BcryptHash"));
 
                 _program.Imports.AddRange(Kernel32Imports.Select(n => new IrImport("kernel32.dll", n, false)));
                 _program.Imports.Add(new IrImport("kernel32.dll", _tickCountImport, false));
                 _program.Imports.AddRange(UcrtImports.Select(n => new IrImport("ucrtbase.dll", n, true)));
+                _program.Imports.AddRange(BcryptImports.Select(n => new IrImport("bcrypt.dll", n, false)));
             }
 
             // ------------------------------------------------------------------
@@ -404,6 +421,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             private void Lea(IrVirtualRegister dst, IrVirtualRegister baseReg, int offset) => Add(IrOpCode.Lea, dst, IrOperand.Reg(baseReg), IrOperand.None, offset, 0);
 
             private void LeaSlot(IrVirtualRegister dst, IrVirtualRegister src) => Add(IrOpCode.LeaSlot, dst, IrOperand.Reg(src));
+
+            private void LeaVar(IrVirtualRegister dst, IrVirtualRegister varReg) => Add(IrOpCode.LeaVar, dst, IrOperand.Reg(varReg));
 
             private void Add(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Add, dst, IrOperand.Reg(a), IrOperand.Reg(b));
 

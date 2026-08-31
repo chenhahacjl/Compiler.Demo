@@ -64,46 +64,11 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 case BuiltinKind.Sqrt:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.MathSqrt);
                     break;
-                case BuiltinKind.Floor:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathFloor);
-                    break;
-                case BuiltinKind.Ceiling:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathCeiling);
-                    break;
-                case BuiltinKind.Truncate:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathTruncate);
-                    break;
-                case BuiltinKind.Round:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.MathRound);
-                    break;
                 case BuiltinKind.Beep:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConsoleBeep);
                     break;
-                case BuiltinKind.Int32ToString:
-                case BuiltinKind.UInt64ToString:
-                    // box 值（框架 TypeRef）→ Convert.ToString(object)
-                    il.Emit(
-                        IlOpCodeTable.Get("Box"),
-                        function.BuiltinKind == BuiltinKind.Int32ToString ? (object)_framework.Int32Type : _framework.UInt64Type);
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
-                    break;
-                case BuiltinKind.Int64ToString:
-                    il.Emit(
-                        IlOpCodeTable.Get("Box"),
-                        (object)_framework.Int64Type);
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToString);
-                    break;
                 case BuiltinKind.DoubleToString:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringDouble);
-                    break;
-                case BuiltinKind.BooleanToString:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringBoolean);
-                    break;
-                case BuiltinKind.CharToString:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToStringChar);
-                    break;
-                case BuiltinKind.ParseInt64:
-                    il.Emit(IlOpCodeTable.Get("Call"), _framework.ConvertToInt64FromString);
                     break;
                 case BuiltinKind.StringFromChars:
                     // 6e-G7 ③a：new string(char[])
@@ -190,6 +155,55 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
+                case BuiltinKind.LaunchProcess:
+                {
+                    // ProcessStartInfo(string fileName) ctor — consumes 'path' from stack
+                    var psiCtor = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", ".ctor", new[] { "System.String" });
+                    if (psiCtor == null) throw new Exception("ProcessStartInfo.ctor not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Newobj"), psiCtor);
+                    // stack: [..., psi]
+
+                    // dup → set_Arguments(args)
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var setArgs = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_Arguments", new[] { "System.String" });
+                    if (setArgs == null) throw new Exception("ProcessStartInfo.set_Arguments not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), setArgs);
+                    // stack: [..., psi]
+
+                    // dup → set_UseShellExecute(false)
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var setUseShell = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_UseShellExecute", new[] { "System.Boolean" });
+                    if (setUseShell == null) throw new Exception("ProcessStartInfo.set_UseShellExecute not found");
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                    il.Emit(IlOpCodeTable.Get("Call"), setUseShell);
+                    // stack: [..., psi]
+
+                    // Process.Start(ProcessStartInfo) → Process
+                    var start = _framework.ResolveMethod("System.Diagnostics.Process", "Start", new[] { "System.Diagnostics.ProcessStartInfo" });
+                    if (start == null) throw new Exception("Process.Start not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), start);
+                    // stack: [..., proc]
+
+                    // dup → WaitForExit()
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var waitForExit = _framework.ResolveMethod("System.Diagnostics.Process", "WaitForExit", Array.Empty<string>());
+                    if (waitForExit == null) throw new Exception("Process.WaitForExit not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), waitForExit);
+                    // stack: [..., proc]
+
+                    // proc.get_ExitCode()
+                    var getExitCode = _framework.ResolveMethod("System.Diagnostics.Process", "get_ExitCode", Array.Empty<string>());
+                    if (getExitCode == null) throw new Exception("Process.ExitCode not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), getExitCode);
+                    // stack: [..., exitCode]
+
+                    // proc.Dispose()
+                    var dispose = _framework.ResolveMethod("System.Diagnostics.Process", "Dispose", Array.Empty<string>());
+                    if (dispose != null)
+                        il.Emit(IlOpCodeTable.Get("Call"), dispose);
+
+                    break;
+                }
 
                 // 6e-M19 M2-c：System.Object 静态方法（Object.Equals(a,b) / Object.ReferenceEquals(a,b)，参数 any→object）
                 case BuiltinKind.ObjectStaticEquals:
@@ -199,7 +213,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectReferenceEquals);
                     break;
                 default:
-                    throw new Exception($"Unknown builtin kind {function.BuiltinKind}");
+                    throw new InvalidOperationException($"IL 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }
         }
 
@@ -511,7 +525,9 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             return elementType switch
             {
                 _ when elementType == TypeSymbol.Int32 => "System.Int32",
+                _ when elementType == TypeSymbol.UInt32 => "System.UInt32",
                 _ when elementType == TypeSymbol.Int64 => "System.Int64",
+                _ when elementType == TypeSymbol.UInt64 => "System.UInt64",
                 _ when elementType == TypeSymbol.Char => "System.Char",
                 _ when elementType == TypeSymbol.UInt8 => "System.Byte",
                 _ when elementType == TypeSymbol.Double => "System.Double",

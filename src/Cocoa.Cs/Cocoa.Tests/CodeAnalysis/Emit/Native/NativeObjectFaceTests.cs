@@ -57,7 +57,7 @@ function Main(): i32
         [Fact]
         public void Native_FacadeToString_StillAllowed()
         {
-            // facade 路由（Runtime.Int32ToString syscall）不受影响
+            // facade 路由（Runtime.Int32ToString 已下沉为纯 Cocoa 带体 static 方法）不受影响
             var diagnostics = EmitNative(@"
 function Main(): i32
 {

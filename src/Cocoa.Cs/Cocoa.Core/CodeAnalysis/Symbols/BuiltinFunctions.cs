@@ -18,18 +18,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         TickCount,
         Exit,
         Sqrt,
-        Floor,
-        Ceiling,
-        Truncate,
-        Round,
         Beep,
-        Int32ToString,
-        Int64ToString,
         DoubleToString,
-        BooleanToString,
-        CharToString,
-        ParseInt64,
-        UInt64ToString,
         StringFromChars,
 
         // ---- 加密（6e-G7 ⑤a）----
@@ -46,6 +36,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         GetCurrentDirectory,
         SetCurrentDirectory,
         GetExecutablePath,
+
+        // ---- 进程（P1-9）----
+        LaunchProcess,
 
         // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
         // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
@@ -82,18 +75,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.TickCount, "TickCount", TypeSymbol.Int32, System.Array.Empty<(string, TypeSymbol)>()),
             new BuiltinSpec(BuiltinKind.Exit, "Exit", TypeSymbol.Void, new[] { ("code", TypeSymbol.Int32) }),
             new BuiltinSpec(BuiltinKind.Sqrt, "Sqrt", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
-            new BuiltinSpec(BuiltinKind.Floor, "Floor", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
-            new BuiltinSpec(BuiltinKind.Ceiling, "Ceiling", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
-            new BuiltinSpec(BuiltinKind.Truncate, "Truncate", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
-            new BuiltinSpec(BuiltinKind.Round, "Round", TypeSymbol.Double, new[] { ("x", TypeSymbol.Double) }),
             new BuiltinSpec(BuiltinKind.Beep, "Beep", TypeSymbol.Void, new[] { ("frequency", TypeSymbol.Int32), ("duration", TypeSymbol.Int32) }),
-            new BuiltinSpec(BuiltinKind.Int32ToString, "Int32ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Int32) }),
-            new BuiltinSpec(BuiltinKind.Int64ToString, "Int64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Int64) }),
             new BuiltinSpec(BuiltinKind.DoubleToString, "DoubleToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Double) }),
-            new BuiltinSpec(BuiltinKind.BooleanToString, "BooleanToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Boolean) }),
-            new BuiltinSpec(BuiltinKind.CharToString, "CharToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Char) }),
-            new BuiltinSpec(BuiltinKind.ParseInt64, "ParseInt64", TypeSymbol.Int64, new[] { ("s", TypeSymbol.String) }),
-            new BuiltinSpec(BuiltinKind.UInt64ToString, "UInt64ToString", TypeSymbol.String, new[] { ("value", TypeSymbol.UInt64) }),
             new BuiltinSpec(BuiltinKind.StringFromChars, "StringFromChars", TypeSymbol.String, new[] { ("chars", TypeSymbol.ArrayOf(TypeSymbol.Char)) }),
             new BuiltinSpec(BuiltinKind.FileReadAllText, "ReadAllText", TypeSymbol.String, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileWriteAllText, "WriteAllText", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("text", TypeSymbol.String) }),
@@ -105,7 +88,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.FileCopy, "Copy", TypeSymbol.Void, new[] { ("src", TypeSymbol.String), ("dst", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.DirectoryExists, "DirectoryExists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
-            new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }));
+            new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
+            new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String) }));
 
         /// <summary>
         /// 杈撳嚭瀛楃涓插苟鎹㈣: void WriteLine(any text)锛? Console.WriteLine锛?
@@ -153,50 +137,12 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly FunctionSymbol Sqrt = Create(BuiltinKind.Sqrt);
 
         /// <summary>
-        /// 鍚戜笅鍙栨暣: double Floor(double x)锛? Math.Floor锛?
-        /// </summary>
-        public static readonly FunctionSymbol Floor = Create(BuiltinKind.Floor);
-
-        /// <summary>
-        /// 鍚戜笂鍙栨暣: double Ceiling(double x)锛? Math.Ceiling锛?
-        /// </summary>
-        public static readonly FunctionSymbol Ceiling = Create(BuiltinKind.Ceiling);
-
-        /// <summary>
-        /// 鍚戦浂鎴柇: double Truncate(double x)锛? Math.Truncate锛?
-        /// </summary>
-        public static readonly FunctionSymbol Truncate = Create(BuiltinKind.Truncate);
-
-        /// <summary>
-        /// 鍥涜垗浜斿叆锛堟渶杩戝伓鏁帮級: double Round(double x)锛? Math.Round锛宐anker's rounding锛?
-        /// </summary>
-        public static readonly FunctionSymbol Round = Create(BuiltinKind.Round);
-
-        /// <summary>
         /// 鎵０鍣ㄨ渹楦? void Beep(int frequency, int duration)锛? Console.Beep锛?
         /// </summary>
         public static readonly FunctionSymbol Beep = Create(BuiltinKind.Beep);
 
-        /// <summary>鏁存暟杞瓧绗︿覆: string Int32ToString(int value)锛坒acade System.Int32.ToString 鐨勫簳灞傚師璇級</summary>
-        public static readonly FunctionSymbol Int32ToString = Create(BuiltinKind.Int32ToString);
-
-        /// <summary>闀挎暣鏁拌浆瀛楃涓? string Int64ToString(long value)锛坒acade System.Int64.ToString 鐨勫簳灞傚師璇級</summary>
-        public static readonly FunctionSymbol Int64ToString = Create(BuiltinKind.Int64ToString);
-
         /// <summary>鍙岀簿搴﹁浆瀛楃涓? string DoubleToString(double value)锛坒acade System.Double.ToString 鐨勫簳灞傚師璇級</summary>
         public static readonly FunctionSymbol DoubleToString = Create(BuiltinKind.DoubleToString);
-
-        /// <summary>甯冨皵杞瓧绗︿覆: string BooleanToString(bool value)锛?True"/"False"锛宖acade System.Boolean.ToString 鐨勫簳灞傚師璇級</summary>
-        public static readonly FunctionSymbol BooleanToString = Create(BuiltinKind.BooleanToString);
-
-        /// <summary>瀛楃杞瓧绗︿覆: string CharToString(char value)锛坒acade System.Char.ToString 鐨勫簳灞傚師璇級</summary>
-        public static readonly FunctionSymbol CharToString = Create(BuiltinKind.CharToString);
-
-        /// <summary>瀛楃涓茶В鏋愪负闀挎暣鏁? long ParseInt64(string s)锛坒acade System.Int64.Parse 鐨勫簳灞傚師璇級</summary>
-        public static readonly FunctionSymbol ParseInt64 = Create(BuiltinKind.ParseInt64);
-
-        /// <summary>鏃犵鍙烽暱鏁存暟杞瓧绗︿覆: string UInt64ToString(ulong value)锛坒acade System.UInt64.ToString 鐨勫簳灞傚師璇級</summary>
-        public static readonly FunctionSymbol UInt64ToString = Create(BuiltinKind.UInt64ToString);
 
         /// <summary>字符数组构造字符串: string StringFromChars(char[] chars)（6e-G7 ③a：StringBuilder 底座）。</summary>
         public static readonly FunctionSymbol StringFromChars = Create(BuiltinKind.StringFromChars);
@@ -213,6 +159,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly FunctionSymbol DirectoryExists = Create(BuiltinKind.DirectoryExists);
         public static readonly FunctionSymbol SetCurrentDirectory = Create(BuiltinKind.SetCurrentDirectory);
         public static readonly FunctionSymbol Sha256Hash = Create(BuiltinKind.Sha256Hash);
+        public static readonly FunctionSymbol LaunchProcess = Create(BuiltinKind.LaunchProcess);
 
         private static FunctionSymbol Create(BuiltinKind kind)
         {
@@ -242,18 +189,8 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.TickCount => TickCount,
                 BuiltinKind.Exit => Exit,
                 BuiltinKind.Sqrt => Sqrt,
-                BuiltinKind.Floor => Floor,
-                BuiltinKind.Ceiling => Ceiling,
-                BuiltinKind.Truncate => Truncate,
-                BuiltinKind.Round => Round,
                 BuiltinKind.Beep => Beep,
-                BuiltinKind.Int32ToString => Int32ToString,
-                BuiltinKind.Int64ToString => Int64ToString,
                 BuiltinKind.DoubleToString => DoubleToString,
-                BuiltinKind.BooleanToString => BooleanToString,
-                BuiltinKind.CharToString => CharToString,
-                BuiltinKind.ParseInt64 => ParseInt64,
-                BuiltinKind.UInt64ToString => UInt64ToString,
                 BuiltinKind.StringFromChars => StringFromChars,
                 BuiltinKind.FileReadAllText => FileReadAllText,
                 BuiltinKind.FileWriteAllText => FileWriteAllText,
@@ -266,6 +203,7 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.DirectoryExists => DirectoryExists,
                 BuiltinKind.SetCurrentDirectory => SetCurrentDirectory,
                 BuiltinKind.Sha256Hash => Sha256Hash,
+                BuiltinKind.LaunchProcess => LaunchProcess,
                 _ => null,
             };
         }

@@ -5,6 +5,15 @@
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
+
+		<!--
+			P0 警告棘轮（基线 2026-08-31：全量 900 个 warning，其中 866 个为 nullable 迁移债）。
+			TreatWarningsAsErrors 开启后，NoWarn 压住这 900 个既有编号，
+			任何新增编号（或取消 NoWarn 后重新出现的警告）都会让构建失败。
+			逐批偿还时从 NoWarn 移除对应编号，即可把该类别纳入棘轮。
+		-->
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>$(NoWarn);CS8602;CS8603;CS8604;CS8605;CS8600;CS8618;CS8620;CS8625;CS0108;CA1416;xUnit2013;xUnit1026</NoWarn>
 	</PropertyGroup>
 
 </Project>
