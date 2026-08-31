@@ -1,5 +1,5 @@
-﻿using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Evaluation;
@@ -16,9 +16,9 @@ namespace Cocoa.CodeAnalysis
         private readonly string _entryPointName;
         private readonly string[] _references;
         private readonly ImmutableArray<MetadataReference> _metadataReferences;
-        private readonly ImmutableArray<CodProgram> _codLibraries;
+        private readonly ImmutableArray<CoaProgram> _codLibraries;
 
-        /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
+        /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
         private readonly bool _linkCodDynamically;
 
         public abstract Language Language { get; }
@@ -30,7 +30,7 @@ namespace Cocoa.CodeAnalysis
             _entryPointName = entryPointName;
             _linkCodDynamically = linkCodDynamically;
             _references = (references ?? Array.Empty<string>())
-                .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+                .Where(r => !r.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
             _metadataReferences = (references ?? Array.Empty<string>())
                 .Select(r => new MetadataReference(r))
@@ -39,24 +39,24 @@ namespace Cocoa.CodeAnalysis
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
 
-        private static ImmutableArray<CodProgram> LoadCodLibraries(string[]? references)
+        private static ImmutableArray<CoaProgram> LoadCodLibraries(string[]? references)
         {
-            var builder = ImmutableArray.CreateBuilder<CodProgram>();
+            var builder = ImmutableArray.CreateBuilder<CoaProgram>();
 
-            // 内建系统库（System.Core.cod 等，目录发现 `System*.cod`）先行：用户引用可覆盖/补充同名符号
+            // 内建系统库（System.Core.coa 等，目录发现 `System*.coa`）先行：用户引用可覆盖/补充同名符号
             builder.AddRange(SystemLibrary.Load());
 
             if (references != null)
             {
                 foreach (var reference in references)
                 {
-                    if (reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+                    if (reference.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                     {
-                        // 6e 跨库里程碑：用户 `.cod` 以「系统库 + 已加载用户库」为 external——
+                        // 6e 跨库里程碑：用户 `.coa` 以「系统库 + 已加载用户库」为 external——
                         // 跨库符号合并复用实例（按依赖序加载；本轮最小实现：按传入序，refcod 拓扑留待完善）
                         var external = builder.ToImmutable();
-                        var library = CodSerializer.Load(reference, external);
-                        library.Name = Cod.CodAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference));
+                        var library = CoaSerializer.Load(reference, external);
+                        library.Name = Coa.CoaAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference));
                         library.SourcePath = Path.GetFullPath(reference);
                         builder.Add(library);
                     }
@@ -76,7 +76,7 @@ namespace Cocoa.CodeAnalysis
             return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically: false, syntaxTrees);
         }
 
-        /// <summary>动态链接变体（阶段 A2）：dotnet 后端消费 `.cod` 时不内联，运行期依赖各库 dll。</summary>
+        /// <summary>动态链接变体（阶段 A2）：dotnet 后端消费 `.coa` 时不内联，运行期依赖各库 dll。</summary>
         public static Compilation Create(string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
         {
             return CreateCompilation(isScript: false, previous: null, entryPointName: "Main", references, linkCodDynamically, syntaxTrees);
@@ -92,7 +92,7 @@ namespace Cocoa.CodeAnalysis
             return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically: false, syntaxTrees);
         }
 
-        /// <summary>动态链接变体（阶段 A2）：带入口名的 dotnet 消费方，`.cod` 库以外部 dll 依赖接入。</summary>
+        /// <summary>动态链接变体（阶段 A2）：带入口名的 dotnet 消费方，`.coa` 库以外部 dll 依赖接入。</summary>
         public static Compilation Create(string entryPointName, string[] references, bool linkCodDynamically, params SyntaxTree[] syntaxTrees)
         {
             return CreateCompilation(isScript: false, previous: null, entryPointName, references, linkCodDynamically, syntaxTrees);
@@ -122,8 +122,8 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<FunctionSymbol> Functions => GlobalScope.Functions;
         public ImmutableArray<VariableSymbol> Variables => GlobalScope.Variables;
 
-        /// <summary>已加载的 `.cod` 库（含系统库；动态链接 CopyLocal 依据）。</summary>
-        internal ImmutableArray<CodProgram> CodLibraries => _codLibraries;
+        /// <summary>已加载的 `.coa` 库（含系统库；动态链接 CopyLocal 依据）。</summary>
+        internal ImmutableArray<CoaProgram> CodLibraries => _codLibraries;
 
         internal BoundGlobalScope GlobalScope
         {
@@ -230,7 +230,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。
-        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .cod 库）类/枚举/
+        /// 内建特殊类型（基元/Object/Type/String/Void）优先，其次全局命名空间树（源 + 注入的 .coa 库）类/枚举/
         /// 泛型定义。支持后置 [] 数组全名、泛型定义（<c>"...List`1"</c>）与实例化 mangle（<c>"...List`1#System.Int32"</c>）。</summary>
         public TypeSymbol? GetTypeByMetadataName(string fullyQualifiedName)
         {
@@ -328,7 +328,7 @@ namespace Cocoa.CodeAnalysis
         private NamespaceSymbol? _globalNamespace;
 
         /// <summary>全局命名空间根（对齐 Roslyn <c>Compilation.GlobalNamespace</c>）：包含子命名空间与
-        /// 全部已声明的命名类型（源 + 注入的 .cod 库；按符号的 <see cref="NamedTypeSymbol.Namespace"/> 归组）。</summary>
+        /// 全部已声明的命名类型（源 + 注入的 .coa 库；按符号的 <see cref="NamedTypeSymbol.Namespace"/> 归组）。</summary>
         public NamespaceSymbol GlobalNamespace
         {
             get
@@ -376,7 +376,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>引用的元数据引用（对齐 Roslyn <c>Compilation.References</c>；含 .cod 库与程序集路径，保持传入顺序）。</summary>
+        /// <summary>引用的元数据引用（对齐 Roslyn <c>Compilation.References</c>；含 .coa 库与程序集路径，保持传入顺序）。</summary>
         public ImmutableArray<MetadataReference> References => _metadataReferences;
 
         private AssemblySymbol? _sourceAssembly;
@@ -400,7 +400,7 @@ namespace Cocoa.CodeAnalysis
 
         private ImmutableArray<AssemblySymbol> _referencedAssemblies;
 
-        /// <summary>引用的元数据程序集（对齐 Roslyn <c>Compilation.References</c>）：程序集路径引用 + 已加载的 `.cod` 库；
+        /// <summary>引用的元数据程序集（对齐 Roslyn <c>Compilation.References</c>）：程序集路径引用 + 已加载的 `.coa` 库；
         /// <see cref="AssemblySymbol.Display"/> 携带路径，供 Emit 解析 BCL/引用。</summary>
         public ImmutableArray<AssemblySymbol> ReferencedAssemblies
         {
@@ -564,7 +564,7 @@ namespace Cocoa.CodeAnalysis
             // 6e-M22 C4-b：IL 后端已支持函数值（Func`N 委托映射），门禁移除；native 见 EmitNative
 
             var ilReferences = references
-                .Where(r => !r.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+                .Where(r => !r.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
             var backendDiagnostics = IlEmitter.Emit(program, moduleName, ilReferences, outputPath, target, emitLibrary);
@@ -643,7 +643,7 @@ namespace Cocoa.CodeAnalysis
             return diagnostics.Concat(importWarnings).ToImmutableArray();
         }
 
-        /// <summary>校验 `.cod` 库的 `requires` 与消费方后端匹配。</summary>
+        /// <summary>校验 `.coa` 库的 `requires` 与消费方后端匹配。</summary>
         private ImmutableArray<Diagnostic> ValidateCodBackendRequirements(bool isNative)
         {
             if (!isNative || _codLibraries.IsDefaultOrEmpty)
@@ -653,7 +653,7 @@ namespace Cocoa.CodeAnalysis
 
             foreach (var library in _codLibraries)
             {
-                if (library.Requires == CodRequirement.DotNet)
+                if (library.Requires == CoaRequirement.DotNet)
                 {
                     var ns = library.Namespaces.Length > 0 ? library.Namespaces[0] : "library";
                     return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, $"库 '{ns}' requires dotnet（含 .NET API/OOP），native 后端不支持（阶段 9 CLR Hosting 前）"));
@@ -664,7 +664,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 纯容器类判定（6e-M17，.cod 库放行判据）：类只含 syscall/静态 extern 方法，
+        /// 纯容器类判定（6e-M17，.coa 库放行判据）：类只含 syscall/静态 extern 方法，
         /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
         /// 不涉对象模型。
         /// </summary>
@@ -689,7 +689,7 @@ namespace Cocoa.CodeAnalysis
         {
             if (classType.IsInterface)
             {
-                // 6e-G7/M0-1a：接口声明放行——仅抽象方法签名（无体），无字段/属性/实现代码，可入 .cod
+                // 6e-G7/M0-1a：接口声明放行——仅抽象方法签名（无体），无字段/属性/实现代码，可入 .coa
                 return classType.Fields.Length == 0 && classType.Properties.Length == 0;
             }
 
@@ -744,7 +744,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 把库编译为 `.cod` 语义层程序集（编译到 BoundProgram 即停，不走 IR/机器码/IL）。
+        /// 把库编译为 `.coa` 语义层程序集（编译到 BoundProgram 即停，不走 IR/机器码/IL）。
         /// </summary>
         internal ImmutableArray<Diagnostic> EmitCocoa(string moduleName, string outputPath)
         {
@@ -763,7 +763,7 @@ namespace Cocoa.CodeAnalysis
                 return program.Diagnostics;
             }
 
-            // 6e-M22：lambda/函数值节点入 `.cod` 序列化于 C6 接入——先行明确诊断
+            // 6e-M22：lambda/函数值节点入 `.coa` 序列化于 C6 接入——先行明确诊断
             var cocoaFunctionValueDiagnostic = FindFunctionValueDiagnostic(program);
             if (cocoaFunctionValueDiagnostic != null)
             {
@@ -776,7 +776,7 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "output = cocoa 的库不允许入口函数（Main/script）"));
             }
 
-            // 校验 2：无内部 OOP（.cod 6e-M17 起放行纯容器类：仅 syscall/extern 静态方法；6b 起放行 facade 实例类
+            // 校验 2：无内部 OOP（.coa 6e-M17 起放行纯容器类：仅 syscall/extern 静态方法；6b 起放行 facade 实例类
             // ——facade 映射 BCL（System.Exception 等），体内不经 cod 执行，仅需符号+成员签名；非 facade 实例类仍 6b 后置）
             if (program.Classes.Length > 0)
             {
@@ -784,7 +784,7 @@ namespace Cocoa.CodeAnalysis
                 if (offendingClass != null)
                 {
                     var location = offendingClass.Declaration?.Identifier.Location ?? ZeroLocation;
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.cod 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类与 facade 类已支持"));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.coa 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类与 facade 类已支持"));
                 }
             }
 
@@ -793,7 +793,7 @@ namespace Cocoa.CodeAnalysis
             {
                 if (HasOopNode(body))
                 {
-                    return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, $"库函数 '{fn.Name}' 含 class/OOP 或 .NET API 调用，.cod 阶段 6b 后置（requires:dotnet）"));
+                    return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, $"库函数 '{fn.Name}' 含 class/OOP 或 .NET API 调用，.coa 阶段 6b 后置（requires:dotnet）"));
                 }
             }
 
@@ -822,13 +822,13 @@ namespace Cocoa.CodeAnalysis
 
             var containerClasses = program.Classes.Where(IsCodSerializableClass).ToImmutableArray();
 
-            var codProgram = new CodProgram(
+            var codProgram = new CoaProgram(
                 functions,
                 globals,
                 enums,
                 containerClasses,
                 program.Functions,
-                CodRequirement.Any,
+                CoaRequirement.Any,
                 ImmutableArray<string>.Empty,
                 ImmutableArray<string>.Empty,
                 imports,
@@ -844,7 +844,7 @@ namespace Cocoa.CodeAnalysis
             Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
             using (var writer = new StreamWriter(outputPath))
             {
-                CodSerializer.Write(writer, codProgram);
+                CoaSerializer.Write(writer, codProgram);
             }
 
             return ImmutableArray<Diagnostic>.Empty;

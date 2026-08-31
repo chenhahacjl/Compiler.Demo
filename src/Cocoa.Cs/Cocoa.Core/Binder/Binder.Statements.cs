@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Lowering;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;

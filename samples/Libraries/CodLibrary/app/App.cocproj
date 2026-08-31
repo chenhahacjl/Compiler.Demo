@@ -8,7 +8,7 @@ dotnetRuntime = net48
 *.co
 
 [references]
-../mylib/out/MyLib.cod
+../mylib/out/MyLib.coa
 
 [options]
 incremental = true

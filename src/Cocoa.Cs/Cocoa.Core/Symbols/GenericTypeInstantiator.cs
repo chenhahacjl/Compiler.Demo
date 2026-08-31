@@ -178,7 +178,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>
         /// 基元内建 → `@` 权威记法（`@` 前缀 = 编译器权威身份标记，非标识符字符与用户类型结构性隔离）。
-        /// Rust/LLVM 式位宽名（i8/i16/i32/i64/u8/u16/u32/u64/f32/f64），`@` 前缀仅在 `.cod` 内部使用。
+        /// Rust/LLVM 式位宽名（i8/i16/i32/i64/u8/u16/u32/u64/f32/f64），`@` 前缀仅在 `.coa` 内部使用。
         /// </summary>
         private static readonly Dictionary<TypeSymbol, string> PrimitiveEncodeNames = new Dictionary<TypeSymbol, string>
         {
@@ -203,7 +203,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             [TypeSymbol.Float128] = "@f128",
         };
 
-        /// <summary>基元权威编码反解（6e-G7 S1：.cod 类型流读侧）。</summary>
+        /// <summary>基元权威编码反解（6e-G7 S1：.coa 类型流读侧）。</summary>
         private static readonly Dictionary<string, TypeSymbol> PrimitiveDecodeNames =
             PrimitiveEncodeNames.ToDictionary(pair => pair.Value, pair => pair.Key);
 
@@ -212,7 +212,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return PrimitiveDecodeNames.TryGetValue(encoded, out type!);
         }
 
-        /// <summary>基元 `@` 权威记法（供 CodSerializer.TypeRef 共用；引用相等键，单例稳定）。</summary>
+        /// <summary>基元 `@` 权威记法（供 CoaSerializer.TypeRef 共用；引用相等键，单例稳定）。</summary>
         internal static bool TryGetPrimitiveName(TypeSymbol type, out string name)
         {
             return PrimitiveEncodeNames.TryGetValue(type, out name!);
@@ -221,7 +221,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>类型实参编码（mangle 与缓存键共用）：`!` 权威实体 / FullName 点保留 / 数组 `[]` 后缀 / 嵌套实例化递归。</summary>
         public static string Encode(TypeSymbol type)
         {
-            // 开放类型参数（定义期壳）：! + 属主全名.名（对齐 CodSerializer.TypeRef；裸名会致不同属主同类参数同键串味）
+            // 开放类型参数（定义期壳）：! + 属主全名.名（对齐 CoaSerializer.TypeRef；裸名会致不同属主同类参数同键串味）
             if (type is TypeParameterSymbol parameter)
             {
                 return parameter.OwningClass != null

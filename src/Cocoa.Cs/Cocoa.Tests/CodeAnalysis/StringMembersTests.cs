@@ -15,7 +15,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// String 成员补齐（自举缺口 P0-6，M0-4 第一批）：源码集成 `src/Cocoa.SDK/System.Core/String.co`
-    /// （System.Core.cod 重建受 Exception.co 实例类门禁阻断，故走源码编译路径），
+    /// （System.Core.coa 重建受 Exception.co 实例类门禁阻断，故走源码编译路径），
     /// 锁定 IndexOf(char)/LastIndexOf/TrimStart·End/ToCharArray/Remove/Insert/Join × 三后端（Evaluator/IL/native x64）。
     /// </summary>
     public class StringMembersTests

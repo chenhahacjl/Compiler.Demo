@@ -1,6 +1,6 @@
 // Cocoa 系统标准库 · System.Core 内部调用层（namespace System）
 // class Runtime —— syscall 声明（编译器内部原语，三后端按 BuiltinKind 分发；完整名 System.Runtime）
-// 可下沉的原语改为带体 static 方法（纯 Cocoa，6e-M18 带体静态方法已放行 .cod），调用点签名不变。
+// 可下沉的原语改为带体 static 方法（纯 Cocoa，6e-M18 带体静态方法已放行 .coa），调用点签名不变。
 // 详细分层设计见 docs-dev/标准库设计.md
 
 namespace System

@@ -106,7 +106,7 @@ namespace Cocoa.Projects
             var extension = Output switch
             {
                 ProjectOutputFormat.Dll => ".dll",
-                ProjectOutputFormat.Cod => ".cod",
+                ProjectOutputFormat.Cod => ".coa",
                 _ => ".exe",
             };
 

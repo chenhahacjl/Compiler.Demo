@@ -174,18 +174,18 @@ function Main()
         public void Compilation_References_ExposeMetadataReferences()
         {
             var code = @"function Main() {}";
-            var compilation = Compilation.Create(new[] { "System.Core.cod", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse(code));
+            var compilation = Compilation.Create(new[] { "System.Core.coa", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse(code));
 
             var references = compilation.References;
             Assert.Equal(2, references.Length);
-            Assert.Equal("System.Core.cod", references[0].Display);
+            Assert.Equal("System.Core.coa", references[0].Display);
             Assert.Equal("C:\\libs\\Foo.dll", references[1].Display);
         }
 
         [Fact]
         public void Emit_MetadataReferenceOverloads_Resolve()
         {
-            var compilation = Compilation.Create(new[] { "System.Core.cod", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse("function Main() {"));
+            var compilation = Compilation.Create(new[] { "System.Core.coa", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse("function Main() {"));
 
             var viaCompilationRefs = compilation.Emit("test", "C:\\Temp\\cocoa-test-out.exe");
             Assert.Contains(viaCompilationRefs, d => d.IsError);
@@ -197,7 +197,7 @@ function Main()
         [Fact]
         public void AssemblySymbols_CarryDisplay_And_EmitConsumes()
         {
-            var compilation = Compilation.Create(new[] { "System.Core.cod", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse("function Main() {"));
+            var compilation = Compilation.Create(new[] { "System.Core.coa", "C:\\libs\\Foo.dll" }, SyntaxTree.Parse("function Main() {"));
 
             var foo = compilation.ReferencedAssemblies.FirstOrDefault(a => a.Name == "Foo");
             Assert.True(foo != null, $"refs={compilation.References.Length} asm={compilation.ReferencedAssemblies.Length} foo={foo?.Display ?? "null"}");

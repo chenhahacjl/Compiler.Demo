@@ -82,11 +82,11 @@ namespace Cocoa.CodeAnalysis.Symbols
             type.AddMethod(TypeFullName);
         }
 
-        /// <summary>是否为 Object/Type 内建单例（`.cod` 序列化跳过 cls 壳与方法回填的判据）。</summary>
+        /// <summary>是否为 Object/Type 内建单例（`.coa` 序列化跳过 cls 壳与方法回填的判据）。</summary>
         internal static bool IsBuiltinSystemClass(NamedTypeSymbol classType)
             => classType == NamedTypeSymbol.SystemObject || classType == NamedTypeSymbol.SystemType;
 
-        /// <summary>按 BuiltinKind 解析单例符号（`.cod` 读侧重建时复用，保证发射器识别内置）。</summary>
+        /// <summary>按 BuiltinKind 解析单例符号（`.coa` 读侧重建时复用，保证发射器识别内置）。</summary>
         internal static FunctionSymbol? GetByKind(BuiltinKind kind) => kind switch
         {
             BuiltinKind.ObjectToString => ToString,
@@ -100,7 +100,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             _ => null,
         };
 
-        /// <summary>按枚举名解析种类（`.cod` v1 序列化用名称字符串，改名不依赖枚举顺序）。</summary>
+        /// <summary>按枚举名解析种类（`.coa` v1 序列化用名称字符串，改名不依赖枚举顺序）。</summary>
         internal static BuiltinKind? GetByKindName(string name)
         {
             foreach (var spec in _specs)

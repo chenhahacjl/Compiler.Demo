@@ -2,20 +2,20 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Cod
+namespace Cocoa.CodeAnalysis.Coa
 {
     /// <summary>
-    /// `.cod` 程序集的内存模型：符号表 + 函数体（语义层 BoundProgram 片段）+ 依赖清单。
+    /// `.coa` 程序集的内存模型：符号表 + 函数体（语义层 BoundProgram 片段）+ 依赖清单。
     /// </summary>
-    internal sealed class CodProgram
+    internal sealed class CoaProgram
     {
-        public CodProgram(
+        public CoaProgram(
             ImmutableArray<FunctionSymbol> functions,
             ImmutableArray<GlobalVariableSymbol> globals,
             ImmutableArray<NamedTypeSymbol> enums,
             ImmutableArray<NamedTypeSymbol> classes,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement> bodies,
-            CodRequirement requires,
+            CoaRequirement requires,
             ImmutableArray<string> platforms,
             ImmutableArray<string> dotnetReferences,
             ImmutableArray<string> nativeImports,
@@ -65,7 +65,7 @@ namespace Cocoa.CodeAnalysis.Cod
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Bodies { get; }
 
         /// <summary>后端要求。</summary>
-        public CodRequirement Requires { get; }
+        public CoaRequirement Requires { get; }
 
         /// <summary>空 = 平台无关；否则仅列出的平台可消费。</summary>
         public ImmutableArray<string> Platforms { get; }
@@ -76,7 +76,7 @@ namespace Cocoa.CodeAnalysis.Cod
         /// <summary>依赖的 native DLL（import 声明）。</summary>
         public ImmutableArray<string> NativeImports { get; }
 
-        /// <summary>依赖的被引用 `.cod`（递归加载）。</summary>
+        /// <summary>依赖的被引用 `.coa`（递归加载）。</summary>
         public ImmutableArray<string> CodReferences { get; }
 
         /// <summary>库声明的命名空间。</summary>

@@ -1,7 +1,7 @@
 # 委托 / Lambda / 闭包 / 事件 设计
 
 > 状态：🔧 设计定稿（2026-08-24，6e-M22 规划，随 6e-M20 G6/G7 收尾同轮实施）
-> 关联：`docs/泛型设计.md`（G6 stdlib / G7 `.cod` 泛型序列化，本轮合并推进）、`docs-dev/对象模型设计.md`（M4 native vtable 复用）、`docs/语法手册.md` §9.12/§15/§20
+> 关联：`docs/泛型设计.md`（G6 stdlib / G7 `.coa` 泛型序列化，本轮合并推进）、`docs-dev/对象模型设计.md`（M4 native vtable 复用）、`docs/语法手册.md` §9.12/§15/§20
 > 核心决策：**结构化函数类型为内核**（Kotlin/F# 路线），delegate 声明为纯语法糖；event 自研多播（三后端同构）；方言只在 Parser 分叉，语义层单一。
 
 ---
@@ -56,7 +56,7 @@ using Handler = (Object, string) -> void        // .co
 using Handler = System.Action<Object, string>;  // .cs
 ```
 
-现有 using 别名机制（6e-M18）右侧扩展接受函数类型/家族拼写；别名编译期局部，不入 `.cod` 导出。
+现有 using 别名机制（6e-M18）右侧扩展接受函数类型/家族拼写；别名编译期局部，不入 `.coa` 导出。
 
 ---
 
@@ -230,12 +230,12 @@ delegate T Selector<in T>(T item)       public delegate T Selector<in T>(T item)
 
 - 语义：声明 = 注册**带名的 FunctionTypeSymbol 别名**（`ClassTypeSymbol.DelegateAliases` / 命名空间级表）
 - 双向隐式转换：`Handler h = ...` 与 `(Object,string)->void` 互通（结构相等即兼容）
-- 可用于事件类型、字段、API 签名；发射层复用 §5 ABI 零新概念；`.cod` 增 `dlgalias` 节点导出
+- 可用于事件类型、字段、API 签名；发射层复用 §5 ABI 零新概念；`.coa` 增 `dlgalias` 节点导出
 - 命名空间级与类内嵌套两级；泛型 delegate 别名 = 类型参数化模板，实例化走既有 Instantiator 缓存
 
 ---
 
-## 9. `.cod` 序列化咬合（C6/C7，并入 G7）
+## 9. `.coa` 序列化咬合（C6/C7，并入 G7）
 
 - 新节点：`fnty`（函数类型）、`evt`（EventSymbol）、`dlgalias`、lambda 提升方法 = 普通 `fn`（mangle 名稳定）、环境/合成类 = 普通 `cls/gcls`
 - 开放泛型体内的 lambda/事件：T 不透明序列化，消费方 BoundTreeSubstituter 全节点替换（fnty 参数/返回一并替换）
@@ -253,7 +253,7 @@ delegate T Selector<in T>(T item)       public delegate T Selector<in T>(T item)
 | C5 闭包 ⚠️ | 捕获分析 + 环境类合成 + 变量改写 + 三后端 + e2e | C4 |
 | C5+ 事件 | EventSymbol + 降级绑定 + 多播数组三后端 + e2e | C5 |
 | C5++ delegate 糖 | 别名注册 + 双向转换 + in/out 诊断 + e2e | C5+ |
-| （G7 并轨） | fnty/evt/dlgalias 入 CodSerializer（C6）+ Substituter 覆盖（C7） | C5++ |
+| （G7 并轨） | fnty/evt/dlgalias 入 CoaSerializer（C6）+ Substituter 覆盖（C7） | C5++ |
 
 ## 11. 验收标准
 

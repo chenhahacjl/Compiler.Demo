@@ -1,4 +1,4 @@
-(cod COCOD 1
+(cod COCOA 1
   (symbols
     (cls System.Array internal iface:false ifaces:0 methods:16 Sum[@i32[]] Sum[@f64[]] Min[@i32[]] Min[@f64[]] Max[@i32[]] Max[@f64[]] Average[@i32[]] Average[@f64[]] Contains[@i32[],@i32] Contains[@f64[],@f64] IndexOf[@i32[],@i32] IndexOf[@f64[],@f64] Reverse[@i32[]] Reverse[@f64[]] Sort[@i32[]] Sort[@f64[]])
     (cls System.Boolean public iface:false ifaces:0 methods:7 ToString[@bool] Parse[@string] Parse[@string,@bool] Equals[@bool,@bool] GetHashCode[@bool] ToString[@bool,@string] TryParse[@string,out:@bool])
@@ -9698,4 +9698,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:5cebcf5e9819384059df907fa32cb026dedc401ce0ffbe30fa6a583ea42adb92)
+(checksum sha256:9863d18210fcc1efa003513cb706a07130d882cd7324ded49acc2f37b57f5be6)

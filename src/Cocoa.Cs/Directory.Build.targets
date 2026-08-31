@@ -1,17 +1,17 @@
-﻿<Project>
+<Project>
 
-	<!-- 涓ぎ搴撲粨 libs\ 鈫?鍚勯」鐩緭鍑虹洰褰曡嚜鍔ㄥ垎鍙戯紙婧愮敱 tools\build-sdk.cmd 鏀堕泦锛?
-	     SkipUnchangedFiles 淇濊瘉澧為噺鏋勫缓闆跺紑閿€锛涜繍琛屾湡 SystemLibrary 鍙︽湁鍚戜笂鎺㈡祴鍏滃簳锛夈€?
-	     娉ㄦ剰锛氬彧鍒嗗彂 .cod鈥斺€斿姩鎬侀摼鎺ョ殑 CocoaStd.Core.dll 鐢辨秷璐规柟鏋勫缓鏃?CopyLocal
-	     浠庡簱婧愮洰褰曪紙SourcePath 鍚岀洰褰曪級钀界洏锛涙澶勫垎鍙戜細涓庡紩鎿庣▼搴忛泦閲嶅悕瑕嗙洊锛屼弗绂佹坊鍔?-->
+	<!-- 中央库仓 libs\ 各项目输出目录自动分发（源由 tools\build-sdk.cmd 收集；
+ SkipUnchangedFiles 保证增量构建零开销；运行期 SystemLibrary 另有向上探测兜底）。
+ 注意：只分发 .coa——动态链接的 CocoaStd.Core.dll 由消费方构建时 CopyLocal
+ 从库源目录（SourcePath 同目录）落盘；此处分发会与引擎程序集重名覆盖，严禁添加 -->
 	<Target Name="DeployStdLib" AfterTargets="Build"
-			Condition="Exists('$(MSBuildThisFileDirectory)libs\System.Core.cod')">
-		<Copy SourceFiles="@(StdLibCod)"
+			Condition="Exists('$(MSBuildThisFileDirectory)libs\System.Core.coa')">
+		<Copy SourceFiles="@(StdLibCoa)"
 				DestinationFolder="$(OutDir)"
 				SkipUnchangedFiles="true" />
 	</Target>
 
 <ItemGroup>
-		<StdLibCod Include="$(MSBuildThisFileDirectory)libs\*.cod" />
+		<StdLibCoa Include="$(MSBuildThisFileDirectory)libs\*.coa" />
 	</ItemGroup>
 </Project>

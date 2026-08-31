@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
@@ -16,7 +16,7 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// 6e 跨库里程碑：独立 System.Collections.cod 跨库调用 System.Core.cod 三后端锁定
+    /// 6e 跨库里程碑：独立 System.Collections.coa 跨库调用 System.Core.coa 三后端锁定
     /// （Evaluator/IL/native x64/x86）。消费方 `using System.Collections.Generic` 经 stdlib
     /// 多模块加载（SystemLibrary 累加式 external 合并）解析集合，体内跨库调用
     /// Object.GetHashCode/Equals 等经 FnKey 库前缀 + external 符号复用跑通。

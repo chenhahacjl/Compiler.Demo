@@ -1,4 +1,4 @@
-﻿// Cocoa 绯荤粺鏍囧噯搴?路 System.Core 閫昏緫灞傦紙namespace System锛?// class Convert 鈥斺€?缂栫爜鍘熻锛?e-G7 鈶 鑷寘鍚細绾?Cocoa 瀹炵幇锛屼笁鍚庣澶╃劧鍙敤锛屼笉渚濊禆 BCL crypto锛夈€?// hex锛氬瓧鑺?鈫?鍗佸叚杩涘埗瀛楃涓诧紙澶у啓锛夛紱base64锛氬瓧鑺?鈫?Base64 瀛楃涓诧紙RFC 4648锛屾爣鍑嗗瓧姣嶈〃 + '=' 濉厖锛夈€?// 娉細涓夊悗绔?`&&`/`||` 闈炵煭璺眰鍊硷紝鏁呭惊鐜敤鍗曟潯浠?+ break 瑙勯伩瓒婄晫銆?
+// Cocoa 绯荤粺鏍囧噯搴?路 System.Core 閫昏緫灞傦紙namespace System锛?// class Convert 鈥斺€?缂栫爜鍘熻锛?e-G7 鈶 鑷寘鍚細绾?Cocoa 瀹炵幇锛屼笁鍚庣澶╃劧鍙敤锛屼笉渚濊禆 BCL crypto锛夈€?// hex锛氬瓧鑺?鈫?鍗佸叚杩涘埗瀛楃涓诧紙澶у啓锛夛紱base64锛氬瓧鑺?鈫?Base64 瀛楃涓诧紙RFC 4648锛屾爣鍑嗗瓧姣嶈〃 + '=' 濉厖锛夈€?// 娉細涓夊悗绔?`&&`/`||` 闈炵煭璺眰鍊硷紝鏁呭惊鐜敤鍗曟潯浠?+ break 瑙勯伩瓒婄晫銆?
 namespace System
 {
     public static class Convert

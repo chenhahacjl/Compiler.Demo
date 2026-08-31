@@ -16,7 +16,7 @@
 4. [绑定规则](#4-绑定规则)
 5. [明确赋值分析（DFA）](#5-明确赋值分析dfa)
 6. [三后端实现](#6-三后端实现)
-7. [.cod 序列化](#7-cod-序列化)
+7. [.coa 序列化](#7-cod-序列化)
 8. [Monomorphizer](#8-monomorphizer)
 9. [stdlib 收益](#9-stdlib-收益)
 10. [测试矩阵与 DoD](#10-测试矩阵与-dod)
@@ -34,8 +34,8 @@
 | `out` / `ref` 参数修饰符 | 双方言拼写（§2）；调用点实参须为可赋值 lvalue |
 | 普通参数可赋值 | 放宽 `ParameterSymbol` 硬编码的 `isReadOnly: true`——C# 语义中参数就是可写局部变量 |
 | 明确赋值分析 | 对齐 C#：out 参出口必须已赋值、未赋值禁读、ref 实参必须已赋值（§5） |
-| 签名身份五处加修饰符位 | 重复声明 / override / 重载 / `.cod` FnKey / MethodSignature（§4.2） |
-| `.cod` 格式扩展 | par 行追加修饰符 token + 调用节点包装（§7） |
+| 签名身份五处加修饰符位 | 重复声明 / override / 重载 / `.coa` FnKey / MethodSignature（§4.2） |
+| `.coa` 格式扩展 | par 行追加修饰符 token + 调用节点包装（§7） |
 | 三后端 | Evaluator 装箱单元 / IL byref 签名+ldloca/stind / native 传址（§6） |
 | 随附验证件 | 纯 Cocoa `Int32.TryParse` / `Int64.TryParse` + `Array.Resize(ref arr, n)`（§9） |
 
@@ -112,7 +112,7 @@ public bool IsByRef => IsOut || IsRef;
 要点：
 
 1. **不引入 ByRefTypeSymbol**。byref 只存在于形参位，不是一等类型：字段/局部/数组元素/泛型实参/函数类型参数都不可能持有 byref——由构造路径结构性保证，零额外门禁。
-2. `ParameterSymbol` 全部构造点（12 处）逐一传递修饰符（默认 None）：Binder.cs:805（顶层函数）、:879（BindParameters 类方法/构造/接口共用）、:1950/:1982（delegate 合成 Invoke）、:2226/:2453（属性 setter value）、:2698-2699（实例方法 this+副本）、CodSerializer.cs:1565（读侧）、GenericMethodInstantiator.cs:54、GenericTypeInstantiator.cs:108、BuiltinFunctions.cs:176、SystemObjectMembers.cs:137、ExternalTypeResolver.cs:64。
+2. `ParameterSymbol` 全部构造点（12 处）逐一传递修饰符（默认 None）：Binder.cs:805（顶层函数）、:879（BindParameters 类方法/构造/接口共用）、:1950/:1982（delegate 合成 Invoke）、:2226/:2453（属性 setter value）、:2698-2699（实例方法 this+副本）、CoaSerializer.cs:1565（读侧）、GenericMethodInstantiator.cs:54、GenericTypeInstantiator.cs:108、BuiltinFunctions.cs:176、SystemObjectMembers.cs:137、ExternalTypeResolver.cs:64。
 3. 内建函数/syscall 规格表暂不引入修饰符（TryParse 走 stdlib 纯 Cocoa 实现，§9）；规格结构预留扩展位。
 
 ---
@@ -132,7 +132,7 @@ public bool IsByRef => IsOut || IsRef;
 - **排除**：属性（与 C# 一致禁止）、只读字段（readonly 语义不变）、字面量/任意表达式、this。
 - 绑定产物：新增轻量包装节点 `BoundByRefArgument(BoundExpression Expression, bool IsRef)` 仅在修饰符存在时包裹实参；普通实参不动。
 
-> 决策记录：选择新包装节点而非 BoundCallExpression 平行修饰符数组——后者改所有调用构造点签名且 Printer/Rewriter/CodSerializer 都要动形状；包装节点 GetChildren 透传内层表达式，Rewriter 天然兼容（补一个 case 重构包装），CodSerializer 加一个节点 case（正好并入 G7-a 窗口）。
+> 决策记录：选择新包装节点而非 BoundCallExpression 平行修饰符数组——后者改所有调用构造点签名且 Printer/Rewriter/CoaSerializer 都要动形状；包装节点 GetChildren 透传内层表达式，Rewriter 天然兼容（补一个 case 重构包装），CoaSerializer 加一个节点 case（正好并入 G7-a 窗口）。
 
 间接调用（`BoundInvocationExpression`，函数值/delegate）v1 不支持 byref 实参：函数类型本身禁止 byref 形参（§4.4），故无表达途径，无需处理。
 
@@ -143,8 +143,8 @@ public bool IsByRef => IsOut || IsRef;
 | 1 | 重复声明拒绝 | `BoundScope.SameSignature`（BoundScope.cs:143-159；TryDeclareFunction :56 / TryDeclareNamespaceFunction :81 使用） | 参数逐位比 类型+IsOut/IsRef ⇒ `f(i32)` 与 `f(out i32)` **可共存**（对齐 C#） |
 | 2 | 重载解析 | `ResolveOverloadByScore`（Binder.cs:6316-6364，:6330 Conversion.Classify 计分） | 计分前先按修饰符过滤候选：实参带 out/ref 修饰符仅匹配同修饰符形参；不带则匹配非 byref 形参。单候选快路（:6282-6314）同样先过滤 |
 | 3 | override 匹配 | `IsOverrideSignatureMatch`（Binder.cs:2833-2854） | 修饰符必须完全一致（对齐 C#），不一致报 `ReportByRefParameterModifierMismatch` |
-| 4 | `.cod` FnKey | Registry.Seal（CodSerializer.cs:1246-1254，`Name[参数类型列表]`） | 键内编入修饰符（如 `Name[out i32,...]`），杜绝跨库仅差修饰符的重载碰撞 |
-| 5 | MethodSignature | CodSerializer.cs:806-811 | 同上 |
+| 4 | `.coa` FnKey | Registry.Seal（CoaSerializer.cs:1246-1254，`Name[参数类型列表]`） | 键内编入修饰符（如 `Name[out i32,...]`），杜绝跨库仅差修饰符的重载碰撞 |
+| 5 | MethodSignature | CoaSerializer.cs:806-811 | 同上 |
 
 接口实现匹配与 override 同规则（成员绑定接口满足性判定处同步）。
 
@@ -254,11 +254,11 @@ callee 侧：InitParam 将指针槽照常拷入形参寄存器槽；此后对该
 
 ---
 
-## 7. .cod 序列化
+## 7. .coa 序列化
 
-1. **par 行扩展**（写 CodSerializer.cs:830-835 / 读 :1556-1569）：`(par <varKey> <name> <typeRef> <ordinal>)` 追加第 5 个 token 修饰符 `-` | `out` | `ref`；读侧缺省 token 按 `-` 兼容（同版本内宽容）。
+1. **par 行扩展**（写 CoaSerializer.cs:830-835 / 读 :1556-1569）：`(par <varKey> <name> <typeRef> <ordinal>)` 追加第 5 个 token 修饰符 `-` | `out` | `ref`；读侧缺省 token 按 `-` 兼容（同版本内宽容）。
 2. **调用节点包装**：`BoundByRefArgument` 新增序列化 case（`byrefarg` 节点，含 IsRef 位 + 内层表达式）——正好并入 G7-a 开放绑定体窗口。
-3. **版本策略**：沿用 f0110bd 先例——`Version = 1` 不变（:32/:80/:1317-1320），格式变更靠读侧拒旧 + **重建入库 stdlib**（System.Core.cod 重新生成；现 stdlib 无 out/ref 签名，重建机械）。
+3. **版本策略**：沿用 f0110bd 先例——`Version = 1` 不变（:32/:80/:1317-1320），格式变更靠读侧拒旧 + **重建入库 stdlib**（System.Core.coa 重新生成；现 stdlib 无 out/ref 签名，重建机械）。
 4. FnKey / MethodSignature 键编入修饰符（§4.2 #4/#5）。
 
 ---
@@ -275,7 +275,7 @@ callee 侧：InitParam 将指针槽照常拷入形参寄存器槽；此后对该
 
 ### 9.1 Int32/Int64.TryParse（纯 Cocoa，零新 syscall）
 
-> **落地记录（R9）**：`System.Core\Int32.co` facade 已实现 ToString/CompareTo/**Parse**（复用 Runtime.ParseInt64 原语 + i32 值域校验）/**TryParse**（i64 累加 + 上界预检防溢出，±边界含 -2147483648）。**边界**：`Array.Resize<T>(ref)` 等「泛型 × byref」stdlib 成员待 G7 泛型 `.cod` 序列化落地后纳入（实测泛型方法进 cod 即加载失败）。**批3（2026-08-29）**：Int64/UInt64/Double 补齐 TryParse/Parse/IsNaN·IsInfinity·IsFinite（M0-4 批3，ParseMembersTests ×三后端）；同批修复 Evaluator byref 回写帧序与 f64/f32 IEEE 相等性两处隐性缺陷，ByRef 矩阵补 Evaluator 腿（详见自举缺口分析 §6）。
+> **落地记录（R9）**：`System.Core\Int32.co` facade 已实现 ToString/CompareTo/**Parse**（复用 Runtime.ParseInt64 原语 + i32 值域校验）/**TryParse**（i64 累加 + 上界预检防溢出，±边界含 -2147483648）。**边界**：`Array.Resize<T>(ref)` 等「泛型 × byref」stdlib 成员待 G7 泛型 `.coa` 序列化落地后纳入（实测泛型方法进 cod 即加载失败）。**批3（2026-08-29）**：Int64/UInt64/Double 补齐 TryParse/Parse/IsNaN·IsInfinity·IsFinite（M0-4 批3，ParseMembersTests ×三后端）；同批修复 Evaluator byref 回写帧序与 f64/f32 IEEE 相等性两处隐性缺陷，ByRef 矩阵补 Evaluator 腿（详见自举缺口分析 §6）。
 ```cocoa
 namespace System
 {
@@ -330,7 +330,7 @@ stdlib `Array` 增 `static function Resize<T>(ref arr: T[], n: i32): void`（泛
 | 语法（双方言） | `.co`/`.cs` 声明与调用位拼写；lambda 形参修饰符拒绝；`out ref` 组合拒绝 |
 | lvalue 五类 × 三后端 × 双架构 | 局部/全局/实例字段/静态字段/数组元素的 out 与 ref 各一 e2e（含 Swap 往返校验）|
 | 明确赋值 DFA | 正例：顺序赋值/分支双路赋值/循环内赋值/嵌套调用 out 传播；负例：出口未赋值/读未赋值/ref 实参未赋值/catch 内读取（保守策略锁定）|
-| 签名身份五处 | f(i32)+f(out i32) 共存重载决议；override 修饰符不匹配诊断；`.cod` round-trip 后重载不碰撞 |
+| 签名身份五处 | f(i32)+f(out i32) 共存重载决议；override 修饰符不匹配诊断；`.coa` round-trip 后重载不碰撞 |
 | 边界诊断 | 函数类型含 byref；delegate 声明含 byref；方法组转换 byref 签名；lambda 捕获 out/ref |
 | 组合 | 泛型方法 + byref 形参（Monomorphizer 复制）；Array.Resize\<T\>(ref)；TryParse 三后端 e2e（含非法输入/空串/+−号/上下界）|
 | 回归 | 全量 xUnit 绿 + samples.cosln 构建 + REPL 冒烟（REPL 全局变量作 out 实参）|
@@ -349,7 +349,7 @@ stdlib `Array` 增 `static function Resize<T>(ref arr: T[], n: i32): void`（泛
 | # | 风险 | 缓解 |
 |---|------|------|
 | R1 | **native ABI 内存安全**：变量槽不清零 × LeaSlot 帧底缓冲假设（+0x80 scratch）× x86 double 双 dword 拆分，与「传任意槽地址」相互作用，错一处即静默内存破坏 | 每种 lvalue 地址传递单独 e2e；byref 形参恒占单指针槽（绕开 double 拆分）；序言防御清零（§6.3）|
-| R2 | **签名身份散落五处**：漏一处 ⇒ 伪重复声明或跨 .cod 重载碰撞 | §4.2 表格逐处出测试；FnKey 键编修饰符后 round-trip 断言 |
+| R2 | **签名身份散落五处**：漏一处 ⇒ 伪重复声明或跨 .coa 重载碰撞 | §4.2 表格逐处出测试；FnKey 键编修饰符后 round-trip 断言 |
 | R3 | **语义漂移**：参数从只读值变可写别名 × lambda 捕获交互 | v1 禁捕获直接消除（§4.5）；Evaluator 别名去重回写（§6.1）|
 | R4 | DFA 与既有 AllPathsReturn/死代码删除共用 CFG 的相互干扰 | 分析只读 CFG 不改写；catch 入口保守置空策略文档化并锁测试 |
 | R5 | 关键字 `out`/`ref` 入表破坏存量标识符 | 接受（when/switch 先例）；迁移清单入文档同步 |
@@ -366,11 +366,11 @@ stdlib `Array` 增 `static function Resize<T>(ref arr: T[], n: i32): void`（泛
 |------|------|------|
 | ParameterSymbol 定义 | Symbols\ParameterSymbol.cs:6（isReadOnly 硬编码 true）、:13（Ordinal） | 放宽 + 加 IsOut/IsRef |
 | VariableSymbol | Symbols\VariableSymbol.cs:7-20（IsReadOnly/Type/Constant）、:19-20（IsCaptured） | 语义放宽依据 |
-| 构造点 ×12 | Binder.cs:805/:879/:1950/:1982/:2226/:2453/:2698-2699；CodSerializer.cs:1565；GenericMethodInstantiator.cs:54；GenericTypeInstantiator.cs:108；BuiltinFunctions.cs:176；SystemObjectMembers.cs:137；ExternalTypeResolver.cs:64 | 逐一传修饰符 |
+| 构造点 ×12 | Binder.cs:805/:879/:1950/:1982/:2226/:2453/:2698-2699；CoaSerializer.cs:1565；GenericMethodInstantiator.cs:54；GenericTypeInstantiator.cs:108；BuiltinFunctions.cs:176；SystemObjectMembers.cs:137；ExternalTypeResolver.cs:64 | 逐一传修饰符 |
 | SameSignature | Binding\BoundScope.cs:143-159（消费 :56/:81） | 身份 #1 |
 | 重载解析 | Binder.cs:6316-6364（:6330 计分）、:6282-6314 快路 | 身份 #2 |
 | override 匹配 | Binder.cs:2833-2854 | 身份 #3 |
-| FnKey/MethodSignature | CodSerializer.cs:1246-1254/:806-811 | 身份 #4/#5 |
+| FnKey/MethodSignature | CoaSerializer.cs:1246-1254/:806-811 | 身份 #4/#5 |
 | 调用绑定 | Binder.cs:6158-6276（实参检查 :6266-6273）、:6393+ 成员、:3697/:3740 泛型 | lvalue 校验插入点 |
 | 实参求值序 | Evaluator.cs:553-562、IlEmitter.cs:1557-1563、BoundTreeToIr.cs:1512-1516 | 三后端对齐参照 |
 | 赋值节点 | BoundAssignmentExpression / BoundMemberAssignmentExpression / BoundElementAssignmentExpression | DFA gen 扫描目标 |
@@ -382,5 +382,5 @@ stdlib `Array` 增 `static function Resize<T>(ref arr: T[], n: i32): void`（泛
 | 默认值机制 | Binder.cs:3205-3226（GetDefaultValue :3234）、Evaluator.cs:1111-1136、BoundTreeToIr.cs:1286-1289/:1102-1106/:1239 | §5.1 范围界定依据 |
 | 捕获分析 | CollectVariableUsage（C5-a，Binder BindLambdaExpression 内） | 禁捕诊断插入点 |
 | 函数类型构造 | FunctionTypeSymbol.cs:23-25/:28-36；Binder.cs:3480-3501/:3543-3587/:3590-3618/:4913/:5096；ClassTypeSymbol.cs:45 | byref 拦截点 |
-| cod par 行 | CodSerializer.cs:830-835（写）/:1556-1569（读）/:32/:80/:1317-1320（Version） | 格式扩展 |
-| syscall 样板 | BuiltinFunctions.cs（枚举/specs/单例/GetByKind）+ Runtime.co + System.Core.cod + Evaluator.cs + IlEmitter.cs(+IlFramework.cs) + BoundTreeToIr.cs + RuntimeEmitterIR.cs + Runtime.X64.cs/X86.cs 导入名表 | 文件 IO 等后续 syscall 同款路径（见自举缺口分析 §4.1） |
+| cod par 行 | CoaSerializer.cs:830-835（写）/:1556-1569（读）/:32/:80/:1317-1320（Version） | 格式扩展 |
+| syscall 样板 | BuiltinFunctions.cs（枚举/specs/单例/GetByKind）+ Runtime.co + System.Core.coa + Evaluator.cs + IlEmitter.cs(+IlFramework.cs) + BoundTreeToIr.cs + RuntimeEmitterIR.cs + Runtime.X64.cs/X86.cs 导入名表 | 文件 IO 等后续 syscall 同款路径（见自举缺口分析 §4.1） |

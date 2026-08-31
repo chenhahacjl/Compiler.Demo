@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Binding
             BoundGlobalScope globalScope,
             BoundScope parentScope,
             bool isScript,
-            ImmutableArray<CodProgram> codLibraries,
+            ImmutableArray<CoaProgram> codLibraries,
             Language dialect,
             ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Builder functionBodies,
             ImmutableArray<Diagnostic>.Builder diagnostics)
@@ -30,7 +30,7 @@ namespace Cocoa.CodeAnalysis.Binding
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
             var helperBinder = new Binder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
             // 6e 跨库里程碑：源码泛型定义先注册（同名占位，cod 后注册静默跳过）——保证源内联集合类
-            // 优先于 System.Collections.cod 同名 gcls。
+            // 优先于 System.Collections.coa 同名 gcls。
             helperBinder.RegisterSourceGenericDefinitionsForSeed(globalScope);
             helperBinder.RegisterCodGenericDefinitionsForSeed(codLibraries);
             var seeded = new HashSet<InstantiatedTypeSymbol>();
@@ -117,7 +117,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             if (seeded.Count == 0 && methodSeeds.Count == 0)
             {
-                // 6e-G7 S1：无活实例化时泛型定义仍需携带（.cod gcls）
+                // 6e-G7 S1：无活实例化时泛型定义仍需携带（.coa gcls）
                 return (FilterDeclaredClasses(globalScope),
                         globalScope.Classes.Where(c => c.IsGenericDefinition).ToImmutableArray());
             }
@@ -255,7 +255,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             // 4. 发射清单：过滤泛型定义（模板）+ 并入活实例化；
-            //    6e-G7 S1：泛型定义单独携带（仅 .cod 发射消费 gcls；IL/native 清单仍排除模板）
+            //    6e-G7 S1：泛型定义单独携带（仅 .coa 发射消费 gcls；IL/native 清单仍排除模板）
             var builder = FilterDeclaredClasses(globalScope).ToBuilder();
             builder.AddRange(live);
 
@@ -274,7 +274,7 @@ namespace Cocoa.CodeAnalysis.Binding
             NamedTypeSymbol definition,
             InstantiatedTypeSymbol instantiated,
             FunctionSymbol instantiatedAccessor,
-            ImmutableArray<CodProgram> codLibraries,
+            ImmutableArray<CoaProgram> codLibraries,
             out BoundBlockStatement body)
         {
             body = null!;

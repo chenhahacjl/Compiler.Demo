@@ -15,7 +15,7 @@
 | 子系统 | 现状 | 与 Roslyn 差距 |
 |---|---|---|
 | Syntax | 红节点单树（可变）；Parent 走字典 | 无红/绿双树、无不可变、无增量解析 |
-| Symbols | 基元已 NamedTypeSymbol+SpecialType；数组已 ArrayTypeSymbol；`Namespace` 是字符串；无 `AssemblySymbol`；引用是裸路径 + `CodProgram` | 无命名空间符号对象、无程序集模型 |
+| Symbols | 基元已 NamedTypeSymbol+SpecialType；数组已 ArrayTypeSymbol；`Namespace` 是字符串；无 `AssemblySymbol`；引用是裸路径 + `CoaProgram` | 无命名空间符号对象、无程序集模型 |
 | Binding | 单个 `Binder.cs`；`BoundNode`（internal，`BoundNodeKind` 枚举） | 巨型文件；Bound 树已像 Roslyn 但未 Visitor 化 |
 | Lowering | `Lowerer.cs`（控制流降级 + 死代码 + CFG） | 已有雏形，缺流水线/闭包捕获（async/迭代器可选） |
 | Emit | IL + 原生双后端，直接消费 Bound 树 | 未走 Lowering 产物 |
@@ -51,10 +51,10 @@ Cocoa.CodeAnalysis
 2. **C3 基元 NamedTypeSymbol 化**（`fdc92ac`）：值类型基元单例 → `NamedTypeSymbol{Struct}` + `SpecialType`（保留关键字 Name/空命名空间，FullName/ABI 不变）；衍生回归 34→0（Cod 序列化不再把基元当 cls、Binder 成员访问排除基元、`FacadeBclFullName` 对基元 FacadeThisType 回退、is/as 排除值类型、`where T:class` 引用判定排除值类型）。
 3. **facade 合并**（`4fee067`）：`System.Int32` 等全名在类型表登记为基元本身（`LookupType("System.Int32") == TypeSymbol.Int32`），成员面经 `NamedTypeSymbol.FacadeCompanion` 委托到 facade 类（System.Core 缓存实例进程内共享，幂等）；消除 int/System.Int32 双符号。
 4. **SymbolKind.Type 拆分**（`6c01c06`）：独立 `ArrayTypeSymbol : TypeSymbol`（`SymbolKind.ArrayType`）；`SymbolKind.Type` 只剩 any/error/null/void/函数值等 CO 特殊类型；全部 `ElementType!=null && Kind==Type` 判定改 `is ArrayTypeSymbol`。
-5. **NamespaceSymbol / AssemblySymbol**（**待办，独立里程碑**）：把符号的 `Namespace` 从裸字符串升为 `NamespaceSymbol`（子命名空间 + 类型成员），并引入 `AssemblySymbol`/`ModuleSymbol` 统一 `.cod` 库与引用。范围大（约 30 处 `.Namespace` 使用 + 构造器 + 命名空间解析），建议与 Phase 2 的 `MetadataReference` 模型合并立项。
+5. **NamespaceSymbol / AssemblySymbol**（**待办，独立里程碑**）：把符号的 `Namespace` 从裸字符串升为 `NamespaceSymbol`（子命名空间 + 类型成员），并引入 `AssemblySymbol`/`ModuleSymbol` 统一 `.coa` 库与引用。范围大（约 30 处 `.Namespace` 使用 + 构造器 + 命名空间解析），建议与 Phase 2 的 `MetadataReference` 模型合并立项。
 
 ### Phase 2 — Compilation/SemanticModel 层（依赖 Phase 1）
-1. `MetadataReference` 抽象：`.cod` 库与 BCL 引用统一；`AssemblySymbol`（源程序集 + 元数据程序集）。
+1. `MetadataReference` 抽象：`.coa` 库与 BCL 引用统一；`AssemblySymbol`（源程序集 + 元数据程序集）。
 2. `Compilation.GetSemanticModel(tree)` → `GetSymbolInfo/GetTypeInfo/GetDeclaredSymbol`；把 Binder 内查找结果暴露为稳定 API。
 3. 验收：既有测试 + 新增 API 测试全绿。
 
@@ -145,7 +145,7 @@ Cocoa.CodeAnalysis
 
 > 决议：按"与 Roslyn 实际一致"推进 Y（§6.3 原列为"形状分叉触发后执行"，现决定启动，逐项已确认：共享规范 IR 作模块层 / CO 先行 CS 后补 / 三舱布局 / 旧共享节点集过渡充任 CS 侧 / 首发增量 A0+A1）。
 > Roslyn 官方边界已核实（`src/Compilers` 七舱：CSharp / VisualBasic / Core / Shared / Extension / Server / Test）：**语言形态**（Syntax/Lexer/Parser/Binder/Compilation 子类/高 Bound）每语言独立；**语言中性**（Diagnostic / 符号抽象 / Green 基 / **PE·元数据读写**）归 Core 共享；连"发射"也是各语言各自 ILBuilder，但 PE 打包（PEModule/MetadataWriter）在 Core。
-> 本项目映射：**cod 文本格式 + 规范化 IR = 本项目的"IL/PE 模块层"**——跨语言互操作的必然解（`.cs` 工程必须能引用 Cocoa 编出的 System.Core.cod）。
+> 本项目映射：**cod 文本格式 + 规范化 IR = 本项目的"IL/PE 模块层"**——跨语言互操作的必然解（`.cs` 工程必须能引用 Cocoa 编出的 System.Core.coa）。
 
 #### 6.7.1 目标五层
 | 层 | 内容 | 分/合 |
@@ -181,7 +181,7 @@ Cocoa.CodeAnalysis
 - **A1 语义标志解耦（零行为变化）**：
   - `FunctionSymbol` 新增 `IsLambda` / `IsPropertyAccessor`（复用或新增 `IsConstructor`）。
   - 替换 8 处 `function.Syntax is XxxSyntax` 类别探测 → 语义标志：`Binder.Expressions.cs:175`、`Binder.cs:661/668/675/694/759`、`IlEmitter.cs:353`、`BoundTreeToIr.cs:186/499/538`、`BoundTreeToIr.Expressions.cs:341`。
-  - ⚠️ **cod 读侧回填**：`CodSerializer.Read.cs`（~1857 符号重建）为 `Declaration==null` 的库符号写回同样标志（否则库函数丢语义判定）；补 CodSerializerTests 往返断言：λ/构造/访问器的 `Is*` 在"语法态"与"cod 形态"一致。
+  - ⚠️ **cod 读侧回填**：`CoaSerializer.Read.cs`（~1857 符号重建）为 `Declaration==null` 的库符号写回同样标志（否则库函数丢语义判定）；补 CoaSerializerTests 往返断言：λ/构造/访问器的 `Is*` 在"语法态"与"cod 形态"一致。
   - `SemanticModel.cs` 21 处具体语法类型收敛（经共享抽象/标志）。
 - 验收：全量绿；新增 ≥1 断言验证上述往返一致。
 

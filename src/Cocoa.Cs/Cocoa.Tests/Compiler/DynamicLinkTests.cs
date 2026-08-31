@@ -38,12 +38,12 @@ namespace MyLib
             File.WriteAllText(Path.Combine(libDir, "Lib.cocproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "using MyLib\nfunction Main(): void\n{\n    Console.WriteLine(Triple(3))\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.cod\n");
+            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.coa\n");
 
             // 1. 库构建：只产出 cod，不预生成任何 dll（lazy）
             var libBuild = CliTestRunner.Run($"build \"{Path.Combine(libDir, "Lib.cocproj")}\"", root);
             Assert.Equal(0, libBuild.ExitCode);
-            Assert.True(File.Exists(Path.Combine(libDir, "Lib.cod")));
+            Assert.True(File.Exists(Path.Combine(libDir, "Lib.coa")));
             Assert.Empty(Directory.EnumerateFiles(libDir, "*.dll"));
 
             // 2. 消费方构建：按需生成并部署 Lib.Managed.dll + System.Core.Managed.dll

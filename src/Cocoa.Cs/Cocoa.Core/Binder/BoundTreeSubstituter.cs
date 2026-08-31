@@ -4,7 +4,7 @@ using System.Collections.Immutable;
 namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>
-    /// 绑定树单态化替换器（6e-G7 S5）：把 `.cod` 携带的<b>开放绑定体</b>（引用泛型定义的
+    /// 绑定树单态化替换器（6e-G7 S5）：把 `.coa` 携带的<b>开放绑定体</b>（引用泛型定义的
     /// TypeParameterSymbol/成员符号）按「定义→实例化」映射改写为封闭树。
     /// 替换面：①类型（复用 <see cref="TypeSubstituter"/>，覆盖节点内嵌 Type 字段）；
     /// ②变量（形参按序对位、局部惰性克隆）；③字段/方法/构造（泛型定义成员 → 实例化成员，按索引对齐）。

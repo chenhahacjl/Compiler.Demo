@@ -23,7 +23,7 @@ src/*.co
 main.co
 
 [references]
-lib.cod
+lib.coa
 
 [imports]
 kernel32.dll
@@ -41,7 +41,7 @@ outputPath = bin
             Assert.Equal(CocoaProjectPlatform.X64, project.Platform);
             Assert.Equal("main", project.Entry);
             Assert.Equal(new[] { "src/*.co", "main.co" }, project.SourcePatterns.ToArray());
-            Assert.Equal(new[] { "lib.cod" }, project.References.ToArray());
+            Assert.Equal(new[] { "lib.coa" }, project.References.ToArray());
             Assert.Equal(new[] { "kernel32.dll" }, project.Imports.ToArray());
             Assert.False(project.Incremental);
             Assert.True(project.Debug);

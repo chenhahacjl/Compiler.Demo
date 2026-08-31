@@ -7,7 +7,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
 {
     /// <summary>
     /// 6e-M22 C8 / 6e-G7：集合泛型 facade（List&lt;T&gt;）经“源码方式”集成——
-    /// 开放泛型含 `new T[]`，当前 .cod 序列化尚不支持（G7 待补），故以源码编译单态化验证
+    /// 开放泛型含 `new T[]`，当前 .coa 序列化尚不支持（G7 待补），故以源码编译单态化验证
     /// foreach / 成员调用 与 三后端对齐。
     /// </summary>
     public class CollectionFacadeTests

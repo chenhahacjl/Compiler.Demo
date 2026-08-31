@@ -38,9 +38,11 @@ TestResult.xml
 # Cocoa build artifacts
 *.exe
 *.dll
-*.cod
+*.coa
 # 标准库中央库仓：入库保证 clone 后开箱可用（构建分发到各 bin；运行时可向上探测 libs/）
-!src/Cocoa.Cs/libs/*.cod
+!src/Cocoa.Cs/libs/*.coa
+# SDK 构建产物（src/Cocoa.SDK/out/*.cod 历史入库；.coa 同规，便于 sdk clone/排查）
+!src/Cocoa.SDK/out/*.coa
 # IL 后端产物（dotnet host 运行时配置）
 *.runtimeconfig.json
 # Cocoa 集中状态目录（仿 .vs）

@@ -139,7 +139,7 @@ MainWindow 启动
 
 ### 4.1 决策：public 门面，不用 InternalsVisibleTo
 
-现状：`Binder`/`BoundGlobalScope`/`BoundProgram`/`BoundScope`/`CodProgram`/`SystemLibrary` 均 internal，
+现状：`Binder`/`BoundGlobalScope`/`BoundProgram`/`BoundScope`/`CoaProgram`/`SystemLibrary` 均 internal，
 `InternalsVisibleTo` 白名单仅 `Cocoa.Tests` 与 `cocoa`。IDE 若加入白名单，等于把整个 Bound 层暴露给 UI 程序集，
 API 面失控且阻碍后续重构。
 
@@ -174,7 +174,7 @@ public sealed class SemanticModel
 
 要点：
 - 内部走既有惰性缓存模式（仿 `Compilation.GlobalScope` 的 Interlocked 惰性初始化）；
-- stdlib 符号经构造时 `SystemLibrary.Load()` 注入路径自然进入作用域（与 CLI 同机制），IDE 无需感知 `.cod`；
+- stdlib 符号经构造时 `SystemLibrary.Load()` 注入路径自然进入作用域（与 CLI 同机制），IDE 无需感知 `.coa`；
 - REPL 的 `Classifier.Classify`（现位于 `Cocoa.Compiler\Repl\Authoring\`，命名空间已是 `Cocoa.CodeAnalysis.Authoring`）
   **M0 物理迁入 Core** 并公开，CLI 改为委托调用——IDE 引用 exe 不可行，必须迁移。
 
@@ -184,7 +184,7 @@ public sealed class SemanticModel
 |-----------|------|---------|
 | `Compilation.GlobalScope`（或 `GetSemanticModel()` 直通） | 高级分析 | 有第二消费者时 |
 | `BoundScope.TryLookup*` / `GetDeclared*` 查询族 | LSP 化时避免门面重复转发 | LSP 路线启动时 |
-| `CodProgram` / `CodSerializer` / `SystemLibrary` | 对象浏览器枚举库符号（P2） | 对象浏览器动工前 |
+| `CoaProgram` / `CoaSerializer` / `SystemLibrary` | 对象浏览器枚举库符号（P2） | 对象浏览器动工前 |
 | `SyntaxTree.GetParent` | 位置解析性能优化（父子索引） | ResolveAtPosition 热点化时 |
 | `ControlFlowGraph` + `BasicBlock` 族 | 数据流可视化工具窗（远期构想） | 不排期 |
 
@@ -216,7 +216,7 @@ public sealed class SemanticModel
 | **P1** | 重命名重构（Ctrl+R,R） | 声明 + 全部引用处文本改写 |
 | **P1** | 全解决方案查找（Ctrl+Shift+F）+ 结果窗口 | glob 遍历 + 正则 |
 | **P1** | 项目属性页（F4） | 表格化编辑 `.cocproj` 字段（output/platform/entry/dotnetRuntime…） |
-| **P1** | 引用管理对话框 | `.cod` / .NET dll / native DLL 三形态；逻辑对齐 `cocoa add reference` |
+| **P1** | 引用管理对话框 | `.coa` / .NET dll / native DLL 三形态；逻辑对齐 `cocoa add reference` |
 | **P1** | 集成终端（Ctrl+`）嵌入 REPL | 直接托管 `cocoa -i` 同款交互（REPL 已有行编辑器与着色） |
 | **P2** | 代码片段（Tab 展开 ~15 个内置模板） | `for`/`if`/`class`/`function`… |
 | **P2** | 格式化文档（Ctrl+K,D） | 按语法树重排的自研 formatter |
@@ -498,7 +498,7 @@ internal IReadOnlyCollection<SourceSpan> CollectSequencePoints(FunctionSymbol f)
 | # | 风险 | 缓解 |
 |---|------|------|
 | R1 | NuGet 还原需联网（Avalonia/AvaloniaEdit/CommunityToolkit） | 首次还原后锁定版本进版本库外缓存；离线机器预置包 |
-| R2 | `libs/System.Core.cod` 分发不到新 IDE bin（现有分发面向 Compiler/Tests） | csproj 增加与 Compiler 相同的 copy target；M1 冒烟必查 stdlib 补全可用 |
+| R2 | `libs/System.Core.coa` 分发不到新 IDE bin（现有分发面向 Compiler/Tests） | csproj 增加与 Compiler 相同的 copy target；M1 冒烟必查 stdlib 补全可用 |
 | R3 | 整项目重绑 O(全部源码)，大项目卡顿 | 单树替换缓存（UpdateTree 只换一棵）+ 防抖 + 取消令牌；超阈值降频（§10）；长期：增量 Binder 是编译器侧课题 |
 | R4 | AvaloniaEdit 大文件/极端行性能 | >2MB 只读保护；长行软折行关闭 |
 | R5 | 模板/Classifier 迁移破坏 CLI 行为 | 迁移为纯物理移动+委托；`NewCommandTests` + REPL 冒烟把关（M0 DoD） |
@@ -526,7 +526,7 @@ internal IReadOnlyCollection<SourceSpan> CollectSequencePoints(FunctionSymbol f)
 
 **Internal（门面内部使用，不对外）**
 - `Binder.BindGlobalScope/BindProgram`、`BoundGlobalScope(Diagnostics/Functions/Enums/Classes/Variables/UsingNamespaces…)`、`BoundProgram`、`BoundScope(TryLookupSymbol/TryLookupFunctions/TryLookupNamespaceFunctions/GetDeclaredVariables/Enums/Classes/Functions)`
-- `CodProgram/CodSerializer/SystemLibrary.Load()`（stdlib 注入机制）
+- `CoaProgram/CoaSerializer/SystemLibrary.Load()`（stdlib 注入机制）
 - `SyntaxTree.GetParent`（惰性父子索引）
 - `ControlFlowGraph/BasicBlock`（远期数据流可视化储备）
 - `Evaluator(_globals/_locals/_thisStack/_closureEnvironments)` + `BoundSequencePointStatement`（M7 调试器挂载点）

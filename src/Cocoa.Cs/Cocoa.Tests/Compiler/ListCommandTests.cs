@@ -36,11 +36,11 @@ namespace Cocoa.Tests.Compiler
         {
             var dir = CliTestRunner.NewTempDir("list");
             File.WriteAllText(Path.Combine(dir, "App.cocproj"),
-                "name = App\noutput = executable\n\n[sources]\n*.co\n\n[references]\n../Libs/MyLib.cod\nmylib.dll\n");
+                "name = App\noutput = executable\n\n[sources]\n*.co\n\n[references]\n../Libs/MyLib.coa\nmylib.dll\n");
             var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.cocproj", dir);
 
             Assert.True(exitCode == 0, stderr);
-            Assert.Contains("../Libs/MyLib.cod", stdout);
+            Assert.Contains("../Libs/MyLib.coa", stdout);
             Assert.Contains("mylib.dll", stdout);
         }
 

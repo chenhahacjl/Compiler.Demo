@@ -375,7 +375,7 @@ namespace Cocoa.Compiler
             Console.WriteLine("  add reference          Adds a reference to a project");
             Console.WriteLine("  remove reference       Removes a reference from a project");
             Console.WriteLine("  clean                  Cleans build caches (.cocoa/) and outputs");
-            Console.WriteLine("  dump <file.cod>        Prints a readable outline of a .cod assembly");
+            Console.WriteLine("  dump <file.coa>        Prints a readable outline of a .coa assembly");
             Console.WriteLine("  -i, --interactive      Launches the interactive REPL");
             Console.WriteLine();
             Console.WriteLine("direct compile options:");

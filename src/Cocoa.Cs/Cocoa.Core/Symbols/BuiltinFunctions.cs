@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Symbols
@@ -42,7 +42,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
         // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
-        // `.cod` 序列化经 GetByKindName → SystemObjectMembers.GetByKindName 解析。
+        // `.coa` 序列化经 GetByKindName → SystemObjectMembers.GetByKindName 解析。
         ObjectToString,
         ObjectGetHashCode,
         ObjectEquals,
@@ -208,7 +208,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             };
         }
 
-        /// <summary>鎸夊悕鏌ユ壘鍐呯疆鍑芥暟锛坄.cod` 鍙嶅簭鍒楀寲鏃跺鐢ㄥ崟渚嬶紝淇濊瘉鍙戝皠鍣ㄨ瘑鍒唴缃紱澶у皬鍐欎笉鏁忔劅鈥斺€攕yscall 澹版槑鍙敤 PascalCase 濡?`Random` 鍛戒腑 `random`锛夈€?/summary>
+        /// <summary>鎸夊悕鏌ユ壘鍐呯疆鍑芥暟锛坄.coa` 鍙嶅簭鍒楀寲鏃跺鐢ㄥ崟渚嬶紝淇濊瘉鍙戝皠鍣ㄨ瘑鍒唴缃紱澶у皬鍐欎笉鏁忔劅鈥斺€攕yscall 澹版槑鍙敤 PascalCase 濡?`Random` 鍛戒腑 `random`锛夈€?/summary>
         internal static FunctionSymbol? GetByName(string name)
         {
             foreach (var spec in _specs)
@@ -222,7 +222,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
-        /// <summary>鎸?BuiltinKind 鏋氫妇鍚嶈В鏋愶紙`.cod` v3 搴忓垪鍖栫敤鍚嶇О瀛楃涓诧紝鏇夸唬 int鈥斺€旀敼鍚嶄笉鍐嶄緷璧栨灇涓鹃『搴忥級銆?/summary>
+        /// <summary>鎸?BuiltinKind 鏋氫妇鍚嶈В鏋愶紙`.coa` v3 搴忓垪鍖栫敤鍚嶇О瀛楃涓诧紝鏇夸唬 int鈥斺€旀敼鍚嶄笉鍐嶄緷璧栨灇涓鹃『搴忥級銆?/summary>
         internal static BuiltinKind? GetByKindName(string name)
         {
             foreach (var spec in _specs)

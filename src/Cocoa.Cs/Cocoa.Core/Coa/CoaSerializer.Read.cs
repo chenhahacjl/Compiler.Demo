@@ -7,10 +7,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Cod
+namespace Cocoa.CodeAnalysis.Coa
 {
     /// <summary>
-    /// `.cod` 璇箟灞傚簭鍒楀寲鍣細绗﹀彿琛?+ 闄嶇骇 BoundProgram锛堝嚱鏁颁綋锛夋枃鏈?round-trip銆?
+    /// `.coa` 璇箟灞傚簭鍒楀寲鍣細绗﹀彿琛?+ 闄嶇骇 BoundProgram锛堝嚱鏁颁綋锛夋枃鏈?round-trip銆?
     /// 鍙屽悗绔叡鐢紙native 鈫?BoundTreeToIr锛孖L 鈫?IlEmitter锛夛紱璇硶鑺傜偣锛圫yntax锛変笉搴忓垪鍖栵紙缃?null锛夈€?
     ///
     /// 鏂囨湰鏍煎紡锛堝彲璇讳紭鍏堬紝绫诲瀷/鍑芥暟/鍙橀噺涓€寰嬫寜鍚嶅瓧寮曠敤锛屼笉鐢ㄦ暟瀛?id锛夛細
@@ -26,40 +26,40 @@ namespace Cocoa.CodeAnalysis.Cod
     ///   杩愮畻绗?     鏂囨湰璁板彿 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
     ///   甯冨皵/鏋氫妇璇? true false锛沺ublic internal protected private锛泈inapi cdecl stdcall锛泆nicode ansi auto
     /// </summary>
-    internal static partial class CodSerializer
+    internal static partial class CoaSerializer
     {
-        /// <summary>读 `.cod` 文本（兼容入口：无库名/无 external，跨库符号解析留空）。</summary>
-        public static CodProgram Read(string text)
+        /// <summary>读 `.coa` 文本（兼容入口：无库名/无 external，跨库符号解析留空）。</summary>
+        public static CoaProgram Read(string text)
         {
-            return Read(text, moduleName: "", external: ImmutableArray<CodProgram>.Empty);
+            return Read(text, moduleName: "", external: ImmutableArray<CoaProgram>.Empty);
         }
 
         /// <summary>
-        /// 读 `.cod` 文本。`moduleName` 为库名（读入符号的 ContainingLibrary 回填，FnKey 库前缀来源）；
+        /// 读 `.coa` 文本。`moduleName` 为库名（读入符号的 ContainingLibrary 回填，FnKey 库前缀来源）；
         /// `external` 为已加载的依赖库（System.Core 先行），供跨库符号合并解析（复用实例，非复制）。
         /// </summary>
-        public static CodProgram Read(string text, string moduleName, ImmutableArray<CodProgram> external)
+        public static CoaProgram Read(string text, string moduleName, ImmutableArray<CoaProgram> external)
         {
             // 瀹屾暣鎬ф牎楠屽墠缃細缂哄け鎴栦笉鍖归厤鍗虫嫆杞斤紙闃茶鏀?鎹熷潖锛涜搫鎰忎吉閫犻渶绛惧悕鏈哄埗锛屼笉鍦?v1 鑼冨洿锛?
             var marker = "(checksum " + ChecksumTag;
             var markerIndex = text.LastIndexOf(marker, StringComparison.Ordinal);
             if (markerIndex < 0)
             {
-                throw new InvalidDataException(".cod checksum missing (expected '(checksum sha256:<hex>)' as the last line); rebuild the library");
+                throw new InvalidDataException(".coa checksum missing (expected '(checksum sha256:<hex>)' as the last line); rebuild the library");
             }
 
             var payload = text.Substring(0, markerIndex);
             var provided = text.Substring(markerIndex + marker.Length).TrimEnd();
             if (!provided.EndsWith(")"))
             {
-                throw new InvalidDataException(".cod checksum malformed (expected '(checksum sha256:<hex>)' as the last line)");
+                throw new InvalidDataException(".coa checksum malformed (expected '(checksum sha256:<hex>)' as the last line)");
             }
 
             provided = provided.Substring(0, provided.Length - 1);
             var actual = ComputeChecksum(payload);
             if (!string.Equals(provided, actual, StringComparison.OrdinalIgnoreCase))
             {
-                throw new InvalidDataException($".cod checksum mismatch: library corrupted or modified (expected {actual}, got {provided})");
+                throw new InvalidDataException($".coa checksum mismatch: library corrupted or modified (expected {actual}, got {provided})");
             }
 
             var tokens = Tokenize(payload).ToArray();
@@ -69,18 +69,18 @@ namespace Cocoa.CodeAnalysis.Cod
             var magic = reader.ExpectString();
             if (magic != Magic)
             {
-                throw new InvalidDataException($"invalid .cod magic '{magic}'");
+                throw new InvalidDataException($"invalid .coa magic '{magic}'");
             }
 
             var version = reader.ExpectInt();
             if (version != Version)
             {
-                throw new InvalidDataException($".cod version {version} is not supported (expected {Version}); rebuild the library");
+                throw new InvalidDataException($".coa version {version} is not supported (expected {Version}); rebuild the library");
             }
 
             var context = new ReadContext(moduleName, external);
             var bodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
-            var requires = CodRequirement.Any;
+            var requires = CoaRequirement.Any;
             var platforms = ImmutableArray.CreateBuilder<string>();
             var dotnetRefs = ImmutableArray.CreateBuilder<string>();
             var codRefs = ImmutableArray.CreateBuilder<string>();
@@ -137,7 +137,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 ? moduleName
                 : RecoverLibraryFromKeys(context.LocalFunctionKeys.Keys);
 
-            var program = new CodProgram(
+            var program = new CoaProgram(
                 context.Functions.ToImmutable(),
                 context.Globals.ToImmutable(),
                 context.Enums.ToImmutable(),
@@ -181,9 +181,9 @@ namespace Cocoa.CodeAnalysis.Cod
             public string ModuleName { get; }
 
             /// <summary>外部队列：已加载的依赖库（System.Core 先行），符号经 FunctionKeys/TypesByName 合并复用实例。</summary>
-            public ImmutableArray<CodProgram> ExternalLibraries { get; }
+            public ImmutableArray<CoaProgram> ExternalLibraries { get; }
 
-            public ReadContext(string moduleName, ImmutableArray<CodProgram> external)
+            public ReadContext(string moduleName, ImmutableArray<CoaProgram> external)
             {
                 ModuleName = moduleName;
                 ExternalLibraries = external;
@@ -213,7 +213,7 @@ namespace Cocoa.CodeAnalysis.Cod
             /// <summary>绫?鏋氫妇鍏ㄥ悕 鈫?绫诲瀷绗﹀彿锛堝唴寤虹被鍨嬩笉缁忔琛紝鐩存帴瑙ｆ瀽锛夈€?/summary>
             public Dictionary<string, TypeSymbol> TypesByName { get; } = new(StringComparer.Ordinal);
 
-            /// <summary>6e 跨库里程碑：本库自持类型表（全名 → 符号）——CodProgram.TypesByName 导出源，
+            /// <summary>6e 跨库里程碑：本库自持类型表（全名 → 符号）——CoaProgram.TypesByName 导出源，
             /// 供其他库读侧 external 合并。与 TypesByName 的区别：不含预播种的 external 符号。</summary>
             public Dictionary<string, TypeSymbol> LocalTypesByName { get; } = new(StringComparer.Ordinal);
 
@@ -223,7 +223,7 @@ namespace Cocoa.CodeAnalysis.Cod
             /// <summary>鍑芥暟閿?鈫?鍑芥暟绗﹀彿銆?/summary>
             public Dictionary<string, FunctionSymbol> FunctionsByKey { get; } = new(StringComparer.Ordinal);
 
-            /// <summary>6e 跨库里程碑：本库自持函数键（含库前缀）→ 符号——CodProgram.FunctionKeys 导出源。</summary>
+            /// <summary>6e 跨库里程碑：本库自持函数键（含库前缀）→ 符号——CoaProgram.FunctionKeys 导出源。</summary>
             public Dictionary<string, FunctionSymbol> LocalFunctionKeys { get; } = new(StringComparer.Ordinal);
 
             /// <summary>鍙橀噺閿?鈫?鍙橀噺/鍙傛暟绗﹀彿銆?/summary>
@@ -350,7 +350,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 throw new InvalidDataException($"Unknown visibility '{visibilityText}' on class '{fullName}'");
             }
 
-            // 6e-G7/M0-1a：接口位 + 实现接口列表（向后兼容：旧版 .cod 无 iface 字段 → 默认非接口、无实现）
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（向后兼容：旧版 .coa 无 iface 字段 → 默认非接口、无实现）
             var isInterface = false;
             var interfaceRefs = new string[0];
             if (reader.PeekRaw().StartsWith("iface:", StringComparison.Ordinal))
@@ -372,7 +372,7 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
-            // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.cod v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
+            // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.coa v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
             classType.BaseType = NamedTypeSymbol.SystemObject;
             // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填
             if (isInterface)
@@ -429,7 +429,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 throw new InvalidDataException($"Unknown visibility '{visibilityText}' on generic class '{fullName}'");
             }
 
-            // 6e-G7/M0-1a：接口位 + 实现接口列表（开放参数引用须待 tpar 注册后解析，见本方法尾部；旧版 .cod 缺字段则默认）
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（开放参数引用须待 tpar 注册后解析，见本方法尾部；旧版 .coa 缺字段则默认）
             var isInterface = false;
             var interfaceRefs = new string[0];
             if (reader.PeekRaw().StartsWith("iface:", StringComparison.Ordinal))
@@ -539,7 +539,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 classType.AddInterface((NamedTypeSymbol)ResolveTypeRef(interfaceRef, context));
             }
 
-            // 6e 跨库里程碑：gcls 一律只入 GenericDefinitions，不入 Classes——否则 CodLibraryCompiler 生成
+            // 6e 跨库里程碑：gcls 一律只入 GenericDefinitions，不入 Classes——否则 CoaLibraryCompiler 生成
             // Managed dll 时把开放类型参数类当普通类发射（IL Unexpected type K）。类型注入经 GenericDefinitions。
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
@@ -1850,7 +1850,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 // 褰撳墠 token 搴斾负鑺傜偣闂嫭鍙?`)`锛堢洿鎺ユ秷璐癸紝涓嶈烦杩?`(`锛?
                 if (_pos >= _tokens.Length)
                 {
-                    throw new InvalidDataException($"unexpected end of .cod file at pos {_pos}; context: {Context()}");
+                    throw new InvalidDataException($"unexpected end of .coa file at pos {_pos}; context: {Context()}");
                 }
 
                 var token = _tokens[_pos++];
@@ -1874,7 +1874,7 @@ namespace Cocoa.CodeAnalysis.Cod
                 {
                     if (_pos >= _tokens.Length)
                     {
-                        throw new InvalidDataException("unexpected end of .cod file");
+                        throw new InvalidDataException("unexpected end of .coa file");
                     }
 
                     var token = _tokens[_pos++];

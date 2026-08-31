@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -7,10 +7,10 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Cod
+namespace Cocoa.CodeAnalysis.Coa
 {
     /// <summary>
-    /// `.cod` 鐠囶厺绠熺仦鍌氱碍閸掓瀵查崳顭掔窗缁楋箑褰跨悰?+ 闂勫秶楠?BoundProgram閿涘牆鍤遍弫棰佺秼閿涘鏋冮張?round-trip閵?
+    /// `.coa` 鐠囶厺绠熺仦鍌氱碍閸掓瀵查崳顭掔窗缁楋箑褰跨悰?+ 闂勫秶楠?BoundProgram閿涘牆鍤遍弫棰佺秼閿涘鏋冮張?round-trip閵?
     /// 閸欏苯鎮楃粩顖氬彙閻㈩煉绱檔ative 閳?BoundTreeToIr閿涘瓥L 閳?IlEmitter閿涘绱辩拠顓熺《閼哄倻鍋ｉ敍鍦珁ntax閿涘绗夋惔蹇撳灙閸栨牭绱欑純?null閿涘鈧?
     ///
     /// 閺傚洦婀伴弽鐓庣础閿涘牆褰茬拠璁崇喘閸忓牞绱濈猾璇茬€?閸戣姤鏆?閸欐﹢鍣烘稉鈧瀣瘻閸氬秴鐡у鏇犳暏閿涘奔绗夐悽銊︽殶鐎?id閿涘绱?
@@ -26,9 +26,9 @@ namespace Cocoa.CodeAnalysis.Cod
     ///   鏉╂劗鐣荤粭?     閺傚洦婀扮拋鏉垮娇 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
     ///   鐢啫鐨?閺嬫矮濡囩拠? true false閿涙埠ublic internal protected private閿涙硤inapi cdecl stdcall閿涙硢nicode ansi auto
     /// </summary>
-    internal static partial class CodSerializer
+    internal static partial class CoaSerializer
     {
-        public const string Magic = "COCOD";
+        public const string Magic = "COCOA";
         public const int Version = 1;
 
         /// <summary>鐎瑰本鏆ｉ幀褎鐗庢宀嬬窗閺傚洣娆㈤張顐ヮ攽 `(checksum sha256:&lt;hex&gt;)` 鐟曞棛娲婇崗璺哄閸忋劑鍎寸€涙濡敍鍦睺F-8閿涘绱辩拠璁虫櫠瀵搫鍩楅弽锟犵崣閵?/summary>
@@ -36,7 +36,7 @@ namespace Cocoa.CodeAnalysis.Cod
 
         // ---------------------------------------------------------------- write
 
-        public static void Write(TextWriter writer, CodProgram program)
+        public static void Write(TextWriter writer, CoaProgram program)
         {
             var registry = new Registry(program.Name);
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
@@ -176,22 +176,22 @@ namespace Cocoa.CodeAnalysis.Cod
             return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(payload))).ToLowerInvariant();
         }
 
-        private static string RequirementName(CodRequirement r)
+        private static string RequirementName(CoaRequirement r)
         {
             return r switch
             {
-                CodRequirement.Any => "any",
-                CodRequirement.DotNet => "dotnet",
+                CoaRequirement.Any => "any",
+                CoaRequirement.DotNet => "dotnet",
                 _ => "any",
             };
         }
 
-        private static CodRequirement ParseRequirement(string name)
+        private static CoaRequirement ParseRequirement(string name)
         {
             return name switch
             {
-                "dotnet" => CodRequirement.DotNet,
-                _ => CodRequirement.Any,
+                "dotnet" => CoaRequirement.DotNet,
+                _ => CoaRequirement.Any,
             };
         }
 
@@ -1187,7 +1187,7 @@ namespace Cocoa.CodeAnalysis.Cod
             }
 
             // 6e-M22/M0-1b锛氬嚱鏁扮被鍨?`fnty{鍙傛暟,;杩斿洖}`锛堥€掑綊 TypeRef锛涘弬鏁伴€楀彿鍒嗛殧銆佸垎鍙锋帴杩斿洖銆亄} 宓屽鈥斺€?
-            // .cod 璇嶆硶浠呬互绌虹櫧涓?() 鍒囧垎锛屾晠宓屽鐢?{} 閬垮紑缁撴瀯鎷彿锛?
+            // .coa 璇嶆硶浠呬互绌虹櫧涓?() 鍒囧垎锛屾晠宓屽鐢?{} 閬垮紑缁撴瀯鎷彿锛?
             if (type is FunctionTypeSymbol functionType)
             {
                 var builder = new System.Text.StringBuilder();
@@ -1218,7 +1218,7 @@ namespace Cocoa.CodeAnalysis.Cod
         }
 
         /// <summary>
-        /// 瀹炰緥鍖栫被鍨嬬殑 .cod 缂栫爜锛?e-G7 S1锛夛細瀹氫箟鍏ㄥ悕 + backtick 鍏冩暟 + # + $ 鍒嗛殧瀹炲弬銆?
+        /// 瀹炰緥鍖栫被鍨嬬殑 .coa 缂栫爜锛?e-G7 S1锛夛細瀹氫箟鍏ㄥ悕 + backtick 鍏冩暟 + # + $ 鍒嗛殧瀹炲弬銆?
         /// 瀹炲弬閫掑綊璧?<see cref="TypeRef"/>鈥斺€斿紑鏀惧弬鏁颁负闄愬畾閿?!灞炰富.鍚嶏紙鍖哄埆浜?mangle 缂撳瓨閿殑瑁?!T锛夛紝
         /// 淇濊瘉璺ㄥ畾涔夋棤姝т箟涓旇渚у彲鐙珛瑙ｆ瀽锛涘熀鍏?绫荤敤骞冲悕锛堜笉鍚?$銆乣銆?锛屽垎闅斿畨鍏級锛涘祵濂楀疄渚嬪寲閫掑綊銆?
         /// </summary>
@@ -1550,7 +1550,7 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             private readonly Dictionary<FunctionSymbol, string> _fnKeys = new(ReferenceEqualityComparer.Instance);
             private readonly Dictionary<object, string> _varKeys = new(ReferenceEqualityComparer.Instance);
 
-            /// <summary>当前模块名（`.cod` 库名）：FnKey 库维度前缀的回退归属（符号未带 ContainingLibrary 时）。</summary>
+            /// <summary>当前模块名（`.coa` 库名）：FnKey 库维度前缀的回退归属（符号未带 ContainingLibrary 时）。</summary>
             private readonly string _moduleName;
 
             public Registry(string moduleName)
@@ -1761,12 +1761,12 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
 
         // ---------------------------------------------------------------- read
 
-        /// <summary>娴?`.cod` 閺傚洣娆㈤崝鐘烘祰缁嬪绨梿鍡愨偓?/summary>
-        /// <summary>Load `.cod` 文件。库名由文件名回填；`external` 为已加载的依赖库（供跨库符号合并）。</summary>
-        public static CodProgram Load(string path, ImmutableArray<CodProgram>? external = null)
+        /// <summary>娴?`.coa` 閺傚洣娆㈤崝鐘烘祰缁嬪绨梿鍡愨偓?/summary>
+        /// <summary>Load `.coa` 文件。库名由文件名回填；`external` 为已加载的依赖库（供跨库符号合并）。</summary>
+        public static CoaProgram Load(string path, ImmutableArray<CoaProgram>? external = null)
         {
             var moduleName = Path.GetFileNameWithoutExtension(path);
-            return Read(File.ReadAllText(path), moduleName, external ?? ImmutableArray<CodProgram>.Empty);
+            return Read(File.ReadAllText(path), moduleName, external ?? ImmutableArray<CoaProgram>.Empty);
         }
 
     }

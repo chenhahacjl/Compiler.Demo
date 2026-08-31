@@ -23,7 +23,7 @@ cocoa build -p samples/<路径>/<项目>.cocproj [-b dotnet]
 | `Tutorial/Dialects` | 方言对照：CsStyle · TopLevelFunctions · CSharpDialect |
 | `Tutorial/Interop` | native DLL 导入（kernel32 import 块） |
 | `Libraries/NetLibrary` | .NET dll 库（`output = library`）+ `[references]` 消费方 app |
-| `Libraries/CodLibrary` | .cod Cocoa 程序集库（`output = cocoa`）+ 消费方 app |
+| `Libraries/CodLibrary` | .coa Cocoa 程序集库（`output = cocoa`）+ 消费方 app |
 | `Classes/CSharpClass` | Cocoa 式类语法预览：字段/属性/构造函数/static |
 
 ## 示例索引
@@ -71,7 +71,7 @@ cocoa build -p samples/Libraries/NetLibrary/mylib/MyLib.cocproj -b dotnet
 cocoa build -p samples/Libraries/NetLibrary/app/App.cocproj -b dotnet
 ./samples/Libraries/NetLibrary/app/out/App.exe
 
-# .cod Cocoa 程序集库（output = cocoa）：编译期 IR 合并，native + dotnet 双后端
+# .coa Cocoa 程序集库（output = cocoa）：编译期 IR 合并，native + dotnet 双后端
 cocoa build -p samples/Libraries/CodLibrary/mylib/MyLib.cocproj
 cocoa build -p samples/Libraries/CodLibrary/app/App.cocproj -b native
 ./samples/Libraries/CodLibrary/app/out/App.exe

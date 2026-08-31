@@ -57,7 +57,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public string Namespace { get; }
 
         /// <summary>
-        /// 所属 `.cod` 库名（程序集维度；跨库 FnKey 前缀）。仅从 `.cod` 加载的符号有值；
+        /// 所属 `.coa` 库名（程序集维度；跨库 FnKey 前缀）。仅从 `.coa` 加载的符号有值；
         /// 编译期注入/用户源码符号为 null（序列化时回退当前模块名）。6e 跨库里程碑。
         /// </summary>
         public string? ContainingLibrary { get; internal set; }

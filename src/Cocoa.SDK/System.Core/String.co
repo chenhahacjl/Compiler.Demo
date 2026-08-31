@@ -1,4 +1,4 @@
-﻿// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
+// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
 // class String —— string 的成员面载体（6e-M19 M2-b 全面 facade，对齐 C# System.String）：
 // 实例方法编译期降级为静态（隐藏首参 this: string，声明参数 ordinal 整体 +1），
 // 旧静态调用形态签名不变、天然兼容。设计见 docs-dev/对象模型设计.md §4.4/§5

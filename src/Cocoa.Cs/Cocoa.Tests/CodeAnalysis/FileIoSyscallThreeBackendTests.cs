@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
@@ -16,7 +16,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// 自举缺口 P0-1/P0-2，M0-4 批2：文件 IO / 环境 syscall 三后端锁定（Evaluator/IL/native）。
-    /// 经 stdlib 注入的 System.Core.cod（System.IO.File / System.Environment，builtin 背书 syscall）消费。
+    /// 经 stdlib 注入的 System.Core.coa（System.IO.File / System.Environment，builtin 背书 syscall）消费。
     /// Y-P0-1 补齐 native 腿（BoundTreeToIr.Builtins 原 "G7-④ follow-up batch" 编译期拒绝 → 运行时 helper 接入）：
     /// 文件读写经 ucrtbase 低参 API（_wfopen/fread/fwrite/fclose）+ 手动 UTF-8 编码 / MultiByteToWideChar 解码，
     /// 路径复制补 null 结尾（CO 串无 null 终止）；本测试同时锁住 IL File.Copy 实参/方法签名失配修复。

@@ -3,24 +3,24 @@ using Cocoa.CodeAnalysis.Emit.IL;
 using System.Collections.Immutable;
 using System.IO;
 
-namespace Cocoa.CodeAnalysis.Cod
+namespace Cocoa.CodeAnalysis.Coa
 {
     /// <summary>
-    /// `.cod` → 托管库 dll 发射（动态链接阶段 A1）：加载语义层程序集，直接构造无入口的
+    /// `.coa` → 托管库 dll 发射（动态链接阶段 A1）：加载语义层程序集，直接构造无入口的
     /// BoundProgram（顶层函数由 IlEmitter 挂 <see cref="IlEmitter"/> 的 &lt;CocoaTopLevel&gt; 容器；
     /// 枚举按 int32 表示；容器类为普通静态类），复用既有 emitLibrary 管线产出标准 .NET 库——
     /// 供消费方 exe 运行期依赖（阶段 A 动态链接）与 C# 互操作。
     /// </summary>
-    internal static class CodLibraryCompiler
+    internal static class CoaLibraryCompiler
     {
-        /// <summary>从 `.cod` 文件发射同名托管库 dll。返回诊断（含错误时调用方不应使用产物）。</summary>
-        public static ImmutableArray<Diagnostic> EmitManagedDll(string codPath, string dllPath, IlTarget target)
+        /// <summary>从 `.coa` 文件发射同名托管库 dll。返回诊断（含错误时调用方不应使用产物）。</summary>
+        public static ImmutableArray<Diagnostic> EmitManagedDll(string coaPath, string dllPath, IlTarget target)
         {
-            return EmitManagedDll(CodSerializer.Load(codPath), dllPath, target);
+            return EmitManagedDll(CoaSerializer.Load(coaPath), dllPath, target);
         }
 
-        /// <summary>从内存中的 CodProgram 发射托管库 dll。</summary>
-        public static ImmutableArray<Diagnostic> EmitManagedDll(CodProgram cod, string dllPath, IlTarget target)
+        /// <summary>从内存中的 CoaProgram 发射托管库 dll。</summary>
+        public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target)
         {
             // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
             // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。

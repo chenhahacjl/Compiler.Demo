@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Syntax;
@@ -47,9 +47,9 @@ namespace Cocoa.Projects
                     ? reference
                     : Path.GetFullPath(Path.Combine(project.Directory, reference));
 
-                if (path.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+                if (path.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 {
-                    // `.cod` 语义层程序集引用：Compilation 加载 + 符号注入 + BoundProgram 合并
+                    // `.coa` 语义层程序集引用：Compilation 加载 + 符号注入 + BoundProgram 合并
                 }
                 else if (!File.Exists(path))
                 {
@@ -87,7 +87,7 @@ namespace Cocoa.Projects
                 $"dotnetRuntime={dotnetRuntime}",
             };
 
-            // 动态链接（阶段 A2）：dotnet 后端消费 `.cod` 时以外部 dll 依赖接入（产物不内联库体）；
+            // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
             var linkCodDynamically = backend == ProjectBackend.DotNet && format != ProjectOutputFormat.Cod;
 
@@ -120,7 +120,7 @@ namespace Cocoa.Projects
 
                 if (format == ProjectOutputFormat.Cod)
                 {
-                    // `.cod` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关。
+                    // `.coa` 语义层程序集：编译到 BoundProgram 即停（不走 IR/机器码/IL），后端无关。
                     // 托管 dll 不在此预生成——由消费方构建时按需生成（lazy，防派生产物被删后断链）
                     diagnostics = compilation.EmitCocoa(project.Name, outputFile);
                 }
@@ -192,13 +192,13 @@ namespace Cocoa.Projects
                 return new ProjectBuildResult(success: false, upToDate: false);
             }
 
-            // CopyLocal：把引用的 `.dll`/`.cod` 条件复制到输出目录（仿 VS 复制引用依赖；
+            // CopyLocal：把引用的 `.dll`/`.coa` 条件复制到输出目录（仿 VS 复制引用依赖；
             // 框架引用集由 IlReferenceResolver 在 Emit 时注入，天然排除）。`cocoa` 产物无运行期依赖，不复制。
             if (format != ProjectOutputFormat.Cod)
             {
                 CopyReferencesToOutput(references, outputDirectory);
 
-                // 动态链接（阶段 A）：被消费的 `.cod` 库按需生成托管 dll 并部署——
+                // 动态链接（阶段 A）：被消费的 `.coa` 库按需生成托管 dll 并部署——
                 // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（cod sha256）过期 → 现场再生，自愈误删
                 if (linkCodDynamically)
                 {
@@ -228,7 +228,7 @@ namespace Cocoa.Projects
             {
                 var extension = Path.GetExtension(reference);
                 if (!extension.Equals(".dll", StringComparison.OrdinalIgnoreCase) &&
-                    !extension.Equals(".cod", StringComparison.OrdinalIgnoreCase))
+                    !extension.Equals(".coa", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
                 }
@@ -247,7 +247,7 @@ namespace Cocoa.Projects
         }
 
         /// <summary>
-        /// 动态链接（阶段 A）：确保被消费 `.cod` 库的托管 dll（X.Managed.dll）在输出目录就绪——
+        /// 动态链接（阶段 A）：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
         /// 缺失或 stamp（cod 文件 sha256）过期 → 从 cod 现场再生。误删/清缓存后下次构建自动自愈。
         /// 返回 false 表示有生成错误（已写诊断，调用方判构建失败）。
         /// </summary>
@@ -273,7 +273,7 @@ namespace Cocoa.Projects
                     continue;
                 }
 
-                var diagnostics = CodLibraryCompiler.EmitManagedDll(sourcePath, managedDll, target);
+                var diagnostics = CoaLibraryCompiler.EmitManagedDll(sourcePath, managedDll, target);
                 if (diagnostics.HasErrors())
                 {
                     messageWriter.WriteDiagnostics(diagnostics);
@@ -287,17 +287,17 @@ namespace Cocoa.Projects
             return ok;
         }
 
-        /// <summary>增量命中路径的轻量库清单：项目引用的 .cod + 系统库（不做完整绑定）。</summary>
+        /// <summary>增量命中路径的轻量库清单：项目引用的 .coa + 系统库（不做完整绑定）。</summary>
         private static IEnumerable<(string Name, string SourcePath)> CollectReferencedCodLibraries(IReadOnlyList<string> references)
         {
             foreach (var reference in references)
             {
-                if (!reference.EndsWith(".cod", StringComparison.OrdinalIgnoreCase) || !File.Exists(reference))
+                if (!reference.EndsWith(".coa", StringComparison.OrdinalIgnoreCase) || !File.Exists(reference))
                 {
                     continue;
                 }
 
-                yield return (CodAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference)), reference);
+                yield return (CoaAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference)), reference);
             }
 
             foreach (var library in SystemLibrary.Load())

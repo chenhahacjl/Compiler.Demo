@@ -10,7 +10,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// 文件 IO / 环境 syscall 冒烟（6e-G7 ④）。
-    /// 通过 stdlib 注入的 System.Core.cod 使用新增 syscall。
+    /// 通过 stdlib 注入的 System.Core.coa 使用新增 syscall。
     /// </summary>
     public class FileIoSyscallTests
     {

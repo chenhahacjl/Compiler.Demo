@@ -18,14 +18,14 @@ namespace Cocoa.Tests.Compiler
             var dir = CliTestRunner.NewTempDir("ref");
             WriteProject(dir);
 
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("add reference -p App.cocproj ../Libs/MyLib.cod", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("add reference -p App.cocproj ../Libs/MyLib.coa", dir);
 
             Assert.True(exitCode == 0, stderr);
             Assert.Contains("Added reference", stdout);
 
             var text = File.ReadAllText(Path.Combine(dir, "App.cocproj"));
             Assert.Contains("[references]", text);
-            Assert.Contains("../Libs/MyLib.cod", text);
+            Assert.Contains("../Libs/MyLib.coa", text);
         }
 
         [Fact]
@@ -34,10 +34,10 @@ namespace Cocoa.Tests.Compiler
             var dir = CliTestRunner.NewTempDir("ref");
             WriteProject(dir);
 
-            var first = CliTestRunner.Run("add reference -p App.cocproj ../Libs/MyLib.cod", dir);
+            var first = CliTestRunner.Run("add reference -p App.cocproj ../Libs/MyLib.coa", dir);
             Assert.True(first.ExitCode == 0, first.Stderr);
 
-            var second = CliTestRunner.Run("add reference -p App.cocproj ../Libs/MyLib.cod", dir);
+            var second = CliTestRunner.Run("add reference -p App.cocproj ../Libs/MyLib.coa", dir);
             Assert.True(second.ExitCode == 0, second.Stderr);
             Assert.Contains("already present", second.Stdout);
 
@@ -45,7 +45,7 @@ namespace Cocoa.Tests.Compiler
             var count = 0;
             foreach (var line in text.Split('\n'))
             {
-                if (line.Trim() == "../Libs/MyLib.cod")
+                if (line.Trim() == "../Libs/MyLib.coa")
                 {
                     count++;
                 }
@@ -58,13 +58,13 @@ namespace Cocoa.Tests.Compiler
         public void RemoveReference_RemovesLine()
         {
             var dir = CliTestRunner.NewTempDir("ref");
-            WriteProject(dir, "name = App\noutput = executable\n\n[sources]\n*.co\n\n[references]\n../Libs/MyLib.cod\n");
+            WriteProject(dir, "name = App\noutput = executable\n\n[sources]\n*.co\n\n[references]\n../Libs/MyLib.coa\n");
 
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("remove reference -p App.cocproj ../Libs/MyLib.cod", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("remove reference -p App.cocproj ../Libs/MyLib.coa", dir);
 
             Assert.True(exitCode == 0, stderr);
             Assert.Contains("Removed reference", stdout);
-            Assert.DoesNotContain("../Libs/MyLib.cod", File.ReadAllText(Path.Combine(dir, "App.cocproj")));
+            Assert.DoesNotContain("../Libs/MyLib.coa", File.ReadAllText(Path.Combine(dir, "App.cocproj")));
         }
 
         [Fact]
@@ -73,7 +73,7 @@ namespace Cocoa.Tests.Compiler
             var dir = CliTestRunner.NewTempDir("ref");
             WriteProject(dir);
 
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("remove reference -p App.cocproj ../Libs/MyLib.cod", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("remove reference -p App.cocproj ../Libs/MyLib.coa", dir);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("was not found", stderr);
@@ -84,13 +84,13 @@ namespace Cocoa.Tests.Compiler
         {
             var dir = CliTestRunner.NewTempDir("ref");
             WriteProject(dir);
-            var libPath = Path.Combine(dir, "..", "Libs", "MyLib.cod");
+            var libPath = Path.Combine(dir, "..", "Libs", "MyLib.coa");
 
             var (exitCode, stdout, stderr) = CliTestRunner.Run($"add reference -p App.cocproj \"{libPath}\"", dir);
 
             Assert.True(exitCode == 0, stderr);
             var text = File.ReadAllText(Path.Combine(dir, "App.cocproj"));
-            Assert.Contains("MyLib.cod", text);
+            Assert.Contains("MyLib.coa", text);
             Assert.DoesNotContain(dir, text.Replace('/', '\\'));
         }
 
@@ -99,7 +99,7 @@ namespace Cocoa.Tests.Compiler
         {
             var dir = CliTestRunner.NewTempDir("ref");
             File.WriteAllText(Path.Combine(dir, "Sol.cosln"), "name = Sol\n\n[projects]\n");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("add reference -p Sol.cosln ../Libs/MyLib.cod", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("add reference -p Sol.cosln ../Libs/MyLib.coa", dir);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("not a .cocproj", stderr);

@@ -1,12 +1,12 @@
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Symbols;
 using System.CodeDom.Compiler;
 
 namespace Cocoa.Compiler
 {
     /// <summary>
-    /// `cocoa dump &lt;file.cod&gt;` —— 把 `.cod` 程序集渲染成可读大纲：依赖清单、枚举/类/全局符号表、
+    /// `cocoa dump &lt;file.coa&gt;` —— 把 `.coa` 程序集渲染成可读大纲：依赖清单、枚举/类/全局符号表、
     /// 函数签名清单与函数体伪码（复用 <see cref="Cocoa.CodeAnalysis.Binding.BoundNodePrinter"/>）。
     /// </summary>
     internal static class DumpCommand
@@ -35,7 +35,7 @@ namespace Cocoa.Compiler
 
                         if (path != null)
                         {
-                            Console.Error.WriteLine("error: need exactly one .cod file");
+                            Console.Error.WriteLine("error: need exactly one .coa file");
                             return 1;
                         }
 
@@ -52,7 +52,7 @@ namespace Cocoa.Compiler
 
             if (path == null)
             {
-                Console.Error.WriteLine("error: need a .cod file (usage: cocoa dump <file.cod>)");
+                Console.Error.WriteLine("error: need a .coa file (usage: cocoa dump <file.coa>)");
                 return 1;
             }
 
@@ -62,16 +62,16 @@ namespace Cocoa.Compiler
                 return 1;
             }
 
-            if (!path.EndsWith(".cod", StringComparison.OrdinalIgnoreCase))
+            if (!path.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
             {
-                Console.Error.WriteLine($"error: '{path}' is not a .cod assembly");
+                Console.Error.WriteLine($"error: '{path}' is not a .coa assembly");
                 return 1;
             }
 
-            CodProgram program;
+            CoaProgram program;
             try
             {
-                program = CodSerializer.Load(path);
+                program = CoaSerializer.Load(path);
             }
             catch (InvalidDataException ex)
             {
@@ -84,7 +84,7 @@ namespace Cocoa.Compiler
             return 0;
         }
 
-        private static void Dump(CodProgram program)
+        private static void Dump(CoaProgram program)
         {
             Console.WriteLine("// cocoa dump");
             Console.WriteLine($"requires  : {program.Requires.ToString().ToLowerInvariant()}");
@@ -223,9 +223,9 @@ namespace Cocoa.Compiler
 
         private static void PrintHelp()
         {
-            Console.WriteLine("usage: cocoa dump <file.cod>");
+            Console.WriteLine("usage: cocoa dump <file.coa>");
             Console.WriteLine();
-            Console.WriteLine("Prints a readable outline of a .cod assembly:");
+            Console.WriteLine("Prints a readable outline of a .coa assembly:");
             Console.WriteLine("manifest, enums, classes, globals, function signatures, and function bodies as pseudocode.");
             Console.WriteLine();
             Console.WriteLine("options:");

@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Lowering;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
@@ -1324,7 +1324,7 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        internal void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CodProgram> libraries)
+        internal void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CoaProgram> libraries)
         {
             // 6e 跨库里程碑：cod 泛型定义注册为单态化种子解析候选（源码同名泛型定义已先注册占位，
             // TryDeclareClass 同名静默跳过——源码优先于 cod，源内联集合测试不被打扰；
@@ -1979,14 +1979,14 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        /// <summary>using 未解析警告（6e-M15）：命名空间在程序声明 / 引用程序集 / .cod 库中都找不到时发警告（提示不绑定 .NET BCL）。</summary>
+        /// <summary>using 未解析警告（6e-M15）：命名空间在程序声明 / 引用程序集 / .coa 库中都找不到时发警告（提示不绑定 .NET BCL）。</summary>
         private void ReportUnresolvedUsings(
             List<UsingDirectiveSyntax> usingDirectives,
             List<(ClassDeclarationSyntax Syntax, string Namespace)> allClasses,
             List<(InterfaceDeclarationSyntax Syntax, string Namespace)> allInterfaces,
             List<(EnumDeclarationSyntax Syntax, string Namespace)> allEnums,
             List<(FunctionDeclarationSyntax Syntax, string Namespace, string? Dll)> pendingFunctions,
-            ImmutableArray<CodProgram> codLibraries)
+            ImmutableArray<CoaProgram> codLibraries)
         {
             if (usingDirectives.Count == 0)
             {
@@ -2477,8 +2477,8 @@ namespace Cocoa.CodeAnalysis.Binding
             return result;
         }
 
-        /// <summary>把 `.cod` 库的公共符号注入作用域（v1 无命名空间 → 裸注册；非空命名空间留扩展位，.cod v2 时启用）。</summary>
-        private static void InjectCodSymbols(BoundScope scope, ImmutableArray<CodProgram> codLibraries)
+        /// <summary>把 `.coa` 库的公共符号注入作用域（v1 无命名空间 → 裸注册；非空命名空间留扩展位，.coa v2 时启用）。</summary>
+        private static void InjectCodSymbols(BoundScope scope, ImmutableArray<CoaProgram> codLibraries)
         {
             if (codLibraries.IsDefaultOrEmpty)
             {

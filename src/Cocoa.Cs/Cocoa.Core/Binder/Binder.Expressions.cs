@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Lowering;
-using Cocoa.CodeAnalysis.Cod;
+using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
@@ -1024,7 +1024,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 boundArguments.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i + 1].Type));
             }
 
-            // 6e-M19 M2-b：走 BoundCallExpression（顶层静态调用形状）——与 .cod 库函数消费同路径，
+            // 6e-M19 M2-b：走 BoundCallExpression（顶层静态调用形状）——与 .coa 库函数消费同路径，
             // 规避 MemberCall 静态分支对含类归属符号的发射差异
             return new BoundCallExpression(syntax, method, boundArguments.ToImmutable());
         }

@@ -66,11 +66,11 @@ Cocoa.Core.IR                 ← 语言无关 IR（合并点）
 ├── BoundTree/BoundNodePrinter.cs
 ├── BoundTree/BoundTreePrinter.cs
 ├── BoundTree/BoundNodeDumper.cs
-├── CodSerializer/            ← .cod 序列化器
-├── CodProgram.cs             ← IR 持久化数据模型
-├── CodAssemblyNaming.cs      ← 程序集命名
-├── CodRequirement.cs         ← 依赖声明
-├── CodLibraryCompiler.cs     ← .cod → DLL（移入 Build）
+├── CoaSerializer/            ← .coa 序列化器
+├── CoaProgram.cs             ← IR 持久化数据模型
+├── CoaAssemblyNaming.cs      ← 程序集命名
+├── CoaRequirement.cs         ← 依赖声明
+├── CoaLibraryCompiler.cs     ← .coa → DLL（移入 Build）
 ├── SystemLibrary.cs          ← 标准库加载
 ├── Monomorphizer.cs          ← 单态化
 └── CFG/                      ← 控制流图
@@ -112,7 +112,7 @@ Cocoa.Core.Build              ← 构建系统
 ├── SolutionBuilder.cs
 ├── BuildCache.cs
 ├── Glob.cs
-├── CodLibraryCompiler.cs     ← 从 IR 移入
+├── CoaLibraryCompiler.cs     ← 从 IR 移入
 └── Projects/                 ← 项目定义
 
 Cocoa.Compiler                ← CLI 入口（不变）
@@ -179,10 +179,10 @@ var type = _builtinTypeResolver(name);
 
 ### 3.2 合并点 2：IR（Bound Tree → 持久化）
 
-不管源码是 CO 还是 CS，Bound Tree 编译后统一通过 CodSerializer 序列化为 `.cod` 文件：
+不管源码是 CO 还是 CS，Bound Tree 编译后统一通过 CoaSerializer 序列化为 `.coa` 文件：
 
 ```
-Bound Tree → CodSerializer → .cod 文件 → CodLibraryCompiler → DLL
+Bound Tree → CoaSerializer → .coa 文件 → CoaLibraryCompiler → DLL
 ```
 
 ---
@@ -334,7 +334,7 @@ Lexer 是**字符 → Token 的机械转换**，与语言无关。`{` 在 CO 和
 | BoundTree/BoundTreePrinter.cs | 1 | 调试打印 |
 | BoundTree/BoundNodeDumper.cs | 1 | 转储 |
 | BoundTree/BoundNodePrinter.cs | 1 | 符号打印 |
-| Cod/ | 4 | CodSerializer, CodProgram, CodAssemblyNaming, CodRequirement |
+| Cod/ | 4 | CoaSerializer, CoaProgram, CoaAssemblyNaming, CoaRequirement |
 | SystemLibrary.cs | 1 | 标准库加载 |
 | Monomorphizer.cs | 1 | 单态化 |
 | CFG/ | 2 | ControlFlowGraph |
@@ -416,7 +416,7 @@ Core.IR → Core（Binder, Syntax, Symbols, Diagnostic, IO）
 - `Projects/DevToolCredential.cs`
 - `Projects/DevToolTokenProvider.cs`
 - `Projects/TokenProviderFactory.cs`
-- `Cod/CodLibraryCompiler.cs`
+- `Cod/CoaLibraryCompiler.cs`
 
 ### Phase 6: Compilation 瘦身（~1 天）
 
@@ -466,7 +466,7 @@ Core（Binder, Syntax, Symbols, MetadataReader, PEWriter, Evaluation）
 | 循环依赖未完全打破 | 编译失败 | Phase 1 优先处理 |
 | Namespace 冲突 | 编译错误 | 统一命名空间规划 |
 | Tests 依赖被移动的类型 | 测试编译失败 | Phase 8 修复引用 |
-| Native/IR 命名混淆 | 开发者困惑 | 文档说明：Native IR 是汇编中间表示，Core.IR 是语义中间表示 |
+| Native/IR 命名混淆 | 开发者困惑 | 文档说明：LIR（native 归属 `Ir*`）是底层中间表示，HIR（Core 语义层）是高层中间表示（见 `docs-dev/前端拆分与IR分层.md`） |
 
 ---
 

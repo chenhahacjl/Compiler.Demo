@@ -1,6 +1,6 @@
 @echo off
-REM Build Cocoa SDK (stdlib): src\Cocoa.SDK\Cocoa.SDK.cosln (System.Core\*.co) -> src\Cocoa.SDK\out\System.Core.cod
-REM (Directory discovery loading: future big modules like System.Net.cod/System.Json.cod
+REM Build Cocoa SDK (stdlib): src\Cocoa.SDK\Cocoa.SDK.cosln (System.Core\*.co) -> src\Cocoa.SDK\out\System.Core.coa
+REM (Directory discovery loading: future big modules like System.Net.coa/System.Json.coa
 REM  add their own .coproj to Cocoa.SDK.cosln and get built automatically)
 REM Usage: tools\build-sdk.cmd
 setlocal
@@ -18,7 +18,7 @@ REM to project bins on build, SystemLibrary walk-up probe covers pre-build gap)
 set "LIBS=%ROOT%\src\Cocoa.Cs\libs"
 if not exist "%LIBS%" mkdir "%LIBS%"
 REM Collect all modules (System.Core + System.Collections; collections serializable since 6b/M0-1c)
-copy /y "%OUT%\System.Core.cod" "%LIBS%\System.Core.cod" >nul
-if exist "%OUT%\System.Collections.cod" copy /y "%OUT%\System.Collections.cod" "%LIBS%\System.Collections.cod" >nul
-REM Managed dll not prebuilt: consumers regenerate lazily from cod (ProjectBuilder.EnsureManagedDlls)
+copy /y "%OUT%\System.Core.coa" "%LIBS%\System.Core.coa" >nul
+if exist "%OUT%\System.Collections.coa" copy /y "%OUT%\System.Collections.coa" "%LIBS%\System.Collections.coa" >nul
+REM Managed dll not prebuilt: consumers regenerate lazily from coa (ProjectBuilder.EnsureManagedDlls)
 endlocal

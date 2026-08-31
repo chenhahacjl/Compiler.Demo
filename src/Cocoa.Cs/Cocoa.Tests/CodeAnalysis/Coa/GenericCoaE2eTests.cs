@@ -13,10 +13,10 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Tests.CodeAnalysis.Emit.IL;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Cod
+namespace Cocoa.Tests.CodeAnalysis.Coa
 {
     /// <summary>
-    /// G7 用户泛型库端到端：泛型定义经 .cod 携带（gcls/tpar/fld/fn+开放体）→ 消费方实例化单态化 ×三后端。
+    /// G7 用户泛型库端到端：泛型定义经 .coa 携带（gcls/tpar/fld/fn+开放体）→ 消费方实例化单态化 ×三后端。
     /// </summary>
     [Collection("CodStdlibSequence")]
     public class GenericCodE2eTests
@@ -72,7 +72,7 @@ function Main(): void
         private static string EmitGenericLibrary(string dir)
         {
             var compilation = Compilation.Create(SyntaxTree.Parse(LibrarySource));
-            var output = Path.Combine(dir, "MyLib.cod");
+            var output = Path.Combine(dir, "MyLib.coa");
             var diagnostics = compilation.EmitCocoa("MyLib", output);
             Assert.True(diagnostics.IsEmpty, string.Join("; ", diagnostics));
             Assert.True(File.Exists(output));
@@ -93,7 +93,7 @@ function Main(): void
             var dir = NewDir();
             var codPath = EmitGenericLibrary(dir);
 
-            var lib = global::Cocoa.CodeAnalysis.Cod.CodSerializer.Load(codPath);
+            var lib = global::Cocoa.CodeAnalysis.Coa.CoaSerializer.Load(codPath);
             var def = lib.GenericDefinitions.Single();
             var ctorDef = def.Methods.Single(m => m.IsConstructor);
 

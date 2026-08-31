@@ -135,7 +135,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             if (cc == null || !IsFacadeRedirect(cc)) return false;
 
             // facade 实例方法已降级为静态（首参 = this）；真正静态方法无 this 首参。
-            // this 标记经 .cod 序列化保留（IsThisParameter ⇔ IsReadOnly）。
+            // this 标记经 .coa 序列化保留（IsThisParameter ⇔ IsReadOnly）。
             var isInstance = fn.Parameters.Length > 0 && fn.Parameters[0].IsThisParameter;
             var methodArgs = isInstance ? node.Arguments.Skip(1) : node.Arguments;
 

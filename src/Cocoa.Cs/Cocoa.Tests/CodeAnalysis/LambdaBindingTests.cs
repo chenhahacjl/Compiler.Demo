@@ -766,7 +766,7 @@ function Main(): i32
             return (process.ExitCode, stdout.Replace("\r\n", "\n"));
         }
 
-        // ── C8: stdlib Collections（源码方式集成，.cod 序列化待 G7）──
+        // ── C8: stdlib Collections（源码方式集成，.coa 序列化待 G7）──
 
         private const string CollectionsProgram = @"using System
 

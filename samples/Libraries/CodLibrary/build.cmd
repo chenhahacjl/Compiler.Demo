@@ -3,7 +3,7 @@ setlocal
 set ROOT=%~dp0
 cd /d "%ROOT%"
 
-echo === 1. Build library (.cod semantic assembly) ===
+echo === 1. Build library (.coa semantic assembly) ===
 cocoa build -p mylib\MyLib.coproj
 if errorlevel 1 exit /b 1
 

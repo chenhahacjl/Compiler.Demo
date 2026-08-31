@@ -1,7 +1,7 @@
 // Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
 // class Array —— 纯 Cocoa 源码静态类，只依赖语言核心（数组/控制流）
 // 详细分层设计见 docs-dev/标准库设计.md
-// 边界（6e-M23 R9）：Resize<T>(ref) 等「泛型 × byref」stdlib 成员待 G7 泛型 .cod 序列化落地后再纳入
+// 边界（6e-M23 R9）：Resize<T>(ref) 等「泛型 × byref」stdlib 成员待 G7 泛型 .coa 序列化落地后再纳入
 
 namespace System
 {

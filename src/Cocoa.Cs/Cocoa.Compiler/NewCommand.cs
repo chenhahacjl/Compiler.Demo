@@ -378,7 +378,7 @@ function Main()
             Console.WriteLine("templates:");
             Console.WriteLine("  console (default)  A console application (executable)");
             Console.WriteLine("  library            A .NET library (dll)");
-            Console.WriteLine("  cocoa              A .cod Cocoa assembly (cocoa library)");
+            Console.WriteLine("  cocoa              A .coa Cocoa assembly (cocoa library)");
             Console.WriteLine("  csharp             A C# dialect console application (.cs files, .cscproj, 6e-M15)");
             Console.WriteLine("  solution           A solution (.cosln) with a console sub-project");
             Console.WriteLine();

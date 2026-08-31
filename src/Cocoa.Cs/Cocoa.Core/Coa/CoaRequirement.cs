@@ -1,9 +1,9 @@
-namespace Cocoa.CodeAnalysis.Cod
+namespace Cocoa.CodeAnalysis.Coa
 {
     /// <summary>
-    /// `.cod` 后端要求（依赖清单 `requires`）。消费方后端不匹配 → 编译期报错。
+    /// `.coa` 后端要求（依赖清单 `requires`）。消费方后端不匹配 → 编译期报错。
     /// </summary>
-    internal enum CodRequirement
+    internal enum CoaRequirement
     {
         /// <summary>纯 Cocoa 函数/基础类型，双后端通用。</summary>
         Any,

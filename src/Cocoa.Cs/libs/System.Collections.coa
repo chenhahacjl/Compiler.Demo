@@ -1,4 +1,4 @@
-(cod COCOD 1
+(cod COCOA 1
   (symbols
     (gcls System.Collections.Generic.Dictionary public iface:false ifaces:0 tparams:2
       (tpar K 0 - c:0)
@@ -3470,4 +3470,4 @@
     (ns System.Collections.Generic)
   )
 )
-(checksum sha256:ff3ed7887b383fce58c3439e934cddcc19189ff71562d3052476f50515216087)
+(checksum sha256:1a6829e2d220cb52a5a913d3be8824aea170e9cf8fde1f136ba3a557c2530108)

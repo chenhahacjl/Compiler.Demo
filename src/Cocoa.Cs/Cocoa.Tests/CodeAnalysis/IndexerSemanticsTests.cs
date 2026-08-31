@@ -14,7 +14,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// 索引器 `this[i]` + `List&lt;T&gt;.Count` 属性消费端锁定（自举缺口 §4.4，M0-3）：
-    /// 集合源码方式集成（List&lt;T&gt; 待 G7 .cod 化），本测试锁定 `list[i]` 读 / `list[i] = x` 写 /
+    /// 集合源码方式集成（List&lt;T&gt; 待 G7 .coa 化），本测试锁定 `list[i]` 读 / `list[i] = x` 写 /
     /// `list.Count` 属性 / `RemoveAt` 在 Evaluator / IL / native x64 三后端的语义一致。
     /// </summary>
     public class IndexerSemanticsTests

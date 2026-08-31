@@ -101,7 +101,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target, bool emitLibrary, bool publishPublicSurface = false)
     {
         // 库产物的分发面即其公共契约：internal 门面类/方法在 dll 形态下发布为 public。
-        // 仅 `.cod` 动态链接库启用（CodLibraryCompiler）——消费方跨程序集访问需要；
+        // 仅 `.coa` 动态链接库启用（CoaLibraryCompiler）——消费方跨程序集访问需要；
         // `-f library`（C# 互操作）保持符号原可见性：internal 隐藏是既定访问控制语义
         _publishPublicSurface = publishPublicSurface;
         _entryFunction = emitLibrary ? null : program.MainFunction;
@@ -114,7 +114,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                 .ToList();
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
-            // 6e-M18：补入函数引用的注入容器类（System.Core.cod 的 Console/Math 等，不在 program.Classes 的源码声明集内）
+            // 6e-M18：补入函数引用的注入容器类（System.Core.coa 的 Console/Math 等，不在 program.Classes 的源码声明集内）
             var classes = program.Classes.Where(c => !c.IsFacadeClass).ToList();
             foreach (var f in orderedFunctions)
             {

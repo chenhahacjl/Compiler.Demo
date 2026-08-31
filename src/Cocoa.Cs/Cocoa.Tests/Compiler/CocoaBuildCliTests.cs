@@ -144,11 +144,11 @@ outputPath = out
 
             var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.cocproj")}\"");
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
-            var codPath = Path.Combine(libDir, "out", "MyLib.cod");
+            var codPath = Path.Combine(libDir, "out", "MyLib.coa");
             Assert.True(File.Exists(codPath), $"cod not emitted: {libBuild.Stdout}{libBuild.Stderr}");
 
             // 校验和强制后：构造带合法校验和的版本错误文档，保证到达版本检查层
-            var bogusCod = "(cod COCOD 99)\n";
+            var bogusCod = "(cod COCOA 99)\n";
             var bogusHash = Convert.ToHexString(
                 System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(bogusCod))).ToLowerInvariant();
             File.WriteAllText(codPath, bogusCod + "(checksum sha256:" + bogusHash + ")");
@@ -165,13 +165,13 @@ platform = x64
 *.co
 
 [references]
-../MyLib/out/MyLib.cod
+../MyLib/out/MyLib.coa
 ");
 
             var appBuild = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\"");
             Assert.NotEqual(0, appBuild.ExitCode);
             var output = appBuild.Stdout + appBuild.Stderr;
-            Assert.Contains(".cod version 99", output);
+            Assert.Contains(".coa version 99", output);
             Assert.Contains("rebuild", output);
             Assert.DoesNotContain("Unhandled exception", output);
         }
@@ -267,7 +267,7 @@ App/App.cocproj
                 File.WriteAllText(Path.Combine(projectDir, name + ".co"), "function Main() { }");
             }
 
-            Func<string, string> other = name => name == "A" ? "../B/B.cod" : "../A/A.cod";
+            Func<string, string> other = name => name == "A" ? "../B/B.coa" : "../A/A.coa";
             foreach (var name in new[] { "A", "B" })
             {
                 var projectDir = Path.Combine(dir, name);
@@ -303,8 +303,8 @@ output = cocoa
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(0, exitCode);
-            Assert.True(File.Exists(Path.Combine(dir, "Lib.cod")), $"expected Lib.cod; stdout=[{stdout}] stderr=[{stderr}]");
-            Assert.Contains("COCOD", File.ReadAllText(Path.Combine(dir, "Lib.cod")));
+            Assert.True(File.Exists(Path.Combine(dir, "Lib.coa")), $"expected Lib.coa; stdout=[{stdout}] stderr=[{stderr}]");
+            Assert.Contains("COCOA", File.ReadAllText(Path.Combine(dir, "Lib.coa")));
         }
 
         [Fact]
@@ -356,7 +356,7 @@ entry = Main
 *.co
 
 [references]
-../Lib/Lib.cod
+../Lib/Lib.coa
 ");
             return (libDir, appDir);
         }
@@ -392,7 +392,7 @@ entry = Main
 
             var libResult = Run($"build \"{libProject}\"");
             Assert.Equal(0, libResult.ExitCode);
-            Assert.True(File.Exists(Path.Combine(libDir, "Lib.cod")));
+            Assert.True(File.Exists(Path.Combine(libDir, "Lib.coa")));
 
             var appArgs = backend == "native" ? $"build \"{appProject}\" -b native" : $"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0";
             var appResult = Run(appArgs);
@@ -417,7 +417,7 @@ entry = Main
 
             var appResult = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\" -b dotnet --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
-            Assert.True(File.Exists(Path.Combine(appDir, "Lib.cod")), "Lib.cod 应复制到 app 输出目录");
+            Assert.True(File.Exists(Path.Combine(appDir, "Lib.coa")), "Lib.coa 应复制到 app 输出目录");
         }
 
         [Fact]

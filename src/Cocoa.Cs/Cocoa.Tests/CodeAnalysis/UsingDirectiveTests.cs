@@ -29,7 +29,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void UsingSystem_BareConsoleWriteLine_Compiles()
         {
-            // Console 为静态容器类（System.Core.cod），using System 后短名经 using 前缀类解析
+            // Console 为静态容器类（System.Core.coa），using System 后短名经 using 前缀类解析
             var result = Evaluate(@"
 using System
 
