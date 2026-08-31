@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeAnalysis.Emit.Native.PEFile</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cocoa.Core" />
+    <InternalsVisibleTo Include="Cocoa.Core.IL" />
+    <InternalsVisibleTo Include="Cocoa.Core.Native" />
+    <InternalsVisibleTo Include="cocoa" />
+    <InternalsVisibleTo Include="Cocoa.Tests" />
+  </ItemGroup>
+</Project>

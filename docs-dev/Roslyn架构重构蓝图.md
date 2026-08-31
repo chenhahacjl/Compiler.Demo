@@ -98,7 +98,7 @@ Cocoa.CodeAnalysis
 |---|---|
 | 驱动 / 平台 CLI（对标 dotnet） | `cocoa` |
 | 语言 | Cocoa（`coc`）/ C# 方言（`csc`） |
-| 编译器入口（托管 DLL + apphost exe，对标 csc.dll） | Cocoa.CoCompiler / Cocoa.CsCompiler |
+| 编译器入口（托管 DLL + apphost exe，对标 csc.dll） | Cocoa.Compiler.Cocoa / Cocoa.Compiler.CSharp |
 | 项目文件 | `.cocproj` / `.cscproj` |
 | 解决方案 | `.cosln` |
 | 共享核心 | `Cocoa.CodeAnalysis` |
@@ -128,7 +128,7 @@ Cocoa.CodeAnalysis
 
 ### 6.6 M3 落地记录（coc/csc 薄入口 + 项目扩展名迁移）
 - **扩展名迁移**：`.coproj` → **`.cocproj`**（Cocoa 项目）；C# 方言项目 = **`.cscproj`**；解决方案 `.cosln` 不变。CLI 全链路（build/clean/list/run/add·remove reference/CliHelper 默认项目解析）接受 `.cocproj`/`.cscproj`；`cocoa new csharp` 产出 `{name}.cscproj`，其余模板 `.cocproj`；18 个样例 `.coproj` git rename → `.cocproj`，`samples.cosln`/样例 README/全库 `.md`/README 引用同步（核心 `ProjectFileParser` 不校验扩展名，解析零改动）。
-- **coc / csc 薄入口**：新项目 `Cocoa.CoCompiler`（AssemblyName `coc`）/ `Cocoa.CsCompiler`（AssemblyName `csc`）——强制指定 `Language.Cocoa` / `Language.GetOrThrow("csharp")` 解析全部源文件，复用 `Cocoa.Compiler.Program.CompileForLanguage(args, language)`（原 `Compile` 抽分母 `CompileImpl(args, createTree)`）；编译核心仍在共享 `Cocoa.CodeAnalysis`，三后端零改动。
+- **coc / csc 薄入口**：新项目 `Cocoa.Compiler.Cocoa`（AssemblyName `coc`）/ `Cocoa.Compiler.CSharp`（AssemblyName `csc`）——强制指定 `Language.Cocoa` / `Language.GetOrThrow("csharp")` 解析全部源文件，复用 `Cocoa.Compiler.Program.CompileForLanguage(args, language)`（原 `Compile` 抽分母 `CompileImpl(args, createTree)`）；编译核心仍在共享 `Cocoa.CodeAnalysis`，三后端零改动。
 - **分派语义**：`cocoa build` 按源文件扩展名经 `SyntaxTree.Load` 分派语言（`.cs`→C# / `.co`→Cocoa），**进程内**调用共享核心（对齐 MSBuild 进程内加载 csc.dll），不 spawn 子进程；`coc`/`csc` 为独立薄编译器 exe（DLL + apphost）供直接调用与未来桥/IDE 使用。
 - **验证**：`coc` 编译运行 `.co`、`csc` 编译运行 `.cs` 双冒烟通过；`.cscproj`（new csharp → build → list → run）端到端通过；SampleSmokeTests 3/3 全绿。
 
@@ -244,7 +244,7 @@ Cocoa.CodeAnalysis
 1. **A3-1 ✅（归属表单一真相源）**：`SyntaxKindLanguageOwnership` 归属表就位——`SyntaxLanguageOwnership`（Shared/CocoaOnly/CSharpOnly）+ `Ownership(kind)`；CocoaOnly 集 = `ForStatement` + 12 个 CO 专属关键字（function/let/property/constructor/extends/facade/syscall/import/to/step/cdecl/stdcall），CSharpOnly 集 = `CSStyleForStatement`。补 C# 方言缺口：类内 import 块原未设门禁，新增 `AllowClassImportBlock`（Parser.Members.cs，Cocoa=true / CSharp=false）。`SyntaxLanguageOwnershipTests` 扩至 10 例：表锁（互斥对不相交、12 关键字全 CocoaOnly、共享 kind 抽查）+ 表与各方言解析器行为一致性（每个 CocoaOnly 关键字在 C# 惯用位置必报错）。
 2. **A3-2 ✅（基类去 C# 偏置）**：`CocoaParser` 自足化——原被双方言覆写的 4 个 C# 偏置默认体（`ParseForStatement`/`ParseForeachStatement`/`ParseVariableDeclaration`/`ParseParameter`）改为**抽象**，各方言必须在自文件声明原生形态（CO 次数循环/`var/let/const` 类型后置/`名称: 类型`；C# 对偶）。`ParseStatement` 默认分支去 C# 偏置：新增 `ParseDialectNativeStatement` 钩子（C# 原生类型前置局部变量；CO 无此形态，遇 C# 式局部变量报错后按 C# 恢复），移除 `AllowCSharpStyleVariableDeclaration` 反转标志；`ParseExpressionStatement` 升 protected 供方言复用。共享恢复/形状探测助手（`ParseRangeForStatement`/`ParseCSStyleForStatement`/`IsCSStyleForHeader`/`ParseCSharpStyleVariableDeclaration`）保留于基类。
 3. **A3-3 ✅（F2 共享绑定服务起步）**：`Binder` 去密封（`internal partial`，CocoaBinder/CSharpBinder 分叉前置）。F2 构造前缀（显式 `base(...)`/`this(...)` 链 + 隐式 base() + 字段初始化器依序置体首）抽取为共享服务 `Binder.BuildConstructorPrefix`——原在 `BuildFunctionBody` 与 `BuildFunctionBodyForMonomorphization` 两处近全等重复，现两调用点同源调用（行为等价，经 `Evaluator_Oop_F2SharedService_Generic_Chain_FieldInits` 泛型+单态化路径回归）。F3（is/as）/F4（foreach）为单站点算法且深耦合 binder 内部状态，随实际 binder 分叉时抽取（见 A3-4+/B 阶段）。
-4. **A3-4 ✅（Cocoa.Core.Cocoa 程序集就位，受控种子迁移）**：新建 `Cocoa.Core.Cocoa`（L1）程序集（引用 Cocoa.Core；Cocoa.Core 侧 `InternalsVisibleTo` 加入）。CO L1 种子迁出 Cocoa.Core：`CocoaParser`（git mv 保史）+ `CocoaLanguage`（原核心内置类迁出，注册表经 base("cocoa") 注册不变）。核心 `Language.Cocoa` 改经**反射装载** Cocoa.Core.Cocoa 并触达 `CocoaLanguage.Instance`（先查注册表、未注册才反射——规避 Cocoa.Core↔Cocoa.Core.Cocoa 循环依赖；CO 默认解析路径依赖该程序集在应用目录）。引用接线：Tests/Compiler(assembly `cocoa`)/CoCompiler(`coc`)/CsCompiler(`csc`) 直引新程序集；`Cocoa.slnx` + `Cocoa.sln` 加入。节点集/绑定层仍留 Cocoa.Core（旧共享节点集临时充任 CS 侧）。接缝回归：`CocoaLanguage_LivesInCocoaCoreCocoaAssembly` / `LanguageCocoa_Resolves_AndParses`；全量 41717 通过 / 2 skip / 1 环境锁（total 41720，41718 基线 + 新增 2）。
+4. **A3-4 ✅（Cocoa.Core.Cocoa 程序集就位，受控种子迁移）**：新建 `Cocoa.Core.Cocoa`（L1）程序集（引用 Cocoa.Core；Cocoa.Core 侧 `InternalsVisibleTo` 加入）。CO L1 种子迁出 Cocoa.Core：`CocoaParser`（git mv 保史）+ `CocoaLanguage`（原核心内置类迁出，注册表经 base("cocoa") 注册不变）。核心 `Language.Cocoa` 改经**反射装载** Cocoa.Core.Cocoa 并触达 `CocoaLanguage.Instance`（先查注册表、未注册才反射——规避 Cocoa.Core↔Cocoa.Core.Cocoa 循环依赖；CO 默认解析路径依赖该程序集在应用目录）。引用接线：Tests/Compiler(assembly `cocoa`)/Cocoa.Compiler.Cocoa(`coc`)/Cocoa.Compiler.CSharp(`csc`) 直引新程序集；`Cocoa.slnx` + `Cocoa.sln` 加入。节点集/绑定层仍留 Cocoa.Core（旧共享节点集临时充任 CS 侧）。接缝回归：`CocoaLanguage_LivesInCocoaCoreCocoaAssembly` / `LanguageCocoa_Resolves_AndParses`；全量 41717 通过 / 2 skip / 1 环境锁（total 41720，41718 基线 + 新增 2）。
 
 **A4 特性演进（CO 优先，每特性独立提交）**：
 1. **A4-1 ✅（range-for 降序 step）**：step 校验放宽为"常量非零整数"（负 step 直表降序）。`Lowerer.RewriteForStatement` 方向感知：负 step → `i >= upper` 继续、`i = i + step`（负即递减）；新增 `BoundNodeFactory.GreaterOrEqual`。native `BoundTreeToIr` ForStatement 防御分支同步方向感知（主路径已在绑定期经通用 Lowerer 降级，该分支现确认死代码）。三后端回归：Evaluator 4 例 + IL e2e + native x64/x86 e2e。

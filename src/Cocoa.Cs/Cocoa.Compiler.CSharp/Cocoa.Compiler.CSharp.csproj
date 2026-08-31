@@ -2,15 +2,15 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <AssemblyName>cocoa</AssemblyName>
-    <RootNamespace>Cocoa.Compiler</RootNamespace>
+    <AssemblyName>csc</AssemblyName>
+    <RootNamespace>Cocoa.Compiler.CSharp</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
     <ProjectReference Include="..\Cocoa.Core.Cocoa\Cocoa.Core.Cocoa.csproj" />
     <ProjectReference Include="..\Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj" />
-    <ProjectReference Include="..\Cocoa.Core.PEFile\Cocoa.Core.PEFile.csproj" />
+    <ProjectReference Include="..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
   </ItemGroup>
 
 </Project>

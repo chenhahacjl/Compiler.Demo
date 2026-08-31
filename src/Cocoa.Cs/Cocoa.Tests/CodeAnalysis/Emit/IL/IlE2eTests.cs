@@ -8,9 +8,11 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlE2eTests
     {
+        private static readonly string _uniqueRunDir = Guid.NewGuid().ToString("N");
+
         private static string GetOutputPath(string name)
         {
-            var directory = Path.Combine(Path.GetTempPath(), "cocoa-il-tests");
+            var directory = Path.Combine(Path.GetTempPath(), "cocoa-il-tests", _uniqueRunDir);
             Directory.CreateDirectory(directory);
             return Path.Combine(directory, name + ".exe");
         }

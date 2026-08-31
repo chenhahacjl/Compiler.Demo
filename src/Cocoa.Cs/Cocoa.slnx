@@ -5,8 +5,9 @@
   <Project Path="Cocoa.Core/Cocoa.Core.csproj" />
   <Project Path="Cocoa.Core.Cocoa/Cocoa.Core.Cocoa.csproj" />
   <Project Path="Cocoa.Core.CSharp/Cocoa.Core.CSharp.csproj" />
-  <Project Path="Cocoa.CoCompiler/Cocoa.CoCompiler.csproj" />
-  <Project Path="Cocoa.CsCompiler/Cocoa.CsCompiler.csproj" />
+  <Project Path="Cocoa.Core.PEFile/Cocoa.Core.PEFile.csproj" />
+  <Project Path="Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
+  <Project Path="Cocoa.Compiler.CSharp/Cocoa.Compiler.CSharp.csproj" />
   <Project Path="Cocoa.Compiler/Cocoa.Compiler.csproj" />
   <Project Path="Cocoa.Generators/Cocoa.Generators.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
