@@ -1,0 +1,61 @@
+using Cocoa.CodeAnalysis.Syntax;
+using System;
+using System.Linq;
+using Xunit;
+
+namespace Cocoa.Tests.CodeAnalysis
+{
+    /// <summary>
+    /// P1-E-2 双枚举拆分契约：<see cref="CocoaSyntaxKind"/> / <see cref="CSharpSyntaxKind"/> 两套语言枚举
+    /// 的成员集与值必须与共享 <see cref="SyntaxKind"/>（= 绿树 RawKind 值域）逐一对齐——
+    /// 保证 <c>(int)Kind == GreenNode.RawKind</c> 跨语言恒成立，绿树存储层语言无关。
+    /// </summary>
+    public class SyntaxKindSplitTests
+    {
+        [Fact]
+        public void CocoaSyntaxKind_Values_AlignWithSharedSyntaxKind()
+        {
+            foreach (SyntaxKind shared in Enum.GetValues(typeof(SyntaxKind)))
+            {
+                Assert.Equal((int)shared, (int)(CocoaSyntaxKind)shared);
+            }
+        }
+
+        [Fact]
+        public void CSharpSyntaxKind_Values_AlignWithSharedSyntaxKind()
+        {
+            foreach (SyntaxKind shared in Enum.GetValues(typeof(SyntaxKind)))
+            {
+                Assert.Equal((int)shared, (int)(CSharpSyntaxKind)shared);
+            }
+        }
+
+        [Fact]
+        public void CocoaSyntaxKind_HasSameMemberCountAsShared()
+        {
+            Assert.Equal(
+                Enum.GetNames(typeof(SyntaxKind)).Length,
+                Enum.GetNames(typeof(CocoaSyntaxKind)).Length);
+        }
+
+        [Fact]
+        public void CSharpSyntaxKind_HasSameMemberCountAsShared()
+        {
+            Assert.Equal(
+                Enum.GetNames(typeof(SyntaxKind)).Length,
+                Enum.GetNames(typeof(CSharpSyntaxKind)).Length);
+        }
+
+        [Fact]
+        public void CocoaSyntaxKind_RawKindRoundTripsViaGreenNode()
+        {
+            // 绿树 RawKind(int) 经语言枚举具名解释后值不变（回环不变量）
+            var tree = SyntaxTree.Parse("function Main(): i32 { var x = 1 + 2; return x }");
+            foreach (var node in tree.Root.DescendantNodesAndSelf())
+            {
+                var green = node.ToGreen();
+                Assert.Equal((int)(CocoaSyntaxKind)green.Kind, green.RawKind);
+            }
+        }
+    }
+}
