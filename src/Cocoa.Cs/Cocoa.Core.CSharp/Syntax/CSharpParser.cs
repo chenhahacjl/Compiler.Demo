@@ -737,11 +737,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.ConstKeyword:
                     statement = ParseVariableDeclaration();
                     break;
-                case SyntaxKind.LetKeyword:
-                    Diagnostics.ReportError(Current.Location, "'let' 是 Cocoa 语法；C# 方言请用 'var'。");
-                    NextToken();
-                    statement = ParseExpressionStatement();
-                    break;
                 case SyntaxKind.IfKeyword:
                     statement = ParseIfStatement();
                     break;
@@ -1126,7 +1121,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                     if (depth == 0) break;
                 }
                 else if (depth >= 1 && token.Kind == SyntaxKind.SemicolonToken) return true;
-                else if (depth >= 1 && token.Kind == SyntaxKind.ToKeyword) return false;
                 index++;
             }
             return false;
@@ -1360,13 +1354,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private StatementSyntax ParseVariableDeclaration()
         {
-            var keywordKind = Current.Kind;
-            if (keywordKind == SyntaxKind.LetKeyword)
-            {
-                Diagnostics.ReportError(Current.Location, "'let' 是 Cocoa 语法；C# 方言请用 'var'。");
-                keywordKind = SyntaxKind.VarKeyword;
-            }
-            var keyword = MatchToken(keywordKind);
+            var keyword = MatchToken(Current.Kind);
             if (keyword.Kind == SyntaxKind.ConstKeyword)
             {
                 if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.IdentifierToken)
@@ -1395,21 +1383,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private MemberSyntax ParseMember()
         {
-            if (Current.Kind == SyntaxKind.ImportKeyword)
-            {
-                ReportError(Current.Location, "顶层 `import` 声明已废弃：请改用类内 import 块 `class Kernel32 { import kernel32.dll { static extern ... } }`。");
-                return ParseImportClause();
-            }
             if (Current.Kind == SyntaxKind.UsingKeyword)
                 return ParseUsingDirective();
             if (Current.Kind == SyntaxKind.NamespaceKeyword)
                 return ParseNamespaceDeclaration();
             var modifiers = ParseModifiers();
-            if (Current.Kind == SyntaxKind.CdeclKeyword || Current.Kind == SyntaxKind.StdcallKeyword || Current.Kind == SyntaxKind.FunctionKeyword)
-            {
-                ReportError(Current.Location, "C# 方言函数声明须为 `[修饰符] 返回类型 名称(...)`，不能使用 'function'/'cdecl'/'stdcall' 关键字。");
-                return ParseFunctionDeclaration(modifiers);
-            }
             if (Current.Kind == SyntaxKind.EnumKeyword) return ParseEnumDeclaration(modifiers);
             if (Current.Kind == SyntaxKind.ClassKeyword) return ParseClassDeclaration(modifiers);
             if (Current.Kind == SyntaxKind.StructKeyword) return ParseClassDeclaration(modifiers);
@@ -1512,10 +1490,10 @@ namespace Cocoa.CodeAnalysis.Syntax
             switch (kind)
             {
                 case SyntaxKind.PublicKeyword: case SyntaxKind.PrivateKeyword: case SyntaxKind.InternalKeyword:
-                case SyntaxKind.ProtectedKeyword: case SyntaxKind.CdeclKeyword: case SyntaxKind.StdcallKeyword:
-                case SyntaxKind.SyscallKeyword: case SyntaxKind.AbstractKeyword: case SyntaxKind.SealedKeyword:
+                case SyntaxKind.ProtectedKeyword:
+                case SyntaxKind.AbstractKeyword: case SyntaxKind.SealedKeyword:
                 case SyntaxKind.StaticKeyword: case SyntaxKind.VirtualKeyword: case SyntaxKind.OverrideKeyword:
-                case SyntaxKind.ReadonlyKeyword: case SyntaxKind.PartialKeyword: case SyntaxKind.FacadeKeyword:
+                case SyntaxKind.ReadonlyKeyword: case SyntaxKind.PartialKeyword:
                     return true;
                 default: return false;
             }
@@ -1561,19 +1539,6 @@ namespace Cocoa.CodeAnalysis.Syntax
                 value = ParseExpression();
             }
             return new EnumMemberSyntax(_syntaxTree, identifier, equalsToken, value);
-        }
-
-        private MemberSyntax ParseImportClause()
-        {
-            var importKeyword = MatchToken(SyntaxKind.ImportKeyword);
-            var nameTokens = ImmutableArray.CreateBuilder<SyntaxToken>();
-            nameTokens.Add(MatchToken(SyntaxKind.IdentifierToken));
-            while (Current.Kind == SyntaxKind.DotToken)
-            {
-                nameTokens.Add(MatchToken(SyntaxKind.DotToken));
-                nameTokens.Add(MatchToken(SyntaxKind.IdentifierToken));
-            }
-            return new ImportClauseSyntax(_syntaxTree, importKeyword, nameTokens.ToImmutable());
         }
 
         private MemberSyntax ParseUsingDirective()
@@ -1635,59 +1600,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             return nameTokens.ToImmutable();
         }
 
-        private MemberSyntax ParseFunctionDeclaration(ImmutableArray<SyntaxToken> modifiers)
-        {
-            var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
-            var identifier = MatchToken(SyntaxKind.IdentifierToken);
-            var typeParameters = ParseOptionalTypeParameterList();
-            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-            var parameters = ParseParameterList();
-            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-            var type = ParseOptionalTypeClause();
-            var externMetadata = ParseOptionalExternMetadata();
-            var whereClauses = ParseWhereClauses();
-            BlockStatementSyntax? body = null;
-            if (Current.Kind == SyntaxKind.FatArrowToken)
-            {
-                var arrow = NextToken();
-                var expression = ParseExpression();
-                if (Current.Kind == SyntaxKind.SemicolonToken) NextToken();
-                body = SynthesizeExpressionBodyBlock(expression, arrow);
-            }
-            else
-            {
-                var isExtern = modifiers.Any(m => m.Kind == SyntaxKind.CdeclKeyword || m.Kind == SyntaxKind.StdcallKeyword) || externMetadata != null;
-                var isAbstract = modifiers.Any(m => m.Kind == SyntaxKind.AbstractKeyword);
-                var isSyscall = modifiers.Any(m => m.Kind == SyntaxKind.SyscallKeyword);
-                if ((!isExtern && !isAbstract && !isSyscall) || Current.Kind == SyntaxKind.OpenBraceToken)
-                    body = ParseBlockStatement();
-            }
-            return new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, identifier, typeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body, externMetadata, whereClauses);
-        }
-
-        private ExternMetadataSyntax? ParseOptionalExternMetadata()
-        {
-            if (Current.Kind != SyntaxKind.ExternKeyword) return null;
-            var externKeyword = NextToken();
-            SyntaxToken? openParen = null;
-            SyntaxToken? closeParen = null;
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
-                openParen = NextToken();
-            var arguments = ImmutableArray.CreateBuilder<ExternMetadataArgumentSyntax>();
-            while (Current.Kind != SyntaxKind.CloseParenthesisToken && Current.Kind != SyntaxKind.EndOfFileToken && (openParen != null || Current.Kind != SyntaxKind.OpenBraceToken))
-            {
-                var key = MatchToken(SyntaxKind.IdentifierToken);
-                var equalsToken = MatchToken(SyntaxKind.EqualsToken);
-                var value = MatchToken(SyntaxKind.IdentifierToken);
-                arguments.Add(new ExternMetadataArgumentSyntax(_syntaxTree, key, equalsToken, value));
-                if (Current.Kind == SyntaxKind.CommaToken) NextToken();
-                else break;
-            }
-            if (openParen != null)
-                closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
-            return new ExternMetadataSyntax(_syntaxTree, externKeyword, openParen, arguments.ToImmutable(), closeParen);
-        }
-
         private MemberSyntax ParseClassDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
             var classKeyword = Current.Kind == SyntaxKind.StructKeyword
@@ -1696,10 +1608,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var typeParameters = ParseOptionalTypeParameterList();
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
-            if (Current.Kind == SyntaxKind.ColonToken || Current.Kind == SyntaxKind.ExtendsKeyword)
+            if (Current.Kind == SyntaxKind.ColonToken)
             {
-                if (Current.Kind == SyntaxKind.ExtendsKeyword)
-                    ReportError(Current.Location, "C# 方言继承/基接口须用冒号 `:`，不支持 'extends' 关键字。");
                 var prefixToken = NextToken();
                 baseTypes.Add(CreateBaseTypeClause(prefixToken));
                 while (Current.Kind == SyntaxKind.CommaToken)
@@ -1728,29 +1638,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private MemberSyntax ParseClassMember(string className)
         {
-            if (Current.Kind == SyntaxKind.ImportKeyword)
-            {
-                ReportError(Current.Location, "C# 方言不支持 import 块；请用 `using` 指令 + extern P/Invoke。");
-                return ParseImportBlock();
-            }
             var modifiers = ParseModifiers();
-            if (Current.Kind == SyntaxKind.ConstructorKeyword)
-            {
-                ReportError(Current.Location, "C# 方言构造函数应写成 `ClassName(...)`（名字 = 类名），不能使用 'constructor' 关键字。");
-                return ParseConstructorDeclaration(modifiers);
-            }
-            if (Current.Kind == SyntaxKind.CdeclKeyword || Current.Kind == SyntaxKind.StdcallKeyword || Current.Kind == SyntaxKind.FunctionKeyword)
-            {
-                ReportError(Current.Location, "C# 方言方法须为 `返回类型 名称(...)`，不能使用 'function'/'cdecl'/'stdcall' 关键字。");
-                return ParseFunctionDeclaration(modifiers);
-            }
             if (Current.Kind == SyntaxKind.EventKeyword) return ParseEventDeclaration(modifiers);
             if (Current.Kind == SyntaxKind.DelegateKeyword) return ParseDelegateDeclaration(modifiers);
-            if (Current.Kind == SyntaxKind.PropertyKeyword)
-            {
-                ReportError(Current.Location, "C# 方言属性须为 `类型 名称 { get; set; }`，不能使用 'property' 关键字。");
-                return ParsePropertyDeclaration(modifiers);
-            }
             if (Current.Kind == SyntaxKind.IdentifierToken)
             {
                 if (Peek(1).Kind == SyntaxKind.ColonToken)
@@ -1804,10 +1694,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             SyntaxToken? initializerKeyword = null;
             var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
-            if (Current.Kind == SyntaxKind.ColonToken || Current.Kind == SyntaxKind.ExtendsKeyword)
+            if (Current.Kind == SyntaxKind.ColonToken)
             {
-                if (Current.Kind == SyntaxKind.ExtendsKeyword)
-                    ReportError(Current.Location, "C# 方言构造链须用冒号 `:`，不支持 'extends' 关键字。");
                 NextToken();
                 if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
                 {
@@ -1905,43 +1793,14 @@ namespace Cocoa.CodeAnalysis.Syntax
             return type;
         }
 
-        private MemberSyntax ParseConstructorDeclaration(ImmutableArray<SyntaxToken> modifiers)
-        {
-            var constructorKeyword = MatchToken(SyntaxKind.ConstructorKeyword);
-            var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-            var parameters = ParseParameterList();
-            var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-            SyntaxToken? initializerKeyword = null;
-            var initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
-            if (Current.Kind == SyntaxKind.ColonToken || Current.Kind == SyntaxKind.ExtendsKeyword)
-            {
-                if (Current.Kind == SyntaxKind.ExtendsKeyword)
-                    ReportError(Current.Location, "C# 方言构造链须用冒号 `:`，不支持 'extends' 关键字。");
-                NextToken();
-                if (Current.Kind == SyntaxKind.BaseKeyword || Current.Kind == SyntaxKind.ThisKeyword)
-                {
-                    initializerKeyword = NextToken();
-                    var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
-                    initializerArguments = ParseArgumentList();
-                    MatchToken(SyntaxKind.CloseParenthesisToken);
-                }
-                else
-                    _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.BaseKeyword);
-            }
-            var body = ParseBlockStatement();
-            return new ConstructorDeclarationSyntax(_syntaxTree, modifiers, constructorKeyword, openParenthesisToken, parameters, closeParenthesisToken, initializerKeyword, initializerArguments, body);
-        }
-
         private MemberSyntax ParseInterfaceDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
             var interfaceKeyword = MatchToken(SyntaxKind.InterfaceKeyword);
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             var typeParameters = ParseOptionalTypeParameterList();
             var baseTypes = ImmutableArray.CreateBuilder<TypeClauseSyntax>();
-            if (Current.Kind == SyntaxKind.ColonToken || Current.Kind == SyntaxKind.ExtendsKeyword)
+            if (Current.Kind == SyntaxKind.ColonToken)
             {
-                if (Current.Kind == SyntaxKind.ExtendsKeyword)
-                    ReportError(Current.Location, "C# 方言继承/基接口须用冒号 `:`，不支持 'extends' 关键字。");
                 var prefixToken = NextToken();
                 baseTypes.Add(CreateBaseTypeClause(prefixToken));
                 while (Current.Kind == SyntaxKind.CommaToken)
@@ -1964,25 +1823,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 if (Current.Kind == SyntaxKind.SemicolonToken) { NextToken(); continue; }
                 var modifiers = ParseModifiers();
-                if (Current.Kind == SyntaxKind.CdeclKeyword || Current.Kind == SyntaxKind.StdcallKeyword || Current.Kind == SyntaxKind.FunctionKeyword)
-                {
-                    ReportError(Current.Location, "C# 方言接口成员须为 `返回类型 名称(...)`，不能使用 'function'/'cdecl'/'stdcall' 关键字。");
-                    var functionKeyword = MatchToken(SyntaxKind.FunctionKeyword);
-                    var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
-                    var memberTypeParameters = ParseOptionalTypeParameterList();
-                    var openParenthesisToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-                    var parameters = ParseParameterList();
-                    var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-                    var type = ParseOptionalTypeClause();
-                    var memberWhereClauses = ParseWhereClauses();
-                    members.Add(new FunctionDeclarationSyntax(_syntaxTree, modifiers, functionKeyword, memberIdentifier, memberTypeParameters, openParenthesisToken, parameters, closeParenthesisToken, type, body: null, whereClauses: memberWhereClauses));
-                }
-                else if (Current.Kind == SyntaxKind.PropertyKeyword)
-                {
-                    ReportError(Current.Location, "C# 方言接口属性须为 `类型 名称 { get; }`，不能使用 'property' 关键字。");
-                    members.Add(ParsePropertyDeclaration(modifiers));
-                }
-                else if (Current.Kind == SyntaxKind.IdentifierToken && (Peek(1).Kind == SyntaxKind.IdentifierToken || (Peek(1).Kind == SyntaxKind.LessToken && IsGenericTypeNameAhead())))
+                if (Current.Kind == SyntaxKind.IdentifierToken && (Peek(1).Kind == SyntaxKind.IdentifierToken || (Peek(1).Kind == SyntaxKind.LessToken && IsGenericTypeNameAhead())))
                 {
                     var type = ParsePrefixTypeClause();
                     var memberIdentifier = MatchToken(SyntaxKind.IdentifierToken);
@@ -2072,43 +1913,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, openParenToken, parameters, closeParenToken, semicolonToken);
         }
 
-        private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)
-        {
-            var propertyKeyword = MatchToken(SyntaxKind.PropertyKeyword);
-            var identifier = Current.Kind == SyntaxKind.ThisKeyword ? MatchToken(SyntaxKind.ThisKeyword) : MatchToken(SyntaxKind.IdentifierToken);
-            if (identifier.Text == "this" && Current.Kind == SyntaxKind.OpenBracketToken)
-                return ParseIndexerDeclaration(modifiers, propertyKeyword, identifier);
-            var type = ParseTypeClause();
-            if (Current.Kind == SyntaxKind.FatArrowToken)
-            {
-                var arrow = NextToken();
-                var expression = ParseExpression();
-                if (Current.Kind == SyntaxKind.SemicolonToken) NextToken();
-                return SynthesizeExpressionBodyProperty(modifiers, propertyKeyword, identifier, type, arrow, expression);
-            }
-            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
-            PropertyAccessorSyntax? getter = null;
-            PropertyAccessorSyntax? setter = null;
-            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
-            {
-                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
-                {
-                    var accessor = ParsePropertyAccessor();
-                    if (accessor.IsGet) getter = accessor; else setter = accessor;
-                }
-                else { _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword); NextToken(); }
-            }
-            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
-            SyntaxToken? equalsToken = null;
-            ExpressionSyntax? initializer = null;
-            if (Current.Kind == SyntaxKind.EqualsToken)
-            {
-                equalsToken = MatchToken(SyntaxKind.EqualsToken);
-                initializer = ParseExpression();
-            }
-            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken, ImmutableArray<ParameterSyntax>.Empty, equalsToken, initializer);
-        }
-
         private PropertyAccessorSyntax ParsePropertyAccessor()
         {
             var modifiers = ParseModifiers();
@@ -2147,49 +1951,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBrace, getter, setter: null, closeBrace);
         }
 
-        private MemberSyntax ParseIndexerDeclaration(ImmutableArray<SyntaxToken> modifiers, SyntaxToken? propertyKeyword, SyntaxToken identifier)
-        {
-            NextToken();
-            var builder = ImmutableArray.CreateBuilder<ParameterSyntax>();
-            if (Current.Kind != SyntaxKind.CloseBracketToken)
-            {
-                builder.Add(ParseParameter());
-                while (Current.Kind == SyntaxKind.CommaToken)
-                {
-                    NextToken();
-                    builder.Add(ParseParameter());
-                }
-            }
-            MatchToken(SyntaxKind.CloseBracketToken);
-            var type = ParseTypeClause();
-            if (Current.Kind == SyntaxKind.FatArrowToken)
-            {
-                _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.OpenBraceToken);
-                NextToken();
-            }
-            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
-            PropertyAccessorSyntax? getter = null;
-            PropertyAccessorSyntax? setter = null;
-            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
-            {
-                if (IsModifier(Current.Kind) || Current.Kind == SyntaxKind.GetKeyword || Current.Kind == SyntaxKind.SetKeyword)
-                {
-                    var accessor = ParsePropertyAccessor();
-                    if (accessor.IsGet) getter = accessor; else setter = accessor;
-                }
-                else { _diagnostics.ReportUnexpectedToken(Current.Location, Current.Kind, SyntaxKind.GetKeyword); NextToken(); }
-            }
-            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
-            SyntaxToken? equalsToken = null;
-            ExpressionSyntax? initializer = null;
-            if (Current.Kind == SyntaxKind.EqualsToken)
-            {
-                equalsToken = MatchToken(SyntaxKind.EqualsToken);
-                initializer = ParseExpression();
-            }
-            return new PropertyDeclarationSyntax(_syntaxTree, modifiers, propertyKeyword, identifier, type, openBraceToken, getter, setter, closeBraceToken, builder.ToImmutable(), equalsToken, initializer);
-        }
-
         private SeparatedSyntaxList<ParameterSyntax> ParseParameterList()
         {
             var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
@@ -2219,35 +1980,6 @@ namespace Cocoa.CodeAnalysis.Syntax
             var type = ParsePrefixTypeClause();
             var identifier = MatchToken(SyntaxKind.IdentifierToken);
             return new ParameterSyntax(_syntaxTree, modifier, identifier, type);
-        }
-
-        private MemberSyntax ParseImportBlock()
-        {
-            var importKeyword = MatchToken(SyntaxKind.ImportKeyword);
-            var nameTokens = ParseQualifiedName();
-            SyntaxToken? blockCharsetKey = null;
-            SyntaxToken? blockCharsetValue = null;
-            SyntaxToken? blockOpenParen = null;
-            SyntaxToken? blockCloseParen = null;
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
-                blockOpenParen = NextToken();
-            if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.EqualsToken && Current.Text == "charset")
-            {
-                blockCharsetKey = NextToken();
-                MatchToken(SyntaxKind.EqualsToken);
-                blockCharsetValue = MatchToken(SyntaxKind.IdentifierToken);
-            }
-            if (blockOpenParen != null)
-                blockCloseParen = MatchToken(SyntaxKind.CloseParenthesisToken);
-            var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
-            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
-            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
-            {
-                if (Current.Kind == SyntaxKind.SemicolonToken) { NextToken(); continue; }
-                members.Add(ParseClassMember(""));
-            }
-            var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
-            return new ImportBlockSyntax(_syntaxTree, importKeyword, nameTokens, blockOpenParen, blockCharsetKey, blockCharsetValue, blockCloseParen, openBraceToken, members.ToImmutable(), closeBraceToken);
         }
     }
 }
