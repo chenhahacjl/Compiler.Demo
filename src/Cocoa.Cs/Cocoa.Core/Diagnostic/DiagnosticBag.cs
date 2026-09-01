@@ -456,91 +456,11 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportUnreachableCode(SyntaxNode node)
         {
-            switch (node.Kind)
+            // P1-4：具体节点 pattern-match 移出共享 Core，经语言钩子分派（语言库委托 UnreachableCodeLocator 保持行为不变）。
+            var location = node.SyntaxTree.Language.GetUnreachableCodeLocation(node);
+            if (location != null)
             {
-                case SyntaxKind.BlockStatement:
-                {
-                    var firstStatement = ((BlockStatementSyntax)node).Statements.FirstOrDefault();
-
-                    // Report just for non empty blocks.
-                    if (firstStatement != null)
-                    {
-                        ReportUnreachableCode(firstStatement);
-                    }
-
-                    return;
-                }
-                case SyntaxKind.VariableDeclaration:
-                {
-                    var variableDeclaration = (VariableDeclarationSyntax)node;
-                    ReportUnreachableCode(variableDeclaration.Keyword?.Location ?? variableDeclaration.Location);
-                    return;
-                }
-                case SyntaxKind.IfStatement:
-                {
-                    ReportUnreachableCode(((IfStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.WhileStatement:
-                {
-                    ReportUnreachableCode(((WhileStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.DoWhileStatement:
-                {
-                    ReportUnreachableCode(((DoWhileStatementSyntax)node).DoKeyword.Location);
-                    return;
-                }
-                case SyntaxKind.ForStatement:
-                {
-                    ReportUnreachableCode(((ForStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.ForeachStatement:
-                {
-                    ReportUnreachableCode(((ForeachStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.SwitchStatement:
-                {
-                    ReportUnreachableCode(((SwitchStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.BreakStatement:
-                {
-                    ReportUnreachableCode(((BreakStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.ContinueStatement:
-                {
-                    ReportUnreachableCode(((ContinueStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.ReturnStatement:
-                {
-                    ReportUnreachableCode(((ReturnStatementSyntax)node).Keyword.Location);
-                    return;
-                }
-                case SyntaxKind.ExpressionStatement:
-                {
-                    var expression = ((ExpressionStatementSyntax)node).Expression;
-                    ReportUnreachableCode(expression);
-                    return;
-                }
-                case SyntaxKind.CallExpression:
-                {
-                    ReportUnreachableCode(((CallExpressionSyntax)node).Identifier.Location);
-                    return;
-                }
-                case SyntaxKind.MemberCallExpression:
-                {
-                    ReportUnreachableCode(((MemberCallExpressionSyntax)node).IdentifierToken.Location);
-                    return;
-                }
-                default:
-                {
-                    throw new Exception($"Unexpected syntax {node.Kind}");
-                }
+                ReportUnreachableCode(location.Value);
             }
         }
 
