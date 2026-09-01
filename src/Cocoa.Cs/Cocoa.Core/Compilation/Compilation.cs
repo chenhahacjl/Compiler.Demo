@@ -231,10 +231,11 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>为指定语法树获取语义模型（对齐 Roslyn <c>Compilation.GetSemanticModel</c>）。</summary>
+        /// <summary>为指定语法树获取语义模型（对齐 Roslyn <c>Compilation.GetSemanticModel</c>；
+        /// P1-5 经 <see cref="Language.CreateSemanticModel"/> 分派语言专属语义模型）。</summary>
         public SemanticModel GetSemanticModel(SyntaxTree syntaxTree)
         {
-            return new SemanticModel(this, syntaxTree);
+            return Language.CreateSemanticModel(this, syntaxTree);
         }
 
         /// <summary>按元数据全名解析类型（对齐 Roslyn <c>CSharpCompilation.GetTypeByMetadataName</c>）。

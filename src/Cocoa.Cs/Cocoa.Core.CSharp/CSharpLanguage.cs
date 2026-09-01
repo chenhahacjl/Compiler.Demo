@@ -94,9 +94,9 @@ namespace Cocoa.CodeAnalysis
         internal override System.Collections.Immutable.ImmutableArray<SyntaxNode> GetRootMembers(SyntaxTree syntaxTree)
             => SyntaxTreeServices.GetRootMembers(syntaxTree);
 
-        /// <summary>语义模型（P1-3 钩子：P1 返回共享 SemanticModel，P1-5 切 CSharpSemanticModel）。</summary>
+        /// <summary>语义模型（P1-5：返回语言专属 <see cref="CSharpSemanticModel"/>）。</summary>
         internal override SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree)
-            => new SemanticModel(compilation, syntaxTree);
+            => new CSharpSemanticModel(compilation, syntaxTree);
 
         /// <summary>不可达代码位置（P1-3 钩子：P1 委托共享解析器，P2-5 切语言节点）。</summary>
         internal override TextLocation? GetUnreachableCodeLocation(SyntaxNode node)
