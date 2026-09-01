@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using System;
 using System.Linq;
@@ -56,6 +57,40 @@ namespace Cocoa.Tests.CodeAnalysis
                 var green = node.ToGreen();
                 Assert.Equal((int)(CocoaSyntaxKind)green.Kind, green.RawKind);
             }
+        }
+
+        [Fact]
+        public void CocoaMappings_RawKindRoundTrip()
+        {
+            foreach (CocoaSyntaxKind kind in Enum.GetValues(typeof(CocoaSyntaxKind)))
+            {
+                Assert.Equal(kind, CocoaSyntaxKindMappings.ToCocoaSyntaxKind((int)kind));
+                Assert.Equal((int)kind, CocoaSyntaxKindMappings.ToRawKind(kind));
+            }
+        }
+
+        [Fact]
+        public void CSharpMappings_RawKindRoundTrip()
+        {
+            foreach (CSharpSyntaxKind kind in Enum.GetValues(typeof(CSharpSyntaxKind)))
+            {
+                Assert.Equal(kind, CSharpSyntaxKindMappings.ToCSharpSyntaxKind((int)kind));
+                Assert.Equal((int)kind, CSharpSyntaxKindMappings.ToRawKind(kind));
+            }
+        }
+
+        [Fact]
+        public void CocoaMappings_UnknownRawKind_ReturnsBadToken()
+        {
+            Assert.Equal(CocoaSyntaxKind.BadToken, CocoaSyntaxKindMappings.ToCocoaSyntaxKind(-1));
+            Assert.Equal(CocoaSyntaxKind.BadToken, CocoaSyntaxKindMappings.ToCocoaSyntaxKind(100000));
+        }
+
+        [Fact]
+        public void CSharpMappings_UnknownRawKind_ReturnsBadToken()
+        {
+            Assert.Equal(CSharpSyntaxKind.BadToken, CSharpSyntaxKindMappings.ToCSharpSyntaxKind(-1));
+            Assert.Equal(CSharpSyntaxKind.BadToken, CSharpSyntaxKindMappings.ToCSharpSyntaxKind(100000));
         }
     }
 }
