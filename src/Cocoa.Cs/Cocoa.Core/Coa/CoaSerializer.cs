@@ -825,7 +825,7 @@ namespace Cocoa.CodeAnalysis.Coa
         private static void WriteUnaryOperator(Writer w, Registry registry, BoundUnaryOperator op)
         {
             w.Open("uop");
-            w.Field(UnaryOpText(op.SyntaxKind));
+            w.Field(UnaryOpText(op.Kind));
             w.Field(TypeRef(op.OperandType));
             w.End();
         }
@@ -833,7 +833,7 @@ namespace Cocoa.CodeAnalysis.Coa
         private static void WriteBinaryOperator(Writer w, Registry registry, BoundBinaryOperator op)
         {
             w.Open("bop");
-            w.Field(BinaryOpText(op.SyntaxKind));
+            w.Field(BinaryOpText(op.Kind));
             w.Field(TypeRef(op.LeftType));
             w.Field(TypeRef(op.RightType));
             w.End();
@@ -1267,78 +1267,80 @@ namespace Cocoa.CodeAnalysis.Coa
             return value ? "true" : "false";
         }
 
-        private static string UnaryOpText(SyntaxKind kind)
+        private static string UnaryOpText(BoundUnaryOperatorKind kind)
         {
             return kind switch
             {
-                SyntaxKind.PlusToken => "+",
-                SyntaxKind.MinusToken => "-",
-                SyntaxKind.BangToken => "!",
-                SyntaxKind.TildeToken => "~",
+                BoundUnaryOperatorKind.Identity => "+",
+                BoundUnaryOperatorKind.Negation => "-",
+                BoundUnaryOperatorKind.LogicalNegation => "!",
+                BoundUnaryOperatorKind.OnesComplement => "~",
                 _ => throw new NotSupportedException($"Unsupported unary operator '{kind}'"),
             };
         }
 
-        private static string BinaryOpText(SyntaxKind kind)
+        private static string BinaryOpText(BoundBinaryOperatorKind kind)
         {
             return kind switch
             {
-                SyntaxKind.PlusToken => "+",
-                SyntaxKind.MinusToken => "-",
-                SyntaxKind.StarToken => "*",
-                SyntaxKind.SlashToken => "/",
-                SyntaxKind.PercentToken => "%",
-                SyntaxKind.ShiftLeftToken => "<<",
-                SyntaxKind.ShiftRightToken => ">>",
-                SyntaxKind.AmpersandToken => "&",
-                SyntaxKind.PipeToken => "|",
-                SyntaxKind.HatToken => "^",
-                SyntaxKind.EqualsEqualsToken => "==",
-                SyntaxKind.BangEqualsToken => "!=",
-                SyntaxKind.LessToken => "<",
-                SyntaxKind.LessOrEqualsToken => "<=",
-                SyntaxKind.GreaterToken => ">",
-                SyntaxKind.GreaterOrEqualsToken => ">=",
-                SyntaxKind.AmpersandAmpersandToken => "&&",
-                SyntaxKind.PipePipeToken => "||",
+                BoundBinaryOperatorKind.Addition => "+",
+                BoundBinaryOperatorKind.Subtraction => "-",
+                BoundBinaryOperatorKind.Multiplication => "*",
+                BoundBinaryOperatorKind.Division => "/",
+                BoundBinaryOperatorKind.Modulo => "%",
+                BoundBinaryOperatorKind.ShiftLeft => "<<",
+                BoundBinaryOperatorKind.ShiftRight => ">>",
+                BoundBinaryOperatorKind.BitwiseAnd => "&",
+                BoundBinaryOperatorKind.BitwiseOr => "|",
+                BoundBinaryOperatorKind.BitwiseXor => "^",
+                BoundBinaryOperatorKind.Equals => "==",
+                BoundBinaryOperatorKind.NotEquals => "!=",
+                BoundBinaryOperatorKind.ReferenceEquals => "==",
+                BoundBinaryOperatorKind.ReferenceNotEquals => "!=",
+                BoundBinaryOperatorKind.Less => "<",
+                BoundBinaryOperatorKind.LessOrEquals => "<=",
+                BoundBinaryOperatorKind.Greater => ">",
+                BoundBinaryOperatorKind.GreaterOrEquals => ">=",
+                BoundBinaryOperatorKind.LogicalAnd => "&&",
+                BoundBinaryOperatorKind.LogicalOr => "||",
                 _ => throw new NotSupportedException($"Unsupported binary operator '{kind}'"),
             };
         }
 
-        private static SyntaxKind ParseUnaryOpText(string text)
+        private static BoundUnaryOperatorKind ParseUnaryOpText(string text)
         {
             return text switch
             {
-                "+" => SyntaxKind.PlusToken,
-                "-" => SyntaxKind.MinusToken,
-                "!" => SyntaxKind.BangToken,
-                "~" => SyntaxKind.TildeToken,
+                "+" => BoundUnaryOperatorKind.Identity,
+                "-" => BoundUnaryOperatorKind.Negation,
+                "!" => BoundUnaryOperatorKind.LogicalNegation,
+                "~" => BoundUnaryOperatorKind.OnesComplement,
                 _ => throw new InvalidDataException($"Unknown unary operator '{text}'"),
             };
         }
 
-        private static SyntaxKind ParseBinaryOpText(string text)
+        private static BoundBinaryOperatorKind ParseBinaryOpText(string text)
         {
             return text switch
             {
-                "+" => SyntaxKind.PlusToken,
-                "-" => SyntaxKind.MinusToken,
-                "*" => SyntaxKind.StarToken,
-                "/" => SyntaxKind.SlashToken,
-                "%" => SyntaxKind.PercentToken,
-                "<<" => SyntaxKind.ShiftLeftToken,
-                ">>" => SyntaxKind.ShiftRightToken,
-                "&" => SyntaxKind.AmpersandToken,
-                "|" => SyntaxKind.PipeToken,
-                "^" => SyntaxKind.HatToken,
-                "==" => SyntaxKind.EqualsEqualsToken,
-                "!=" => SyntaxKind.BangEqualsToken,
-                "<" => SyntaxKind.LessToken,
-                "<=" => SyntaxKind.LessOrEqualsToken,
-                ">" => SyntaxKind.GreaterToken,
-                ">=" => SyntaxKind.GreaterOrEqualsToken,
-                "&&" => SyntaxKind.AmpersandAmpersandToken,
-                "||" => SyntaxKind.PipePipeToken,
+                "+" => BoundBinaryOperatorKind.Addition,
+                "-" => BoundBinaryOperatorKind.Subtraction,
+                "*" => BoundBinaryOperatorKind.Multiplication,
+                "/" => BoundBinaryOperatorKind.Division,
+                "%" => BoundBinaryOperatorKind.Modulo,
+                "<<" => BoundBinaryOperatorKind.ShiftLeft,
+                ">>" => BoundBinaryOperatorKind.ShiftRight,
+                "&" => BoundBinaryOperatorKind.BitwiseAnd,
+                "|" => BoundBinaryOperatorKind.BitwiseOr,
+                "^" => BoundBinaryOperatorKind.BitwiseXor,
+                "==" => BoundBinaryOperatorKind.Equals,
+                "!=" => BoundBinaryOperatorKind.NotEquals,
+                "<" => BoundBinaryOperatorKind.Less,
+                "<=" => BoundBinaryOperatorKind.LessOrEquals,
+                ">" => BoundBinaryOperatorKind.Greater,
+                ">=" => BoundBinaryOperatorKind.GreaterOrEquals,
+                "&&" => BoundBinaryOperatorKind.LogicalAnd,
+                "||" => BoundBinaryOperatorKind.LogicalOr,
                 _ => throw new InvalidDataException($"Unknown binary operator '{text}'"),
             };
         }

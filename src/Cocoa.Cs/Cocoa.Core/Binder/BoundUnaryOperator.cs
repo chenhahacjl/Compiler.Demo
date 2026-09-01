@@ -1,28 +1,29 @@
-using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System;
+using System.Collections.Generic;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
     /// <summary>
-    /// 绑定一元操作符
+    /// 绑定一元操作符（HIR 净化）：运算符对象只携带语义 <see cref="BoundUnaryOperatorKind"/>，
+    /// 不携带 <see cref="SyntaxKind"/>。前端（Binder / BoundNodeFactory / 插值拼接）经
+    /// <see cref="Bind(SyntaxKind, TypeSymbol)"/> 兼容门把词法 token 翻译为语义 kind。
     /// </summary>
     public sealed class BoundUnaryOperator
     {
-        private BoundUnaryOperator(SyntaxKind syntaxKind, BoundUnaryOperatorKind kind, TypeSymbol operandType)
-            : this(syntaxKind, kind, operandType, operandType)
+        private BoundUnaryOperator(BoundUnaryOperatorKind kind, TypeSymbol operandType)
+            : this(kind, operandType, operandType)
         {
         }
 
-        private BoundUnaryOperator(SyntaxKind syntaxKind, BoundUnaryOperatorKind kind, TypeSymbol operandType, TypeSymbol resultType)
+        private BoundUnaryOperator(BoundUnaryOperatorKind kind, TypeSymbol operandType, TypeSymbol resultType)
         {
-            SyntaxKind = syntaxKind;
             Kind = kind;
             OperandType = operandType;
             ResultType = resultType;
         }
 
-        public SyntaxKind SyntaxKind { get; }
         public BoundUnaryOperatorKind Kind { get; }
         public TypeSymbol OperandType { get; }
         public TypeSymbol ResultType { get; }
@@ -36,7 +37,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             var ops = new List<BoundUnaryOperator>
             {
-                new BoundUnaryOperator(SyntaxKind.BangToken, BoundUnaryOperatorKind.LogicalNegation, TypeSymbol.Boolean),
+                new BoundUnaryOperator(BoundUnaryOperatorKind.LogicalNegation, TypeSymbol.Boolean),
             };
 
             var numericTypes = new[]
@@ -50,29 +51,49 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 // 6e-M21 Phase 7：<32 位整数一元 +/-/~ 结果升 Int32（C# 同构：-(byte)5 / ~(byte)5 均为 int）
                 var result = t.IsInteger && t.BitWidth < 32 ? TypeSymbol.Int32 : t;
-                ops.Add(new BoundUnaryOperator(SyntaxKind.PlusToken, BoundUnaryOperatorKind.Identity, t, result));
-                ops.Add(new BoundUnaryOperator(SyntaxKind.MinusToken, BoundUnaryOperatorKind.Negation, t, result));
+                ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Identity, t, result));
+                ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.Negation, t, result));
 
                 if (t.IsInteger)
                 {
-                    ops.Add(new BoundUnaryOperator(SyntaxKind.TildeToken, BoundUnaryOperatorKind.OnesComplement, t, result));
+                    ops.Add(new BoundUnaryOperator(BoundUnaryOperatorKind.OnesComplement, t, result));
                 }
             }
 
             return ops.ToArray();
         }
 
+        /// <summary>兼容词法门（HIR 净化）：token → 语义 kind 翻译后委托语义入口。</summary>
         public static BoundUnaryOperator? Bind(SyntaxKind syntaxKind, TypeSymbol operandType)
+        {
+            return Bind(Translate(syntaxKind), operandType);
+        }
+
+        /// <summary>语义主入口：按 <see cref="BoundUnaryOperatorKind"/> 绑定。</summary>
+        public static BoundUnaryOperator? Bind(BoundUnaryOperatorKind kind, TypeSymbol operandType)
         {
             foreach (var op in _operators)
             {
-                if (op.SyntaxKind == syntaxKind && op.OperandType == operandType)
+                if (op.Kind == kind && op.OperandType == operandType)
                 {
                     return op;
                 }
             }
 
             return null;
+        }
+
+        /// <summary>词法 token → 语义一元 kind（HIR 净化翻译门，供 <see cref="Bind(SyntaxKind, TypeSymbol)"/>）。</summary>
+        private static BoundUnaryOperatorKind Translate(SyntaxKind syntaxKind)
+        {
+            return syntaxKind switch
+            {
+                SyntaxKind.PlusToken => BoundUnaryOperatorKind.Identity,
+                SyntaxKind.MinusToken => BoundUnaryOperatorKind.Negation,
+                SyntaxKind.BangToken => BoundUnaryOperatorKind.LogicalNegation,
+                SyntaxKind.TildeToken => BoundUnaryOperatorKind.OnesComplement,
+                _ => throw new NotSupportedException($"Unsupported unary operator token '{syntaxKind}'"),
+            };
         }
     }
 }

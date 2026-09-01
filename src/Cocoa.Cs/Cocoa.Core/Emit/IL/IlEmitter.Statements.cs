@@ -732,7 +732,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             }
             else
             {
-                throw new System.Exception($"Unexpected unary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Operand.Type})");
+                throw new System.Exception($"Unexpected unary operator {BoundOperatorText.UnaryGlyph(node.Op.Kind)}({node.Operand.Type})");
             }
         }
 
@@ -855,7 +855,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
                     il.Emit(IlOpCodeTable.Get("Ceq"));
                     break;
                 default:
-                    throw new System.Exception($"Unexpected binary operator {SyntaxFacts.GetText(node.Op.SyntaxKind)}({node.Left.Type}, {node.Right.Type})");
+                    throw new System.Exception($"Unexpected binary operator {BoundOperatorText.BinaryGlyph(node.Op.Kind)}({node.Left.Type}, {node.Right.Type})");
             }
         }
 

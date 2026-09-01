@@ -1688,22 +1688,22 @@ namespace Cocoa.CodeAnalysis.Coa
         private static BoundUnaryOperator ReadUnaryOperator(Reader reader, ReadContext context)
         {
             reader.Expect("uop");
-            var syntaxKind = ParseUnaryOpText(reader.ExpectString());
+            var unaryKind = ParseUnaryOpText(reader.ExpectString());
             var operandType = ResolveTypeRef(reader.ExpectString(), context);
-            var op = BoundUnaryOperator.Bind(syntaxKind, operandType);
+            var op = BoundUnaryOperator.Bind(unaryKind, operandType);
             reader.End();
-            return op ?? throw new InvalidDataException($"Cannot bind unary operator {syntaxKind} on {operandType}");
+            return op ?? throw new InvalidDataException($"Cannot bind unary operator {unaryKind} on {operandType}");
         }
 
         private static BoundBinaryOperator ReadBinaryOperator(Reader reader, ReadContext context)
         {
             reader.Expect("bop");
-            var syntaxKind = ParseBinaryOpText(reader.ExpectString());
+            var binaryKind = ParseBinaryOpText(reader.ExpectString());
             var leftType = ResolveTypeRef(reader.ExpectString(), context);
             var rightType = ResolveTypeRef(reader.ExpectString(), context);
-            var op = BoundBinaryOperator.Bind(syntaxKind, leftType, rightType);
+            var op = BoundBinaryOperator.Bind(binaryKind, leftType, rightType);
             reader.End();
-            return op ?? throw new InvalidDataException($"Cannot bind binary operator {syntaxKind} on {leftType} and {rightType}");
+            return op ?? throw new InvalidDataException($"Cannot bind binary operator {binaryKind} on {leftType} and {rightType}");
         }
 
         private static BoundLabel GetLabel(Dictionary<string, BoundLabel> labels, string name)

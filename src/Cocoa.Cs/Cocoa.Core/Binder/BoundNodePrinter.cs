@@ -166,11 +166,11 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             if (expression is BoundUnaryExpression unaryExpression)
             {
-                writer.WriteNestedExpression(parentPrecedence, SyntaxFacts.GetUnaryOperatorPrecedence(unaryExpression.Op.SyntaxKind), unaryExpression);
+                writer.WriteNestedExpression(parentPrecedence, BoundOperatorText.UnaryPrecedence(unaryExpression.Op.Kind), unaryExpression);
             }
             else if (expression is BoundBinaryExpression binaryExpression)
             {
-                writer.WriteNestedExpression(parentPrecedence, SyntaxFacts.GetBinaryOperatorPrecedence(binaryExpression.Op.SyntaxKind), binaryExpression);
+                writer.WriteNestedExpression(parentPrecedence, BoundOperatorText.BinaryPrecedence(binaryExpression.Op.Kind), binaryExpression);
             }
             else
             {
@@ -436,7 +436,7 @@ namespace Cocoa.CodeAnalysis.Binding
         {
             writer.WriteIdentifier(node.Variable.Name);
             writer.WriteSpace();
-            writer.WritePunctuation(node.Op.SyntaxKind);
+            writer.WritePunctuation(BoundOperatorText.BinaryGlyph(node.Op.Kind));
             writer.WritePunctuation(SyntaxKind.EqualsToken);
             writer.WriteSpace();
             node.Expression.WriteTo(writer);
@@ -444,19 +444,19 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private static void WriteUnaryExpression(BoundUnaryExpression node, IndentedTextWriter writer)
         {
-            var precedence = SyntaxFacts.GetUnaryOperatorPrecedence(node.Op.SyntaxKind);
+            var precedence = BoundOperatorText.UnaryPrecedence(node.Op.Kind);
 
-            writer.WritePunctuation(node.Op.SyntaxKind);
+            writer.WritePunctuation(BoundOperatorText.UnaryGlyph(node.Op.Kind));
             writer.WriteNestedExpression(precedence, node.Operand);
         }
 
         private static void WriteBinaryExpression(BoundBinaryExpression node, IndentedTextWriter writer)
         {
-            var precedence = SyntaxFacts.GetBinaryOperatorPrecedence(node.Op.SyntaxKind);
+            var precedence = BoundOperatorText.BinaryPrecedence(node.Op.Kind);
 
             writer.WriteNestedExpression(precedence, node.Left);
             writer.WriteSpace();
-            writer.WritePunctuation(node.Op.SyntaxKind);
+            writer.WritePunctuation(BoundOperatorText.BinaryGlyph(node.Op.Kind));
             writer.WriteSpace();
             writer.WriteNestedExpression(precedence, node.Right);
         }
