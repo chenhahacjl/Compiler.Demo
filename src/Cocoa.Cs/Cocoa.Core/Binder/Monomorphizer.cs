@@ -40,7 +40,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var (identifier, argumentClauses) in CollectGenericUsages(globalScope))
             {
-                var result = helperBinder.BindGenericTypeNameForExpansion(identifier, argumentClauses.Cast<SyntaxNode>().ToImmutableArray());
+                var result = helperBinder.BindGenericTypeNameForExpansion(identifier, argumentClauses);
                 if (result is InstantiatedTypeSymbol instantiated)
                 {
                     seeded.Add(instantiated);
@@ -397,12 +397,13 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>
-        /// 扫描本编译全部声明语法中的泛型用法站点（6e-M20）：
+        /// 扫描本编译全部声明语法中的泛型用法站点（6e-M20，P1-3 钩子预备）：
         /// ① 类型位置的 GenericTypeClauseSyntax（`var x: List&lt;int&gt;` / extends / where）；
         /// ② 对象创建站点的显式实参（`new Box&lt;i32&gt;(…)`——泛型信息在 TypeArguments 上，无子句节点）。
-        /// 返回 (类型名, 实参子句列表) 对。
+        /// 返回 (类型名, 实参子句列表) 对；实参以语言中性 <see cref="SyntaxNode"/> 表达（语言库
+        /// <see cref="Language.CollectGenericUsages"/> 钩子在 P1 委托本器，P2-5 切语言节点后由语言库自持）。
         /// </summary>
-        private static IEnumerable<(SyntaxToken Identifier, ImmutableArray<TypeClauseSyntax> Arguments)> CollectGenericUsages(BoundGlobalScope globalScope)
+        internal static IEnumerable<(SyntaxToken Identifier, ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(BoundGlobalScope globalScope)
         {
             foreach (var root in CollectDeclarationRoots(globalScope))
             {
@@ -410,11 +411,11 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     if (node is GenericTypeClauseSyntax genericClause)
                     {
-                        yield return (genericClause.Identifier, genericClause.TypeArguments);
+                        yield return (genericClause.Identifier, genericClause.TypeArguments.Cast<SyntaxNode>().ToImmutableArray());
                     }
                     else if (node is ObjectCreationExpressionSyntax creation && creation.TypeArguments != null)
                     {
-                        yield return (creation.Identifier, creation.TypeArguments.Arguments);
+                        yield return (creation.Identifier, creation.TypeArguments.Arguments.Cast<SyntaxNode>().ToImmutableArray());
                     }
                 }
             }

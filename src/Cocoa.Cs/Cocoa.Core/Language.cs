@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -141,5 +142,36 @@ namespace Cocoa.CodeAnalysis
         /// 语言子类委托各自语言库 Binder 的静态 <c>BuildFunctionBodyForMonomorphization</c>）。
         /// </summary>
         internal abstract (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, ImmutableArray<Coa.CoaProgram> codLibraries, Dictionary<string, Symbols.TypeSymbol> typeArgumentsByName);
+
+        /// <summary>
+        /// 绿→类型化红节点（P1-3 钩子预备）：语言库各自持有一份类型化红节点构建器
+        /// （P2-4 落地；P1 委托共享 <see cref="GreenNode.CreateTypedRed"/> 保持行为不变）。
+        /// </summary>
+        internal abstract SyntaxNode CreateTypedRed(GreenNode green, SyntaxTree syntaxTree, int position);
+
+        /// <summary>
+        /// 泛型用法扫描（P1-3 钩子预备）：返回语言中性的 (类型名, 实参列表) 对，共享
+        /// <see cref="Binder.Monomorphizer"/> 保持单实现（P1 委托共享扫描；P2-5 切语言节点后由语言库自持）。
+        /// </summary>
+        internal abstract IEnumerable<(SyntaxToken Identifier, ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(Binding.BoundGlobalScope globalScope);
+
+        /// <summary>
+        /// 声明的命名空间名集合（P1-3 钩子预备，P2-6 消费者适配用）。
+        /// </summary>
+        internal abstract ImmutableArray<string> GetDeclaredNamespaceNames(SyntaxTree syntaxTree);
+
+        /// <summary>根成员集合（P1-3 钩子预备，P2-6 Repl/测试消费用）。</summary>
+        internal abstract ImmutableArray<SyntaxNode> GetRootMembers(SyntaxTree syntaxTree);
+
+        /// <summary>
+        /// 按本语言创建语义模型（P1-3 钩子预备；P1-5 落地 CocoaSemanticModel/CSharpSemanticModel 分派）。
+        /// </summary>
+        internal abstract SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree);
+
+        /// <summary>
+        /// 不可达代码位置解析（P1-3 钩子预备；P1-4 供 <see cref="DiagnosticBag.ReportUnreachableCode(SyntaxNode)"/>
+        /// 分派，P2-5 切语言节点后由语言库自持）。
+        /// </summary>
+        internal abstract TextLocation? GetUnreachableCodeLocation(SyntaxNode node);
     }
 }

@@ -2,6 +2,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -65,5 +66,29 @@ namespace Cocoa.CodeAnalysis
         /// <summary>CO 编译对象（S-4.2 Compilation 分家：CocoaCompilation 随语言库落位）。</summary>
         internal override Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
             => new CocoaCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
+
+        /// <summary>绿→类型化红节点（P1-3 钩子：P1 委托共享 <see cref="GreenNode.CreateTypedRed"/>，P2-4 切语言节点）。</summary>
+        internal override SyntaxNode CreateTypedRed(GreenNode green, SyntaxTree syntaxTree, int position)
+            => green.CreateTypedRed(syntaxTree, position);
+
+        /// <summary>泛型用法扫描（P1-3 钩子：P1 委托共享 Monomorphizer 扫描，P2-5 切语言节点）。</summary>
+        internal override System.Collections.Generic.IEnumerable<(SyntaxToken Identifier, System.Collections.Immutable.ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(Binding.BoundGlobalScope globalScope)
+            => Monomorphizer.CollectGenericUsages(globalScope);
+
+        /// <summary>声明的命名空间名集合（P1-3 钩子：P1 委托共享服务，P2-5 切语言节点）。</summary>
+        internal override System.Collections.Immutable.ImmutableArray<string> GetDeclaredNamespaceNames(SyntaxTree syntaxTree)
+            => SyntaxTreeServices.GetDeclaredNamespaceNames(syntaxTree);
+
+        /// <summary>根成员集合（P1-3 钩子：P1 委托共享服务，P2-5 切语言节点）。</summary>
+        internal override System.Collections.Immutable.ImmutableArray<SyntaxNode> GetRootMembers(SyntaxTree syntaxTree)
+            => SyntaxTreeServices.GetRootMembers(syntaxTree);
+
+        /// <summary>语义模型（P1-3 钩子：P1 返回共享 SemanticModel，P1-5 切 CocoaSemanticModel）。</summary>
+        internal override SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree)
+            => new SemanticModel(compilation, syntaxTree);
+
+        /// <summary>不可达代码位置（P1-3 钩子：P1 委托共享解析器，P2-5 切语言节点）。</summary>
+        internal override TextLocation? GetUnreachableCodeLocation(SyntaxNode node)
+            => UnreachableCodeLocator.GetLocation(node);
     }
 }
