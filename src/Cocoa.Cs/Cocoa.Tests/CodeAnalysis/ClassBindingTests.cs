@@ -595,6 +595,28 @@ function Main()
         }
 
         [Fact]
+        public void GreenNode_RawKind_MatchesKindStorage()
+        {
+            // P1-E-1：绿树存储层 RawKind:int 化——存储与共享枚举解耦（过渡态便捷视图 Kind == (SyntaxKind)RawKind）
+            var code = @"function Main()
+{
+    var x = 1 + 2
+}";
+            var tree = SyntaxTree.Parse(code);
+            var green = tree.GreenRoot;
+            Assert.Equal((int)SyntaxKind.CompilationUnit, green.RawKind);
+            Assert.Equal(green.Kind, (SyntaxKind)green.RawKind);
+
+            var descendants = tree.Root.DescendantNodesAndSelf();
+            foreach (var node in descendants)
+            {
+                var g = node.ToGreen();
+                Assert.Equal((int)g.Kind, g.RawKind);
+                Assert.Equal(g.Kind, (SyntaxKind)g.RawKind);
+            }
+        }
+
+        [Fact]
         public void GreenRoot_RoundTrips_UsingAlias()
         {
             var code = @"using Alias = System.Collections.List

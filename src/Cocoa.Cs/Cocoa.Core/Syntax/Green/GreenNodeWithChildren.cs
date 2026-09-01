@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         private readonly ImmutableArray<GreenNode?> _slots;
 
         public GreenNodeWithChildren(SyntaxKind kind, ImmutableArray<GreenNode?> slots)
-            : base(kind)
+            : base((int)kind)
         {
             _slots = slots.IsDefault ? ImmutableArray<GreenNode?>.Empty : slots;
         }

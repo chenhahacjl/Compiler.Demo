@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             Parent = parent;
         }
 
-        public override SyntaxKind Kind => _green.Kind;
+        public override SyntaxKind Kind => (SyntaxKind)_green.RawKind;
 
         /// <summary>所包裹的绿节点。</summary>
         public GreenNode Green => _green;

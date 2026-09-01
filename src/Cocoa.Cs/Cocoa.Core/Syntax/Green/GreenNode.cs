@@ -11,12 +11,16 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public abstract class GreenNode
     {
-        private protected GreenNode(SyntaxKind kind)
+        private protected GreenNode(int rawKind)
         {
-            Kind = kind;
+            RawKind = rawKind;
         }
 
-        public SyntaxKind Kind { get; }
+        /// <summary>语言无关的原始 kind（P1-E-1：存储层与语言枚举解耦，为拆两套 SyntaxKind 铺路）。</summary>
+        public int RawKind { get; }
+
+        /// <summary>便捷视图：当前共享联合枚举（过渡态；P1-E-2 拆两套枚举后由各语言节点层提供）。</summary>
+        public SyntaxKind Kind => (SyntaxKind)RawKind;
 
         /// <summary>文本宽度（含子节点/trivia）。</summary>
         public abstract int Width { get; }

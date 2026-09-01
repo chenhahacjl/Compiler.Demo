@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public GreenToken(SyntaxKind kind, string text, object? value = null,
             ImmutableArray<GreenTrivia> leadingTrivia = default,
             ImmutableArray<GreenTrivia> trailingTrivia = default)
-            : base(kind)
+            : base((int)kind)
         {
             Text = text;
             Value = value;
