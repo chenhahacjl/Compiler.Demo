@@ -1,8 +1,25 @@
 # 前端拆分与 IR 分层（架构演进方案）
 
-> 状态：设计定稿（2026-08-31）· 取代 `docs-dev/CIR设计.md`、`docs-dev/IR设计.md`
+> 状态：拆分实施中（2026-09-02 更新）· 设计定稿（2026-08-31）· 取代 `docs-dev/CIR设计.md`、`docs-dev/IR设计.md`
 > 前置阅读：[`Roslyn架构重构蓝图.md`](Roslyn架构重构蓝图.md)（L1–L5 与 Y/A/B/W 系列）、[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)（旧架构基线）
 > 本文裁决：**双前端全量拆分（CO/C# 各自 Lexer/Parser/SyntaxKind/节点类/Binder/Lower）+ 双层 IR（HIR 共享合并点 / LIR native 私有）**；`.coa` 为 HIR 的双向持久化。
+
+## 实施状态（2026-09-02）
+
+前端全量拆分已落地五层（提交 258a6ad），Core 共享层已不再持有语言专属实现：
+
+| 层 | 状态 | 说明 |
+|---|---|---|
+| 双`SyntaxKind` | ✅ 已完成 | `CocoaSyntaxKind`/`CSharpSyntaxKind` 值域对齐共享枚举（P1-E-2） |
+| 节点类 ×2 | ✅ 已完成 | 75 节点类复制进 `Cocoa.CodeAnalysis.Cocoa.Syntax`/`.CSharp.Syntax`；根类 `CocoaSyntaxNode`/`CSharpSyntaxNode` 以 `new abstract` 接管语言枚举 `Kind`；删除源生成器 `Cocoa.Generators`（`GetChildren` 直接内联进节点文件） |
+| 双 Lexer | ✅ 已完成 | `CocoaLexer`/`CSharpLexer` 真实现落库；`ILexer` 接口；删共享 `Syntax/Lexer.cs`（P1-E-2e + S-2） |
+| 双 SyntaxFacts | ✅ 已完成 | `CocoaSyntaxFacts`/`CSharpSyntaxFacts` 副本落库（S-3） |
+| 双 Binder | ✅ 已完成 | 删共享 `Binding/Binder.cs`（5 个 partial）；`CocoaBinder`/`CSharpBinder` 独立副本接管绑定；`IBinder` 窄接口（单态化种子收集面）+ `Language.BuildFunctionBodyForMonomorphization` 分派；共享 HIR 服务（Monomorphizer/CFG/确定赋值/常量折叠）留 Core（S-4.1~4.3） |
+| 双 Compilation | ✅ 已完成 | `CocoaCompilation`/`CSharpCompilation` 迁语言库；`Language.CreateCompilation` 工厂；`Compilation` 抽象 `BindGlobalScope`/`BindProgram`（S-4.2~4.3a） |
+| Parser 产出语言节点 | ⏳ 待实施 | **S-5 原子切换**：`SyntaxTree.Root`/`IParser` 需语言中性化（抽象 `SyntaxNode`），Parser 与 Binder 副本需同步切换节点引用；含 40 处 `Root.Members` 消费点与 `GreenNode.CreateTypedRed`（详见 §5 Phase 1b） |
+| 每语言 Lower | ⏳ 待实施 | 方言构造（CO for-to / C# for(;;)）收口（§5 Phase 1c） |
+
+每步全量回归 41805 绿。下一步：S-5（Parser/SyntaxTree 语言中性化原子切换，单独专项推进）。
 
 ---
 
@@ -237,20 +254,28 @@ FUNCTION main (p0)
 
 ## 5. 需要修改的内容（Phase 0-3）
 
-### Phase 0：HIR 净化（~1 周，可独立合入）
+> 上标标记：✅ = 已落地（2026-09-02）；其余为待办。
 
-- 删 `BoundBinaryOperator.SyntaxKind`（`Binder/BoundBinaryOperator.cs:31`）、`BoundUnaryOperator.SyntaxKind`（`Binder/BoundUnaryOperator.cs:25`），改用 `BoundBinaryOperatorKind` / `BoundUnaryOperatorKind`。
-- `CoaSerializer.UnaryOpText/BinaryOpText`（`Cod/CoaSerializer.cs:1270,1282`）改按 `BoundOperatorKind` 编解码。
-- `IlEmitter.Statements.cs:735,858`、`BoundNodePrinter` 改语义文本。
-- 扩充 `CanonicalIr.Verify`（`Lowering/CanonicalIr.cs`）为完整高/规范契约。
+### Phase 0：HIR 净化（~1 周，可独立合入）— ✅ 已完成（P1-E-2 前置：双枚举拆分）
 
-### Phase 1：前端全量拆分
+- 删 `BoundBinaryOperator.SyntaxKind`、`BoundUnaryOperator.SyntaxKind`，改用 `BoundBinaryOperatorKind` / `BoundUnaryOperatorKind`。✅
+- `CoaSerializer.UnaryOpText/BinaryOpText` 改按 `BoundOperatorKind` 编解码。✅
+- `IlEmitter.Statements.cs`、`BoundNodePrinter` 改语义文本。✅
 
-- **token 级**：两套 `SyntaxKind` 枚举（CocoaSyntaxKind / CSharpSyntaxKind）、两套 Lexer（关键字表各归其语言，CO 词在 C# 回落标识符）。
-- 删 `CSharpParser.cs` 31 处 CO 关键字防御分支（:741/:1364/:1408 等）。
-- **节点类**：90 个语法节点类复制两套；`SyntaxNodeGetChildrenGenerator` 改识别两套。
-- **Binder**：拆 CocoaBinder / CSharpBinder；共享工具（CFG/确定赋值/常量折叠/Monomorphizer）留 Core。
-- **语言专属 Lower**：`Cocoa.Core.Cocoa/Lowering/`（BoundForStatement→while/if/goto）、`Cocoa.Core.CSharp/Lowering/`（把 `Binder.Statements.cs:1437-1484` 的 C# for 脱糖移入）。
+### Phase 1：前端全量拆分 — 五层已落地，Parser 产出语言节点待续（S-5）
+
+**已完成（S-1~S-4，提交 258a6ad）：**
+
+- **token 级**：两套 `SyntaxKind` 枚举（CocoaSyntaxKind / CSharpSyntaxKind，值域对齐）、两套 Lexer 真实现（CocoaLexer/CSharpLexer 入语言库，关键字表各归其语言，CO 词在 C# 回落标识符）；共享 `Syntax/Lexer.cs` 删除。✅
+- **节点类**：75 语法节点类复制两套（`Cocoa.CodeAnalysis.Cocoa.Syntax` / `.CSharp.Syntax`）；根类 `CocoaSyntaxNode`/`CSharpSyntaxNode` 以 `new abstract` 声明语言枚举 `Kind`（Core `SyntaxNode.Kind` 由 `abstract` 改 `virtual` 哨兵）；`GetChildren` 直接内联进节点文件，删除源生成器 `Cocoa.Generators`。✅
+- **SyntaxFacts**：`CocoaSyntaxFacts`/`CSharpSyntaxFacts` 副本落库。✅
+- **Binder**：删共享 `Binding/Binder.cs`（5 个 partial）；`CocoaBinder`/`CSharpBinder` 独立副本接管绑定；`IBinder` 窄接口（单态化种子收集：Register…Seed / BindGenericTypeNameForExpansion）+ `Language.BuildFunctionBodyForMonomorphization` 分派；共享工具（Monomorphizer/CFG/确定赋值/常量折叠）留 Core。✅
+- **Compilation**：`CocoaCompilation`/`CSharpCompilation` 迁语言库；`Language.CreateCompilation` 工厂；`Compilation` 抽象 `BindGlobalScope`/`BindProgram`，语言子类驱动各自 Binder。✅
+
+**待续（S-5/S-6，原子切换专项）：**
+
+- **Phase 1b（S-5）：Parser 产出语言节点** —— `SyntaxTree.Root`/`IParser.ParseCompilationUnit`/`ParseHandler` 由共享 `CompilationUnitSyntax` 改抽象 `SyntaxNode`（语言中性化）；`CocoaParser`/`CSharpParser` 的 114/103 处 `new XxxSyntax` 与 659/498 处 `SyntaxKind` 改语言库节点与语言枚举（token 判断保留共享 `SyntaxKind`，需逐处区分）；Binder 副本同步切语言节点；适配 ~40 处 `Root.Members` 消费点（Binder/Compilation/CocoaRepl/测试）与 `GreenNode.CreateTypedRed`（~1300 行 `new` 共享节点）。数千行同步切换，任一环失败破坏基线，须单独专项、小子步回归。
+- **语言专属 Lower**：`Cocoa.Core.Cocoa/Lowering/`（BoundForStatement→while/if/goto）、`Cocoa.Core.CSharp/Lowering/`（C# for 脱糖移入）。
 
 ### Phase 2：LIR 改造（LLVM 式）
 
@@ -268,16 +293,21 @@ FUNCTION main (p0)
 
 ## 6. 最终项目结构
 
+> 标 ✅ 为已落地（2026-09-02）；未标为待续。
+
 ```
 Cocoa.Core（共享层，类比 .NET CIL/BCL）
-  Text / Diagnostic / Symbols / Compilation 抽象
-  Bound 树(HIR) + Lowering + CirToIr + Cod + IL/Native 发射 + PEFile
-  Green/Red 树基础设施（RawKind:int）
+  Text / Diagnostic / Symbols / Compilation 抽象 ✅（Compilation 子类已迁语言库，Core 留抽象）
+  Bound 树(HIR) + Lowering + CirToIr + Cod + IL/Native 发射 + PEFile ✅
+  Green/Red 树基础设施（RawKind:int）✅
+  （共享 Binder / 共享 Lexer 已删除）✅
 Cocoa.Core.Cocoa
-  CocoaLexer / CocoaParser / CocoaSyntaxKind / 90 节点类 / CocoaBinder / CocoaLower / CocoaCompilation
+  CocoaLexer ✅ / CocoaParser（产出共享节点，S-5 待切换）/ CocoaSyntaxKind ✅
+  / 75 节点类 ✅ / CocoaBinder ✅ / CocoaLower（待续）/ CocoaCompilation ✅
 Cocoa.Core.CSharp
-  CSharpLexer / CSharpParser / CSharpSyntaxKind / 90 节点类 / CSharpBinder / CSharpLower / CSharpCompilation
+  CSharpLexer ✅ / CSharpParser（产出共享节点，S-5 待切换）/ CSharpSyntaxKind ✅
+  / 75 节点类 ✅ / CSharpBinder ✅ / CSharpLower（待续）/ CSharpCompilation ✅
 coc / csc（各自引用独立前端）
 ```
 
-**一句话**：双前端（CO/C# 全量独立）+ 双层 IR（HIR 共享合并点 + LIR native 私有）的编译器架构改造；核心产出是前端 token/节点/Binder/Lower 的彻底语言化拆分，以及 IR 层的净化与新 LIR 改造。
+**一句话**：双前端（CO/C# 全量独立）+ 双层 IR（HIR 共享合并点 + LIR native 私有）的编译器架构改造；核心产出是前端 token/节点/Binder/Lower 的彻底语言化拆分，以及 IR 层的净化与新 LIR 改造。前端五层（SyntaxKind/Lexer/节点类/SyntaxFacts/Binder/Compilation）已落库，剩余 Parser 产出语言节点（S-5 原子切换）与每语言 Lower。
