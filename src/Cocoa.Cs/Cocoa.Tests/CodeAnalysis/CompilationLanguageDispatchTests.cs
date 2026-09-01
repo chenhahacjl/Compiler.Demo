@@ -1,6 +1,8 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System.Collections.Immutable;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis
@@ -8,6 +10,7 @@ namespace Cocoa.Tests.CodeAnalysis
     /// <summary>
     /// Y §6.7 A0：双 <see cref="Compilation"/> 子类分派锁定——
     /// <c>Compilation.Create</c> 按首棵语法树语言返回 <see cref="CocoaCompilation"/> / <see cref="CSharpCompilation"/>（行为等价）。
+    /// P1-B：<see cref="Language.CreateBinder"/> 工厂按语言分派 <see cref="CocoaBinder"/> / <see cref="CSharpBinder"/>。
     /// </summary>
     public class CompilationLanguageDispatchTests
     {
@@ -72,6 +75,28 @@ namespace Cocoa.Tests.CodeAnalysis
             var tree = SyntaxTree.Parse("function Main(): i32 { return 0 }");
             Assert.NotNull(tree.Root);
             Assert.Same(cocoa, tree.Language);
+        }
+
+        [Fact]
+        public void CocoaLanguage_CreateBinder_ReturnsCocoaBinder()
+        {
+            // P1-B：Language.CreateBinder 工厂按语言分派——CO 语言产出 CocoaBinder
+            var binder = Language.Cocoa.CreateBinder(
+                isScript: false, parent: null, function: null,
+                references: ImmutableArray<string>.Empty, usingNamespaces: ImmutableArray<string>.Empty,
+                Language.Cocoa.LookupBuiltinType);
+            Assert.IsType<CocoaBinder>(binder);
+        }
+
+        [Fact]
+        public void CSharpLanguage_CreateBinder_ReturnsCSharpBinder()
+        {
+            // P1-B：Language.CreateBinder 工厂按语言分派——C# 语言产出 CSharpBinder
+            var binder = Language.CSharp.CreateBinder(
+                isScript: false, parent: null, function: null,
+                references: ImmutableArray<string>.Empty, usingNamespaces: ImmutableArray<string>.Empty,
+                Language.CSharp.LookupBuiltinType);
+            Assert.IsType<CSharpBinder>(binder);
         }
     }
 }

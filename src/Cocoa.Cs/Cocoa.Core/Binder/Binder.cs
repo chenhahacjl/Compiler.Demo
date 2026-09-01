@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定器
     /// </summary>
-    internal sealed partial class Binder
+    internal partial class Binder
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;
@@ -110,7 +110,7 @@ namespace Cocoa.CodeAnalysis.Binding
             parentScope.TryDeclareClass(NamedTypeSymbol.SystemMulticastDelegate);
 
             var language = syntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : syntaxTrees[0].Language;
-            var binder = new Binder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, language.LookupBuiltinType, codLibraries: codLibraries);
+            var binder = language.CreateBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, language.LookupBuiltinType, codLibraries: codLibraries);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
@@ -663,7 +663,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
+            var binder = dialect.CreateBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
             if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）
@@ -720,7 +720,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 bodyLocation = (SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
-            var binder = new Binder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            var binder = dialect.CreateBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
             if (!function.IsLambda)
             {
                 // 6e-M22 C5：非 lambda 函数 = 环境宿主（其体内 lambda 的捕获变量由该环境对象承载）

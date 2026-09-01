@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis
@@ -38,6 +39,10 @@ namespace Cocoa.CodeAnalysis
             "f128" => TypeSymbol.Float128,
             _ => null,
         };
+
+        /// <summary>CO 绑定器（P1-B CO 显式化：CO 专属绑定语义随分叉落位于 <see cref="Binding.CocoaBinder"/>）。</summary>
+        internal override Binding.Binder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, System.Collections.Immutable.ImmutableArray<string> references, System.Collections.Immutable.ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, System.Collections.Immutable.ImmutableArray<string> usingStatics = default, System.Collections.Immutable.ImmutableDictionary<string, string> usingAliases = null, System.Collections.Immutable.ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
+            => new Binding.CocoaBinder(isScript, parent, function, references, usingNamespaces, usingStatics, usingAliases, codLibraries, globalNamespace);
 
         internal override IParser CreateParser(SyntaxTree syntaxTree) => new CocoaParser(syntaxTree);
 

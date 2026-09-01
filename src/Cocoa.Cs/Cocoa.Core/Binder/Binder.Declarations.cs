@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// Partial member surface of the binder.
     /// </summary>
-    internal sealed partial class Binder
+    internal partial class Binder
     {
         private void BindFunctionDeclaration(FunctionDeclarationSyntax syntax, string? namespaceName = null, string? importedDll = null)
         {

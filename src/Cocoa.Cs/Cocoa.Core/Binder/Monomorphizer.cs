@@ -28,7 +28,7 @@ namespace Cocoa.CodeAnalysis.Binding
             ImmutableArray<Diagnostic>.Builder diagnostics)
         {
             // 1. 活实例化种子：语法扫描泛型类型子句 + new/调用站点的显式实参
-            var helperBinder = new Binder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
+            var helperBinder = dialect.CreateBinder(isScript, parentScope, null, globalScope.References, globalScope.UsingNamespaces, dialect.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
             // 6e 跨库里程碑：源码泛型定义先注册（同名占位，cod 后注册静默跳过）——保证源内联集合类
             // 优先于 System.Collections.coa 同名 gcls。
             helperBinder.RegisterSourceGenericDefinitionsForSeed(globalScope);

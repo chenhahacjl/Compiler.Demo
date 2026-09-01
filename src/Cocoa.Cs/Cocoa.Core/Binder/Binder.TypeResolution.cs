@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// Partial member surface of the binder.
     /// </summary>
-    internal sealed partial class Binder
+    internal partial class Binder
     {
         private TypeSymbol? LookupType(string name)
         {

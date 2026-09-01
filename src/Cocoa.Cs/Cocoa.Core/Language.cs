@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 
@@ -110,5 +111,16 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>按本语言创建解析器（预词法 token，插值洞子解析用）。</summary>
         internal abstract IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens);
+
+        /// <summary>
+        /// 按本语言创建绑定器（P1-B 分叉前置，对称 <see cref="CreateParser(SyntaxTree)"/>）。
+        /// 基类默认返回共享 <see cref="Binding.Binder"/>；CO/C# 子类各自返回 <see cref="Binding.CocoaBinder"/>/<see cref="Binding.CSharpBinder"/>。
+        /// 参数与 <see cref="Binding.Binder"/> 构造器一致；解析器（builtin type resolver）由各语言子类以自身
+        /// <see cref="LookupBuiltinType"/> 提供——保持 Binder 语言中性（M2 设计 X）。
+        /// </summary>
+        internal virtual Binding.Binder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
+        {
+            return new Binding.Binder(isScript, parent, function, references, usingNamespaces, builtinTypeResolver, usingStatics, usingAliases, codLibraries, globalNamespace);
+        }
     }
 }
