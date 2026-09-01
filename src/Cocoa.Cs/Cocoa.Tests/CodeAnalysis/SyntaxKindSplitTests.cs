@@ -100,7 +100,7 @@ namespace Cocoa.Tests.CodeAnalysis
             var tree = SyntaxTree.Parse("function Main(): i32 { var x = 1 + 2; return x }");
             foreach (var node in tree.Root.DescendantNodesAndSelf())
             {
-                Assert.Equal((CocoaSyntaxKind)node.Kind, node.CocoaKind());
+                Assert.Equal((CocoaSyntaxKind)node.RawKind, node.CocoaKind());
                 if (node is SyntaxToken token)
                     Assert.Equal((CocoaSyntaxKind)token.Kind, token.CocoaKind());
             }
@@ -113,7 +113,7 @@ namespace Cocoa.Tests.CodeAnalysis
             var tree = SyntaxTree.ParseCs("class P { static void Main() { var x = 1 + 2; } }");
             foreach (var node in tree.Root.DescendantNodesAndSelf())
             {
-                Assert.Equal((CSharpSyntaxKind)node.Kind, node.CSharpKind());
+                Assert.Equal((CSharpSyntaxKind)node.RawKind, node.CSharpKind());
                 if (node is SyntaxToken token)
                     Assert.Equal((CSharpSyntaxKind)token.Kind, token.CSharpKind());
             }

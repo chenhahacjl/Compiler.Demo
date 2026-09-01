@@ -175,7 +175,7 @@ namespace Cocoa.Compiler
             var syntaxTree = SyntaxTree.Parse(text);
 
             // Use Member because we need to exclude the EndOfFileToken.
-            var lastMembet = syntaxTree.Root.Members.LastOrDefault();
+            var lastMembet = syntaxTree.Language.GetRootMembers(syntaxTree).LastOrDefault();
             if (lastMembet == null || lastMembet.GetLastToken().IsMissing)
                 return false;
 

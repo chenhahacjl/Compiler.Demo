@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     {
         /// <summary>节点（含 token/trivia）的 C# 语法类型。</summary>
         public static CSharpSyntaxKind CSharpKind(this SyntaxNode node)
-            => CSharpSyntaxKindMappings.ToCSharpSyntaxKind(node.Kind);
+            => CSharpSyntaxKindMappings.ToCSharpSyntaxKind((SyntaxKind)node.RawKind);
 
         /// <summary>token 的 C# 语法类型。</summary>
         public static CSharpSyntaxKind CSharpKind(this SyntaxToken token)

@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
-using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using SSyntax = Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis
 {
@@ -11,13 +12,13 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     public sealed class CocoaSemanticModel : SemanticModel
     {
-        internal CocoaSemanticModel(Compilation compilation, SyntaxTree syntaxTree)
+        internal CocoaSemanticModel(Compilation compilation, SSyntax.SyntaxTree syntaxTree)
             : base(compilation, syntaxTree)
         {
         }
 
         /// <summary>表达式类型：优先绑定树（任意表达式，含局部变量/参数/实例成员）；类型名节点回落名称解析。</summary>
-        public override TypeSymbol? GetTypeInfo(SyntaxNode node)
+        public override TypeSymbol? GetTypeInfo(SSyntax.SyntaxNode node)
         {
             if (node != null && BoundBySyntax.TryGetValue(node, out var bound) && bound is BoundExpression expression)
             {
@@ -26,8 +27,8 @@ namespace Cocoa.CodeAnalysis
 
             string? name = node switch
             {
-                NameExpressionSyntax nameExpression => nameExpression.IdentifierToken.Text,
-                TypeClauseSyntax typeClause => typeClause.Identifier.Text,
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.NameExpressionSyntax nameExpression => nameExpression.IdentifierToken.Text,
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.TypeClauseSyntax typeClause => typeClause.Identifier.Text,
                 null => null,
                 _ => null,
             };
@@ -42,9 +43,9 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>解析声明语法节点对应的符号：类/枚举 → 命名类型（类按声明引用精确匹配、枚举按名）；
         /// 顶层函数 → 函数符号；其余返回 null。</summary>
-        public override Symbol? GetDeclaredSymbol(SyntaxNode declaration)
+        public override Symbol? GetDeclaredSymbol(SSyntax.SyntaxNode declaration)
         {
-            if (declaration is FunctionDeclarationSyntax function)
+            if (declaration is global::Cocoa.CodeAnalysis.Cocoa.Syntax.FunctionDeclarationSyntax function)
             {
                 foreach (var ns in EnumerateNamespaces(GlobalNamespace))
                 {
@@ -60,7 +61,7 @@ namespace Cocoa.CodeAnalysis
                 return null;
             }
 
-            if (declaration is ClassDeclarationSyntax classDeclaration)
+            if (declaration is global::Cocoa.CodeAnalysis.Cocoa.Syntax.ClassDeclarationSyntax classDeclaration)
             {
                 foreach (var ns in EnumerateNamespaces(GlobalNamespace))
                 {
@@ -76,7 +77,7 @@ namespace Cocoa.CodeAnalysis
                 return null;
             }
 
-            if (declaration is EnumDeclarationSyntax enumDeclaration)
+            if (declaration is global::Cocoa.CodeAnalysis.Cocoa.Syntax.EnumDeclarationSyntax enumDeclaration)
             {
                 foreach (var ns in EnumerateNamespaces(GlobalNamespace))
                 {
@@ -96,7 +97,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>表达式对应符号：优先绑定树（局部变量/参数/实例成员等返回真实绑定符号）；未命中回落名称/成员解析。</summary>
-        public override Symbol? GetSymbolInfo(SyntaxNode node)
+        public override Symbol? GetSymbolInfo(SSyntax.SyntaxNode node)
         {
             if (node != null && BoundBySyntax.TryGetValue(node, out var bound))
             {
@@ -122,10 +123,10 @@ namespace Cocoa.CodeAnalysis
 
             return node switch
             {
-                NameExpressionSyntax nameExpression => ResolveName(nameExpression.IdentifierToken.Text),
-                CallExpressionSyntax callExpression => ResolveName(callExpression.Identifier.Text),
-                MemberAccessExpressionSyntax memberAccess => ResolveMemberAccess(memberAccess.Expression, memberAccess.IdentifierToken.Text),
-                MemberCallExpressionSyntax memberCall => ResolveMemberAccess(memberCall.Expression, memberCall.IdentifierToken.Text),
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.NameExpressionSyntax nameExpression => ResolveName(nameExpression.IdentifierToken.Text),
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.CallExpressionSyntax callExpression => ResolveName(callExpression.Identifier.Text),
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.MemberAccessExpressionSyntax memberAccess => ResolveMemberAccess(memberAccess.Expression, memberAccess.IdentifierToken.Text),
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.MemberCallExpressionSyntax memberCall => ResolveMemberAccess(memberCall.Expression, memberCall.IdentifierToken.Text),
                 null => null,
                 _ => null,
             };
@@ -133,7 +134,7 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>成员解析：接收者解析为类型（静态成员，如 <c>Utils.Twice</c>）→ 返回成员符号；
         /// 实例接收者/嵌套命名空间（如 System.Math.Max）暂不支持。</summary>
-        private Symbol? ResolveMemberAccess(ExpressionSyntax receiver, string memberName)
+        private Symbol? ResolveMemberAccess(global::Cocoa.CodeAnalysis.Cocoa.Syntax.ExpressionSyntax receiver, string memberName)
         {
             if (ResolveReceiverType(receiver) is not NamedTypeSymbol receiverType)
             {
@@ -145,12 +146,12 @@ namespace Cocoa.CodeAnalysis
                 ?? receiverType.GetProperty(memberName);
         }
 
-        private TypeSymbol? ResolveReceiverType(ExpressionSyntax receiver)
+        private TypeSymbol? ResolveReceiverType(global::Cocoa.CodeAnalysis.Cocoa.Syntax.ExpressionSyntax receiver)
         {
             return receiver switch
             {
-                NameExpressionSyntax name => ResolveName(name.IdentifierToken.Text) as TypeSymbol,
-                MemberAccessExpressionSyntax nested => ResolveReceiverType(nested.Expression) is NamedTypeSymbol parent
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.NameExpressionSyntax name => ResolveName(name.IdentifierToken.Text) as TypeSymbol,
+                global::Cocoa.CodeAnalysis.Cocoa.Syntax.MemberAccessExpressionSyntax nested => ResolveReceiverType(nested.Expression) is NamedTypeSymbol parent
                     ? parent.GetMethod(nested.IdentifierToken.Text)?.ReturnType
                     : null,
                 _ => null,

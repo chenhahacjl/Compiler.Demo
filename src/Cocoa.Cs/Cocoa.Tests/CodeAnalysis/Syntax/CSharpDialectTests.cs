@@ -1,4 +1,5 @@
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 using System.Linq;
@@ -169,7 +170,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.ParseCs("namespace Foo; public class Bar { } public static void Main() { print(1); }");
             Assert.False(tree.Diagnostics.HasErrors());
 
-            var ns = Assert.Single(tree.Root.Members.OfType<NamespaceDeclarationSyntax>());
+            var ns = Assert.Single(((CompilationUnitSyntax)tree.Root).Members.OfType<NamespaceDeclarationSyntax>());
             Assert.Equal("Foo", ns.Name);
             Assert.Equal(2, ns.Members.Length); // class Bar + Main
         }
@@ -179,7 +180,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             var tree = SyntaxTree.Parse("namespace Foo; public class Bar { }");
             Assert.False(tree.Diagnostics.HasErrors());
-            Assert.Single(tree.Root.Members.OfType<NamespaceDeclarationSyntax>());
+            Assert.Single(((global::Cocoa.CodeAnalysis.Cocoa.Syntax.CompilationUnitSyntax)tree.Root).Members.OfType<global::Cocoa.CodeAnalysis.Cocoa.Syntax.NamespaceDeclarationSyntax>());
         }
 
         // ---- 嵌套 using 在文件作用域命名空间内可收集 ----

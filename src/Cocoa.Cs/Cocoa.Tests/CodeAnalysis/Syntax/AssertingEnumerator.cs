@@ -50,7 +50,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             try
             {
                 Assert.True(_enumerator.MoveNext());
-                Assert.Equal(kind, _enumerator.Current.Kind);
+                Assert.Equal(kind, (SyntaxKind)_enumerator.Current.RawKind);
                 Assert.IsNotType<SyntaxToken>(_enumerator.Current);
             }
             catch when (MarkFailed())
@@ -64,7 +64,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             try
             {
                 Assert.True(_enumerator.MoveNext());
-                Assert.Equal(kind, _enumerator.Current.Kind);
+                Assert.Equal(kind, (SyntaxKind)_enumerator.Current.RawKind);
                 var token = Assert.IsType<SyntaxToken>(_enumerator.Current);
                 Assert.Equal(text, token.Text);
             }

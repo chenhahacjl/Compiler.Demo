@@ -1,5 +1,7 @@
 using System.Linq;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 
@@ -20,7 +22,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("function TryParse(s: string, out value: i32): bool { return true }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
             Assert.Null(function.Parameters[0].Modifier);
             Assert.False(function.Parameters[0].IsByRef);
 
@@ -38,7 +40,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("function Swap(ref a: i32, ref b: i32): void { }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
             Assert.All(function.Parameters, p =>
             {
                 Assert.NotNull(p.Modifier);
@@ -53,7 +55,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("function Add(a: int, b: int): int { return a + b }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
             Assert.All(function.Parameters, p => Assert.Null(p.Modifier));
         }
 
@@ -74,7 +76,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.ParseCs("bool TryParse(string s, out int value) { return true; }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)tree.Root).Members));
             var modified = function.Parameters[1];
             Assert.NotNull(modified.Modifier);
             Assert.Equal(SyntaxKind.OutKeyword, modified.Modifier!.Kind);
@@ -87,7 +89,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             var tree = SyntaxTree.ParseCs("void Swap(ref int[] a) { }");            Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)tree.Root).Members));
             Assert.NotNull(function.Parameters[0].Modifier);
             Assert.Equal(SyntaxKind.RefKeyword, function.Parameters[0].Modifier!.Kind);
         }
@@ -105,7 +107,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var byRef = FindFirst<ByRefArgumentExpressionSyntax>(tree.Root)!;
             Assert.Equal(SyntaxKind.OutKeyword, byRef.Keyword.Kind);
             Assert.False(byRef.IsRef);
-            Assert.Equal(SyntaxKind.NameExpression, byRef.Expression.Kind);
+            Assert.Equal(CocoaSyntaxKind.NameExpression, byRef.Expression.Kind);
         }
 
         [Fact]
@@ -114,10 +116,10 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.ParseCs("void M(int[] a) { N(ref a[0]); }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var byRef = FindFirst<ByRefArgumentExpressionSyntax>(tree.Root)!;
+            var byRef = FindFirst<CSyntax.ByRefArgumentExpressionSyntax>(tree.Root)!;
             Assert.Equal(SyntaxKind.RefKeyword, byRef.Keyword.Kind);
             Assert.True(byRef.IsRef);
-            Assert.Equal(SyntaxKind.ElementAccessExpression, byRef.Expression.Kind);
+            Assert.Equal(CSharpSyntaxKind.ElementAccessExpression, byRef.Expression.Kind);
         }
 
         // ------------------------------------------------------------------

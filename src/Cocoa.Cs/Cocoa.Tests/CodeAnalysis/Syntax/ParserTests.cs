@@ -1,4 +1,6 @@
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using System.Diagnostics;
 using System.Linq;
 using Xunit;
@@ -127,7 +129,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         public void Parser_ImportClause_ParsesDottedName()
         {
             var syntaxTree = SyntaxTree.Parse("import kernel32.dll");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var importClause = Assert.IsType<ImportClauseSyntax>(member);
 
@@ -155,7 +157,7 @@ class Kernel32
         static stdcall function ExitProcess(exitCode: i32)
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var importBlock = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
 
@@ -181,7 +183,7 @@ class Kernel32
         static stdcall function MessageBeep(uType: i32): i32
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var blocks = classDecl.Members.OfType<ImportBlockSyntax>().ToArray();
 
@@ -202,7 +204,7 @@ class User32
             extern(entry = MessageBoxA, charset = ansi)
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var block = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
             var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(block.Members));
@@ -228,7 +230,7 @@ class Kernel32
             extern entry = GetTickCount, charset = unicode
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var block = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
             var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(block.Members));
@@ -250,7 +252,7 @@ class User32
         static stdcall function MessageBeep(uType: i32): i32
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDecl = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var block = Assert.IsType<ImportBlockSyntax>(Assert.Single(classDecl.Members));
 
@@ -267,7 +269,7 @@ class Runtime
 {
     syscall function Random(max: i32): i32
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classMember = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classMember.Members));
 
@@ -279,7 +281,7 @@ class Runtime
         public void Parser_StdcallExternDeclaration_ParsesNoBody()
         {
             var syntaxTree = SyntaxTree.Parse("stdcall function GetTickCount(): int");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var function = Assert.IsType<FunctionDeclarationSyntax>(member);
 
@@ -308,7 +310,7 @@ cdecl function double(x: i32): i32
 {
     return x * 2
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var function = Assert.IsType<FunctionDeclarationSyntax>(member);
 
@@ -336,7 +338,7 @@ public class Point
         return _x * _y
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
 
@@ -359,7 +361,7 @@ public class Point
         public void Parser_ClassDeclaration_Traversal()
         {
             var syntaxTree = SyntaxTree.Parse("public class Foo { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
 
             using (var e = new AssertingEnumerator(member))
@@ -411,7 +413,7 @@ for (var i = 0; i < 10; i++)
 {
     print(i)
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
@@ -420,9 +422,9 @@ for (var i = 0; i < 10; i++)
             Assert.Equal("(", statement.OpenParenToken.Text);
             Assert.IsType<VariableDeclarationSyntax>(statement.Init);
             Assert.NotNull(statement.SemicolonToken1);
-            Assert.Equal(SyntaxKind.BinaryExpression, statement.Condition!.Kind);
+            Assert.Equal(CocoaSyntaxKind.BinaryExpression, statement.Condition!.Kind);
             Assert.NotNull(statement.SemicolonToken2);
-            Assert.Equal(SyntaxKind.PostfixIncrementExpression, statement.Update!.Kind);
+            Assert.Equal(CocoaSyntaxKind.PostfixIncrementExpression, statement.Update!.Kind);
             Assert.Equal(")", statement.CloseParenToken.Text);
             Assert.IsType<BlockStatementSyntax>(statement.Body);
 
@@ -467,7 +469,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_CSStyleForStatement_EmptyParts()
         {
             var syntaxTree = SyntaxTree.Parse("for (;;) { break }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
@@ -483,7 +485,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_CSStyleForStatement_MissingParts()
         {
             var syntaxTree = SyntaxTree.Parse("for (; i < 10;) { i = i + 1 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
@@ -499,7 +501,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_Class_ExtendsKeyword()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo extends Bar { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
 
@@ -513,7 +515,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_Interface_ExtendsKeyword()
         {
             var syntaxTree = SyntaxTree.Parse("interface IFoo extends IBar, IBaz { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var interfaceDeclaration = Assert.IsType<InterfaceDeclarationSyntax>(member);
 
@@ -538,7 +540,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_RangeFor_ParenthesizedVar()
         {
             var syntaxTree = SyntaxTree.Parse("for (var i = 1 to 10) { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
@@ -554,7 +556,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_RangeFor_NoParens()
         {
             var syntaxTree = SyntaxTree.Parse("for var i = 1 to 10 { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
@@ -569,7 +571,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_RangeFor_ReuseExistingVariable()
         {
             var syntaxTree = SyntaxTree.Parse("for (i = 1 to 10) { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
@@ -584,7 +586,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Parses_RangeFor_CountOnly()
         {
             var syntaxTree = SyntaxTree.Parse("for (1 to 10) { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
@@ -592,15 +594,15 @@ for (var i = 0; i < 10; i++)
             Assert.Null(statement.VarKeyword);
             Assert.Null(statement.Identifier);
             Assert.Null(statement.EqualsToken);
-            Assert.Equal(SyntaxKind.LiteralExpression, statement.LowerBound.Kind);
-            Assert.Equal(SyntaxKind.LiteralExpression, statement.UpperBound.Kind);
+            Assert.Equal(CocoaSyntaxKind.LiteralExpression, statement.LowerBound.Kind);
+            Assert.Equal(CocoaSyntaxKind.LiteralExpression, statement.UpperBound.Kind);
         }
 
         [Fact]
         public void Parser_Parses_RangeFor_CountOnly_NoParens()
         {
             var syntaxTree = SyntaxTree.Parse("for 1 to 5 { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
@@ -612,7 +614,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_RangeFor_LetKeyword_ReportsError()
         {
             var syntaxTree = SyntaxTree.Parse("for let i = 1 to 10 { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
@@ -626,7 +628,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_CSStyleFor_NotConfusedWithRangeFor()
         {
             var syntaxTree = SyntaxTree.Parse("for (var i = 0; i < 10; i++) { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
 
@@ -637,7 +639,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Foreach_CocoaStyle_Parses()
         {
             var syntaxTree = SyntaxTree.Parse("foreach (var x in arr) { print(x) }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForeachStatementSyntax>(globalStatement.Statement);
@@ -645,7 +647,7 @@ for (var i = 0; i < 10; i++)
             Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
             Assert.Equal("x", statement.Identifier.Text);
             Assert.Equal(SyntaxKind.InKeyword, statement.InKeyword.Kind);
-            Assert.Equal(SyntaxKind.NameExpression, statement.Collection.Kind);
+            Assert.Equal(CocoaSyntaxKind.NameExpression, statement.Collection.Kind);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -653,14 +655,14 @@ for (var i = 0; i < 10; i++)
         public void Parser_Foreach_CSharpVarStyle_Parses()
         {
             var syntaxTree = SyntaxTree.Parse("foreach (var x in arr) { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForeachStatementSyntax>(globalStatement.Statement);
 
             Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
             Assert.Equal("x", statement.Identifier.Text);
-            Assert.Equal(SyntaxKind.NameExpression, statement.Collection.Kind);
+            Assert.Equal(CocoaSyntaxKind.NameExpression, statement.Collection.Kind);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -668,7 +670,7 @@ for (var i = 0; i < 10; i++)
         public void Parser_Foreach_LetKeyword_ReportsError()
         {
             var syntaxTree = SyntaxTree.Parse("foreach let x in arr { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ForeachStatementSyntax>(globalStatement.Statement);
@@ -700,7 +702,7 @@ switch (x)
         break
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<SwitchStatementSyntax>(globalStatement.Statement);
@@ -729,7 +731,7 @@ switch (x)
         break
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<SwitchStatementSyntax>(globalStatement.Statement);
@@ -753,7 +755,7 @@ switch (x)
         break
     }
 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<SwitchStatementSyntax>(globalStatement.Statement);
@@ -767,7 +769,7 @@ switch (x)
         public void Parser_Constructor_ExtendsBaseKeyword()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { constructor(x: int) extends base(x) { } }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
             var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
@@ -780,7 +782,7 @@ switch (x)
         public void Parser_Constructor_ExtendsThisKeyword()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { constructor(x: int) extends this(x) { } }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
             var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
@@ -792,7 +794,7 @@ switch (x)
         public void Parser_Constructor_ExtendsInvalidInitializer_ReportsError()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { constructor() extends foo() { } }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
             var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
@@ -805,10 +807,10 @@ switch (x)
         public void Parser_CSharpStyleField_BindsToClassField()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { private int _x; }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var field = Assert.IsType<CSyntax.ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Equal("_x", field.Identifier.Text);
             Assert.Equal("int", field.Type.Identifier.Text);
@@ -820,14 +822,14 @@ switch (x)
         public void Parser_CSharpStyleFieldWithInitializer_BindsToClassField()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { private int _x = 5; }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var field = Assert.IsType<CSyntax.ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Equal("_x", field.Identifier.Text);
             Assert.True(field.HasInitializer);
-            Assert.IsType<LiteralExpressionSyntax>(field.Initializer);
+            Assert.IsType<CSyntax.LiteralExpressionSyntax>(field.Initializer);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -835,7 +837,7 @@ switch (x)
         public void Parser_CocoaStyleFieldWithInitializer_BindsToClassField()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { private _x: int = 5 }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
             var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
@@ -849,10 +851,10 @@ switch (x)
         public void Parser_CSharpStyleMethod_BindsToFunctionDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public int Area() { return 1; } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Equal("Area", method.Identifier.Text);
             Assert.Null(method.FunctionKeyword);
@@ -865,10 +867,10 @@ switch (x)
         public void Parser_CSharpStyleConstructor_BindsToConstructorDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public Foo(int x, int y) { } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<CSyntax.ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Null(constructor.ConstructorKeyword);
             Assert.Equal(2, constructor.Parameters.Count);
@@ -882,10 +884,10 @@ switch (x)
         public void Parser_CSharpStyleConstructor_BaseChain()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo: Bar { public Foo(int x) : base(x) { } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var constructor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var constructor = Assert.IsType<CSyntax.ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Equal(SyntaxKind.BaseKeyword, constructor.InitializerKeyword!.Kind);
             Assert.Equal(1, constructor.InitializerArguments.Count);
@@ -896,10 +898,10 @@ switch (x)
         public void Parser_CSharpStyleAutoProperty_BindsToPropertyDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public string Name { get; set; } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var property = Assert.IsType<CSyntax.PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Null(property.PropertyKeyword);
             Assert.Equal("Name", property.Identifier.Text);
@@ -915,14 +917,14 @@ switch (x)
         public void Parser_CSharpStyleAutoPropertyWithInitializer_BindsToPropertyDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public int X { get; set; } = 42; }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var property = Assert.IsType<CSyntax.PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.True(property.IsAuto);
             Assert.True(property.HasInitializer);
-            Assert.IsType<LiteralExpressionSyntax>(property.Initializer);
+            Assert.IsType<CSyntax.LiteralExpressionSyntax>(property.Initializer);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -930,14 +932,14 @@ switch (x)
         public void Parser_CSharpStyleArrayParameter_BindsToParameter()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public int Sum(int[] values) { return 0; } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
             var parameter = Assert.Single(method.Parameters);
 
             Assert.Equal("values", parameter.Identifier.Text);
-            Assert.IsType<ArrayTypeClauseSyntax>(parameter.Type);
+            Assert.IsType<CSyntax.ArrayTypeClauseSyntax>(parameter.Type);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -945,13 +947,13 @@ switch (x)
         public void Parser_CSharpStyleExpressionBodiedMethod_SynthesizesReturnBlock()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public int Area() => _x * _y; }");
-            var root = syntaxTree.Root;
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
-            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var method = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             var block = method.Body!;
-            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(block.Statements));
-            Assert.IsType<BinaryExpressionSyntax>(statement.Expression);
+            var statement = Assert.IsType<CSyntax.ReturnStatementSyntax>(Assert.Single(block.Statements));
+            Assert.IsType<CSyntax.BinaryExpressionSyntax>(statement.Expression);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -959,7 +961,7 @@ switch (x)
         public void Parser_CocoaStyleExpressionBodiedFunction_SynthesizesReturnBlock()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { public function Area(): int => _x * _y; }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
@@ -973,16 +975,16 @@ switch (x)
         public void Parser_CSharpStyleExpressionBodiedProperty_SynthesizesGetter()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public int X => _x; }");
-            var root = syntaxTree.Root;
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
-            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var property = Assert.IsType<CSyntax.PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.NotNull(property.Getter);
             Assert.Null(property.Setter);
             Assert.False(property.IsAuto);
             var body = property.Getter!.Body!;
-            var statement = Assert.IsType<ReturnStatementSyntax>(Assert.Single(body.Statements));
-            Assert.IsType<NameExpressionSyntax>(statement.Expression);
+            var statement = Assert.IsType<CSyntax.ReturnStatementSyntax>(Assert.Single(body.Statements));
+            Assert.IsType<CSyntax.NameExpressionSyntax>(statement.Expression);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -990,7 +992,7 @@ switch (x)
         public void Parser_CocoaStyleExpressionBodiedProperty_SynthesizesGetter()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { public property X: int => _x; }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
@@ -1007,9 +1009,9 @@ switch (x)
         public void Parser_CSharpStyleAccessorModifier_BindsToPropertyAccessor()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public int X { get; private set; } }");
-            var root = syntaxTree.Root;
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
-            var property = Assert.IsType<PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var property = Assert.IsType<CSyntax.PropertyDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Empty(property.Getter!.Modifiers);
             var setterModifier = Assert.Single(property.Setter!.Modifiers);
@@ -1021,7 +1023,7 @@ switch (x)
         public void Parser_ExpressionBodiedTopLevelFunction_SynthesizesReturnBlock()
         {
             var syntaxTree = SyntaxTree.Parse("function Add(a: int, b: int): int => a + b");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(root.Members));
 
             var block = method.Body!;
@@ -1034,7 +1036,7 @@ switch (x)
         public void Parser_VerbatimStringLiteral_Parses()
         {
             var syntaxTree = SyntaxTree.Parse(@"@""hi""");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var literal = Assert.IsType<LiteralExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
@@ -1047,7 +1049,7 @@ switch (x)
         public void Parser_RawStringLiteral_Parses()
         {
             var syntaxTree = SyntaxTree.Parse("function Main() { print(\"\"\"hi\"\"\") }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<FunctionDeclarationSyntax>(member);
             Assert.Empty(syntaxTree.Diagnostics);
@@ -1057,7 +1059,7 @@ switch (x)
         public void Parser_InterpolatedString_Parses()
         {
             var syntaxTree = SyntaxTree.Parse("$\"a{1}b\"");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
@@ -1074,7 +1076,7 @@ switch (x)
         public void Parser_InterpolatedString_EscapedBraces()
         {
             var syntaxTree = SyntaxTree.Parse("$\"a{{b}}c\"");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
@@ -1091,7 +1093,7 @@ switch (x)
         public void Parser_InterpolatedString_CSharpPrefixes_Parse(string source)
         {
             var syntaxTree = SyntaxTree.Parse(source);
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
@@ -1115,7 +1117,7 @@ switch (x)
         public void Parser_InterpolatedString_FormatSpecifier_ExcludesClosingBrace(string source, string expectedFormat)
         {
             var syntaxTree = SyntaxTree.Parse(source);
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var interpolated = Assert.IsType<InterpolatedStringExpressionSyntax>(Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression);
@@ -1128,12 +1130,12 @@ switch (x)
         public void Parser_CSharpStyleLocalVariable_BindsToVariableDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public void Bar() { int x = 10; print(x); } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
             var block = method.Body!;
-            var declaration = Assert.IsType<VariableDeclarationSyntax>(block.Statements[0]);
+            var declaration = Assert.IsType<CSyntax.VariableDeclarationSyntax>(block.Statements[0]);
 
             Assert.Null(declaration.Keyword);
             Assert.Equal("x", declaration.Identifier.Text);
@@ -1145,15 +1147,15 @@ switch (x)
         public void Parser_CSharpStyleInterfaceMembers_BindToMembers()
         {
             var syntaxTree = SyntaxTree.ParseCs("interface IFoo { int Area(); string Name { get; } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var interfaceDeclaration = Assert.IsType<InterfaceDeclarationSyntax>(member);
+            var interfaceDeclaration = Assert.IsType<CSyntax.InterfaceDeclarationSyntax>(member);
 
             Assert.Equal(2, interfaceDeclaration.Members.Length);
-            var method = Assert.IsType<FunctionDeclarationSyntax>(interfaceDeclaration.Members[0]);
+            var method = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(interfaceDeclaration.Members[0]);
             Assert.Equal("Area", method.Identifier.Text);
             Assert.Null(method.Body);
-            var property = Assert.IsType<PropertyDeclarationSyntax>(interfaceDeclaration.Members[1]);
+            var property = Assert.IsType<CSyntax.PropertyDeclarationSyntax>(interfaceDeclaration.Members[1]);
             Assert.Equal("Name", property.Identifier.Text);
             Assert.Empty(syntaxTree.Diagnostics);
         }
@@ -1162,9 +1164,9 @@ switch (x)
         public void Parser_CSharpStyleTopLevelFunction_BindsToFunctionDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("public static void Main() { }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(member);
 
             Assert.Equal(2, function.Modifiers.Length);
             Assert.Equal(SyntaxKind.PublicKeyword, function.Modifiers[0].Kind);
@@ -1180,9 +1182,9 @@ switch (x)
         public void Parser_CSharpStyleTopLevelFunction_WithParamsAndReturnType()
         {
             var syntaxTree = SyntaxTree.ParseCs("public int Add(int x, int y) { return x + y; }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(member);
 
             Assert.Equal("Add", function.Identifier.Text);
             Assert.Equal("int", function.Type!.Identifier.Text);
@@ -1197,11 +1199,11 @@ switch (x)
         public void Parser_CSharpStyleTopLevelFunction_ArrayReturnType()
         {
             var syntaxTree = SyntaxTree.ParseCs("int[] GetNums() { }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(member);
 
-            Assert.IsType<ArrayTypeClauseSyntax>(function.Type);
+            Assert.IsType<CSyntax.ArrayTypeClauseSyntax>(function.Type);
             Assert.Equal("GetNums", function.Identifier.Text);
             Assert.Empty(syntaxTree.Diagnostics);
         }
@@ -1210,9 +1212,9 @@ switch (x)
         public void Parser_CSharpStyleTopLevelFunction_SemicolonNoBody()
         {
             var syntaxTree = SyntaxTree.ParseCs("public void Setup();");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var function = Assert.IsType<FunctionDeclarationSyntax>(member);
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(member);
 
             Assert.Null(function.Body);
             Assert.Empty(syntaxTree.Diagnostics);
@@ -1243,7 +1245,7 @@ switch (x)
         public void Parser_GlobalCallStatement_NotConfusedWithFunction()
         {
             var syntaxTree = SyntaxTree.Parse("print(\"hi\")");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             var statement = Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement);
@@ -1254,7 +1256,7 @@ switch (x)
         public void Parser_GlobalStatement_NestedParens_NotConfusedWithFunction()
         {
             var syntaxTree = SyntaxTree.Parse("print(Foo(x))");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement);
@@ -1265,7 +1267,7 @@ switch (x)
         public void Parser_UsingDirective_WithSemicolon_NoDiagnostics()
         {
             var syntaxTree = SyntaxTree.Parse("using Foo.Bar;");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var usingDirective = Assert.IsType<UsingDirectiveSyntax>(member);
 
@@ -1277,7 +1279,7 @@ switch (x)
         public void Parser_UsingDirective_WithoutSemicolon_NoDiagnostics()
         {
             var syntaxTree = SyntaxTree.Parse("using Foo.Bar");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var usingDirective = Assert.IsType<UsingDirectiveSyntax>(member);
 
@@ -1289,7 +1291,7 @@ switch (x)
         public void Parser_TopLevelStatement_WithTrailingSemicolon_NoDiagnostics()
         {
             var syntaxTree = SyntaxTree.Parse("print(1);");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
             Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement);
@@ -1300,18 +1302,18 @@ switch (x)
         public void Parser_CSharpStyleConstLocal_BindsToVariableDeclaration()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { public void Bar() { const int x = 10; print(x); } }");
-            var root = syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
-            var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(member);
+            var method = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
             var block = method.Body!;
-            var declaration = Assert.IsType<VariableDeclarationSyntax>(block.Statements[0]);
+            var declaration = Assert.IsType<CSyntax.VariableDeclarationSyntax>(block.Statements[0]);
 
             Assert.Equal(SyntaxKind.ConstKeyword, declaration.Keyword!.Kind);
             Assert.Equal("x", declaration.Identifier.Text);
             Assert.Equal("int", declaration.TypeClause!.Identifier.Text);
             Assert.NotNull(declaration.EqualsToken);
-            Assert.IsType<LiteralExpressionSyntax>(declaration.Initializer);
+            Assert.IsType<CSyntax.LiteralExpressionSyntax>(declaration.Initializer);
             Assert.Empty(syntaxTree.Diagnostics);
         }
 
@@ -1319,7 +1321,7 @@ switch (x)
         public void Parser_ClassDeclaration_MultipleBaseTypes()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo extends Bar, IA, IB { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
 
@@ -1334,7 +1336,7 @@ switch (x)
         public void Parser_ClassDeclaration_Extends_MultipleBaseTypes()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo extends Bar, IA { }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
 
@@ -1348,7 +1350,7 @@ switch (x)
         public void Parser_CocoaClassMembers_Parse()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { private _x: int public property Y: int { get set } public function Get(): int { return _x; } }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
 
@@ -1363,9 +1365,9 @@ switch (x)
         public void Parser_StaticConstructor_CSharpStyle_Parses()
         {
             var syntaxTree = SyntaxTree.ParseCs("class Foo { static Foo() { x = 1; } }");
-            var root = syntaxTree.Root;
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
-            var ctor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(Assert.Single(root.Members));
+            var ctor = Assert.IsType<CSyntax.ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Contains(ctor.Modifiers, m => m.Kind == SyntaxKind.StaticKeyword);
             Assert.Null(ctor.ConstructorKeyword);
@@ -1378,7 +1380,7 @@ switch (x)
         public void Parser_StaticConstructor_CocoaStyle_Parses()
         {
             var syntaxTree = SyntaxTree.Parse("class Foo { static constructor() { x = 1; } }");
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(root.Members));
             var ctor = Assert.IsType<ConstructorDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
@@ -1451,7 +1453,7 @@ switch (x)
             var syntaxTree = SyntaxTree.Parse("function Main() { for var i = 0 to 10 step 2 { } }");
             Assert.Empty(syntaxTree.Diagnostics);
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
             var block = function.Body!;
             var forStatement = Assert.IsType<ForStatementSyntax>(block.Statements[0]);
 
@@ -1465,7 +1467,7 @@ switch (x)
             var syntaxTree = SyntaxTree.Parse("class Foo { public static function Square(x: int): int { return x * x } }");
             Assert.Empty(syntaxTree.Diagnostics);
 
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
             var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Contains(method.Modifiers, m => m.Kind == SyntaxKind.StaticKeyword);
@@ -1477,7 +1479,7 @@ switch (x)
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);
-            var root = syntaxTree.Root;
+            var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
 

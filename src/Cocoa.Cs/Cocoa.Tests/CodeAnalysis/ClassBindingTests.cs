@@ -2,6 +2,8 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -629,7 +631,7 @@ function Main()
 
             Assert.Equal(code, tree.GreenRoot.ToString());
 
-            var directive = tree.Root.Members.OfType<UsingDirectiveSyntax>().First();
+            var directive = ((CompilationUnitSyntax)tree.Root).Members.OfType<UsingDirectiveSyntax>().First();
             Assert.Equal("System.Collections.List", directive.Name);
             Assert.Equal("Alias", directive.Alias);
             Assert.NotNull(directive.EqualsToken);
@@ -655,13 +657,13 @@ function Main()
 
             Assert.Equal(code, tree.GreenRoot.ToString());
 
-            var explicitDelegate = tree.Root.Members.OfType<DelegateDeclarationSyntax>().First();
+            var explicitDelegate = ((CompilationUnitSyntax)tree.Root).Members.OfType<DelegateDeclarationSyntax>().First();
             Assert.Equal("IntTransform", explicitDelegate.Identifier.Text);
             Assert.NotNull(explicitDelegate.ReturnType);
             Assert.NotNull(explicitDelegate.ReturnType!.ColonToken);
             Assert.NotNull(explicitDelegate.OpenParenToken);
 
-            var implicitDelegate = tree.Root.Members.OfType<DelegateDeclarationSyntax>().ElementAt(1);
+            var implicitDelegate = ((CompilationUnitSyntax)tree.Root).Members.OfType<DelegateDeclarationSyntax>().ElementAt(1);
             Assert.Equal("Handler", implicitDelegate.Identifier.Text);
             Assert.Null(implicitDelegate.ReturnType);
 
@@ -681,13 +683,13 @@ function Main()
 
             Assert.Equal(code, tree.GreenRoot.ToString());
 
-            var delegateDecl = tree.Root.Members.OfType<DelegateDeclarationSyntax>().First();
+            var delegateDecl = ((CSyntax.CompilationUnitSyntax)tree.Root).Members.OfType<CSyntax.DelegateDeclarationSyntax>().First();
             Assert.Equal("Transformer", delegateDecl.Identifier.Text);
             Assert.NotNull(delegateDecl.ReturnType);
             Assert.Null(delegateDecl.ReturnType!.ColonToken);
             Assert.NotNull(delegateDecl.SemicolonToken);
 
-            var typed = Assert.IsType<DelegateDeclarationSyntax>(tree.GreenRoot.CreateTypedRed(tree).DescendantNodes().OfType<DelegateDeclarationSyntax>().First());
+            var typed = Assert.IsType<CSyntax.DelegateDeclarationSyntax>(tree.GreenRoot.CreateTypedRed(tree).DescendantNodes().OfType<CSyntax.DelegateDeclarationSyntax>().First());
             Assert.Equal("Transformer", typed.Identifier.Text);
             Assert.Equal("int", typed.ReturnType!.Identifier.Text);
             Assert.NotNull(typed.SemicolonToken);
@@ -752,7 +754,7 @@ function Main()
 
             Assert.IsType<BinaryExpressionSyntax>(typed);
             var binary = (BinaryExpressionSyntax)typed;
-            Assert.Equal(SyntaxKind.BinaryExpression, binary.Kind);
+            Assert.Equal(CocoaSyntaxKind.BinaryExpression, binary.Kind);
             Assert.IsType<NameExpressionSyntax>(binary.Left);
             Assert.Equal(SyntaxKind.PlusToken, binary.OperatorToken.Kind);
             Assert.Equal("+", binary.OperatorToken.Text);
@@ -1442,7 +1444,7 @@ function Main()
         {
             var syntaxTree = SyntaxTree.Parse("function Main() { var p = new Point(3) }");
             var root = syntaxTree.Root;
-            var member = Assert.Single(root.Members);
+            var member = Assert.Single(((CompilationUnitSyntax)root).Members);
             var func = Assert.IsType<FunctionDeclarationSyntax>(member);
             Assert.True(ContainsNode(func, SyntaxKind.ObjectCreationExpression));
         }

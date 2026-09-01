@@ -78,28 +78,115 @@ namespace Cocoa.CodeAnalysis
         internal override (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, System.Collections.Immutable.ImmutableArray<Coa.CoaProgram> codLibraries, Dictionary<string, TypeSymbol> typeArgumentsByName)
             => global::Cocoa.CodeAnalysis.CSharp.Binding.CSharpBinder.BuildFunctionBodyForMonomorphization(isScript, parentScope, function, globalScope, codLibraries, this, typeArgumentsByName);
 
-        /// <summary>绿→类型化红节点（P1-3 钩子：P1 委托共享 <see cref="GreenNode.CreateTypedRed"/>，P2-4 切语言节点）。</summary>
+        /// <summary>绿→类型化红节点（P2-4：语言库各自持有一份构建器）。</summary>
         internal override SyntaxNode CreateTypedRed(GreenNode green, SyntaxTree syntaxTree, int position)
-            => green.CreateTypedRed(syntaxTree, position);
+            => new global::Cocoa.CodeAnalysis.CSharp.Syntax.CSharpGreenNodeFactory(green).CreateTypedRed(syntaxTree, position);
 
-        /// <summary>泛型用法扫描（P1-3 钩子：P1 委托共享 Monomorphizer 扫描，P2-5 切语言节点）。</summary>
+        /// <summary>泛型用法扫描（P2-5：语言库按语言节点扫描）。</summary>
         internal override System.Collections.Generic.IEnumerable<(SyntaxToken Identifier, System.Collections.Immutable.ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(Binding.BoundGlobalScope globalScope)
-            => Monomorphizer.CollectGenericUsages(globalScope);
+        {
+            foreach (var root in Binding.Monomorphizer.CollectDeclarationRoots(globalScope))
+            {
+                foreach (var node in Binding.Monomorphizer.Walk(root))
+                {
+                    if (node is global::Cocoa.CodeAnalysis.CSharp.Syntax.GenericTypeClauseSyntax genericClause)
+                    {
+                        yield return (genericClause.Identifier, genericClause.TypeArguments.Cast<SyntaxNode>().ToImmutableArray());
+                    }
+                    else if (node is global::Cocoa.CodeAnalysis.CSharp.Syntax.ObjectCreationExpressionSyntax creation && creation.TypeArguments != null)
+                    {
+                        yield return (creation.Identifier, creation.TypeArguments.Arguments.Cast<SyntaxNode>().ToImmutableArray());
+                    }
+                }
+            }
+        }
 
-        /// <summary>声明的命名空间名集合（P1-3 钩子：P1 委托共享服务，P2-5 切语言节点）。</summary>
+        /// <summary>声明的命名空间名集合（P2-5：语言库按语言节点）。</summary>
         internal override System.Collections.Immutable.ImmutableArray<string> GetDeclaredNamespaceNames(SyntaxTree syntaxTree)
-            => SyntaxTreeServices.GetDeclaredNamespaceNames(syntaxTree);
+        {
+            var names = new System.Collections.Generic.List<string>();
+            CollectNamespaceNames(((global::Cocoa.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax)syntaxTree.Root).Members, names);
+            return names.ToImmutableArray();
+        }
 
-        /// <summary>根成员集合（P1-3 钩子：P1 委托共享服务，P2-5 切语言节点）。</summary>
+        private static void CollectNamespaceNames(System.Collections.Immutable.ImmutableArray<global::Cocoa.CodeAnalysis.CSharp.Syntax.MemberSyntax> members, System.Collections.Generic.List<string> names)
+        {
+            foreach (var member in members)
+            {
+                if (member is global::Cocoa.CodeAnalysis.CSharp.Syntax.NamespaceDeclarationSyntax ns)
+                {
+                    names.Add(ns.Name);
+                    CollectNamespaceNames(ns.Members, names);
+                }
+            }
+        }
+
+        /// <summary>根成员集合（P2-5：语言库按语言节点）。</summary>
         internal override System.Collections.Immutable.ImmutableArray<SyntaxNode> GetRootMembers(SyntaxTree syntaxTree)
-            => SyntaxTreeServices.GetRootMembers(syntaxTree);
+            => ((global::Cocoa.CodeAnalysis.CSharp.Syntax.CompilationUnitSyntax)syntaxTree.Root).Members.Cast<SyntaxNode>().ToImmutableArray();
 
         /// <summary>语义模型（P1-5：返回语言专属 <see cref="CSharpSemanticModel"/>）。</summary>
         internal override SemanticModel CreateSemanticModel(Compilation compilation, SyntaxTree syntaxTree)
             => new CSharpSemanticModel(compilation, syntaxTree);
 
-        /// <summary>不可达代码位置（P1-3 钩子：P1 委托共享解析器，P2-5 切语言节点）。</summary>
+        /// <summary>不可达代码位置（P2-5：语言库按语言节点解析）。</summary>
         internal override TextLocation? GetUnreachableCodeLocation(SyntaxNode node)
-            => UnreachableCodeLocator.GetLocation(node);
+        {
+            var kind = (node as global::Cocoa.CodeAnalysis.CSharp.Syntax.CSharpSyntaxNode)?.Kind;
+            switch (kind)
+            {
+                case CSharpSyntaxKind.BlockStatement:
+                {
+                    var firstStatement = ((global::Cocoa.CodeAnalysis.CSharp.Syntax.BlockStatementSyntax)node).Statements.FirstOrDefault();
+                    return firstStatement == null ? null : GetUnreachableCodeLocation(firstStatement);
+                }
+                case CSharpSyntaxKind.VariableDeclaration:
+                {
+                    var variableDeclaration = (global::Cocoa.CodeAnalysis.CSharp.Syntax.VariableDeclarationSyntax)node;
+                    return variableDeclaration.Keyword?.Location ?? variableDeclaration.Location;
+                }
+                case CSharpSyntaxKind.IfStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.IfStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.WhileStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.WhileStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.DoWhileStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.DoWhileStatementSyntax)node).DoKeyword.Location;
+                case CSharpSyntaxKind.ForStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.ForStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.ForeachStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.ForeachStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.SwitchStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.SwitchStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.BreakStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.BreakStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.ContinueStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.ContinueStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.ReturnStatement:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.ReturnStatementSyntax)node).Keyword.Location;
+                case CSharpSyntaxKind.ExpressionStatement:
+                    return GetUnreachableCodeLocation(((global::Cocoa.CodeAnalysis.CSharp.Syntax.ExpressionStatementSyntax)node).Expression);
+                case CSharpSyntaxKind.CallExpression:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.CallExpressionSyntax)node).Identifier.Location;
+                case CSharpSyntaxKind.MemberCallExpression:
+                    return ((global::Cocoa.CodeAnalysis.CSharp.Syntax.MemberCallExpressionSyntax)node).IdentifierToken.Location;
+                default:
+                    throw new Exception($"Unexpected syntax {node.Kind}");
+            }
+        }
+
+        /// <summary>声明名 token 位置（P2-6 钩子：语言库按语言节点）。</summary>
+        internal override TextLocation? GetDeclarationNameLocation(SyntaxNode? declaration)
+        {
+            if (declaration is global::Cocoa.CodeAnalysis.CSharp.Syntax.FunctionDeclarationSyntax fn)
+                return fn.Identifier.Location;
+            if (declaration is global::Cocoa.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax cls)
+                return cls.Identifier.Location;
+            return declaration?.Location;
+        }
+
+        /// <summary>类声明是否带 facade 修饰符（P2-6 钩子：语言库按语言节点）。</summary>
+        internal override bool HasDeclaredFacadeModifier(SyntaxNode? declaration)
+            => declaration is global::Cocoa.CodeAnalysis.CSharp.Syntax.ClassDeclarationSyntax cls
+                && cls.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword);
     }
 }

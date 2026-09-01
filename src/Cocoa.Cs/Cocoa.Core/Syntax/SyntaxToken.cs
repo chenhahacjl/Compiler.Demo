@@ -23,6 +23,8 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override SyntaxKind Kind { get; }
 
+        public override int RawKind => (int)Kind;
+
         public int Position { get; }
         public string Text { get; }
         public object? Value { get; }

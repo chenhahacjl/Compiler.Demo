@@ -456,7 +456,7 @@ namespace Cocoa.CodeAnalysis
 
         public void ReportUnreachableCode(SyntaxNode node)
         {
-            // P1-4：具体节点 pattern-match 移出共享 Core，经语言钩子分派（语言库委托 UnreachableCodeLocator 保持行为不变）。
+            // P2-5：具体节点 pattern-match 移出共享 Core，经语言钩子分派（语言库按语言节点解析）。
             var location = node.SyntaxTree.Language.GetUnreachableCodeLocation(node);
             if (location != null)
             {

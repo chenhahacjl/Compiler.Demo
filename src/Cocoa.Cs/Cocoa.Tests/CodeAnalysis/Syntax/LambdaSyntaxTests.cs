@@ -1,6 +1,8 @@
 using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 
@@ -21,7 +23,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("function apply(f: (i64) -> i64, x: int): int { return x }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
             var parameter = function.Parameters[0];
             var functionType = Assert.IsType<FunctionTypeSyntax>(parameter.Type);
 
@@ -42,7 +44,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("function maker(): (int) -> string { }");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(tree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
             Assert.IsType<FunctionTypeSyntax>(function.Type);
         }
 
@@ -71,11 +73,11 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("let add = (x: i64, y: i64) => x + y");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var lambda = FindLambda(tree.Root)!;
+            var lambda = FindLambda<LambdaExpressionSyntax>(tree.Root)!;
             Assert.Equal(2, lambda.Parameters.Count);
             Assert.True(lambda.HasExplicitParameterTypes);
             Assert.NotNull(lambda.OpenParenthesisToken);
-            Assert.Equal(SyntaxKind.BinaryExpression, lambda.Body.Kind);
+            Assert.Equal(CocoaSyntaxKind.BinaryExpression, lambda.Body.Kind);
         }
 
         [Fact]
@@ -84,7 +86,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.Parse("let log = () => 1");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var lambda = FindLambda(tree.Root)!;
+            var lambda = FindLambda<LambdaExpressionSyntax>(tree.Root)!;
             Assert.Empty(lambda.Parameters);
         }
 
@@ -93,8 +95,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         {
             var tree = SyntaxTree.Parse("let square = (x: int) => { return x * x }");
 
-            var lambda = FindLambda(tree.Root)!;
-            Assert.Equal(SyntaxKind.BlockStatement, lambda.Body.Kind);
+            var lambda = FindLambda<LambdaExpressionSyntax>(tree.Root)!;
+            Assert.Equal(CocoaSyntaxKind.BlockStatement, lambda.Body.Kind);
         }
 
         [Fact]
@@ -110,7 +112,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.ParseCs("var f = x => x + 1;");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var lambda = FindLambda(tree.Root)!;
+            var lambda = FindLambda<CSyntax.LambdaExpressionSyntax>(tree.Root)!;
             Assert.Null(lambda.OpenParenthesisToken);
             Assert.Single(lambda.Parameters);
         }
@@ -121,7 +123,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var tree = SyntaxTree.ParseCs("var add = (x, y) => x + y;");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
 
-            var lambda = FindLambda(tree.Root)!;
+            var lambda = FindLambda<CSyntax.LambdaExpressionSyntax>(tree.Root)!;
             Assert.Equal(2, lambda.Parameters.Count);
             Assert.False(lambda.HasExplicitParameterTypes);
         }
@@ -139,7 +141,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             // 歧义消解回归：`(x)` / `(1 + 2)` 仍为括号表达式，不误判 lambda
             var tree = SyntaxTree.Parse("let y = (1 + 2) * 3");
             Assert.Empty(tree.Diagnostics.Where(d => d.IsError));
-            Assert.Null(FindLambda(tree.Root));
+            Assert.Null(FindLambda<LambdaExpressionSyntax>(tree.Root));
         }
 
         // ------------------------------------------------------------------
@@ -170,16 +172,16 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         // helpers
         // ------------------------------------------------------------------
 
-        private static LambdaExpressionSyntax? FindLambda(SyntaxNode node)
+        private static T? FindLambda<T>(SyntaxNode node) where T : SyntaxNode
         {
-            if (node is LambdaExpressionSyntax lambda)
+            if (node is T lambda)
             {
                 return lambda;
             }
 
             foreach (var child in node.GetChildren())
             {
-                var found = FindLambda(child);
+                var found = FindLambda<T>(child);
                 if (found != null)
                 {
                     return found;

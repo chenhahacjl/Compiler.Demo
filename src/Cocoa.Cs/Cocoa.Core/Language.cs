@@ -173,5 +173,16 @@ namespace Cocoa.CodeAnalysis
         /// 分派，P2-5 切语言节点后由语言库自持）。
         /// </summary>
         internal abstract TextLocation? GetUnreachableCodeLocation(SyntaxNode node);
+
+        /// <summary>
+        /// 声明名 token 位置（P2-6 钩子）：供共享 Core 消费者（<c>Compilation</c>/<c>NativeImportValidator</c>）
+        /// 语言中性获取函数/类等声明的 <c>Identifier.Location</c>；语言库按语言节点实现。
+        /// </summary>
+        internal abstract TextLocation? GetDeclarationNameLocation(SyntaxNode? declaration);
+
+        /// <summary>
+        /// 类声明是否带 facade 修饰符（P2-6 钩子）：共享 Core <c>Compilation.DeclaredFacade</c> 经此分派。
+        /// </summary>
+        internal abstract bool HasDeclaredFacadeModifier(SyntaxNode? declaration);
     }
 }

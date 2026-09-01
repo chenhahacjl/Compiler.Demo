@@ -617,7 +617,7 @@ namespace Cocoa.CodeAnalysis
                 var interfaceClass = program.Classes.FirstOrDefault(c => c.IsInterface);
                 if (interfaceClass != null)
                 {
-                    var location = ((ClassDeclarationSyntax?)interfaceClass.Declaration)?.Identifier.Location
+                    var location = Language.GetDeclarationNameLocation(interfaceClass.Declaration)
                                    ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
                     return ImmutableArray.Create(Diagnostic.Error(location, $"interface '{interfaceClass.Name}' 暂不支持 native 后端（接口分派随后续里程碑落地，见 docs-dev/对象模型设计.md）"));
                 }
@@ -625,7 +625,7 @@ namespace Cocoa.CodeAnalysis
                 var staticInitClass = program.Classes.FirstOrDefault(HasStaticInitializer);
                 if (staticInitClass != null)
                 {
-                    var location = ((ClassDeclarationSyntax?)staticInitClass.Declaration)?.Identifier.Location
+                    var location = Language.GetDeclarationNameLocation(staticInitClass.Declaration)
                                    ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
                     return ImmutableArray.Create(Diagnostic.Error(location, $"class '{staticInitClass.Name}' 含静态构造函数或静态字段初始化器，native 后端暂不支持静态初始化触发（字段可声明但保持零值；请改在显式代码中赋值）"));
                 }
@@ -677,24 +677,19 @@ namespace Cocoa.CodeAnalysis
         /// 无实例字段/实例构造/属性/显式基类/实例方法。等价"编译期透明的互操作分组"，
         /// 不涉对象模型。
         /// </summary>
-        private static bool IsCodSerializableClass(NamedTypeSymbol classType)
+        private bool IsCodSerializableClass(NamedTypeSymbol classType)
         {
             return IsPureContainerClass(classType) || classType.IsFacadeClass || DeclaredFacade(classType);
         }
 
         /// <summary>类声明是否带 `facade` 修饰符（未命中 FacadeTargets 的 facade 类映射 BCL 前也按符号序列化）。</summary>
-        private static bool DeclaredFacade(NamedTypeSymbol classType)
+        private bool DeclaredFacade(NamedTypeSymbol classType)
         {
             // 部分类任一部分声明含 facade 关键字即算；Declaration 为 null（纯 cod 重建/外部类）按 IsFacadeClass 判定
-            if (classType.Declaration is ClassDeclarationSyntax synthDecl)
-            {
-                return synthDecl.Modifiers.Any(m => m.Kind == SyntaxKind.FacadeKeyword);
-            }
-
-            return false;
+            return Language.HasDeclaredFacadeModifier(classType.Declaration);
         }
 
-        private static bool IsPureContainerClass(NamedTypeSymbol classType)
+        private bool IsPureContainerClass(NamedTypeSymbol classType)
         {
             if (classType.IsInterface)
             {
@@ -792,7 +787,7 @@ namespace Cocoa.CodeAnalysis
                 var offendingClass = program.Classes.FirstOrDefault(c => !IsCodSerializableClass(c));
                 if (offendingClass != null)
                 {
-                    var location = ((ClassDeclarationSyntax?)offendingClass.Declaration)?.Identifier.Location ?? ZeroLocation;
+                    var location = Language.GetDeclarationNameLocation(offendingClass.Declaration) ?? ZeroLocation;
                     return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.coa 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类与 facade 类已支持"));
                 }
             }
@@ -877,22 +872,10 @@ namespace Cocoa.CodeAnalysis
             var names = new List<string>();
             foreach (var tree in SyntaxTrees)
             {
-                CollectNamespaceNames(tree.Root.Members, names);
+                names.AddRange(tree.Language.GetDeclaredNamespaceNames(tree));
             }
 
             return names.Distinct(StringComparer.Ordinal).OrderBy(x => x, StringComparer.Ordinal).ToImmutableArray();
-        }
-
-        private static void CollectNamespaceNames(ImmutableArray<MemberSyntax> members, List<string> names)
-        {
-            foreach (var member in members)
-            {
-                if (member is NamespaceDeclarationSyntax ns)
-                {
-                    names.Add(ns.Name);
-                    CollectNamespaceNames(ns.Members, names);
-                }
-            }
         }
 
         /// <summary>函数值节点扫描（6e-M22 C4 + M0-1b）：函数类型签名（参数/返回/字段）经 fnty 序列化已放行；

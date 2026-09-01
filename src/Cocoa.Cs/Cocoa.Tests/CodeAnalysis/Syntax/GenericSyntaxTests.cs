@@ -1,3 +1,5 @@
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using CSyntax = global::Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Linq;
 using Xunit;
@@ -13,7 +15,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         public void Parser_GenericClassDeclaration_ParsesSingleTypeParameter()
         {
             var syntaxTree = SyntaxTree.Parse("public class Box<T> { }");
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(classDeclaration.TypeParameters);
@@ -25,7 +27,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
         public void Parser_GenericClassDeclaration_ParsesMultipleTypeParameters()
         {
             var syntaxTree = SyntaxTree.Parse("public class Dict<K, V> extends Object { }");
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(classDeclaration.TypeParameters);
@@ -41,7 +43,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 public class SortedList<T> where T: IComparable<T>, new()
 {
 }");
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             var whereClause = Assert.Single(classDeclaration.WhereClauses);
@@ -66,7 +68,7 @@ public class SortedList<T> where T: IComparable<T>, new()
 public class MyList<T> extends List<T> where T: class
 {
 }");
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.Single(classDeclaration.BaseTypes);
@@ -84,7 +86,7 @@ public interface IEnumerable<T>
 {
     function GetEnumerator(): IEnumerator<T>
 }");
-            var interfaceDeclaration = Assert.IsType<InterfaceDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var interfaceDeclaration = Assert.IsType<InterfaceDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(interfaceDeclaration.TypeParameters);
@@ -104,7 +106,7 @@ public class Box
 {
     private _items: List<int>
 }");
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
             var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
@@ -120,7 +122,7 @@ public class Box
         {
             // `>>` 词法为单 token：嵌套泛型收尾须拆分为两个 GreaterToken
             var syntaxTree = SyntaxTree.Parse(@"var grid: List<List<int>> = null");
-            var statement = Assert.IsType<VariableDeclarationSyntax>(Assert.IsType<GlobalStatementSyntax>(Assert.Single(syntaxTree.Root.Members)).Statement);
+            var statement = Assert.IsType<VariableDeclarationSyntax>(Assert.IsType<GlobalStatementSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members)).Statement);
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             var typeClause = Assert.IsType<GenericTypeClauseSyntax>(statement.TypeClause!);
@@ -134,7 +136,7 @@ public class Box
         public void Parser_ArrayOfGeneric_ParsesSuffixAfterArguments()
         {
             var syntaxTree = SyntaxTree.Parse(@"var lists: List<int>[] = null");
-            var statement = Assert.IsType<VariableDeclarationSyntax>(Assert.IsType<GlobalStatementSyntax>(Assert.Single(syntaxTree.Root.Members)).Statement);
+            var statement = Assert.IsType<VariableDeclarationSyntax>(Assert.IsType<GlobalStatementSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members)).Statement);
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             var arrayType = Assert.IsType<ArrayTypeClauseSyntax>(statement.TypeClause!);
@@ -198,7 +200,7 @@ function Max<T>(a: T, b: T): T where T: IComparable<T>
 {
     return a
 }");
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(function.TypeParameters);
@@ -219,7 +221,7 @@ public static T Max<T>(T a, T b) where T : IComparable<T>
 {
     return a;
 }");
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(function.TypeParameters);
@@ -236,11 +238,11 @@ List<int> MakeList(int capacity)
 {
     return null;
 }");
-            var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
+            var function = Assert.IsType<CSyntax.FunctionDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.Equal("MakeList", function.Identifier.Text);
-            var returnType = Assert.IsType<GenericTypeClauseSyntax>(function.Type!);
+            var returnType = Assert.IsType<CSyntax.GenericTypeClauseSyntax>(function.Type!);
             Assert.Equal("List", returnType.Identifier.Text);
         }
 
@@ -252,18 +254,18 @@ class Box
 {
     private List<int> _items;
 }");
-            var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(syntaxTree.Root.Members));
-            var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
+            var classDeclaration = Assert.IsType<CSyntax.ClassDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
+            var field = Assert.IsType<CSyntax.ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
-            var typeClause = Assert.IsType<GenericTypeClauseSyntax>(field.Type);
+            var typeClause = Assert.IsType<CSyntax.GenericTypeClauseSyntax>(field.Type);
             Assert.Equal("List", typeClause.Identifier.Text);
         }
 
         private static ExpressionSyntax ParseExpression(string text)
         {
             var syntaxTree = SyntaxTree.Parse(text);
-            var member = Assert.Single(syntaxTree.Root.Members);
+            var member = Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
 
             return Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression;

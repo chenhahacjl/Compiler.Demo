@@ -1,11 +1,13 @@
+using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
     /// 严格 Cocoa 方言解析器（`.co`）：自包含（sealed），所有 Allow* 以 CO 值内联，
     /// 所有 virtual/abstract 方法替换为具体实现；无继承、无 virtual 方法。
+    /// S-5 P2-1：产出 Cocoa 语言节点（<c>Cocoa.CodeAnalysis.Cocoa.Syntax</c>），token 判断保留共享 <see cref="SyntaxKind"/>。
     /// </summary>
     internal sealed class CocoaParser : IParser
     {
@@ -128,7 +130,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private void ReportError(TextLocation location, string message) => _diagnostics.ReportError(location, message);
 
-        public CompilationUnitSyntax ParseCompilationUnit()
+        public SyntaxNode ParseCompilationUnit()
         {
             var members = ParseMembers();
             var endOfFileToken = MatchToken(SyntaxKind.EndOfFileToken);
@@ -471,7 +473,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             var arrowToken = MatchToken(SyntaxKind.FatArrowToken);
 
-            SyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
+            CocoaSyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
                 ? ParseBlockStatement()
                 : ParseExpression();
 

@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
     /// </summary>
     public sealed partial class LambdaExpressionSyntax : ExpressionSyntax
     {
-        internal LambdaExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken? openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken? closeParenthesisToken, bool hasExplicitParameterTypes, SyntaxToken arrowToken, SyntaxNode body)
+        internal LambdaExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken? openParenthesisToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken? closeParenthesisToken, bool hasExplicitParameterTypes, SyntaxToken arrowToken, CSharpSyntaxNode body)
             : base(syntaxTree)
         {
             OpenParenthesisToken = openParenthesisToken;
@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public SyntaxToken ArrowToken { get; }
 
         /// <summary>lambda 浣擄細琛ㄨ揪寮忔垨鍧楄鍙ャ€?/summary>
-        public SyntaxNode Body { get; }
+        public CSharpSyntaxNode Body { get; }
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {

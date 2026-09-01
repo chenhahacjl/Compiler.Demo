@@ -1,10 +1,12 @@
+using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Syntax
+namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 严格 C# 方言解析器（`.cs`）：自包含（sealed），所有 Allow* 以 CS 值内联，
+    /// 严格 C# 方言解析器（`.cs`）：自包含（sealed），所有 Allow* 以 C# 值内联，
     /// 所有 virtual/abstract 方法替换为具体实现；无继承、无 virtual 方法。
+    /// S-5 P2-1：产出 C# 语言节点（<c>Cocoa.CodeAnalysis.CSharp.Syntax</c>），token 判断保留共享 <see cref="SyntaxKind"/>。
     /// </summary>
     internal sealed class CSharpParser : IParser
     {
@@ -100,10 +102,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         // ==================== Entry ====================
 
-        public CompilationUnitSyntax ParseCompilationUnit()
+        public SyntaxNode ParseCompilationUnit()
         {
             var members = ParseMembers();
             var endOfFileToken = MatchToken(SyntaxKind.EndOfFileToken);
+
             return new CompilationUnitSyntax(_syntaxTree, members, endOfFileToken);
         }
 
@@ -370,7 +373,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 nodesAndSeparators.Add(new ParameterSyntax(_syntaxTree, identifier, missingType));
             }
             var arrowToken = MatchToken(SyntaxKind.FatArrowToken);
-            SyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
+            CSharpSyntaxNode body = Current.Kind == SyntaxKind.OpenBraceToken
                 ? ParseBlockStatement()
                 : ParseExpression();
             return new LambdaExpressionSyntax(_syntaxTree, openParenthesisToken,

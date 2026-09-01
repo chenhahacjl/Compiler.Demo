@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         private Dictionary<SyntaxNode, SyntaxNode?>? _parents;
 
         private delegate void ParseHandler(SyntaxTree syntaxTree,
-                                            out CompilationUnitSyntax root,
+                                            out SyntaxNode root,
                                             out ImmutableArray<Diagnostic> diagnostics);
 
         private SyntaxTree(SourceText text, ParseHandler handler, Language? language = null)
@@ -27,7 +27,9 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SourceText Text { get; }
         public ImmutableArray<Diagnostic> Diagnostics { get; }
-        public CompilationUnitSyntax Root { get; }
+
+        /// <summary>根节点（S-5 P2-2 语言中性化：抽象 <see cref="SyntaxNode"/>，语言节点统一视图）。</summary>
+        public SyntaxNode Root { get; }
 
         private GreenNode? _greenRoot;
 
@@ -48,7 +50,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return Parse(sourceText, language);
         }
 
-        private static void Parse(SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics)
+        private static void Parse(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics)
         {
             var parser = syntaxTree.Language.CreateParser(syntaxTree);
             root = parser.ParseCompilationUnit();
@@ -80,7 +82,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public static SyntaxTree Parse(SourceText text, Language language)
         {
-            return new SyntaxTree(text, (SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, out root, out diagnostics), language);
+            return new SyntaxTree(text, (SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> diagnostics) => Parse(syntaxTree, out root, out diagnostics), language);
         }
 
         /// <summary>绿→红（Phase 4 桥接 1b 第一步）：由不可变绿树重新物化红树。绿树自描述（文本/trivia 完整），
@@ -111,7 +113,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var tokens = new List<SyntaxToken>();
 
-            void ParseTokens(SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> d)
+            void ParseTokens(SyntaxTree syntaxTree, out SyntaxNode root, out ImmutableArray<Diagnostic> d)
             {
                 var lexer = syntaxTree.Language.CreateLexer(syntaxTree);
 
@@ -126,7 +128,10 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                     if (token.Kind == SyntaxKind.EndOfFileToken)
                     {
-                        root = new CompilationUnitSyntax(syntaxTree, ImmutableArray<MemberSyntax>.Empty, token);
+                        // P2-7：共享节点类已删，根构建经语言工厂（空成员 + EOF token 的绿节点）。
+                        var greenRoot = new GreenNodeWithChildren(SyntaxKind.CompilationUnit,
+                            ImmutableArray.Create<GreenNode?>((GreenNode)token.ToGreen()));
+                        root = syntaxTree.Language.CreateTypedRed(greenRoot, syntaxTree, 0);
 
                         break;
                     }
@@ -151,7 +156,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             return _parents[syntaxNode];
         }
 
-        private Dictionary<SyntaxNode, SyntaxNode?> CreateParentsDictionary(CompilationUnitSyntax root)
+        private Dictionary<SyntaxNode, SyntaxNode?> CreateParentsDictionary(SyntaxNode root)
         {
             var result = new Dictionary<SyntaxNode, SyntaxNode?>();
 

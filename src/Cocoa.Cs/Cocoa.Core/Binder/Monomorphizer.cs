@@ -38,7 +38,7 @@ namespace Cocoa.CodeAnalysis.Binding
             var methodSeeds = new List<(FunctionSymbol Instantiated, FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)>();
             var seenMethods = new HashSet<FunctionSymbol>();
 
-            foreach (var (identifier, argumentClauses) in CollectGenericUsages(globalScope))
+            foreach (var (identifier, argumentClauses) in dialect.CollectGenericUsages(globalScope))
             {
                 var result = helperBinder.BindGenericTypeNameForExpansion(identifier, argumentClauses);
                 if (result is InstantiatedTypeSymbol instantiated)
@@ -371,8 +371,8 @@ namespace Cocoa.CodeAnalysis.Binding
             }
         }
 
-        /// <summary>声明语法根集合（类声明 / 函数语法），供泛型用法扫描共用。</summary>
-        private static IEnumerable<SyntaxNode> CollectDeclarationRoots(BoundGlobalScope globalScope)
+        /// <summary>声明语法根集合（类声明 / 函数语法），供泛型用法扫描共用（P2-5：语言钩子经此复用）。</summary>
+        internal static IEnumerable<SyntaxNode> CollectDeclarationRoots(BoundGlobalScope globalScope)
         {
             var roots = new HashSet<SyntaxNode>();
 
@@ -396,32 +396,8 @@ namespace Cocoa.CodeAnalysis.Binding
             return roots;
         }
 
-        /// <summary>
-        /// 扫描本编译全部声明语法中的泛型用法站点（6e-M20，P1-3 钩子预备）：
-        /// ① 类型位置的 GenericTypeClauseSyntax（`var x: List&lt;int&gt;` / extends / where）；
-        /// ② 对象创建站点的显式实参（`new Box&lt;i32&gt;(…)`——泛型信息在 TypeArguments 上，无子句节点）。
-        /// 返回 (类型名, 实参子句列表) 对；实参以语言中性 <see cref="SyntaxNode"/> 表达（语言库
-        /// <see cref="Language.CollectGenericUsages"/> 钩子在 P1 委托本器，P2-5 切语言节点后由语言库自持）。
-        /// </summary>
-        internal static IEnumerable<(SyntaxToken Identifier, ImmutableArray<SyntaxNode> Arguments)> CollectGenericUsages(BoundGlobalScope globalScope)
-        {
-            foreach (var root in CollectDeclarationRoots(globalScope))
-            {
-                foreach (var node in Walk(root))
-                {
-                    if (node is GenericTypeClauseSyntax genericClause)
-                    {
-                        yield return (genericClause.Identifier, genericClause.TypeArguments.Cast<SyntaxNode>().ToImmutableArray());
-                    }
-                    else if (node is ObjectCreationExpressionSyntax creation && creation.TypeArguments != null)
-                    {
-                        yield return (creation.Identifier, creation.TypeArguments.Arguments.Cast<SyntaxNode>().ToImmutableArray());
-                    }
-                }
-            }
-        }
-
-        private static IEnumerable<SyntaxNode> Walk(SyntaxNode node)
+        /// <summary>深度优先遍历（P2-5：语言钩子经此复用）。</summary>
+        internal static IEnumerable<SyntaxNode> Walk(SyntaxNode node)
         {
             yield return node;
 

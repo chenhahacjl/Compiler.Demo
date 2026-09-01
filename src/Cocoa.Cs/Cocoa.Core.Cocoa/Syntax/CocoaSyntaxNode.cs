@@ -15,5 +15,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
         /// <summary>Cocoa 语法类型（语言枚举接管共享联合视图）。</summary>
         public new abstract CocoaSyntaxKind Kind { get; }
+
+        /// <summary>语言无关原始 kind（P2-6：与共享值域对齐，供绿/红桥接）。</summary>
+        public override int RawKind => (int)Kind;
     }
 }

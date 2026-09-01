@@ -18,11 +18,14 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxNode? Parent => SyntaxTree.GetParent(this);
 
         /// <summary>
-        /// 共享联合视图（S-1 复制分家：由 abstract 改 virtual 哨兵，语言库根类
-        /// <c>CocoaSyntaxNode</c>/<c>CSharpSyntaxNode</c> 用 <c>new abstract</c> 隐藏并以语言枚举接管；
-        /// Core 内 78 节点类仍 override 此属性，行为不变）。
+        /// 共享联合视图（S-1 复制分家：语言库根类 <c>CocoaSyntaxNode</c>/<c>CSharpSyntaxNode</c> 用
+        /// <c>new abstract</c> 隐藏并以语言枚举接管；本属性为共享枚举视图，经 <see cref="RawKind"/> 具名，
+        /// 语言节点值域对齐故取值正确）。
         /// </summary>
-        public virtual SyntaxKind Kind => SyntaxKind.BadToken;
+        public virtual SyntaxKind Kind => (SyntaxKind)RawKind;
+
+        /// <summary>语言无关的原始 kind（绿/红桥接与共享视图统一读取；语言根类 override 返回语言枚举 int 值，与共享值域对齐）。</summary>
+        public abstract int RawKind { get; }
 
         public virtual TextSpan Span
         {
@@ -113,7 +116,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 slots.Add(child.ToGreen());
             }
 
-            return new GreenNodeWithChildren(Kind, slots.ToImmutable());
+            return new GreenNodeWithChildren((SyntaxKind)RawKind, slots.ToImmutable());
         }
 
         public SyntaxToken GetLastToken()
