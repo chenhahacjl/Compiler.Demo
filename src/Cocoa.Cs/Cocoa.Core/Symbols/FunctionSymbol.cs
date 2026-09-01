@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class FunctionSymbol : Symbol
     {
-        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, FunctionDeclarationSyntax? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, NamedTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "", string? entryPoint = null, CharSet? charSet = null)
+        internal FunctionSymbol(string name, ImmutableArray<ParameterSymbol> parameters, TypeSymbol returnType, SyntaxNode? declaration = null, bool isExtern = false, string? dllName = null, CallingConvention callingConvention = CallingConvention.Winapi, NamedTypeSymbol? containingClass = null, SyntaxNode? syntax = null, Visibility visibility = Visibility.Public, BuiltinKind? builtinKind = null, string @namespace = "", string? entryPoint = null, CharSet? charSet = null)
             : base(name)
         {
             Parameters = parameters;
@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public ImmutableArray<ParameterSymbol> Parameters { get; }
         public TypeSymbol ReturnType { get; }
-        public FunctionDeclarationSyntax? Declaration { get; }
+        public SyntaxNode? Declaration { get; }
         public bool IsExtern { get; }
         public string? DllName { get; }
         public CallingConvention CallingConvention { get; }

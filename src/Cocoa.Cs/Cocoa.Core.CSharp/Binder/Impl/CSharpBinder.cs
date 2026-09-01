@@ -398,7 +398,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                                        (mainFunction.Parameters.Length == 1 && mainFunction.Parameters[0].Type == TypeSymbol.ArrayOf(TypeSymbol.String));
                     if (!parametersOk || !returnTypeOk)
                     {
-                        binder.Diagnostics.ReportMainMustHaveCorrectSignature(mainFunction.Declaration!.Identifier.Location);
+                        binder.Diagnostics.ReportMainMustHaveCorrectSignature(((FunctionDeclarationSyntax)mainFunction.Declaration!).Identifier.Location);
                     }
                 }
 
@@ -406,7 +406,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 {
                     if (mainFunction != null)
                     {
-                        binder.Diagnostics.ReportCannotMixMainAndGlobalStatements(mainFunction.Declaration!.Identifier.Location);
+                        binder.Diagnostics.ReportCannotMixMainAndGlobalStatements(((FunctionDeclarationSyntax)mainFunction.Declaration!).Identifier.Location);
 
                         foreach (var globalStatement in firstGlobalStatementPerSyntaxTree)
                         {
@@ -655,8 +655,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// </summary>
         private static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, NamespaceSymbol? globalNamespace)
         {
-            var bodySyntax = function.Declaration?.Body;
-            var bodyLocation = (SyntaxNode?)function.Declaration?.Identifier ?? function.Syntax;
+            var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
+            var bodyLocation = (SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
 
             if (function.Syntax is ConstructorDeclarationSyntax ctorSyntax)
             {
@@ -693,7 +693,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
 
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
-                ? (function.Declaration != null ? function.Declaration.Identifier.Location : bodyLocation.Location)
+                ? (function.Declaration != null ? ((FunctionDeclarationSyntax)function.Declaration).Identifier.Location : bodyLocation.Location)
                 : (TextLocation?)null;
             var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);
 
@@ -712,8 +712,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// </summary>
         internal static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, Dictionary<string, TypeSymbol> typeArgumentsByName)
         {
-            var bodySyntax = function.Declaration?.Body;
-            var bodyLocation = (SyntaxNode?)function.Declaration?.Identifier ?? function.Syntax;
+            var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
+            var bodyLocation = (SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
 
             if (function.Syntax is ConstructorDeclarationSyntax ctorSyntax)
             {

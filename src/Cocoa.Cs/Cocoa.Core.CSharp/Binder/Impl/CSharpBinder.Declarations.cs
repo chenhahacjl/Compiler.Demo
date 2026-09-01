@@ -1378,7 +1378,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return result.ToImmutable();
             }
 
-            foreach (var member in classType.Declaration.Members)
+            foreach (var member in ((ClassDeclarationSyntax)classType.Declaration).Members)
             {
                 if (member is ClassFieldDeclarationSyntax fieldDecl && fieldDecl.Initializer != null)
                 {
@@ -1612,7 +1612,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 {
                     if (FindImplementation(classType, method) == null)
                     {
-                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 未实现接口 '{iface.Name}' 的方法 '{method.Name}'。");
+                        _diagnostics.ReportError(((ClassDeclarationSyntax?)classType.Declaration)?.Identifier.Location ?? default, $"类 '{classType.Name}' 未实现接口 '{iface.Name}' 的方法 '{method.Name}'。");
                     }
                 }
 
@@ -1621,18 +1621,18 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     var implementation = classType.GetProperty(property.Name);
                     if (implementation == null)
                     {
-                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 未实现接口 '{iface.Name}' 的属性 '{property.Name}'。");
+                        _diagnostics.ReportError(((ClassDeclarationSyntax?)classType.Declaration)?.Identifier.Location ?? default, $"类 '{classType.Name}' 未实现接口 '{iface.Name}' 的属性 '{property.Name}'。");
                         continue;
                     }
 
                     if (property.Getter != null && implementation.Getter == null)
                     {
-                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 的属性 '{property.Name}' 缺少接口 '{iface.Name}' 要求的 getter。");
+                        _diagnostics.ReportError(((ClassDeclarationSyntax?)classType.Declaration)?.Identifier.Location ?? default, $"类 '{classType.Name}' 的属性 '{property.Name}' 缺少接口 '{iface.Name}' 要求的 getter。");
                     }
 
                     if (property.Setter != null && implementation.Setter == null)
                     {
-                        _diagnostics.ReportError(classType.Declaration?.Identifier.Location ?? default, $"类 '{classType.Name}' 的属性 '{property.Name}' 缺少接口 '{iface.Name}' 要求的 setter。");
+                        _diagnostics.ReportError(((ClassDeclarationSyntax?)classType.Declaration)?.Identifier.Location ?? default, $"类 '{classType.Name}' 的属性 '{property.Name}' 缺少接口 '{iface.Name}' 要求的 setter。");
                     }
                 }
             }

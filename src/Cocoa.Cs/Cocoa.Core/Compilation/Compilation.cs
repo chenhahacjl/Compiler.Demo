@@ -616,7 +616,7 @@ namespace Cocoa.CodeAnalysis
                 var interfaceClass = program.Classes.FirstOrDefault(c => c.IsInterface);
                 if (interfaceClass != null)
                 {
-                    var location = interfaceClass.Declaration?.Identifier.Location
+                    var location = ((ClassDeclarationSyntax?)interfaceClass.Declaration)?.Identifier.Location
                                    ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
                     return ImmutableArray.Create(Diagnostic.Error(location, $"interface '{interfaceClass.Name}' 暂不支持 native 后端（接口分派随后续里程碑落地，见 docs-dev/对象模型设计.md）"));
                 }
@@ -624,7 +624,7 @@ namespace Cocoa.CodeAnalysis
                 var staticInitClass = program.Classes.FirstOrDefault(HasStaticInitializer);
                 if (staticInitClass != null)
                 {
-                    var location = staticInitClass.Declaration?.Identifier.Location
+                    var location = ((ClassDeclarationSyntax?)staticInitClass.Declaration)?.Identifier.Location
                                    ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
                     return ImmutableArray.Create(Diagnostic.Error(location, $"class '{staticInitClass.Name}' 含静态构造函数或静态字段初始化器，native 后端暂不支持静态初始化触发（字段可声明但保持零值；请改在显式代码中赋值）"));
                 }
@@ -791,7 +791,7 @@ namespace Cocoa.CodeAnalysis
                 var offendingClass = program.Classes.FirstOrDefault(c => !IsCodSerializableClass(c));
                 if (offendingClass != null)
                 {
-                    var location = offendingClass.Declaration?.Identifier.Location ?? ZeroLocation;
+                    var location = ((ClassDeclarationSyntax?)offendingClass.Declaration)?.Identifier.Location ?? ZeroLocation;
                     return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.coa 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类与 facade 类已支持"));
                 }
             }

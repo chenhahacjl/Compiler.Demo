@@ -59,7 +59,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         // 枚举常量成员（TypeKind.Enum 时使用；class/struct/interface 为 null）
         private Dictionary<string, int>? _enumMembers;
 
-        internal NamedTypeSymbol(string name, string @namespace, Visibility visibility, ClassDeclarationSyntax? declaration, bool isExternal = false)
+        internal NamedTypeSymbol(string name, string @namespace, Visibility visibility, SyntaxNode? declaration, bool isExternal = false)
             : base(name)
         {
             Namespace = @namespace ?? "";
@@ -89,7 +89,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public Visibility Visibility { get; }
 
-        public ClassDeclarationSyntax? Declaration { get; }
+        public SyntaxNode? Declaration { get; }
 
         /// <summary>基类（null = 接口或未落位；非接口类绑定后恒为显式基类或 <see cref="SystemObject"/>）。</summary>
         public virtual NamedTypeSymbol? BaseType

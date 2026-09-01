@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Syntax;
 using CharSet = Cocoa.CodeAnalysis.Symbols.CharSet;
 
 namespace Cocoa.CodeAnalysis.Emit.Native
@@ -29,7 +30,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
                 // 6e-M17 Step 5：native 路径遇 charset = ansi → 编译期诊断"未实现"（不静默错编）
                 if (function.IsExtern && function.CharSet == CharSet.Ansi)
                 {
-                    builder.Add(Diagnostic.Error(function.Declaration?.Identifier.Location ?? default,
+                    builder.Add(Diagnostic.Error(((FunctionDeclarationSyntax?)function.Declaration)?.Identifier.Location ?? default,
                         $"extern function '{function.Name}' 声明 charset = ansi，native 后端未实现（仅支持 unicode，见 docs-dev/内部调用与互操作设计.md §5.3）。"));
                     continue;
                 }
@@ -41,7 +42,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
 
                 if (!TryResolveExport(function.DllName, function.EntryPoint ?? function.Name, architecture))
                 {
-                    builder.Add(Diagnostic.Warning(function.Declaration?.Identifier.Location ?? default,
+                    builder.Add(Diagnostic.Warning(((FunctionDeclarationSyntax?)function.Declaration)?.Identifier.Location ?? default,
                         $"import symbol '{function.EntryPoint ?? function.Name}' not found in export table of '{function.DllName}'"));
                 }
             }
