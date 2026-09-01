@@ -92,5 +92,31 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.Equal(CSharpSyntaxKind.BadToken, CSharpSyntaxKindMappings.ToCSharpSyntaxKind(-1));
             Assert.Equal(CSharpSyntaxKind.BadToken, CSharpSyntaxKindMappings.ToCSharpSyntaxKind(100000));
         }
+
+        [Fact]
+        public void CocoaKindAccessor_MatchesSharedKind()
+        {
+            // P1-E-2c：CocoaKind() 语言枚举访问器与共享 SyntaxKind（= RawKind 具名视图）一致
+            var tree = SyntaxTree.Parse("function Main(): i32 { var x = 1 + 2; return x }");
+            foreach (var node in tree.Root.DescendantNodesAndSelf())
+            {
+                Assert.Equal((CocoaSyntaxKind)node.Kind, node.CocoaKind());
+                if (node is SyntaxToken token)
+                    Assert.Equal((CocoaSyntaxKind)token.Kind, token.CocoaKind());
+            }
+        }
+
+        [Fact]
+        public void CSharpKindAccessor_MatchesSharedKind()
+        {
+            // P1-E-2c：CSharpKind() 语言枚举访问器与共享 SyntaxKind 一致
+            var tree = SyntaxTree.ParseCs("class P { static void Main() { var x = 1 + 2; } }");
+            foreach (var node in tree.Root.DescendantNodesAndSelf())
+            {
+                Assert.Equal((CSharpSyntaxKind)node.Kind, node.CSharpKind());
+                if (node is SyntaxToken token)
+                    Assert.Equal((CSharpSyntaxKind)token.Kind, token.CSharpKind());
+            }
+        }
     }
 }
