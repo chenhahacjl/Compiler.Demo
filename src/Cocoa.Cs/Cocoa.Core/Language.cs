@@ -113,6 +113,22 @@ namespace Cocoa.CodeAnalysis
         internal abstract IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens);
 
         /// <summary>
+        /// 按本语言创建词法分析器（P1-E-2e Lexer 分家，对称 <see cref="CreateParser(SyntaxTree)"/>）。
+        /// 基类默认返回共享 <see cref="Syntax.Lexer"/>；CO/C# 子类各自返回 <see cref="Syntax.CocoaLexer"/>/<see cref="Syntax.CSharpLexer"/>。
+        /// 语法中立的分词逻辑留 Core（<see cref="Syntax.Lexer"/>），语言差异（关键字表等）经本工厂 + 子类落位语言库。
+        /// </summary>
+        internal virtual Syntax.Lexer CreateLexer(SyntaxTree syntaxTree)
+        {
+            return new Syntax.Lexer(syntaxTree);
+        }
+
+        /// <summary>从指定位置开始词法（插值洞子解析，位置须指向洞首）。</summary>
+        internal virtual Syntax.Lexer CreateLexer(SyntaxTree syntaxTree, int start)
+        {
+            return new Syntax.Lexer(syntaxTree, start);
+        }
+
+        /// <summary>
         /// 按本语言创建绑定器（P1-B 分叉前置，对称 <see cref="CreateParser(SyntaxTree)"/>）。
         /// 基类默认返回共享 <see cref="Binding.Binder"/>；CO/C# 子类各自返回 <see cref="Binding.CocoaBinder"/>/<see cref="Binding.CSharpBinder"/>。
         /// 参数与 <see cref="Binding.Binder"/> 构造器一致；解析器（builtin type resolver）由各语言子类以自身

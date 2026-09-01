@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var tokens = new List<SyntaxToken>();
             var badTokens = new List<SyntaxToken>();
 
-            var lexer = new Lexer(syntaxTree);
+            var lexer = syntaxTree.Language.CreateLexer(syntaxTree);
             SyntaxToken token;
 
             do
@@ -591,7 +591,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private InterpolationSyntax ParseHoleExpression(int start, int end)
         {
-            var lexer = new Lexer(_syntaxTree, start);
+            var lexer = _syntaxTree.Language.CreateLexer(_syntaxTree, start);
             var tokens = new List<SyntaxToken>();
             SyntaxToken token;
             do

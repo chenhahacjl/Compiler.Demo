@@ -48,5 +48,12 @@ namespace Cocoa.CodeAnalysis
 
         internal override IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
             => new CocoaParser(syntaxTree, tokens);
+
+        /// <summary>CO 词法分析器（P1-E-2e Lexer 分家）。</summary>
+        internal override Syntax.Lexer CreateLexer(SyntaxTree syntaxTree)
+            => new CocoaLexer(syntaxTree);
+
+        internal override Syntax.Lexer CreateLexer(SyntaxTree syntaxTree, int start)
+            => new CocoaLexer(syntaxTree, start);
     }
 }

@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <br/>
     /// 字符 => Token
     /// </summary>
-    internal sealed partial class Lexer
+    internal partial class Lexer
     {
         private void ReadToken()
         {

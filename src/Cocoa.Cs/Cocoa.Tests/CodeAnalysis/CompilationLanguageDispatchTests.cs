@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
+using System.Linq;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis
@@ -97,6 +98,41 @@ namespace Cocoa.Tests.CodeAnalysis
                 references: ImmutableArray<string>.Empty, usingNamespaces: ImmutableArray<string>.Empty,
                 Language.CSharp.LookupBuiltinType);
             Assert.IsType<CSharpBinder>(binder);
+        }
+
+        [Fact]
+        public void CocoaLanguage_CreateLexer_ReturnsCocoaLexer()
+        {
+            // P1-E-2e：Language.CreateLexer 工厂按语言分派——CO 语言产出 CocoaLexer
+            var tree = SyntaxTree.Parse("function Main(): i32 { return 0 }");
+            var lexer = Language.Cocoa.CreateLexer(tree);
+            Assert.IsType<CocoaLexer>(lexer);
+
+            var holeLexer = Language.Cocoa.CreateLexer(tree, 0);
+            Assert.IsType<CocoaLexer>(holeLexer);
+        }
+
+        [Fact]
+        public void CSharpLanguage_CreateLexer_ReturnsCSharpLexer()
+        {
+            // P1-E-2e：Language.CreateLexer 工厂按语言分派——C# 语言产出 CSharpLexer
+            var tree = SyntaxTree.ParseCs("class P { static void Main() { } }");
+            var lexer = Language.CSharp.CreateLexer(tree);
+            Assert.IsType<CSharpLexer>(lexer);
+
+            var holeLexer = Language.CSharp.CreateLexer(tree, 0);
+            Assert.IsType<CSharpLexer>(holeLexer);
+        }
+
+        [Fact]
+        public void Parse_EndToEnd_UsesLanguageLexer()
+        {
+            // P1-E-2e 端到端：解析走语言工厂创建的 Lexer，行为不变（.co/.cs 均 0 诊断错误）
+            var co = SyntaxTree.Parse("function Main(): i32 { var x = 1 + 2; return x }");
+            Assert.False(co.Diagnostics.Any(d => d.IsError));
+
+            var cs = SyntaxTree.ParseCs("class P { static void Main() { var x = 1 + 2; } }");
+            Assert.False(cs.Diagnostics.Any(d => d.IsError));
         }
     }
 }

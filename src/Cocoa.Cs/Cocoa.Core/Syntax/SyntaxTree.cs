@@ -113,7 +113,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             void ParseTokens(SyntaxTree syntaxTree, out CompilationUnitSyntax root, out ImmutableArray<Diagnostic> d)
             {
-                var lexer = new Lexer(syntaxTree);
+                var lexer = syntaxTree.Language.CreateLexer(syntaxTree);
 
                 while (true)
                 {

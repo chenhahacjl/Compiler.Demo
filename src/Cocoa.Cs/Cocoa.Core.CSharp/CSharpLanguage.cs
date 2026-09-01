@@ -56,6 +56,13 @@ namespace Cocoa.CodeAnalysis
         internal override IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
             => new CSharpParser(syntaxTree, tokens);
 
+        /// <summary>C# 词法分析器（P1-E-2e Lexer 分家）。</summary>
+        internal override Syntax.Lexer CreateLexer(SyntaxTree syntaxTree)
+            => new CSharpLexer(syntaxTree);
+
+        internal override Syntax.Lexer CreateLexer(SyntaxTree syntaxTree, int start)
+            => new CSharpLexer(syntaxTree, start);
+
         /// <summary>C# 绑定器（P1-B 分叉前置：C# 专属绑定语义随分叉落位于 <see cref="Binding.CSharpBinder"/>）。</summary>
         internal override Binding.Binder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, System.Collections.Immutable.ImmutableArray<string> references, System.Collections.Immutable.ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, System.Collections.Immutable.ImmutableArray<string> usingStatics = default, System.Collections.Immutable.ImmutableDictionary<string, string> usingAliases = null, System.Collections.Immutable.ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
             => new Binding.CSharpBinder(isScript, parent, function, references, usingNamespaces, usingStatics, usingAliases, codLibraries, globalNamespace);
