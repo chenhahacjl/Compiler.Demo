@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class ContinueStatementSyntax : StatementSyntax
     {
@@ -11,5 +11,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         public override SyntaxKind Kind => SyntaxKind.ContinueStatement;
 
         public SyntaxToken Keyword { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+        }
     }
 }

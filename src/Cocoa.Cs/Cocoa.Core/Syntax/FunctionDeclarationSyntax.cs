@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken? FunctionKeyword { get; }
         public SyntaxToken Identifier { get; }
 
-        /// <summary>泛型方法类型参数列表 `&lt;T&gt;`（6e-M20；非泛型方法为 null）。</summary>
+        /// <summary>娉涘瀷鏂规硶绫诲瀷鍙傛暟鍒楄〃 `&lt;T&gt;`锛?e-M20锛涢潪娉涘瀷鏂规硶涓?null锛夈€?/summary>
         public TypeParameterListSyntax? TypeParameters { get; }
 
         public SyntaxToken OpenParenthesisToken { get; }
@@ -33,10 +33,49 @@ namespace Cocoa.CodeAnalysis.Syntax
         public TypeClauseSyntax? Type { get; }
         public BlockStatementSyntax? Body { get; }
 
-        /// <summary>extern 元数据子句（`extern(entry=…, charset=…)`，6e-M17 Step 5）；非 extern 函数为 null。</summary>
+        /// <summary>extern 鍏冩暟鎹瓙鍙ワ紙`extern(entry=鈥? charset=鈥?`锛?e-M17 Step 5锛夛紱闈?extern 鍑芥暟涓?null銆?/summary>
         public ExternMetadataSyntax? ExternMetadata { get; }
 
-        /// <summary>泛型约束子句列表（`where T: ...`，6e-M20）。</summary>
+        /// <summary>娉涘瀷绾︽潫瀛愬彞鍒楄〃锛坄where T: ...`锛?e-M20锛夈€?/summary>
         public ImmutableArray<WhereClauseSyntax> WhereClauses { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            if (FunctionKeyword != null)
+            {
+                yield return FunctionKeyword;
+            }
+            yield return Identifier;
+            if (TypeParameters != null)
+            {
+                yield return TypeParameters;
+            }
+            yield return OpenParenthesisToken;
+            foreach (var child in Parameters.GetWithSeparators())
+            {
+                yield return child;
+            }
+            yield return CloseParenthesisToken;
+            if (Type != null)
+            {
+                yield return Type;
+            }
+            if (Body != null)
+            {
+                yield return Body;
+            }
+            if (ExternMetadata != null)
+            {
+                yield return ExternMetadata;
+            }
+            foreach (var child in WhereClauses)
+            {
+                yield return child;
+            }
+        }
     }
 }

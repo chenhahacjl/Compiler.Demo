@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 括号表达式语法
+    /// 鎷彿琛ㄨ揪寮忚娉?
     /// </summary>
     public sealed partial class ParenthesizedExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken OpenParenthesisToken { get; }
         public ExpressionSyntax Expression { get; }
         public SyntaxToken CloseParenthesisToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return OpenParenthesisToken;
+            yield return Expression;
+            yield return CloseParenthesisToken;
+        }
     }
 }

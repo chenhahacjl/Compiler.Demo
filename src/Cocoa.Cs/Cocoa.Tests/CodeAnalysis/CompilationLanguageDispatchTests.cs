@@ -1,5 +1,9 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Cocoa.Binding;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
+using Cocoa.CodeAnalysis.CSharp.Binding;
+using Cocoa.CodeAnalysis.CSharp.Syntax;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -86,7 +90,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 isScript: false, parent: null, function: null,
                 references: ImmutableArray<string>.Empty, usingNamespaces: ImmutableArray<string>.Empty,
                 Language.Cocoa.LookupBuiltinType);
-            Assert.IsType<CocoaBinder>(binder);
+            Assert.IsType<Cocoa.CodeAnalysis.Cocoa.Binding.CocoaBinder>(binder);
         }
 
         [Fact]
@@ -97,7 +101,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 isScript: false, parent: null, function: null,
                 references: ImmutableArray<string>.Empty, usingNamespaces: ImmutableArray<string>.Empty,
                 Language.CSharp.LookupBuiltinType);
-            Assert.IsType<CSharpBinder>(binder);
+            Assert.IsType<Cocoa.CodeAnalysis.CSharp.Binding.CSharpBinder>(binder);
         }
 
         [Fact]

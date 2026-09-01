@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public abstract class SyntaxNode
     {
-        private protected SyntaxNode(SyntaxTree syntaxTree)
+        protected SyntaxNode(SyntaxTree syntaxTree)
         {
             SyntaxTree = syntaxTree;
         }
@@ -17,7 +17,12 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxNode? Parent => SyntaxTree.GetParent(this);
 
-        public abstract SyntaxKind Kind { get; }
+        /// <summary>
+        /// 共享联合视图（S-1 复制分家：由 abstract 改 virtual 哨兵，语言库根类
+        /// <c>CocoaSyntaxNode</c>/<c>CSharpSyntaxNode</c> 用 <c>new abstract</c> 隐藏并以语言枚举接管；
+        /// Core 内 78 节点类仍 override 此属性，行为不变）。
+        /// </summary>
+        public virtual SyntaxKind Kind => SyntaxKind.BadToken;
 
         public virtual TextSpan Span
         {

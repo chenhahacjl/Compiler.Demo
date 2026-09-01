@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 泛型类型参数列表（6e-M20）：`&lt;T, U&gt;`。
+    /// 娉涘瀷绫诲瀷鍙傛暟鍒楄〃锛?e-M20锛夛細`&lt;T, U&gt;`銆?
     /// </summary>
     public sealed partial class TypeParameterListSyntax : SyntaxNode
     {
@@ -20,5 +20,15 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken LessThanToken { get; }
         public ImmutableArray<SyntaxToken> Parameters { get; }
         public SyntaxToken GreaterThanToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return LessThanToken;
+            foreach (var child in Parameters)
+            {
+                yield return child;
+            }
+            yield return GreaterThanToken;
+        }
     }
 }

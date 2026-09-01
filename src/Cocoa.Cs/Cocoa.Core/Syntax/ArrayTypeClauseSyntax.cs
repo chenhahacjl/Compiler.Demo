@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 数组类型语法（int[] / int[][]，ElementType 递归嵌套）
+    /// 鏁扮粍绫诲瀷璇硶锛坕nt[] / int[][]锛孍lementType 閫掑綊宓屽锛?
     /// </summary>
     public sealed partial class ArrayTypeClauseSyntax : TypeClauseSyntax
     {
@@ -18,5 +18,17 @@ namespace Cocoa.CodeAnalysis.Syntax
         public TypeClauseSyntax ElementType { get; }
         public SyntaxToken OpenBracketToken { get; }
         public SyntaxToken CloseBracketToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (ColonToken != null)
+            {
+                yield return ColonToken;
+            }
+            yield return Identifier;
+            yield return ElementType;
+            yield return OpenBracketToken;
+            yield return CloseBracketToken;
+        }
     }
 }

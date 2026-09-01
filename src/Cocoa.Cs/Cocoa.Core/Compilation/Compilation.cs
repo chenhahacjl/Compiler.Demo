@@ -23,6 +23,15 @@ namespace Cocoa.CodeAnalysis
 
         public abstract Language Language { get; }
 
+        /// <summary>
+        /// 按本语言绑定全局作用域（S-4.3 Compilation 驱动 Binder：对齐 Roslyn
+        /// <c>CSharpCompilation</c> 驱动 <c>CSharpBinder</c>）。语言子类调用各自语言库的 Binder 静态编排。
+        /// </summary>
+        internal abstract BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries);
+
+        /// <summary>按本语言绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
+        internal abstract BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace);
+
         protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
         {
             IsScript = isScript;
@@ -104,15 +113,14 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 按首棵语法树语言分派子类（Y §6.7 A0）：CO → <see cref="CocoaCompilation"/>，C# → <see cref="CSharpCompilation"/>。
-        /// 空语法树/脚本沿用语言缺省为 Cocoa。行为等价（公开 API 面不变）。
+        /// 经语言工厂分派（Y §6.7 A0 + S-4.2 Compilation 分家）：CO → <see cref="CocoaCompilation"/>，
+        /// C# → <see cref="CSharpCompilation"/>；子类随语言库落位，Core 仅持 <see cref="Language"/> 抽象。
+        /// 空语法树 / 脚本默认 Cocoa，行为等价，API 面不变。
         /// </summary>
         private static Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
         {
-            var isCocoa = syntaxTrees.Length == 0 || syntaxTrees[0].Language == Language.Cocoa;
-            return isCocoa
-                ? new CocoaCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees)
-                : new CSharpCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
+            var language = syntaxTrees.Length == 0 ? Language.Cocoa : syntaxTrees[0].Language;
+            return language.CreateCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
         }
 
         public bool IsScript { get; }
@@ -131,7 +139,7 @@ namespace Cocoa.CodeAnalysis
             {
                 if (_globalScope == null)
                 {
-                    var globalScope = Binding.Binder.BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references, _codLibraries);
+                    var globalScope = BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references, _codLibraries);
                     Interlocked.CompareExchange(ref _globalScope, globalScope, null);
                 }
 
@@ -433,7 +441,7 @@ namespace Cocoa.CodeAnalysis
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
-            var program = Binding.Binder.BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : SyntaxTrees[0].Language, _linkCodDynamically, GlobalNamespace);
+            var program = BindProgram(IsScript, previous, GlobalScope, _codLibraries, SyntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : SyntaxTrees[0].Language, _linkCodDynamically, GlobalNamespace);
 
             // Y A2-F1：规范 IR 契约（DEBUG）——消费边界不得有高 Bound 节点泄漏
             Lowering.CanonicalIr.Verify(program);

@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 一元表达式语法
+    /// 涓€鍏冭〃杈惧紡璇硶
     /// </summary>
     public sealed partial class UnaryExpressionSyntax : ExpressionSyntax
     {
@@ -16,5 +16,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken OperatorToken { get; }
         public ExpressionSyntax Operand { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return OperatorToken;
+            yield return Operand;
+        }
     }
 }

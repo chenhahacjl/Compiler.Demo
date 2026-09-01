@@ -43,7 +43,7 @@ namespace Cocoa.CodeAnalysis
                     return _boundBySyntax;
                 }
 
-                var program = Binder.BindProgram(
+                var program = _compilation.BindProgram(
                     _compilation.IsScript,
                     null,
                     _compilation.GlobalScope,

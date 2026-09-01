@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class VariableDeclarationSyntax : StatementSyntax
     {
@@ -19,5 +19,26 @@ namespace Cocoa.CodeAnalysis.Syntax
         public TypeClauseSyntax? TypeClause { get; }
         public SyntaxToken? EqualsToken { get; }
         public ExpressionSyntax? Initializer { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (Keyword != null)
+            {
+                yield return Keyword;
+            }
+            yield return Identifier;
+            if (TypeClause != null)
+            {
+                yield return TypeClause;
+            }
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            if (Initializer != null)
+            {
+                yield return Initializer;
+            }
+        }
     }
 }

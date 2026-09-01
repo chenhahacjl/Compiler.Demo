@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
@@ -13,5 +13,14 @@ namespace Cocoa.CodeAnalysis.Syntax
         public override SyntaxKind Kind => SyntaxKind.GlobalStatement;
 
         public StatementSyntax Statement { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            yield return Statement;
+        }
     }
 }

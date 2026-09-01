@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 构造函数节点：`public constructor(x: int, y: int) : base(...) { ... }`
+    /// 鏋勯€犲嚱鏁拌妭鐐癸細`public constructor(x: int, y: int) : base(...) { ... }`
     /// </summary>
     public sealed partial class ConstructorDeclarationSyntax : MemberSyntax
     {
@@ -26,12 +26,39 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SeparatedSyntaxList<ParameterSyntax> Parameters { get; }
         public SyntaxToken CloseParenthesisToken { get; }
 
-        /// <summary>构造链关键字（`: base` / `: this`；null = 无显式链）。</summary>
+        /// <summary>鏋勯€犻摼鍏抽敭瀛楋紙`: base` / `: this`锛沶ull = 鏃犳樉寮忛摼锛夈€?/summary>
         public SyntaxToken? InitializerKeyword { get; }
 
-        /// <summary>构造链实参。</summary>
+        /// <summary>鏋勯€犻摼瀹炲弬銆?/summary>
         public SeparatedSyntaxList<ExpressionSyntax> InitializerArguments { get; }
 
         public BlockStatementSyntax Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            if (ConstructorKeyword != null)
+            {
+                yield return ConstructorKeyword;
+            }
+            yield return OpenParenthesisToken;
+            foreach (var child in Parameters.GetWithSeparators())
+            {
+                yield return child;
+            }
+            yield return CloseParenthesisToken;
+            if (InitializerKeyword != null)
+            {
+                yield return InitializerKeyword;
+            }
+            foreach (var child in InitializerArguments.GetWithSeparators())
+            {
+                yield return child;
+            }
+            yield return Body;
+        }
     }
 }

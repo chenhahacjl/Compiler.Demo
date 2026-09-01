@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 赋值表达式语法（目标为名称/数组索引/成员表达式）
+    /// 璧嬪€艰〃杈惧紡璇硶锛堢洰鏍囦负鍚嶇О/鏁扮粍绱㈠紩/鎴愬憳琛ㄨ揪寮忥級
     /// </summary>
     public sealed partial class AssignmentExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Target { get; }
         public SyntaxToken AssignmentToken { get; }
         public ExpressionSyntax Expression { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Target;
+            yield return AssignmentToken;
+            yield return Expression;
+        }
     }
 }

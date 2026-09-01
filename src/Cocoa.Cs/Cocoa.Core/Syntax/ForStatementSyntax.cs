@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// Cocoa 式 for 循环：`for [var i =] low to high`，括号与 `var i =` 均可选。
+    /// Cocoa 寮?for 寰幆锛歚for [var i =] low to high`锛屾嫭鍙蜂笌 `var i =` 鍧囧彲閫夈€?
     /// </summary>
     public sealed partial class ForStatementSyntax : StatementSyntax
     {
@@ -36,5 +36,42 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax? Step { get; }
         public SyntaxToken? CloseParenToken { get; }
         public StatementSyntax Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            if (OpenParenToken != null)
+            {
+                yield return OpenParenToken;
+            }
+            if (VarKeyword != null)
+            {
+                yield return VarKeyword;
+            }
+            if (Identifier != null)
+            {
+                yield return Identifier;
+            }
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            yield return LowerBound;
+            yield return ToKeyword;
+            yield return UpperBound;
+            if (StepKeyword != null)
+            {
+                yield return StepKeyword;
+            }
+            if (Step != null)
+            {
+                yield return Step;
+            }
+            if (CloseParenToken != null)
+            {
+                yield return CloseParenToken;
+            }
+            yield return Body;
+        }
     }
 }

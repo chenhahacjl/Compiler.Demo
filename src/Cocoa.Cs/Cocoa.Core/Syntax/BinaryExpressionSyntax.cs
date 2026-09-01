@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 二元表达式语法
+    /// 浜屽厓琛ㄨ揪寮忚娉?
     /// </summary>
     public sealed partial class BinaryExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Left { get; }
         public SyntaxToken OperatorToken { get; }
         public ExpressionSyntax Right { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Left;
+            yield return OperatorToken;
+            yield return Right;
+        }
     }
 }

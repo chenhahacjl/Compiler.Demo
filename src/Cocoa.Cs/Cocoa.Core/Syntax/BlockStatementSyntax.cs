@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
@@ -17,5 +17,15 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken OpenBraceToken { get; }
         public ImmutableArray<StatementSyntax> Statements { get; }
         public SyntaxToken CloseBraceToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return OpenBraceToken;
+            foreach (var child in Statements)
+            {
+                yield return child;
+            }
+            yield return CloseBraceToken;
+        }
     }
 }

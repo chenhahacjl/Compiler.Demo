@@ -105,8 +105,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         continue;
                     }
 
-                    var (methodBody, methodBodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, dialect, typeArgumentsByName);
+                    var (methodBody, methodBodyDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = methodBody;
                     diagnostics.AddRange(methodBodyDiagnostics);
@@ -204,8 +204,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                     }
 
-                    var (body, bodyDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, dialect, typeArgumentsByName);
+                    var (body, bodyDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                        isScript, parentScope, instantiatedMethod, globalScope, codLibraries, typeArgumentsByName);
 
                     functionBodies[instantiatedMethod] = body;
                     diagnostics.AddRange(bodyDiagnostics);
@@ -228,8 +228,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                         else
                         {
-                            var (getterBody, getterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                                isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, dialect, typeArgumentsByName);
+                            var (getterBody, getterDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                                isScript, parentScope, instantiatedProperty.Getter, globalScope, codLibraries, typeArgumentsByName);
                             functionBodies[instantiatedProperty.Getter] = getterBody;
                             diagnostics.AddRange(getterDiagnostics);
                         }
@@ -245,8 +245,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                         else
                         {
-                            var (setterBody, setterDiagnostics) = Binder.BuildFunctionBodyForMonomorphization(
-                                isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, dialect, typeArgumentsByName);
+                            var (setterBody, setterDiagnostics) = dialect.BuildFunctionBodyForMonomorphization(
+                                isScript, parentScope, instantiatedProperty.Setter, globalScope, codLibraries, typeArgumentsByName);
                             functionBodies[instantiatedProperty.Setter] = setterBody;
                             diagnostics.AddRange(setterDiagnostics);
                         }

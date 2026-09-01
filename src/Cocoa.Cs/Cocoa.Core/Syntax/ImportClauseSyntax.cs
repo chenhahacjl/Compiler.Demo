@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// import 声明节点
+    /// import 澹版槑鑺傜偣
     /// </summary>
     public sealed partial class ImportClauseSyntax : MemberSyntax
     {
@@ -25,6 +25,19 @@ namespace Cocoa.CodeAnalysis.Syntax
             get
             {
                 return string.Concat(NameTokens.Select(t => t.Text));
+            }
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            yield return ImportKeyword;
+            foreach (var child in NameTokens)
+            {
+                yield return child;
             }
         }
     }

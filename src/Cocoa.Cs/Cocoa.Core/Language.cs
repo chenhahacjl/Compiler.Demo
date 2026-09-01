@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System;
@@ -113,30 +114,32 @@ namespace Cocoa.CodeAnalysis
         internal abstract IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens);
 
         /// <summary>
-        /// 按本语言创建词法分析器（P1-E-2e Lexer 分家，对称 <see cref="CreateParser(SyntaxTree)"/>）。
-        /// 基类默认返回共享 <see cref="Syntax.Lexer"/>；CO/C# 子类各自返回 <see cref="Syntax.CocoaLexer"/>/<see cref="Syntax.CSharpLexer"/>。
-        /// 语法中立的分词逻辑留 Core（<see cref="Syntax.Lexer"/>），语言差异（关键字表等）经本工厂 + 子类落位语言库。
+        /// 按本语言创建词法分析器（S-2 Lexer 分家，对称 <see cref="CreateParser(SyntaxTree)"/>）。
+        /// 共享 <see cref="SyntaxKind"/>（token 存储层留 Core）；CO/C# 各自实现
+        /// <see cref="Syntax.CocoaLexer"/>/<see cref="Syntax.CSharpLexer"/> 落位语言库。
         /// </summary>
-        internal virtual Syntax.Lexer CreateLexer(SyntaxTree syntaxTree)
-        {
-            return new Syntax.Lexer(syntaxTree);
-        }
+        internal abstract ILexer CreateLexer(SyntaxTree syntaxTree);
 
         /// <summary>从指定位置开始词法（插值洞子解析，位置须指向洞首）。</summary>
-        internal virtual Syntax.Lexer CreateLexer(SyntaxTree syntaxTree, int start)
-        {
-            return new Syntax.Lexer(syntaxTree, start);
-        }
+        internal abstract ILexer CreateLexer(SyntaxTree syntaxTree, int start);
 
         /// <summary>
-        /// 按本语言创建绑定器（P1-B 分叉前置，对称 <see cref="CreateParser(SyntaxTree)"/>）。
-        /// 基类默认返回共享 <see cref="Binding.Binder"/>；CO/C# 子类各自返回 <see cref="Binding.CocoaBinder"/>/<see cref="Binding.CSharpBinder"/>。
-        /// 参数与 <see cref="Binding.Binder"/> 构造器一致；解析器（builtin type resolver）由各语言子类以自身
-        /// <see cref="LookupBuiltinType"/> 提供——保持 Binder 语言中性（M2 设计 X）。
+        /// 按本语言创建编译对象（S-4.2 Compilation 分家，对称 <see cref="CreateParser(SyntaxTree)"/>）。
+        /// CO/C# 子类各自返回 <see cref="CocoaCompilation"/>/<see cref="CSharpCompilation"/>（语言库内），
+        /// <see cref="Compilation.Create"/> 经此工厂分派，Core 不再直接实例化语言 Compilation 子类。
         /// </summary>
-        internal virtual Binding.Binder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
-        {
-            return new Binding.Binder(isScript, parent, function, references, usingNamespaces, builtinTypeResolver, usingStatics, usingAliases, codLibraries, globalNamespace);
-        }
+        internal abstract Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees);
+
+        /// <summary>
+        /// 按本语言创建绑定器（S-4.3b/c 分派：返回窄接口 <see cref="IBinder"/>，Core 共享服务经接口消费；
+        /// CO/C# 子类各自返回语言库 Binder 副本）。
+        /// </summary>
+        internal abstract IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null);
+
+        /// <summary>
+        /// 按本语言构建单态化重绑函数体（S-4.3b 分派：Core <see cref="Binder.Monomorphizer"/> 经此调用，
+        /// 语言子类委托各自语言库 Binder 的静态 <c>BuildFunctionBodyForMonomorphization</c>）。
+        /// </summary>
+        internal abstract (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, ImmutableArray<Coa.CoaProgram> codLibraries, Dictionary<string, Symbols.TypeSymbol> typeArgumentsByName);
     }
 }

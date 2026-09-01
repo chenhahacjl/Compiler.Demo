@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 文字表达式语法
+    /// 鏂囧瓧琛ㄨ揪寮忚娉?
     /// </summary>
     public sealed partial class LiteralExpressionSyntax : ExpressionSyntax
     {
@@ -21,5 +21,10 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken LiteralToken { get; }
         public object Value { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return LiteralToken;
+        }
     }
 }

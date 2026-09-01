@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 数组索引表达式语法：a[i]
+    /// 鏁扮粍绱㈠紩琛ㄨ揪寮忚娉曪細a[i]
     /// </summary>
     public sealed partial class ElementAccessExpressionSyntax : ExpressionSyntax
     {
@@ -20,5 +20,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken OpenBracketToken { get; }
         public ExpressionSyntax Index { get; }
         public SyntaxToken CloseBracketToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Expression;
+            yield return OpenBracketToken;
+            yield return Index;
+            yield return CloseBracketToken;
+        }
     }
 }

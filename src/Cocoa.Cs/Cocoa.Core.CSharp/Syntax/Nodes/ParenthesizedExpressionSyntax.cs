@@ -1,0 +1,32 @@
+﻿using Cocoa.CodeAnalysis.Syntax;
+
+namespace Cocoa.CodeAnalysis.CSharp.Syntax
+{
+    /// <summary>
+    /// 鎷彿琛ㄨ揪寮忚娉?
+    /// </summary>
+    public sealed partial class ParenthesizedExpressionSyntax : ExpressionSyntax
+    {
+        internal ParenthesizedExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken openParenthesisToken, ExpressionSyntax expression, SyntaxToken closeParenthesisToken)
+            : base(syntaxTree)
+        {
+            OpenParenthesisToken = openParenthesisToken;
+            Expression = expression;
+            CloseParenthesisToken = closeParenthesisToken;
+        }
+
+        public override CSharpSyntaxKind Kind => CSharpSyntaxKind.ParenthesizedExpression;
+
+        public SyntaxToken OpenParenthesisToken { get; }
+        public ExpressionSyntax Expression { get; }
+        public SyntaxToken CloseParenthesisToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return OpenParenthesisToken;
+            yield return Expression;
+            yield return CloseParenthesisToken;
+        }
+    }
+}
+

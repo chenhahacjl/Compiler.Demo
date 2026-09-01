@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 类型转换表达式语法 ( type ) expr
+    /// 绫诲瀷杞崲琛ㄨ揪寮忚娉?( type ) expr
     /// </summary>
     public sealed partial class CastExpressionSyntax : ExpressionSyntax
     {
@@ -20,5 +20,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken TypeName { get; }
         public SyntaxToken CloseParenthesisToken { get; }
         public ExpressionSyntax Expression { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return OpenParenthesisToken;
+            yield return TypeName;
+            yield return CloseParenthesisToken;
+            yield return Expression;
+        }
     }
 }

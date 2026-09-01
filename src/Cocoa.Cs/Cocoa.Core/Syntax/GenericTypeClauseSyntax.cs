@@ -1,10 +1,10 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 泛型类型语法（6e-M20）：`List&lt;int&gt;` / `List&lt;List&lt;int&gt;&gt;`。
-    /// 基类 Identifier 承载类型名（与 ArrayTypeClauseSyntax 同构），TypeArguments 为实参列表。
+    /// 娉涘瀷绫诲瀷璇硶锛?e-M20锛夛細`List&lt;int&gt;` / `List&lt;List&lt;int&gt;&gt;`銆?
+    /// 鍩虹被 Identifier 鎵胯浇绫诲瀷鍚嶏紙涓?ArrayTypeClauseSyntax 鍚屾瀯锛夛紝TypeArguments 涓哄疄鍙傚垪琛ㄣ€?
     /// </summary>
     public sealed partial class GenericTypeClauseSyntax : TypeClauseSyntax
     {
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ImmutableArray<TypeClauseSyntax> TypeArguments { get; }
         public SyntaxToken GreaterThanToken { get; }
 
-        /// <summary>调试显示名：`List<int>`（含嵌套/数组）。</summary>
+        /// <summary>璋冭瘯鏄剧ず鍚嶏細`List<int>`锛堝惈宓屽/鏁扮粍锛夈€?/summary>
         public string DisplayName
         {
             get
@@ -58,6 +58,21 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             return type.Identifier.Text;
+        }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (ColonToken != null)
+            {
+                yield return ColonToken;
+            }
+            yield return Identifier;
+            yield return LessThanToken;
+            foreach (var child in TypeArguments)
+            {
+                yield return child;
+            }
+            yield return GreaterThanToken;
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class EnumMemberSyntax : SyntaxNode
     {
@@ -15,5 +15,18 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken Identifier { get; }
         public SyntaxToken? EqualsToken { get; }
         public ExpressionSyntax? Value { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Identifier;
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            if (Value != null)
+            {
+                yield return Value;
+            }
+        }
     }
 }

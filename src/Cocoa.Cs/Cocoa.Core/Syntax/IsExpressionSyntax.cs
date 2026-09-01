@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// is 类型测试表达式（6e-M19 M5-b）：expr is TypeName → bool
+    /// is 绫诲瀷娴嬭瘯琛ㄨ揪寮忥紙6e-M19 M5-b锛夛細expr is TypeName 鈫?bool
     /// </summary>
     public sealed partial class IsExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Expression { get; }
         public SyntaxToken IsKeyword { get; }
         public SyntaxToken TypeName { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Expression;
+            yield return IsKeyword;
+            yield return TypeName;
+        }
     }
 }

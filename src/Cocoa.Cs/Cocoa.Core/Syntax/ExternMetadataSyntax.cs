@@ -1,10 +1,10 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// extern 元数据子句：`extern(entry = MessageBoxA, charset = ansi)`（括号可选，命名键值，逗号分隔）。
-    /// 6e-M17 Step 5：DLL 导出名别名（entry）+ 编码格式（charset）。
+    /// extern 鍏冩暟鎹瓙鍙ワ細`extern(entry = MessageBoxA, charset = ansi)`锛堟嫭鍙峰彲閫夛紝鍛藉悕閿€硷紝閫楀彿鍒嗛殧锛夈€?
+    /// 6e-M17 Step 5锛欴LL 瀵煎嚭鍚嶅埆鍚嶏紙entry锛? 缂栫爜鏍煎紡锛坈harset锛夈€?
     /// </summary>
     public sealed partial class ExternMetadataSyntax : SyntaxNode
     {
@@ -26,9 +26,26 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ImmutableArray<ExternMetadataArgumentSyntax> Arguments { get; }
 
         public SyntaxToken? CloseParenthesisToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return ExternKeyword;
+            if (OpenParenthesisToken != null)
+            {
+                yield return OpenParenthesisToken;
+            }
+            foreach (var child in Arguments)
+            {
+                yield return child;
+            }
+            if (CloseParenthesisToken != null)
+            {
+                yield return CloseParenthesisToken;
+            }
+        }
     }
 
-    /// <summary>extern 元数据键值对：`key = value`（如 `entry = MessageBoxA` / `charset = ansi`）。</summary>
+    /// <summary>extern 鍏冩暟鎹敭鍊煎锛歚key = value`锛堝 `entry = MessageBoxA` / `charset = ansi`锛夈€?/summary>
     public sealed partial class ExternMetadataArgumentSyntax : SyntaxNode
     {
         internal ExternMetadataArgumentSyntax(SyntaxTree syntaxTree, SyntaxToken key, SyntaxToken equalsToken, SyntaxToken value)
@@ -46,5 +63,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken EqualsToken { get; }
 
         public SyntaxToken Value { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Key;
+            yield return EqualsToken;
+            yield return Value;
+        }
     }
 }

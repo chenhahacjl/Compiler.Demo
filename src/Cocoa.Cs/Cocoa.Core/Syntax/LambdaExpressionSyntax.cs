@@ -1,9 +1,9 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// Lambda 表达式（6e-M22 C2）：`(x: int, y: int) =&gt; expr | { … }`、`() => expr`；
-    /// `.cs` 方言追加免括号单参 `x => expr`（OpenParenthesisToken 为 null）。
-    /// 绑定在 C3/C4 接入——C2 阶段 Binder 门禁报明确诊断。
+    /// Lambda 琛ㄨ揪寮忥紙6e-M22 C2锛夛細`(x: int, y: int) =&gt; expr | { 鈥?}`銆乣() => expr`锛?
+    /// `.cs` 鏂硅█杩藉姞鍏嶆嫭鍙峰崟鍙?`x => expr`锛圤penParenthesisToken 涓?null锛夈€?
+    /// 缁戝畾鍦?C3/C4 鎺ュ叆鈥斺€擟2 闃舵 Binder 闂ㄧ鎶ユ槑纭瘖鏂€?
     /// </summary>
     public sealed partial class LambdaExpressionSyntax : ExpressionSyntax
     {
@@ -20,19 +20,37 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public override SyntaxKind Kind => SyntaxKind.LambdaExpression;
 
-        /// <summary>参数列表开括号；null = 免括号单参形态（仅 .cs）。</summary>
+        /// <summary>鍙傛暟鍒楄〃寮€鎷彿锛沶ull = 鍏嶆嫭鍙峰崟鍙傚舰鎬侊紙浠?.cs锛夈€?/summary>
         public SyntaxToken? OpenParenthesisToken { get; }
 
         public SeparatedSyntaxList<ParameterSyntax> Parameters { get; }
 
         public SyntaxToken? CloseParenthesisToken { get; }
 
-        /// <summary>参数是否全部显式标注类型（C# 规则：任一显式则须全部显式）。</summary>
+        /// <summary>鍙傛暟鏄惁鍏ㄩ儴鏄惧紡鏍囨敞绫诲瀷锛圕# 瑙勫垯锛氫换涓€鏄惧紡鍒欓』鍏ㄩ儴鏄惧紡锛夈€?/summary>
         public bool HasExplicitParameterTypes { get; }
 
         public SyntaxToken ArrowToken { get; }
 
-        /// <summary>lambda 体：表达式或块语句。</summary>
+        /// <summary>lambda 浣擄細琛ㄨ揪寮忔垨鍧楄鍙ャ€?/summary>
         public SyntaxNode Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (OpenParenthesisToken != null)
+            {
+                yield return OpenParenthesisToken;
+            }
+            foreach (var child in Parameters.GetWithSeparators())
+            {
+                yield return child;
+            }
+            if (CloseParenthesisToken != null)
+            {
+                yield return CloseParenthesisToken;
+            }
+            yield return ArrowToken;
+            yield return Body;
+        }
     }
 }

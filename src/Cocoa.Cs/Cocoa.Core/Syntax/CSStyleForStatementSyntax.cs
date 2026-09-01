@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// C# 风格 for 循环 `for (init; cond; update) body`，三个部分均可省略。
+    /// C# 椋庢牸 for 寰幆 `for (init; cond; update) body`锛屼笁涓儴鍒嗗潎鍙渷鐣ャ€?
     /// </summary>
     public sealed partial class CSStyleForStatementSyntax : StatementSyntax
     {
@@ -40,5 +40,33 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax? Update { get; }
         public SyntaxToken CloseParenToken { get; }
         public StatementSyntax Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            yield return OpenParenToken;
+            if (Init != null)
+            {
+                yield return Init;
+            }
+            if (SemicolonToken1 != null)
+            {
+                yield return SemicolonToken1;
+            }
+            if (Condition != null)
+            {
+                yield return Condition;
+            }
+            if (SemicolonToken2 != null)
+            {
+                yield return SemicolonToken2;
+            }
+            if (Update != null)
+            {
+                yield return Update;
+            }
+            yield return CloseParenToken;
+            yield return Body;
+        }
     }
 }

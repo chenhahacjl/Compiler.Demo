@@ -1,6 +1,6 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
-    /// <summary>插值字符串中的字面量文本段（合成 StringToken，Value 为已处理转义后的文本）。</summary>
+    /// <summary>鎻掑€煎瓧绗︿覆涓殑瀛楅潰閲忔枃鏈锛堝悎鎴?StringToken锛孷alue 涓哄凡澶勭悊杞箟鍚庣殑鏂囨湰锛夈€?/summary>
     public sealed partial class InterpolatedStringTextSyntax : InterpolatedStringContentSyntax
     {
         internal InterpolatedStringTextSyntax(SyntaxTree syntaxTree, SyntaxToken textToken)
@@ -12,5 +12,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         public override SyntaxKind Kind => SyntaxKind.InterpolatedStringText;
 
         public SyntaxToken TextToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return TextToken;
+        }
     }
 }

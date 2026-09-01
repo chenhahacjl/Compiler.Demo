@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 属性访问器：`get { ... }` / `set { ... }`（`;` = 自动），可带可见性修饰符（`private set;`）。
+    /// 灞炴€ц闂櫒锛歚get { ... }` / `set { ... }`锛坄;` = 鑷姩锛夛紝鍙甫鍙鎬т慨楗扮锛坄private set;`锛夈€?
     /// </summary>
     public sealed partial class PropertyAccessorSyntax : SyntaxNode
     {
@@ -24,5 +24,22 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken? SemicolonToken { get; }
 
         public bool IsGet => Keyword.Kind == SyntaxKind.GetKeyword;
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            yield return Keyword;
+            if (Body != null)
+            {
+                yield return Body;
+            }
+            if (SemicolonToken != null)
+            {
+                yield return SemicolonToken;
+            }
+        }
     }
 }

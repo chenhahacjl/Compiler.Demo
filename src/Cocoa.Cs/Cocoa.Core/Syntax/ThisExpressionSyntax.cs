@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// this 表达式：`this._x` / `this.Method()`（显式实例引用）。
+    /// this 琛ㄨ揪寮忥細`this._x` / `this.Method()`锛堟樉寮忓疄渚嬪紩鐢級銆?
     /// </summary>
     public sealed partial class ThisExpressionSyntax : ExpressionSyntax
     {
@@ -14,5 +14,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         public override SyntaxKind Kind => SyntaxKind.ThisExpression;
 
         public SyntaxToken ThisKeyword { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return ThisKeyword;
+        }
     }
 }

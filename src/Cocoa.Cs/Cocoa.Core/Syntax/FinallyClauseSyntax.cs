@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class FinallyClauseSyntax : SyntaxNode
     {
@@ -13,5 +13,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken FinallyKeyword { get; }
         public BlockStatementSyntax Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return FinallyKeyword;
+            yield return Body;
+        }
     }
 }

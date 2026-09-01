@@ -1,6 +1,6 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
-    /// <summary>default 子句：`default : 体`。</summary>
+    /// <summary>default 瀛愬彞锛歚default : 浣揱銆?/summary>
     public sealed partial class DefaultClauseSyntax : SwitchSectionSyntax
     {
         internal DefaultClauseSyntax(SyntaxTree syntaxTree, SyntaxToken defaultKeyword, SyntaxToken colonToken, StatementSyntax body)
@@ -16,5 +16,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken DefaultKeyword { get; }
         public SyntaxToken ColonToken { get; }
         public StatementSyntax Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return DefaultKeyword;
+            yield return ColonToken;
+            yield return Body;
+        }
     }
 }

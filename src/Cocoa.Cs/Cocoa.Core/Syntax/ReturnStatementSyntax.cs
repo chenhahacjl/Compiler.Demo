@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class ReturnStatementSyntax : StatementSyntax
     {
@@ -13,5 +13,14 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken Keyword { get; }
         public ExpressionSyntax? Expression { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            if (Expression != null)
+            {
+                yield return Expression;
+            }
+        }
     }
 }

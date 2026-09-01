@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 成员访问表达式语法：arr.Length
+    /// 鎴愬憳璁块棶琛ㄨ揪寮忚娉曪細arr.Length
     /// </summary>
     public sealed partial class MemberAccessExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Expression { get; }
         public SyntaxToken DotToken { get; }
         public SyntaxToken IdentifierToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Expression;
+            yield return DotToken;
+            yield return IdentifierToken;
+        }
     }
 }

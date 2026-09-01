@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 三元表达式 `cond ? a : b`（右结合）
+    /// 涓夊厓琛ㄨ揪寮?`cond ? a : b`锛堝彸缁撳悎锛?
     /// </summary>
     public sealed partial class ConditionalExpressionSyntax : ExpressionSyntax
     {
@@ -22,5 +22,14 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax WhenTrue { get; }
         public SyntaxToken ColonToken { get; }
         public ExpressionSyntax WhenFalse { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Condition;
+            yield return QuestionToken;
+            yield return WhenTrue;
+            yield return ColonToken;
+            yield return WhenFalse;
+        }
     }
 }

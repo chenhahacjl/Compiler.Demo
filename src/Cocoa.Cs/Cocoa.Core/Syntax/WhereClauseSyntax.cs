@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 泛型约束子句（6e-M20）：`where T: IComparable&lt;T&gt;` / `where T: Base, IDisposable, new()`。
+    /// 娉涘瀷绾︽潫瀛愬彞锛?e-M20锛夛細`where T: IComparable&lt;T&gt;` / `where T: Base, IDisposable, new()`銆?
     /// </summary>
     public sealed partial class WhereClauseSyntax : SyntaxNode
     {
@@ -22,5 +22,16 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken Identifier { get; }
         public SyntaxToken ColonToken { get; }
         public ImmutableArray<TypeClauseSyntax> ConstraintTypes { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return WhereKeyword;
+            yield return Identifier;
+            yield return ColonToken;
+            foreach (var child in ConstraintTypes)
+            {
+                yield return child;
+            }
+        }
     }
 }

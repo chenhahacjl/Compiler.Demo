@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// using 导入（6e-M18）：`using MyLib` / `using static MyClass` / `using Alias = MyLib`
+    /// using 瀵煎叆锛?e-M18锛夛細`using MyLib` / `using static MyClass` / `using Alias = MyLib`
     /// </summary>
     public sealed partial class UsingDirectiveSyntax : MemberSyntax
     {
@@ -23,11 +23,36 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken? StaticKeyword { get; }
         public SyntaxToken? AliasToken { get; }
 
-        /// <summary>别名导入的 `=` 记号（`using Alias = Foo.Bar`；P0 起保留，绿往返完整）。</summary>
+        /// <summary>鍒悕瀵煎叆鐨?`=` 璁板彿锛坄using Alias = Foo.Bar`锛汸0 璧蜂繚鐣欙紝缁垮線杩斿畬鏁达級銆?/summary>
         public SyntaxToken? EqualsToken { get; }
         public ImmutableArray<SyntaxToken> NameTokens { get; }
 
         public string Name => string.Concat(NameTokens.Select(t => t.Text));
         public string Alias => AliasToken?.Text ?? "";
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            yield return UsingKeyword;
+            if (StaticKeyword != null)
+            {
+                yield return StaticKeyword;
+            }
+            if (AliasToken != null)
+            {
+                yield return AliasToken;
+            }
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            foreach (var child in NameTokens)
+            {
+                yield return child;
+            }
+        }
     }
 }

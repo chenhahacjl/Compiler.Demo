@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// foreach 循环：`foreach [var] x in collection`，括号与 `var` 均可选。
+    /// foreach 寰幆锛歚foreach [var] x in collection`锛屾嫭鍙蜂笌 `var` 鍧囧彲閫夈€?
     /// </summary>
     public sealed partial class ForeachStatementSyntax : StatementSyntax
     {
@@ -28,5 +28,26 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Collection { get; }
         public SyntaxToken? CloseParenToken { get; }
         public StatementSyntax Body { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            if (OpenParenToken != null)
+            {
+                yield return OpenParenToken;
+            }
+            if (VarKeyword != null)
+            {
+                yield return VarKeyword;
+            }
+            yield return Identifier;
+            yield return InKeyword;
+            yield return Collection;
+            if (CloseParenToken != null)
+            {
+                yield return CloseParenToken;
+            }
+            yield return Body;
+        }
     }
 }

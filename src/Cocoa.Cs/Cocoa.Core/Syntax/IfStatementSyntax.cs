@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class IfStatementSyntax : StatementSyntax
     {
@@ -17,5 +17,16 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Condition { get; }
         public StatementSyntax ThenStatement { get; }
         public ElseClauseSyntax? ElseClause { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            yield return Condition;
+            yield return ThenStatement;
+            if (ElseClause != null)
+            {
+                yield return ElseClause;
+            }
+        }
     }
 }

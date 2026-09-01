@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 后缀自增/自减表达式 `x++` / `x--`
+    /// 鍚庣紑鑷/鑷噺琛ㄨ揪寮?`x++` / `x--`
     /// </summary>
     public sealed partial class PostfixIncrementExpressionSyntax : ExpressionSyntax
     {
@@ -16,5 +16,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public ExpressionSyntax Operand { get; }
         public SyntaxToken OperatorToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Operand;
+            yield return OperatorToken;
+        }
     }
 }

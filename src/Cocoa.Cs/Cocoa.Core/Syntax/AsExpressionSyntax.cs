@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// as 类型转换表达式（6e-M19 M5-b）：expr as TypeName → TypeName（失败得 null）
+    /// as 绫诲瀷杞崲琛ㄨ揪寮忥紙6e-M19 M5-b锛夛細expr as TypeName 鈫?TypeName锛堝け璐ュ緱 null锛?
     /// </summary>
     public sealed partial class AsExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax Expression { get; }
         public SyntaxToken AsKeyword { get; }
         public SyntaxToken TypeName { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Expression;
+            yield return AsKeyword;
+            yield return TypeName;
+        }
     }
 }

@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public partial class TypeClauseSyntax : SyntaxNode
     {
@@ -13,5 +13,14 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken? ColonToken { get; }
         public SyntaxToken Identifier { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            if (ColonToken != null)
+            {
+                yield return ColonToken;
+            }
+            yield return Identifier;
+        }
     }
 }

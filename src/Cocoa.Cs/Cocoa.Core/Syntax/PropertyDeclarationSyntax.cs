@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 属性声明：`public property Name: string { get {...} set {...} }`（或自动 `{ get; set }`）。
+    /// 灞炴€у０鏄庯細`public property Name: string { get {...} set {...} }`锛堟垨鑷姩 `{ get; set }`锛夈€?
     /// </summary>
     public sealed partial class PropertyDeclarationSyntax : MemberSyntax
     {
@@ -38,5 +38,41 @@ namespace Cocoa.CodeAnalysis.Syntax
         public bool IsAuto => Getter?.Body == null && Setter?.Body == null;
 
         public bool HasInitializer => Initializer != null;
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            if (PropertyKeyword != null)
+            {
+                yield return PropertyKeyword;
+            }
+            yield return Identifier;
+            yield return Type;
+            yield return OpenBraceToken;
+            if (Getter != null)
+            {
+                yield return Getter;
+            }
+            if (Setter != null)
+            {
+                yield return Setter;
+            }
+            yield return CloseBraceToken;
+            foreach (var child in Parameters)
+            {
+                yield return child;
+            }
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            if (Initializer != null)
+            {
+                yield return Initializer;
+            }
+        }
     }
 }

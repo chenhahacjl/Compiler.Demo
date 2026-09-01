@@ -1,9 +1,9 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 类字段声明节点：`private _x: int`（或 C# 式 `private int _x;`，可带初始化器 `= expr`）。
+    /// 绫诲瓧娈靛０鏄庤妭鐐癸細`private _x: int`锛堟垨 C# 寮?`private int _x;`锛屽彲甯﹀垵濮嬪寲鍣?`= expr`锛夈€?
     /// </summary>
     public sealed partial class ClassFieldDeclarationSyntax : MemberSyntax
     {
@@ -24,5 +24,23 @@ namespace Cocoa.CodeAnalysis.Syntax
         public ExpressionSyntax? Initializer { get; }
 
         public bool HasInitializer => Initializer != null;
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            foreach (var child in Modifiers)
+            {
+                yield return child;
+            }
+            yield return Identifier;
+            yield return Type;
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            if (Initializer != null)
+            {
+                yield return Initializer;
+            }
+        }
     }
 }

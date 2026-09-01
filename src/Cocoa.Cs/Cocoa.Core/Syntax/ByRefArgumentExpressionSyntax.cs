@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// byref 实参表达式：`out x` / `ref arr[i]`（6e-M23 R1；仅调用实参位合法，绑定层校验）。
+    /// byref 瀹炲弬琛ㄨ揪寮忥細`out x` / `ref arr[i]`锛?e-M23 R1锛涗粎璋冪敤瀹炲弬浣嶅悎娉曪紝缁戝畾灞傛牎楠岋級銆?
     /// </summary>
     public sealed partial class ByRefArgumentExpressionSyntax : ExpressionSyntax
     {
@@ -18,5 +18,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         public bool IsRef => Keyword.Kind == SyntaxKind.RefKeyword;
 
         public ExpressionSyntax Expression { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            yield return Expression;
+        }
     }
 }

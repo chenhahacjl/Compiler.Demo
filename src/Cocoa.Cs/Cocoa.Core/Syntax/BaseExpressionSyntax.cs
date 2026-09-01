@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// base 表达式：`base.Method()`（非虚调用基类成员）。
+    /// base 琛ㄨ揪寮忥細`base.Method()`锛堥潪铏氳皟鐢ㄥ熀绫绘垚鍛橈級銆?
     /// </summary>
     public sealed partial class BaseExpressionSyntax : ExpressionSyntax
     {
@@ -14,5 +14,10 @@ namespace Cocoa.CodeAnalysis.Syntax
         public override SyntaxKind Kind => SyntaxKind.BaseExpression;
 
         public SyntaxToken BaseKeyword { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return BaseKeyword;
+        }
     }
 }

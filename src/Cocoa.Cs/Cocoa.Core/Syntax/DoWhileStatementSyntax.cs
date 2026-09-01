@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class DoWhileStatementSyntax : StatementSyntax
     {
@@ -17,5 +17,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         public StatementSyntax Body { get; }
         public SyntaxToken WhileKeyword { get; }
         public ExpressionSyntax Condition { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return DoKeyword;
+            yield return Body;
+            yield return WhileKeyword;
+            yield return Condition;
+        }
     }
 }

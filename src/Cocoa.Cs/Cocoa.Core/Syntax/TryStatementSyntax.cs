@@ -1,4 +1,4 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
@@ -20,5 +20,19 @@ namespace Cocoa.CodeAnalysis.Syntax
         public BlockStatementSyntax TryBlock { get; }
         public ImmutableArray<CatchClauseSyntax> Catches { get; }
         public FinallyClauseSyntax? Finally { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            yield return TryBlock;
+            foreach (var child in Catches)
+            {
+                yield return child;
+            }
+            if (Finally != null)
+            {
+                yield return Finally;
+            }
+        }
     }
 }

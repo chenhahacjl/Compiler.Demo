@@ -1,8 +1,8 @@
-using System.Collections.Immutable;
+﻿using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Syntax
 {
-    /// <summary>switch 语句：`switch (value) { case ...: ... default: ... }`。</summary>
+    /// <summary>switch 璇彞锛歚switch (value) { case ...: ... default: ... }`銆?/summary>
     public sealed partial class SwitchStatementSyntax : StatementSyntax
     {
         internal SwitchStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, SyntaxToken? openParenToken, ExpressionSyntax expression, SyntaxToken? closeParenToken, SyntaxToken openBraceToken, ImmutableArray<SwitchSectionSyntax> sections, SyntaxToken closeBraceToken)
@@ -26,5 +26,25 @@ namespace Cocoa.CodeAnalysis.Syntax
         public SyntaxToken OpenBraceToken { get; }
         public ImmutableArray<SwitchSectionSyntax> Sections { get; }
         public SyntaxToken CloseBraceToken { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return Keyword;
+            if (OpenParenToken != null)
+            {
+                yield return OpenParenToken;
+            }
+            yield return Expression;
+            if (CloseParenToken != null)
+            {
+                yield return CloseParenToken;
+            }
+            yield return OpenBraceToken;
+            foreach (var child in Sections)
+            {
+                yield return child;
+            }
+            yield return CloseBraceToken;
+        }
     }
 }

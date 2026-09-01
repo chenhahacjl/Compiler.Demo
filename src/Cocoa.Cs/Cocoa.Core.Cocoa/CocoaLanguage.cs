@@ -1,6 +1,9 @@
+using Cocoa.CodeAnalysis.Binding;
+using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis
@@ -40,20 +43,27 @@ namespace Cocoa.CodeAnalysis
             _ => null,
         };
 
-        /// <summary>CO 绑定器（P1-B CO 显式化：CO 专属绑定语义随分叉落位于 <see cref="Binding.CocoaBinder"/>）。</summary>
-        internal override Binding.Binder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, System.Collections.Immutable.ImmutableArray<string> references, System.Collections.Immutable.ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, System.Collections.Immutable.ImmutableArray<string> usingStatics = default, System.Collections.Immutable.ImmutableDictionary<string, string> usingAliases = null, System.Collections.Immutable.ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
-            => new Binding.CocoaBinder(isScript, parent, function, references, usingNamespaces, usingStatics, usingAliases, codLibraries, globalNamespace);
+        /// <summary>CO 绑定器（S-4.3c 分派：返回语言库独立副本，Core 经 <see cref="IBinder"/> 窄接口消费）。</summary>
+        internal override IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, System.Collections.Immutable.ImmutableArray<string> references, System.Collections.Immutable.ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, System.Collections.Immutable.ImmutableArray<string> usingStatics = default, System.Collections.Immutable.ImmutableDictionary<string, string> usingAliases = null, System.Collections.Immutable.ImmutableArray<Coa.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null)
+            => new global::Cocoa.CodeAnalysis.Cocoa.Binding.CocoaBinder(isScript, parent, function, references, usingNamespaces, builtinTypeResolver, usingStatics, usingAliases, codLibraries, globalNamespace);
+
+        internal override (Binding.BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, Binding.BoundScope parentScope, Symbols.FunctionSymbol function, Binding.BoundGlobalScope globalScope, System.Collections.Immutable.ImmutableArray<Coa.CoaProgram> codLibraries, Dictionary<string, TypeSymbol> typeArgumentsByName)
+            => global::Cocoa.CodeAnalysis.Cocoa.Binding.CocoaBinder.BuildFunctionBodyForMonomorphization(isScript, parentScope, function, globalScope, codLibraries, this, typeArgumentsByName);
 
         internal override IParser CreateParser(SyntaxTree syntaxTree) => new CocoaParser(syntaxTree);
 
         internal override IParser CreateParser(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> tokens)
             => new CocoaParser(syntaxTree, tokens);
 
-        /// <summary>CO 词法分析器（P1-E-2e Lexer 分家）。</summary>
-        internal override Syntax.Lexer CreateLexer(SyntaxTree syntaxTree)
+        /// <summary>CO 词法分析器（S-2 Lexer 分家：CO 专属词法逻辑随语言库落位）。</summary>
+        internal override ILexer CreateLexer(SyntaxTree syntaxTree)
             => new CocoaLexer(syntaxTree);
 
-        internal override Syntax.Lexer CreateLexer(SyntaxTree syntaxTree, int start)
+        internal override ILexer CreateLexer(SyntaxTree syntaxTree, int start)
             => new CocoaLexer(syntaxTree, start);
+
+        /// <summary>CO 编译对象（S-4.2 Compilation 分家：CocoaCompilation 随语言库落位）。</summary>
+        internal override Compilation CreateCompilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically, SyntaxTree[] syntaxTrees)
+            => new CocoaCompilation(isScript, previous, entryPointName, references, linkCodDynamically, syntaxTrees);
     }
 }

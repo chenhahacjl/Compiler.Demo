@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Syntax
+﻿namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed partial class ElseClauseSyntax : SyntaxNode
     {
@@ -13,5 +13,11 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public SyntaxToken ElseKeyword { get; }
         public StatementSyntax ElseStatement { get; }
+
+        public override IEnumerable<SyntaxNode> GetChildren()
+        {
+            yield return ElseKeyword;
+            yield return ElseStatement;
+        }
     }
 }
