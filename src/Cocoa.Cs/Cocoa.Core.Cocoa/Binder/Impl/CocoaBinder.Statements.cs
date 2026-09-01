@@ -525,7 +525,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         }
 
         /// <summary>Monomorphizer 专用：泛型类型名绑定（new/调用站点的 Identifier+实参列表，命中同一缓存壳）。</summary>
-        public TypeSymbol? BindGenericTypeNameForExpansion(SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses) => BindGenericTypeName(identifier, argumentClauses);
+        public TypeSymbol? BindGenericTypeNameForExpansion(SyntaxToken identifier, ImmutableArray<SyntaxNode> argumentClauses)
+            => BindGenericTypeName(identifier, argumentClauses.Cast<TypeClauseSyntax>().ToImmutableArray());
 
         /// <summary>
         /// 泛型类型子句绑定（6e-M20）：`List&lt;int&gt;` / 嵌套 `List&lt;List&lt;int&gt;&gt;` → 泛型名解析核心。

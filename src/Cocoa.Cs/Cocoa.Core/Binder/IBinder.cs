@@ -14,6 +14,6 @@ namespace Cocoa.CodeAnalysis.Binding
     {
         void RegisterSourceGenericDefinitionsForSeed(BoundGlobalScope globalScope);
         void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CoaProgram> libraries);
-        TypeSymbol? BindGenericTypeNameForExpansion(SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses);
+        TypeSymbol? BindGenericTypeNameForExpansion(SyntaxToken identifier, ImmutableArray<SyntaxNode> argumentClauses);
     }
 }

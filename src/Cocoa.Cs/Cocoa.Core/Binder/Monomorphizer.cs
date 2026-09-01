@@ -3,6 +3,7 @@ using Cocoa.CodeAnalysis.Coa;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Binding
 {    /// <summary>
@@ -39,7 +40,7 @@ namespace Cocoa.CodeAnalysis.Binding
 
             foreach (var (identifier, argumentClauses) in CollectGenericUsages(globalScope))
             {
-                var result = helperBinder.BindGenericTypeNameForExpansion(identifier, argumentClauses);
+                var result = helperBinder.BindGenericTypeNameForExpansion(identifier, argumentClauses.Cast<SyntaxNode>().ToImmutableArray());
                 if (result is InstantiatedTypeSymbol instantiated)
                 {
                     seeded.Add(instantiated);
