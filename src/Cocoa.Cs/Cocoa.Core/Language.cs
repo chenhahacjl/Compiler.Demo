@@ -95,6 +95,16 @@ namespace Cocoa.CodeAnalysis
         /// 供参数绿往返源序化（ParameterSyntax.IsTypeFirst）判别。</summary>
         public virtual bool ParametersAreTypeFirst => false;
 
+        /// <summary>
+        /// 关键字识别（P1-A 词法分家）：文本 → 关键字 kind，未命中返回 <see cref="SyntaxKind.IdentifierToken"/>。
+        /// 基类 = 共享关键字表（<see cref="SyntaxFacts.GetKeywordKind"/>）；
+        /// 语言专属表经 override 排除对方语言独占词（C# 侧 CO 词在 P1-A(ii) 回落标识符）。
+        /// </summary>
+        public virtual SyntaxKind GetKeywordKind(string text)
+        {
+            return SyntaxFacts.GetKeywordKind(text);
+        }
+
         /// <summary>按本语言创建解析器（完整树）。</summary>
         internal abstract IParser CreateParser(SyntaxTree syntaxTree);
 

@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -22,6 +23,13 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.True(!tree.Diagnostics.Any(d => d.IsError), string.Join("; ", tree.Diagnostics.Select(d => d.Message)));
             var root = tree.Root;
             return root.DescendantNodesAndSelf().Select(n => n.Kind).ToImmutableList();
+        }
+
+        /// <summary>P1-A：C# 语言关键字表对指定 kind 的分类（应为回落/共享）；经 <see cref="Language.GetOrThrow"/> 取已注册 C# 语言实例。</summary>
+        private static SyntaxKind CSharpLanguageKeywordKind(SyntaxKind keywordKind)
+        {
+            var language = Language.GetOrThrow("csharp");
+            return language.GetKeywordKind(keywordKind.ToString());
         }
 
         /// <summary>每个 CO 专属关键字在 C# 方言中的触发性拒绝片段（上下文 = 该关键字惯用位置）。</summary>
@@ -93,16 +101,29 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
-        public void CocoaOnlyKeywords_RejectedInCs()
+        public void CocoaOnlyKeywords_FallBackToIdentifierInCs()
         {
-            // 归属表与 C# 方言行为一致性：每个 CocoaOnly 关键字在 C# 惯用位置必产生至少一条错误
+            // P1-A 词法分家行为反转：CO 专属关键字在 `.cs` 词法表回落为标识符（SyntaxFacts 共享表 → CSharpLanguage 排除）。
+            // 每个 CO 独占词在 C# 中可作普通标识符（文档 Phase 3：CO 词在 C# 可作标识符，反之亦然）。
             foreach (var (keyword, snippet) in CocoaOnlyKeywordSnippets)
             {
-                var tree = SyntaxTree.ParseCs(snippet);
-                Assert.True(
-                    tree.Diagnostics.Any(d => d.IsError),
-                    $"C# 方言应拒绝 CO 专属关键字 {keyword}：\n{snippet}");
+                Assert.Equal(SyntaxKind.IdentifierToken, CSharpLanguageKeywordKind(keyword));
             }
+
+            // 惯用位置不再产生专属"不支持 CO 关键字"诊断（错与对：回落为标识符后走 C# 语法自然路径）
+            var cs = SyntaxTree.ParseCs("class P { static void M() { let x = 1; } }");
+            Assert.False(cs.Diagnostics.Any(d => d.IsError), $"C# 中 CO 词回落为标识符后不应报错: {string.Join("; ", cs.Diagnostics.Select(d => d.Message))}");
+        }
+
+        [Fact]
+        public void CocoaOnlyKeywords_UsableAsCsIdentifiers()
+        {
+            // 12 个 CO 独占词全部可作 C# 普通标识符（编译 0 错误）
+            var cs = SyntaxTree.ParseCs(
+                "class P { int function = 1; int let = 2; int property = 3; int constructor = 4; " +
+                "int extends = 5; int facade = 6; int syscall = 7; int cdecl = 8; int stdcall = 9; " +
+                "int import = 10; int to = 11; int step = 12; }");
+            Assert.False(cs.Diagnostics.Any(d => d.IsError), string.Join("; ", cs.Diagnostics.Select(d => d.Message)));
         }
 
         [Fact]
@@ -122,11 +143,11 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
-        public void CoOwnedKeywords_RejectedInCs()
+        public void CoOwnedKeywords_FallBackToIdentifierInCs()
         {
-            // CO 专属关键字：function / let / property / constructor / extends / facade / syscall / import / to / step
-            var cs = SyntaxTree.ParseCs("function F() { let x = 1 }");
-            Assert.True(cs.Diagnostics.Any(d => d.IsError), "C# 方言应拒绝 CO 专属关键字（function/let）。");
+            // P1-A 行为反转：CO 专属关键字 function/let 在 `.cs` 词法表回落为标识符，不再被专属拒绝。
+            var cs = SyntaxTree.ParseCs("class P { static void M() { int let = 1; int function = 2; print(let + function); } }");
+            Assert.False(cs.Diagnostics.Any(d => d.IsError), string.Join("; ", cs.Diagnostics.Select(d => d.Message)));
         }
 
         [Fact]

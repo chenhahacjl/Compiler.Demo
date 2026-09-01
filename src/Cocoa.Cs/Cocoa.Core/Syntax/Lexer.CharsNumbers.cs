@@ -348,7 +348,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             var length = _position - _start;
             var text = _text.ToString(_start, length);
 
-            _kind = SyntaxFacts.GetKeywordKind(text);
+            // P1-A 词法分家：关键字识别经语言专属表（CO 表 = 共享全表；C# 表在 P1-A(ii) 排除 CO 独占词）
+            _kind = _syntaxTree.Language.GetKeywordKind(text);
         }
     }
 }

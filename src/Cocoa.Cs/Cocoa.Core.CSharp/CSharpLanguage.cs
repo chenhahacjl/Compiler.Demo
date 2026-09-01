@@ -22,6 +22,19 @@ namespace Cocoa.CodeAnalysis
         /// <summary>`.cs` 参数为类型前置 `int x`（参数绿往返源序化依据）。</summary>
         public override bool ParametersAreTypeFirst => true;
 
+        /// <summary>
+        /// 关键字识别（P1-A 词法分家）：C# 表 = 共享全表减去 CO 独占词。
+        /// CO 独占关键字（function/let/property/constructor/extends/facade/syscall/import/to/step/cdecl/stdcall）
+        /// 在 `.cs` 中回落为 <see cref="SyntaxKind.IdentifierToken"/>（文档 Phase 3：CO 词在 C# 可作标识符，反之亦然）。
+        /// </summary>
+        public override SyntaxKind GetKeywordKind(string text)
+        {
+            var kind = base.GetKeywordKind(text);
+            return SyntaxKindLanguageOwnership.Ownership(kind) == SyntaxLanguageOwnership.CocoaOnly
+                ? SyntaxKind.IdentifierToken
+                : kind;
+        }
+
         protected override TypeSymbol? LookupSpecificBuiltinType(string name) => name switch
         {
             "int" => TypeSymbol.Int32,

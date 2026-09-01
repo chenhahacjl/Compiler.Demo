@@ -22,14 +22,12 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             return SyntaxTree.Parse(text).Diagnostics;
         }
 
-        // ---- 扩展名分派：Cocoa 专属拼写在 .cs 报错、.co 不报错 ----
+        // ---- 扩展名分派：Cocoa 拼写在 .cs 回落为标识符（P1-A 词法分家后），语法残余报错路径各归其语言 ----
 
         [Theory]
-        [InlineData("function Add(a: int, b: int): int { return a + b }", "function 关键字")]
-        [InlineData("let x = 5", "let")]
-        [InlineData("var x: int = 5", "类型后置")]
-        [InlineData("print(1)", "缺少分号")]
-        public void Cs_RejectsCocoaSyntax_CoAccepts(string text, string _)
+        [InlineData("var x: int = 5")]
+        [InlineData("print(1)")]
+        public void Cs_RejectsCocoaSyntax_CoAccepts(string text)
         {
             var csDiagnostics = ParseCsDiagnostics(text);
             Assert.True(csDiagnostics.Any(), $"`.cs` 应对 Cocoa 拼写报错: {text}");
@@ -37,6 +35,18 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
             var coDiagnostics = ParseCocoaDiagnostics(text);
             Assert.False(coDiagnostics.HasErrors(), $"`.co` 不应报错: {text}");
+        }
+
+        [Fact]
+        public void Cs_CocoaKeywords_FallBackToIdentifier()
+        {
+            // P1-A 行为反转：CO 专属关键字在 `.cs` 回落为标识符，可作普通变量名。
+            // 注意：`let x = 5` 在 C# 中现为 `Syntax var let` 式声明形态（0 错误）；function 同理。
+            var letDiagnostics = ParseCsDiagnostics("class P { static void M() { let x = 5; } }");
+            Assert.False(letDiagnostics.HasErrors(), $"`.cs` 中 `let` 回落为标识符不应报错: {string.Join("; ", letDiagnostics.Select(d => d.Message))}");
+
+            var fnIdentDiagnostics = ParseCsDiagnostics("class P { int function = 1; }");
+            Assert.False(fnIdentDiagnostics.HasErrors(), $"`.cs` 中 `function` 回落为标识符不应报错: {string.Join("; ", fnIdentDiagnostics.Select(d => d.Message))}");
         }
 
         // ---- 严格接受：合法 C# 子集无诊断 ----
@@ -59,18 +69,30 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.False(ParseCsDiagnostics(text).HasErrors(), $"`.cs` 合法子集不应报错: {text}");
         }
 
-        // ---- extends 继承关键字拒绝 ----
+        // ---- extends 继承关键字回落为标识符（P1-A 词法分家） ----
 
         [Theory]
         [InlineData("public class Foo extends Bar { }")]
         [InlineData("public interface IB extends IA { }")]
         [InlineData("public class Foo { public constructor() extends base() { } }")]
-        public void Cs_RejectsExtendsKeyword(string text)
+        public void Cs_ExtendsNoLongerSpecialKeyword(string text)
         {
-            var diagnostics = ParseCsDiagnostics(text);
-            Assert.True(diagnostics.Any(d => d.Message.Contains("extends")), $".cs 应拒绝 extends: {text}");
+            // 行为反转：`extends` 在 `.cs` 词法表回落为标识符，不再产生专属"不支持 extends"诊断；
+            // 语法残余（extends 作为不入流的成员）走 C# 通用错误路径。此处仅锁定"专属消息已消失"。
+            var csDiagnostics = ParseCsDiagnostics(text);
+            Assert.False(
+                csDiagnostics.Any(d => d.Message.Contains("extends")),
+                $".cs 不应再有专属 'extends' 拒绝消息（回落为标识符）: {text}");
 
             Assert.False(ParseCocoaDiagnostics(text).HasErrors(), $".co 应接受 extends: {text}");
+        }
+
+        [Fact]
+        public void Cs_ExtendsKeyword_UsableAsIdentifier()
+        {
+            // 回落契约：`extends` 在 C# 可作普通标识符（0 错误）
+            var text = "class P { int extends = 1; }";
+            Assert.False(ParseCsDiagnostics(text).HasErrors(), string.Join("; ", ParseCsDiagnostics(text).Select(d => d.Message)));
         }
 
         [Fact]
