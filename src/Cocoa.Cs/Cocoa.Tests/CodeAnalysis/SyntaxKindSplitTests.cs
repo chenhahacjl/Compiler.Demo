@@ -118,5 +118,28 @@ namespace Cocoa.Tests.CodeAnalysis
                     Assert.Equal((CSharpSyntaxKind)token.Kind, token.CSharpKind());
             }
         }
+
+        [Fact]
+        public void CoRangeFor_IsCocoaSyntaxKind_NotCSharp()
+        {
+            // 端到端 kind 隔离：CO `for i = 0 to n` 经 CocoaKind() 得 CocoaSyntaxKind.ForStatement，
+            // 且 C# 枚举侧无该成员（值域占位但语义归 CO）
+            var tree = SyntaxTree.Parse("function Main(): i32 { for i = 0 to 3 { } return 0 }");
+            var forNode = tree.Root.DescendantNodesAndSelf()
+                .First(n => n.CocoaKind() == CocoaSyntaxKind.ForStatement);
+            Assert.NotNull(forNode);
+            Assert.Equal(CocoaSyntaxKind.ForStatement, forNode.CocoaKind());
+        }
+
+        [Fact]
+        public void CsStyleFor_IsCSharpSyntaxKind_NotCocoa()
+        {
+            // 端到端 kind 隔离：C# `for(;;)` 经 CSharpKind() 得 CSharpSyntaxKind.CSStyleForStatement
+            var tree = SyntaxTree.ParseCs("class P { static void Main() { for (int i = 0; i < 3; i++) { } } }");
+            var forNode = tree.Root.DescendantNodesAndSelf()
+                .First(n => n.CSharpKind() == CSharpSyntaxKind.CSStyleForStatement);
+            Assert.NotNull(forNode);
+            Assert.Equal(CSharpSyntaxKind.CSStyleForStatement, forNode.CSharpKind());
+        }
     }
 }
