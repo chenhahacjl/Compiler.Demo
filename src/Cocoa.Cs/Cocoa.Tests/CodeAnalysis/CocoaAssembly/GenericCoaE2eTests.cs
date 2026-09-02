@@ -13,7 +13,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Tests.CodeAnalysis.Emit.IL;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Coa
+namespace Cocoa.Tests.CodeAnalysis.CocoaAssembly
 {
     /// <summary>
     /// G7 用户泛型库端到端：泛型定义经 .coa 携带（gcls/tpar/fld/fn+开放体）→ 消费方实例化单态化 ×三后端。
@@ -93,7 +93,7 @@ function Main(): void
             var dir = NewDir();
             var codPath = EmitGenericLibrary(dir);
 
-            var lib = global::Cocoa.CodeAnalysis.Coa.CoaSerializer.Load(codPath);
+            var lib = global::Cocoa.CodeAnalysis.CocoaAssembly.CoaSerializer.Load(codPath);
             var def = lib.GenericDefinitions.Single();
             var ctorDef = def.Methods.Single(m => m.IsConstructor);
 

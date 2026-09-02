@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Coa
+namespace Cocoa.CodeAnalysis.CocoaAssembly
 {
     /// <summary>
     /// `.coa` 库的托管产物命名规则（动态链接阶段 A）：

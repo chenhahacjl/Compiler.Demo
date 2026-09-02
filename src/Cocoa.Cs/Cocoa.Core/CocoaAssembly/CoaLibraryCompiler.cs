@@ -4,7 +4,7 @@ using Cocoa.CodeAnalysis.Lowering;
 using System.Collections.Immutable;
 using System.IO;
 
-namespace Cocoa.CodeAnalysis.Coa
+namespace Cocoa.CodeAnalysis.CocoaAssembly
 {
     /// <summary>
     /// `.coa` → 托管库 dll 发射（动态链接阶段 A1）：加载语义层程序集，直接构造无入口的

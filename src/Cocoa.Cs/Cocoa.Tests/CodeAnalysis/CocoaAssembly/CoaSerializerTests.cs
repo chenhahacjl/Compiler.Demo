@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.CocoaAssembly;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Coa
+namespace Cocoa.Tests.CodeAnalysis.CocoaAssembly
 {
     /// <summary>
     /// cod 库相关测试串行集合：成员测试会改写进程级 COCOA_STDLIB 并 Reset stdlib，

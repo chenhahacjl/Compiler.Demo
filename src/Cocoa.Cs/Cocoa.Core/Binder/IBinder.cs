@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.CocoaAssembly;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;

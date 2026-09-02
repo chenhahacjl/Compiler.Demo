@@ -7,7 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Coa
+namespace Cocoa.CodeAnalysis.CocoaAssembly
 {
     /// <summary>
     /// `.coa` 鐠囶厺绠熺仦鍌氱碍閸掓瀵查崳顭掔窗缁楋箑褰跨悰?+ 闂勫秶楠?BoundProgram閿涘牆鍤遍弫棰佺秼閿涘鏋冮張?round-trip閵?

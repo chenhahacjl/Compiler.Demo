@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.CocoaAssembly;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -82,7 +82,7 @@ namespace Cocoa.CodeAnalysis
                 {
                     // 程序集名 = 库名 + .Managed 后缀（动态链接 AssemblyRef 与按需生成部署依据，阶段 A）
                     var baseName = Path.GetFileNameWithoutExtension(file);
-                    program.Name = Coa.CoaAssemblyNaming.ManagedAssemblyName(baseName);
+                    program.Name = CocoaAssembly.CoaAssemblyNaming.ManagedAssemblyName(baseName);
                     program.SourcePath = Path.GetFullPath(file);
                     builder.Add(program);
                     loaded.Add(program);

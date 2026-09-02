@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.CocoaAssembly;
 using Cocoa.CodeAnalysis.CSharp.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;

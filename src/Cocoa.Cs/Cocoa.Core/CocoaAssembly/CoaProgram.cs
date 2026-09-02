@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Coa
+namespace Cocoa.CodeAnalysis.CocoaAssembly
 {
     /// <summary>
     /// `.coa` 程序集的内存模型：符号表 + 函数体（语义层 BoundProgram 片段）+ 依赖清单。

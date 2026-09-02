@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.CocoaAssembly;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using SSyntax = Cocoa.CodeAnalysis.Syntax;
