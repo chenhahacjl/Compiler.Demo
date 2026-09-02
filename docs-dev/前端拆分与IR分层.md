@@ -18,8 +18,9 @@
 | 双 Compilation | ✅ 已完成 | `CocoaCompilation`/`CSharpCompilation` 迁语言库；`Language.CreateCompilation` 工厂；`Compilation` 抽象 `BindGlobalScope`/`BindProgram`（S-4.2~4.3a） |
 | Parser 产出语言节点 | ✅ 已完成 | **S-5 原子切换（793e016）**：`SyntaxTree.Root`/`IParser`/`ParseHandler` 语言中性化（抽象 `SyntaxNode`）；`CocoaParser`/`CSharpParser` 迁语言命名空间产出语言节点；Binder 副本切语言节点（`SSyntax` 别名 + 节点 kind 改语言枚举，token 判断保留共享 `SyntaxKind`）；消费者（Compilation/CocoaRepl/NativeImportValidator/DiagnosticBag）经语言钩子分派；`GreenNode.CreateTypedRed` 随迁语言库（CocoaGreenNodeFactory/CSharpGreenNodeFactory）；删除共享 75 节点类（`SyntaxNode.Kind` 改经抽象 `RawKind:int` 具名）；测试迁移 388 处引用 |
 | 每语言 Lower | ✅ 完成（S-6 收口） | 共享 Core 默认采用 Cocoa 语法——`BoundForRangeStatement`（原 range-for，CO 次数循环内部名 forrange）保留 Core，共享 `Lowerer.RewriteForRangeStatement` 降级；**不建语言专属 Lower**。定稿：**CO 具备双形态 for**——C 风格 `for (init; cond; update)`（逗号多 init/update，与 C# 共用 `SyntaxKind.ForStatement`=159）与 `for N to M [step k]`（range，`SyntaxKind.ForRangeStatement`=161，internal ForRangeStatementSyntax/BoundForRangeStatement/ForRangeStatementSyntax）；C 风格 for 两语言绑定期各自脱糖为 while/if/goto（§5 Phase 1c） |
+| HIR/LIR 分层命名 + `.coa` 存 HIR | 📝 已定稿（S-7，待实施） | **三层语义**：HIR=绑定后未降级树（for/while/if 保留，`.coa` 持久化）；MIR=Lowerer（Hir→Mir）输出的 goto 化规范树（`program.Functions` 契约，三后端/求值器消费，`CanonicalIr.Verify` 校验）；LIR=3 地址码（仅 native）。实施拆分见 [`docs-dev/S7-HIRLIR.md`](S7-HIRLIR.md) |
 
-全量回归 41808 绿。S-6（方言构造收口）已完成：共享 Core 默认 Cocoa 语法、CO 双形态 for（C 风格 + range 内部名 forrange）、C# 仅 C 风格 for。
+全量回归 41808 绿。S-6（方言构造收口）已完成。S-7 已定稿待实施：`.coa` 存 HIR（结构化）、三层命名 HIR/MIR/LIR、`BoundTreeToIr→MirToLir`/`IrToAssembler→LirToAssembler`/`RuntimeEmitterIR→RuntimeEmitterLir`/LIR 数据节点全族 `Lir*`。
 
 ---
 
@@ -52,9 +53,10 @@
 | 6 | 命名 | 采纳 HIR / MIR / LIR（对齐 Rust，避开 LLVM 撞名） |
 | 7 | 再简化 | 删除"绑定输出"的 HIR 命名；MIR 标定为 HIR → 最终 HIR + LIR 两层 |
 | 8 | 每语言 lower | 原案每门语言一个专属 Lower，把方言构造统一为共享规范高节点；**S-6 定稿：共享 Core 默认采用 Cocoa 语法**，range（`BoundForRangeStatement`/`RewriteForRangeStatement`）保留 Core，C 风格 for 两语言绑定期各自脱糖为 while，**不建语言专属 Lower**；CO 双形态 for（C 风格 + range），C# 仅 C 风格 |
-| 9 | `.coa` | 双向：库构建 →.coa，消费构建 .coa→ 合并（不是输出专属） |
-| 10 | LIR 是否也发 IL | 否。IL 吃 HIR（= Roslyn bound→CIL 做法）；LIR 仅 native（= RyuJIT 内部私有） |
+| 9 | `.coa` | 双向：库构建 →.coa，消费构建 .coa→ 合并（不是输出专属）；**S-7 定稿：存 HIR（结构化，for/while/if 保留）**，消费方链接时统一 Lower 成 MIR 后再分发三后端 |
+| 10 | LIR 是否也发 IL | 否。IL 吃 MIR（`program.Functions` 规范树，Roslyn bound→CIL 同构）；LIR 仅 native（= RyuJIT 内部私有） |
 | 11 | 与 .NET 对应 | 底层 IR 由 native 后端自己做（编译期 AOT），结构同构 RyuJIT |
+| 12 | **S-7：IR 分层语义修正** | 恢复**三层清晰命名**：HIR=绑定后未降级树（`.coa` 持久化）；MIR=Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions`，`CanonicalIr.Verify` 契约）；LIR=3 地址码（native 私有）。命名：`BoundTreeToIr→MirToLir`、`IrToAssembler→LirToAssembler`、`RuntimeEmitterIR→RuntimeEmitterLir`、LIR 数据节点全族 `Ir*→Lir*`；**MIR 不落盘**（仅内存流转，debug 可环境变量 dump）。详见 [`docs-dev/S7-HIRLIR.md`](S7-HIRLIR.md) |
 
 ---
 
@@ -63,18 +65,22 @@
 ```
 源码（.co / .cs）
     ↓ 各自 Lexer + Parser + Binder（全拆，token 级也拆；方言 for 在绑定期各自收口）
-HIR（规范降级树：goto/条件goto/ret/赋值）【合并点 + .coa 双向边界】
-   ├─▶ .coa（持久化/注入）
-   ├─▶ IL 后端（CIL）
-   ├─▶ Evaluator
-   └─▶ CirToIr
-       LIR（3-地址码 + 基本块 + terminator + 虚拟寄存器 + 强类型）【native 私有】
-          └─▶ IrToAssembler → x86/x64
+HIR（绑定后未降级树：for/while/if 等保留）【语言合并点 + .coa 双向边界】
+   ├─▶ .coa（持久化/注入；消费方链接时统一 Lower 成 MIR）
+   └─▶ Lowerer（Hir→Mir）
+       MIR（规范降级树：goto/条件goto/ret/赋值）【BoundProgram.Functions 契约；不落盘】
+       ├─▶ IL 后端（CIL，Roslyn bound→CIL 同构）
+       ├─▶ Evaluator
+       └─▶ MirToLir
+           LIR（3-地址码 + 基本块 + terminator + 虚拟寄存器 + 强类型）【native 私有】
+              └─▶ LirToAssembler → x86/x64
 ```
 
 **关键原则**：
 
-- **HIR** = 规范降级树（原 MIR），IL / Evaluator / `.coa` / native 全消费，纯净无方言。
+- **HIR** = 绑定后未降级树（for/while/if 保留），`.coa` 持久化，纯净无方言。
+- **MIR** = Lowerer（Hir→Mir）输出规范降级树（goto/条件goto/ret/赋值），`program.Functions` 跨后端共享契约，**不落盘**。
+- **LIR** = 3-地址码，仅 native，零语法零 ABI 泄漏。
 - **LIR** = 3-地址码，仅 native，零语法零 ABI 泄漏。
 - **Binder 原始输出**（if/while/for 高节点）= 瞬态，不命名，仅 Lowering 输入。
 - **每语言 Binder** 收敛方言（CO `for i to n` 绑定期转 range-for / C# `for(;;)` 绑定期脱糖为 while），共享 Core Lowerer 保留 Cocoa range-for 降级。
@@ -83,41 +89,50 @@ HIR（规范降级树：goto/条件goto/ret/赋值）【合并点 + .coa 双向�
 
 ## 4. IR 分层详解
 
-### 4.1 HIR（规范高层 IR）
+> **S-7 定稿（2026-10-11）：恢复三层语义**——HIR（绑定后未降级）/ MIR（Lowerer 输出 goto 化规范树）/ LIR（3 地址码）。原 §4.1 将 HIR 定义为"Lowering 后规范树"，现按 S-7 修正为"绑定后未降级树"；Lowering 后形态定名为 **MIR**。实施拆分见 [`docs-dev/S7-HIRLIR.md`](S7-HIRLIR.md)。
 
-- 形态：树形；Lowering 后的规范 Bound 树（goto / 条件goto / ret / 赋值 / 局部声明 / 序列点…）。
+### 4.1 HIR（绑定后高层 IR，未降级）
+
+- 形态：树形；绑定输出的 Bound 树（保留 for / while / if / do-while / 表达式 / 变量声明 / 序列点…），**未展平为 goto**。
 - 生命周期：语言合并点，跨后端共享。
-  - IL 后端：直接遍历 HIR 发 CIL（Roslyn bound→CIL 同构）。
-  - Evaluator：树解释执行。
-  - `.coa`：序列化 HIR（库构建写出、消费方读入合并）。
-  - native：经 CirToIr 降为 LIR。
-- 语言无关性要求：节点与运算符只依赖语义枚举（`BoundBinaryOperatorKind` / `BoundUnaryOperatorKind`），不携带 `SyntaxKind`；
-  `CanonicalIr.Verify`（`Lowering/CanonicalIr.cs`）以 DEBUG 契约确保"高节点不清零不跨消费边界"。
+  - IL 后端：编辑 `program.Functions`（已 Lower 成 MIR）发 CIL（Roslyn bound→CIL 同构）。
+  - Evaluator：树解释执行（消费 MIR 规范树）。
+  - `.coa`：**序列化 HIR（结构化，for/while/if 保留）**——库构建写出、消费方读入后统一 Lower 成 MIR 再合并。
+  - native：经 Hir→Mir（Lowerer）+ Mir→Lir（`MirToLir`）两级降级。
+- 语言无关性要求：节点与运算符只依赖语义枚举（`BoundBinaryOperatorKind` / `BoundUnaryOperatorKind`），不携带 `SyntaxKind`。
 
-### 4.2 LIR（低层 3-地址码 IR）
+### 4.2 MIR（规范中层 IR）
 
-- 形态：指令列表 + **显式基本块 + terminator** + 无限虚拟寄存器 + **强类型**（LLVM 式）。
-- 生命周期：native 内部，仅经 `IrToAssembler` 出 x86/x64。
+- 形态：树形；Lowerer（`Hir→Mir`）输出的规范 Bound 树（goto / 条件goto / ret / 赋值 / 局部声明 / 序列点…）。
+- 生命周期：`BoundProgram.Functions` 的存储形态（跨后端共享契约）；**不落盘**（仅内存流转，debug 期可环境变量 dump）。
+- 消费：IL 后端 / Evaluator / native（经 `MirToLir`）统一遍历。
+- 规范契约：`CanonicalIr.Verify`（`Lowering/CanonicalIr.cs`）以 DEBUG 契约确保"高节点不清零不跨消费边界"。
+
+### 4.3 LIR（低层 3-地址码 IR）
+
+- 形态：指令列表 + **显式基本块 + terminator** + 无限虚拟寄存器 + **强类型**（LLVM 式）；命名族 `Lir*`。
+- 生命周期：native 内部，仅经 `LirToAssembler` 出 x86/x64。
 - 目标无关要求：opcode 收敛到 ~35 个目标无关指令，无 Add64 宽度变体（宽度由 `IrType` 驱动）、无 ABI 指令
   （`InitParam/ReserveArgs/SetArg/StackCheck` 等全部下沉后端展开 pass）。
 - 优化 pass（可选）：利用显式 CFG 做死代码 / 常量传播。
 
-### 4.3 LIR 设计要点与落地实现（完整并入原 `IR设计.md`）
+### 4.4 LIR 设计要点与落地实现（完整并入原 `IR设计.md`）
 
-#### 4.3.1 设计目标
+#### 4.4.1 设计目标
 
-- 作为绑定树（Lowerer 输出）与 IAssembler 之间的统一中间表示。
-- x86/x64 双后端共用同一 IR，平台差异收敛到指令选择。
-- IR 文本打印器（测试断言基础）。
-- **IR 仅服务 native 后端**（IL 后端从 `BoundProgram` 直接发射，不走 IR）。
+- 作为绑定树（Lowerer 输出=MIR）与 IAssembler 之间的统一中间表示。
+- x86/x64 双后端共用同一 LIR，平台差异收敛到指令选择。
+- LIR 文本打印器（测试断言基础）。
+- **LIR 仅服务 native 后端**（IL 后端从 `BoundProgram` 的 MIR 直接发射，不走 LIR）。
 
 ```
-BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后端 ──► x86 / x64 机器码
-                 │
-                 └──► 打印器 ──► 文本 IR（测试断言，不直接产出 .coa）
+MIR（BoundProgram.Functions 规范树）
+   ──► MirToLir ──► LIR (三地址码 + 虚拟寄存器)
+        │
+        └──► LirPrinter ──► 文本 LIR（测试断言，不直接产出 .coa）
 ```
 
-#### 4.3.2 指令形态
+#### 4.4.2 指令形态
 
 三地址码：`<op> <dest> <src1> <src2>`（最多一个目的 + 两个操作数）。
 
@@ -128,11 +143,11 @@ BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后
 
 | 种类 | 解析目标 | 说明 |
 |------|---------|------|
-| `IrFunction` | 编译单元内的 IR 函数（含来自 `.coa` 的，合并后） | 本单元函数 |
+| `IrFunction` | 编译单元内的 LIR 函数（含来自 `.coa` 的，合并后） | 本单元函数 |
 | `Metadata` | .NET 元数据引用（TypeRef/MethodRef/FieldRef → AssemblyRef） | 仅 IL 路径可达（native 需 CLR Hosting） |
 | `NativeImport` | `import kernel32.dll` 声明 → 导入表 IAT 槽 | native 后端 |
 
-#### 4.3.3 指令集草案
+#### 4.4.3 指令集草案
 
 | 类别 | 指令 |
 |------|------|
@@ -147,12 +162,12 @@ BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后
 | 字符串/数据 | `strconst <reg> <data-id>`、`bytes <data-id> "..."` |
 | 调试/信息 | `seqpoint <file> <line>`（序列点，供诊断） |
 
-#### 4.3.4 求值模型
+#### 4.4.4 求值模型
 
 - 严格复刻现有语义：栈式求值 + eax/rax 临时结果、运行时函数调用方式、栈布局。
 - IR 生成阶段逐函数对照现有 x86/x64 输出。
 
-#### 4.3.5 后端映射
+#### 4.4.5 后端映射
 
 | IR | x86 | x64 |
 |----|-----|-----|
@@ -160,20 +175,22 @@ BoundTree ──► IR (三地址码 + 虚拟寄存器) ──► IAssembler 后
 | `call` | `call rel32` + 栈平衡（stdcall 风格） | `call rel32`（Windows x64 调用约定） |
 | 重定位 | `RelocsStripped`（exe）/ HIGHLOW（dll） | DIR64（dll） |
 
-#### 4.3.6 组件（预计）
+#### 4.4.6 组件（预计，S-7 后命名）
+
+> **S-7 命名对照**：以下旧名（`BoundTreeToIr`/`IrToAssembler`/`Ir*`）按定稿改名——`BoundTreeToIr→MirToLir`、`IrToAssembler→LirToAssembler`、`RuntimeEmitterIR→RuntimeEmitterLir`、LIR 数据节点全族 `Ir*→Lir*`（详见 `docs-dev/S7-HIRLIR.md`）。下方为当前实现布局（未改名状态）。
 
 ```
 Emit/IR/
-├── IrProgram.cs          // IR 单元（函数列表 + 数据）
-├── IrFunction.cs         // 函数（指令列表 + 参数）
-├── IrInstruction.cs      // 指令（op + operands）
-├── IrVirtualRegister.cs  // 虚拟寄存器分配器
-├── IrPrinter.cs          // 文本打印器（测试 + .coa 程序集输出）
-├── BoundTreeToIr.cs      // 绑定树 → IR
-└── IrToAssembler.cs      // IR → IAssembler
+├── IrProgram.cs          // LIR 单元（函数列表 + 数据）→ LirProgram
+├── IrFunction.cs         // 函数（指令列表 + 参数）→ LirFunction
+├── IrInstruction.cs      // 指令（op + operands）→ LirInstruction
+├── IrVirtualRegister.cs  // 虚拟寄存器分配器 → LirVirtualRegister
+├── IrPrinter.cs          // 文本打印器（测试 + .coa 程序集输出）→ LirPrinter
+├── BoundTreeToIr.cs      // MIR（绑定规范树）→ LIR → MirToLir
+└── IrToAssembler.cs      // LIR → IAssembler → LirToAssembler
 ```
 
-#### 4.3.7 序列化（.coa 程序集）
+#### 4.4.7 序列化（.coa 程序集）
 
 `.coa` = Cocoa 程序集（等价 .NET dll：每库一个/多个 `namespace`、无入口点、公共符号表按命名空间组织）。
 
@@ -192,9 +209,9 @@ Emit/IR/
 - `.coa` 反序列化 → 符号表 + `BoundProgram` 片段 → 消费方 Binder 符号注入 + BoundProgram 层合并。
 - 依赖清单规则见 项目格式规范 §4.1；`requires` 后端约束（`dotnet`/`native`/`any`）+ 平台要求由消费方编译期校验，不匹配报错；无入口点校验（`output = cocoa` 禁止 `Main`）。
 
-### 4.4 LIR 阶段实施记录（并入原 `IR设计.md` §9）
+### 4.5 LIR 阶段实施记录（并入原 `IR设计.md` §9）
 
-#### 4.4.1 阶段 1 实施记录（2026-08-13）
+#### 4.5.1 阶段 1 实施记录（2026-08-13）
 
 **采纳的模型（定稿）**：**「无限虚拟寄存器 + 三地址码」**模型：
 
@@ -221,7 +238,7 @@ FUNCTION main (p0)
 
 测试：`src/Cocoa.Tests/CodeAnalysis/Emit/IR/IrTests.cs`（14 个：分配器唯一 id、指令构造、打印格式），全量 4891 绿（阶段 4 后 4901 绿）。
 
-#### 4.4.2 阶段 2 实施记录（2026-08-13，已完成）
+#### 4.5.2 阶段 2 实施记录（2026-08-13，已完成）
 
 - `BoundTreeToIr.cs`：绑定树 → IR，平台无关；表达式求值顺序与 NativeCodeEmitter 完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
 - `IrToAssembler.cs`：IR → IAssembler；寄存器分配 = **每 vreg → 唯一栈槽**（slot k @ [rbp-16-slotSize*k]，与现有 ABI 帧布局一致；物理寄存器仅作瞬时运算载体）。
@@ -230,13 +247,13 @@ FUNCTION main (p0)
 
 **关键修复**：x64 对齐补丁原设计在 Call 指令内发射，晚于 StoreArg，导致嵌套调用参数区错位 8 字节（0xC0000005）。改为**补丁并入 ReserveArgs、配对栈在 FreeArgs 对称恢复**。
 
-#### 4.4.3 阶段 3 验收记录（2026-08-13，已完成）
+#### 4.5.3 阶段 3 验收记录（2026-08-13，已完成）
 
 - 同一 `.co` 文件 x86/x64 双后端行为一致：`NativeSourceEmitTests` 全部双平台断言通过（42/42）。
 - 全量 4901 测试绿色。
 - x86 崩溃回归：TwoInput.co 管道输入 "123\r\n" x86/x64 均 exit=0、输出一致（`AN=123Bdone`）。
 
-#### 4.4.4 阶段 4 验收记录（2026-08-13，已完成）
+#### 4.5.4 阶段 4 验收记录（2026-08-13，已完成）
 
 - `RuntimeEmitterIR.cs`：全部 17 个运行时函数统一 IR 生成，x86/x64 双份实现合并为单份。
 - 双平台 NativeSourceEmitTests 42/42 全过；全量 4901 测试绿色。
@@ -278,8 +295,10 @@ FUNCTION main (p0)
 
 ### Phase 2：LIR 改造（LLVM 式）
 
-- 数据结构：`IrType.cs` / `IrBasicBlock.cs` / `IrTerminator.cs`；`IrToAssembler.cs` 改遍历 Blocks。
-- opcode 归并：删 Add64/SetArg/InitRegArg/ReserveArgs/StackCheck 等平台项，宽度由 `IrType` 驱动；ABI 下沉后端。
+> **S-7 命名对照**：LIR 数据节点全族 `Ir*→Lir*`；`IrToAssembler→LirToAssembler`、`BoundTreeToIr→MirToLir`。以下待续项落盘后按新名实施。
+
+- 数据结构：`IrType→LirType` / `IrBasicBlock→LirBasicBlock` / `IrTerminator→LirTerminator`；`LirToAssembler` 改遍历 Blocks。
+- opcode 归并：删 Add64/SetArg/InitRegArg/ReserveArgs/StackCheck 等平台项，宽度由 `LirType` 驱动；ABI 下沉后端。
 - 优化 pass（可选）：显式 CFG 上的死代码/常量传播。
 
 ### Phase 3：测试收口
@@ -297,7 +316,7 @@ FUNCTION main (p0)
 ```
 Cocoa.Core（共享层，类比 .NET CIL/BCL）
   Text / Diagnostic / Symbols / Compilation 抽象 ✅（Compilation 子类已迁语言库，Core 留抽象）
-  Bound 树(HIR) + Lowering + CirToIr + Cod + IL/Native 发射 + PEFile ✅
+  Bound 树(HIR/MIR) + Lowering(Hir→Mir) + MirToLir + Cod + IL/Native 发射 + PEFile ✅
   Green/Red 树基础设施（RawKind:int）✅（SyntaxNode.Kind 经抽象 RawKind 具名）
   （共享 Binder / 共享 Lexer / 共享 75 节点类 已删除）✅
 Cocoa.Core.Cocoa

@@ -6,31 +6,34 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
-    /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
+    /// MIR → LIR（<c>MirToLir</c>）：输入 = MIR（<see cref="BoundProgram.Functions"/> 规范树，
+    /// 即 Lowerer「Hir→Mir」输出 —— goto/CFG 形态、无 for/while/if 等结构节点；消费契约见 CanonicalIr）。 
+    /// 输出 = LIR（3 地址码，<see cref="LirProgram"/>）。逐方法对照 NativeCodeEmitter 的发射语义；
     /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
-    /// 帧布局/对齐/TEB 检查收敛到 IrToAssembler。
+    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
+    /// LIR 为 native 私有独立类型族（Lir*）；MIR 与 LIR 之间一步完成（无独立 MIR 数据结构落盘）。
     /// </summary>
-    internal sealed partial class BoundTreeToIr
+    internal sealed partial class MirToLir
     {
         private readonly BoundProgram _program;
         private readonly bool _isX64;
-        private readonly IrVirtualRegisterAllocator _allocator = new();
-        private readonly IrProgram _irProgram;
+        private readonly LirVirtualRegisterAllocator _allocator = new();
+        private readonly LirProgram _irProgram;
 
-        private readonly Dictionary<FunctionSymbol, IrFunction> _functionMap = new();
-        private readonly Dictionary<VariableSymbol, IrVirtualRegister> _variables = new();
+        private readonly Dictionary<FunctionSymbol, LirFunction> _functionMap = new();
+        private readonly Dictionary<VariableSymbol, LirVirtualRegister> _variables = new();
         private readonly Dictionary<BoundLabel, int> _labels = new();
 
         /// <summary>6e-M22 C4-c：env-first 形态的提升 lambda 集合（参数区前置 8 字节环境槽）。</summary>
-        private readonly Dictionary<FunctionSymbol, IrFunction> _staticThunks = new();
+        private readonly Dictionary<FunctionSymbol, LirFunction> _staticThunks = new();
         private readonly HashSet<FunctionSymbol> _environmentFirstFunctions = new();
 
         /// <summary>6e-M22 C5：当前函数的环境对象寄存器与布局类（无捕获 = null）。</summary>
-        private IrVirtualRegister? _closureRegister;
+        private LirVirtualRegister? _closureRegister;
         private NamedTypeSymbol? _closureClass;
 
         /// <summary>M4：存活类集合（new 可达 → 类 + 基类链），vtable 发射与可达成员入队的依据。</summary>
@@ -48,8 +51,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// <summary>M4：已发射的伪 vtable（System.Type 对象）key 集合。</summary>
         private readonly HashSet<string> _pseudoVTableKeys = new();
 
-        private IrFunction _currentFunction = null!;
-        private IrVirtualRegister? _thisRegister;
+        private LirFunction _currentFunction = null!;
+        private LirVirtualRegister? _thisRegister;
         private int _nextLabelId;
 
         private static readonly FunctionSymbol[] ObjectBuiltinVirtualRoots =
@@ -59,16 +62,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             SystemObjectMembers.Equals,
         };
 
-        private BoundTreeToIr(BoundProgram program, TargetPlatform platform)
+        private MirToLir(BoundProgram program, TargetPlatform platform)
         {
             _program = program;
             _isX64 = platform.Arch == Architecture.X64;
-            _irProgram = new IrProgram(program.MainFunction!.Name);
+            _irProgram = new LirProgram(program.MainFunction!.Name);
         }
 
-        public static IrProgram Generate(BoundProgram program, TargetPlatform platform)
+        public static LirProgram Generate(BoundProgram program, TargetPlatform platform)
         {
-            var generator = new BoundTreeToIr(program, platform);
+            var generator = new MirToLir(program, platform);
             generator.EmitProgram();
             generator.EmitVTableData();
             return generator._irProgram;
@@ -115,7 +118,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     // 全部 vtable 一律自引用头（[0]=自身地址）：使 Type 值（vtable 指针）与对象
                     // 共用同一访问公式 [[x]+8] 取类型名——ObjectToString/Name/FullName 三路一致。
                     // （typeId 字段无消费方，M4 不分配；后续 is/typeid 需求再扩展头部。）
-                    _irProgram.AddData(IrDataItem.VTable(key, -1, _irProgram.InternString(classType.FullName), slots));
+                    _irProgram.AddData(LirDataItem.VTable(key, -1, _irProgram.InternString(classType.FullName), slots));
                 }
             }
         }
@@ -176,7 +179,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             foreach (var (function, body) in functionsToEmit)
             {
-                // 入口函数保持裸名（IrToAssembler 以 Name==EntryFunctionName 标记入口标签；
+                // 入口函数保持裸名（LirToAssembler 以 Name==EntryFunctionName 标记入口标签；
                 // 入口可为命名空间/类静态方法，mangle 名会破坏匹配）
                 var irName = function == _program.MainFunction ? function.Name : NativeObjectModel.FunctionIrName(function);
 
@@ -185,16 +188,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var parameters = CreateParameters(function);
                 if (function.IsStatic && function.IsLambda)
                 {
-                    parameters.Insert(0, new IrParameter("__env", 0));
+                    parameters.Insert(0, new LirParameter("__env", 0));
                     for (var p = 0; p < parameters.Count; p++)
                     {
-                        parameters[p] = new IrParameter(parameters[p].Name, p);
+                        parameters[p] = new LirParameter(parameters[p].Name, p);
                     }
 
                     _environmentFirstFunctions.Add(function);
                 }
 
-                var irFunction = new IrFunction(irName, parameters);
+                var irFunction = new LirFunction(irName, parameters);
                 irFunction.ReturnSize = ReturnSize(function.ReturnType);
                 _functionMap.Add(function, irFunction);
                 _irProgram.Functions.Add(irFunction);
@@ -409,12 +412,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private static List<IrParameter> CreateParameters(FunctionSymbol function)
+        private static List<LirParameter> CreateParameters(FunctionSymbol function)
         {
-            var parameters = new List<IrParameter>();
+            var parameters = new List<LirParameter>();
             foreach (var parameter in function.Parameters)
             {
-                parameters.Add(new IrParameter(parameter.Name, parameter.Ordinal));
+                parameters.Add(new LirParameter(parameter.Name, parameter.Ordinal));
             }
 
             return parameters;
@@ -481,7 +484,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 函数
         // ------------------------------------------------------------------
 
-        private void EmitFunction(IrFunction irFunction, FunctionSymbol function, BoundBlockStatement body)
+        private void EmitFunction(LirFunction irFunction, FunctionSymbol function, BoundBlockStatement body)
         {
             _currentFunction = irFunction;
             _variables.Clear();
@@ -490,7 +493,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _thisRegister = null;
 
             irFunction.EndLabelId = AllocLabel();
-            Add(irFunction.Instructions, new IrInstruction(IrOpCode.StackCheck));
+            Add(irFunction.Instructions, new LirInstruction(LirOpCode.StackCheck));
 
             // 6e-M22 C5：闭包环境接线
             _closureRegister = null;
@@ -498,16 +501,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (_closureClass != null && function.IsLambda)
             {
-                // lambda：隐藏 __env 首参（IrParameter 已在创建时前置）即环境对象
+                // lambda：隐藏 __env 首参（LirParameter 已在创建时前置）即环境对象
                 _closureRegister = AllocateRegister(8);
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, _closureRegister, IrOperand.Constant(0)));
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _closureRegister, LirOperand.Constant(0)));
             }
 
             if (HasThisParameter(function))
             {
                 // M4：隐藏 this = 参数区偏移 0（BoundThisExpression/BaseExpression 映射该寄存器）
                 _thisRegister = AllocateRegister(8);
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, _thisRegister, IrOperand.Constant(0)));
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _thisRegister, LirOperand.Constant(0)));
             }
 
             foreach (var parameter in function.Parameters)
@@ -517,11 +520,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (function.Name == _irProgram.EntryFunctionName)
                 {
                     // 入口函数参数（main(args: string[])）由运行时从命令行构造，无需 ABI 传参。
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Call, register, IrOperand.Runtime("BuildArgs")));
+                    Add(irFunction.Instructions, new LirInstruction(LirOpCode.Call, register, LirOperand.Runtime("BuildArgs")));
                 }
                 else
                 {
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.InitParam, register, IrOperand.Constant(ParamByteOffset(function, parameter.Ordinal, function.Parameters.Length))));
+                    Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, register, LirOperand.Constant(ParamByteOffset(function, parameter.Ordinal, function.Parameters.Length))));
                 }
 
                 if (parameter.IsOut)
@@ -529,8 +532,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     // 明确赋值防御兜底（设计 §5.3）：out 形参入口写穿透默认值，杜绝未赋值读到帧垃圾
                     var valueSize = ReturnSize(parameter.Type);
                     var zero = AllocateRegister(valueSize);
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(register), IrOperand.Reg(zero), 0, valueSize));
+                    Add(irFunction.Instructions, new LirInstruction(LirOpCode.Const, zero, LirOperand.Constant(0)));
+                    Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(register), LirOperand.Reg(zero), 0, valueSize));
                 }
             }
 
@@ -542,21 +545,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 var sizeRegister = EmitConst(envSize + pointerSize);
                 var envObject = AllocateRegister(8);
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(sizeRegister)));
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.Call, envObject, IrOperand.Runtime("Alloc"), IrOperand.Constant(0)));
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeRegister)));
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.Call, envObject, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
 
                 // [0] typeId 占位 0
                 var zero = AllocateRegister(4);
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
-                Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(envObject), IrOperand.Reg(zero), 0, 4));
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.Const, zero, LirOperand.Constant(0)));
+                Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(envObject), LirOperand.Reg(zero), 0, 4));
 
                 // 字段清零
                 foreach (var field in NativeObjectModel.CollectInstanceFields(_closureClass))
                 {
                     var fieldSize = NativeObjectModel.FieldSize(field.Type);
                     var zeroField = AllocateRegister(fieldSize == 8 ? 8 : 4);
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Const, zeroField, IrOperand.Constant(0)));
-                    Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(envObject), IrOperand.Reg(zeroField), envOffsets[field], fieldSize));
+                    Add(irFunction.Instructions, new LirInstruction(LirOpCode.Const, zeroField, LirOperand.Constant(0)));
+                    Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(envObject), LirOperand.Reg(zeroField), envOffsets[field], fieldSize));
                 }
 
                 // 捕获参数播种：入参值写入环境字段
@@ -568,7 +571,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         {
                             var field = _closureClass.GetField(captured.Name)!;
                             var value = GetVariable(parameter);
-                            Add(irFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(envObject), IrOperand.Reg(value), envOffsets[field], NativeObjectModel.FieldSize(captured.Type)));
+                            Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(envObject), LirOperand.Reg(value), envOffsets[field], NativeObjectModel.FieldSize(captured.Type)));
                         }
                     }
                 }
@@ -578,10 +581,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             EmitStatement(body);
 
-            Add(irFunction.Instructions, new IrInstruction(IrOpCode.Ret, IrOperand.Label(irFunction.EndLabelId)));
+            Add(irFunction.Instructions, new LirInstruction(LirOpCode.Ret, LirOperand.Label(irFunction.EndLabelId)));
         }
 
-        private IrVirtualRegister AllocateRegister(VariableSymbol? symbol, int size)
+        private LirVirtualRegister AllocateRegister(VariableSymbol? symbol, int size)
         {
             var register = _allocator.Allocate();
             _currentFunction.RegisterSizes.Add(register, size);
@@ -593,14 +596,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return register;
         }
 
-        private IrVirtualRegister AllocateRegister(int size)
+        private LirVirtualRegister AllocateRegister(int size)
         {
             var register = _allocator.Allocate();
             _currentFunction.RegisterSizes.Add(register, size);
             return register;
         }
 
-        private void Add(List<IrInstruction> instructions, IrInstruction instruction)
+        private void Add(List<LirInstruction> instructions, LirInstruction instruction)
         {
             instructions.Add(instruction);
         }

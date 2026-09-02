@@ -1,12 +1,12 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>IR 文本打印器：输出平台无关的中间表示（.coa 雏形）。</summary>
-    internal static class IrPrinter
+    internal static class LirPrinter
     {
-        public static string Format(IrInstruction instruction)
+        public static string Format(LirInstruction instruction)
         {
             var sb = new StringBuilder();
             sb.Append(instruction.OpCode.ToString().ToLowerInvariant());
@@ -16,9 +16,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 sb.Append(' ').Append(instruction.Dst);
             }
 
-            if (instruction.OpCode == IrOpCode.Jcc || instruction.OpCode == IrOpCode.Setcc)
+            if (instruction.OpCode == LirOpCode.Jcc || instruction.OpCode == LirOpCode.Setcc)
             {
-                sb.Append(' ').Append(((IrCond)instruction.A.Imm).ToString());
+                sb.Append(' ').Append(((LirCond)instruction.A.Imm).ToString());
                 if (instruction.B.IsNone == false)
                 {
                     sb.Append(", ").Append(instruction.B.ToString());
@@ -37,7 +37,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 sb.Append(", ").Append(instruction.B.ToString());
             }
 
-            if (instruction.OpCode != IrOpCode.Load && instruction.OpCode != IrOpCode.LoadSlotField && instruction.OpCode != IrOpCode.Store && instruction.OpCode != IrOpCode.StoreSlotField && instruction.Offset != 0)
+            if (instruction.OpCode != LirOpCode.Load && instruction.OpCode != LirOpCode.LoadSlotField && instruction.OpCode != LirOpCode.Store && instruction.OpCode != LirOpCode.StoreSlotField && instruction.Offset != 0)
             {
                 sb.Append(instruction.Offset > 0 ? " +" : " ").Append(instruction.Offset);
             }
@@ -50,10 +50,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return sb.ToString();
         }
 
-        private static string FormatOperand(IrInstruction instruction)
+        private static string FormatOperand(LirInstruction instruction)
         {
             var a = instruction.A;
-            if (instruction.OpCode == IrOpCode.Load || instruction.OpCode == IrOpCode.LoadSlotField || instruction.OpCode == IrOpCode.Store || instruction.OpCode == IrOpCode.StoreSlotField)
+            if (instruction.OpCode == LirOpCode.Load || instruction.OpCode == LirOpCode.LoadSlotField || instruction.OpCode == LirOpCode.Store || instruction.OpCode == LirOpCode.StoreSlotField)
             {
                 var offset = instruction.Offset == 0 ? "" : (instruction.Offset > 0 ? "+" + instruction.Offset : instruction.Offset.ToString());
                 return "[" + a.ToString() + offset + "]";
@@ -62,7 +62,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return a.ToString();
         }
 
-        public static string Format(IrFunction function)
+        public static string Format(LirFunction function)
         {
             var sb = new StringBuilder();
             sb.Append("FUNCTION ").Append(function.Name);
@@ -87,7 +87,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return sb.ToString();
         }
 
-        public static string Format(IrProgram program)
+        public static string Format(LirProgram program)
         {
             var sb = new StringBuilder();
             sb.AppendLine("PROGRAM entry = " + program.EntryFunctionName);

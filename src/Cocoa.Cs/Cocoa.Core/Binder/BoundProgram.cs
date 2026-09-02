@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     internal sealed class BoundProgram
     {
-        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<NamedTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<NamedTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null)
+        public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<NamedTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<NamedTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? rawFunctions = null)
         {
             Previous = previous;
             Diagnostics = diagnostics;
@@ -16,6 +16,7 @@ namespace Cocoa.CodeAnalysis.Binding
             CodAssemblies = codAssemblies ?? ImmutableDictionary<object, string>.Empty;
             GenericDefinitions = genericDefinitions ?? ImmutableArray<NamedTypeSymbol>.Empty;
             GenericOpenBodies = genericOpenBodies ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
+            RawFunctions = rawFunctions ?? ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
         }
 
         public BoundProgram? Previous { get; }
@@ -39,8 +40,15 @@ namespace Cocoa.CodeAnalysis.Binding
 
         /// <summary>
         /// 泛型定义方法的开放绑定体（6e-G7 S2）：T 保持开放的降级 Bound 块，
-        /// EmitCocoa 序列化进 bodies 区供消费方替换展开。
+        /// EmitCocoa 序列化进 bodies 区供消费方替换展开（S-7 后为 raw 结构化 HIR）。
         /// </summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> GenericOpenBodies { get; }
+
+        /// <summary>
+        /// 源码函数的 raw（未 Lower）绑定体（S-7）：绑定 + 插值归一后、Lowering 前，
+        /// EmitCocoa 以此为 `.coa` bodies 序列化源（for/while/if 保留）。
+        /// Functions（lowered/MIR）仍是三后端与求值器唯一消费契约。
+        /// </summary>
+        public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> RawFunctions { get; }
     }
 }

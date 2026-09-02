@@ -317,14 +317,21 @@ namespace Cocoa.CodeAnalysis.Lowering
         {
             var rewrittenNode = base.RewriteVariableDeclaration(node);
 
-            return new BoundSequencePointStatement(rewrittenNode.Syntax, rewrittenNode, rewrittenNode.Syntax.Location);
+            // S-7：反序列化库体（.coa raw HIR）节点 Syntax 为 null——SequencePoint 仅调试序列点定位用，
+            // 库体无源码映射，跳过包装（语义不变；后端无需其存在）。
+            return rewrittenNode.Syntax == null
+                ? rewrittenNode
+                : new BoundSequencePointStatement(rewrittenNode.Syntax, rewrittenNode, rewrittenNode.Syntax.Location);
         }
 
         protected override BoundStatement RewriteExpressionStatement(BoundExpressionStatement node)
         {
             var rewrittenNode = base.RewriteExpressionStatement(node);
 
-            return new BoundSequencePointStatement(rewrittenNode.Syntax, rewrittenNode, rewrittenNode.Syntax.Location);
+            // S-7：同上——防反序列化库体 null Syntax 在取 .Location 时 NRE
+            return rewrittenNode.Syntax == null
+                ? rewrittenNode
+                : new BoundSequencePointStatement(rewrittenNode.Syntax, rewrittenNode, rewrittenNode.Syntax.Location);
         }
     }
 }

@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -199,8 +200,10 @@ namespace Cocoa.CodeAnalysis.Binding
 
                         if (openBody != null)
                         {
+                            // S-7：库体为 raw（结构化 HIR）——替换展开后须 Lower 为 MIR 再进发射清单
+                            // （AllPathsReturn 已由库构建期校验，此处仅 Lower，不重复报告）
                             functionBodies[instantiatedMethod] =
-                                BoundTreeSubstituter.SubstituteMethodBody(openBody, definition, instantiated, instantiatedMethod, definitionMethod);
+                                Lowerer.Lower(instantiatedMethod, BoundTreeSubstituter.SubstituteMethodBody(openBody, definition, instantiated, instantiatedMethod, definitionMethod));
                             continue;
                         }
                     }
@@ -225,7 +228,9 @@ namespace Cocoa.CodeAnalysis.Binding
                         // 用库携带的开放绑定体做替换展开，避免 BuildFunctionBodyForMonomorphization 在 null 语法上 NRE。
                         if (TrySubstituteCodAccessor(definitionProperty.Getter, definition, instantiated, instantiatedProperty.Getter, codLibraries, out var codGetterBody))
                         {
-                            functionBodies[instantiatedProperty.Getter] = codGetterBody;
+                            // S-7：库体为 raw —— 替换展开后 Lower 为 MIR
+                            functionBodies[instantiatedProperty.Getter] =
+                                Lowerer.Lower(instantiatedProperty.Getter, codGetterBody);
                         }
                         else
                         {
@@ -242,7 +247,9 @@ namespace Cocoa.CodeAnalysis.Binding
                         // 同上：cod 库 setter 开放体替换捷径
                         if (TrySubstituteCodAccessor(definitionProperty.Setter, definition, instantiated, instantiatedProperty.Setter, codLibraries, out var codSetterBody))
                         {
-                            functionBodies[instantiatedProperty.Setter] = codSetterBody;
+                            // S-7：库体为 raw —— 替换展开后 Lower 为 MIR
+                            functionBodies[instantiatedProperty.Setter] =
+                                Lowerer.Lower(instantiatedProperty.Setter, codSetterBody);
                         }
                         else
                         {

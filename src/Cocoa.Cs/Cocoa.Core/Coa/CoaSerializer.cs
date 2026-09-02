@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Coa
 {
     /// <summary>
     /// `.coa` 鐠囶厺绠熺仦鍌氱碍閸掓瀵查崳顭掔窗缁楋箑褰跨悰?+ 闂勫秶楠?BoundProgram閿涘牆鍤遍弫棰佺秼閿涘鏋冮張?round-trip閵?
-    /// 閸欏苯鎮楃粩顖氬彙閻㈩煉绱檔ative 閳?BoundTreeToIr閿涘瓥L 閳?IlEmitter閿涘绱辩拠顓熺《閼哄倻鍋ｉ敍鍦珁ntax閿涘绗夋惔蹇撳灙閸栨牭绱欑純?null閿涘鈧?
+    /// 閸欏苯鎮楃粩顖氬彙閻㈩煉绱檔ative 閳?MirToLir閿涘瓥L 閳?IlEmitter閿涘绱辩拠顓熺《閼哄倻鍋ｉ敍鍦珁ntax閿涘绗夋惔蹇撳灙閸栨牭绱欑純?null閿涘鈧?
     ///
     /// 閺傚洦婀伴弽鐓庣础閿涘牆褰茬拠璁崇喘閸忓牞绱濈猾璇茬€?閸戣姤鏆?閸欐﹢鍣烘稉鈧瀣瘻閸氬秴鐡у鏇犳暏閿涘奔绗夐悽銊︽殶鐎?id閿涘绱?
     ///   (type)     閸愬懎缂?閺佹壆绮嶇猾璇茬€烽崘鍛颁粓娑撳搫鎮曠€涙绱╅悽顭掔窗int / int[] / int[][]閿涙稓琚?閺嬫矮濡囬悽銊ュ弿閸?System.Console

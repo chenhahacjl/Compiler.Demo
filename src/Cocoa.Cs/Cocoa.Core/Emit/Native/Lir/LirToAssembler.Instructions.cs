@@ -5,129 +5,129 @@ using Cocoa.CodeAnalysis.Emit.Native.Assembler;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
 using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
     /// IR 到 IAssembler 的映射。寄存器分配策略：每个虚拟寄存器 → 函数帧内唯一栈槽
     /// （slot k @ [rbp - 16 - slotSize*k]），物理寄存器（eax/ecx/edx…）仅作瞬时运算载体。
     /// 帧布局、参数传递、TEB 栈限检查、x64 16 字节对齐与现有 NativeCodeEmitter 完全一致。
     /// </summary>
-    internal sealed partial class IrToAssembler
+    internal sealed partial class LirToAssembler
     {
-        private void EmitInstruction(IrInstruction instruction)
+        private void EmitInstruction(LirInstruction instruction)
         {
             switch (instruction.OpCode)
             {
-                case IrOpCode.Const:
+                case LirOpCode.Const:
                     EmitConst(instruction);
                     break;
-                case IrOpCode.Mov:
+                case LirOpCode.Mov:
                     EmitMov(instruction);
                     break;
-                case IrOpCode.Load:
+                case LirOpCode.Load:
                     EmitLoad(instruction);
                     break;
-                case IrOpCode.LoadSlotField:
+                case LirOpCode.LoadSlotField:
                     EmitLoadSlotField(instruction);
                     break;
-                case IrOpCode.StoreSlotField:
+                case LirOpCode.StoreSlotField:
                     EmitStoreSlotField(instruction);
                     break;
-                case IrOpCode.Store:
+                case LirOpCode.Store:
                     EmitStore(instruction);
                     break;
-                case IrOpCode.LeaData:
+                case LirOpCode.LeaData:
                     EmitLeaData(instruction);
                     break;
-                case IrOpCode.Lea:
+                case LirOpCode.Lea:
                     EmitLea(instruction);
                     break;
-                case IrOpCode.LeaSlot:
+                case LirOpCode.LeaSlot:
                     EmitLeaSlot(instruction);
                     break;
-                case IrOpCode.LeaVar:
+                case LirOpCode.LeaVar:
                     EmitLeaVar(instruction);
                     break;
-                case IrOpCode.InitParam:
+                case LirOpCode.InitParam:
                     EmitInitParam(instruction);
                     break;
-                case IrOpCode.InitRegArg:
+                case LirOpCode.InitRegArg:
                     EmitInitRegArg(instruction);
                     break;
-                case IrOpCode.Add:
-                case IrOpCode.Sub:
-                case IrOpCode.Imul:
-                case IrOpCode.And:
-                case IrOpCode.Or:
-                case IrOpCode.Xor:
+                case LirOpCode.Add:
+                case LirOpCode.Sub:
+                case LirOpCode.Imul:
+                case LirOpCode.And:
+                case LirOpCode.Or:
+                case LirOpCode.Xor:
                     EmitBinary(instruction);
                     break;
-                case IrOpCode.Idiv:
+                case LirOpCode.Idiv:
                     EmitIdiv(instruction);
                     break;
-                case IrOpCode.Irem:
+                case LirOpCode.Irem:
                     EmitIrem(instruction);
                     break;
-                case IrOpCode.Udiv:
+                case LirOpCode.Udiv:
                     EmitUdiv(instruction);
                     break;
-                case IrOpCode.Urem:
+                case LirOpCode.Urem:
                     EmitUrem(instruction);
                     break;
-                case IrOpCode.Neg:
-                case IrOpCode.Not:
+                case LirOpCode.Neg:
+                case LirOpCode.Not:
                     EmitUnary(instruction);
                     break;
-                case IrOpCode.Add64:
-                case IrOpCode.Sub64:
-                case IrOpCode.Imul64:
-                case IrOpCode.And64:
-                case IrOpCode.Or64:
-                case IrOpCode.Xor64:
+                case LirOpCode.Add64:
+                case LirOpCode.Sub64:
+                case LirOpCode.Imul64:
+                case LirOpCode.And64:
+                case LirOpCode.Or64:
+                case LirOpCode.Xor64:
                     EmitBinary64(instruction);
                     break;
-                case IrOpCode.Idiv64:
+                case LirOpCode.Idiv64:
                     EmitIdiv64(instruction);
                     break;
-                case IrOpCode.Irem64:
+                case LirOpCode.Irem64:
                     EmitIrem64(instruction);
                     break;
-                case IrOpCode.Udiv64:
+                case LirOpCode.Udiv64:
                     EmitUdiv64(instruction);
                     break;
-                case IrOpCode.Urem64:
+                case LirOpCode.Urem64:
                     EmitUrem64(instruction);
                     break;
-                case IrOpCode.Neg64:
-                case IrOpCode.Not64:
+                case LirOpCode.Neg64:
+                case LirOpCode.Not64:
                     EmitUnary64(instruction);
                     break;
-                case IrOpCode.Shl64:
-                case IrOpCode.Shr64:
-                case IrOpCode.Sar64:
+                case LirOpCode.Shl64:
+                case LirOpCode.Shr64:
+                case LirOpCode.Sar64:
                     EmitShift64(instruction);
                     break;
-                case IrOpCode.Cmp64:
+                case LirOpCode.Cmp64:
                     EmitCmp64(instruction);
                     break;
-                case IrOpCode.Shl:
-                case IrOpCode.Shr:
-                case IrOpCode.Sar:
+                case LirOpCode.Shl:
+                case LirOpCode.Shr:
+                case LirOpCode.Sar:
                     EmitShift(instruction);
                     break;
-                case IrOpCode.Cmp:
+                case LirOpCode.Cmp:
                     EmitCmp(instruction);
                     break;
-                case IrOpCode.Setcc:
+                case LirOpCode.Setcc:
                     EmitSetcc(instruction);
                     break;
-                case IrOpCode.Label:
+                case LirOpCode.Label:
                     _a.MarkLabel(GetLabel((int)instruction.A.Imm));
                     break;
-                case IrOpCode.Jmp:
+                case LirOpCode.Jmp:
                     _a.Jmp(GetLabel((int)instruction.A.Imm));
                     break;
-                case IrOpCode.Jcc:
+                case LirOpCode.Jcc:
                     if (_pendingCmp64Trichotomy)
                     {
                         // x86 Cmp64 三路结果在 EAX：cmp eax,0 后按条件分支
@@ -135,106 +135,106 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         _pendingCmp64Trichotomy = false;
                     }
 
-                    _a.Jcc(MapCond((IrCond)instruction.A.Imm), GetLabel((int)instruction.B.Imm));
+                    _a.Jcc(MapCond((LirCond)instruction.A.Imm), GetLabel((int)instruction.B.Imm));
                     break;
-                case IrOpCode.Call:
+                case LirOpCode.Call:
                     EmitCall(instruction);
                     break;
-                case IrOpCode.CallReg:
+                case LirOpCode.CallReg:
                     EmitCallReg(instruction);
                     break;
-                case IrOpCode.Ret:
+                case LirOpCode.Ret:
                     EmitRet(instruction);
                     break;
-                case IrOpCode.ReserveArgs:
+                case LirOpCode.ReserveArgs:
                     EmitReserveArgs(instruction);
                     break;
-                case IrOpCode.FreeArgs:
+                case LirOpCode.FreeArgs:
                     EmitFreeArgs(instruction);
                     break;
-                case IrOpCode.StoreArg:
+                case LirOpCode.StoreArg:
                     EmitStoreArg(instruction);
                     break;
-                case IrOpCode.SetArg:
+                case LirOpCode.SetArg:
                     EmitSetArg(instruction);
                     break;
-                case IrOpCode.SetArg64:
+                case LirOpCode.SetArg64:
                     EmitSetArg64(instruction);
                     break;
-                case IrOpCode.FConst:
+                case LirOpCode.FConst:
                     EmitFConst(instruction);
                     break;
-                case IrOpCode.FMov:
+                case LirOpCode.FMov:
                     EmitFMove(instruction);
                     break;
-                case IrOpCode.FAdd:
-                case IrOpCode.FSub:
-                case IrOpCode.FMul:
-                case IrOpCode.FDiv:
+                case LirOpCode.FAdd:
+                case LirOpCode.FSub:
+                case LirOpCode.FMul:
+                case LirOpCode.FDiv:
                     EmitFBinary(instruction);
                     break;
-                case IrOpCode.FNeg:
+                case LirOpCode.FNeg:
                     EmitFNeg(instruction);
                     break;
-                case IrOpCode.FSqrt:
-                case IrOpCode.FFloor:
-                case IrOpCode.FCeiling:
-                case IrOpCode.FTruncate:
-                case IrOpCode.FRound:
+                case LirOpCode.FSqrt:
+                case LirOpCode.FFloor:
+                case LirOpCode.FCeiling:
+                case LirOpCode.FTruncate:
+                case LirOpCode.FRound:
                     EmitFUnary(instruction);
                     break;
-                case IrOpCode.FCmp:
+                case LirOpCode.FCmp:
                     EmitFCmp(instruction);
                     break;
-                case IrOpCode.FCvtSI:
+                case LirOpCode.FCvtSI:
                     EmitFCvtSI(instruction);
                     break;
-                case IrOpCode.FCvtSD:
+                case LirOpCode.FCvtSD:
                     EmitFCvtSD(instruction);
                     break;
-                case IrOpCode.FCvtSI64:
+                case LirOpCode.FCvtSI64:
                     EmitFCvtSI64(instruction);
                     break;
-                case IrOpCode.FCvtSD64:
+                case LirOpCode.FCvtSD64:
                     EmitFCvtSD64(instruction);
                     break;
-                case IrOpCode.FCvtDS:
+                case LirOpCode.FCvtDS:
                     EmitFCvtDS(instruction);
                     break;
-                case IrOpCode.FCvtSSD:
+                case LirOpCode.FCvtSSD:
                     EmitFCvtSSD(instruction);
                     break;
-                case IrOpCode.FCvtSI64U:
+                case LirOpCode.FCvtSI64U:
                     EmitFCvtSI64U(instruction);
                     break;
-                case IrOpCode.Movsx64:
+                case LirOpCode.Movsx64:
                     EmitMovsx64(instruction);
                     break;
-                case IrOpCode.Movzx64:
+                case LirOpCode.Movzx64:
                     EmitMovzx64(instruction);
                     break;
-                case IrOpCode.Trunc64:
+                case LirOpCode.Trunc64:
                     EmitTrunc64(instruction);
                     break;
-                case IrOpCode.StoreRet:
+                case LirOpCode.StoreRet:
                     EmitStoreRet(instruction);
                     break;
-                case IrOpCode.StackCheck:
+                case LirOpCode.StackCheck:
                     EmitStackCheck();
                     break;
-                case IrOpCode.SysCall:
+                case LirOpCode.SysCall:
                     EmitSysCall(instruction);
                     break;
-                case IrOpCode.Push:
+                case LirOpCode.Push:
                     EmitPush(instruction);
                     break;
-                case IrOpCode.Pop:
+                case LirOpCode.Pop:
                     EmitPop(instruction);
                     break;
-                case IrOpCode.Nop:
+                case LirOpCode.Nop:
                     _a.Nop();
                     break;
-                case IrOpCode.SeqPoint:
+                case LirOpCode.SeqPoint:
                     break;
                 default:
                     throw new Exception($"Unexpected IR opcode: {instruction.OpCode}");
@@ -245,7 +245,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 数据移动
         // ------------------------------------------------------------------
 
-        private void EmitConst(IrInstruction instruction)
+        private void EmitConst(LirInstruction instruction)
         {
             if (RegisterSize(instruction.Dst!) == 8)
             {
@@ -284,7 +284,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitMov(IrInstruction instruction)
+        private void EmitMov(LirInstruction instruction)
         {
             var srcSize = RegisterSize(instruction.A.Register!);
             var dstSize = RegisterSize(instruction.Dst!);
@@ -304,7 +304,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitLoad(IrInstruction instruction)
+        private void EmitLoad(LirInstruction instruction)
         {
             var baseSize = RegisterSize(instruction.A.Register!);
             var baseReg = baseSize == 8 ? X64Register.RAX : X64Register.EAX;
@@ -338,7 +338,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>从 <paramref name="instruction.A"/> 的槽内存（而非其指向的地址）按偏移直接读取。用于取 double 槽的高 dword 等标量位模式，避免把值当指针解引用。</summary>
-        private void EmitLoadSlotField(IrInstruction instruction)
+        private void EmitLoadSlotField(LirInstruction instruction)
         {
             var operand = new X64MemoryOperand(X64Register.RBP, GetSlotOffset(instruction.A.Register!) + instruction.Offset);
             if (instruction.ByteSize == 2)
@@ -358,14 +358,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>把 <paramref name="instruction.B"/> 的值写入 <paramref name="instruction.A"/> 的槽内存（而非其指向的地址）的偏移处。用于把 double 的低/高 dword 拼进槽。</summary>
-        private void EmitStoreSlotField(IrInstruction instruction)
+        private void EmitStoreSlotField(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
             var operand = new X64MemoryOperand(X64Register.RBP, GetSlotOffset(instruction.A.Register!) + instruction.Offset);
             _a.Mov(ToSize(instruction.ByteSize), operand, X64Register.EAX);
         }
 
-        private void EmitStore(IrInstruction instruction)
+        private void EmitStore(LirInstruction instruction)
         {
             var baseSize = RegisterSize(instruction.A.Register!);
             var baseReg = baseSize == 8 ? X64Register.RAX : X64Register.EAX;
@@ -386,14 +386,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(ToSize(instruction.ByteSize), operand, X64Register.ECX);
         }
 
-        private void EmitLeaData(IrInstruction instruction)
+        private void EmitLeaData(LirInstruction instruction)
         {
             var key = (string)instruction.A.Symbol!;
             _a.LeaRip(X64Register.RAX, _dataSymbols[key]);
             StoreSlot(instruction.Dst!, X64Register.RAX);
         }
 
-        private void EmitLea(IrInstruction instruction)
+        private void EmitLea(LirInstruction instruction)
         {
             var size = RegisterSize(instruction.A.Register!);
             var reg = size == 8 ? X64Register.RAX : X64Register.EAX;
@@ -402,7 +402,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, reg);
         }
 
-        private void EmitLeaSlot(IrInstruction instruction)
+        private void EmitLeaSlot(LirInstruction instruction)
         {
             // 指向帧底部的缓冲槽（远离返回地址；配合 EmitFunction 的 LeaSlot 缓冲空间）
             var offset = -_frameBytes + _slotSize;
@@ -411,14 +411,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>LeaVar（6e-M23 R7）：dst = &amp;变量槽——byref 实参把调用方变量的帧槽地址传给被调方。</summary>
-        private void EmitLeaVar(IrInstruction instruction)
+        private void EmitLeaVar(LirInstruction instruction)
         {
             var slot = GetSlotOffset(instruction.A.Register!);
             _a.Lea(X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitInitParam(IrInstruction instruction)
+        private void EmitInitParam(LirInstruction instruction)
         {
             var offset = (int)instruction.A.Imm;
             var size = RegisterSize(instruction.Dst!);
@@ -434,7 +434,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>x86：把参数区（字节偏移 offset）的 8 字节 double 搬到双 dword 槽（低 dword 在 [slot]，高 dword 在 [slot-4]）。</summary>
-        private void InitParam8X86(IrVirtualRegister dst, int offset)
+        private void InitParam8X86(LirVirtualRegister dst, int offset)
         {
             var slot = GetSlotOffset(dst);
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, _paramOffset + offset));
@@ -443,7 +443,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.EAX);
         }
 
-        private void EmitInitRegArg(IrInstruction instruction)
+        private void EmitInitRegArg(LirInstruction instruction)
         {
             var size = RegisterSize(instruction.Dst!);
             var ordinal = (int)instruction.A.Imm;
@@ -462,7 +462,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 算术/逻辑/位
         // ------------------------------------------------------------------
 
-        private void EmitBinary(IrInstruction instruction)
+        private void EmitBinary(LirInstruction instruction)
         {
             var size = ToSize(RegisterSize(instruction.Dst!));
             LoadOperand(X64Register.EAX, instruction.A, size);
@@ -470,22 +470,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             switch (instruction.OpCode)
             {
-                case IrOpCode.Add:
+                case LirOpCode.Add:
                     _a.Add(size, X64Register.EAX, X64Register.ECX);
                     break;
-                case IrOpCode.Sub:
+                case LirOpCode.Sub:
                     _a.Sub(size, X64Register.EAX, X64Register.ECX);
                     break;
-                case IrOpCode.Imul:
+                case LirOpCode.Imul:
                     _a.Imul(size, X64Register.EAX, X64Register.ECX);
                     break;
-                case IrOpCode.And:
+                case LirOpCode.And:
                     _a.And(size, X64Register.EAX, X64Register.ECX);
                     break;
-                case IrOpCode.Or:
+                case LirOpCode.Or:
                     _a.Or(size, X64Register.EAX, X64Register.ECX);
                     break;
-                case IrOpCode.Xor:
+                case LirOpCode.Xor:
                     _a.Xor(size, X64Register.EAX, X64Register.ECX);
                     break;
             }
@@ -493,7 +493,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitIdiv(IrInstruction instruction)
+        private void EmitIdiv(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.Dst!, RegisterSize(instruction.Dst!));
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
@@ -507,7 +507,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitIrem(IrInstruction instruction)
+        private void EmitIrem(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.Dst!, RegisterSize(instruction.Dst!));
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
@@ -521,7 +521,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EDX);
         }
 
-        private void EmitUdiv(IrInstruction instruction)
+        private void EmitUdiv(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.Dst!, RegisterSize(instruction.Dst!));
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
@@ -534,7 +534,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitUrem(IrInstruction instruction)
+        private void EmitUrem(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.Dst!, RegisterSize(instruction.Dst!));
             LoadSlot(X64Register.ECX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
@@ -544,12 +544,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EDX);
         }
 
-        private void EmitUnary(IrInstruction instruction)
+        private void EmitUnary(LirInstruction instruction)
         {
             var size = ToSize(RegisterSize(instruction.Dst!));
             LoadSlot(X64Register.EAX, instruction.Dst!, RegisterSize(instruction.Dst!));
 
-            if (instruction.OpCode == IrOpCode.Neg)
+            if (instruction.OpCode == LirOpCode.Neg)
             {
                 _a.Neg(size, X64Register.EAX);
             }
@@ -561,23 +561,23 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        private void EmitShift(IrInstruction instruction)
+        private void EmitShift(LirInstruction instruction)
         {
             var size = ToSize(RegisterSize(instruction.Dst!));
             LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
 
-            if (instruction.B.Kind == IrOperandKind.Constant)
+            if (instruction.B.Kind == LirOperandKind.Constant)
             {
                 var count = (int)instruction.B.Imm;
                 switch (instruction.OpCode)
                 {
-                    case IrOpCode.Shl:
+                    case LirOpCode.Shl:
                         _a.Shl(size, X64Register.EAX, count);
                         break;
-                    case IrOpCode.Shr:
+                    case LirOpCode.Shr:
                         _a.Shr(size, X64Register.EAX, count);
                         break;
-                    case IrOpCode.Sar:
+                    case LirOpCode.Sar:
                         _a.Sar(size, X64Register.EAX, count);
                         break;
                 }
@@ -587,13 +587,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 LoadSlot(X64Register.ECX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
                 switch (instruction.OpCode)
                 {
-                    case IrOpCode.Shl:
+                    case LirOpCode.Shl:
                         _a.Shl(size, X64Register.EAX);
                         break;
-                    case IrOpCode.Shr:
+                    case LirOpCode.Shr:
                         _a.Shr(size, X64Register.EAX);
                         break;
-                    case IrOpCode.Sar:
+                    case LirOpCode.Sar:
                         _a.Sar(size, X64Register.EAX);
                         break;
                 }
@@ -611,7 +611,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private bool _pendingCmp64Trichotomy;
 
-        private void EmitBinary64(IrInstruction instruction)
+        private void EmitBinary64(LirInstruction instruction)
         {
             var dst = instruction.Dst!;
             if (_isX64)
@@ -621,22 +621,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 switch (instruction.OpCode)
                 {
-                    case IrOpCode.Add64:
+                    case LirOpCode.Add64:
                         _a.Add(X64Size.Qword, X64Register.RAX, X64Register.RCX);
                         break;
-                    case IrOpCode.Sub64:
+                    case LirOpCode.Sub64:
                         _a.Sub(X64Size.Qword, X64Register.RAX, X64Register.RCX);
                         break;
-                    case IrOpCode.Imul64:
+                    case LirOpCode.Imul64:
                         _a.Imul(X64Size.Qword, X64Register.RAX, X64Register.RCX);
                         break;
-                    case IrOpCode.And64:
+                    case LirOpCode.And64:
                         _a.And(X64Size.Qword, X64Register.RAX, X64Register.RCX);
                         break;
-                    case IrOpCode.Or64:
+                    case LirOpCode.Or64:
                         _a.Or(X64Size.Qword, X64Register.RAX, X64Register.RCX);
                         break;
-                    case IrOpCode.Xor64:
+                    case LirOpCode.Xor64:
                         _a.Xor(X64Size.Qword, X64Register.RAX, X64Register.RCX);
                         break;
                 }
@@ -657,7 +657,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             switch (instruction.OpCode)
             {
-                case IrOpCode.Add64:
+                case LirOpCode.Add64:
                     // 低 32 位相加 + adc 高 32 位
                     _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
                     _a.Add(X64Size.Dword, X64Register.EAX, bLo);
@@ -667,7 +667,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
                     break;
 
-                case IrOpCode.Sub64:
+                case LirOpCode.Sub64:
                     _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
                     _a.Sub(X64Size.Dword, X64Register.EAX, bLo);
                     _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
@@ -676,11 +676,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
                     break;
 
-                case IrOpCode.Imul64:
+                case LirOpCode.Imul64:
                     EmitImul64X86(aLo, aHi, bLo, bHi, dLo, dHi);
                     break;
 
-                case IrOpCode.And64:
+                case LirOpCode.And64:
                     _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
                     _a.And(X64Size.Dword, X64Register.EAX, bLo);
                     _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
@@ -689,7 +689,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
                     break;
 
-                case IrOpCode.Or64:
+                case LirOpCode.Or64:
                     _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
                     _a.Or(X64Size.Dword, X64Register.EAX, bLo);
                     _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
@@ -698,7 +698,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     _a.Mov(X64Size.Dword, dHi, X64Register.ECX);
                     break;
 
-                case IrOpCode.Xor64:
+                case LirOpCode.Xor64:
                     _a.Mov(X64Size.Dword, X64Register.EAX, aLo);
                     _a.Xor(X64Size.Dword, X64Register.EAX, bLo);
                     _a.Mov(X64Size.Dword, X64Register.ECX, aHi);
@@ -746,7 +746,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Pop(X64Register.EBX);
         }
 
-        private void EmitIdiv64(IrInstruction instruction)
+        private void EmitIdiv64(LirInstruction instruction)
         {
             if (_isX64)
             {
@@ -768,7 +768,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreCallResult(instruction.Dst!);
         }
 
-        private void EmitIrem64(IrInstruction instruction)
+        private void EmitIrem64(LirInstruction instruction)
         {
             if (_isX64)
             {
@@ -791,7 +791,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>6e-M21 Phase 5：无符号 64 位除法——x64 用 xor edx + div；x86 走运行时 Udiv64 helper。</summary>
-        private void EmitUdiv64(IrInstruction instruction)
+        private void EmitUdiv64(LirInstruction instruction)
         {
             if (_isX64)
             {
@@ -812,7 +812,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreCallResult(instruction.Dst!);
         }
 
-        private void EmitUrem64(IrInstruction instruction)
+        private void EmitUrem64(LirInstruction instruction)
         {
             if (_isX64)
             {
@@ -834,7 +834,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>x86：把被除数（dst 槽）与除数（A 槽）装入 ECX/EDX/ESI/EDI。</summary>
-        private void LoadIdivArgs(IrInstruction instruction)
+        private void LoadIdivArgs(LirInstruction instruction)
         {
             var slot = GetSlotOffset(instruction.Dst!);
             var divisorSlot = GetSlotOffset(instruction.A.Register!);
@@ -856,13 +856,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitUnary64(IrInstruction instruction)
+        private void EmitUnary64(LirInstruction instruction)
         {
             var dst = instruction.Dst!;
             if (_isX64)
             {
                 LoadSlot(X64Register.RAX, dst, 8);
-                if (instruction.OpCode == IrOpCode.Neg64)
+                if (instruction.OpCode == LirOpCode.Neg64)
                 {
                     _a.Neg(X64Size.Qword, X64Register.RAX);
                 }
@@ -878,7 +878,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var slot = GetSlotOffset(dst);
             var lo = new X64MemoryOperand(X64Register.RBP, slot);
             var hi = new X64MemoryOperand(X64Register.RBP, slot - 4);
-            if (instruction.OpCode == IrOpCode.Neg64)
+            if (instruction.OpCode == LirOpCode.Neg64)
             {
                 // neg lo; adc hi,0; neg hi
                 _a.Mov(X64Size.Dword, X64Register.EAX, lo);
@@ -900,11 +900,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitShift64(IrInstruction instruction)
+        private void EmitShift64(LirInstruction instruction)
         {
             var dst = instruction.Dst!;
             var src = instruction.A.Register!;
-            var countIsConst = instruction.B.Kind == IrOperandKind.Constant;
+            var countIsConst = instruction.B.Kind == LirOperandKind.Constant;
 
             if (_isX64)
             {
@@ -914,13 +914,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     var count = (int)instruction.B.Imm;
                     switch (instruction.OpCode)
                     {
-                        case IrOpCode.Shl64:
+                        case LirOpCode.Shl64:
                             _a.Shl(X64Size.Qword, X64Register.RAX, count);
                             break;
-                        case IrOpCode.Shr64:
+                        case LirOpCode.Shr64:
                             _a.Shr(X64Size.Qword, X64Register.RAX, count);
                             break;
-                        case IrOpCode.Sar64:
+                        case LirOpCode.Sar64:
                             _a.Sar(X64Size.Qword, X64Register.RAX, count);
                             break;
                     }
@@ -930,13 +930,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     LoadSlot(X64Register.ECX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
                     switch (instruction.OpCode)
                     {
-                        case IrOpCode.Shl64:
+                        case LirOpCode.Shl64:
                             _a.Shl(X64Size.Qword, X64Register.RAX);
                             break;
-                        case IrOpCode.Shr64:
+                        case LirOpCode.Shr64:
                             _a.Shr(X64Size.Qword, X64Register.RAX);
                             break;
-                        case IrOpCode.Sar64:
+                        case LirOpCode.Sar64:
                             _a.Sar(X64Size.Qword, X64Register.RAX);
                             break;
                     }
@@ -1012,15 +1012,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // shld/shrd：dst=hi(src), src=lo
             switch (instruction.OpCode)
             {
-                case IrOpCode.Shl64:
+                case LirOpCode.Shl64:
                     _a.ShldCl(X64Register.EDX, X64Register.EAX);
                     _a.Shl(X64Size.Dword, X64Register.EAX);
                     break;
-                case IrOpCode.Shr64:
+                case LirOpCode.Shr64:
                     _a.ShrdCl(X64Register.EAX, X64Register.EDX);
                     _a.Shr(X64Size.Dword, X64Register.EDX);
                     break;
-                case IrOpCode.Sar64:
+                case LirOpCode.Sar64:
                     _a.ShrdCl(X64Register.EAX, X64Register.EDX);
                     _a.Sar(X64Size.Dword, X64Register.EDX);
                     break;
@@ -1032,23 +1032,23 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>按移位方向对单个 32 位寄存器执行 shl/shr/sar；count=-1 表示用 CL 计数。</summary>
-        private void EmitShift32Reg(IrOpCode opCode, int count, X64Register reg)
+        private void EmitShift32Reg(LirOpCode opCode, int count, X64Register reg)
         {
             var size = X64Size.Dword;
             if (count >= 0)
             {
                 switch (opCode)
                 {
-                    case IrOpCode.Shl64:
-                    case IrOpCode.Shl:
+                    case LirOpCode.Shl64:
+                    case LirOpCode.Shl:
                         _a.Shl(size, reg, count);
                         break;
-                    case IrOpCode.Shr64:
-                    case IrOpCode.Shr:
+                    case LirOpCode.Shr64:
+                    case LirOpCode.Shr:
                         _a.Shr(size, reg, count);
                         break;
-                    case IrOpCode.Sar64:
-                    case IrOpCode.Sar:
+                    case LirOpCode.Sar64:
+                    case LirOpCode.Sar:
                         _a.Sar(size, reg, count);
                         break;
                 }
@@ -1057,35 +1057,35 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             {
                 switch (opCode)
                 {
-                    case IrOpCode.Shl64:
-                    case IrOpCode.Shl:
+                    case LirOpCode.Shl64:
+                    case LirOpCode.Shl:
                         _a.Shl(size, reg);
                         break;
-                    case IrOpCode.Shr64:
-                    case IrOpCode.Shr:
+                    case LirOpCode.Shr64:
+                    case LirOpCode.Shr:
                         _a.Shr(size, reg);
                         break;
-                    case IrOpCode.Sar64:
-                    case IrOpCode.Sar:
+                    case LirOpCode.Sar64:
+                    case LirOpCode.Sar:
                         _a.Sar(size, reg);
                         break;
                 }
             }
         }
 
-        private void EmitShldShrd64(IrOpCode opCode, int count, X64Register dst, X64Register src)
+        private void EmitShldShrd64(LirOpCode opCode, int count, X64Register dst, X64Register src)
         {
             switch (opCode)
             {
-                case IrOpCode.Shl64:
+                case LirOpCode.Shl64:
                     _a.ShldImm8(dst, src, (byte)count);
                     _a.Shl(X64Size.Dword, src, count);
                     break;
-                case IrOpCode.Shr64:
+                case LirOpCode.Shr64:
                     _a.ShrdImm8(dst, src, (byte)count);
                     _a.Shr(X64Size.Dword, dst, count);
                     break;
-                case IrOpCode.Sar64:
+                case LirOpCode.Sar64:
                     _a.ShrdImm8(dst, src, (byte)count);
                     _a.Sar(X64Size.Dword, dst, count);
                     break;
@@ -1094,7 +1094,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         /// <summary>64 位比较。x64：qword cmp 直接置标志；x86：计算三路结果（-1/0/+1）入 EAX，
         /// 紧随其后的 Setcc/Jcc 先 cmp eax,0 再按条件分支（_pendingCmp64Trichotomy 标记）。</summary>
-        private void EmitCmp64(IrInstruction instruction)
+        private void EmitCmp64(LirInstruction instruction)
         {
             if (_isX64)
             {
@@ -1138,11 +1138,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _pendingCmp64Trichotomy = true;
         }
 
-        private void EmitCmp(IrInstruction instruction)
+        private void EmitCmp(LirInstruction instruction)
         {
             var size = ToSize(RegisterSize(instruction.A.Register!));
             LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
-            if (instruction.B.Kind == IrOperandKind.Constant)
+            if (instruction.B.Kind == LirOperandKind.Constant)
             {
                 _a.Cmp(size, X64Register.EAX, (int)instruction.B.Imm);
             }
@@ -1153,7 +1153,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitSetcc(IrInstruction instruction)
+        private void EmitSetcc(LirInstruction instruction)
         {
             if (_pendingCmp64Trichotomy)
             {
@@ -1162,7 +1162,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _pendingCmp64Trichotomy = false;
             }
 
-            _a.Setcc(MapCond((IrCond)instruction.A.Imm), X64Register.RAX);
+            _a.Setcc(MapCond((LirCond)instruction.A.Imm), X64Register.RAX);
             _a.Movzx(X64Size.Dword, X64Register.RAX, X64Register.RAX);
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
@@ -1171,13 +1171,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 调用/返回
         // ------------------------------------------------------------------
 
-        private void EmitCall(IrInstruction instruction)
+        private void EmitCall(LirInstruction instruction)
         {
             _sysArgs.Clear();
 
             var aligned = false;
 
-            if (instruction.A.Kind == IrOperandKind.Runtime)
+            if (instruction.A.Kind == LirOperandKind.Runtime)
             {
                 aligned = EmitAlign(0);
                 _a.Call(_nameToLabel[(string)instruction.A.Symbol!]);
@@ -1185,7 +1185,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             else
             {
                 // 锟矫伙拷锟斤拷锟斤拷锟斤拷锟矫的诧拷锟斤拷锟斤拷锟斤拷锟诫补锟斤拷锟斤拷锟斤拷 ReserveArgs 锟斤拷锟斤拷锟戒，FreeArgs 锟皆称恢革拷
-                _a.Call(GetFunctionLabel((IrFunction)instruction.A.Symbol!));
+                _a.Call(GetFunctionLabel((LirFunction)instruction.A.Symbol!));
             }
 
             if (aligned)
@@ -1200,7 +1200,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitCallReg(IrInstruction instruction)
+        private void EmitCallReg(LirInstruction instruction)
         {
             _sysArgs.Clear();
 
@@ -1222,7 +1222,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>调用后把返回值存入虚拟寄存器：x86 8 字节返回为 EDX:EAX，拆分存入双 dword 槽。</summary>
-        private void StoreCallResult(IrVirtualRegister dst)
+        private void StoreCallResult(LirVirtualRegister dst)
         {
             if (!_isX64 && RegisterSize(dst) == 8)
             {
@@ -1255,7 +1255,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         /// <summary>参数区预留（字节数）：x64 每参 8 字节，x86 按类型 4/8 字节累计。
         /// 对齐补丁（sub rsp, 8）在预留前发射（与参数区同属一个调用单元），恢复由配对的 FreeArgs 完成。</summary>
-        private void EmitReserveArgs(IrInstruction instruction)
+        private void EmitReserveArgs(LirInstruction instruction)
         {
             var bytes = (int)instruction.A.Imm;
             var slots = bytes / _slotSize;
@@ -1275,7 +1275,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitFreeArgs(IrInstruction instruction)
+        private void EmitFreeArgs(LirInstruction instruction)
         {
             var bytes = (int)instruction.A.Imm;
             var slots = bytes / _slotSize;
@@ -1291,7 +1291,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitRet(IrInstruction instruction)
+        private void EmitRet(LirInstruction instruction)
         {
             _a.MarkLabel(GetLabel((int)instruction.A.Imm));
 
@@ -1340,7 +1340,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Ret();
         }
 
-        private void EmitStoreRet(IrInstruction instruction)
+        private void EmitStoreRet(LirInstruction instruction)
         {
             var size = RegisterSize(instruction.A.Register!);
             if (!_isX64 && size == 8)
@@ -1359,7 +1359,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(ToSize(size), operand, X64Register.EAX);
         }
 
-        private void EmitStoreArg(IrInstruction instruction)
+        private void EmitStoreArg(LirInstruction instruction)
         {
             var size = RegisterSize(instruction.B.Register!);
             var offset = (int)instruction.A.Imm;
@@ -1375,7 +1375,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>x86：把双 dword 槽的 8 字节 double 搬到参数区（字节偏移 offset，低 dword 在前）。</summary>
-        private void StoreArg8X86(IrVirtualRegister src, int offset)
+        private void StoreArg8X86(LirVirtualRegister src, int offset)
         {
             var slot = GetSlotOffset(src);
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
@@ -1384,7 +1384,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RSP, offset + 4), X64Register.EAX);
         }
 
-        private void EmitSetArg(IrInstruction instruction)
+        private void EmitSetArg(LirInstruction instruction)
         {
             _sysArgs.Add(instruction.B.Register!);
 
@@ -1421,7 +1421,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // SSE 只做瞬时运算（XMM0/XMM1），与整型路径共用 eax/ecx/edx 装载/存储惯例。
         // ------------------------------------------------------------------
 
-        private void EmitFConst(IrInstruction instruction)
+        private void EmitFConst(LirInstruction instruction)
         {
             var key = (string)instruction.A.Symbol!;
             if (instruction.SinglePrecision)
@@ -1435,13 +1435,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0);
         }
 
-        private void EmitFMove(IrInstruction instruction)
+        private void EmitFMove(LirInstruction instruction)
         {
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, instruction.SinglePrecision);
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0, instruction.SinglePrecision);
         }
 
-        private void EmitFBinary(IrInstruction instruction)
+        private void EmitFBinary(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single);
@@ -1449,16 +1449,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             switch (instruction.OpCode)
             {
-                case IrOpCode.FAdd:
+                case LirOpCode.FAdd:
                     if (single) { _a.Addss(X64Register.XMM0, X64Register.XMM1); } else { _a.Addsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
-                case IrOpCode.FSub:
+                case LirOpCode.FSub:
                     if (single) { _a.Subss(X64Register.XMM0, X64Register.XMM1); } else { _a.Subsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
-                case IrOpCode.FMul:
+                case LirOpCode.FMul:
                     if (single) { _a.Mulss(X64Register.XMM0, X64Register.XMM1); } else { _a.Mulsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
-                case IrOpCode.FDiv:
+                case LirOpCode.FDiv:
                     if (single) { _a.Divss(X64Register.XMM0, X64Register.XMM1); } else { _a.Divsd(X64Register.XMM0, X64Register.XMM1); }
                     break;
             }
@@ -1466,7 +1466,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single);
         }
 
-        private void EmitFNeg(IrInstruction instruction)
+        private void EmitFNeg(LirInstruction instruction)
         {
             var dstSlot = GetSlotOffset(instruction.Dst!);
             if (instruction.SinglePrecision)
@@ -1495,7 +1495,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitFCmp(IrInstruction instruction)
+        private void EmitFCmp(LirInstruction instruction)
         {
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, instruction.SinglePrecision);
             LoadSlotXmm(X64Register.XMM1, instruction.B.Register!, instruction.SinglePrecision);
@@ -1510,26 +1510,26 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>浮点单参数学（SSE）：值已在槽中，载入 XMM0 计算后写回槽。</summary>
-        private void EmitFUnary(IrInstruction instruction)
+        private void EmitFUnary(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single);
 
             switch (instruction.OpCode)
             {
-                case IrOpCode.FSqrt:
+                case LirOpCode.FSqrt:
                     if (single) { _a.Sqrtss(X64Register.XMM0, X64Register.XMM0); } else { _a.Sqrtsd(X64Register.XMM0, X64Register.XMM0); }
                     break;
-                case IrOpCode.FFloor:
+                case LirOpCode.FFloor:
                     if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x01); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x01); }
                     break;
-                case IrOpCode.FCeiling:
+                case LirOpCode.FCeiling:
                     if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x02); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x02); }
                     break;
-                case IrOpCode.FTruncate:
+                case LirOpCode.FTruncate:
                     if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x03); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x03); }
                     break;
-                case IrOpCode.FRound:
+                case LirOpCode.FRound:
                     if (single) { _a.Roundss(X64Register.XMM0, X64Register.XMM0, 0x00); } else { _a.Roundsd(X64Register.XMM0, X64Register.XMM0, 0x00); }
                     break;
             }
@@ -1537,7 +1537,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single);
         }
 
-        private void EmitFCvtSI(IrInstruction instruction)
+        private void EmitFCvtSI(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
             if (instruction.SinglePrecision)
@@ -1552,7 +1552,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitFCvtSD(IrInstruction instruction)
+        private void EmitFCvtSD(LirInstruction instruction)
         {
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, instruction.SinglePrecision);
             if (instruction.SinglePrecision)
@@ -1568,7 +1568,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>float ↔ double 精度转换（6e-M21 Phase 5b）。</summary>
-        private void EmitFCvtDS(IrInstruction instruction)
+        private void EmitFCvtDS(LirInstruction instruction)
         {
             // double → float：读双槽位模式，cvtsd2ss，写 4 字节槽
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single: false);
@@ -1576,7 +1576,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: true);
         }
 
-        private void EmitFCvtSSD(IrInstruction instruction)
+        private void EmitFCvtSSD(LirInstruction instruction)
         {
             // float → double：movss 读 4 字节槽，cvtss2sd，写双槽位模式
             LoadSlotXmm(X64Register.XMM0, instruction.A.Register!, single: true);
@@ -1585,7 +1585,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>long → double/float。x64：cvtsi2sd/cvtsi2ss r64；x86：fild qword + fstp qword/dword（双槽位模式直读）。</summary>
-        private void EmitFCvtSI64(IrInstruction instruction)
+        private void EmitFCvtSI64(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
             if (_isX64)
@@ -1637,7 +1637,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
         /// <summary>
         /// 6e-M21 Phase 7锛歶64 鈫?double/float 绮剧‘杞崲锛堝惈 >2^63 澶у€硷級銆?        /// 鎭掔瓑寮忥細(double)u = (double)(u 娓?MSB) + hiBit路2^63锛屽悇姝ュ潎绮剧‘鍙〃绀恒€?        /// x64锛歴hl1/shr1 娓?MSB + movabs 甯搁噺 2^63锛堟棤鍒嗘敮锛夛紱x86锛欶PU 鏃犲垎鏀袱娈靛拰锛堝父閲忓啓甯т笓鐢ㄦЫ锛夈€?        /// </summary>
-        private void EmitFCvtSI64U(IrInstruction instruction)
+        private void EmitFCvtSI64U(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
             var srcSlot = GetSlotOffset(instruction.A.Register!);
@@ -1705,7 +1705,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
             }
         }
-        private void EmitFCvtSD64(IrInstruction instruction)
+        private void EmitFCvtSD64(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
             if (_isX64)
@@ -1770,7 +1770,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>int/enum → long 符号扩展。x64：movsxd；x86：cdq 后低 dword 存高槽。</summary>
-        private void EmitMovsx64(IrInstruction instruction)
+        private void EmitMovsx64(LirInstruction instruction)
         {
             if (_isX64)
             {
@@ -1789,7 +1789,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>byte/char → long 零扩展（源 32 位值无符号）。x64：mov eax,[slot] 自动清高 32；x86：写低 dword、高 dword 置 0。</summary>
-        private void EmitMovzx64(IrInstruction instruction)
+        private void EmitMovzx64(LirInstruction instruction)
         {
             var srcSlot = GetSlotOffset(instruction.A.Register!);
             if (_isX64)
@@ -1807,7 +1807,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>long → int 低 32 位截断。x64：qword 清高；x86：仅写低 dword。</summary>
-        private void EmitTrunc64(IrInstruction instruction)
+        private void EmitTrunc64(LirInstruction instruction)
         {
             var srcSlot = GetSlotOffset(instruction.A.Register!);
             if (_isX64)
@@ -1823,7 +1823,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>double 运行时参数：x64 单 64 位寄存器（rcx/rdx/r8/r9）；x86 拆 low/high 两个 32 位寄存器。</summary>
-        private void EmitSetArg64(IrInstruction instruction)
+        private void EmitSetArg64(LirInstruction instruction)
         {
             var ordinal = (int)instruction.A.Imm;
             var register = instruction.B.Register!;
@@ -1866,9 +1866,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 系统调用（平台化模板）
         // ------------------------------------------------------------------
 
-        private void EmitSysCall(IrInstruction instruction)
+        private void EmitSysCall(LirInstruction instruction)
         {
-            var import = (IrImport)instruction.A.Symbol!;
+            var import = (LirImport)instruction.A.Symbol!;
             var importSlot = _importSlots[import];
             var argCount = (int)instruction.B.Imm;
             var dst = instruction.Dst;
@@ -2014,14 +2014,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             _a.Jcc(X64CondCode.Below, _nameToLabel["StackOverflow"]);
         }
 
-        private void EmitPush(IrInstruction instruction)
+        private void EmitPush(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.A.Register!, RegisterSize(instruction.A.Register!));
             _a.Push(X64Register.RAX);
             _stackDepth++;
         }
 
-        private void EmitPop(IrInstruction instruction)
+        private void EmitPop(LirInstruction instruction)
         {
             _a.Pop(X64Register.RAX);
             _stackDepth--;
@@ -2032,7 +2032,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 操作数/槽
         // ------------------------------------------------------------------
 
-        private int RegisterSize(IrVirtualRegister register) => _currentFunction!.RegisterSize(register);
+        private int RegisterSize(LirVirtualRegister register) => _currentFunction!.RegisterSize(register);
 
     }
 }

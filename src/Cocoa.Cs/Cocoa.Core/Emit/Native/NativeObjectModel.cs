@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Symbols;
 namespace Cocoa.CodeAnalysis.Emit.Native
 {
     /// <summary>
-    /// 6e-M19 M4：native 对象模型静态辅助——实例字段布局、vtable 槽位分配、IrFunction 全局唯一名。
+    /// 6e-M19 M4：native 对象模型静态辅助——实例字段布局、vtable 槽位分配、LirFunction 全局唯一名。
     /// 设计见 docs-dev/对象模型设计.md §8：
     ///   对象布局   [0] vtablePtr(4/8B) [4] pad(4B) [8] 字段…（基类在前、派生在后，8 字节对齐头）
     ///   vtable     [0] typeId:int [4] pad [8] 名字指针 [8+ps·(i+1)] 槽 i（Object 固定 0..3，用户虚方法续接）
@@ -249,7 +249,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native
         public static string StaticFieldKey(FieldSymbol field) => "$sf:" + field.ContainingClass.FullName + "." + field.Name;
 
         /// <summary>
-        /// IrFunction 全局唯一名。类方法（含构造/静态）以 `Namespace.Class.Name$参数类型` mangle，
+        /// LirFunction 全局唯一名。类方法（含构造/静态）以 `Namespace.Class.Name$参数类型` mangle，
         /// 防止跨类同名/重载在 _nameToLabel 平坦命名空间冲突；顶层函数维持裸名
         /// （入口匹配 _program.EntryFunctionName == function.Name 依赖裸名，现状保持）。
         /// </summary>

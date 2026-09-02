@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// 分派点来源（Backends 列的依据）：
     ///   Evaluator → Evaluator.Calls.cs / Evaluator.Members.cs
     ///   Il        → Emit/IL/IlEmitter.Expressions.cs（Random 为 switch 前的 if 分支）
-    ///   Native    → Emit/Native/IR/BoundTreeToIr.Builtins.cs / .Expressions.cs
+    ///   Native    → Emit/Native/Lir/MirToLir.Builtins.cs / .Expressions.cs
     /// </summary>
     internal static class BuiltinCoverage
     {

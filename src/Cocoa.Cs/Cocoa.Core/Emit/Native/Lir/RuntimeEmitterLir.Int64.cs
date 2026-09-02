@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
     /// 平台无关运行时 IR 生成：把原 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
     /// 合并为单一 IR 程序挂接。<br/>
     /// 平台差异收敛为：指针槽宽（8/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）、
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 IrToAssembler.SysCall 负责。
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
     /// </summary>
-    internal static partial class RuntimeEmitterIR
+    internal static partial class RuntimeEmitterLir
     {
         private sealed partial class RuntimeFunctionEmitter
         {
@@ -48,7 +48,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Shr(neg, neg, 31);
                 var isPos = NewLabel();
                 Cmp(neg, 0);
-                Jcc(IrCond.Equal, isPos);
+                Jcc(LirCond.Equal, isPos);
                 Const(sign, 1);
                 Neg64Pair(lo, hi);
                 Mark(isPos);
@@ -80,7 +80,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Or(acc, acc, w);
                 }
                 Cmp(acc, 0);
-                Jcc(IrCond.Equal, done);
+                Jcc(LirCond.Equal, done);
 
                 var rem = NewReg(4);
                 CallRuntime(rem, "DivChain", buf, ten);
@@ -93,7 +93,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 Cmp(tail, end);
                 var hasDigits = NewLabel();
-                Jcc(IrCond.NotEqual, hasDigits);
+                Jcc(LirCond.NotEqual, hasDigits);
                 SubI(tail, tail, 2);
                 var zch = C(4, (int)'0');
                 Store(tail, 0, zch, 2);
@@ -101,7 +101,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 Cmp(sign, 0);
                 var noSign = NewLabel();
-                Jcc(IrCond.Equal, noSign);
+                Jcc(LirCond.Equal, noSign);
                 SubI(tail, tail, 2);
                 var minus = C(4, (int)'-');
                 Store(tail, 0, minus, 2);
@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 CallRuntime(obj, "Alloc", size);
                 Cmp(obj, 0);
                 var oom = NewLabel();
-                Jcc(IrCond.Equal, oom);
+                Jcc(LirCond.Equal, oom);
 
                 var chars = NewReg(4);
                 Mov(chars, lenBytes);
@@ -200,7 +200,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     Or(acc, acc, w);
                 }
                 Cmp(acc, 0);
-                Jcc(IrCond.Equal, done);
+                Jcc(LirCond.Equal, done);
 
                 var rem = NewReg(4);
                 CallRuntime(rem, "DivChain", buf, ten);
@@ -213,7 +213,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 Cmp(tail, end);
                 var hasDigits = NewLabel();
-                Jcc(IrCond.NotEqual, hasDigits);
+                Jcc(LirCond.NotEqual, hasDigits);
                 SubI(tail, tail, 2);
                 var zch = C(4, (int)'0');
                 Store(tail, 0, zch, 2);
@@ -233,7 +233,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 CallRuntime(obj, "Alloc", size);
                 Cmp(obj, 0);
                 var oom = NewLabel();
-                Jcc(IrCond.Equal, oom);
+                Jcc(LirCond.Equal, oom);
 
                 var chars = NewReg(4);
                 Mov(chars, lenBytes);
@@ -283,7 +283,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var c0 = NewReg(4);
                 Load(c0, s, 4, 2);
                 Cmp(c0, C(4, '-'));
-                Jcc(IrCond.NotEqual, skipNeg);
+                Jcc(LirCond.NotEqual, skipNeg);
                 Const(neg, 1);
                 AddI(len, len, -1);
                 var p2 = NewReg(8);
@@ -298,7 +298,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 Mark(loop);
                 Cmp(i, len);
-                Jcc(IrCond.GreaterOrEqual, done);
+                Jcc(LirCond.GreaterOrEqual, done);
                 var ch = NewReg(4);
                 Load(ch, p, 0, 2);
                 var nextP = NewReg(8);
@@ -307,7 +307,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 AddI(ch, ch, -'0');
 
                 var dig = NewReg(8);
-                Add(IrOpCode.Movzx64, dig, IrOperand.Reg(ch));
+                Add(LirOpCode.Movzx64, dig, LirOperand.Reg(ch));
                 var prod = NewReg(8);
                 Imul64(prod, acc, ten);
                 Add(acc, prod, dig);
@@ -320,8 +320,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 // 负号修正：neg != 0 → Neg64(acc)
                 Cmp(neg, 0);
                 var outLbl = NewLabel();
-                Jcc(IrCond.Equal, outLbl);
-                Add(IrOpCode.Neg64, acc, IrOperand.Reg(acc));
+                Jcc(LirCond.Equal, outLbl);
+                Add(LirOpCode.Neg64, acc, LirOperand.Reg(acc));
                 Mark(outLbl);
 
                 StoreRet(acc);
@@ -353,7 +353,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Or(bz, bLo, bHi);
                 Cmp(bz, 0);
                 var notZero = NewLabel();
-                Jcc(IrCond.NotEqual, notZero);
+                Jcc(LirCond.NotEqual, notZero);
                 CallRuntime(null, "DivByZero");
                 Mark(notZero);
 
@@ -377,13 +377,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 var aPos = NewLabel();
                 Cmp(aNeg, 0);
-                Jcc(IrCond.Equal, aPos);
+                Jcc(LirCond.Equal, aPos);
                 Neg64Pair(avLo, avHi);
                 Mark(aPos);
 
                 var bPos = NewLabel();
                 Cmp(bNeg, 0);
-                Jcc(IrCond.Equal, bPos);
+                Jcc(LirCond.Equal, bPos);
                 Neg64Pair(bvLo, bvHi);
                 Mark(bPos);
 
@@ -392,7 +392,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var bitDone = NewLabel();
                 Mark(bitLoop);
                 Cmp(bit, 0);
-                Jcc(IrCond.Less, bitDone);
+                Jcc(LirCond.Less, bitDone);
 
                 ShiftLeft64(rLo, rHi);
                 var aBitReg = NewReg(4);
@@ -403,7 +403,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Uge64(cmpRes, rLo, rHi, bvLo, bvHi);
                 var skipSub = NewLabel();
                 Cmp(cmpRes, 0);
-                Jcc(IrCond.Equal, skipSub);
+                Jcc(LirCond.Equal, skipSub);
                 Sub64(rLo, rHi, bvLo, bvHi);
                 SetBit64(qLo, qHi, bit);
                 Mark(skipSub);
@@ -414,7 +414,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 Cmp(qsign, 0);
                 var qPos = NewLabel();
-                Jcc(IrCond.Equal, qPos);
+                Jcc(LirCond.Equal, qPos);
                 Neg64Pair(qLo, qHi);
                 Mark(qPos);
 
@@ -454,7 +454,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Or(bz, bLo, bHi);
                 Cmp(bz, 0);
                 var notZero = NewLabel();
-                Jcc(IrCond.NotEqual, notZero);
+                Jcc(LirCond.NotEqual, notZero);
                 CallRuntime(null, "DivByZero");
                 Mark(notZero);
 
@@ -473,7 +473,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 var aPos = NewLabel();
                 Cmp(aNeg, 0);
-                Jcc(IrCond.Equal, aPos);
+                Jcc(LirCond.Equal, aPos);
                 Neg64Pair(avLo, avHi);
                 Mark(aPos);
 
@@ -482,7 +482,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Shr(bNeg, bNeg, 31);
                 var bPos = NewLabel();
                 Cmp(bNeg, 0);
-                Jcc(IrCond.Equal, bPos);
+                Jcc(LirCond.Equal, bPos);
                 Neg64Pair(bvLo, bvHi);
                 Mark(bPos);
 
@@ -491,7 +491,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var bitDone = NewLabel();
                 Mark(bitLoop);
                 Cmp(bit, 0);
-                Jcc(IrCond.Less, bitDone);
+                Jcc(LirCond.Less, bitDone);
 
                 ShiftLeft64(rLo, rHi);
                 var aBitReg = NewReg(4);
@@ -502,7 +502,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Uge64(cmpRes, rLo, rHi, bvLo, bvHi);
                 var skipSub = NewLabel();
                 Cmp(cmpRes, 0);
-                Jcc(IrCond.Equal, skipSub);
+                Jcc(LirCond.Equal, skipSub);
                 Sub64(rLo, rHi, bvLo, bvHi);
                 SetBit64(qLo, qHi, bit);
                 Mark(skipSub);
@@ -513,7 +513,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 Cmp(aNeg, 0);
                 var rPos = NewLabel();
-                Jcc(IrCond.Equal, rPos);
+                Jcc(LirCond.Equal, rPos);
                 Neg64Pair(rLo, rHi);
                 Mark(rPos);
 
@@ -553,7 +553,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Or(bz, bLo, bHi);
                 Cmp(bz, 0);
                 var notZero = NewLabel();
-                Jcc(IrCond.NotEqual, notZero);
+                Jcc(LirCond.NotEqual, notZero);
                 CallRuntime(null, "DivByZero");
                 Mark(notZero);
 
@@ -562,7 +562,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var bitDone = NewLabel();
                 Mark(bitLoop);
                 Cmp(bit, 0);
-                Jcc(IrCond.Less, bitDone);
+                Jcc(LirCond.Less, bitDone);
 
                 ShiftLeft64(rLo, rHi);
                 var aBitReg = NewReg(4);
@@ -573,7 +573,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Uge64(cmpRes, rLo, rHi, bLo, bHi);
                 var skipSub = NewLabel();
                 Cmp(cmpRes, 0);
-                Jcc(IrCond.Equal, skipSub);
+                Jcc(LirCond.Equal, skipSub);
                 Sub64(rLo, rHi, bLo, bHi);
                 SetBit64(qLo, qHi, bit);
                 Mark(skipSub);
@@ -613,7 +613,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Or(bz, bLo, bHi);
                 Cmp(bz, 0);
                 var notZero = NewLabel();
-                Jcc(IrCond.NotEqual, notZero);
+                Jcc(LirCond.NotEqual, notZero);
                 CallRuntime(null, "DivByZero");
                 Mark(notZero);
 
@@ -622,7 +622,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var bitDone = NewLabel();
                 Mark(bitLoop);
                 Cmp(bit, 0);
-                Jcc(IrCond.Less, bitDone);
+                Jcc(LirCond.Less, bitDone);
 
                 ShiftLeft64(rLo, rHi);
                 var aBitReg = NewReg(4);
@@ -633,7 +633,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 Uge64(cmpRes, rLo, rHi, bLo, bHi);
                 var skipSub = NewLabel();
                 Cmp(cmpRes, 0);
-                Jcc(IrCond.Equal, skipSub);
+                Jcc(LirCond.Equal, skipSub);
                 Sub64(rLo, rHi, bLo, bHi);
                 SetBit64(qLo, qHi, bit);
                 Mark(skipSub);
@@ -656,12 +656,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             // ---- 64 位整型运算辅助（操作 4 字节对）----
 
             /// <summary>(hi:lo) = -(hi:lo)（二补码）。</summary>
-            private void Neg64Pair(IrVirtualRegister lo, IrVirtualRegister hi)
+            private void Neg64Pair(LirVirtualRegister lo, LirVirtualRegister hi)
             {
                 Neg(lo);
                 var loZero = NewLabel();
                 Cmp(lo, 0);
-                Jcc(IrCond.Equal, loZero);
+                Jcc(LirCond.Equal, loZero);
                 // 低 32 位取反后有借位（lo != 0）→ 高 32 位仅按位取反（~hi），不再 +1
                 Xor(hi, hi, C(4, unchecked((int)0xFFFFFFFFu)));
                 var d = NewLabel();
@@ -674,7 +674,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             /// <summary>(hi:lo) = (hi:lo) << 1（逻辑左移，进位跨 32 位）。</summary>
-            private void ShiftLeft64(IrVirtualRegister lo, IrVirtualRegister hi)
+            private void ShiftLeft64(LirVirtualRegister lo, LirVirtualRegister hi)
             {
                 var t = NewReg(4);
                 Mov(t, lo);
@@ -691,7 +691,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             /// <summary>取 (hi:lo) 的第 bit 位（0/1）。bit 为 0..63 的寄存器。</summary>
-            private void LoadABit(IrVirtualRegister dst, IrVirtualRegister lo, IrVirtualRegister hi, IrVirtualRegister bit)
+            private void LoadABit(LirVirtualRegister dst, LirVirtualRegister lo, LirVirtualRegister hi, LirVirtualRegister bit)
             {
                 var dword = NewReg(4);
                 Mov(dword, bit);
@@ -699,7 +699,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var isHi = NewLabel();
                 var got = NewLabel();
                 Cmp(dword, 0);
-                Jcc(IrCond.NotEqual, isHi);
+                Jcc(LirCond.NotEqual, isHi);
                 var sh = NewReg(4);
                 Mov(sh, bit);
                 And(sh, sh, C(4, 31));
@@ -722,17 +722,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             /// <summary>无符号 >=：(rHi:rLo) >= (bHi:bLo) → dst（1/0）。</summary>
-            private void Uge64(IrVirtualRegister dst, IrVirtualRegister rLo, IrVirtualRegister rHi, IrVirtualRegister bLo, IrVirtualRegister bHi)
+            private void Uge64(LirVirtualRegister dst, LirVirtualRegister rLo, LirVirtualRegister rHi, LirVirtualRegister bLo, LirVirtualRegister bHi)
             {
                 Cmp(rHi, bHi);
                 var hiLt = NewLabel();
-                Jcc(IrCond.Below, hiLt);
+                Jcc(LirCond.Below, hiLt);
                 var hiGt = NewLabel();
-                Jcc(IrCond.Above, hiGt);
+                Jcc(LirCond.Above, hiGt);
                 // rHi == bHi：比较低 32 位
                 Cmp(rLo, bLo);
                 var loGe = NewLabel();
-                Jcc(IrCond.AboveOrEqual, loGe);
+                Jcc(LirCond.AboveOrEqual, loGe);
                 Const(dst, 0);
                 var d1 = NewLabel();
                 Jmp(d1);
@@ -750,12 +750,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             /// <summary>无符号减法：(rHi:rLo) -= (bHi:bLo)（借位跨 32 位，r 保证 < 2*b）。</summary>
-            private void Sub64(IrVirtualRegister rLo, IrVirtualRegister rHi, IrVirtualRegister bLo, IrVirtualRegister bHi)
+            private void Sub64(LirVirtualRegister rLo, LirVirtualRegister rHi, LirVirtualRegister bLo, LirVirtualRegister bHi)
             {
                 var borrow = NewReg(4);
                 Cmp(rLo, bLo);
                 var noB = NewLabel();
-                Jcc(IrCond.AboveOrEqual, noB);
+                Jcc(LirCond.AboveOrEqual, noB);
                 Const(borrow, 1);
                 var bdone = NewLabel();
                 Jmp(bdone);
@@ -776,7 +776,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             /// <summary>q |= (1 << bit)（bit 为 0..63 的寄存器）。</summary>
-            private void SetBit64(IrVirtualRegister qLo, IrVirtualRegister qHi, IrVirtualRegister bit)
+            private void SetBit64(LirVirtualRegister qLo, LirVirtualRegister qHi, LirVirtualRegister bit)
             {
                 var d = NewReg(4);
                 Mov(d, bit);
@@ -784,7 +784,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 var hiPart = NewLabel();
                 var done = NewLabel();
                 Cmp(d, 0);
-                Jcc(IrCond.NotEqual, hiPart);
+                Jcc(LirCond.NotEqual, hiPart);
                 var sh = NewReg(4);
                 Mov(sh, bit);
                 And(sh, sh, C(4, 31));

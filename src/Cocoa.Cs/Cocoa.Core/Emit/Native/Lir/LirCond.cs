@@ -1,7 +1,7 @@
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>条件码（与 IAssembler 的 X64CondCode 一一对应）。</summary>
-    internal enum IrCond
+    internal enum LirCond
     {
         Equal,
         NotEqual,

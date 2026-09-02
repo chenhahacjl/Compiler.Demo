@@ -1,9 +1,12 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Coa;
+using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Coa
@@ -899,6 +902,107 @@ namespace Test
             var header = text.Substring(hashIdx, tparIdx - hashIdx);
             Assert.Contains("Test.ICollection`1#!Test.HashSet.T", header);
             Assert.DoesNotContain("!Test.IList.T", header);
+        }
+
+        [Fact]
+        public void S7_Coa_StoresStructuredHir_NotGotoOnly()
+        {
+            // S-7：.coa bodies 存 raw（未 Lower）结构化 HIR——for/while/if 保留，而非 Lowerer 的 goto/label 形态。
+            var output = EmitLibrary(NewDir(), LibrarySource);
+            var text = File.ReadAllText(output);
+
+            // 序列化源含 for range（Factorial/Sum）、while（Countdown）→ 文本应见 (for / (while / (if
+            Assert.Contains("(while", text);
+            Assert.Contains("(for ", text);
+
+            // LibrarySource 无 goto 语义（无 break/continue/label），结构化 HIR 不应出现 goto 指令
+            Assert.DoesNotContain("(goto", text);
+            Assert.DoesNotContain("(cgoto", text);
+        }
+
+        [Fact]
+        public void S7_Coa_LinkedLibrary_Lowers_AtConsumptionAndRuns()
+        {
+            // S-7 链接边界：.coa 库为 HIR（含 while/for），消费方编译时经链接处补 Lower → MIR
+            // 三后端（Evaluator/IL/native x64）可正常绑定运行——语义等价锁定。
+            var dir = NewDir();
+            var libSource = @"
+namespace MyLib
+{
+    function SumTo(n: i32): i32
+    {
+        var total = 0
+        var i = 1
+        while i <= n
+        {
+            total = total + i
+            i = i + 1
+        }
+        return total
+    }
+}
+";
+
+            var codPath = EmitLibrary(dir, libSource);
+            var text = File.ReadAllText(codPath);
+            Assert.Contains("(while", text);
+
+            var appSource = @"
+using MyLib
+
+function Main(): void
+{
+    System.Console.WriteLine(SumTo(4))
+}
+";
+
+            // Evaluator
+            var evalCompilation = Compilation.Create(new[] { codPath }, SyntaxTree.Parse(appSource));
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+                var result = evalCompilation.Evaluate(new System.Collections.Generic.Dictionary<Cocoa.CodeAnalysis.Symbols.VariableSymbol, object>());
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal("10", writer.ToString().Replace("\r\n", "\n").Trim());
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+
+            // IL
+            var refs = new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location, codPath };
+            var ilTree = SyntaxTree.Parse(appSource);
+            var ilCompilation = Compilation.Create("Main", refs, ilTree);
+            var exePath = Path.Combine(dir, "app-il.exe");
+            var ilDiagnostics = ilCompilation.Emit("app-il", refs, exePath, Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+            Assert.Empty(ilDiagnostics.Select(d => d.Message));
+
+            var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")
+            {
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+            using (var process = Process.Start(psi)!)
+            using (var output = new MemoryStream())
+            {
+                var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+                Assert.True(process.WaitForExit(15000), "il app timeout");
+                outputTask.Wait();
+                Assert.Equal(0, process.ExitCode);
+                Assert.Equal("10", Encoding.UTF8.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n").Trim());
+            }
+
+            // native x64
+            TargetPlatform.TryParse("windows-x64", out var platform);
+            var nativeCompilation = Compilation.Create(new[] { codPath }, SyntaxTree.Parse(appSource));
+            var nativeExe = Path.Combine(dir, "app-native-x64.exe");
+            var nativeDiagnostics = nativeCompilation.EmitNative("app-native", nativeExe, platform);
+            Assert.Empty(nativeDiagnostics.Select(d => d.Message));
+            var stdout = Cocoa.Tests.CodeAnalysis.Emit.Native.NativeEmitTests.Run(nativeExe);
+            Assert.Equal("10", stdout.Replace("\r\n", "\n").Replace("\r", "\n").Trim());
         }
     }
 }

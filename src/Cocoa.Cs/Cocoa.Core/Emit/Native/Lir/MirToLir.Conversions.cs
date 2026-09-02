@@ -6,17 +6,17 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
     /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
     /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
-    /// 帧布局/对齐/TEB 检查收敛到 IrToAssembler。
+    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// </summary>
-    internal sealed partial class BoundTreeToIr
+    internal sealed partial class MirToLir
     {
-        private IrVirtualRegister EmitConditionalExpression(BoundConditionalExpression node)
+        private LirVirtualRegister EmitConditionalExpression(BoundConditionalExpression node)
         {
             var instructions = _currentFunction.Instructions;
             var result = AllocateRegister(ReturnSize(node.Type));
@@ -24,65 +24,65 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var endLabel = AllocLabel();
 
             var condition = EmitExpression(node.Condition);
-            Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
-            Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(elseLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(elseLabel)));
 
             var whenTrue = EmitExpression(node.WhenTrue);
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(whenTrue)));
-            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(endLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(whenTrue)));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(endLabel)));
 
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(elseLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(elseLabel)));
             var whenFalse = EmitExpression(node.WhenFalse);
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(whenFalse)));
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(endLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(whenFalse)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(endLabel)));
 
             return result;
         }
 
         /// <summary>6e-M19 M5-b：is 动态判定——[obj] vtable 与目标祖先链 vtable 指针逐一比对（仅严格基类接收者到达）。</summary>
-        private IrVirtualRegister EmitIsExpression(BoundIsExpression node)
+        private LirVirtualRegister EmitIsExpression(BoundIsExpression node)
         {
             var result = AllocateRegister(4);
             var obj = EmitExpression(node.Expression);
             EmitTypeChainCompare(obj, node.TargetType, out var found, out var notFound, out var done);
 
             var instructions = _currentFunction.Instructions;
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(found)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(found)));
             var one = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.Const, one, IrOperand.Constant(1)));
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(one)));
-            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(done)));
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(notFound)));
+            Add(instructions, new LirInstruction(LirOpCode.Const, one, LirOperand.Constant(1)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(one)));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(done)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(notFound)));
             var zero = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.Const, zero, IrOperand.Constant(0)));
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(zero)));
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(done)));
+            Add(instructions, new LirInstruction(LirOpCode.Const, zero, LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(zero)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(done)));
 
             return result;
         }
 
         /// <summary>6e-M19 M5-b：as 动态转换——同一链比对，命中返回原引用、失败得 null（0）。</summary>
-        private IrVirtualRegister EmitAsExpression(BoundAsExpression node)
+        private LirVirtualRegister EmitAsExpression(BoundAsExpression node)
         {
             var result = AllocateRegister(8);
             var obj = EmitExpression(node.Expression);
             EmitTypeChainCompare(obj, node.TargetType, out var found, out var notFound, out var done);
 
             var instructions = _currentFunction.Instructions;
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(found)));
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(obj)));
-            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(done)));
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(notFound)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(found)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(obj)));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(done)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(notFound)));
             var nullReg = AllocateRegister(8);
-            Add(instructions, new IrInstruction(IrOpCode.Const, nullReg, IrOperand.Constant(0)));
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(nullReg)));
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(done)));
+            Add(instructions, new LirInstruction(LirOpCode.Const, nullReg, LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(nullReg)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(done)));
 
             return result;
         }
 
         /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命中/汇合三标签交调用方回填结果。</summary>
-        private void EmitTypeChainCompare(IrVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
+        private void EmitTypeChainCompare(LirVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
         {
             var instructions = _currentFunction.Instructions;
             var ps = _isX64 ? 8 : 4;
@@ -90,21 +90,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             notFound = AllocLabel();
             done = AllocLabel();
 
-            Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(obj), IrOperand.Constant(0)));
-            Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(notFound)));
+            Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(obj), LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(notFound)));
 
             var curVt = AllocateRegister(ps);
-            Add(instructions, new IrInstruction(IrOpCode.Load, curVt, IrOperand.Reg(obj), IrOperand.None, 0, ps));
+            Add(instructions, new LirInstruction(LirOpCode.Load, curVt, LirOperand.Reg(obj), LirOperand.None, 0, ps));
 
             var candidate = AllocateRegister(ps);
             foreach (var key in EnumerateDescendantVTableKeys((NamedTypeSymbol)targetType))
             {
-                Add(instructions, new IrInstruction(IrOpCode.LeaData, candidate, IrOperand.Data(key)));
-                Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(curVt), IrOperand.Reg(candidate)));
-                Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(found)));
+                Add(instructions, new LirInstruction(LirOpCode.LeaData, candidate, LirOperand.Data(key)));
+                Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(curVt), LirOperand.Reg(candidate)));
+                Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(found)));
             }
 
-            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(notFound)));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(notFound)));
         }
 
         /// <summary>
@@ -120,13 +120,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 .Select(NativeObjectModel.VTableKey);
         }
 
-        private IrVirtualRegister EmitRuntimeBinary(BoundBinaryExpression node, string runtimeName, int resultSize, bool invert = false)
+        private LirVirtualRegister EmitRuntimeBinary(BoundBinaryExpression node, string runtimeName, int resultSize, bool invert = false)
         {
             var instructions = _currentFunction.Instructions;
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
 
-            IrVirtualRegister result;
+            LirVirtualRegister result;
             if (runtimeName == "ObjectEquals")
             {
                 // M4：ObjectEquals 为栈 ABI（与 vtable 槽共享实现）
@@ -135,14 +135,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             else
             {
                 result = AllocateRegister(resultSize);
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(left)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(right)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime(runtimeName), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(left)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(right)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime(runtimeName), LirOperand.Constant(0)));
             }
 
             if (invert)
             {
-                Add(instructions, new IrInstruction(IrOpCode.Xor, result, IrOperand.Reg(result), IrOperand.Constant(1)));
+                Add(instructions, new LirInstruction(LirOpCode.Xor, result, LirOperand.Reg(result), LirOperand.Constant(1)));
             }
 
             return result;
@@ -153,20 +153,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// 函数同时作为 vtable 固定槽默认实现（槽内容可能是用户 override，callreg 无法区分 ABI），
         /// 故统一采用与用户函数一致的 ReserveArgs/StoreArg 栈传参约定；参数一律 8 字节槽。
         /// </summary>
-        private IrVirtualRegister EmitStackRuntimeCall(string name, int resultSize, params IrVirtualRegister[] args)
+        private LirVirtualRegister EmitStackRuntimeCall(string name, int resultSize, params LirVirtualRegister[] args)
         {
             var instructions = _currentFunction.Instructions;
             var totalBytes = 8 * args.Length;
 
-            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
+            Add(instructions, new LirInstruction(LirOpCode.ReserveArgs, LirOperand.Constant(totalBytes)));
             for (var i = args.Length - 1; i >= 0; i--)
             {
-                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(8 * i), IrOperand.Reg(args[i])));
+                Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(8 * i), LirOperand.Reg(args[i])));
             }
 
             var result = AllocateRegister(resultSize);
-            Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime(name), IrOperand.Constant(0)));
-            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));
+            Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime(name), LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(totalBytes)));
             return result;
         }
 
@@ -174,9 +174,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 函数调用
         // ------------------------------------------------------------------
 
-        private IrVirtualRegister _voidResult = null!;
+        private LirVirtualRegister _voidResult = null!;
 
-        private IrVirtualRegister EmitCallExpression(BoundCallExpression node)
+        private LirVirtualRegister EmitCallExpression(BoundCallExpression node)
         {
             if (node.Function.BuiltinKind != null)
             {
@@ -191,12 +191,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return EmitUserCall(node);
         }
 
-        private IrVirtualRegister EmitExternCall(BoundCallExpression node)
+        private LirVirtualRegister EmitExternCall(BoundCallExpression node)
         {
             return EmitExternCall(node.Function, node.Arguments);
         }
 
-        private IrVirtualRegister EmitExternCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        private LirVirtualRegister EmitExternCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
         {
             var instructions = _currentFunction.Instructions;
             var count = arguments.Length;
@@ -210,21 +210,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             for (var i = 0; i < count; i++)
             {
                 var value = EmitExpression(arguments[i]);
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(i), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(i), LirOperand.Reg(value)));
             }
 
-            var import = new IrImport(function.DllName!, function.EntryPoint ?? function.Name, function.CallingConvention == CallingConvention.Cdecl);
+            var import = new LirImport(function.DllName!, function.EntryPoint ?? function.Name, function.CallingConvention == CallingConvention.Cdecl);
             if (!_irProgram.Imports.Contains(import))
             {
                 _irProgram.Imports.Add(import);
             }
 
             var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
-            Add(instructions, new IrInstruction(IrOpCode.SysCall, result, IrOperand.Import(import), IrOperand.Constant(count)));
+            Add(instructions, new LirInstruction(LirOpCode.SysCall, result, LirOperand.Import(import), LirOperand.Constant(count)));
             return result ?? VoidResult();
         }
 
-        private IrVirtualRegister VoidResult()
+        private LirVirtualRegister VoidResult()
         {
             if (_voidResult == null)
             {
@@ -253,76 +253,76 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             if (type == TypeSymbol.String)
             {
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Int32 || type is NamedTypeSymbol { TypeKind: TypeKind.Enum } || type == TypeSymbol.UInt8 ||
                      type == TypeSymbol.Int8 || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16)
             {
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(intFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(intFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Boolean)
             {
                 var text = EmitSelectString("True", "False", value);
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Char)
             {
                 var text = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("CharToString"), LirOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Float)
             {
                 // 6e-M21 Phase 5b：float 打印经单→双精度中转复用 DoubleToString
                 var asDouble = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, asDouble, IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(asDouble)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSSD, asDouble, LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(asDouble)));
                 var text = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Double)
             {
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 var text = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.UInt32)
             {
                 // u32 零扩展进 8 字节寄存器后按无符号 64 位打印（值域非负，符号解释正确）
                 var widened = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Movzx64, widened, IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(widened)));
+                Add(instructions, new LirInstruction(LirOpCode.Movzx64, widened, LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(widened)));
                 var text = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("UInt64ToString"), LirOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.UInt64)
             {
                 // u64 打印：UInt64ToString（无符号十进制，支持 >2^63 大值）→ PrintString/WriteString
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 var text = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("UInt64ToString"), LirOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else if (type == TypeSymbol.Int64)
             {
                 // long 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 var text = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(text)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime(stringFn), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("Int64ToString"), LirOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime(stringFn), LirOperand.Constant(0)));
             }
             else
             {
@@ -330,76 +330,76 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private IrVirtualRegister EmitSelectString(string trueText, string falseText, IrVirtualRegister condition)
+        private LirVirtualRegister EmitSelectString(string trueText, string falseText, LirVirtualRegister condition)
         {
             var instructions = _currentFunction.Instructions;
             var falseLabel = AllocLabel();
             var doneLabel = AllocLabel();
             var result = AllocateRegister(8);
 
-            Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
-            Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(falseLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(falseLabel)));
 
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(EmitStringLiteral(trueText))));
-            Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(doneLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(EmitStringLiteral(trueText))));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(doneLabel)));
 
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(falseLabel)));
-            Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(EmitStringLiteral(falseText))));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(falseLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(EmitStringLiteral(falseText))));
 
-            Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(doneLabel)));
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(doneLabel)));
             return result;
         }
 
-        private IrVirtualRegister EmitUserCall(BoundCallExpression node)
+        private LirVirtualRegister EmitUserCall(BoundCallExpression node)
         {
             return EmitFunctionCall(node.Function, node.Arguments);
         }
 
         /// <summary>用户函数调用（栈 ABI）：ReserveArgs/StoreArg/Call/FreeArgs（6e-M18 起亦服务静态容器类方法调用）。</summary>
-        private IrVirtualRegister EmitFunctionCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        private LirVirtualRegister EmitFunctionCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
             => EmitInvoke(function, null, arguments);
 
         /// <summary>
         /// M4：统一调用发射。receiver != null → 实例调用（this 为隐藏 arg0，参数区前置 8 字节）；
         /// indirectFunction != null → CallReg 虚分派（vtable 槽指针）。实参右→左求值（与既有顺序一致）。
         /// </summary>
-        private IrVirtualRegister? EmitInvoke(
+        private LirVirtualRegister? EmitInvoke(
             FunctionSymbol function,
-            IrVirtualRegister? receiver,
+            LirVirtualRegister? receiver,
             ImmutableArray<BoundExpression> arguments,
-            IrVirtualRegister? indirectFunction = null)
+            LirVirtualRegister? indirectFunction = null)
         {
             var instructions = _currentFunction.Instructions;
             var hasThis = receiver != null;
             var count = arguments.Length;
 
             var totalBytes = ParamsTotalBytes(function, count);
-            Add(instructions, new IrInstruction(IrOpCode.ReserveArgs, IrOperand.Constant(totalBytes)));
+            Add(instructions, new LirInstruction(LirOpCode.ReserveArgs, LirOperand.Constant(totalBytes)));
 
             if (hasThis)
             {
-                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(0), IrOperand.Reg(receiver!)));
+                Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(0), LirOperand.Reg(receiver!)));
             }
 
             // 6e-M23 R7：实参改为源顺序（左→右）求值——对齐 C#/Evaluator/IL；out 实参依赖同调用内先写后读的顺序语义
             for (var i = 0; i < count; i++)
             {
                 var value = EmitExpression(arguments[i]);
-                Add(instructions, new IrInstruction(IrOpCode.StoreArg, IrOperand.Constant(ParamByteOffset(function, i, count)), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(ParamByteOffset(function, i, count)), LirOperand.Reg(value)));
             }
 
             var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
             if (indirectFunction != null)
             {
-                Add(instructions, new IrInstruction(IrOpCode.CallReg, result, IrOperand.None, IrOperand.Reg(indirectFunction)));
+                Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(indirectFunction)));
             }
             else
             {
                 var irFunction = _functionMap[function];
-                Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Func(irFunction), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Func(irFunction), LirOperand.Constant(0)));
             }
 
-            Add(instructions, new IrInstruction(IrOpCode.FreeArgs, IrOperand.Constant(totalBytes)));
+            Add(instructions, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(totalBytes)));
             return result ?? VoidResult();
         }
 
@@ -409,7 +409,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// ≤32 位来源转 i32/u32 位模式不变；64 位来源先 Trunc64；
         /// →64 位按源符号性选 Movsx64/Movzx64（char 零扩展、enum 符号扩展，与既有路径一致）。
         /// </summary>
-        private bool TryEmitIntegerConversion(BoundConversionExpression node, IrVirtualRegister value, out IrVirtualRegister result)
+        private bool TryEmitIntegerConversion(BoundConversionExpression node, LirVirtualRegister value, out LirVirtualRegister result)
         {
             result = value;
             var from = node.Expression.Type;
@@ -444,7 +444,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (fromIs64)
                 {
                     var truncated = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, truncated, IrOperand.Reg(v)));
+                    Add(instructions, new LirInstruction(LirOpCode.Trunc64, truncated, LirOperand.Reg(v)));
                     source = truncated;
                 }
 
@@ -453,14 +453,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     case "byte":
                     {
                         var r = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(source), IrOperand.Constant(0xFF)));
+                        Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(source), LirOperand.Constant(0xFF)));
                         result = r;
                         break;
                     }
                     case "ushort":
                     {
                         var r = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(source), IrOperand.Constant(0xFFFF)));
+                        Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(source), LirOperand.Constant(0xFFFF)));
                         result = r;
                         break;
                     }
@@ -469,9 +469,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var shifted = AllocateRegister(4);
                         var r = AllocateRegister(4);
                         var count24 = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Const, count24, IrOperand.Constant(24)));
-                        Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(source), IrOperand.Reg(count24)));
-                        Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(count24)));
+                        Add(instructions, new LirInstruction(LirOpCode.Const, count24, LirOperand.Constant(24)));
+                        Add(instructions, new LirInstruction(LirOpCode.Shl, shifted, LirOperand.Reg(source), LirOperand.Reg(count24)));
+                        Add(instructions, new LirInstruction(LirOpCode.Sar, r, LirOperand.Reg(shifted), LirOperand.Reg(count24)));
                         result = r;
                         break;
                     }
@@ -480,9 +480,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var shifted = AllocateRegister(4);
                         var r = AllocateRegister(4);
                         var count16 = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Const, count16, IrOperand.Constant(16)));
-                        Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(source), IrOperand.Reg(count16)));
-                        Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(count16)));
+                        Add(instructions, new LirInstruction(LirOpCode.Const, count16, LirOperand.Constant(16)));
+                        Add(instructions, new LirInstruction(LirOpCode.Shl, shifted, LirOperand.Reg(source), LirOperand.Reg(count16)));
+                        Add(instructions, new LirInstruction(LirOpCode.Sar, r, LirOperand.Reg(shifted), LirOperand.Reg(count16)));
                         result = r;
                         break;
                     }
@@ -496,7 +496,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (fromIs64)
                 {
                     var r = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, r, IrOperand.Reg(v)));
+                    Add(instructions, new LirInstruction(LirOpCode.Trunc64, r, LirOperand.Reg(v)));
                     result = r;
                 }
 
@@ -515,9 +515,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 // char 无符号零扩展；enum 底层 int 符号扩展（与既有路径一致）
                 var zeroExtend = (from.IsInteger && !from.IsSigned) || from == TypeSymbol.Char;
                 var r = AllocateRegister(8);
-                Add(instructions, new IrInstruction(
-                    zeroExtend ? IrOpCode.Movzx64 : IrOpCode.Movsx64,
-                    r, IrOperand.Reg(v)));
+                Add(instructions, new LirInstruction(
+                    zeroExtend ? LirOpCode.Movzx64 : LirOpCode.Movsx64,
+                    r, LirOperand.Reg(v)));
                 result = r;
                 return true;
             }
@@ -530,7 +530,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         /// 无符号 ≤32 位整数经 Movzx64 零扩展后按 long 转换（值非负语义正确）；
         /// float↔double 用 FCvtSSD/FCvtDS；f32 目标/源全部带 single 标志走 ss 族指令。
         /// </summary>
-        private bool TryEmitFloatConversion(BoundConversionExpression node, IrVirtualRegister value, out IrVirtualRegister result)
+        private bool TryEmitFloatConversion(BoundConversionExpression node, LirVirtualRegister value, out LirVirtualRegister result)
         {
             result = value;
             var from = node.Expression.Type;
@@ -562,7 +562,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (to == TypeSymbol.Double)
                 {
                     var widened = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, widened, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSSD, widened, LirOperand.Reg(value)));
                     result = widened;
                     return true;
                 }
@@ -570,7 +570,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (to == TypeSymbol.Int32 || to == TypeSymbol.UInt32)
                 {
                     var r32 = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD, r32, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSD, r32, LirOperand.Reg(value), LirOperand.None, 0, 0, true));
                     result = r32;
                     return true;
                 }
@@ -578,7 +578,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (to == TypeSymbol.Int64 || to == TypeSymbol.UInt64)
                 {
                     var r64 = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD64, r64, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSD64, r64, LirOperand.Reg(value), LirOperand.None, 0, 0, true));
                     result = r64;
                     return true;
                 }
@@ -588,21 +588,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     to == TypeSymbol.UInt8 || to == TypeSymbol.UInt16)
                 {
                     var truncated = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD, truncated, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSD, truncated, LirOperand.Reg(value), LirOperand.None, 0, 0, true));
 
                     switch (to.Name)
                     {
                         case "byte":
                         {
                             var r = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(truncated), IrOperand.Constant(0xFF)));
+                            Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(truncated), LirOperand.Constant(0xFF)));
                             result = r;
                             break;
                         }
                         case "ushort":
                         {
                             var r = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.And, r, IrOperand.Reg(truncated), IrOperand.Constant(0xFFFF)));
+                            Add(instructions, new LirInstruction(LirOpCode.And, r, LirOperand.Reg(truncated), LirOperand.Constant(0xFFFF)));
                             result = r;
                             break;
                         }
@@ -611,9 +611,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             var shifted = AllocateRegister(4);
                             var r = AllocateRegister(4);
                             var c24 = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.Const, c24, IrOperand.Constant(24)));
-                            Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(truncated), IrOperand.Reg(c24)));
-                            Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(c24)));
+                            Add(instructions, new LirInstruction(LirOpCode.Const, c24, LirOperand.Constant(24)));
+                            Add(instructions, new LirInstruction(LirOpCode.Shl, shifted, LirOperand.Reg(truncated), LirOperand.Reg(c24)));
+                            Add(instructions, new LirInstruction(LirOpCode.Sar, r, LirOperand.Reg(shifted), LirOperand.Reg(c24)));
                             result = r;
                             break;
                         }
@@ -622,9 +622,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             var shifted = AllocateRegister(4);
                             var r = AllocateRegister(4);
                             var c16 = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.Const, c16, IrOperand.Constant(16)));
-                            Add(instructions, new IrInstruction(IrOpCode.Shl, shifted, IrOperand.Reg(truncated), IrOperand.Reg(c16)));
-                            Add(instructions, new IrInstruction(IrOpCode.Sar, r, IrOperand.Reg(shifted), IrOperand.Reg(c16)));
+                            Add(instructions, new LirInstruction(LirOpCode.Const, c16, LirOperand.Constant(16)));
+                            Add(instructions, new LirInstruction(LirOpCode.Shl, shifted, LirOperand.Reg(truncated), LirOperand.Reg(c16)));
+                            Add(instructions, new LirInstruction(LirOpCode.Sar, r, LirOperand.Reg(shifted), LirOperand.Reg(c16)));
                             result = r;
                             break;
                         }
@@ -641,7 +641,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (from == TypeSymbol.Float)
                 {
                     var r = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, r, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSSD, r, LirOperand.Reg(value)));
                     result = r;
                     return true;
                 }
@@ -652,11 +652,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     if (from == TypeSymbol.UInt64)
                     {
                         // 6e-M21 Phase 7：无符号精确转换（清 MSB + 补偿 2^63），支持 >2^63 大值
-                        Add(instructions, new IrInstruction(IrOpCode.FCvtSI64U, r, IrOperand.Reg(value)));
+                        Add(instructions, new LirInstruction(LirOpCode.FCvtSI64U, r, LirOperand.Reg(value)));
                     }
                     else
                     {
-                        Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(value)));
+                        Add(instructions, new LirInstruction(LirOpCode.FCvtSI64, r, LirOperand.Reg(value)));
                     }
 
                     result = r;
@@ -667,16 +667,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 无符号零扩展后按 long 转（u32 最大值在 double 精度内精确）
                     var wide = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Movzx64, wide, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Movzx64, wide, LirOperand.Reg(value)));
                     var r = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(wide)));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSI64, r, LirOperand.Reg(wide)));
                     result = r;
                     return true;
                 }
 
                 // 有符号整数/enum → double
                 var signedResult = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSI, signedResult, IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSI, signedResult, LirOperand.Reg(value)));
                 result = signedResult;
                 return true;
             }
@@ -685,7 +685,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (from == TypeSymbol.Double)
             {
                 var r4 = AllocateRegister(4);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtDS, r4, IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtDS, r4, LirOperand.Reg(value)));
                 result = r4;
                 return true;
             }
@@ -693,30 +693,30 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (from.IsInteger && !from.IsSigned || from == TypeSymbol.Char)
             {
                 var wide = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Movzx64, wide, IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.Movzx64, wide, LirOperand.Reg(value)));
                 if (to == TypeSymbol.Float)
                 {
                     // u32 值域非负：零扩展后按无符号 long 路径精确转换到 f32
                     var r4 = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64U, r4, IrOperand.Reg(wide), IrOperand.None, 0, 0, true));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSI64U, r4, LirOperand.Reg(wide), LirOperand.None, 0, 0, true));
                     result = r4;
                     return true;
                 }
 
                 var r = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, r, IrOperand.Reg(wide)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSI64, r, LirOperand.Reg(wide)));
                 result = r;
                 return true;
             }
 
             // 有符号整数/enum → float
             var fResult = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.FCvtSI, fResult, IrOperand.Reg(value), IrOperand.None, 0, 0, true));
+            Add(instructions, new LirInstruction(LirOpCode.FCvtSI, fResult, LirOperand.Reg(value), LirOperand.None, 0, 0, true));
             result = fResult;
             return true;
         }
 
-        private IrVirtualRegister EmitConversionExpression(BoundConversionExpression node)
+        private LirVirtualRegister EmitConversionExpression(BoundConversionExpression node)
         {
             var instructions = _currentFunction.Instructions;
             var value = EmitExpression(node.Expression);
@@ -765,7 +765,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (from == TypeSymbol.Double && to == TypeSymbol.Int32)
             {
                 var result = AllocateRegister(4);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSD, result, IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSD, result, LirOperand.Reg(value)));
                 return result;
             }
 
@@ -773,9 +773,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             {
                 // 截断取整（与 C# 一致）；LeaSlot 保证 x86 帧底缓冲（EmitFCvtSD64 的控制字区）
                 var scratch = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.LeaSlot, scratch, IrOperand.Reg(scratch)));
+                Add(instructions, new LirInstruction(LirOpCode.LeaSlot, scratch, LirOperand.Reg(scratch)));
                 var result = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSD64, result, IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSD64, result, LirOperand.Reg(value)));
                 return result;
             }
 
@@ -785,7 +785,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 符号扩展
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Movsx64, result, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Movsx64, result, LirOperand.Reg(value)));
                     return result;
                 }
 
@@ -793,7 +793,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 零扩展（byte 无符号）
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Movzx64, result, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Movzx64, result, LirOperand.Reg(value)));
                     return result;
                 }
 
@@ -801,15 +801,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 零扩展（char 无符号，槽内已是零扩展的 32 位值）
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Movzx64, result, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Movzx64, result, LirOperand.Reg(value)));
                     return result;
                 }
 
                 if (from == TypeSymbol.String)
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ParseInt64"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("ParseInt64"), LirOperand.Constant(0)));
                     return result;
                 }
 
@@ -822,38 +822,38 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 低 32 位截断
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, result, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Trunc64, result, LirOperand.Reg(value)));
                     return result;
                 }
 
                 if (to == TypeSymbol.UInt8)
                 {
                     var truncatedLong = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, truncatedLong, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Trunc64, truncatedLong, LirOperand.Reg(value)));
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(truncatedLong), IrOperand.Constant(0xFF)));
+                    Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(truncatedLong), LirOperand.Constant(0xFF)));
                     return result;
                 }
 
                 if (to == TypeSymbol.Char)
                 {
                     var truncatedLong = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Trunc64, truncatedLong, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Trunc64, truncatedLong, LirOperand.Reg(value)));
                     return truncatedLong;
                 }
 
                 if (to == TypeSymbol.Double)
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSI64, result, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSI64, result, LirOperand.Reg(value)));
                     return result;
                 }
 
                 if (to == TypeSymbol.String)
                 {
                     var text = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("Int64ToString"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("Int64ToString"), LirOperand.Constant(0)));
                     return text;
                 }
 
@@ -864,7 +864,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 from == TypeSymbol.UInt8 && to == TypeSymbol.Double)
             {
                 var result = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSI, result, IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSI, result, LirOperand.Reg(value)));
                 return result;
             }
 
@@ -874,9 +874,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 与 C# 语义一致：(byte) 3.9 == 3（先截断到 int 再取低 8 位）
                     var truncated = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.FCvtSD, truncated, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.FCvtSD, truncated, LirOperand.Reg(value)));
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(truncated), IrOperand.Constant(0xFF)));
+                    Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(truncated), LirOperand.Constant(0xFF)));
                     return result;
                 }
 
@@ -884,7 +884,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     // 无符号字节截断，与 C# (byte)300 == 44 语义一致
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(value), IrOperand.Constant(0xFF)));
+                    Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(value), LirOperand.Constant(0xFF)));
                     return result;
                 }
 
@@ -896,24 +896,24 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (from == TypeSymbol.Double)
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                     return result;
                 }
 
                 if (from == TypeSymbol.Int32)
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("IntToString"), LirOperand.Constant(0)));
                     return result;
                 }
 
                 if (from == TypeSymbol.Char)
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("CharToString"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("CharToString"), LirOperand.Constant(0)));
                     return result;
                 }
 
@@ -930,8 +930,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (from == TypeSymbol.String)
                 {
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ParseInt"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("ParseInt"), LirOperand.Constant(0)));
                     return result;
                 }
 
@@ -943,8 +943,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (from == TypeSymbol.String)
                 {
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ParseBool"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("ParseBool"), LirOperand.Constant(0)));
                     return result;
                 }
 
@@ -958,7 +958,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 变量/标签
         // ------------------------------------------------------------------
 
-        private IrVirtualRegister GetVariable(VariableSymbol variable)
+        private LirVirtualRegister GetVariable(VariableSymbol variable)
         {
             if (_variables.TryGetValue(variable, out var register))
             {

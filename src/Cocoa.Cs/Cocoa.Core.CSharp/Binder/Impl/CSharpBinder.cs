@@ -450,6 +450,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             var functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
+            var rawBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var genericOpenBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
@@ -464,8 +465,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     // （历史边界：正因此前选语法重绑路线）——诊断不外泄，体照常携带供替换展开
                     if (!function.IsGenericMethod && !function.IsExtern && !function.IsAbstract && function.BuiltinKind == null)
                     {
-                        var (openBody, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
-                        genericOpenBodies.Add(function, openBody);
+                        // S-7：泛型开放体随库携带为 raw（结构化 HIR）——读侧并入 cod.Bodies，
+                        // 消费方 Monomorphizer 替换展开后由其捷径补 Lower（见 Monomorphizer 三个替换点）。
+                        var (rawOpenBody, _, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
+                        genericOpenBodies.Add(function, rawOpenBody);
                     }
 
                     continue;
@@ -489,8 +492,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     continue;
                 }
 
-                var (loweredBody, bodyDiagnostics) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
+                var (rawBody, loweredBody, bodyDiagnostics) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
                 functionBodies.Add(function, loweredBody);
+                rawBodies.Add(function, rawBody);
                 diagnostics.AddRange(bodyDiagnostics);
             }
 
@@ -579,6 +583,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var codAssemblies = ImmutableDictionary<object, string>.Empty;
             if (!codLibraries.IsDefaultOrEmpty)
             {
+                // S-7：.coa 存 raw 结构化 HIR（含 for/while/if），链接合并前统一 Lower 为 MIR，
+                // 保持 program.Functions 规范契约（三后端/求值器/CanonicalIr.Verify 零改动）。
                 if (!linkCodDynamically)
                 {
                     foreach (var library in codLibraries)
@@ -594,7 +600,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                             if (!functionBodies.ContainsKey(fn))
                             {
-                                functionBodies.Add(fn, body);
+                                // AllPathsReturn 已由库构建期校验；此处仅 Lower（raw HIR → MIR）
+                                var lowered = Lowerer.Lower(fn, body);
+                                functionBodies.Add(fn, lowered);
                             }
                         }
                     }
@@ -634,7 +642,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
             }
 
-            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions, genericOpenBodies.ToImmutable());
+            return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions, genericOpenBodies.ToImmutable(), rawBodies.ToImmutable());
         }
 
         /// <summary>绑定树先序递归枚举（6e-M22 C4）：lambda 后处理走查用。</summary>
@@ -653,8 +661,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
         /// <summary>
         /// 单函数体构建（6e-M20 自 BindProgram 抽取复用）：方法体绑定 + 构造链/字段初始化器前缀 + 降级 + AllPathsReturn 检查。
+        /// 返回 <c>(raw, lowered, diagnostics)</c>：raw 为 S-7 HIR（.coa 持久化用，未 Lower）；lowered 为 MIR（三后端/求值器消费）。
         /// </summary>
-        private static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, NamespaceSymbol? globalNamespace)
+        private static (BoundBlockStatement Raw, BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, NamespaceSymbol? globalNamespace)
         {
             var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
             var bodyLocation = (SSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
@@ -696,7 +705,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
                 ? (function.Declaration != null ? ((FunctionDeclarationSyntax)function.Declaration).Identifier.Location : bodyLocation.Location)
                 : (TextLocation?)null;
-            var loweredBody = LoweringPipeline.Lower(function, InterpolationNormalizer.Rewrite(body), binder._diagnostics, returnCheckLocation);
+
+            // S-7：拆双产物——raw（构造前缀/插值归一后、未 Lower 的结构化 HIR）供 .coa 持久化；
+            // lowered（Lowerer 输出 goto/CFG 的 MIR）供三后端与求值器消费。Library 消费边界见链接处补 Lower。
+            var rawBody = (BoundBlockStatement)InterpolationNormalizer.Rewrite(body);
+            var loweredBody = LoweringPipeline.Lower(function, rawBody, binder._diagnostics, returnCheckLocation);
 
             // 明确赋值分析（6e-M23 R4）：跟踪本函数 out 形参
             DefiniteAssignmentAnalysis.Analyze(
@@ -704,7 +717,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 function.Parameters.Where(p => p.IsOut).ToImmutableArray(),
                 binder._diagnostics);
 
-            return (loweredBody, binder.Diagnostics.ToImmutableArray());
+            return (rawBody, loweredBody, binder.Diagnostics.ToImmutableArray());
         }
 
         /// <summary>

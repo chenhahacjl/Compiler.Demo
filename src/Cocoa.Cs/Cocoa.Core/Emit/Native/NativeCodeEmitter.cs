@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.Emit.Native.IR;
+using Cocoa.CodeAnalysis.Emit.Native.Lir;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X86;
@@ -12,8 +12,8 @@ using Cocoa.CodeAnalysis.Emit.Native.Runtime.Windows.X86;
 namespace Cocoa.CodeAnalysis.Emit.Native
 {
     /// <summary>
-    /// 原生后端入口：绑定树 → IR（BoundTreeToIr）→ 运行时 IR 挂接（RuntimeEmitterIR）→
-    /// IAssembler（IrToAssembler）。帧布局、参数传递、TEB 栈限检查、x64 16 字节对齐与历史实现一致（ABI 见 IrToAssembler）。
+    /// 原生后端入口：MIR（program.Functions 规范树）→ LIR（MirToLir）→ 运行时 LIR 挂接（RuntimeEmitterLir）→
+    /// IAssembler（LirToAssembler）。帧布局、参数传递、TEB 栈限检查、x64 16 字节对齐与历史实现一致（ABI 见 LirToAssembler）。
     /// </summary>
     internal sealed class NativeCodeEmitter
     {
@@ -27,12 +27,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native
 
             var entryLabel = a.CreateLabel();
 
-            var ir = BoundTreeToIr.Generate(program, platform);
-            RuntimeEmitterIR.Append(ir, platform);
-            System.IO.File.WriteAllText(System.IO.Path.ChangeExtension(outputPath, ".ir.txt"), Cocoa.CodeAnalysis.Emit.Native.IR.IrPrinter.Format(ir));
+            var ir = MirToLir.Generate(program, platform);
+            RuntimeEmitterLir.Append(ir, platform);
+            System.IO.File.WriteAllText(System.IO.Path.ChangeExtension(outputPath, ".ir.txt"), Cocoa.CodeAnalysis.Emit.Native.Lir.LirPrinter.Format(ir));
 
             // 6c-2：无自解析 stub，IAT 由 OS 加载器按导入描述符填充，入口即 main
-            var result = IrToAssembler.Emit(a, ir, entryLabel, platform, null);
+            var result = LirToAssembler.Emit(a, ir, entryLabel, platform, null);
 
             a.Patch(dataRva - PeFileWriter.TextRva, PeFileWriter.ImageBaseOf(platform.Arch));
             var code = a.ToArray();
@@ -52,10 +52,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native
                 : new X86Assembler();
 
             var entryLabel = a.CreateLabel();
-            var ir = BoundTreeToIr.Generate(program, platform);
-            RuntimeEmitterIR.Append(ir, platform);
+            var ir = MirToLir.Generate(program, platform);
+            RuntimeEmitterLir.Append(ir, platform);
 
-            IrToAssembler.Emit(a, ir, entryLabel, platform, null);
+            LirToAssembler.Emit(a, ir, entryLabel, platform, null);
 
             return PeFileWriter.ComputeDataRva(a.ToArray().Length);
         }

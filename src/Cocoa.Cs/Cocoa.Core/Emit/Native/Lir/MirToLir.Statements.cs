@@ -6,15 +6,15 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
     /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
     /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
-    /// 帧布局/对齐/TEB 检查收敛到 IrToAssembler。
+    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// </summary>
-    internal sealed partial class BoundTreeToIr
+    internal sealed partial class MirToLir
     {
         private void EmitStatement(BoundStatement node)
         {
@@ -47,12 +47,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             var field = _closureClass!.GetField(declaration.Variable.Name)!;
                             var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
-                            Add(instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(_closureRegister), IrOperand.Reg(value), offset, size));
+                            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(_closureRegister), LirOperand.Reg(value), offset, size));
                             break;
                         }
 
                         var variable = GetVariable(declaration.Variable);
-                        Add(instructions, new IrInstruction(IrOpCode.Mov, variable, IrOperand.Reg(value)));
+                        Add(instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(value)));
                         break;
                     }
 
@@ -63,19 +63,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var doneLabel = AllocLabel();
                         var condition = EmitExpression(statement.Condition);
 
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
-                        Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(elseLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(elseLabel)));
 
                         EmitStatement(statement.ThenStatement);
-                        Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(doneLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(doneLabel)));
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(elseLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(elseLabel)));
                         if (statement.ElseStatement != null)
                         {
                             EmitStatement(statement.ElseStatement);
                         }
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(doneLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(doneLabel)));
                         break;
                     }
 
@@ -85,15 +85,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var loopLabel = AllocLabel();
                         var doneLabel = AllocLabel();
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(loopLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(loopLabel)));
                         var condition = EmitExpression(statement.Condition);
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
-                        Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(doneLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(doneLabel)));
 
                         EmitStatement(statement.Body);
-                        Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(loopLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(loopLabel)));
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(doneLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(doneLabel)));
                         break;
                     }
 
@@ -102,11 +102,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var statement = (BoundDoWhileStatement)node;
                         var loopLabel = AllocLabel();
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(loopLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(loopLabel)));
                         EmitStatement(statement.Body);
                         var condition = EmitExpression(statement.Condition);
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
-                        Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.NotEqual), IrOperand.Label(loopLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.NotEqual), LirOperand.Label(loopLabel)));
                         break;
                     }
 
@@ -117,17 +117,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var doneLabel = AllocLabel();
 
                         var variable = GetVariable(statement.Variable);
-                        Add(instructions, new IrInstruction(IrOpCode.Mov, variable, IrOperand.Reg(EmitExpression(statement.LowerBound))));
+                        Add(instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(EmitExpression(statement.LowerBound))));
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(loopLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(loopLabel)));
                         var upper = EmitExpression(statement.UpperBound);
                         var less = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(variable), IrOperand.Reg(upper)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(variable), LirOperand.Reg(upper)));
                         // 步长方向：负数 → 降序（i > upper 继续）；非负或缺省 → 升序（i < upper 继续）
                         var descending = statement.Step?.ConstantValue?.Value is int stepConst && stepConst < 0;
-                        Add(instructions, new IrInstruction(IrOpCode.Setcc, less, IrOperand.Constant((int)(descending ? IrCond.Greater : IrCond.Less))));
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(less), IrOperand.Constant(0)));
-                        Add(instructions, new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), IrOperand.Label(doneLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Setcc, less, LirOperand.Constant((int)(descending ? LirCond.Greater : LirCond.Less))));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(less), LirOperand.Constant(0)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(doneLabel)));
 
                         EmitStatement(statement.Body);
 
@@ -140,28 +140,28 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             stepExpression);
                         EmitExpression(new BoundAssignmentExpression(statement.Syntax, statement.Variable, increment));
 
-                        Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(loopLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(loopLabel)));
 
-                        Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(doneLabel)));
+                        Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(doneLabel)));
                         break;
                     }
 
                 case BoundNodeKind.LabelStatement:
-                    Add(instructions, new IrInstruction(IrOpCode.Label, IrOperand.Label(GetLabel(((BoundLabelStatement)node).Label))));
+                    Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(GetLabel(((BoundLabelStatement)node).Label))));
                     break;
 
                 case BoundNodeKind.GotoStatement:
-                    Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(GetLabel(((BoundGotoStatement)node).Label))));
+                    Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(GetLabel(((BoundGotoStatement)node).Label))));
                     break;
 
                 case BoundNodeKind.ConditionalGotoStatement:
                     {
                         var statement = (BoundConditionalGotoStatement)node;
                         var condition = EmitExpression(statement.Condition);
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(condition), IrOperand.Constant(0)));
-                        Add(instructions, new IrInstruction(IrOpCode.Jcc,
-                            IrOperand.Constant((int)(statement.JumpIfTrue ? IrCond.NotEqual : IrCond.Equal)),
-                            IrOperand.Label(GetLabel(statement.Label))));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jcc,
+                            LirOperand.Constant((int)(statement.JumpIfTrue ? LirCond.NotEqual : LirCond.Equal)),
+                            LirOperand.Label(GetLabel(statement.Label))));
                         break;
                     }
 
@@ -171,10 +171,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         if (statement.Expression != null)
                         {
                             var value = EmitExpression(statement.Expression);
-                            Add(instructions, new IrInstruction(IrOpCode.StoreRet, IrOperand.Reg(value)));
+                            Add(instructions, new LirInstruction(LirOpCode.StoreRet, LirOperand.Reg(value)));
                         }
 
-                        Add(instructions, new IrInstruction(IrOpCode.Jmp, IrOperand.Label(_currentFunction.EndLabelId)));
+                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(_currentFunction.EndLabelId)));
                         break;
                     }
 
@@ -191,7 +191,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         // 表达式
         // ------------------------------------------------------------------
 
-        private IrVirtualRegister EmitExpression(BoundExpression node)
+        private LirVirtualRegister EmitExpression(BoundExpression node)
         {
             if (node.ConstantValue != null)
             {
@@ -214,7 +214,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
                             var result = AllocateRegister(size);
-                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Load, result, IrOperand.Reg(_closureRegister), IrOperand.None, offset, size));
+                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(_closureRegister), LirOperand.None, offset, size));
                             return result;
                         }
 
@@ -224,7 +224,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         if (variable is ParameterSymbol { IsByRef: true } byRefParameter)
                         {
                             var loaded = AllocateRegister(ReturnSize(byRefParameter.Type));
-                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Load, loaded, IrOperand.Reg(value), IrOperand.None, 0, ReturnSize(byRefParameter.Type)));
+                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, loaded, LirOperand.Reg(value), LirOperand.None, 0, ReturnSize(byRefParameter.Type)));
                             return loaded;
                         }
 
@@ -242,7 +242,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                             var field = _closureClass!.GetField(assignment.Variable.Name)!;
                             var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
-                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(_closureRegister), IrOperand.Reg(value), offset, size));
+                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(_closureRegister), LirOperand.Reg(value), offset, size));
                             return value;
                         }
 
@@ -250,12 +250,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         if (assignment.Variable is ParameterSymbol { IsByRef: true })
                         {
                             var pointer = GetVariable(assignment.Variable);
-                            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Store, null, IrOperand.Reg(pointer), IrOperand.Reg(value), 0, ReturnSize(assignment.Variable.Type)));
+                            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(pointer), LirOperand.Reg(value), 0, ReturnSize(assignment.Variable.Type)));
                             return value;
                         }
 
                         var variable = GetVariable(assignment.Variable);
-                        Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Mov, variable, IrOperand.Reg(value)));
+                        Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(value)));
                         return variable;
                     }
 
@@ -332,14 +332,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private IrVirtualRegister EmitConstant(BoundExpression node)
+        private LirVirtualRegister EmitConstant(BoundExpression node)
         {
             var value = node.ConstantValue!.Value;
 
             if (value == null)
             {
                 var register = AllocateRegister(8);
-                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Const, register, IrOperand.Constant(0)));
+                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
                 return register;
             }
 
@@ -392,14 +392,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             throw new Exception($"Unexpected constant: {value}");
         }
 
-        private IrVirtualRegister EmitLiteralExpression(BoundLiteralExpression node)
+        private LirVirtualRegister EmitLiteralExpression(BoundLiteralExpression node)
         {
             var value = node.Value;
 
             if (value == null)
             {
                 var register = AllocateRegister(8);
-                Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Const, register, IrOperand.Constant(0)));
+                Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
                 return register;
             }
 
@@ -447,54 +447,54 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             throw new Exception($"Unexpected literal: {value}");
         }
 
-        private IrVirtualRegister EmitConst(int value)
+        private LirVirtualRegister EmitConst(int value)
         {
             var register = AllocateRegister(4);
-            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Const, register, IrOperand.Constant(value)));
+            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
             return register;
         }
 
-        /// <summary>64 位整型常量：8 字节槽（x86 由 IrToAssembler 拆低/高两个 dword 立即数）。</summary>
-        private IrVirtualRegister EmitLongConst(long value)
+        /// <summary>64 位整型常量：8 字节槽（x86 由 LirToAssembler 拆低/高两个 dword 立即数）。</summary>
+        private LirVirtualRegister EmitLongConst(long value)
         {
             var register = AllocateRegister(8);
-            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.Const, register, IrOperand.Constant(value)));
+            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
             return register;
         }
 
-        private IrVirtualRegister EmitStringLiteral(string text)
+        private LirVirtualRegister EmitStringLiteral(string text)
         {
             var key = _irProgram.InternString(text);
             var register = AllocateRegister(8);
-            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.LeaData, register, IrOperand.Data(key)));
+            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, register, LirOperand.Data(key)));
             return register;
         }
 
-        private IrVirtualRegister EmitDoubleConst(double value)
+        private LirVirtualRegister EmitDoubleConst(double value)
         {
             var bits = unchecked((long)BitConverter.DoubleToInt64Bits(value));
             var key = "d:" + unchecked((ulong)bits).ToString("X16");
-            _irProgram.AddData(IrDataItem.ByteArray(key, new[]
+            _irProgram.AddData(LirDataItem.ByteArray(key, new[]
             {
                 (byte)bits, (byte)(bits >> 8), (byte)(bits >> 16), (byte)(bits >> 24),
                 (byte)(bits >> 32), (byte)(bits >> 40), (byte)(bits >> 48), (byte)(bits >> 56),
             }));
             var register = AllocateRegister(8);
-            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.FConst, register, IrOperand.Data(key)));
+            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key)));
             return register;
         }
 
         /// <summary>float 常量：4 字节数据段 + FConst（single 标志 → movss 装载）（6e-M21 Phase 5b）。</summary>
-        private IrVirtualRegister EmitFloatConst(float value)
+        private LirVirtualRegister EmitFloatConst(float value)
         {
             var bits = BitConverter.SingleToInt32Bits(value);
             var key = "f:" + unchecked((uint)bits).ToString("X8");
-            _irProgram.AddData(IrDataItem.ByteArray(key, new[]
+            _irProgram.AddData(LirDataItem.ByteArray(key, new[]
             {
                 (byte)bits, (byte)(bits >> 8), (byte)(bits >> 16), (byte)(bits >> 24),
             }));
             var register = AllocateRegister(4);
-            Add(_currentFunction.Instructions, new IrInstruction(IrOpCode.FConst, register, IrOperand.Data(key), IrOperand.None, 0, 0, true));
+            Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key), LirOperand.None, 0, 0, true));
             return register;
         }
 

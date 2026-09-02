@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
     /// 平台无关运行时 IR 生成：把原 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
     /// 合并为单一 IR 程序挂接。<br/>
     /// 平台差异收敛为：指针槽宽（8/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）、
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 IrToAssembler.SysCall 负责。
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
     /// </summary>
-    internal static partial class RuntimeEmitterIR
+    internal static partial class RuntimeEmitterLir
     {
         private static readonly string[] Kernel32Imports =
         {
@@ -36,7 +36,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             "BCryptHash",
         };
 
-        public static void Append(IrProgram program, TargetPlatform platform)
+        public static void Append(LirProgram program, TargetPlatform platform)
         {
             var emitter = new RuntimeFunctionEmitter(program, platform);
             emitter.Emit();
@@ -46,16 +46,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         {
             private const string Prefix = "rt:";
 
-            private readonly IrProgram _program;
+            private readonly LirProgram _program;
             private readonly bool _isX64;
             private readonly string _tickCountImport;
             private readonly int _heapPtrOffset;
             private readonly int _heapEndOffset;
-            private readonly IrVirtualRegisterAllocator _allocator = new();
+            private readonly LirVirtualRegisterAllocator _allocator = new();
 
-            private IrFunction? _currentFunction;
-            private List<IrInstruction> _instructions = new();
-            private readonly List<IrVirtualRegister> _args = new();
+            private LirFunction? _currentFunction;
+            private List<LirInstruction> _instructions = new();
+            private readonly List<LirVirtualRegister> _args = new();
             private int _nextLabel;
 
             // 数据 key
@@ -66,7 +66,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 _formatZero = "", _formatHalf = "",
                 _bcryptAlg = "", _bcryptHash = "";
 
-            public RuntimeFunctionEmitter(IrProgram program, TargetPlatform platform)
+            public RuntimeFunctionEmitter(LirProgram program, TargetPlatform platform)
             {
                 _program = program;
                 _isX64 = platform.Arch == Architecture.X64;
@@ -278,57 +278,57 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             private void EmitData()
             {
-                _heapBase = _program.AddData(IrDataItem.Pointer(Prefix + "HeapBase"));
-                _heapPtr = _program.AddData(IrDataItem.Pointer(Prefix + "HeapPtr"));
-                _heapEnd = _program.AddData(IrDataItem.Pointer(Prefix + "HeapEnd"));
-                _rngState = _program.AddData(IrDataItem.Int32(Prefix + "RngState", 0));
-                _inputBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "InputBuffer", new byte[0x2000]));
-                _fileBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
-                _fileBuffer2 = _program.AddData(IrDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
-                // C 风格 null 结尾宽串（IrDataItem.Utf16 是长度前缀的 CO 串，不能直接作 LPCWSTR）
-                _rbMode = _program.AddData(IrDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
-                _wbMode = _program.AddData(IrDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
-                _emptyString = _program.AddData(IrDataItem.Utf16(Prefix + "EmptyString", ""));
-                _divZeroMessage = _program.AddData(IrDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
-                _stackOverflowMessage = _program.AddData(IrDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
-                _arrayBoundsMessage = _program.AddData(IrDataItem.Utf16(Prefix + "ArrayBoundsMessage", "error: array index out of range"));
-                _substringMessage = _program.AddData(IrDataItem.Utf16(Prefix + "SubstringMessage", "error: invalid substring arguments"));
-                _newLine = _program.AddData(IrDataItem.Utf16(Prefix + "NewLine", "\r\n"));
-                _zeroString = _program.AddData(IrDataItem.Utf16(Prefix + "ZeroString", "0"));
-                _negZeroString = _program.AddData(IrDataItem.Utf16(Prefix + "NegZeroString", "-0"));
-                _infinityString = _program.AddData(IrDataItem.Utf16(Prefix + "InfinityString", "Infinity"));
-                _negInfinityString = _program.AddData(IrDataItem.Utf16(Prefix + "NegInfinityString", "-Infinity"));
-                _nanString = _program.AddData(IrDataItem.Utf16(Prefix + "NanString", "NaN"));
-                _formatBuffer = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatBuffer", new byte[1600]));
-                _fmtBigBuf = _program.AddData(IrDataItem.ByteArray(Prefix + "FmtBigBuf", new byte[1600]));
-                _formatOne = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatOne", DoubleBits(1.0)));
-                _formatTen = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatTen", DoubleBits(10.0)));
-                _formatTrue = _program.AddData(IrDataItem.Utf16(Prefix + "FormatTrue", "True"));
-                _formatFalse = _program.AddData(IrDataItem.Utf16(Prefix + "FormatFalse", "False"));
-                _formatZero = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatZero", DoubleBits(0.0)));
-                _formatHalf = _program.AddData(IrDataItem.ByteArray(Prefix + "FormatHalf", DoubleBits(0.5)));
-                _bcryptAlg = _program.AddData(IrDataItem.Pointer(Prefix + "BcryptAlg"));
-                _bcryptHash = _program.AddData(IrDataItem.Pointer(Prefix + "BcryptHash"));
+                _heapBase = _program.AddData(LirDataItem.Pointer(Prefix + "HeapBase"));
+                _heapPtr = _program.AddData(LirDataItem.Pointer(Prefix + "HeapPtr"));
+                _heapEnd = _program.AddData(LirDataItem.Pointer(Prefix + "HeapEnd"));
+                _rngState = _program.AddData(LirDataItem.Int32(Prefix + "RngState", 0));
+                _inputBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "InputBuffer", new byte[0x2000]));
+                _fileBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
+                _fileBuffer2 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
+                // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀的 CO 串，不能直接作 LPCWSTR）
+                _rbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
+                _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
+                _emptyString = _program.AddData(LirDataItem.Utf16(Prefix + "EmptyString", ""));
+                _divZeroMessage = _program.AddData(LirDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
+                _stackOverflowMessage = _program.AddData(LirDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
+                _arrayBoundsMessage = _program.AddData(LirDataItem.Utf16(Prefix + "ArrayBoundsMessage", "error: array index out of range"));
+                _substringMessage = _program.AddData(LirDataItem.Utf16(Prefix + "SubstringMessage", "error: invalid substring arguments"));
+                _newLine = _program.AddData(LirDataItem.Utf16(Prefix + "NewLine", "\r\n"));
+                _zeroString = _program.AddData(LirDataItem.Utf16(Prefix + "ZeroString", "0"));
+                _negZeroString = _program.AddData(LirDataItem.Utf16(Prefix + "NegZeroString", "-0"));
+                _infinityString = _program.AddData(LirDataItem.Utf16(Prefix + "InfinityString", "Infinity"));
+                _negInfinityString = _program.AddData(LirDataItem.Utf16(Prefix + "NegInfinityString", "-Infinity"));
+                _nanString = _program.AddData(LirDataItem.Utf16(Prefix + "NanString", "NaN"));
+                _formatBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "FormatBuffer", new byte[1600]));
+                _fmtBigBuf = _program.AddData(LirDataItem.ByteArray(Prefix + "FmtBigBuf", new byte[1600]));
+                _formatOne = _program.AddData(LirDataItem.ByteArray(Prefix + "FormatOne", DoubleBits(1.0)));
+                _formatTen = _program.AddData(LirDataItem.ByteArray(Prefix + "FormatTen", DoubleBits(10.0)));
+                _formatTrue = _program.AddData(LirDataItem.Utf16(Prefix + "FormatTrue", "True"));
+                _formatFalse = _program.AddData(LirDataItem.Utf16(Prefix + "FormatFalse", "False"));
+                _formatZero = _program.AddData(LirDataItem.ByteArray(Prefix + "FormatZero", DoubleBits(0.0)));
+                _formatHalf = _program.AddData(LirDataItem.ByteArray(Prefix + "FormatHalf", DoubleBits(0.5)));
+                _bcryptAlg = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptAlg"));
+                _bcryptHash = _program.AddData(LirDataItem.Pointer(Prefix + "BcryptHash"));
 
-                _program.Imports.AddRange(Kernel32Imports.Select(n => new IrImport("kernel32.dll", n, false)));
-                _program.Imports.Add(new IrImport("kernel32.dll", _tickCountImport, false));
-                _program.Imports.AddRange(UcrtImports.Select(n => new IrImport("ucrtbase.dll", n, true)));
-                _program.Imports.AddRange(BcryptImports.Select(n => new IrImport("bcrypt.dll", n, false)));
+                _program.Imports.AddRange(Kernel32Imports.Select(n => new LirImport("kernel32.dll", n, false)));
+                _program.Imports.Add(new LirImport("kernel32.dll", _tickCountImport, false));
+                _program.Imports.AddRange(UcrtImports.Select(n => new LirImport("ucrtbase.dll", n, true)));
+                _program.Imports.AddRange(BcryptImports.Select(n => new LirImport("bcrypt.dll", n, false)));
             }
 
             // ------------------------------------------------------------------
             // 工具
             // ------------------------------------------------------------------
 
-            private IrFunction BeginFunction(string name, params int[] argSizes)
+            private LirFunction BeginFunction(string name, params int[] argSizes)
             {
-                var parameters = new List<IrParameter>(argSizes.Length);
+                var parameters = new List<LirParameter>(argSizes.Length);
                 for (var i = 0; i < argSizes.Length; i++)
                 {
-                    parameters.Add(new IrParameter(null, i));
+                    parameters.Add(new LirParameter(null, i));
                 }
 
-                var function = new IrFunction(name, parameters);
+                var function = new LirFunction(name, parameters);
                 _currentFunction = function;
                 _instructions = function.Instructions;
                 _args.Clear();
@@ -338,7 +338,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     var register = NewReg(argSizes[i]);
                     _args.Add(register);
-                    Add(IrOpCode.InitRegArg, register, IrOperand.Constant(i));
+                    Add(LirOpCode.InitRegArg, register, LirOperand.Constant(i));
                 }
 
                 return function;
@@ -351,13 +351,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             /// </summary>
             private void BeginStackFunction(string name, params int[] argSizes)
             {
-                var parameters = new List<IrParameter>(argSizes.Length);
+                var parameters = new List<LirParameter>(argSizes.Length);
                 for (var i = 0; i < argSizes.Length; i++)
                 {
-                    parameters.Add(new IrParameter(null, i));
+                    parameters.Add(new LirParameter(null, i));
                 }
 
-                var function = new IrFunction(name, parameters);
+                var function = new LirFunction(name, parameters);
                 _currentFunction = function;
                 _instructions = function.Instructions;
                 _args.Clear();
@@ -368,19 +368,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 {
                     var register = NewReg(argSizes[i]);
                     _args.Add(register);
-                    Add(IrOpCode.InitParam, register, IrOperand.Constant(offset));
+                    Add(LirOpCode.InitParam, register, LirOperand.Constant(offset));
                     offset += argSizes[i];
                 }
             }
 
-            private void EndFunction(IrFunction function, int returnSize)
+            private void EndFunction(LirFunction function, int returnSize)
             {
                 function.ReturnSize = returnSize;
                 function.EndLabelId = NewLabel();
-                Add(IrOpCode.Ret, IrOperand.Label(function.EndLabelId));
+                Add(LirOpCode.Ret, LirOperand.Label(function.EndLabelId));
             }
 
-            private IrVirtualRegister NewReg(int size)
+            private LirVirtualRegister NewReg(int size)
             {
                 var register = _allocator.Allocate();
                 _currentFunction!.RegisterSizes.Add(register, size);
@@ -389,92 +389,92 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             private int NewLabel() => _nextLabel++;
 
-            private void Add(IrOpCode opCode, IrVirtualRegister? dst, IrOperand a, IrOperand b, int offset, int byteSize)
+            private void Add(LirOpCode opCode, LirVirtualRegister? dst, LirOperand a, LirOperand b, int offset, int byteSize)
             {
-                _instructions.Add(new IrInstruction(opCode, dst, a, b, offset, byteSize));
+                _instructions.Add(new LirInstruction(opCode, dst, a, b, offset, byteSize));
             }
 
-            private void Add(IrOpCode opCode, IrVirtualRegister? dst, IrOperand a, IrOperand b) => Add(opCode, dst, a, b, 0, 0);
+            private void Add(LirOpCode opCode, LirVirtualRegister? dst, LirOperand a, LirOperand b) => Add(opCode, dst, a, b, 0, 0);
 
-            private void Add(IrOpCode opCode, IrVirtualRegister? dst, IrOperand a) => Add(opCode, dst, a, IrOperand.None, 0, 0);
+            private void Add(LirOpCode opCode, LirVirtualRegister? dst, LirOperand a) => Add(opCode, dst, a, LirOperand.None, 0, 0);
 
-            private void Add(IrOpCode opCode, IrOperand a) => Add(opCode, null, a, IrOperand.None, 0, 0);
+            private void Add(LirOpCode opCode, LirOperand a) => Add(opCode, null, a, LirOperand.None, 0, 0);
 
-            private void Add(IrOpCode opCode, IrOperand a, IrOperand b) => Add(opCode, null, a, b, 0, 0);
+            private void Add(LirOpCode opCode, LirOperand a, LirOperand b) => Add(opCode, null, a, b, 0, 0);
 
-            private void Const(IrVirtualRegister dst, long imm) => Add(IrOpCode.Const, dst, IrOperand.Constant(imm));
+            private void Const(LirVirtualRegister dst, long imm) => Add(LirOpCode.Const, dst, LirOperand.Constant(imm));
 
-            private void Mov(IrVirtualRegister dst, IrVirtualRegister src) => Add(IrOpCode.Mov, dst, IrOperand.Reg(src));
+            private void Mov(LirVirtualRegister dst, LirVirtualRegister src) => Add(LirOpCode.Mov, dst, LirOperand.Reg(src));
 
-            private void Load(IrVirtualRegister dst, IrVirtualRegister baseReg, int offset, int size) => Add(IrOpCode.Load, dst, IrOperand.Reg(baseReg), IrOperand.None, offset, size);
+            private void Load(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int size) => Add(LirOpCode.Load, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, size);
 
             /// <summary>从 <paramref name="baseReg"/> 的槽内存直接按偏移读取（不解引用）。x64 槽 8 字节（double 高 dword 在 +4）；x86 槽 4 字节×2（高 dword 在 -4）。</summary>
-            private void LoadSlotField(IrVirtualRegister dst, IrVirtualRegister baseReg, int offset, int size) => Add(IrOpCode.LoadSlotField, dst, IrOperand.Reg(baseReg), IrOperand.None, offset, size);
+            private void LoadSlotField(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int size) => Add(LirOpCode.LoadSlotField, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, size);
 
             /// <summary>把 <paramref name="src"/> 写入 <paramref name="baseReg"/> 槽内存的偏移处（不解引用），用于 x86 把 low/high 两 dword 拼装成 double 槽。</summary>
-            private void StoreSlotField(IrVirtualRegister baseReg, int offset, IrVirtualRegister src, int size) => Add(IrOpCode.StoreSlotField, null, IrOperand.Reg(baseReg), IrOperand.Reg(src), offset, size);
+            private void StoreSlotField(LirVirtualRegister baseReg, int offset, LirVirtualRegister src, int size) => Add(LirOpCode.StoreSlotField, null, LirOperand.Reg(baseReg), LirOperand.Reg(src), offset, size);
 
-            private void Store(IrVirtualRegister baseReg, int offset, IrVirtualRegister src, int size) => Add(IrOpCode.Store, null, IrOperand.Reg(baseReg), IrOperand.Reg(src), offset, size);
+            private void Store(LirVirtualRegister baseReg, int offset, LirVirtualRegister src, int size) => Add(LirOpCode.Store, null, LirOperand.Reg(baseReg), LirOperand.Reg(src), offset, size);
 
-            private void LeaData(IrVirtualRegister dst, string key) => Add(IrOpCode.LeaData, dst, IrOperand.Data(key));
+            private void LeaData(LirVirtualRegister dst, string key) => Add(LirOpCode.LeaData, dst, LirOperand.Data(key));
 
-            private void Lea(IrVirtualRegister dst, IrVirtualRegister baseReg, int offset) => Add(IrOpCode.Lea, dst, IrOperand.Reg(baseReg), IrOperand.None, offset, 0);
+            private void Lea(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset) => Add(LirOpCode.Lea, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, 0);
 
-            private void LeaSlot(IrVirtualRegister dst, IrVirtualRegister src) => Add(IrOpCode.LeaSlot, dst, IrOperand.Reg(src));
+            private void LeaSlot(LirVirtualRegister dst, LirVirtualRegister src) => Add(LirOpCode.LeaSlot, dst, LirOperand.Reg(src));
 
-            private void LeaVar(IrVirtualRegister dst, IrVirtualRegister varReg) => Add(IrOpCode.LeaVar, dst, IrOperand.Reg(varReg));
+            private void LeaVar(LirVirtualRegister dst, LirVirtualRegister varReg) => Add(LirOpCode.LeaVar, dst, LirOperand.Reg(varReg));
 
-            private void Add(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Add, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Add(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Add, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void AddI(IrVirtualRegister dst, IrVirtualRegister a, int imm) => Add(IrOpCode.Add, dst, IrOperand.Reg(a), IrOperand.Constant(imm));
+            private void AddI(LirVirtualRegister dst, LirVirtualRegister a, int imm) => Add(LirOpCode.Add, dst, LirOperand.Reg(a), LirOperand.Constant(imm));
 
-            private void SubI(IrVirtualRegister dst, IrVirtualRegister a, int imm) => Add(IrOpCode.Sub, dst, IrOperand.Reg(a), IrOperand.Constant(imm));
+            private void SubI(LirVirtualRegister dst, LirVirtualRegister a, int imm) => Add(LirOpCode.Sub, dst, LirOperand.Reg(a), LirOperand.Constant(imm));
 
-            private void Sub(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Sub, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Sub(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Sub, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Imul64(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Imul64, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Imul64(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Imul64, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Imul(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Imul, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Imul(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Imul, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void And(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.And, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void And(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.And, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Or(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Or, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Or(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Or, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Xor(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Xor, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Xor(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Xor, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Shl(IrVirtualRegister dst, IrVirtualRegister a, int count) => Add(IrOpCode.Shl, dst, IrOperand.Reg(a), IrOperand.Constant(count));
+            private void Shl(LirVirtualRegister dst, LirVirtualRegister a, int count) => Add(LirOpCode.Shl, dst, LirOperand.Reg(a), LirOperand.Constant(count));
 
-            private void Shr(IrVirtualRegister dst, IrVirtualRegister a, int count) => Add(IrOpCode.Shr, dst, IrOperand.Reg(a), IrOperand.Constant(count));
+            private void Shr(LirVirtualRegister dst, LirVirtualRegister a, int count) => Add(LirOpCode.Shr, dst, LirOperand.Reg(a), LirOperand.Constant(count));
 
-            private void Shl(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister count) => Add(IrOpCode.Shl, dst, IrOperand.Reg(a), IrOperand.Reg(count));
+            private void Shl(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister count) => Add(LirOpCode.Shl, dst, LirOperand.Reg(a), LirOperand.Reg(count));
 
-            private void Shr(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister count) => Add(IrOpCode.Shr, dst, IrOperand.Reg(a), IrOperand.Reg(count));
+            private void Shr(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister count) => Add(LirOpCode.Shr, dst, LirOperand.Reg(a), LirOperand.Reg(count));
 
-            private void Neg(IrVirtualRegister dst) => Add(IrOpCode.Neg, dst, IrOperand.Reg(dst));
+            private void Neg(LirVirtualRegister dst) => Add(LirOpCode.Neg, dst, LirOperand.Reg(dst));
 
-            private void Udiv(IrVirtualRegister dst, IrVirtualRegister divisor) => Add(IrOpCode.Udiv, dst, IrOperand.Reg(divisor));
+            private void Udiv(LirVirtualRegister dst, LirVirtualRegister divisor) => Add(LirOpCode.Udiv, dst, LirOperand.Reg(divisor));
 
-            private void Urem(IrVirtualRegister dst, IrVirtualRegister divisor) => Add(IrOpCode.Urem, dst, IrOperand.Reg(divisor));
+            private void Urem(LirVirtualRegister dst, LirVirtualRegister divisor) => Add(LirOpCode.Urem, dst, LirOperand.Reg(divisor));
 
-            private void Cmp(IrVirtualRegister a, long imm) => Add(IrOpCode.Cmp, IrOperand.Reg(a), IrOperand.Constant(imm));
+            private void Cmp(LirVirtualRegister a, long imm) => Add(LirOpCode.Cmp, LirOperand.Reg(a), LirOperand.Constant(imm));
 
-            private void Cmp(IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.Cmp, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void Cmp(LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Cmp, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Jcc(IrCond cond, int label) => Add(IrOpCode.Jcc, IrOperand.Constant((int)cond), IrOperand.Label(label));
+            private void Jcc(LirCond cond, int label) => Add(LirOpCode.Jcc, LirOperand.Constant((int)cond), LirOperand.Label(label));
 
-            private void Setcc(IrVirtualRegister dst, IrCond cond) => Add(IrOpCode.Setcc, dst, IrOperand.Constant((int)cond));
+            private void Setcc(LirVirtualRegister dst, LirCond cond) => Add(LirOpCode.Setcc, dst, LirOperand.Constant((int)cond));
 
-            private void Jmp(int label) => Add(IrOpCode.Jmp, IrOperand.Label(label));
+            private void Jmp(int label) => Add(LirOpCode.Jmp, LirOperand.Label(label));
 
-            private void Mark(int label) => Add(IrOpCode.Label, IrOperand.Label(label));
+            private void Mark(int label) => Add(LirOpCode.Label, LirOperand.Label(label));
 
-            private void StoreRet(IrVirtualRegister src) => Add(IrOpCode.StoreRet, IrOperand.Reg(src));
+            private void StoreRet(LirVirtualRegister src) => Add(LirOpCode.StoreRet, LirOperand.Reg(src));
 
-            private void SetArg(int ordinal, IrVirtualRegister src) => Add(IrOpCode.SetArg, IrOperand.Constant(ordinal), IrOperand.Reg(src));
+            private void SetArg(int ordinal, LirVirtualRegister src) => Add(LirOpCode.SetArg, LirOperand.Constant(ordinal), LirOperand.Reg(src));
 
-            private void CallRuntime(IrVirtualRegister? dst, string name) => Add(IrOpCode.Call, dst, IrOperand.Runtime(name));
+            private void CallRuntime(LirVirtualRegister? dst, string name) => Add(LirOpCode.Call, dst, LirOperand.Runtime(name));
 
-            private void CallRuntime(IrVirtualRegister? dst, string name, IrVirtualRegister arg0, IrVirtualRegister? arg1 = null, IrVirtualRegister? arg2 = null)
+            private void CallRuntime(LirVirtualRegister? dst, string name, LirVirtualRegister arg0, LirVirtualRegister? arg1 = null, LirVirtualRegister? arg2 = null)
             {
                 SetArg(0, arg0);
                 if (arg1 != null)
@@ -490,13 +490,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 CallRuntime(dst, name);
             }
 
-            private void SysCall(IrVirtualRegister? dst, string import, int argCount, params IrVirtualRegister?[] args)
+            private void SysCall(LirVirtualRegister? dst, string import, int argCount, params LirVirtualRegister?[] args)
             {
                 SysCallDll(dst, "kernel32.dll", import, argCount, false, args);
             }
 
-            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 IrToAssembler.SysCall 负责。</summary>
-            private void SysCallDll(IrVirtualRegister? dst, string dll, string import, int argCount, bool cdecl, params IrVirtualRegister?[] args)
+            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 LirToAssembler.SysCall 负责。</summary>
+            private void SysCallDll(LirVirtualRegister? dst, string dll, string import, int argCount, bool cdecl, params LirVirtualRegister?[] args)
             {
                 for (var i = 0; i < args.Length; i++)
                 {
@@ -506,11 +506,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     }
                 }
 
-                Add(IrOpCode.SysCall, dst, IrOperand.Import(new IrImport(dll, import, cdecl)), IrOperand.Constant(argCount));
+                Add(LirOpCode.SysCall, dst, LirOperand.Import(new LirImport(dll, import, cdecl)), LirOperand.Constant(argCount));
             }
 
             /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）。</summary>
-            private IrVirtualRegister C(int size, long imm)
+            private LirVirtualRegister C(int size, long imm)
             {
                 var register = NewReg(size);
                 Const(register, imm);
@@ -531,17 +531,17 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
 
             // 浮点运算便捷封装
-            private void FConst(IrVirtualRegister dst, string key) => Add(IrOpCode.FConst, dst, IrOperand.Data(key));
+            private void FConst(LirVirtualRegister dst, string key) => Add(LirOpCode.FConst, dst, LirOperand.Data(key));
 
-            private void FAdd(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.FAdd, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void FAdd(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.FAdd, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void FSub(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.FSub, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void FSub(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.FSub, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void FMul(IrVirtualRegister dst, IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.FMul, dst, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void FMul(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.FMul, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void FCmp(IrVirtualRegister a, IrVirtualRegister b) => Add(IrOpCode.FCmp, IrOperand.Reg(a), IrOperand.Reg(b));
+            private void FCmp(LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.FCmp, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void FCvtSD(IrVirtualRegister dst, IrVirtualRegister src) => Add(IrOpCode.FCvtSD, dst, IrOperand.Reg(src));
+            private void FCvtSD(LirVirtualRegister dst, LirVirtualRegister src) => Add(LirOpCode.FCvtSD, dst, LirOperand.Reg(src));
 
         }
     }

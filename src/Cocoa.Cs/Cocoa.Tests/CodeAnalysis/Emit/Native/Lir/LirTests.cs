@@ -1,16 +1,16 @@
 using System.Collections.Generic;
 using Cocoa.CodeAnalysis.Emit.Native;
-using Cocoa.CodeAnalysis.Emit.Native.IR;
+using Cocoa.CodeAnalysis.Emit.Native.Lir;
 using Xunit;
 
-namespace Cocoa.Tests.CodeAnalysis.Emit.IR
+namespace Cocoa.Tests.CodeAnalysis.Emit.Lir
 {
-    public class IrVirtualRegisterTests
+    public class LirVirtualRegisterTests
     {
         [Fact]
         public void Allocator_Issues_Unique_Ids()
         {
-            var allocator = new IrVirtualRegisterAllocator();
+            var allocator = new LirVirtualRegisterAllocator();
 
             var v1 = allocator.Allocate();
             var v2 = allocator.Allocate();
@@ -25,21 +25,21 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void ToString_Shows_V_Prefix()
         {
-            var register = new IrVirtualRegister(7);
+            var register = new LirVirtualRegister(7);
 
             Assert.Equal("v7", register.ToString());
         }
     }
 
-    public class IrInstructionTests
+    public class LirInstructionTests
     {
         [Fact]
         public void Const_Uses_Immediate_OperandA()
         {
-            var allocator = new IrVirtualRegisterAllocator();
-            var instruction = new IrInstruction(IrOpCode.Const, allocator.Allocate(), IrOperand.Constant(42));
+            var allocator = new LirVirtualRegisterAllocator();
+            var instruction = new LirInstruction(LirOpCode.Const, allocator.Allocate(), LirOperand.Constant(42));
 
-            Assert.Equal(IrOpCode.Const, instruction.OpCode);
+            Assert.Equal(LirOpCode.Const, instruction.OpCode);
             Assert.Equal(42, instruction.A.Imm);
             Assert.Equal(0, instruction.Dst!.Id);
             Assert.True(instruction.B.IsNone);
@@ -48,14 +48,14 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void Binary_Uses_Two_Operands()
         {
-            var allocator = new IrVirtualRegisterAllocator();
+            var allocator = new LirVirtualRegisterAllocator();
             var dst = allocator.Allocate();
             var srcA = allocator.Allocate();
             var srcB = allocator.Allocate();
 
-            var instruction = new IrInstruction(IrOpCode.Add, dst, IrOperand.Reg(srcA), IrOperand.Reg(srcB));
+            var instruction = new LirInstruction(LirOpCode.Add, dst, LirOperand.Reg(srcA), LirOperand.Reg(srcB));
 
-            Assert.Equal(IrOpCode.Add, instruction.OpCode);
+            Assert.Equal(LirOpCode.Add, instruction.OpCode);
             Assert.Equal(srcA, instruction.A.Register);
             Assert.Equal(srcB, instruction.B.Register);
             Assert.Equal(dst, instruction.Dst);
@@ -64,13 +64,13 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void Memory_Load_Carries_Offset_And_Size()
         {
-            var allocator = new IrVirtualRegisterAllocator();
+            var allocator = new LirVirtualRegisterAllocator();
             var dst = allocator.Allocate();
             var baseReg = allocator.Allocate();
 
-            var instruction = IrMem.Load(dst, baseReg, -16, 4);
+            var instruction = LirMem.Load(dst, baseReg, -16, 4);
 
-            Assert.Equal(IrOpCode.Load, instruction.OpCode);
+            Assert.Equal(LirOpCode.Load, instruction.OpCode);
             Assert.Equal(baseReg, instruction.A.Register);
             Assert.Equal(-16, instruction.Offset);
             Assert.Equal(4, instruction.ByteSize);
@@ -79,27 +79,27 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void Memory_Store_Carries_Offset_And_Size()
         {
-            var allocator = new IrVirtualRegisterAllocator();
+            var allocator = new LirVirtualRegisterAllocator();
             var baseReg = allocator.Allocate();
             var src = allocator.Allocate();
 
-            var instruction = IrMem.Store(baseReg, 8, src, 8);
+            var instruction = LirMem.Store(baseReg, 8, src, 8);
 
-            Assert.Equal(IrOpCode.Store, instruction.OpCode);
+            Assert.Equal(LirOpCode.Store, instruction.OpCode);
             Assert.Equal(src, instruction.B.Register);
             Assert.Equal(8, instruction.Offset);
             Assert.Equal(8, instruction.ByteSize);
         }
     }
 
-    public class IrPrinterTests
+    public class LirPrinterTests
     {
-        private readonly IrVirtualRegisterAllocator _allocator = new IrVirtualRegisterAllocator();
+        private readonly LirVirtualRegisterAllocator _allocator = new LirVirtualRegisterAllocator();
 
         [Fact]
         public void Print_Const_Show_Op_And_Imm()
         {
-            var text = new IrInstruction(IrOpCode.Const, _allocator.Allocate(), IrOperand.Constant(42)).ToString();
+            var text = new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(42)).ToString();
 
             Assert.Equal("const v0 42", text);
         }
@@ -111,7 +111,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
             var srcA = _allocator.Allocate();
             var srcB = _allocator.Allocate();
 
-            var text = new IrInstruction(IrOpCode.Add, dst, IrOperand.Reg(srcA), IrOperand.Reg(srcB)).ToString();
+            var text = new LirInstruction(LirOpCode.Add, dst, LirOperand.Reg(srcA), LirOperand.Reg(srcB)).ToString();
 
             Assert.Equal("add v0 v1, v2", text);
         }
@@ -122,7 +122,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
             var dst = _allocator.Allocate();
             var baseReg = _allocator.Allocate();
 
-            var text = IrMem.Load(dst, baseReg, -16, 4).ToString();
+            var text = LirMem.Load(dst, baseReg, -16, 4).ToString();
 
             Assert.Equal("load v0 [v1-16] :32bit", text);
         }
@@ -133,7 +133,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
             var baseReg = _allocator.Allocate();
             var src = _allocator.Allocate();
 
-            var text = IrMem.Store(baseReg, 8, src, 8).ToString();
+            var text = LirMem.Store(baseReg, 8, src, 8).ToString();
 
             Assert.Equal("store [v0+8], v1 :64bit", text);
         }
@@ -141,21 +141,21 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void Print_Label_And_Branch()
         {
-            var label = IrOperand.Label(3);
+            var label = LirOperand.Label(3);
 
-            Assert.Equal("jmp L3", new IrInstruction(IrOpCode.Jmp, label).ToString());
-            Assert.Equal("jcc Equal, L3", new IrInstruction(IrOpCode.Jcc, IrOperand.Constant((int)IrCond.Equal), label).ToString());
-            Assert.Equal("setcc v0 Greater", new IrInstruction(IrOpCode.Setcc, _allocator.Allocate(), IrOperand.Constant((int)IrCond.Greater)).ToString());
+            Assert.Equal("jmp L3", new LirInstruction(LirOpCode.Jmp, label).ToString());
+            Assert.Equal("jcc Equal, L3", new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), label).ToString());
+            Assert.Equal("setcc v0 Greater", new LirInstruction(LirOpCode.Setcc, _allocator.Allocate(), LirOperand.Constant((int)LirCond.Greater)).ToString());
         }
 
         [Fact]
         public void Print_Function_With_Parameters()
         {
-            var function = new IrFunction("main", new List<IrParameter>(new[] { new IrParameter(null, 0) }));
-            function.Instructions.Add(new IrInstruction(IrOpCode.Const, _allocator.Allocate(), IrOperand.Constant(1)));
-            function.Instructions.Add(new IrInstruction(IrOpCode.Ret));
+            var function = new LirFunction("main", new List<LirParameter>(new[] { new LirParameter(null, 0) }));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(1)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Ret));
 
-            var text = IrPrinter.Format(function);
+            var text = LirPrinter.Format(function);
 
             Assert.Contains("FUNCTION main (p0)", text);
             Assert.Contains("const v0 1", text);
@@ -165,13 +165,13 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void Print_Program_With_Data()
         {
-            var program = new IrProgram("main");
+            var program = new LirProgram("main");
             var key = program.InternString("hello");
-            var function = new IrFunction("main", new List<IrParameter>());
-            function.Instructions.Add(new IrInstruction(IrOpCode.LeaData, _allocator.Allocate(), IrOperand.Data(key)));
+            var function = new LirFunction("main", new List<LirParameter>());
+            function.Instructions.Add(new LirInstruction(LirOpCode.LeaData, _allocator.Allocate(), LirOperand.Data(key)));
             program.Functions.Add(function);
 
-            var text = IrPrinter.Format(program);
+            var text = LirPrinter.Format(program);
 
             Assert.Contains("PROGRAM entry = main", text);
             Assert.Contains(".data", text);
@@ -182,7 +182,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IR
         [Fact]
         public void InternString_Deduplicates_By_Text()
         {
-            var program = new IrProgram("main");
+            var program = new LirProgram("main");
 
             var key1 = program.InternString("abc");
             var key2 = program.InternString("abc");

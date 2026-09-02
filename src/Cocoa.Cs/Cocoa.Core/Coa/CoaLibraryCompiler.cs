@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Lowering;
 using System.Collections.Immutable;
 using System.IO;
 
@@ -24,6 +25,7 @@ namespace Cocoa.CodeAnalysis.Coa
         {
             // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
             // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。
+            // S-7：.coa 库体为 raw 结构化 HIR —— 送入 BoundProgram 前统一 Lower 为 MIR（IlEmitter 消费契约）。
             var functionsBuilder = ImmutableDictionary.CreateBuilder<CodeAnalysis.Symbols.FunctionSymbol, BoundBlockStatement>();
             foreach (var pair in cod.Bodies)
             {
@@ -32,7 +34,7 @@ namespace Cocoa.CodeAnalysis.Coa
                     continue;
                 }
 
-                functionsBuilder.Add(pair);
+                functionsBuilder.Add(pair.Key, Lowerer.Lower(pair.Key, pair.Value));
             }
 
             // 无入口的纯库程序集：Main/Script 均空，emitLibrary 走库 PE 形态

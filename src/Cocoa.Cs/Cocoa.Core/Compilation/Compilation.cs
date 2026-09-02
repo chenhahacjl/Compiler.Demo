@@ -793,7 +793,8 @@ namespace Cocoa.CodeAnalysis
             }
 
             // 校验 3：库体不含 OOP/.NET API 节点（类字段/方法/对象创建/this/base/静态类型等）
-            foreach (var (fn, body) in program.Functions)
+            // S-7：.coa 持久化 raw（未 Lower）体——校验对象与序列化源一致（program.RawFunctions）
+            foreach (var (fn, body) in program.RawFunctions)
             {
                 if (HasOopNode(body))
                 {
@@ -831,7 +832,9 @@ namespace Cocoa.CodeAnalysis
                 globals,
                 enums,
                 containerClasses,
-                program.Functions,
+                // S-7：.coa bodies 序列化 raw（未 Lower 结构化 HIR：for/while/if 保留），
+                // 非 program.Functions（lowered/MIR）。消费方链接/动态发射处统一补 Lower。
+                program.RawFunctions,
                 CoaRequirement.Any,
                 ImmutableArray<string>.Empty,
                 ImmutableArray<string>.Empty,
@@ -879,10 +882,10 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>函数值节点扫描（6e-M22 C4 + M0-1b）：函数类型签名（参数/返回/字段）经 fnty 序列化已放行；
-        /// lambda/函数值表达式/间接调用的库体序列化未接入前仍拒绝。</summary>
+        /// lambda/函数值表达式/间接调用的库体序列化未接入前仍拒绝。S-7：扫 raw（序列化源）。</summary>
         private Diagnostic? FindFunctionValueDiagnostic(BoundProgram program)
         {
-            foreach (var (function, body) in program.Functions)
+            foreach (var (function, body) in program.RawFunctions)
             {
                 if (HasFunctionValueNode(body))
                 {

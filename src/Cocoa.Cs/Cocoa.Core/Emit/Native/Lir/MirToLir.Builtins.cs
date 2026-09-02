@@ -6,17 +6,17 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
     /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
     /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
-    /// 帧布局/对齐/TEB 检查收敛到 IrToAssembler。
+    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// </summary>
-    internal sealed partial class BoundTreeToIr
+    internal sealed partial class MirToLir
     {
-        private IrVirtualRegister EmitBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
+        private LirVirtualRegister EmitBuiltinCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
         {
             var instructions = _currentFunction.Instructions;
 
@@ -35,39 +35,39 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BuiltinKind.ReadLine:
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Input"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("Input"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.ReadKey:
                 {
                     var intercept = EmitExpression(arguments[0]);
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(intercept)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("ReadKey"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(intercept)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("ReadKey"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.Random:
                 {
                     var argument = EmitExpression(arguments[0]);
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(argument)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Random"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(argument)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("Random"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.Sleep:
                 {
                     var ms = EmitExpression(arguments[0]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(ms)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Sleep"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(ms)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("Sleep"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.Beep:
                 {
                     var frequency = EmitExpression(arguments[0]);
                     var duration = EmitExpression(arguments[1]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(frequency)));
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(duration)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("Beep"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(frequency)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(duration)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("Beep"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.DoubleToString:
@@ -76,15 +76,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     var result = AllocateRegister(8);
                     if (_isX64)
                     {
-                        Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                     }
                     else
                     {
-                        Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
-                        Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(value)));
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(value)));
                     }
 
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.StringFromChars:
@@ -92,84 +92,84 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     // 6e-G7 ③a：char[] → string（运行时复制 UTF-16 数据区）
                     var chars = EmitExpression(arguments[0]);
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(chars)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("StringFromChars"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(chars)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("StringFromChars"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.FileReadAllText:
                 {
                     var path = EmitExpression(arguments[0]);
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("FileReadAllText"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileReadAllText"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.FileWriteAllText:
                 {
                     var path = EmitExpression(arguments[0]);
                     var text = EmitExpression(arguments[1]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(text)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("FileWriteAllText"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(text)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileWriteAllText"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.FileExists:
                 {
                     var path = EmitExpression(arguments[0]);
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("FileExists"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileExists"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.FileDelete:
                 {
                     var path = EmitExpression(arguments[0]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("FileDelete"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileDelete"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.FileCopy:
                 {
                     var src = EmitExpression(arguments[0]);
                     var dst = EmitExpression(arguments[1]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(src)));
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(dst)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("FileCopy"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(src)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(dst)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileCopy"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.DirectoryExists:
                 {
                     var path = EmitExpression(arguments[0]);
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("DirectoryExists"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("DirectoryExists"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.GetEnvironmentVariable:
                 {
                     var name = EmitExpression(arguments[0]);
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(name)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetEnvironmentVariable"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(name)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("GetEnvironmentVariable"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.GetCurrentDirectory:
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetCurrentDirectory"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("GetCurrentDirectory"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.SetCurrentDirectory:
                 {
                     var path = EmitExpression(arguments[0]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("SetCurrentDirectory"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("SetCurrentDirectory"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.GetExecutablePath:
                 {
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("GetExecutablePath"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("GetExecutablePath"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.ObjectStaticEquals:
@@ -181,29 +181,29 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BuiltinKind.TickCount:
                 {
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("TickCount"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("TickCount"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.Exit:
                 {
                     var code = EmitExpression(arguments[0]);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(code)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("ExitProcess"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(code)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("ExitProcess"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
                 case BuiltinKind.Sqrt:
                 {
                     var x = EmitExpression(arguments[0]);
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.FSqrt, result, IrOperand.Reg(x)));
+                    Add(instructions, new LirInstruction(LirOpCode.FSqrt, result, LirOperand.Reg(x)));
                     return result;
                 }
                 case BuiltinKind.Sha256Hash:
                 {
                     var data = EmitExpression(arguments[0]);
                     var result = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(data)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("Sha256Hash"), IrOperand.Constant(1)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(data)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("Sha256Hash"), LirOperand.Constant(1)));
                     return result;
                 }
                 case BuiltinKind.LaunchProcess:
@@ -211,9 +211,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                     var path = EmitExpression(arguments[0]);
                     var args = EmitExpression(arguments[1]);
                     var result = AllocateRegister(4);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(path)));
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(args)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("LaunchProcess"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(args)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("LaunchProcess"), LirOperand.Constant(0)));
                     return result;
                 }
                 default:
@@ -223,7 +223,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。
         /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道。</summary>
-        private IrVirtualRegister EmitFormatExpression(BoundFormatExpression node)
+        private LirVirtualRegister EmitFormatExpression(BoundFormatExpression node)
         {
             var type = node.Value.Type;
             var format = node.Format;
@@ -236,10 +236,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (type == TypeSymbol.Float)
             {
                 var asDouble = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.FCvtSSD, asDouble, IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(asDouble)));
+                Add(instructions, new LirInstruction(LirOpCode.FCvtSSD, asDouble, LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(asDouble)));
                 value = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, value, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                 type = TypeSymbol.String;
             }
             else if (type == TypeSymbol.UInt32 || type == TypeSymbol.UInt64)
@@ -248,21 +248,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (type == TypeSymbol.UInt32)
                 {
                     src = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.Movzx64, src, IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.Movzx64, src, LirOperand.Reg(value)));
                 }
 
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(src)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(src)));
                 value = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, value, IrOperand.Runtime("UInt64ToString"), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("UInt64ToString"), LirOperand.Constant(0)));
                 type = TypeSymbol.String;
             }
             else if (type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
                      type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16)
             {
                 // 窄整型槽内已是 32 位规范表示，直接走 IntToString
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
                 value = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.Call, value, IrOperand.Runtime("IntToString"), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("IntToString"), LirOperand.Constant(0)));
                 type = TypeSymbol.String;
             }
 
@@ -279,7 +279,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return EmitStringFormatCall(value, fmtPtr, width, typeKind);
         }
 
-        private IrVirtualRegister EmitStringFormatCall(IrVirtualRegister value, IrVirtualRegister fmtPtr, int width, int typeKind)
+        private LirVirtualRegister EmitStringFormatCall(LirVirtualRegister value, LirVirtualRegister fmtPtr, int width, int typeKind)
         {
             var instructions = _currentFunction.Instructions;
             var packed = ((width & 0xFFFF) << 4) | (typeKind & 0xF);
@@ -287,60 +287,60 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             var is64 = typeKind == 1 || typeKind == 5; // double / long：值按 64 位传参（x86 拆 low/high）
             if (is64)
             {
-                Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(value)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 1 : 2), IrOperand.Reg(fmtPtr)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 2 : 3), IrOperand.Reg(EmitConst(packed))));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(_isX64 ? 1 : 2), LirOperand.Reg(fmtPtr)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(_isX64 ? 2 : 3), LirOperand.Reg(EmitConst(packed))));
             }
             else
             {
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(value)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
                 if (!_isX64)
                 {
                     // x86 StringFormat 按 (low, high, fmtPtr, packed) 布局接收，非 double 用占位 high
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(value)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(value)));
                 }
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 1 : 2), IrOperand.Reg(fmtPtr)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(_isX64 ? 2 : 3), IrOperand.Reg(EmitConst(packed))));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(_isX64 ? 1 : 2), LirOperand.Reg(fmtPtr)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(_isX64 ? 2 : 3), LirOperand.Reg(EmitConst(packed))));
             }
-            Add(instructions, new IrInstruction(IrOpCode.Call, result, IrOperand.Runtime("StringFormat"), IrOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("StringFormat"), LirOperand.Constant(0)));
             return result;
         }
 
-        private IrVirtualRegister EmitElementAddress(List<IrInstruction> instructions, IrVirtualRegister array, IrVirtualRegister index, int elementSize)
+        private LirVirtualRegister EmitElementAddress(List<LirInstruction> instructions, LirVirtualRegister array, LirVirtualRegister index, int elementSize)
         {
             var length = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.Load, length, IrOperand.Reg(array), IrOperand.None, 0, 4));
+            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(array), LirOperand.None, 0, 4));
             EmitArrayBoundsCheck(instructions, index, length);
 
             var offset = AllocateRegister(4);
-            Add(instructions, new IrInstruction(IrOpCode.Mov, offset, IrOperand.Reg(index)));
+            Add(instructions, new LirInstruction(LirOpCode.Mov, offset, LirOperand.Reg(index)));
             if (elementSize == 2)
             {
-                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(1)));
+                Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(1)));
             }
             else if (elementSize == 4)
             {
-                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(2)));
+                Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(2)));
             }
             else if (elementSize == 8)
             {
-                Add(instructions, new IrInstruction(IrOpCode.Shl, offset, IrOperand.Reg(offset), IrOperand.Constant(3)));
+                Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(3)));
             }
 
             var address = AllocateRegister(8);
-            Add(instructions, new IrInstruction(IrOpCode.Lea, address, IrOperand.Reg(array), IrOperand.None, 8, 0));
-            Add(instructions, new IrInstruction(IrOpCode.Add, address, IrOperand.Reg(address), IrOperand.Reg(offset)));
+            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
             return address;
         }
 
-        private void EmitArrayBoundsCheck(List<IrInstruction> instructions, IrVirtualRegister index, IrVirtualRegister length)
+        private void EmitArrayBoundsCheck(List<LirInstruction> instructions, LirVirtualRegister index, LirVirtualRegister length)
         {
-            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(index)));
-            Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(length)));
-            Add(instructions, new IrInstruction(IrOpCode.Call, null, IrOperand.Runtime("ArrayBoundsCheck"), IrOperand.Constant(0)));
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(index)));
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(length)));
+            Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("ArrayBoundsCheck"), LirOperand.Constant(0)));
         }
 
-        private IrVirtualRegister EmitUnaryExpression(BoundUnaryExpression node)
+        private LirVirtualRegister EmitUnaryExpression(BoundUnaryExpression node)
         {
             var operand = EmitExpression(node.Operand);
             var instructions = _currentFunction.Instructions;
@@ -356,38 +356,38 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         {
                             // 6e-M21 Phase 5b：单精度取反（4 字节槽翻转符号位）
                             var resultSingle = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.FMov, resultSingle, IrOperand.Reg(operand), IrOperand.None, 0, 0, true));
-                            Add(instructions, new IrInstruction(IrOpCode.FNeg, resultSingle, IrOperand.None, IrOperand.None, 0, 0, true));
+                            Add(instructions, new LirInstruction(LirOpCode.FMov, resultSingle, LirOperand.Reg(operand), LirOperand.None, 0, 0, true));
+                            Add(instructions, new LirInstruction(LirOpCode.FNeg, resultSingle, LirOperand.None, LirOperand.None, 0, 0, true));
                             return resultSingle;
                         }
 
                         if (node.Operand.Type == TypeSymbol.Double)
                         {
                             var result = AllocateRegister(8);
-                            Add(instructions, new IrInstruction(IrOpCode.FMov, result, IrOperand.Reg(operand)));
-                            Add(instructions, new IrInstruction(IrOpCode.FNeg, result));
+                            Add(instructions, new LirInstruction(LirOpCode.FMov, result, LirOperand.Reg(operand)));
+                            Add(instructions, new LirInstruction(LirOpCode.FNeg, result));
                             return result;
                         }
 
                         if (node.Operand.Type == TypeSymbol.Int64 || node.Operand.Type == TypeSymbol.UInt64)
                         {
                             var resultLong = AllocateRegister(8);
-                            Add(instructions, new IrInstruction(IrOpCode.Mov, resultLong, IrOperand.Reg(operand)));
-                            Add(instructions, new IrInstruction(IrOpCode.Neg64, resultLong));
+                            Add(instructions, new LirInstruction(LirOpCode.Mov, resultLong, LirOperand.Reg(operand)));
+                            Add(instructions, new LirInstruction(LirOpCode.Neg64, resultLong));
                             return resultLong;
                         }
 
                         var resultInt = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Mov, resultInt, IrOperand.Reg(operand)));
-                        Add(instructions, new IrInstruction(IrOpCode.Neg, resultInt));
+                        Add(instructions, new LirInstruction(LirOpCode.Mov, resultInt, LirOperand.Reg(operand)));
+                        Add(instructions, new LirInstruction(LirOpCode.Neg, resultInt));
                         return resultInt;
                     }
 
                 case BoundUnaryOperatorKind.LogicalNegation:
                     {
                         var result = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(operand), IrOperand.Constant(0)));
-                        Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.Equal)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(operand), LirOperand.Constant(0)));
+                        Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.Equal)));
                         return result;
                     }
 
@@ -396,14 +396,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         if (node.Operand.Type == TypeSymbol.Int64)
                         {
                             var resultLong = AllocateRegister(8);
-                            Add(instructions, new IrInstruction(IrOpCode.Mov, resultLong, IrOperand.Reg(operand)));
-                            Add(instructions, new IrInstruction(IrOpCode.Not64, resultLong));
+                            Add(instructions, new LirInstruction(LirOpCode.Mov, resultLong, LirOperand.Reg(operand)));
+                            Add(instructions, new LirInstruction(LirOpCode.Not64, resultLong));
                             return resultLong;
                         }
 
                         var result = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(operand)));
-                        Add(instructions, new IrInstruction(IrOpCode.Not, result));
+                        Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(operand)));
+                        Add(instructions, new LirInstruction(LirOpCode.Not, result));
                         return result;
                     }
 
@@ -412,7 +412,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private IrVirtualRegister EmitBinaryExpression(BoundBinaryExpression node)
+        private LirVirtualRegister EmitBinaryExpression(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
             var instructions = _currentFunction.Instructions;
@@ -424,15 +424,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 if (node.Right.Type == TypeSymbol.Double)
                 {
                     var text = AllocateRegister(8);
-                    Add(instructions, new IrInstruction(IrOpCode.SetArg64, IrOperand.Constant(0), IrOperand.Reg(concatRight)));
-                    Add(instructions, new IrInstruction(IrOpCode.Call, text, IrOperand.Runtime("DoubleToString"), IrOperand.Constant(0)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(concatRight)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                     concatRight = text;
                 }
 
                 var concatResult = AllocateRegister(8);
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(0), IrOperand.Reg(concatLeft)));
-                Add(instructions, new IrInstruction(IrOpCode.SetArg, IrOperand.Constant(1), IrOperand.Reg(concatRight)));
-                Add(instructions, new IrInstruction(IrOpCode.Call, concatResult, IrOperand.Runtime("Concat"), IrOperand.Constant(0)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(concatLeft)));
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(concatRight)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, concatResult, LirOperand.Runtime("Concat"), LirOperand.Constant(0)));
                 return concatResult;
             }
 
@@ -468,90 +468,90 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             switch (op)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    Add(instructions, new IrInstruction(IrOpCode.Add, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Add, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.LogicalAnd:
                     // 逻辑与用位与（0/1 布尔语义 = && 结果；三后端一致：Evaluator/IL 均为急切求值）
-                    Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Subtraction:
-                    Add(instructions, new IrInstruction(IrOpCode.Sub, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Sub, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Multiplication:
-                    Add(instructions, new IrInstruction(IrOpCode.Imul, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Imul, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Division:
-                    Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Udiv : IrOpCode.Idiv, result, IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(left)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Udiv : LirOpCode.Idiv, result, LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Modulo:
-                    Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Urem : IrOpCode.Irem, result, IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(left)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Urem : LirOpCode.Irem, result, LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftLeft:
-                    Add(instructions, new IrInstruction(IrOpCode.Shl, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Shl, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
                     // 无符号类型为逻辑右移（Shr），有符号为算术右移（Sar）
-                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Shr : IrOpCode.Sar, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseOr:
                 case BoundBinaryOperatorKind.LogicalOr:
-                    Add(instructions, new IrInstruction(IrOpCode.Or, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Or, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseXor:
-                    Add(instructions, new IrInstruction(IrOpCode.Xor, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Xor, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Equals:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.Equal)));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.Equal)));
                     break;
 
                 case BoundBinaryOperatorKind.NotEquals:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.NotEqual)));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.NotEqual)));
                     break;
 
                 // 6e-M19 M2-c：类类型引用相等——M4 前 native 对象即指针，直接位比较
                 case BoundBinaryOperatorKind.ReferenceEquals:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.Equal)));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.Equal)));
                     break;
 
                 case BoundBinaryOperatorKind.ReferenceNotEquals:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)IrCond.NotEqual)));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.NotEqual)));
                     break;
 
                 case BoundBinaryOperatorKind.Less:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.Below : IrCond.Less))));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)(isUnsigned ? LirCond.Below : LirCond.Less))));
                     break;
 
                 case BoundBinaryOperatorKind.LessOrEquals:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.BelowOrEqual : IrCond.LessOrEqual))));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)(isUnsigned ? LirCond.BelowOrEqual : LirCond.LessOrEqual))));
                     break;
 
                 case BoundBinaryOperatorKind.Greater:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.Above : IrCond.Greater))));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)(isUnsigned ? LirCond.Above : LirCond.Greater))));
                     break;
 
                 case BoundBinaryOperatorKind.GreaterOrEquals:
-                    Add(instructions, new IrInstruction(IrOpCode.Cmp, IrOperand.Reg(left), IrOperand.Reg(right)));
-                    Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)(isUnsigned ? IrCond.AboveOrEqual : IrCond.GreaterOrEqual))));
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)(isUnsigned ? LirCond.AboveOrEqual : LirCond.GreaterOrEqual))));
                     break;
 
                 default:
@@ -562,7 +562,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         }
 
         /// <summary>long/u64 二元运算（6e-M19 M1）：算术/位/移位/比较走 64 位 IR 指令；u64 无符号语义（Phase 5）。</summary>
-        private IrVirtualRegister EmitLongBinary(BoundBinaryExpression node)
+        private LirVirtualRegister EmitLongBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
             var instructions = _currentFunction.Instructions;
@@ -576,48 +576,48 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             switch (op)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    Add(instructions, new IrInstruction(IrOpCode.Add64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Add64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Subtraction:
-                    Add(instructions, new IrInstruction(IrOpCode.Sub64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Sub64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Multiplication:
-                    Add(instructions, new IrInstruction(IrOpCode.Imul64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Imul64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Division:
-                    Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Udiv64 : IrOpCode.Idiv64, result, IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(left)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Udiv64 : LirOpCode.Idiv64, result, LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Modulo:
-                    Add(instructions, new IrInstruction(IrOpCode.Mov, result, IrOperand.Reg(left)));
-                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Urem64 : IrOpCode.Irem64, result, IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(left)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Urem64 : LirOpCode.Irem64, result, LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.LogicalAnd:
-                    Add(instructions, new IrInstruction(IrOpCode.And64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.And64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseOr:
                 case BoundBinaryOperatorKind.LogicalOr:
-                    Add(instructions, new IrInstruction(IrOpCode.Or64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Or64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseXor:
-                    Add(instructions, new IrInstruction(IrOpCode.Xor64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Xor64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftLeft:
-                    Add(instructions, new IrInstruction(IrOpCode.Shl64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Shl64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
                     // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64）
-                    Add(instructions, new IrInstruction(isUnsigned ? IrOpCode.Shr64 : IrOpCode.Sar64, result, IrOperand.Reg(left), IrOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr64 : LirOpCode.Sar64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Equals:
@@ -628,18 +628,18 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     {
                         var boolResult = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.Cmp64, IrOperand.Reg(left), IrOperand.Reg(right)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp64, LirOperand.Reg(left), LirOperand.Reg(right)));
 
-                        IrCond cond = op switch
+                        LirCond cond = op switch
                         {
-                            BoundBinaryOperatorKind.Equals => IrCond.Equal,
-                            BoundBinaryOperatorKind.NotEquals => IrCond.NotEqual,
-                            BoundBinaryOperatorKind.Less => isUnsigned ? IrCond.Below : IrCond.Less,
-                            BoundBinaryOperatorKind.LessOrEquals => isUnsigned ? IrCond.BelowOrEqual : IrCond.LessOrEqual,
-                            BoundBinaryOperatorKind.Greater => isUnsigned ? IrCond.Above : IrCond.Greater,
-                            _ => isUnsigned ? IrCond.AboveOrEqual : IrCond.GreaterOrEqual,
+                            BoundBinaryOperatorKind.Equals => LirCond.Equal,
+                            BoundBinaryOperatorKind.NotEquals => LirCond.NotEqual,
+                            BoundBinaryOperatorKind.Less => isUnsigned ? LirCond.Below : LirCond.Less,
+                            BoundBinaryOperatorKind.LessOrEquals => isUnsigned ? LirCond.BelowOrEqual : LirCond.LessOrEqual,
+                            BoundBinaryOperatorKind.Greater => isUnsigned ? LirCond.Above : LirCond.Greater,
+                            _ => isUnsigned ? LirCond.AboveOrEqual : LirCond.GreaterOrEqual,
                         };
-                        Add(instructions, new IrInstruction(IrOpCode.Setcc, boolResult, IrOperand.Constant((int)cond)));
+                        Add(instructions, new LirInstruction(LirOpCode.Setcc, boolResult, LirOperand.Constant((int)cond)));
                         return boolResult;
                     }
 
@@ -650,7 +650,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             return result;
         }
 
-        private IrVirtualRegister EmitFloatBinary(BoundBinaryExpression node)
+        private LirVirtualRegister EmitFloatBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
             var instructions = _currentFunction.Instructions;
@@ -671,12 +671,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         var result = AllocateRegister(resultSize);
                         var fOp = op switch
                         {
-                            BoundBinaryOperatorKind.Addition => IrOpCode.FAdd,
-                            BoundBinaryOperatorKind.Subtraction => IrOpCode.FSub,
-                            BoundBinaryOperatorKind.Multiplication => IrOpCode.FMul,
-                            _ => IrOpCode.FDiv,
+                            BoundBinaryOperatorKind.Addition => LirOpCode.FAdd,
+                            BoundBinaryOperatorKind.Subtraction => LirOpCode.FSub,
+                            BoundBinaryOperatorKind.Multiplication => LirOpCode.FMul,
+                            _ => LirOpCode.FDiv,
                         };
-                        Add(instructions, new IrInstruction(fOp, result, IrOperand.Reg(left), IrOperand.Reg(right), 0, 0, single));
+                        Add(instructions, new LirInstruction(fOp, result, LirOperand.Reg(left), LirOperand.Reg(right), 0, 0, single));
                         return result;
                     }
 
@@ -688,32 +688,32 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     {
                         var result = AllocateRegister(4);
-                        Add(instructions, new IrInstruction(IrOpCode.FCmp, null, IrOperand.Reg(left), IrOperand.Reg(right), 0, 0, single));
+                        Add(instructions, new LirInstruction(LirOpCode.FCmp, null, LirOperand.Reg(left), LirOperand.Reg(right), 0, 0, single));
 
                         // ucomisd 在 unordered（NaN 参与）时置 ZF=PF=CF=1；
                         // 全部 6 个比较条件对 NaN 一律 false、!= 对 NaN 为 true（IEEE-754 语义）。
                         var (main, fixup) = op switch
                         {
-                            BoundBinaryOperatorKind.Equals => (IrCond.Equal, IrCond.NoParity),
-                            BoundBinaryOperatorKind.NotEquals => (IrCond.NotEqual, IrCond.Parity),
-                            BoundBinaryOperatorKind.Less => (IrCond.Below, IrCond.NoParity),
-                            BoundBinaryOperatorKind.LessOrEquals => (IrCond.BelowOrEqual, IrCond.NoParity),
-                            BoundBinaryOperatorKind.Greater => (IrCond.Above, IrCond.NoParity),
-                            _ => (IrCond.AboveOrEqual, IrCond.NoParity),
+                            BoundBinaryOperatorKind.Equals => (LirCond.Equal, LirCond.NoParity),
+                            BoundBinaryOperatorKind.NotEquals => (LirCond.NotEqual, LirCond.Parity),
+                            BoundBinaryOperatorKind.Less => (LirCond.Below, LirCond.NoParity),
+                            BoundBinaryOperatorKind.LessOrEquals => (LirCond.BelowOrEqual, LirCond.NoParity),
+                            BoundBinaryOperatorKind.Greater => (LirCond.Above, LirCond.NoParity),
+                            _ => (LirCond.AboveOrEqual, LirCond.NoParity),
                         };
 
-                        Add(instructions, new IrInstruction(IrOpCode.Setcc, result, IrOperand.Constant((int)main)));
-                        if (fixup == IrCond.NoParity)
+                        Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)main)));
+                        if (fixup == LirCond.NoParity)
                         {
                             var clear = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.Setcc, clear, IrOperand.Constant((int)IrCond.NoParity)));
-                            Add(instructions, new IrInstruction(IrOpCode.And, result, IrOperand.Reg(result), IrOperand.Reg(clear)));
+                            Add(instructions, new LirInstruction(LirOpCode.Setcc, clear, LirOperand.Constant((int)LirCond.NoParity)));
+                            Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(result), LirOperand.Reg(clear)));
                         }
                         else
                         {
                             var mark = AllocateRegister(4);
-                            Add(instructions, new IrInstruction(IrOpCode.Setcc, mark, IrOperand.Constant((int)IrCond.Parity)));
-                            Add(instructions, new IrInstruction(IrOpCode.Or, result, IrOperand.Reg(result), IrOperand.Reg(mark)));
+                            Add(instructions, new LirInstruction(LirOpCode.Setcc, mark, LirOperand.Constant((int)LirCond.Parity)));
+                            Add(instructions, new LirInstruction(LirOpCode.Or, result, LirOperand.Reg(result), LirOperand.Reg(mark)));
                         }
 
                         return result;

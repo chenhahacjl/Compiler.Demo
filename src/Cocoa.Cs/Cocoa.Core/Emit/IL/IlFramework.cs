@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Cocoa.CodeAnalysis.Emit.IL
 {
     /// <summary>
-    /// IL 后端的 .NET 框架引用集中管理（功能层 IL 实现的归属地，native 侧对应 RuntimeEmitterIR）：
+    /// IL 后端的 .NET 框架引用集中管理（功能层 IL 实现的归属地，native 侧对应 RuntimeEmitterLir）：
     /// 类型/方法解析 + 缓存，按用途分组预解析常用方法引用（Console/String/Convert/Random/Debug/Object/Format）。
     /// </summary>
     internal sealed class IlFramework

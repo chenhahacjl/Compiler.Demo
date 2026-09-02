@@ -61,7 +61,8 @@ namespace Cocoa.CodeAnalysis.Coa
         /// <summary>泛型定义方法的开放绑定体（6e-G7 S2：T 保持开放；消费方替换展开）。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> GenericOpenBodies { get; }
 
-        /// <summary>函数体（语义层 BoundProgram 片段，已降级）。</summary>
+        /// <summary>函数体（语义层 BoundProgram 片段）。S-7：raw 结构化 HIR（for/while/if 保留，未 Lower）；
+        /// 消费方（链接内联 / 动态 dll 发射）在进入各自消费边界前统一 Lower 为 MIR。</summary>
         public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> Bodies { get; }
 
         /// <summary>后端要求。</summary>

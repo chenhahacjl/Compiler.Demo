@@ -5,12 +5,12 @@ using Cocoa.CodeAnalysis.Emit.Native.Assembler;
 using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
 using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 
-namespace Cocoa.CodeAnalysis.Emit.Native.IR
+namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>IR → IAssembler 的发射结果：全部函数/特殊函数 label 与入口 stub label。</summary>
-    internal sealed class IrEmitResult
+    internal sealed class LirEmitResult
     {
-        public IrEmitResult(Dictionary<string, int> labels, int stubLabel, List<PefileImport> imports)
+        public LirEmitResult(Dictionary<string, int> labels, int stubLabel, List<PefileImport> imports)
         {
             Labels = labels;
             StubLabel = stubLabel;
@@ -27,10 +27,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
     /// （slot k @ [rbp - 16 - slotSize*k]），物理寄存器（eax/ecx/edx…）仅作瞬时运算载体。
     /// 帧布局、参数传递、TEB 栈限检查、x64 16 字节对齐与现有 NativeCodeEmitter 完全一致。
     /// </summary>
-    internal sealed partial class IrToAssembler
+    internal sealed partial class LirToAssembler
     {
         private readonly IAssembler _a;
-        private readonly IrProgram _program;
+        private readonly LirProgram _program;
         private readonly int _entryLabel;
         private readonly TargetPlatform _platform;
         private readonly bool _isX64;
@@ -39,22 +39,22 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         private readonly int _stackLimitOffset;
         private readonly Action<IReadOnlyList<PefileImport>, int>? _emitStub;
 
-        private readonly Dictionary<IrFunction, int> _functionLabels = new();
+        private readonly Dictionary<LirFunction, int> _functionLabels = new();
         private readonly Dictionary<string, int> _nameToLabel = new();
         private readonly Dictionary<int, int> _asmLabelCache = new();
         private readonly Dictionary<string, int> _dataSymbols = new();
-        private readonly Dictionary<IrImport, int> _importSlots = new();
+        private readonly Dictionary<LirImport, int> _importSlots = new();
         private readonly List<PefileImport> _imports = new();
-        private readonly List<IrVirtualRegister> _sysArgs = new();
+        private readonly List<LirVirtualRegister> _sysArgs = new();
 
-        private Dictionary<IrVirtualRegister, int> _slots = new();
+        private Dictionary<LirVirtualRegister, int> _slots = new();
         private int _stackDepth;
         private int _frameBytes;
         private readonly Stack<bool> _alignStack = new();
-        private IrFunction? _currentFunction;
+        private LirFunction? _currentFunction;
         private int _stubLabel;
 
-        private IrToAssembler(IAssembler a, IrProgram program, int entryLabel, TargetPlatform platform,
+        private LirToAssembler(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
             Action<IReadOnlyList<PefileImport>, int>? emitStub)
         {
             _a = a;
@@ -70,12 +70,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
         private X64Size SlotSize => _slotSize == 8 ? X64Size.Qword : X64Size.Dword;
 
-        public static IrEmitResult Emit(IAssembler a, IrProgram program, int entryLabel, TargetPlatform platform,
+        public static LirEmitResult Emit(IAssembler a, LirProgram program, int entryLabel, TargetPlatform platform,
             Action<IReadOnlyList<PefileImport>, int>? emitStub)
         {
-            var emitter = new IrToAssembler(a, program, entryLabel, platform, emitStub);
+            var emitter = new LirToAssembler(a, program, entryLabel, platform, emitStub);
             emitter.EmitProgram();
-            return new IrEmitResult(emitter._nameToLabel, emitter._stubLabel, emitter._imports);
+            return new LirEmitResult(emitter._nameToLabel, emitter._stubLabel, emitter._imports);
         }
 
         private void EmitProgram()
@@ -115,10 +115,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
                 switch (item.Kind)
                 {
-                    case IrDataKind.Int32:
+                    case LirDataKind.Int32:
                         _a.WriteDataInt32(item.IntValue);
                         break;
-                    case IrDataKind.Pointer:
+                    case LirDataKind.Pointer:
                         if (_isX64)
                         {
                             _a.WriteDataInt64(0);
@@ -129,14 +129,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         }
 
                         break;
-                    case IrDataKind.Utf16:
+                    case LirDataKind.Utf16:
                         _a.WriteDataUtf16(item.Text!);
                         _a.AlignData(4);
                         break;
-                    case IrDataKind.Bytes:
+                    case LirDataKind.Bytes:
                         _a.WriteDataBytes(item.Bytes!);
                         break;
-                    case IrDataKind.VTable:
+                    case LirDataKind.VTable:
                         EmitVTableData(item);
                         break;
                     default:
@@ -146,7 +146,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
 
             // 分组内聚：kernel32 组（运行时基础）全部在前，其余 DLL 组按首见顺序聚合，组内保持相对顺序。
             // IAT 由 OS 加载器按描述符 FirstThunk 连续填充，槽数组必须与 specs 分组顺序一致。
-            var seenImports = new HashSet<IrImport>();
+            var seenImports = new HashSet<LirImport>();
             var imports = _program.Imports.Where(seenImports.Add).ToList();
             var kernel32Group = imports.Where(i => string.Equals(i.DllName, "kernel32.dll", StringComparison.OrdinalIgnoreCase)).ToList();
             var otherGroups = imports.Where(i => !string.Equals(i.DllName, "kernel32.dll", StringComparison.OrdinalIgnoreCase))
@@ -198,9 +198,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
         //       [8+ps·(i+1)] 槽 i 函数绝对地址。两架构槽偏移公式一致。
         // ------------------------------------------------------------------
 
-        private readonly List<(IrDataItem Item, int Symbol)> _vtableSymbols = new();
+        private readonly List<(LirDataItem Item, int Symbol)> _vtableSymbols = new();
 
-        private void EmitVTableData(IrDataItem item)
+        private void EmitVTableData(LirDataItem item)
         {
             var symbol = _dataSymbols[item.Key];
             _vtableSymbols.Add((item, symbol));
@@ -287,15 +287,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             }
         }
 
-        private void EmitFunction(IrFunction function)
+        private void EmitFunction(LirFunction function)
         {
             _currentFunction = function;
             _asmLabelCache.Clear();
             _sysArgs.Clear();
             _pendingCmp64Trichotomy = false;
 
-            _slots = new Dictionary<IrVirtualRegister, int>();
-            var registers = new List<IrVirtualRegister>(function.RegisterSizes.Keys);
+            _slots = new Dictionary<LirVirtualRegister, int>();
+            var registers = new List<LirVirtualRegister>(function.RegisterSizes.Keys);
             registers.Sort((x, y) => x.Id.CompareTo(y.Id));
             var slotCount = 0;
             foreach (var register in registers)
@@ -316,7 +316,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             if (_isX64)
             {
                 var frameBytes = 8 * (_slots.Count + 1);
-                if (function.Instructions.Any(i => i.OpCode == IrOpCode.LeaSlot))
+                if (function.Instructions.Any(i => i.OpCode == LirOpCode.LeaSlot))
                 {
                     frameBytes += 0x80;
                 }
@@ -339,14 +339,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
             else
             {
                 var frameBytes = 4 * (slotCount + 3);
-                if (function.Instructions.Any(i => i.OpCode == IrOpCode.LeaSlot))
+                if (function.Instructions.Any(i => i.OpCode == LirOpCode.LeaSlot))
                 {
                     frameBytes += 0x80;
                 }
 
                 // 6e-M21 Phase 5b/7：x87 控制字专用槽（-frameBytes）+ u64→浮点常量槽（[-fb+8..+16)），
                 // 与变量槽/LeaSlot 缓冲隔离，避免恢复 fldcw 覆盖 fistp 写入的转换结果
-                if (function.Instructions.Any(i => i.OpCode == IrOpCode.FCvtSD64 || i.OpCode == IrOpCode.FCvtSI64U))
+                if (function.Instructions.Any(i => i.OpCode == LirOpCode.FCvtSD64 || i.OpCode == LirOpCode.FCvtSI64U))
                 {
                     frameBytes += 16;
                 }
