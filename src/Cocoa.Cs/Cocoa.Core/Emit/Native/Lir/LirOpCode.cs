@@ -41,23 +41,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         // 64 位整型（long，6e-M19 M1）：值在槽中以 64 位位模式存放
         // （x64 单 8 字节槽 → qword 指令；x86 双 4 字节槽 [slot]=低32/[slot-4]=高32 → 进位链序列）
-        // 注意与 8 字节指针的 Add 区分：指针运算保持 32 位（x86），*64 仅用于真 64 位整型值。
-        Add64,       // Add64 <dst> <srcA> <srcB>
-        Sub64,       // Sub64 <dst> <srcA> <srcB>
-        Imul64,      // Imul64 <dst> <srcA> <srcB>   — 有符号 64×64→64（低 64 位）
-        And64,       // And64 <dst> <srcA> <srcB>
-        Or64,        // Or64 <dst> <srcA> <srcB>
-        Xor64,       // Xor64 <dst> <srcA> <srcB>
-        Idiv64,      // Idiv64 <dst> <src>           — 有符号除法：dst / src → dst（除零走 DivByZero）
-        Irem64,      // Irem64 <dst> <src>           — 有符号取余：dst % src → dst
-        Udiv64,      // Udiv64 <dst> <src>           — 无符号 64 位除法（6e-M21 Phase 5，x86 走运行时 helper）
-        Urem64,      // Urem64 <dst> <src>           — 无符号 64 位取余
-        Neg64,       // Neg64 <dst>
-        Not64,       // Not64 <dst>
-        Shl64,       // Shl64 <dst> <src> <count>
-        Shr64,       // Shr64 <dst> <src> <count>    — 逻辑右移
-        Sar64,       // Sar64 <dst> <src> <count>    — 算术右移
-        Cmp64,       // Cmp64 <srcA> <srcB>          — 64 位比较（x86 经三路结果，紧随 Setcc/Jcc）
+        // 注意与 8 字节指针的 Add 区分：指针运算保持 32 位（x86），真 64 位整型值经 LirType.I64 分派进位链。
+        // （Add64/Sub64/Imul64/And64/Or64/Xor64/Neg64/Not64/Shl64/Shr64/Sar64/Cmp64/Idiv64/Irem64/Udiv64/Urem64
+        //   已归并为对应基础 opcode，宽度/语义由寄存器 LirType 驱动）
 
         // 比较（Cmp 设标志，Setcc 紧随使用；Jcc 配最近一次 Cmp 的标志）
         Cmp,         // Cmp <srcA> <srcB>

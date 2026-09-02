@@ -9,10 +9,10 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
-    /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
-    /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
-    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler。
-    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
+    /// 绑定树（Lowerer 输出）→ IR。逐方法对�?NativeCodeEmitter 的发射语义；
+    /// 字节宽仅按类型区分；仅当 double �?8 字节运行时的寄存器参数时按平台调�?ordinal（x86 �?low/high 两寄存器）�?
+    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler�?
+    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）�?
     /// </summary>
     internal sealed partial class MirToLir
     {
@@ -73,7 +73,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case BuiltinKind.DoubleToString:
                 {
                     var value = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     if (_isX64)
                     {
                         Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
@@ -89,9 +89,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 }
                 case BuiltinKind.StringFromChars:
                 {
-                    // 6e-G7 ③a：char[] → string（运行时复制 UTF-16 数据区）
+                    // 6e-G7 ③a：char[] �?string（运行时复制 UTF-16 数据区）
                     var chars = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(chars)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("StringFromChars"), LirOperand.Constant(0)));
                     return result;
@@ -99,7 +99,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case BuiltinKind.FileReadAllText:
                 {
                     var path = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileReadAllText"), LirOperand.Constant(0)));
                     return result;
@@ -148,14 +148,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case BuiltinKind.GetEnvironmentVariable:
                 {
                     var name = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(name)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("GetEnvironmentVariable"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.GetCurrentDirectory:
                 {
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("GetCurrentDirectory"), LirOperand.Constant(0)));
                     return result;
                 }
@@ -168,14 +168,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 }
                 case BuiltinKind.GetExecutablePath:
                 {
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("GetExecutablePath"), LirOperand.Constant(0)));
                     return result;
                 }
                 case BuiltinKind.ObjectStaticEquals:
                 case BuiltinKind.ObjectReferenceEquals:
                 {
-                    // M4c：装箱语义——双侧均为值类型时恒 false（各自独立表示）；否则指针比较
+                    // M4c：装箱语义——双侧均为值类型时�?false（各自独立表示）；否则指针比�?
                     return EmitObjectStaticEquality(arguments);
                 }
                 case BuiltinKind.TickCount:
@@ -194,14 +194,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case BuiltinKind.Sqrt:
                 {
                     var x = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.F64);
                     Add(instructions, new LirInstruction(LirOpCode.FSqrt, result, LirOperand.Reg(x)));
                     return result;
                 }
                 case BuiltinKind.Sha256Hash:
                 {
                     var data = EmitExpression(arguments[0]);
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(data)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("Sha256Hash"), LirOperand.Constant(1)));
                     return result;
@@ -217,12 +217,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     return result;
                 }
                 default:
-                    throw new InvalidOperationException($"native 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
+                    throw new InvalidOperationException($"native 后端未实现内建原�?{function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }
         }
 
-        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。
-        /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道。</summary>
+        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理�?
+        /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道�?/summary>
         private LirVirtualRegister EmitFormatExpression(BoundFormatExpression node)
         {
             var type = node.Value.Type;
@@ -232,13 +232,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var value = EmitExpression(node.Value);
             var instructions = _currentFunction.Instructions;
 
-            // 新类型预转字符串（复用既有 ToString 原语），统一走 string 通道
+            // 新类型预转字符串（复用既�?ToString 原语），统一�?string 通道
             if (type == TypeSymbol.Float)
             {
-                var asDouble = AllocateRegister(8);
+                var asDouble = AllocateRegister(LirType.F64);
                 Add(instructions, new LirInstruction(LirOpCode.FCvtSSD, asDouble, LirOperand.Reg(value)));
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(asDouble)));
-                value = AllocateRegister(8);
+                value = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                 type = TypeSymbol.String;
             }
@@ -247,21 +247,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var src = value;
                 if (type == TypeSymbol.UInt32)
                 {
-                    src = AllocateRegister(8);
+                    src = AllocateRegister(LirType.I64);
                     Add(instructions, new LirInstruction(LirOpCode.Movzx64, src, LirOperand.Reg(value)));
                 }
 
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(src)));
-                value = AllocateRegister(8);
+                value = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("UInt64ToString"), LirOperand.Constant(0)));
                 type = TypeSymbol.String;
             }
             else if (type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
                      type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16)
             {
-                // 窄整型槽内已是 32 位规范表示，直接走 IntToString
+                // 窄整型槽内已�?32 位规范表示，直接�?IntToString
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
-                value = AllocateRegister(8);
+                value = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("IntToString"), LirOperand.Constant(0)));
                 type = TypeSymbol.String;
             }
@@ -283,8 +283,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         {
             var instructions = _currentFunction.Instructions;
             var packed = ((width & 0xFFFF) << 4) | (typeKind & 0xF);
-            var result = AllocateRegister(8);
-            var is64 = typeKind == 1 || typeKind == 5; // double / long：值按 64 位传参（x86 拆 low/high）
+            var result = AllocateRegister(LirType.Addr);
+            var is64 = typeKind == 1 || typeKind == 5; // double / long：值按 64 位传参（x86 �?low/high�?
             if (is64)
             {
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
@@ -296,7 +296,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
                 if (!_isX64)
                 {
-                    // x86 StringFormat 按 (low, high, fmtPtr, packed) 布局接收，非 double 用占位 high
+                    // x86 StringFormat �?(low, high, fmtPtr, packed) 布局接收，非 double 用占�?high
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(value)));
                 }
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(_isX64 ? 1 : 2), LirOperand.Reg(fmtPtr)));
@@ -327,7 +327,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(3)));
             }
 
-            var address = AllocateRegister(8);
+            var address = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
             Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
             return address;
@@ -354,7 +354,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     {
                         if (node.Operand.Type == TypeSymbol.Float)
                         {
-                            // 6e-M21 Phase 5b：单精度取反（4 字节槽翻转符号位）
+                            // 6e-M21 Phase 5b：单精度取反�? 字节槽翻转符号位�?
                             var resultSingle = AllocateRegister(4);
                             Add(instructions, new LirInstruction(LirOpCode.FMov, resultSingle, LirOperand.Reg(operand), LirOperand.None, 0, 0, true));
                             Add(instructions, new LirInstruction(LirOpCode.FNeg, resultSingle, LirOperand.None, LirOperand.None, 0, 0, true));
@@ -363,7 +363,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                         if (node.Operand.Type == TypeSymbol.Double)
                         {
-                            var result = AllocateRegister(8);
+                            var result = AllocateRegister(LirType.F64);
                             Add(instructions, new LirInstruction(LirOpCode.FMov, result, LirOperand.Reg(operand)));
                             Add(instructions, new LirInstruction(LirOpCode.FNeg, result));
                             return result;
@@ -371,9 +371,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                         if (node.Operand.Type == TypeSymbol.Int64 || node.Operand.Type == TypeSymbol.UInt64)
                         {
-                            var resultLong = AllocateRegister(8);
+                            var resultLong = AllocateRegister(LirType.I64);
                             Add(instructions, new LirInstruction(LirOpCode.Mov, resultLong, LirOperand.Reg(operand)));
-                            Add(instructions, new LirInstruction(LirOpCode.Neg64, resultLong));
+                            Add(instructions, new LirInstruction(LirOpCode.Neg, resultLong));
                             return resultLong;
                         }
 
@@ -395,9 +395,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     {
                         if (node.Operand.Type == TypeSymbol.Int64)
                         {
-                            var resultLong = AllocateRegister(8);
+                            var resultLong = AllocateRegister(LirType.I64);
                             Add(instructions, new LirInstruction(LirOpCode.Mov, resultLong, LirOperand.Reg(operand)));
-                            Add(instructions, new LirInstruction(LirOpCode.Not64, resultLong));
+                            Add(instructions, new LirInstruction(LirOpCode.Not, resultLong));
                             return resultLong;
                         }
 
@@ -423,13 +423,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var concatRight = EmitExpression(node.Right);
                 if (node.Right.Type == TypeSymbol.Double)
                 {
-                    var text = AllocateRegister(8);
+                    var text = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(concatRight)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                     concatRight = text;
                 }
 
-                var concatResult = AllocateRegister(8);
+                var concatResult = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(concatLeft)));
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(concatRight)));
                 Add(instructions, new LirInstruction(LirOpCode.Call, concatResult, LirOperand.Runtime("Concat"), LirOperand.Constant(0)));
@@ -462,7 +462,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var right = EmitExpression(node.Right);
             var result = AllocateRegister(4);
 
-            // 6e-M21 Phase 5：8/16/32 位整数统一在 32 位槽运算，无符号类型选择无符号语义指令
+            // 6e-M21 Phase 5�?/16/32 位整数统一�?32 位槽运算，无符号类型选择无符号语义指�?
             var isUnsigned = node.Left.Type.IsInteger && !node.Left.Type.IsSigned;
 
             switch (op)
@@ -473,7 +473,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.LogicalAnd:
-                    // 逻辑与用位与（0/1 布尔语义 = && 结果；三后端一致：Evaluator/IL 均为急切求值）
+                    // 逻辑与用位与�?/1 布尔语义 = && 结果；三后端一致：Evaluator/IL 均为急切求值）
                     Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
@@ -500,7 +500,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
-                    // 无符号类型为逻辑右移（Shr），有符号为算术右移（Sar）
+                    // 无符号类型为逻辑右移（Shr），有符号为算术右移（Sar�?
                     Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
@@ -523,7 +523,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.NotEqual)));
                     break;
 
-                // 6e-M19 M2-c：类类型引用相等——M4 前 native 对象即指针，直接位比较
+                // 6e-M19 M2-c：类类型引用相等——M4 �?native 对象即指针，直接位比�?
                 case BoundBinaryOperatorKind.ReferenceEquals:
                     Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
                     Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.Equal)));
@@ -561,63 +561,63 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             return result;
         }
 
-        /// <summary>long/u64 二元运算（6e-M19 M1）：算术/位/移位/比较走 64 位 IR 指令；u64 无符号语义（Phase 5）。</summary>
+        /// <summary>long/u64 二元运算�?e-M19 M1）：算术/�?移位/比较�?64 �?IR 指令；u64 无符号语义（Phase 5）�?/summary>
         private LirVirtualRegister EmitLongBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
             var instructions = _currentFunction.Instructions;
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
-            var result = AllocateRegister(8);
+            var result = AllocateRegister(LirType.I64);
 
-            // 6e-M21 Phase 5：u64 走无符号语义（Udiv64/Urem64、Shr64 逻辑右移、无符号比较）
+            // 6e-M21 Phase 5：u64 走无符号语义（Udiv64/Urem64、Shr64 逻辑右移、无符号比较�?
             var isUnsigned = node.Left.Type == TypeSymbol.UInt64;
 
             switch (op)
             {
                 case BoundBinaryOperatorKind.Addition:
-                    Add(instructions, new LirInstruction(LirOpCode.Add64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Add, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Subtraction:
-                    Add(instructions, new LirInstruction(LirOpCode.Sub64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Sub, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Multiplication:
-                    Add(instructions, new LirInstruction(LirOpCode.Imul64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Imul, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Division:
                     Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(left)));
-                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Udiv64 : LirOpCode.Idiv64, result, LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Udiv : LirOpCode.Idiv, result, LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Modulo:
                     Add(instructions, new LirInstruction(LirOpCode.Mov, result, LirOperand.Reg(left)));
-                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Urem64 : LirOpCode.Irem64, result, LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Urem : LirOpCode.Irem, result, LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.LogicalAnd:
-                    Add(instructions, new LirInstruction(LirOpCode.And64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseOr:
                 case BoundBinaryOperatorKind.LogicalOr:
-                    Add(instructions, new LirInstruction(LirOpCode.Or64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Or, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.BitwiseXor:
-                    Add(instructions, new LirInstruction(LirOpCode.Xor64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Xor, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftLeft:
-                    Add(instructions, new LirInstruction(LirOpCode.Shl64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    Add(instructions, new LirInstruction(LirOpCode.Shl, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
-                    // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64）
-                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr64 : LirOpCode.Sar64, result, LirOperand.Reg(left), LirOperand.Reg(right)));
+                    // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64�?
+                    Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
                 case BoundBinaryOperatorKind.Equals:
@@ -628,7 +628,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     {
                         var boolResult = AllocateRegister(4);
-                        Add(instructions, new LirInstruction(LirOpCode.Cmp64, LirOperand.Reg(left), LirOperand.Reg(right)));
+                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
 
                         LirCond cond = op switch
                         {
@@ -657,9 +657,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
 
-            // 6e-M21 Phase 5b：f32 走真正单精度 SSE（ss 族），f64 保持双精度
+            // 6e-M21 Phase 5b：f32 走真正单精度 SSE（ss 族），f64 保持双精�?
             var single = node.Left.Type == TypeSymbol.Float;
-            var resultSize = single ? 4 : 8;
+            var resultType = single ? LirType.F32 : LirType.F64;
 
             switch (op)
             {
@@ -668,7 +668,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case BoundBinaryOperatorKind.Multiplication:
                 case BoundBinaryOperatorKind.Division:
                     {
-                        var result = AllocateRegister(resultSize);
+                        var result = AllocateRegister(resultType);
                         var fOp = op switch
                         {
                             BoundBinaryOperatorKind.Addition => LirOpCode.FAdd,
@@ -690,8 +690,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                         var result = AllocateRegister(4);
                         Add(instructions, new LirInstruction(LirOpCode.FCmp, null, LirOperand.Reg(left), LirOperand.Reg(right), 0, 0, single));
 
-                        // ucomisd 在 unordered（NaN 参与）时置 ZF=PF=CF=1；
-                        // 全部 6 个比较条件对 NaN 一律 false、!= 对 NaN 为 true（IEEE-754 语义）。
+                        // ucomisd �?unordered（NaN 参与）时�?ZF=PF=CF=1�?
+                        // 全部 6 个比较条件对 NaN 一�?false�?= �?NaN �?true（IEEE-754 语义）�?
                         var (main, fixup) = op switch
                         {
                             BoundBinaryOperatorKind.Equals => (LirCond.Equal, LirCond.NoParity),

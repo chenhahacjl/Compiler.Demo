@@ -27,8 +27,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 {
                     var tmp = NewReg(8);
                     Mov(tmp, _args[0]);
-                    var buf0 = NewReg(8);
-                    var scratch = NewReg(8);
+                    var buf0 = NewPtr();
+                    var scratch = NewPtr();
                     LeaSlot(buf0, scratch);
                     Store(buf0, 0, tmp, 8);
                     Load(lo, buf0, 0, 4);
@@ -53,8 +53,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Neg64Pair(lo, hi);
                 Mark(isPos);
 
-                var buf = NewReg(8);
-                var bufScratch = NewReg(8);
+                var buf = NewPtr();
+                var bufScratch = NewPtr();
                 LeaSlot(buf, bufScratch);
                 Store(buf, 0, lo, 4);
                 Store(buf, 4, hi, 4);
@@ -62,9 +62,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Store(buf, 8, zero, 4);
                 Store(buf, 12, zero, 4);
 
-                var end = NewReg(8);
+                var end = NewPtr();
                 Lea(end, buf, 64);
-                var tail = NewReg(8);
+                var tail = NewPtr();
                 Mov(tail, end);
                 var ten = C(4, 10);
 
@@ -117,7 +117,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Shl(size, size, 2);
                 AddI(size, size, 4);
 
-                var obj = NewReg(8);
+                var obj = NewPtr();
                 CallRuntime(obj, "Alloc", size);
                 Cmp(obj, 0);
                 var oom = NewLabel();
@@ -132,7 +132,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mov(count, lenBytes);
                 AddI(count, count, 2);
                 Shr(count, count, 2);
-                var dst = NewReg(8);
+                var dst = NewPtr();
                 Lea(dst, obj, 4);
                 CallRuntime(null, "CopyChars", dst, tail, count);
 
@@ -160,8 +160,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 {
                     var tmp = NewReg(8);
                     Mov(tmp, _args[0]);
-                    var buf0 = NewReg(8);
-                    var scratch = NewReg(8);
+                    var buf0 = NewPtr();
+                    var scratch = NewPtr();
                     LeaSlot(buf0, scratch);
                     Store(buf0, 0, tmp, 8);
                     Load(lo, buf0, 0, 4);
@@ -173,8 +173,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     Mov(hi, _args[1]);
                 }
 
-                var buf = NewReg(8);
-                var bufScratch = NewReg(8);
+                var buf = NewPtr();
+                var bufScratch = NewPtr();
                 LeaSlot(buf, bufScratch);
                 Store(buf, 0, lo, 4);
                 Store(buf, 4, hi, 4);
@@ -182,9 +182,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Store(buf, 8, zero, 4);
                 Store(buf, 12, zero, 4);
 
-                var end = NewReg(8);
+                var end = NewPtr();
                 Lea(end, buf, 64);
-                var tail = NewReg(8);
+                var tail = NewPtr();
                 Mov(tail, end);
                 var ten = C(4, 10);
 
@@ -229,7 +229,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Shl(size, size, 2);
                 AddI(size, size, 4);
 
-                var obj = NewReg(8);
+                var obj = NewPtr();
                 CallRuntime(obj, "Alloc", size);
                 Cmp(obj, 0);
                 var oom = NewLabel();
@@ -244,7 +244,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mov(count, lenBytes);
                 AddI(count, count, 2);
                 Shr(count, count, 2);
-                var dst = NewReg(8);
+                var dst = NewPtr();
                 Lea(dst, obj, 4);
                 CallRuntime(null, "CopyChars", dst, tail, count);
 
@@ -273,7 +273,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 var len = NewReg(4);
                 Load(len, s, 0, 4);
-                var p = NewReg(8);
+                var p = NewPtr();
                 Lea(p, s, 4);
 
                 // 负号前置检查：s[0] == '-' → neg=1，len-1、指针后移一个 UTF-16 字符
@@ -286,7 +286,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Jcc(LirCond.NotEqual, skipNeg);
                 Const(neg, 1);
                 AddI(len, len, -1);
-                var p2 = NewReg(8);
+                var p2 = NewPtr();
                 Lea(p2, s, 6);
                 Mov(p, p2);
                 Mark(skipNeg);
@@ -301,7 +301,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Jcc(LirCond.GreaterOrEqual, done);
                 var ch = NewReg(4);
                 Load(ch, p, 0, 2);
-                var nextP = NewReg(8);
+                var nextP = NewPtr();
                 Lea(nextP, p, 2);
                 Mov(p, nextP);
                 AddI(ch, ch, -'0');
@@ -317,11 +317,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 Mark(done);
 
-                // 负号修正：neg != 0 → Neg64(acc)
+                // 负号修正：neg != 0 → Neg(acc)
                 Cmp(neg, 0);
                 var outLbl = NewLabel();
                 Jcc(LirCond.Equal, outLbl);
-                Add(LirOpCode.Neg64, acc, LirOperand.Reg(acc));
+                Add(LirOpCode.Neg, acc, LirOperand.Reg(acc));
                 Mark(outLbl);
 
                 StoreRet(acc);
@@ -419,8 +419,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(qPos);
 
                 var q = NewReg(8);
-                var qbuf = NewReg(8);
-                var qscratch = NewReg(8);
+                var qbuf = NewPtr();
+                var qscratch = NewPtr();
                 LeaSlot(qbuf, qscratch);
                 Store(qbuf, 0, qLo, 4);
                 Store(qbuf, 4, qHi, 4);
@@ -518,8 +518,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(rPos);
 
                 var r = NewReg(8);
-                var rbuf = NewReg(8);
-                var rscratch = NewReg(8);
+                var rbuf = NewPtr();
+                var rscratch = NewPtr();
                 LeaSlot(rbuf, rscratch);
                 Store(rbuf, 0, rLo, 4);
                 Store(rbuf, 4, rHi, 4);
@@ -583,8 +583,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(bitDone);
 
                 var q = NewReg(8);
-                var qbuf = NewReg(8);
-                var qscratch = NewReg(8);
+                var qbuf = NewPtr();
+                var qscratch = NewPtr();
                 LeaSlot(qbuf, qscratch);
                 Store(qbuf, 0, qLo, 4);
                 Store(qbuf, 4, qHi, 4);
@@ -643,8 +643,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(bitDone);
 
                 var r = NewReg(8);
-                var rbuf = NewReg(8);
-                var rscratch = NewReg(8);
+                var rbuf = NewPtr();
+                var rscratch = NewPtr();
                 LeaSlot(rbuf, rscratch);
                 Store(rbuf, 0, rLo, 4);
                 Store(rbuf, 4, rHi, 4);

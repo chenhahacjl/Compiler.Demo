@@ -5,10 +5,10 @@ using System.Linq;
 namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
-    /// 平台无关运行时 IR 生成：把原 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
-    /// 合并为单一 IR 程序挂接。<br/>
-    /// 平台差异收敛为：指针槽宽（8/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）、
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
+    /// 平台无关运行�?IR 生成：把�?x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs�?
+    /// 合并为单一 IR 程序挂接�?br/>
+    /// 平台差异收敛为：指针槽宽�?/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）�?
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责�?
     /// </summary>
     internal static partial class RuntimeEmitterLir
     {
@@ -17,13 +17,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
-            // Y-P0-1：文件 IO / 环境 syscall（G7-④ 补齐；文件读写经 msvcrt 低参 API，避开 6-7 参 ABI 上限）
+            // Y-P0-1：文�?IO / 环境 syscall（G7-�?补齐；文件读写经 msvcrt 低参 API，避开 6-7 �?ABI 上限�?
             "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
             "MultiByteToWideChar", "WideCharToMultiByte",
         };
 
-        /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）。</summary>
+        /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）�?/summary>
         private static readonly string[] UcrtImports =
         {
             "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64", "_wsystem",
@@ -79,20 +79,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             {
                 EmitData();
 
-                _ = BeginFunction("WriteStr", 8, 4);
+                _ = BeginFunctionTyped("WriteStr", new[] { 8, 4 }, LirType.Addr);
                 EmitWriteStr();
                 _ = BeginFunction("BuildInt", 4, 8);
                 EmitBuildInt();
                 _ = BeginFunction("Alloc", 4);
                 EmitAlloc();
-                _ = BeginFunction("CopyChars", 8, 8, 4);
+                _ = BeginFunctionTyped("CopyChars", new[] { 8, 8, 4 }, LirType.Addr, LirType.Addr);
                 EmitCopyChars();
 
-                _ = BeginFunction("PrintString", 8);
+                _ = BeginFunctionTyped("PrintString", new[] { 8 }, LirType.Addr);
                 EmitPrintString();
                 _ = BeginFunction("PrintInt", 4);
                 EmitPrintInt();
-                _ = BeginFunction("WriteString", 8);
+                _ = BeginFunctionTyped("WriteString", new[] { 8 }, LirType.Addr);
                 EmitWriteString();
                 _ = BeginFunction("WriteInt", 4);
                 EmitWriteInt();
@@ -111,12 +111,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitParseInt64();
                 if (!_isX64)
                 {
-                    // x86 64 位有符号除法/取余经运行时（x64 内联 cqo+idiv）
+                    // x86 64 位有符号除法/取余经运行时（x64 内联 cqo+idiv�?
                     _ = BeginFunction("Idiv64", 4, 4, 4, 4);
                     EmitIdiv64();
                     _ = BeginFunction("Irem64", 4, 4, 4, 4);
                     EmitIrem64();
-                    // 6e-M21 Phase 5：无符号 64 位除/余（x64 内联 xor edx + div）
+                    // 6e-M21 Phase 5：无符号 64 位除/余（x64 内联 xor edx + div�?
                     _ = BeginFunction("Udiv64", 4, 4, 4, 4);
                     EmitUdiv64();
                     _ = BeginFunction("Urem64", 4, 4, 4, 4);
@@ -134,44 +134,44 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitUInt64ToString();
                 if (_isX64)
                 {
-                    _ = BeginFunction("DoubleToString", 8);
+                    _ = BeginFunctionTyped("DoubleToString", new[] { 8 }, LirType.F64);
                 }
                 else
                 {
-                    _ = BeginFunction("DoubleToString", 4, 4);
+                    _ = BeginFunctionTyped("DoubleToString", new[] { 4, 4 }, LirType.F64, LirType.F64);
                 }
                 EmitDoubleToString();
                 if (_isX64)
                 {
-                    _ = BeginFunction("FormatFixed", 8, 4);
+                    _ = BeginFunctionTyped("FormatFixed", new[] { 8, 4 }, LirType.F64);
                 }
                 else
                 {
-                    _ = BeginFunction("FormatFixed", 4, 4, 4);
+                    _ = BeginFunctionTyped("FormatFixed", new[] { 4, 4, 4 }, LirType.F64, LirType.F64);
                 }
                 EmitFormatFixed();
                 if (_isX64)
                 {
-                    _ = BeginFunction("FormatSci", 8, 4, 4);
+                    _ = BeginFunctionTyped("FormatSci", new[] { 8, 4, 4 }, LirType.F64);
                 }
                 else
                 {
-                    _ = BeginFunction("FormatSci", 4, 4, 4, 4);
+                    _ = BeginFunctionTyped("FormatSci", new[] { 4, 4, 4, 4 }, LirType.F64, LirType.F64);
                 }
                 EmitFormatSci();
-                _ = BeginFunction("DivChain", 8, 4);
+                _ = BeginFunctionTyped("DivChain", new[] { 8, 4 }, LirType.F64);
                 EmitDivChain();
-                _ = BeginFunction("BigDiv", 8, 4, 4);
+                _ = BeginFunctionTyped("BigDiv", new[] { 8, 4, 4 }, LirType.F64);
                 EmitBigDiv();
-                _ = BeginFunction("ParseInt", 8);
+                _ = BeginFunctionTyped("ParseInt", new[] { 8 }, LirType.Addr);
                 EmitParseInt();
-                _ = BeginFunction("ParseBool", 8);
+                _ = BeginFunctionTyped("ParseBool", new[] { 8 }, LirType.Addr);
                 EmitParseBool();
-                _ = BeginFunction("Concat", 8, 8);
+                _ = BeginFunctionTyped("Concat", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitConcat();
-                _ = BeginFunction("StrEquals", 8, 8);
+                _ = BeginFunctionTyped("StrEquals", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitStrEquals();
-                _ = BeginFunction("Substring", 8, 4, 4);
+                _ = BeginFunctionTyped("Substring", new[] { 8, 4, 4 }, LirType.Addr);
                 EmitSubstring();
                 _ = BeginFunction("CharToString", 4);
                 EmitCharToString();
@@ -184,26 +184,26 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     _ = BeginFunction("StringFormat", 4, 4, 4, 4);
                 }
                 EmitStringFormat();
-                _ = BeginFunction("PadString", 8, 4);
+                _ = BeginFunctionTyped("PadString", new[] { 8, 4 }, LirType.Addr);
                 EmitPadString();
-                _ = BeginFunction("AllocStringFromBuf", 8, 4);
+                _ = BeginFunctionTyped("AllocStringFromBuf", new[] { 8, 4 }, LirType.Addr);
                 EmitAllocStringFromBuf();
-                _ = BeginFunction("FormatHex", 8, 4, 4);
+                _ = BeginFunctionTyped("FormatHex", new[] { 8, 4, 4 }, LirType.Addr);
                 EmitFormatHex();
-                _ = BeginFunction("FormatDecPad", 8, 4);
+                _ = BeginFunctionTyped("FormatDecPad", new[] { 8, 4 }, LirType.Addr);
                 EmitFormatDecPad();
                 _ = BeginFunction("ScaleAssemble", 4, 4, 4, 4);
                 EmitScaleAssemble();
                 if (_isX64)
                 {
-                    _ = BeginFunction("DoubleFixed", 8, 4);
+                    _ = BeginFunctionTyped("DoubleFixed", new[] { 8, 4 }, LirType.F64);
                 }
                 else
                 {
-                    _ = BeginFunction("DoubleFixed", 4, 4, 4);
+                    _ = BeginFunctionTyped("DoubleFixed", new[] { 4, 4, 4 }, LirType.F64, LirType.F64);
                 }
                 EmitDoubleFixed();
-                _ = BeginFunction("ApplyAlignment", 8, 4, 4);
+                _ = BeginFunctionTyped("ApplyAlignment", new[] { 8, 4, 4 }, LirType.Addr);
                 EmitApplyAlignment();
                 _ = BeginFunction("Input");
                 EmitInput();
@@ -211,15 +211,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitReadKey();
                 _ = BeginFunction("Random", 4);
                 EmitRandom();
-                BeginStackFunction("ObjectEquals", 8, 8);
+                BeginStackFunctionTyped("ObjectEquals", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitObjectEquals();
-                BeginStackFunction("ObjectToString", 8);
+                BeginStackFunctionTyped("ObjectToString", new[] { 8 }, LirType.Addr);
                 EmitObjectToString();
-                BeginStackFunction("ObjectGetHashCode", 8);
+                BeginStackFunctionTyped("ObjectGetHashCode", new[] { 8 }, LirType.Addr);
                 EmitObjectGetHashCode();
-                BeginStackFunction("ObjectGetType", 8);
+                BeginStackFunctionTyped("ObjectGetType", new[] { 8 }, LirType.Addr);
                 EmitObjectGetType();
-                _ = BeginFunction("TypeSimpleName", 8);
+                _ = BeginFunctionTyped("TypeSimpleName", new[] { 8 }, LirType.Addr);
                 EmitTypeSimpleName();
                 _ = BeginFunction("NewArray", 4, 4);
                 EmitNewArray();
@@ -236,34 +236,34 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitSleep();
                 _ = BeginFunction("Beep", 4, 4);
                 EmitBeep();
-                // Y-P0-1：文件 IO / 环境 syscall（G7-④ 补齐）
-                _ = BeginFunction("FileExists", 8);
+                // Y-P0-1：文�?IO / 环境 syscall（G7-�?补齐�?
+                _ = BeginFunctionTyped("FileExists", new[] { 8 }, LirType.Addr);
                 EmitFileExists();
-                _ = BeginFunction("DirectoryExists", 8);
+                _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr);
                 EmitDirectoryExists();
-                _ = BeginFunction("FileDelete", 8);
+                _ = BeginFunctionTyped("FileDelete", new[] { 8 }, LirType.Addr);
                 EmitFileDelete();
-                _ = BeginFunction("FileCopy", 8, 8);
+                _ = BeginFunctionTyped("FileCopy", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitFileCopy();
-                _ = BeginFunction("GetEnvironmentVariable", 8);
+                _ = BeginFunctionTyped("GetEnvironmentVariable", new[] { 8 }, LirType.Addr);
                 EmitGetEnvironmentVariable();
                 _ = BeginFunction("GetCurrentDirectory");
                 EmitGetCurrentDirectory();
                 _ = BeginFunction("GetExecutablePath");
                 EmitGetExecutablePath();
-                _ = BeginFunction("SetCurrentDirectory", 8);
+                _ = BeginFunctionTyped("SetCurrentDirectory", new[] { 8 }, LirType.Addr);
                 EmitSetCurrentDirectory();
-                _ = BeginFunction("FileReadAllText", 8);
+                _ = BeginFunctionTyped("FileReadAllText", new[] { 8 }, LirType.Addr);
                 EmitFileReadAllText();
-                _ = BeginFunction("FileWriteAllText", 8, 8);
+                _ = BeginFunctionTyped("FileWriteAllText", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitFileWriteAllText();
-                _ = BeginFunction("StringFromChars", 8);
+                _ = BeginFunctionTyped("StringFromChars", new[] { 8 }, LirType.Addr);
                 EmitStringFromChars();
 
-                _ = BeginFunction("Sha256Hash", 8);
+                _ = BeginFunctionTyped("Sha256Hash", new[] { 8 }, LirType.Addr);
                 EmitSha256Hash();
 
-                _ = BeginFunction("LaunchProcess", 8, 8);
+                _ = BeginFunctionTyped("LaunchProcess", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitLaunchProcess();
 
                 var divByZero = BeginFunction("DivByZero");
@@ -285,7 +285,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 _inputBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "InputBuffer", new byte[0x2000]));
                 _fileBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
                 _fileBuffer2 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
-                // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀的 CO 串，不能直接作 LPCWSTR）
+                // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀�?CO 串，不能直接�?LPCWSTR�?
                 _rbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
                 _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
                 _emptyString = _program.AddData(LirDataItem.Utf16(Prefix + "EmptyString", ""));
@@ -322,6 +322,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private LirFunction BeginFunction(string name, params int[] argSizes)
             {
+                return BeginFunctionTyped(name, argSizes);
+            }
+
+            private LirFunction BeginFunctionTyped(string name, int[] argSizes, params LirType[] argTypes)
+            {
                 var parameters = new List<LirParameter>(argSizes.Length);
                 for (var i = 0; i < argSizes.Length; i++)
                 {
@@ -336,7 +341,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 for (var i = 0; i < argSizes.Length; i++)
                 {
-                    var register = NewReg(argSizes[i]);
+                    var register = argTypes.Length > i && argTypes[i] != default
+                        ? NewReg(argTypes[i])
+                        : NewReg(argSizes[i]);
                     _args.Add(register);
                     Add(LirOpCode.InitRegArg, register, LirOperand.Constant(i));
                 }
@@ -345,11 +352,16 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             /// <summary>
-            /// 栈 ABI 运行时函数（M4）：参数经 ReserveArgs/StoreArg 从栈传入（与用户函数一致），
-            /// 供 vtable 槽间接调用（callreg 无法区分槽内容是运行时默认还是用户 override，
-            /// 故 Object 面四个运行时函数统一用户 ABI）。x64 参数区每参 8 字节；x86 按宽度累计。
+            /// �?ABI 运行时函数（M4）：参数�?ReserveArgs/StoreArg 从栈传入（与用户函数一致）�?
+            /// �?vtable 槽间接调用（callreg 无法区分槽内容是运行时默认还是用�?override�?
+            /// �?Object 面四个运行时函数统一用户 ABI）。x64 参数区每�?8 字节；x86 按宽度累计�?
             /// </summary>
             private void BeginStackFunction(string name, params int[] argSizes)
+            {
+                BeginStackFunctionTyped(name, argSizes);
+            }
+
+            private void BeginStackFunctionTyped(string name, int[] argSizes, params LirType[] argTypes)
             {
                 var parameters = new List<LirParameter>(argSizes.Length);
                 for (var i = 0; i < argSizes.Length; i++)
@@ -366,7 +378,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var offset = 0;
                 for (var i = 0; i < argSizes.Length; i++)
                 {
-                    var register = NewReg(argSizes[i]);
+                    var register = argTypes.Length > i && argTypes[i] != default
+                        ? NewReg(argTypes[i])
+                        : NewReg(argSizes[i]);
                     _args.Add(register);
                     Add(LirOpCode.InitParam, register, LirOperand.Constant(offset));
                     offset += argSizes[i];
@@ -383,6 +397,28 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             private LirVirtualRegister NewReg(int size)
             {
                 var register = _allocator.Allocate(size == 8 ? LirType.I64 : LirType.I32);
+                _currentFunction!.Register(register);
+                return register;
+            }
+
+            private LirVirtualRegister NewReg(LirType type)
+            {
+                var register = _allocator.Allocate(type);
+                _currentFunction!.Register(register);
+                return register;
+            }
+
+            /// <summary>指针寄存器（对象/缓冲/地址）：x86 双槽但按 32 位指针算术（Qword 降级）�?/summary>
+            private LirVirtualRegister NewPtr()
+            {
+                var register = _allocator.Allocate(LirType.Addr);
+                _currentFunction!.Register(register);
+                return register;
+            }
+
+            private LirVirtualRegister NewF64()
+            {
+                var register = _allocator.Allocate(LirType.F64);
                 _currentFunction!.Register(register);
                 return register;
             }
@@ -408,10 +444,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private void Load(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int size) => Add(LirOpCode.Load, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, size);
 
-            /// <summary>从 <paramref name="baseReg"/> 的槽内存直接按偏移读取（不解引用）。x64 槽 8 字节（double 高 dword 在 +4）；x86 槽 4 字节×2（高 dword 在 -4）。</summary>
+            /// <summary>�?<paramref name="baseReg"/> 的槽内存直接按偏移读取（不解引用）。x64 �?8 字节（double �?dword �?+4）；x86 �?4 字节×2（高 dword �?-4）�?/summary>
             private void LoadSlotField(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int size) => Add(LirOpCode.LoadSlotField, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, size);
 
-            /// <summary>把 <paramref name="src"/> 写入 <paramref name="baseReg"/> 槽内存的偏移处（不解引用），用于 x86 把 low/high 两 dword 拼装成 double 槽。</summary>
+            /// <summary>�?<paramref name="src"/> 写入 <paramref name="baseReg"/> 槽内存的偏移处（不解引用），用于 x86 �?low/high �?dword 拼装�?double 槽�?/summary>
             private void StoreSlotField(LirVirtualRegister baseReg, int offset, LirVirtualRegister src, int size) => Add(LirOpCode.StoreSlotField, null, LirOperand.Reg(baseReg), LirOperand.Reg(src), offset, size);
 
             private void Store(LirVirtualRegister baseReg, int offset, LirVirtualRegister src, int size) => Add(LirOpCode.Store, null, LirOperand.Reg(baseReg), LirOperand.Reg(src), offset, size);
@@ -432,7 +468,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private void Sub(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Sub, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
-            private void Imul64(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Imul64, dst, LirOperand.Reg(a), LirOperand.Reg(b));
+            private void Imul64(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Imul, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
             private void Imul(LirVirtualRegister dst, LirVirtualRegister a, LirVirtualRegister b) => Add(LirOpCode.Imul, dst, LirOperand.Reg(a), LirOperand.Reg(b));
 
@@ -495,7 +531,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 SysCallDll(dst, "kernel32.dll", import, argCount, false, args);
             }
 
-            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 LirToAssembler.SysCall 负责。</summary>
+            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true �?x86 调用方清栈。x64 fastcall / x86 stdcall 约定�?LirToAssembler.SysCall 负责�?/summary>
             private void SysCallDll(LirVirtualRegister? dst, string dll, string import, int argCount, bool cdecl, params LirVirtualRegister?[] args)
             {
                 for (var i = 0; i < args.Length; i++)
@@ -509,7 +545,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(LirOpCode.SysCall, dst, LirOperand.Import(new LirImport(dll, import, cdecl)), LirOperand.Constant(argCount));
             }
 
-            /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）。</summary>
+            /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）�?/summary>
             private LirVirtualRegister C(int size, long imm)
             {
                 var register = NewReg(size);
@@ -517,7 +553,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 return register;
             }
 
-            /// <summary>常量为负的立即数加法（AddI 接受负 imm）。</summary>
+            /// <summary>常量为负的立即数加法（AddI 接受�?imm）�?/summary>
             private static int SafeImm(int value) => value;
 
             private static byte[] DoubleBits(double value)

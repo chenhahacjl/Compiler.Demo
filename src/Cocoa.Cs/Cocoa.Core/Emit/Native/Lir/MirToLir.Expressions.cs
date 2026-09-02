@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var elementSize = ElementSize(elementType);
 
             var length = EmitExpression(node.Length);
-            var array = AllocateRegister(8);
+            var array = AllocateRegister(LirType.Addr);
             var elementSizeRegister = EmitConst(elementSize);
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(length)));
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(elementSizeRegister)));
@@ -35,7 +35,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.Const, index, LirOperand.Constant(i)));
                 EmitArrayBoundsCheck(instructions, index, length);
 
-                var address = AllocateRegister(8);
+                var address = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8 + i * elementSize, 0));
                 var value = EmitExpression(node.Initializers[i]);
                 Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(address), LirOperand.Reg(value), 0, elementSize));
@@ -63,7 +63,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(index), LirOperand.Reg(length)));
             Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.AboveOrEqual), LirOperand.Label(done)));
 
-            var offset = AllocateRegister(8);
+            var offset = AllocateRegister(LirType.I64);
             Add(instructions, new LirInstruction(LirOpCode.Mov, offset, LirOperand.Reg(index)));
             if (elementSize == 2)
             {
@@ -78,7 +78,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(3)));
             }
 
-            var address = AllocateRegister(8);
+            var address = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
             Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
 
@@ -156,7 +156,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.Mov, offset, LirOperand.Reg(index)));
                 Add(instructions, new LirInstruction(LirOpCode.Shl, offset, LirOperand.Reg(offset), LirOperand.Constant(1)));
 
-                var address = AllocateRegister(8);
+                var address = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(target), LirOperand.None, 4, 0));
                 Add(instructions, new LirInstruction(LirOpCode.Add, address, LirOperand.Reg(address), LirOperand.Reg(offset)));
 
@@ -167,7 +167,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             var array = EmitElementAddress(instructions, target, index, elementSize);
 
-            var value = AllocateRegister(elementSize == 8 ? 8 : 4);
+            var value = AllocateRegister(TypeOf(elementType));
             Add(instructions, new LirInstruction(LirOpCode.Load, value, LirOperand.Reg(array), LirOperand.None, 0, elementSize));
             return value;
         }
@@ -199,7 +199,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 if (field.IsStatic)
                 {
                     var slot = EmitStaticFieldAddress(field);
-                    var staticResult = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                    var staticResult = AllocateRegister(TypeOf(field.Type));
                     Add(instructions, new LirInstruction(LirOpCode.Load, staticResult, LirOperand.Reg(slot), LirOperand.None, 0, fieldSize));
                     return staticResult;
                 }
@@ -207,7 +207,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var target = EmitExpression(node.Target);
                 var (offsets, _) = GetLayout((NamedTypeSymbol)field.ContainingClass);
                 var offset = offsets[field];
-                var result = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                var result = AllocateRegister(TypeOf(field.Type));
                 Add(instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(target), LirOperand.None, offset, fieldSize));
                 return result;
             }
@@ -223,7 +223,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         {
             var key = NativeObjectModel.StaticFieldKey(field);
             _irProgram.AddData(LirDataItem.ByteArray(key, new byte[NativeObjectModel.FieldSize(field.Type)]));
-            var slot = AllocateRegister(8);
+            var slot = AllocateRegister(LirType.Addr);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, slot, LirOperand.Data(key)));
             return slot;
         }
@@ -260,12 +260,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var pointerSize = _isX64 ? 8 : 4;
 
             var sizeRegister = EmitConst(instanceSize);
-            var obj = AllocateRegister(8);
+            var obj = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeRegister)));
             Add(instructions, new LirInstruction(LirOpCode.Call, obj, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
 
             // 对象头 [0] = 具体类 vtable 指针
-            var vtable = AllocateRegister(8);
+            var vtable = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(NativeObjectModel.VTableKey(classType))));
             Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(vtable), 0, pointerSize));
 
@@ -273,7 +273,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             foreach (var field in NativeObjectModel.CollectInstanceFields(classType))
             {
                 var fieldSize = NativeObjectModel.FieldSize(field.Type);
-                var zero = AllocateRegister(fieldSize == 8 ? 8 : 4);
+                var zero = AllocateRegister(TypeOf(field.Type));
                 Add(instructions, new LirInstruction(LirOpCode.Const, zero, LirOperand.Constant(0)));
                 Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(zero), offsets[field], fieldSize));
             }
@@ -349,7 +349,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             // obj = Alloc(pointerSize * 3)
             var sizeRegister = EmitConst(pointerSize * 3);
-            var obj = AllocateRegister(8);
+            var obj = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeRegister)));
             Add(instructions, new LirInstruction(LirOpCode.Call, obj, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
 
@@ -359,9 +359,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(zero), 0, 4));
 
             // [ps] 函数地址：LeaData 地址表 → Load 解引用
-            var table = AllocateRegister(8);
+            var table = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.LeaData, table, LirOperand.Data(key)));
-            var functionPointer = AllocateRegister(8);
+            var functionPointer = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, functionPointer, LirOperand.Reg(table), LirOperand.None, 8 + pointerSize, pointerSize));
             Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(functionPointer), pointerSize, pointerSize));
 
@@ -382,7 +382,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
             else
             {
-                environment = AllocateRegister(8);
+                environment = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Const, environment, LirOperand.Constant(0)));
             }
 
@@ -430,8 +430,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     }
                 }
 
-                var size = ReturnSize(function.Parameters[i].Type);
-                var register = AllocateRegister(size);
+                var register = AllocateRegister(TypeOf(function.Parameters[i].Type));
                 Add(instr, new LirInstruction(LirOpCode.InitParam, register, LirOperand.Constant(offset)));
                 paramRegisters.Add(register);
             }
@@ -477,10 +476,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             var callee = EmitExpression(node.Callee);
 
-            var functionPointer = AllocateRegister(8);
+            var functionPointer = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, functionPointer, LirOperand.Reg(callee), LirOperand.None, pointerSize, pointerSize));
 
-            var environment = AllocateRegister(8);
+            var environment = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, environment, LirOperand.Reg(callee), LirOperand.None, pointerSize * 2, pointerSize));
 
             // 参数区：this(env, 8B) + 实参（x64 每参 8；x86 按 ReturnSize 累计）——与 InvokeVirtualSlot 同构
@@ -545,7 +544,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 if (node.Expression.Type == TypeSymbol.String && node.Identifier == "substring")
                 {
-                    var result = AllocateRegister(8);
+                    var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(target)));
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(start)));
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(count)));
@@ -578,10 +577,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var slot = _virtualSlots[root];
             var pointerSize = _isX64 ? 8 : 4;
 
-            var vtable = AllocateRegister(8);
+            var vtable = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, vtable, LirOperand.Reg(receiver), LirOperand.None, 0, pointerSize));
 
-            var functionPointer = AllocateRegister(8);
+            var functionPointer = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, functionPointer, LirOperand.Reg(vtable), LirOperand.None, 8 + pointerSize * (slot + 1), pointerSize));
             return functionPointer;
         }
@@ -611,7 +610,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     // Name = TypeSimpleName(FullName)——与 IL 组合语义一致（无点回退全名）
                     var typeValue = EmitExpression(node.Expression);
                     var fullName = EmitLoadPointerField(typeValue, 8);
-                    var simple = AllocateRegister(8);
+                    var simple = AllocateRegister(LirType.Addr);
                     Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(fullName)));
                     Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Call, simple, LirOperand.Runtime("TypeSimpleName"), LirOperand.Constant(0)));
                     return simple;
@@ -736,10 +735,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var instructions = _currentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
 
-            var vtable = AllocateRegister(8);
+            var vtable = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, vtable, LirOperand.Reg(receiver), LirOperand.None, 0, pointerSize));
 
-            var functionPointer = AllocateRegister(8);
+            var functionPointer = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.Load, functionPointer, LirOperand.Reg(vtable), LirOperand.None, 8 + pointerSize * (slotIndex + 1), pointerSize));
 
             // 参数区：this(8) + 实参（x64 每参 8；x86 按 ReturnSize 累计）
@@ -761,7 +760,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             var resultSize = slotIndex == NativeObjectModel.SlotToString ? 8 : 4;
-            var result = AllocateRegister(resultSize);
+            var result = AllocateRegister(slotIndex == NativeObjectModel.SlotToString ? LirType.Addr : LirType.I32);
             Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(functionPointer)));
             Add(instructions, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(running)));
             return result;
@@ -769,7 +768,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         private LirVirtualRegister EmitLoadPointerField(LirVirtualRegister baseRegister, int offset)
         {
-            var result = AllocateRegister(8);
+            var result = AllocateRegister(LirType.Addr);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(baseRegister), LirOperand.None, offset, _isX64 ? 8 : 4));
             return result;
         }
@@ -783,7 +782,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 _irProgram.AddData(LirDataItem.VTable(key, -1, _irProgram.InternString(fullName), NativeObjectModel.ObjectSlotFunctions));
             }
 
-            var vtable = AllocateRegister(8);
+            var vtable = AllocateRegister(LirType.Addr);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(key)));
             return vtable;
         }
@@ -843,7 +842,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             if (type == TypeSymbol.Double)
             {
-                var text = AllocateRegister(8);
+                var text = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                 return text;
@@ -851,9 +850,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             if (type == TypeSymbol.Float)
             {
-                var asDouble = AllocateRegister(8);
+                var asDouble = AllocateRegister(LirType.F64);
                 Add(instructions, new LirInstruction(LirOpCode.FCvtSSD, asDouble, LirOperand.Reg(value)));
-                var text = AllocateRegister(8);
+                var text = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(asDouble)));
                 Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("DoubleToString"), LirOperand.Constant(0)));
                 return text;
@@ -861,7 +860,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64)
             {
-                var text = AllocateRegister(8);
+                var text = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("Int64ToString"), LirOperand.Constant(0)));
                 return text;
@@ -869,14 +868,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             if (type == TypeSymbol.Char)
             {
-                var text = AllocateRegister(8);
+                var text = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
                 Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("CharToString"), LirOperand.Constant(0)));
                 return text;
             }
 
             // int/uint/sbyte/short/ushort/byte/enum：32 位规范值
-            var intText = AllocateRegister(8);
+            var intText = AllocateRegister(LirType.Addr);
             Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
             Add(instructions, new LirInstruction(LirOpCode.Call, intText, LirOperand.Runtime("IntToString"), LirOperand.Constant(0)));
             return intText;
@@ -898,7 +897,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         private LirVirtualRegister WidenTo8(LirVirtualRegister value)
         {
-            var widened = AllocateRegister(8);
+            var widened = AllocateRegister(LirType.I64);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Movzx64, widened, LirOperand.Reg(value)));
             return widened;
         }

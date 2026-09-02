@@ -5,20 +5,20 @@ using System.Linq;
 namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
-    /// 平台无关运行时 IR 生成：把原 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
-    /// 合并为单一 IR 程序挂接。<br/>
-    /// 平台差异收敛为：指针槽宽（8/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）、
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
+    /// 平台无关运行�?IR 生成：把�?x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs�?
+    /// 合并为单一 IR 程序挂接�?br/>
+    /// 平台差异收敛为：指针槽宽�?/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）�?
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责�?
     /// </summary>
     internal static partial class RuntimeEmitterLir
     {
         private sealed partial class RuntimeFunctionEmitter
         {
-            /// <summary>pow = 10^n（n ≥ 0），运行时循环计算（n 来自格式解析，非编译期常量）。</summary>
+            /// <summary>pow = 10^n（n �?0），运行时循环计算（n 来自格式解析，非编译期常量）�?/summary>
             private void EmitPow10(LirVirtualRegister n, LirVirtualRegister powOut)
             {
                 FConst(powOut, _formatOne);
-                var ten = NewReg(8);
+                var ten = NewF64();
                 FConst(ten, _formatTen);
                 var i = NewReg(4);
                 Const(i, 0);
@@ -33,7 +33,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>rounded = round(value × 10^n)（round-half-away-from-zero，与旧 FormatInt 语义一致）。x86 下 value 拆 low/high 两参数，槽内拼装。</summary>
+            /// <summary>rounded = round(value × 10^n)（round-half-away-from-zero，与�?FormatInt 语义一致）。x86 �?value �?low/high 两参数，槽内拼装�?/summary>
             private void EmitDoubleFixed()
             {
                 LirVirtualRegister d;
@@ -44,19 +44,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 }
                 else
                 {
-                    d = NewReg(8);
+                    d = NewF64();
                     StoreSlotField(d, -4, _args[1], 4);
                     StoreSlotField(d, 0, _args[0], 4);
                 }
-                var pow = NewReg(8);
+                var pow = NewF64();
                 EmitPow10(n, pow);
-                var s = NewReg(8);
+                var s = NewF64();
                 FMul(s, d, pow);
-                var zero = NewReg(8);
+                var zero = NewF64();
                 FConst(zero, _formatZero);
-                var half = NewReg(8);
+                var half = NewF64();
                 FConst(half, _formatHalf);
-                var sR = NewReg(8);
+                var sR = NewF64();
                 var isNeg = NewLabel();
                 var done = NewLabel();
                 FCmp(d, zero);
@@ -72,7 +72,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EndFunction(_currentFunction!, 4);
             }
 
-            /// <summary>运行时解析格式串（UTF-16）：首字符决定 code（D/X/F/G/E 大小写），后续数字为 n；F 且 n==0 默认 2。</summary>
+            /// <summary>运行时解析格式串（UTF-16）：首字符决�?code（D/X/F/G/E 大小写），后续数字为 n；F �?n==0 默认 2�?/summary>
             private void ParseFormat(LirVirtualRegister fmtPtr, LirVirtualRegister fmtLen, LirVirtualRegister code, LirVirtualRegister n, LirVirtualRegister lowerCase)
             {
                 Const(code, 0);
@@ -120,7 +120,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(digits);
                 var hasDigits = NewReg(4);
                 Const(hasDigits, 0);
-                var p = NewReg(8);
+                var p = NewPtr();
                 Lea(p, fmtPtr, 6);
                 var i = NewReg(4);
                 Const(i, 1);
@@ -146,21 +146,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(brk);
                 Mark(digDone);
 
-                // F 且显式精度缺失时默认 2 位小数（F0 的 0 是显式精度，保留）
+                // F 且显式精度缺失时默认 2 位小数（F0 �?0 是显式精度，保留�?
                 var fDefDone = NewLabel();
                 Cmp(code, 3); Jcc(LirCond.NotEqual, fDefDone);
                 Cmp(hasDigits, 0); Jcc(LirCond.NotEqual, fDefDone);
                 Const(n, 2);
                 Mark(fDefDone);
 
-                // E 且显式精度缺失时默认 6 位小数（对齐 .NET）
+                // E 且显式精度缺失时默认 6 位小数（对齐 .NET�?
                 var eDefDone = NewLabel();
                 Cmp(code, 5); Jcc(LirCond.NotEqual, eDefDone);
                 Cmp(hasDigits, 0); Jcc(LirCond.NotEqual, eDefDone);
                 Const(n, 6);
                 Mark(eDefDone);
 
-                // G 且显式精度缺失时默认 15 位有效数字（对齐 .NET）
+                // G 且显式精度缺失时默认 15 位有效数字（对齐 .NET�?
                 var gDefDone = NewLabel();
                 Cmp(code, 4); Jcc(LirCond.NotEqual, gDefDone);
                 Cmp(hasDigits, 0); Jcc(LirCond.NotEqual, gDefDone);
@@ -172,7 +172,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
 
             // ------------------------------------------------------------------
-            // WriteStr(buf:8, len:4)：控制台 → WriteConsoleW，否则 WriteFile
+            // WriteStr(buf:8, len:4)：控制台 �?WriteConsoleW，否�?WriteFile
             // ------------------------------------------------------------------
 
             private void EmitWriteStr()
@@ -183,7 +183,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var done = NewLabel();
 
                 var written = NewReg(4);
-                var writtenAddr = NewReg(8);
+                var writtenAddr = NewPtr();
                 LeaSlot(writtenAddr, written);
 
                 var handle = C(8, 0);
@@ -207,7 +207,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // BuildInt(value:4, buf:8)：紧凑 UTF-16 数字写入 buf，返回字节长度
+            // BuildInt(value:4, buf:8)：紧�?UTF-16 数字写入 buf，返回字节长�?
             // ------------------------------------------------------------------
 
             private void EmitBuildInt()
@@ -227,7 +227,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Neg(value);
 
                 Mark(positive);
-                var tail = NewReg(8);
+                var tail = NewPtr();
                 Lea(tail, buf, 44);
                 var ten = C(4, 10);
 
@@ -240,7 +240,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Sub(value, value, digit);
                 var digitChar = NewReg(4);
                 AddI(digitChar, value, '0');
-                var nextTail = NewReg(8);
+                var nextTail = NewPtr();
                 Lea(nextTail, tail, -2);
                 Store(nextTail, 0, digitChar, 2);
                 Mov(value, quotient);
@@ -249,11 +249,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Jcc(LirCond.NotEqual, digitLoop);
 
                 Cmp(sign, 0);
-                var copyTail = NewReg(8);
+                var copyTail = NewPtr();
                 var copyReady = NewLabel();
                 Jcc(LirCond.Equal, signDone);
                 var minus = C(4, '-');
-                var signTail = NewReg(8);
+                var signTail = NewPtr();
                 Lea(signTail, tail, -2);
                 Store(signTail, 0, minus, 2);
                 Mov(copyTail, signTail);
@@ -265,13 +265,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 // lenBytes = 44 + buf - tail
                 var len = NewReg(4);
-                var endAddr = NewReg(8);
+                var endAddr = NewPtr();
                 Mov(endAddr, buf);
                 AddI(endAddr, endAddr, 44);
                 Sub(endAddr, endAddr, tail);
                 Mov(len, endAddr);
 
-                // 复制 (len+2)>>2 个 dword：紧凑区 → buf
+                // 复制 (len+2)>>2 �?dword：紧凑区 �?buf
                 var count = NewReg(4);
                 Mov(count, len);
                 AddI(count, count, 2);
@@ -283,10 +283,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var word = NewReg(4);
                 Load(word, tail, 0, 4);
                 Store(buf, 0, word, 4);
-                var nextTail2 = NewReg(8);
+                var nextTail2 = NewPtr();
                 Lea(nextTail2, tail, 4);
                 Mov(tail, nextTail2);
-                var nextBuf = NewReg(8);
+                var nextBuf = NewPtr();
                 Lea(nextBuf, buf, 4);
                 Mov(buf, nextBuf);
                 AddI(count, count, -1);
@@ -298,7 +298,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Alloc(size:4) → 堆指针（8/x86:4），失败 0
+            // Alloc(size:4) �?堆指针（8/x86:4），失败 0
             // ------------------------------------------------------------------
 
             private void EmitAlloc()
@@ -310,32 +310,32 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var heart = NewLabel();
                 var done = NewLabel();
 
-                var heap = NewReg(8);
+                var heap = NewPtr();
                 LeaData(heap, _heapBase);
                 var ptrSize = _isX64 ? 8 : 4;
 
                 // 首次使用：VirtualAlloc(0, 1MB, MEM_RESERVE|COMMIT, RW)
-                var baseAddr = NewReg(8);
+                var baseAddr = NewPtr();
                 Load(baseAddr, heap, 0, ptrSize);
                 Cmp(baseAddr, 0);
                 Jcc(LirCond.NotEqual, have);
-                var first = NewReg(8);
+                var first = NewPtr();
                 SysCall(first, "VirtualAlloc", 4, C(4, 0), C(4, 0x100000), C(4, 0x3000), C(4, 0x04));
                 Cmp(first, 0);
                 Jcc(LirCond.Equal, fail);
                 Store(heap, 0, first, ptrSize);
-                var firstEnd = NewReg(8);
+                var firstEnd = NewPtr();
                 Lea(firstEnd, first, 0x100000);
                 Store(heap, _heapEndOffset, firstEnd, ptrSize);
                 Store(heap, _heapPtrOffset, first, ptrSize);
 
                 Mark(have);
-                // HeapPtr + size <= HeapEnd → 直接分配；否则新块
-                var ptr = NewReg(8);
+                // HeapPtr + size <= HeapEnd �?直接分配；否则新�?
+                var ptr = NewPtr();
                 Load(ptr, heap, _heapPtrOffset, ptrSize);
-                var newPtr = NewReg(8);
+                var newPtr = NewPtr();
                 Add(newPtr, ptr, size);
-                var end = NewReg(8);
+                var end = NewPtr();
                 Load(end, heap, _heapEndOffset, ptrSize);
                 Cmp(newPtr, end);
                 Jcc(LirCond.Below, heart);
@@ -347,20 +347,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Const(newSize, 0x100000);
 
                 Mark(newSizeReady);
-                var second = NewReg(8);
+                var second = NewPtr();
                 SysCall(second, "VirtualAlloc", 4, C(4, 0), newSize, C(4, 0x3000), C(4, 0x04));
                 Cmp(second, 0);
                 Jcc(LirCond.Equal, fail);
                 Store(heap, 0, second, ptrSize);
                 Store(heap, _heapPtrOffset, second, ptrSize);
-                var secondEnd = NewReg(8);
+                var secondEnd = NewPtr();
                 Add(secondEnd, second, newSize);
                 Store(heap, _heapEndOffset, secondEnd, ptrSize);
 
                 Mark(heart);
-                var current = NewReg(8);
+                var current = NewPtr();
                 Load(current, heap, _heapPtrOffset, ptrSize);
-                var next = NewReg(8);
+                var next = NewPtr();
                 Add(next, current, size);
                 Store(heap, _heapPtrOffset, next, ptrSize);
                 StoreRet(current);
@@ -392,10 +392,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var word = NewReg(4);
                 Load(word, src, 0, 4);
                 Store(dst, 0, word, 4);
-                var nextSrc = NewReg(8);
+                var nextSrc = NewPtr();
                 Lea(nextSrc, src, 4);
                 Mov(src, nextSrc);
-                var nextDst = NewReg(8);
+                var nextDst = NewPtr();
                 Lea(nextDst, dst, 4);
                 Mov(dst, nextDst);
                 AddI(count, count, -1);
@@ -414,12 +414,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var s = _args[0];
                 var nullStr = NewLabel();
 
-                // 6e-M19 M5-a：null 打印为空（对齐 Console.WriteLine(null)）
+                // 6e-M19 M5-a：null 打印为空（对�?Console.WriteLine(null)�?
                 Cmp(s, 0);
                 Jcc(LirCond.Equal, nullStr);
                 var len = NewReg(4);
                 Load(len, s, 0, 4);
-                var chars = NewReg(8);
+                var chars = NewPtr();
                 Lea(chars, s, 4);
                 CallRuntime(null, "WriteStr", chars, len);
                 Mark(nullStr);
@@ -427,7 +427,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EndFunction(_currentFunction!, 0);
             }
 
-            /// <summary>语言层 write 语义：文本不换行（Console.Write 对齐，6e-M18+ 原语 Write）。</summary>
+            /// <summary>语言�?write 语义：文本不换行（Console.Write 对齐�?e-M18+ 原语 Write）�?/summary>
             private void EmitWriteString()
             {
                 var s = _args[0];
@@ -438,19 +438,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Jcc(LirCond.Equal, writeDone);
                 var len = NewReg(4);
                 Load(len, s, 0, 4);
-                var chars = NewReg(8);
+                var chars = NewPtr();
                 Lea(chars, s, 4);
                 CallRuntime(null, "WriteStr", chars, len);
                 Mark(writeDone);
                 EndFunction(_currentFunction!, 0);
             }
 
-            /// <summary>语言层 print 语义：文本 + CRLF（与解释器/IL 后端 Console.WriteLine 一致）。</summary>
+            /// <summary>语言�?print 语义：文�?+ CRLF（与解释�?IL 后端 Console.WriteLine 一致）�?/summary>
             private void EmitWriteNewLine()
             {
-                var newLine = NewReg(8);
+                var newLine = NewPtr();
                 LeaData(newLine, _newLine);
-                var newLineChars = NewReg(8);
+                var newLineChars = NewPtr();
                 Lea(newLineChars, newLine, 4);
                 CallRuntime(null, "WriteStr", newLineChars, C(4, 2));
             }
@@ -462,8 +462,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             private void EmitPrintInt()
             {
                 var value = _args[0];
-                var buf = NewReg(8);
-                var scratch = NewReg(8);
+                var buf = NewPtr();
+                var scratch = NewPtr();
                 LeaSlot(buf, scratch);
                 var len = NewReg(4);
                 CallRuntime(len, "BuildInt", value, buf);
@@ -476,14 +476,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // WriteInt(value:4)：BuildInt + WriteStr（不换行）
+            // WriteInt(value:4)：BuildInt + WriteStr（不换行�?
             // ------------------------------------------------------------------
 
             private void EmitWriteInt()
             {
                 var value = _args[0];
-                var buf = NewReg(8);
-                var scratch = NewReg(8);
+                var buf = NewPtr();
+                var scratch = NewPtr();
                 LeaSlot(buf, scratch);
                 var len = NewReg(4);
                 CallRuntime(len, "BuildInt", value, buf);
@@ -495,7 +495,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // IntToString(value:4) → 字符串对象（含 [len:4]）
+            // IntToString(value:4) �?字符串对象（�?[len:4]�?
             // ------------------------------------------------------------------
 
             private void EmitIntToString()
@@ -504,8 +504,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var oom = NewLabel();
                 var done = NewLabel();
 
-                var scratch = NewReg(8);
-                var buf = NewReg(8);
+                var scratch = NewPtr();
+                var buf = NewPtr();
                 LeaSlot(buf, scratch);
                 var lenBytes = NewReg(4);
                 CallRuntime(lenBytes, "BuildInt", value, buf);
@@ -517,7 +517,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Shl(size, size, 2);
                 AddI(size, size, 4);
 
-                var obj = NewReg(8);
+                var obj = NewPtr();
                 CallRuntime(obj, "Alloc", size);
                 Cmp(obj, 0);
                 Jcc(LirCond.Equal, oom);
@@ -531,7 +531,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mov(count, lenBytes);
                 AddI(count, count, 2);
                 Shr(count, count, 2);
-                var dst = NewReg(8);
+                var dst = NewPtr();
                 Lea(dst, obj, 4);
                 CallRuntime(null, "CopyChars", dst, buf, count);
 
@@ -547,9 +547,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // DivChain(buf:8, divisor:4) → rem:4
-            // 128 位数（8 个 16 位块，LE，buf[0..15]）除以小除数（< 2^16，链式保证
-            // rem<<16 不溢出 32 位），商写回 buf，返回余数。
+            // DivChain(buf:8, divisor:4) �?rem:4
+            // 128 位数�? �?16 位块，LE，buf[0..15]）除以小除数�? 2^16，链式保�?
+            // rem<<16 不溢�?32 位），商写回 buf，返回余数�?
             // ------------------------------------------------------------------
 
             private void EmitDivChain()
@@ -559,7 +559,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var loop = NewLabel();
                 var done = NewLabel();
 
-                var p = NewReg(8);
+                var p = NewPtr();
                 Lea(p, buf, 14);
                 var count = C(4, 8);
                 var rem = C(4, 0);
@@ -577,7 +577,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Imul(back, q, divisor);
                 Sub(rem, t, back);
                 Store(p, 0, q, 2);
-                var next = NewReg(8);
+                var next = NewPtr();
                 Lea(next, p, -2);
                 Mov(p, next);
                 AddI(count, count, -1);
@@ -589,8 +589,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EndFunction(_currentFunction!, 4);
             }
 
-            // BigDiv(buf:8, divisor:4, blocks:4) → rem:4
-            // 大整数（blocks 个 16 位块，LE）除以小除数（< 2^16），链式 16 位块商写回，返回余数。
+            // BigDiv(buf:8, divisor:4, blocks:4) �?rem:4
+            // 大整数（blocks �?16 位块，LE）除以小除数�? 2^16），链式 16 位块商写回，返回余数�?
             // ------------------------------------------------------------------
 
             private void EmitBigDiv()
@@ -601,7 +601,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var loop = NewLabel();
                 var done = NewLabel();
 
-                var p = NewReg(8);
+                var p = NewPtr();
                 Mov(p, buf);
                 var top = NewReg(4);
                 Mov(top, blocks);
@@ -626,7 +626,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Imul(back, q, divisor);
                 Sub(rem, t, back);
                 Store(p, 0, q, 2);
-                var next = NewReg(8);
+                var next = NewPtr();
                 Lea(next, p, -2);
                 Mov(p, next);
                 AddI(count, count, -1);
@@ -639,8 +639,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // 大整数（80×u16 = 1280 位，LE）原语 —— 全 double 范围定点格式化基础。
-            // 布局：u32 limb i（LE）位于 buf+4i，等价 16 位块 2i/2i+1（乘/除按 16 位块，移位按 32 位 limb）。
+            // 大整数（80×u16 = 1280 位，LE）原�?—�?�?double 范围定点格式化基础�?
+            // 布局：u32 limb i（LE）位�?buf+4i，等�?16 位块 2i/2i+1（乘/除按 16 位块，移位按 32 �?limb）�?
             // ------------------------------------------------------------------
 
             private const int BigBlocks = 80;
@@ -677,7 +677,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(loop);
                 Cmp(i, BigLimbs);
                 Jcc(LirCond.GreaterOrEqual, done);
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 EmitBigAddr(buf, i, 4, addr);
                 Store(addr, 0, C(4, 0), 4);
                 AddI(i, i, 1);
@@ -696,7 +696,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(loop);
                 Cmp(i, BigLimbs);
                 Jcc(LirCond.GreaterOrEqual, done);
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 EmitBigAddr(buf, i, 4, addr);
                 Store(addr, 0, C(4, 0), 4);
                 AddI(i, i, 1);
@@ -704,7 +704,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>整值 ×k（k ≤ 0xFFFF 编译期常量）原地，16 位块链式进位。</summary>
+            /// <summary>整�?×k（k �?0xFFFF 编译期常量）原地�?6 位块链式进位�?/summary>
             private void EmitBigMulSmall(LirVirtualRegister buf, int k)
             {
                 var carry = NewReg(4);
@@ -716,7 +716,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(loop);
                 Cmp(i, BigBlocks);
                 Jcc(LirCond.GreaterOrEqual, done);
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 EmitBigAddr(buf, i, 2, addr);
                 var blk = NewReg(4);
                 Load(blk, addr, 0, 2);
@@ -733,7 +733,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>读 buf[idx]（idx 越界 → 0）。</summary>
+            /// <summary>�?buf[idx]（idx 越界 �?0）�?/summary>
             private void EmitBigGetLimb(LirVirtualRegister buf, LirVirtualRegister idx, LirVirtualRegister val)
             {
                 Const(val, 0);
@@ -742,7 +742,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Jcc(LirCond.Less, done);
                 Cmp(idx, BigLimbs);
                 Jcc(LirCond.GreaterOrEqual, done);
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 EmitBigAddr(buf, idx, 4, addr);
                 Load(val, addr, 0, 4);
                 Mark(done);
@@ -750,12 +750,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private void EmitBigSetLimb(LirVirtualRegister buf, LirVirtualRegister idx, LirVirtualRegister val)
             {
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 EmitBigAddr(buf, idx, 4, addr);
                 Store(addr, 0, val, 4);
             }
 
-            /// <summary>右移 bits（0..1074）截断（无舍入）。</summary>
+            /// <summary>右移 bits�?..1074）截断（无舍入）�?/summary>
             private void EmitBigShrTrunc(LirVirtualRegister buf, LirVirtualRegister bits)
             {
                 var full = NewReg(4);
@@ -839,7 +839,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(doneAll);
             }
 
-            /// <summary>左移 bits（0..1074），高位丢弃。</summary>
+            /// <summary>左移 bits�?..1074），高位丢弃�?/summary>
             private void EmitBigShl(LirVirtualRegister buf, LirVirtualRegister bits)
             {
                 var full = NewReg(4);
@@ -915,7 +915,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(doneAll);
             }
 
-            /// <summary>在 bitpos 位置 +2^bitpos（进位链，用于 away-from-zero 舍入）。</summary>
+            /// <summary>�?bitpos 位置 +2^bitpos（进位链，用�?away-from-zero 舍入）�?/summary>
             private void EmitBigAddBitAt(LirVirtualRegister buf, LirVirtualRegister bitpos)
             {
                 var limbIdx = NewReg(4);
@@ -961,7 +961,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(propDone);
             }
 
-            /// <summary>右移 bits 且 round-half-away-from-zero（先加 2^(bits-1) 再截断）。</summary>
+            /// <summary>右移 bits �?round-half-away-from-zero（先�?2^(bits-1) 再截断）�?/summary>
             private void EmitBigShrRoundAway(LirVirtualRegister buf, LirVirtualRegister bits)
             {
                 var done = NewLabel();
@@ -986,7 +986,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(loop);
                 Cmp(i, BigLimbs);
                 Jcc(LirCond.GreaterOrEqual, done);
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 EmitBigAddr(buf, i, 4, addr);
                 var w = NewReg(4);
                 Load(w, addr, 0, 4);
@@ -997,12 +997,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mov(z, acc);
             }
 
-            /// <summary>把 buf 的十进制数字全部提取（LSB 先出，反向写 tail），返回数字数与数字起始 tail。</summary>
+            /// <summary>�?buf 的十进制数字全部提取（LSB 先出，反向写 tail），返回数字数与数字起始 tail�?/summary>
             private void EmitBigDigitsToTail(LirVirtualRegister buf, LirVirtualRegister tailEnd, LirVirtualRegister digitCount, LirVirtualRegister newTail)
             {
                 var count = NewReg(4);
                 Const(count, 0);
-                var cur = NewReg(8);
+                var cur = NewPtr();
                 Mov(cur, tailEnd);
                 var loop = NewLabel();
                 var isZero = NewReg(4);
@@ -1011,7 +1011,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 CallRuntime(rem, "BigDiv", buf, C(4, 10), C(4, BigBlocks));
                 var ch = NewReg(4);
                 AddI(ch, rem, '0');
-                var prev = NewReg(8);
+                var prev = NewPtr();
                 Lea(prev, cur, -2);
                 Store(prev, 0, ch, 2);
                 Mov(cur, prev);
@@ -1024,10 +1024,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // 全 double 范围格式化核心：1280 位大整数定点 v×10^S，S=6（普通）/n（F）。
+            // �?double 范围格式化核心：1280 位大整数定点 v×10^S，S=6（普通）/n（F）�?
             // ------------------------------------------------------------------
 
-            /// <summary>把 double 位模式拆为 sign/exp/m0/m1（m1 含隐式位）/e/isSpecial/isZero/isMantZero。</summary>
+            /// <summary>�?double 位模式拆�?sign/exp/m0/m1（m1 含隐式位�?e/isSpecial/isZero/isMantZero�?/summary>
             private void EmitSplitDouble(LirVirtualRegister b0, LirVirtualRegister b1, LirVirtualRegister sign, LirVirtualRegister exp,
                 LirVirtualRegister m0, LirVirtualRegister m1, LirVirtualRegister e, LirVirtualRegister isSpecial, LirVirtualRegister isZero, LirVirtualRegister isMantZero)
             {
@@ -1077,7 +1077,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private void EmitStoreCharAt(LirVirtualRegister fmt, LirVirtualRegister pos, char ch)
             {
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 Mov(addr, fmt);
                 Add(addr, addr, pos);
                 Store(addr, 0, C(4, (int)ch), 2);
@@ -1097,10 +1097,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>从 src 拷 charCount 个 UTF-16 字符到 fmt+pos 并推进 pos。</summary>
+            /// <summary>�?src �?charCount �?UTF-16 字符�?fmt+pos 并推�?pos�?/summary>
             private void EmitCopyCharsAt(LirVirtualRegister fmt, LirVirtualRegister pos, LirVirtualRegister src, LirVirtualRegister charCount)
             {
-                var dst = NewReg(8);
+                var dst = NewPtr();
                 Mov(dst, fmt);
                 Add(dst, dst, pos);
                 var dwords = NewReg(4);
@@ -1114,11 +1114,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(pos, pos, adv);
             }
 
-            /// <summary>固定格式组装：[sign] intpart ['.' frac] → _formatBuffer → 字符串对象。
-            /// n 位小数；trim=true 剪尾零并去尾随小数点（普通打印）。digits 在 tail 中按正向排列。</summary>
+            /// <summary>固定格式组装：[sign] intpart ['.' frac] �?_formatBuffer �?字符串对象�?
+            /// n 位小数；trim=true 剪尾零并去尾随小数点（普通打印）。digits �?tail 中按正向排列�?/summary>
             private void EmitAssembleFixed(LirVirtualRegister objOut, LirVirtualRegister tail, LirVirtualRegister digitCount, LirVirtualRegister nReg, LirVirtualRegister sign, bool trim)
             {
-                var fmt = NewReg(8);
+                var fmt = NewPtr();
                 LeaData(fmt, _formatBuffer);
                 var pos = NewReg(4);
                 Const(pos, 0);
@@ -1164,7 +1164,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitCopyCharsAt(fmt, pos, tail, digitCount);
                 Jmp(fracWrote);
                 Mark(fracCopy);
-                var tailOff = NewReg(8);
+                var tailOff = NewPtr();
                 Mov(tailOff, tail);
                 var offBytes = NewReg(4);
                 Mov(offBytes, intLen);
@@ -1178,7 +1178,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     var trimLoop = NewLabel();
                     var trimDone = NewLabel();
                     var ch = NewReg(4);
-                    var addr = NewReg(8);
+                    var addr = NewPtr();
                     Mark(trimLoop);
                     var minPos = NewReg(4);
                     Mov(minPos, intEnd);
@@ -1211,7 +1211,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // DoubleToString(bits) → 字符串对象（全范围：6 位小数剪尾零，v×10^6 大整数定点）
+            // DoubleToString(bits) �?字符串对象（全范围：6 位小数剪尾零，v×10^6 大整数定点）
             // ------------------------------------------------------------------
 
             private void EmitDoubleToString()
@@ -1225,7 +1225,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var b1 = NewReg(4);
                 if (_isX64)
                 {
-                    var t = NewReg(8);
+                    var t = NewPtr();
                     Mov(t, _args[0]);
                     Shr(t, t, 16);
                     Shr(t, t, 16);
@@ -1253,7 +1253,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Cmp(isZero, 0);
                 Jcc(LirCond.NotEqual, zeroLabel);
 
-                var buf = NewReg(8);
+                var buf = NewPtr();
                 LeaData(buf, _fmtBigBuf);
                 EmitBigSetZero(buf);
                 EmitBigSetFromMantissa(buf, m0, m1);
@@ -1277,14 +1277,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitBigShrRoundAway(buf, negE);
                 Mark(shiftDone);
 
-                var tail = NewReg(8);
+                var tail = NewPtr();
                 Mov(tail, buf);
                 AddI(tail, tail, 1600);
                 var d = NewReg(4);
-                var tail2 = NewReg(8);
+                var tail2 = NewPtr();
                 EmitBigDigitsToTail(buf, tail, d, tail2);
 
-                var obj = NewReg(8);
+                var obj = NewPtr();
                 EmitAssembleFixed(obj, tail2, d, C(4, 6), sign, trim: true);
                 StoreRet(obj);
                 Jmp(fixedDone);
@@ -1305,7 +1305,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // FormatFixed(value, n) → 字符串对象（F 格式：n 位小数零填充，away-from-zero，全范围）
+            // FormatFixed(value, n) �?字符串对象（F 格式：n 位小数零填充，away-from-zero，全范围�?
             // ------------------------------------------------------------------
 
             private void EmitFormatFixed()
@@ -1320,7 +1320,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var b1 = NewReg(4);
                 if (_isX64)
                 {
-                    var t = NewReg(8);
+                    var t = NewPtr();
                     Mov(t, _args[0]);
                     Shr(t, t, 16);
                     Shr(t, t, 16);
@@ -1348,7 +1348,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Cmp(isZero, 0);
                 Jcc(LirCond.NotEqual, zeroLabel);
 
-                var buf = NewReg(8);
+                var buf = NewPtr();
                 LeaData(buf, _fmtBigBuf);
                 EmitBigSetZero(buf);
                 EmitBigSetFromMantissa(buf, m0, m1);
@@ -1377,30 +1377,30 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitBigShrRoundAway(buf, negE);
                 Mark(shiftDone);
 
-                var tail = NewReg(8);
+                var tail = NewPtr();
                 Mov(tail, buf);
                 AddI(tail, tail, 1600);
                 var d = NewReg(4);
-                var tail2 = NewReg(8);
+                var tail2 = NewPtr();
                 EmitBigDigitsToTail(buf, tail, d, tail2);
 
-                var obj = NewReg(8);
+                var obj = NewPtr();
                 EmitAssembleFixed(obj, tail2, d, n, sign, trim: false);
                 StoreRet(obj);
                 Jmp(done);
 
                 Mark(zeroLabel);
-                var zbuf = NewReg(8);
+                var zbuf = NewPtr();
                 LeaData(zbuf, _fmtBigBuf);
                 EmitBigSetZero(zbuf);
                 EmitBigSetFromMantissa(zbuf, C(4, 0), C(4, 0));
-                var tailZ = NewReg(8);
+                var tailZ = NewPtr();
                 Mov(tailZ, zbuf);
                 AddI(tailZ, tailZ, 1600);
                 var dZ = NewReg(4);
-                var tailZ2 = NewReg(8);
+                var tailZ2 = NewPtr();
                 EmitBigDigitsToTail(zbuf, tailZ, dZ, tailZ2);
-                var objZ = NewReg(8);
+                var objZ = NewPtr();
                 EmitAssembleFixed(objZ, tailZ2, dZ, n, C(4, 0), trim: false);
                 StoreRet(objZ);
                 Jmp(done);
@@ -1418,13 +1418,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // E / G 格式（FormatSci(value, n, mode)）：half-to-even 舍入，3 位补零指数（E），
-            // G 剪尾零并定点/科学切换。mode 0=E（n 小数位）1=G（n 有效数字）。
+            // E / G 格式（FormatSci(value, n, mode)）：half-to-even 舍入�? 位补零指数（E），
+            // G 剪尾零并定点/科学切换。mode 0=E（n 小数位）1=G（n 有效数字）�?
             // ------------------------------------------------------------------
 
             private void EmitLoadDigit(LirVirtualRegister tail, LirVirtualRegister idx, LirVirtualRegister ch)
             {
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 Mov(addr, tail);
                 var off = NewReg(4);
                 Mov(off, idx);
@@ -1435,7 +1435,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private void EmitStoreDigit(LirVirtualRegister tail, LirVirtualRegister idx, LirVirtualRegister ch)
             {
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 Mov(addr, tail);
                 var off = NewReg(4);
                 Mov(off, idx);
@@ -1444,7 +1444,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Store(addr, 0, ch, 2);
             }
 
-            /// <summary>把 tail 中前 D 位数字按 round-half-away-from-zero 舍入写回 tail[0..D)；进位时置 carryOut 并把 tail 写为 "1" + 零。</summary>
+            /// <summary>�?tail 中前 D 位数字按 round-half-away-from-zero 舍入写回 tail[0..D)；进位时�?carryOut 并把 tail 写为 "1" + 零�?/summary>
             private void EmitRoundMantissa(LirVirtualRegister tail, LirVirtualRegister d, LirVirtualRegister D, LirVirtualRegister carryOut)
             {
                 var doUp = NewLabel();
@@ -1506,14 +1506,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(roundDone);
             }
 
-            /// <summary>剪 _formatBuffer 末尾 '0'（停在 intEnd+2 即小数点前）并去除尾随小数点。</summary>
+            /// <summary>�?_formatBuffer 末尾 '0'（停�?intEnd+2 即小数点前）并去除尾随小数点�?/summary>
             private void EmitTrimTrailingZeros(LirVirtualRegister fmt, LirVirtualRegister pos, LirVirtualRegister intEnd)
             {
                 var trimLoop = NewLabel();
                 var trimDone = NewLabel();
                 var afterTrim = NewLabel();
                 var ch = NewReg(4);
-                var addr = NewReg(8);
+                var addr = NewPtr();
                 Mark(trimLoop);
                 var minPos = NewReg(4);
                 Mov(minPos, intEnd);
@@ -1538,7 +1538,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mark(afterTrim);
             }
 
-            /// <summary>指数后缀：'E'/'e' ± |e10|（lowerE 运行时 0=大写）。minPad 为指数最小位数（E 3 位 / G 2 位）。</summary>
+            /// <summary>指数后缀�?E'/'e' ± |e10|（lowerE 运行�?0=大写）。minPad 为指数最小位数（E 3 �?/ G 2 位）�?/summary>
             private void EmitSciExp(LirVirtualRegister fmt, LirVirtualRegister pos, LirVirtualRegister e10, int minPad, LirVirtualRegister lowerE)
             {
                 var useLower = NewLabel();
@@ -1562,7 +1562,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitStoreCharAt(fmt, pos, '-');
                 Neg(e10Abs);
                 Mark(e10SignDone);
-                var eStr = NewReg(8);
+                var eStr = NewPtr();
                 CallRuntime(eStr, "IntToString", e10Abs);
                 var eLen = NewReg(4);
                 Load(eLen, eStr, 0, 4);
@@ -1571,15 +1571,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Neg(pad);
                 AddI(pad, pad, minPad);
                 EmitWriteRepeatedCharAt(fmt, pos, pad, '0');
-                var eData = NewReg(8);
+                var eData = NewPtr();
                 Lea(eData, eStr, 4);
                 EmitCopyCharsAt(fmt, pos, eData, eLen);
             }
 
-            /// <summary>按 D 位尾数（tail 正向）+ e10 组装。sci=true 科学（1 位整数 + E 后缀）；否则定点（小数点放 e10+1 处）。trim 剪尾零。</summary>
+            /// <summary>�?D 位尾数（tail 正向�? e10 组装。sci=true 科学�? 位整�?+ E 后缀）；否则定点（小数点�?e10+1 处）。trim 剪尾零�?/summary>
             private void EmitAssembleSciG(LirVirtualRegister objOut, LirVirtualRegister tail, LirVirtualRegister D, LirVirtualRegister e10, LirVirtualRegister sign, bool sci, bool trim, int minPad, LirVirtualRegister lowerE)
             {
-                var fmt = NewReg(8);
+                var fmt = NewPtr();
                 LeaData(fmt, _formatBuffer);
                 var pos = NewReg(4);
                 Const(pos, 0);
@@ -1601,7 +1601,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     Cmp(D, 1);
                     Jcc(LirCond.Equal, noPoint);
                     EmitStoreCharAt(fmt, pos, '.');
-                    var tailF = NewReg(8);
+                    var tailF = NewPtr();
                     Mov(tailF, tail);
                     AddI(tailF, tailF, 2);
                     var fracLen = NewReg(4);
@@ -1640,7 +1640,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     EmitCopyCharsAt(fmt, pos, tail, intDigits);
                     Mov(intEnd, pos);
                     EmitStoreCharAt(fmt, pos, '.');
-                    var tailM = NewReg(8);
+                    var tailM = NewPtr();
                     Mov(tailM, tail);
                     var offM = NewReg(4);
                     Mov(offM, intDigits);
@@ -1692,7 +1692,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var b1 = NewReg(4);
                 if (_isX64)
                 {
-                    var t = NewReg(8);
+                    var t = NewPtr();
                     Mov(t, _args[0]);
                     Shr(t, t, 16);
                     Shr(t, t, 16);
@@ -1715,7 +1715,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var isMantZero = NewReg(4);
                 EmitSplitDouble(b0, b1, sign, exp, m0, m1, e, isSpecial, isZero, isMantZero);
 
-                // D = mode==1(G) ? n : n+1（至少 1）—— 零/特殊分支也用到，须先算
+                // D = mode==1(G) ? n : n+1（至�?1）—�?�?特殊分支也用到，须先�?
                 var D = NewReg(4);
                 var dE = NewLabel();
                 var dDone = NewLabel();
@@ -1738,7 +1738,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Cmp(isZero, 0);
                 Jcc(LirCond.NotEqual, zeroLabel);
 
-                // e10_est = trunc(e*30103/100000)（按 |e| 求，负号回代；误差 ≤1 由 S 裕量吸收）
+                // e10_est = trunc(e*30103/100000)（按 |e| 求，负号回代；误�?�? �?S 裕量吸收�?
                 var eAbs = NewReg(4);
                 Mov(eAbs, e);
                 var negE2 = NewLabel();
@@ -1777,7 +1777,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(S, S, D);
                 AddI(S, S, 20);
 
-                var buf = NewReg(8);
+                var buf = NewPtr();
                 LeaData(buf, _fmtBigBuf);
                 EmitBigSetZero(buf);
                 EmitBigSetFromMantissa(buf, m0, m1);
@@ -1806,11 +1806,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 EmitBigShrTrunc(buf, negE);
                 Mark(shiftDone);
 
-                var tail = NewReg(8);
+                var tail = NewPtr();
                 Mov(tail, buf);
                 AddI(tail, tail, 1600);
                 var d = NewReg(4);
-                var tail2 = NewReg(8);
+                var tail2 = NewPtr();
                 EmitBigDigitsToTail(buf, tail, d, tail2);
 
                 // e10 = d - S - 1（由位数精确定）
@@ -1827,7 +1827,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 AddI(e10, e10, 1);
                 Mark(noCarry);
 
-                // G 定点/科学切换：-4 <= e10 < n → 定点
+                // G 定点/科学切换�?4 <= e10 < n �?定点
                 var gSciLabel = NewLabel();
                 Cmp(mode, 0);
                 Jcc(LirCond.Equal, gSciLabel);
@@ -1835,7 +1835,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Jcc(LirCond.Less, gSciLabel);
                 Cmp(e10, n);
                 Jcc(LirCond.GreaterOrEqual, gSciLabel);
-                var objG = NewReg(8);
+                var objG = NewPtr();
                 EmitAssembleSciG(objG, tail2, D, e10, sign, sci: false, trim: true, minPad: 2, lowerE);
                 StoreRet(objG);
                 Jmp(done);
@@ -1843,7 +1843,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var gTrim = NewLabel();
                 var gNoTrim = NewLabel();
                 var gTrimDone = NewLabel();
-                var objS = NewReg(8);
+                var objS = NewPtr();
                 Cmp(mode, 1);
                 Jcc(LirCond.Equal, gTrim);
                 EmitAssembleSciG(objS, tail2, D, e10, sign, sci: true, trim: false, minPad: 3, lowerE);
@@ -1859,10 +1859,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var gZero = NewLabel();
                 Cmp(mode, 1);
                 Jcc(LirCond.Equal, gZero);
-                // E 零："0." + n 零 + "E+000"
-                var zbuf = NewReg(8);
+                // E 零："0." + n �?+ "E+000"
+                var zbuf = NewPtr();
                 LeaData(zbuf, _fmtBigBuf);
-                var ztail = NewReg(8);
+                var ztail = NewPtr();
                 Mov(ztail, zbuf);
                 AddI(ztail, ztail, 1600);
                 var zcnt = NewReg(4);
@@ -1876,7 +1876,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 AddI(zcnt, zcnt, 1);
                 Jmp(zloop);
                 Mark(zdone);
-                var objZ = NewReg(8);
+                var objZ = NewPtr();
                 EmitAssembleSciG(objZ, ztail, D, C(4, 0), C(4, 0), sci: true, trim: false, minPad: 3, lowerE);
                 StoreRet(objZ);
                 Jmp(gZeroDone);
@@ -1898,14 +1898,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
 
-            /// <summary>复制 InternString 数据并返回新对象（sign 选择正/负串）。</summary>
+            /// <summary>复制 InternString 数据并返回新对象（sign 选择�?负串）�?/summary>
             private void EmitReturnFixedString(LirVirtualRegister sign, string positiveKey, string negativeKey)
             {
                 var oom = NewLabel();
                 var done = NewLabel();
                 var usePos = NewLabel();
 
-                var s = NewReg(8);
+                var s = NewPtr();
                 LeaData(s, positiveKey);
                 Cmp(sign, 0);
                 Jcc(LirCond.Equal, usePos);
@@ -1921,7 +1921,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Shr(size, size, 2);
                 Shl(size, size, 2);
                 AddI(size, size, 4);
-                var obj = NewReg(8);
+                var obj = NewPtr();
                 CallRuntime(obj, "Alloc", size);
                 Cmp(obj, 0);
                 Jcc(LirCond.Equal, oom);
@@ -1932,9 +1932,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Mov(count, len);
                 AddI(count, count, 1);
                 Shr(count, count, 1);
-                var dst = NewReg(8);
+                var dst = NewPtr();
                 Lea(dst, obj, 4);
-                var src = NewReg(8);
+                var src = NewPtr();
                 Lea(src, s, 4);
                 CallRuntime(null, "CopyChars", dst, src, count);
 

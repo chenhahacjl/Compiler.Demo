@@ -213,7 +213,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                             var field = _closureClass!.GetField(variable.Name)!;
                             var offset = NativeObjectModel.BuildLayout(_closureClass).Offsets[field];
                             var size = NativeObjectModel.FieldSize(field.Type);
-                            var result = AllocateRegister(size);
+                            var result = AllocateRegister(TypeOf(field.Type));
                             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, result, LirOperand.Reg(_closureRegister), LirOperand.None, offset, size));
                             return result;
                         }
@@ -338,7 +338,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             if (value == null)
             {
-                var register = AllocateRegister(8);
+                var register = AllocateRegister(LirType.Addr);
                 Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
                 return register;
             }
@@ -398,7 +398,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             if (value == null)
             {
-                var register = AllocateRegister(8);
+                var register = AllocateRegister(LirType.Addr);
                 Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(0)));
                 return register;
             }
@@ -457,7 +457,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         /// <summary>64 位整型常量：8 字节槽（x86 由 LirToAssembler 拆低/高两个 dword 立即数）。</summary>
         private LirVirtualRegister EmitLongConst(long value)
         {
-            var register = AllocateRegister(8);
+            var register = AllocateRegister(LirType.I64);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Const, register, LirOperand.Constant(value)));
             return register;
         }
@@ -465,7 +465,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         private LirVirtualRegister EmitStringLiteral(string text)
         {
             var key = _irProgram.InternString(text);
-            var register = AllocateRegister(8);
+            var register = AllocateRegister(LirType.Addr);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.LeaData, register, LirOperand.Data(key)));
             return register;
         }
@@ -479,7 +479,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 (byte)bits, (byte)(bits >> 8), (byte)(bits >> 16), (byte)(bits >> 24),
                 (byte)(bits >> 32), (byte)(bits >> 40), (byte)(bits >> 48), (byte)(bits >> 56),
             }));
-            var register = AllocateRegister(8);
+            var register = AllocateRegister(LirType.F64);
             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.FConst, register, LirOperand.Data(key)));
             return register;
         }
