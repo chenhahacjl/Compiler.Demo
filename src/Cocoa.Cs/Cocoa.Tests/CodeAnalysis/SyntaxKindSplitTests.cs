@@ -32,19 +32,19 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
-        public void CocoaSyntaxKind_HasSameMemberCountAsShared()
+        public void CocoaSyntaxKind_HasForAndForRange()
         {
-            Assert.Equal(
-                Enum.GetNames(typeof(SyntaxKind)).Length,
-                Enum.GetNames(typeof(CocoaSyntaxKind)).Length);
+            // CO 枚举：ForStatement=159（C 风格 for，两语言共用）；ForRangeStatement=161（CO 次数循环专属）
+            Assert.Equal((int)SyntaxKind.ForStatement, (int)CocoaSyntaxKind.ForStatement);
+            Assert.Equal((int)SyntaxKind.ForRangeStatement, (int)CocoaSyntaxKind.ForRangeStatement);
         }
 
         [Fact]
-        public void CSharpSyntaxKind_HasSameMemberCountAsShared()
+        public void CSharpSyntaxKind_HasForButNotForRange()
         {
-            Assert.Equal(
-                Enum.GetNames(typeof(SyntaxKind)).Length,
-                Enum.GetNames(typeof(CSharpSyntaxKind)).Length);
+            // C# 枚举：ForStatement=159（C 风格 for）；不含 CO 次数循环槽（161）
+            Assert.Equal((int)SyntaxKind.ForStatement, (int)CSharpSyntaxKind.ForStatement);
+            Assert.False(Enum.IsDefined(typeof(CSharpSyntaxKind), (int)SyntaxKind.ForRangeStatement));
         }
 
         [Fact]
@@ -122,24 +122,23 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void CoRangeFor_IsCocoaSyntaxKind_NotCSharp()
         {
-            // 端到端 kind 隔离：CO `for i = 0 to n` 经 CocoaKind() 得 CocoaSyntaxKind.ForStatement，
-            // 且 C# 枚举侧无该成员（值域占位但语义归 CO）
+            // 端到端 kind 隔离：CO `for i = 0 to n` 经 CocoaKind() 得 CocoaSyntaxKind.ForRangeStatement
             var tree = SyntaxTree.Parse("function Main(): i32 { for i = 0 to 3 { } return 0 }");
             var forNode = tree.Root.DescendantNodesAndSelf()
-                .First(n => n.CocoaKind() == CocoaSyntaxKind.ForStatement);
+                .First(n => n.CocoaKind() == CocoaSyntaxKind.ForRangeStatement);
             Assert.NotNull(forNode);
-            Assert.Equal(CocoaSyntaxKind.ForStatement, forNode.CocoaKind());
+            Assert.Equal(CocoaSyntaxKind.ForRangeStatement, forNode.CocoaKind());
         }
 
         [Fact]
         public void CsStyleFor_IsCSharpSyntaxKind_NotCocoa()
         {
-            // 端到端 kind 隔离：C# `for(;;)` 经 CSharpKind() 得 CSharpSyntaxKind.CSStyleForStatement
+            // 端到端 kind 隔离：C# `for(;;)` 经 CSharpKind() 得 CSharpSyntaxKind.ForStatement
             var tree = SyntaxTree.ParseCs("class P { static void Main() { for (int i = 0; i < 3; i++) { } } }");
             var forNode = tree.Root.DescendantNodesAndSelf()
-                .First(n => n.CSharpKind() == CSharpSyntaxKind.CSStyleForStatement);
+                .First(n => n.CSharpKind() == CSharpSyntaxKind.ForStatement);
             Assert.NotNull(forNode);
-            Assert.Equal(CSharpSyntaxKind.CSStyleForStatement, forNode.CSharpKind());
+            Assert.Equal(CSharpSyntaxKind.ForStatement, forNode.CSharpKind());
         }
     }
 }

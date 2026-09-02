@@ -64,7 +64,6 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 case SSyntax.CSharpSyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.CSStyleForStatement: return BindCSStyleForStatement((CSStyleForStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
@@ -992,85 +991,6 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundDoWhileStatement(syntax, body, condition, breakLabel, continueLabel);
         }
 
-        private BoundStatement BindForStatement(ForStatementSyntax syntax)
-        {
-            var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Int32);
-            var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Int32);
-
-            // 方向（Y-A4-2）：两界为编译期常量时按比较自动定方向（lower > upper → 降序，如 `10 to 1`）；
-            // 否则以显式 step 符号为准（A4-1：负 step 降序）；缺省升序。
-            var lowerConst = lowerBound.ConstantValue?.Value is int lv ? lv : (int?)null;
-            var upperConst = upperBound.ConstantValue?.Value is int uv ? uv : (int?)null;
-            var autoDescending = lowerConst != null && upperConst != null && lowerConst > upperConst;
-
-            // 可选步长：仅支持常量非零整数——按幅值（方向由边界比较 / 负号决定，内部以带符号 step 表达）
-            BoundExpression? step = null;
-            if (syntax.Step != null)
-            {
-                step = BindExpression(syntax.Step, TypeSymbol.Int32);
-                if (step.ConstantValue == null ||
-                    step.ConstantValue.Value is not int stepValue ||
-                    stepValue == 0)
-                {
-                    _diagnostics.ReportError(syntax.Step.Location, "for 循环的 step 必须为常量非零整数。");
-                }
-                else
-                {
-                    var magnitude = Math.Abs(stepValue);
-                    var descending = autoDescending || stepValue < 0;
-                    step = new BoundLiteralExpression(syntax.Step, descending ? -magnitude : magnitude);
-                }
-            }
-            else if (autoDescending)
-            {
-                // 降序缺省步长 → -1
-                step = new BoundLiteralExpression(syntax.LowerBound, -1);
-            }
-
-            _scope = new BoundScope(_scope);
-
-            VariableSymbol variable;
-
-            if (syntax.Identifier != null)
-            {
-                if (syntax.VarKeyword != null)
-                {
-                    // var → 声明新的可变循环变量
-                    variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: false, TypeSymbol.Int32);
-                }
-                else
-                {
-                    // 无关键字 → 复用外层已存在变量（必须已声明且可变）
-                    var lookup = _scope.TryLookupSymbol(syntax.Identifier.Text);
-                    if (lookup is VariableSymbol existingVariable)
-                    {
-                        if (existingVariable.IsReadOnly)
-                        {
-                            _diagnostics.ReportError(syntax.Identifier.Location, $"循环变量 '{existingVariable.Name}' 是只读的，for 循环需要可写变量。");
-                        }
-
-                        variable = existingVariable;
-                    }
-                    else
-                    {
-                        _diagnostics.ReportError(syntax.Identifier.Location, $"循环变量 '{syntax.Identifier.Text}' 未定义。省略 var 时循环变量必须在外部作用域已声明。");
-                        variable = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, TypeSymbol.Int32);
-                    }
-                }
-            }
-            else
-            {
-                // 纯次数循环 for (1 to 10)：隐藏计数器（不进作用域查找，用户不可见）
-                variable = new LocalVariableSymbol("__for", isReadOnly: true, TypeSymbol.Int32, constant: null);
-            }
-
-            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
-
-            _scope = _scope.Parent!;
-
-            return new BoundForStatement(syntax, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
-        }
-
         /// <summary>foreach 绑定期脱糖为 while 索引循环（策略点：v1 数组/字符串）：</summary>
         /// <remarks>
         /// {
@@ -1421,31 +1341,41 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             _diagnostics.ReportError(last.Location, "switch 节体必须以 break/return/continue 结尾（不支持 fall-through）。");
         }
 
-        private BoundStatement BindCSStyleForStatement(CSStyleForStatementSyntax syntax)
+        private BoundStatement BindForStatement(ForStatementSyntax syntax)
         {
             _scope = new BoundScope(_scope);
 
-            BoundStatement? init = null;
-            if (syntax.Init != null)
+            var initStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+            if (syntax.InitDeclaration != null)
             {
-                init = BindStatement(syntax.Init);
+                initStatements.Add(BindStatement(syntax.InitDeclaration));
+            }
+
+            foreach (var initializer in syntax.Initializers)
+            {
+                initStatements.Add(new BoundExpressionStatement(syntax, BindExpression(initializer)));
             }
 
             var condition = syntax.Condition == null ? null : BindExpression(syntax.Condition, TypeSymbol.Boolean);
-            var update = syntax.Update == null ? null : BindExpression(syntax.Update);
             var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
+
+            var incrementorExpressions = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var incrementor in syntax.Incrementors)
+            {
+                incrementorExpressions.Add(BindExpression(incrementor));
+            }
 
             _scope = _scope.Parent!;
 
             // C 风格 for 在绑定期脱糖为既有的纯循环节点：
             // {
-            //     init
+            //     init...
             //     while (true)
             //     {
             //         if (condition) { } else break;
             //         body
             //         continue:
-            //         update
+            //         update...
             //     }
             // }
 
@@ -1465,9 +1395,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             whileBody.Add(body);
             whileBody.Add(new BoundLabelStatement(syntax, continueLabel));
 
-            if (update != null)
+            foreach (var incrementor in incrementorExpressions)
             {
-                whileBody.Add(new BoundExpressionStatement(syntax, update));
+                whileBody.Add(new BoundExpressionStatement(syntax, incrementor));
             }
 
             var whileStatement = new BoundWhileStatement(
@@ -1477,14 +1407,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 breakLabel,
                 whileContinueLabel);
 
-            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
-            if (init != null)
-            {
-                statements.Add(init);
-            }
-            statements.Add(whileStatement);
+            initStatements.Add(whileStatement);
 
-            return new BoundBlockStatement(syntax, statements.ToImmutable());
+            return new BoundBlockStatement(syntax, initStatements.ToImmutable());
         }
 
         private BoundStatement BindLoopBody(StatementSyntax body, out BoundLabel breakLabel, out BoundLabel continueLabel)

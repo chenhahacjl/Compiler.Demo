@@ -1423,7 +1423,7 @@ namespace Cocoa.CodeAnalysis.Coa
                         var body = ReadStatement(reader, context, labels);
                         var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
                         var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
-                        return new BoundForStatement(null, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
+                        return new BoundForRangeStatement(null, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
                     }
                 case "label":
                     return new BoundLabelStatement(null, GetLabel(labels, Unescape(reader.ExpectString())));

@@ -152,6 +152,15 @@ namespace Cocoa.Tests.CodeAnalysis
             AssertValue(text, expectedValue);
         }
 
+        [Theory]
+        [InlineData("{ var result = 0 for (var i = 0; i < 5; i++) { result = result + i } return result }", 10)]
+        [InlineData("{ var i = 0; var j = 0; var result = 0 for (i = 0, j = 0; i < 5; i++, j++) { result = result + i + j } return result }", 20)]
+        [InlineData("{ var result = 0 for (var i = 0; i < 5; i = i + 1) { if (i == 2) continue; result = result + i } return result }", 8)]
+        public void Evaluator_CStyleFor_Computes_CorrectValues(string text, object expectedValue)
+        {
+            AssertValue(text, expectedValue);
+        }
+
         [Fact]
         public void Evaluator_ForStep_NonConstant_ReportsError()
         {

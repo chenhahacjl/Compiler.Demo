@@ -1524,41 +1524,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         {
             var keyword = MatchToken(SyntaxKind.ForKeyword);
 
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCSStyleForHeader())
+            // 双形态分派：`for (...)` 头内含分号 → C 风格 for；否则 → 次数循环（range，源语法 `for N to M`）。
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCStyleForHeader())
             {
-                ReportError(Current.Location, "Cocoa for 循环须为 `for i = 0 to 10`（次数循环），不支持 C 风格 `for (初始化; 条件; 更新)`。");
-                return ParseCSStyleForStatement(keyword);
+                return ParseCStyleForStatement(keyword);
             }
 
-            return ParseRangeForStatement(keyword);
+            return ParseForRangeStatement(keyword);
         }
 
-        private StatementSyntax? ParseForInitializer()
-        {
-            if (Current.Kind == SyntaxKind.LetKeyword ||
-                Current.Kind == SyntaxKind.VarKeyword ||
-                Current.Kind == SyntaxKind.ConstKeyword)
-            {
-                return ParseVariableDeclaration();
-            }
-
-            if (Current.Kind != SyntaxKind.SemicolonToken)
-            {
-                return new ExpressionStatementSyntax(_syntaxTree, ParseExpression());
-            }
-
-            return null;
-        }
-
-        private bool IsCSStyleForHeader()
+        private bool IsCStyleForHeader()
         {
             var index = _position;
             var depth = 0;
-
             while (index < _tokens.Length)
             {
                 var token = _tokens[index];
-
                 if (token.Kind == SyntaxKind.OpenParenthesisToken)
                 {
                     depth++;
@@ -1586,7 +1567,63 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             return false;
         }
 
-        private StatementSyntax ParseRangeForStatement(SyntaxToken keyword)
+        private StatementSyntax ParseCStyleForStatement(SyntaxToken keyword)
+        {
+            var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
+
+            VariableDeclarationSyntax? initDeclaration = null;
+            SeparatedSyntaxList<ExpressionSyntax> initializers = default;
+            if (Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.VarKeyword || Current.Kind == SyntaxKind.ConstKeyword)
+            {
+                initDeclaration = (VariableDeclarationSyntax)ParseVariableDeclaration();
+            }
+            else if (Current.Kind != SyntaxKind.SemicolonToken)
+            {
+                initializers = ParseCommaSeparatedExpressions(SyntaxKind.SemicolonToken);
+            }
+
+            var semicolonToken1 = MatchToken(SyntaxKind.SemicolonToken);
+            ExpressionSyntax? condition = null;
+            if (Current.Kind != SyntaxKind.SemicolonToken)
+            {
+                condition = ParseExpression();
+            }
+
+            var semicolonToken2 = MatchToken(SyntaxKind.SemicolonToken);
+            SeparatedSyntaxList<ExpressionSyntax> incrementors = default;
+            if (Current.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                incrementors = ParseCommaSeparatedExpressions(SyntaxKind.CloseParenthesisToken);
+            }
+
+            var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var body = ParseStatement();
+
+            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, initDeclaration, initializers, semicolonToken1, condition, semicolonToken2, incrementors, closeParenToken, body);
+        }
+
+        /// <summary>解析逗号分隔的表达式列表，直到 <paramref name="terminator"/>。</summary>
+        private SeparatedSyntaxList<ExpressionSyntax> ParseCommaSeparatedExpressions(SyntaxKind terminator)
+        {
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            var parseNext = true;
+            while (parseNext && Current.Kind != terminator && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var expression = ParseExpression();
+                nodesAndSeparators.Add(expression);
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    var comma = MatchToken(SyntaxKind.CommaToken);
+                    nodesAndSeparators.Add(comma);
+                }
+                else
+                    parseNext = false;
+            }
+
+            return new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+        }
+
+        private StatementSyntax ParseForRangeStatement(SyntaxToken keyword)
         {
             SyntaxToken? openParenToken = null;
             if (Current.Kind == SyntaxKind.OpenParenthesisToken)
@@ -1637,35 +1674,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
             var body = ParseStatement();
 
-            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, stepKeyword, step, closeParenToken, body);
-        }
-
-        private StatementSyntax ParseCSStyleForStatement(SyntaxToken keyword)
-        {
-            var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-
-            var init = ParseForInitializer();
-
-            var semicolonToken1 = MatchToken(SyntaxKind.SemicolonToken);
-
-            ExpressionSyntax? condition = null;
-            if (Current.Kind != SyntaxKind.SemicolonToken)
-            {
-                condition = ParseExpression();
-            }
-
-            var semicolonToken2 = MatchToken(SyntaxKind.SemicolonToken);
-
-            ExpressionSyntax? update = null;
-            if (Current.Kind != SyntaxKind.CloseParenthesisToken)
-            {
-                update = ParseExpression();
-            }
-
-            var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-            var body = ParseStatement();
-
-            return new CSStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
+            return new ForRangeStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, stepKeyword, step, closeParenToken, body);
         }
 
         private StatementSyntax ParseForeachStatement()

@@ -23,8 +23,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     return RewriteWhileStatement((BoundWhileStatement)node);
                 case BoundNodeKind.DoWhileStatement:
                     return RewriteDoWhileStatement((BoundDoWhileStatement)node);
-                case BoundNodeKind.ForStatement:
-                    return RewriteForStatement((BoundForStatement)node);
+                case BoundNodeKind.ForRangeStatement:
+                    return RewriteForRangeStatement((BoundForRangeStatement)node);
                 case BoundNodeKind.LabelStatement:
                     return RewriteLabelStatement((BoundLabelStatement)node);
                 case BoundNodeKind.GotoStatement:
@@ -136,7 +136,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundDoWhileStatement(node.Syntax, body, condition, node.BreakLabel, node.ContinueLabel);
         }
 
-        protected virtual BoundStatement RewriteForStatement(BoundForStatement node)
+        protected virtual BoundStatement RewriteForRangeStatement(BoundForRangeStatement node)
         {
             var lowerBound = RewriteExpression(node.LowerBound);
             var upperBound = RewriteExpression(node.UpperBound);
@@ -147,7 +147,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundForStatement(node.Syntax, node.Variable, lowerBound, upperBound, step, body, node.BreakLabel, node.ContinueLabel);
+            return new BoundForRangeStatement(node.Syntax, node.Variable, lowerBound, upperBound, step, body, node.BreakLabel, node.ContinueLabel);
         }
 
         protected virtual BoundStatement RewriteLabelStatement(BoundLabelStatement node)

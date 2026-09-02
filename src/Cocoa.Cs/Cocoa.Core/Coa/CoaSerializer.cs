@@ -237,9 +237,9 @@ namespace Cocoa.CodeAnalysis.Coa
                         CollectExpression(registry, owner, n.Condition, labels);
                         break;
                     }
-                case BoundNodeKind.ForStatement:
+                case BoundNodeKind.ForRangeStatement:
                     {
-                        var n = (BoundForStatement)statement;
+                        var n = (BoundForRangeStatement)statement;
                         registry.RegisterVariable(n.Variable, owner);
                         CollectExpression(registry, owner, n.LowerBound, labels);
                         CollectExpression(registry, owner, n.UpperBound, labels);
@@ -500,9 +500,9 @@ namespace Cocoa.CodeAnalysis.Coa
                         w.End();
                         break;
                     }
-                case BoundNodeKind.ForStatement:
+                case BoundNodeKind.ForRangeStatement:
                     {
-                        var n = (BoundForStatement)statement;
+                        var n = (BoundForRangeStatement)statement;
                         w.Open("for");
                         w.Field(registry.VarKey(n.Variable));
                         WriteExpression(w, registry, labels, n.LowerBound);

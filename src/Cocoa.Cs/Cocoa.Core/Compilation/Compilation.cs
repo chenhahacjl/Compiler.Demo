@@ -973,9 +973,9 @@ namespace Cocoa.CodeAnalysis
                         var n = (BoundDoWhileStatement)node;
                         return new BoundNode[] { n.Body, n.Condition };
                     }
-                case BoundNodeKind.ForStatement:
+                case BoundNodeKind.ForRangeStatement:
                     {
-                        var n = (BoundForStatement)node;
+                        var n = (BoundForRangeStatement)node;
                         return n.Step == null
                             ? new BoundNode[] { n.LowerBound, n.UpperBound, n.Body }
                             : new BoundNode[] { n.LowerBound, n.UpperBound, n.Step, n.Body };

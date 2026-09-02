@@ -1,25 +1,39 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+﻿using System.Collections.Immutable;
+
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// Cocoa 寮?for 寰幆锛歚for [var i =] low to high`锛屾嫭鍙蜂笌 `var i =` 鍧囧彲閫夈€?
+    /// C# 风格 for 循环 `for (init; cond; update) body`，三段均可省略；
+    /// init 可为变量声明（<see cref="InitDeclaration"/>）或逗号分隔的初始化表达式列表
+    /// （<see cref="Initializers"/>，如 `i = 0, j = 0`）；update 为逗号分隔的更新表达式列表
+    /// （<see cref="Incrementors"/>，如 `i++, j--`）。
     /// </summary>
     public sealed partial class ForStatementSyntax : StatementSyntax
     {
-        internal ForStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, SyntaxToken? openParenToken, SyntaxToken? varKeyword, SyntaxToken? identifier, SyntaxToken? equalsToken, ExpressionSyntax lowerBound, SyntaxToken toKeyword, ExpressionSyntax upperBound, SyntaxToken? stepKeyword, ExpressionSyntax? step, SyntaxToken? closeParenToken, StatementSyntax body)
+        internal ForStatementSyntax(
+            SyntaxTree syntaxTree,
+            SyntaxToken keyword,
+            SyntaxToken? openParenToken,
+            VariableDeclarationSyntax? initDeclaration,
+            SeparatedSyntaxList<ExpressionSyntax> initializers,
+            SyntaxToken? semicolonToken1,
+            ExpressionSyntax? condition,
+            SyntaxToken? semicolonToken2,
+            SeparatedSyntaxList<ExpressionSyntax> incrementors,
+            SyntaxToken? closeParenToken,
+            StatementSyntax body)
             : base(syntaxTree)
         {
             Keyword = keyword;
             OpenParenToken = openParenToken;
-            VarKeyword = varKeyword;
-            Identifier = identifier;
-            EqualsToken = equalsToken;
-            LowerBound = lowerBound;
-            ToKeyword = toKeyword;
-            UpperBound = upperBound;
-            StepKeyword = stepKeyword;
-            Step = step;
+            InitDeclaration = initDeclaration;
+            Initializers = initializers ?? new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
+            SemicolonToken1 = semicolonToken1;
+            Condition = condition;
+            SemicolonToken2 = semicolonToken2;
+            Incrementors = incrementors ?? new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty);
             CloseParenToken = closeParenToken;
             Body = body;
         }
@@ -28,14 +42,20 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
 
         public SyntaxToken Keyword { get; }
         public SyntaxToken? OpenParenToken { get; }
-        public SyntaxToken? VarKeyword { get; }
-        public SyntaxToken? Identifier { get; }
-        public SyntaxToken? EqualsToken { get; }
-        public ExpressionSyntax LowerBound { get; }
-        public SyntaxToken ToKeyword { get; }
-        public ExpressionSyntax UpperBound { get; }
-        public SyntaxToken? StepKeyword { get; }
-        public ExpressionSyntax? Step { get; }
+
+        /// <summary>init 为变量声明形式（`int i = 0` / `var i = 0`）；否则为 null。</summary>
+        public VariableDeclarationSyntax? InitDeclaration { get; }
+
+        /// <summary>init 为逗号分隔的初始化表达式列表（`i = 0, j = 0`）；变量声明形式时为空。</summary>
+        public SeparatedSyntaxList<ExpressionSyntax> Initializers { get; }
+
+        public SyntaxToken? SemicolonToken1 { get; }
+        public ExpressionSyntax? Condition { get; }
+        public SyntaxToken? SemicolonToken2 { get; }
+
+        /// <summary>逗号分隔的更新表达式列表（`i++, j--`）。</summary>
+        public SeparatedSyntaxList<ExpressionSyntax> Incrementors { get; }
+
         public SyntaxToken? CloseParenToken { get; }
         public StatementSyntax Body { get; }
 
@@ -46,28 +66,29 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             {
                 yield return OpenParenToken;
             }
-            if (VarKeyword != null)
+            if (InitDeclaration != null)
             {
-                yield return VarKeyword;
+                yield return InitDeclaration;
             }
-            if (Identifier != null)
+            foreach (var child in Initializers.GetWithSeparators())
             {
-                yield return Identifier;
+                yield return child;
             }
-            if (EqualsToken != null)
+            if (SemicolonToken1 != null)
             {
-                yield return EqualsToken;
+                yield return SemicolonToken1;
             }
-            yield return LowerBound;
-            yield return ToKeyword;
-            yield return UpperBound;
-            if (StepKeyword != null)
+            if (Condition != null)
             {
-                yield return StepKeyword;
+                yield return Condition;
             }
-            if (Step != null)
+            if (SemicolonToken2 != null)
             {
-                yield return Step;
+                yield return SemicolonToken2;
+            }
+            foreach (var child in Incrementors.GetWithSeparators())
+            {
+                yield return child;
             }
             if (CloseParenToken != null)
             {
@@ -77,4 +98,3 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         }
     }
 }
-

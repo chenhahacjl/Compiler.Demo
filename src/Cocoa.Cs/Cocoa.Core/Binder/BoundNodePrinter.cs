@@ -43,8 +43,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.DoWhileStatement:
                     WriteDoWhileStatement((BoundDoWhileStatement)node, writer);
                     break;
-                case BoundNodeKind.ForStatement:
-                    WriteForStatement((BoundForStatement)node, writer);
+                case BoundNodeKind.ForRangeStatement:
+                    WriteForRangeStatement((BoundForRangeStatement)node, writer);
                     break;
                 case BoundNodeKind.LabelStatement:
                     WriteLabelStatement((BoundLabelStatement)node, writer);
@@ -265,7 +265,7 @@ namespace Cocoa.CodeAnalysis.Binding
             writer.WriteLine();
         }
 
-        private static void WriteForStatement(BoundForStatement node, IndentedTextWriter writer)
+        private static void WriteForRangeStatement(BoundForRangeStatement node, IndentedTextWriter writer)
         {
             writer.WriteKeyword(SyntaxKind.ForKeyword);
             writer.WriteSpace();

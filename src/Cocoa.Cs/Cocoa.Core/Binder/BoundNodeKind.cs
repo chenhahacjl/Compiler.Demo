@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Binding
         IfStatement,
         WhileStatement,
         DoWhileStatement,
-        ForStatement,
+        ForRangeStatement,
         LabelStatement,
         GotoStatement,
         ConditionalGotoStatement,

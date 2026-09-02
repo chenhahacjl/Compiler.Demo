@@ -516,6 +516,46 @@ function Main()
         }
 
         [Fact]
+        public void Run_CocoaProgram_CStyleFor_OnDotnetHost()
+        {
+            // CO 方言 CS 形态 for（与 range 共存）：逗号多 init/update、空段、continue/break
+            var (exitCode, stdout) = EmitAndRun(@"using System
+
+function Main()
+{
+    var sum = 0
+    for (var i = 0; i < 5; i++)
+    {
+        sum = sum + i
+    }
+    Console.WriteLine(sum)
+
+    var i = 0
+    var j = 10
+    var total = 0
+    for (i = 0, j = 10; i < 3; i++, j--)
+    {
+        total = total + i + j
+    }
+    Console.WriteLine(total)
+
+    var empty = 0
+    for (;;)
+    {
+        empty = empty + 1
+        if empty == 4
+        {
+            break
+        }
+    }
+    Console.WriteLine(empty)
+}", "e2e-cstyle-for");
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("10\r\n30\r\n4\r\n", stdout);
+        }
+
+        [Fact]
         public void Run_CocoaProgram_WithWideCallAndLongConcat_OnDotnetHost()
         {
             var (exitCode, stdout) = EmitAndRun(@"using System

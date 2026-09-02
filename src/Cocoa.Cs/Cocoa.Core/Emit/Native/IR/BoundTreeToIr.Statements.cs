@@ -110,9 +110,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.IR
                         break;
                     }
 
-                case BoundNodeKind.ForStatement:
+                case BoundNodeKind.ForRangeStatement:
                     {
-                        var statement = (BoundForStatement)node;
+                        var statement = (BoundForRangeStatement)node;
                         var loopLabel = AllocLabel();
                         var doneLabel = AllocLabel();
 

@@ -10,9 +10,8 @@ namespace Cocoa.Tests.CodeAnalysis
     /// <summary>
     /// Y A3-0/A3-1：节点层语言归属契约。A3-1 引入 <see cref="SyntaxKindLanguageOwnership"/> 归属表
     /// 作为单一真相源（Shared / CocoaOnly / CSharpOnly），本类据此锁定现状：
-    /// 互斥节点 kind 对仅 <c>ForStatement</c>（CO 次数循环）/ <c>CSStyleForStatement</c>（C# <c>for(;;)</c>），
-    /// 其余方言差异在词法 / 解析标志层（CocoaParser 关闭 C# 拼写、C# 拒绝 CO 关键字）。
-    /// 新增 CO 专属特性（A4）时先登记归属表，再由本类断言与各方言解析器行为一致。
+    /// <c>ForStatement</c>（C 风格 for(;;)，两语言共用 = Shared）；<c>ForRangeStatement</c>
+    /// （CO 次数循环 for N to M = CocoaOnly）。其余方言差异在词法 / 解析标志层。
     /// 详见 蓝图 §6.7.10。
     /// </summary>
     public class SyntaxLanguageOwnershipTests
@@ -50,24 +49,25 @@ namespace Cocoa.Tests.CodeAnalysis
         };
 
         [Fact]
-        public void OwnershipTable_ForStatement_IsCocoaOnly()
+        public void OwnershipTable_ForStatement_IsShared()
         {
-            Assert.Equal(SyntaxLanguageOwnership.CocoaOnly, SyntaxKindLanguageOwnership.Ownership(SyntaxKind.ForStatement));
+            // C 风格 for(;;) 两语言共用
+            Assert.Equal(SyntaxLanguageOwnership.Shared, SyntaxKindLanguageOwnership.Ownership(SyntaxKind.ForStatement));
         }
 
         [Fact]
-        public void OwnershipTable_CSStyleForStatement_IsCSharpOnly()
+        public void OwnershipTable_ForRangeStatement_IsCocoaOnly()
         {
-            Assert.Equal(SyntaxLanguageOwnership.CSharpOnly, SyntaxKindLanguageOwnership.Ownership(SyntaxKind.CSStyleForStatement));
+            Assert.Equal(SyntaxLanguageOwnership.CocoaOnly, SyntaxKindLanguageOwnership.Ownership(SyntaxKind.ForRangeStatement));
         }
 
         [Fact]
         public void OwnershipTable_ExclusiveForKinds_AreDisjoint()
         {
-            // 互斥对：同一 `for` 关键字在 CO/C# 各产生唯一的节点 kind，绝不同时共享
+            // 互斥：CO 次数循环（ForRangeStatement）为 CocoaOnly，与共享的 C 风格 for 不同属
             Assert.NotEqual(
                 SyntaxKindLanguageOwnership.Ownership(SyntaxKind.ForStatement),
-                SyntaxKindLanguageOwnership.Ownership(SyntaxKind.CSStyleForStatement));
+                SyntaxKindLanguageOwnership.Ownership(SyntaxKind.ForRangeStatement));
         }
 
         [Fact]
@@ -127,19 +127,19 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         [Fact]
-        public void CoRangeFor_NotCSharpStyle()
+        public void CoRangeFor_IsForRangeStatement()
         {
             var kinds = KindsOf("function Main(): i32 { for i = 0 to 3 { } return 0 }", cs: false);
-            Assert.Contains(SyntaxKind.ForStatement, kinds);
-            Assert.DoesNotContain(SyntaxKind.CSStyleForStatement, kinds);
+            Assert.Contains(SyntaxKind.ForRangeStatement, kinds);
+            Assert.DoesNotContain(SyntaxKind.ForStatement, kinds);
         }
 
         [Fact]
-        public void CsStyleFor_NotRange()
+        public void CsStyleFor_IsForStatement()
         {
             var kinds = KindsOf("class P { static void Main() { for (int i = 0; i < 3; i++) { } } }", cs: true);
-            Assert.Contains(SyntaxKind.CSStyleForStatement, kinds);
-            Assert.DoesNotContain(SyntaxKind.ForStatement, kinds);
+            Assert.Contains(SyntaxKind.ForStatement, kinds);
+            Assert.DoesNotContain(SyntaxKind.ForRangeStatement, kinds);
         }
 
         [Fact]

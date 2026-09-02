@@ -174,9 +174,9 @@ ColonToken,               // :
         IfStatement,              // IF 判断语句
         WhileStatement,           // WHILE 循环语句
         DoWhileStatement,         // DO-WHILE 循环语句
-        ForStatement,             // FOR 循环语句
+        ForStatement,             // FOR 循环语句（C 风格 for (init; cond; update)，CO/C# 共用）
         ForeachStatement,         // FOREACH 循环语句
-        CSStyleForStatement,      // C# 风格 FOR 循环语句 for (init; cond; update)
+        ForRangeStatement,        // CO 次数循环语句 for N to M [step k]（内部名 forrange）
         BreakStatement,           // BREAK 语句
         ContinueStatement,        // CONTINUE 语句
         ReturnStatement,          // RETURN 语句

@@ -77,12 +77,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 SyntaxKind.CatchClause => BuildCatchClause(syntaxTree, position),
                 SyntaxKind.ForeachStatement => BuildForeachStatement(syntaxTree, position),
                 SyntaxKind.ForStatement => BuildForStatement(syntaxTree, position),
+                SyntaxKind.ForRangeStatement => BuildForRangeStatement(syntaxTree, position),
                 SyntaxKind.ArrayCreationExpression => BuildArrayCreationExpression(syntaxTree, position),
                 SyntaxKind.NamespaceDeclaration => BuildNamespaceDeclaration(syntaxTree, position),
                 SyntaxKind.UsingDirective => BuildUsingDirective(syntaxTree, position),
                 SyntaxKind.ClassDeclaration => BuildClassLikeDeclaration(syntaxTree, position, isInterface: false),
                 SyntaxKind.InterfaceDeclaration => BuildClassLikeDeclaration(syntaxTree, position, isInterface: true),
-                SyntaxKind.CSStyleForStatement => BuildCSStyleForStatement(syntaxTree, position),
                 SyntaxKind.ConstructorDeclaration => BuildConstructorDeclaration(syntaxTree, position),
                 SyntaxKind.PropertyDeclaration => BuildPropertyDeclaration(syntaxTree, position),
                 SyntaxKind.CaseClause => BuildCaseClause(syntaxTree, position),
@@ -1035,6 +1035,87 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             position += _green.GetSlot(slot).Width;
             slot++;
 
+            SyntaxToken? openParen = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParen = (SyntaxToken)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+
+            VariableDeclarationSyntax? initDeclaration = null;
+            var initializerNodes = ImmutableArray.CreateBuilder<SyntaxNode>();
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.VariableDeclaration)
+            {
+                initDeclaration = (VariableDeclarationSyntax)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+            else
+            {
+                while (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.SemicolonToken)
+                {
+                    initializerNodes.Add(_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                    position += _green.GetSlot(slot).Width;
+                    slot++;
+                }
+            }
+
+            var initializers = new SeparatedSyntaxList<ExpressionSyntax>(initializerNodes.ToImmutable());
+
+            SyntaxToken? semicolon1 = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolon1 = (SyntaxToken)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+
+            ExpressionSyntax? condition = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.SemicolonToken)
+            {
+                condition = (ExpressionSyntax)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+
+            SyntaxToken? semicolon2 = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.SemicolonToken)
+            {
+                semicolon2 = (SyntaxToken)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+
+            var incrementorNodes = ImmutableArray.CreateBuilder<SyntaxNode>();
+            while (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
+            {
+                incrementorNodes.Add(_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+
+            var incrementors = new SeparatedSyntaxList<ExpressionSyntax>(incrementorNodes.ToImmutable());
+
+            SyntaxToken? closeParen = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                closeParen = (SyntaxToken)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot).Width;
+                slot++;
+            }
+
+            var body = (StatementSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            return new ForStatementSyntax(syntaxTree, keyword, openParen, initDeclaration, initializers, semicolon1, condition, semicolon2, incrementors, closeParen, body);
+        }
+
+        private SyntaxNode BuildForRangeStatement(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var keyword = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot).Width;
+            slot++;
+
             SyntaxToken? openParenthesis = null;
             if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
             {
@@ -1101,7 +1182,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
 
             var body = (StatementSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            return new ForStatementSyntax(syntaxTree, keyword, openParenthesis, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, stepKeyword, step, closeParenthesis, body);
+            return new ForRangeStatementSyntax(syntaxTree, keyword, openParenthesis, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, stepKeyword, step, closeParenthesis, body);
         }
 
         private SyntaxNode BuildArrayCreationExpression(SyntaxTree syntaxTree, int position)
@@ -1283,63 +1364,6 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             return isInterface
                 ? new InterfaceDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), keyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses.ToImmutable(), openBrace, members, closeBrace)
                 : new ClassDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), keyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses.ToImmutable(), openBrace, members, closeBrace);
-        }
-
-        private SyntaxNode BuildCSStyleForStatement(SyntaxTree syntaxTree, int position)
-        {
-            var slot = 0;
-            var keyword = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            position += _green.GetSlot(slot).Width;
-            slot++;
-            var openParen = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            position += _green.GetSlot(slot).Width;
-            slot++;
-
-            StatementSyntax? init = null;
-            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.SemicolonToken)
-            {
-                init = (StatementSyntax)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
-                position += _green.GetSlot(slot).Width;
-                slot++;
-            }
-
-            SyntaxToken? semicolon1 = null;
-            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon1 = (SyntaxToken)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
-                position += _green.GetSlot(slot).Width;
-                slot++;
-            }
-
-            ExpressionSyntax? condition = null;
-            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.SemicolonToken)
-            {
-                condition = (ExpressionSyntax)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
-                position += _green.GetSlot(slot).Width;
-                slot++;
-            }
-
-            SyntaxToken? semicolon2 = null;
-            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.SemicolonToken)
-            {
-                semicolon2 = (SyntaxToken)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
-                position += _green.GetSlot(slot).Width;
-                slot++;
-            }
-
-            ExpressionSyntax? update = null;
-            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
-            {
-                update = (ExpressionSyntax)_green.GetSlot(slot).CreateTypedRed(syntaxTree, position);
-                position += _green.GetSlot(slot).Width;
-                slot++;
-            }
-
-            var closeParen = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            position += _green.GetSlot(slot).Width;
-            slot++;
-            var body = (StatementSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
-            return new CSStyleForStatementSyntax(syntaxTree, keyword, openParen, init, semicolon1, condition, semicolon2, update, closeParen, body);
         }
 
         private SyntaxNode BuildConstructorDeclaration(SyntaxTree syntaxTree, int position)

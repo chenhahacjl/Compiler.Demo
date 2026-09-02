@@ -166,9 +166,8 @@ namespace Cocoa.CodeAnalysis.Syntax
         IfStatement = 156,
         WhileStatement = 157,
         DoWhileStatement = 158,
-        ForStatement = 159, // CO range-for; unused by C# but value-slot reserved
+        ForStatement = 159,
         ForeachStatement = 160,
-        CSStyleForStatement = 161,
         BreakStatement = 162,
         ContinueStatement = 163,
         ReturnStatement = 164,

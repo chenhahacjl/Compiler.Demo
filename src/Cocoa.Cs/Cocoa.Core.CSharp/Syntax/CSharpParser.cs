@@ -1104,94 +1104,55 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         private StatementSyntax ParseForStatement()
         {
             var keyword = MatchToken(SyntaxKind.ForKeyword);
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken && IsCSStyleForHeader())
-                return ParseCSStyleForStatement(keyword);
-            Diagnostics.ReportError(Current.Location, "C# 方言 for 循环必须为 C 风格 `for (初始化; 条件; 更新)`，不支持 `for i = 0 to n`。");
-            return ParseRangeForStatement(keyword);
-        }
-
-        private bool IsCSStyleForHeader()
-        {
-            var index = _position;
-            var depth = 0;
-            while (index < _tokens.Length)
-            {
-                var token = _tokens[index];
-                if (token.Kind == SyntaxKind.OpenParenthesisToken) depth++;
-                else if (token.Kind == SyntaxKind.CloseParenthesisToken)
-                {
-                    depth--;
-                    if (depth == 0) break;
-                }
-                else if (depth >= 1 && token.Kind == SyntaxKind.SemicolonToken) return true;
-                index++;
-            }
-            return false;
-        }
-
-        private StatementSyntax ParseRangeForStatement(SyntaxToken keyword)
-        {
-            SyntaxToken? openParenToken = null;
-            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
-                openParenToken = NextToken();
-            SyntaxToken? varKeyword = null;
-            if (Current.Kind == SyntaxKind.VarKeyword || Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.ConstKeyword)
-            {
-                var keywordToken = NextToken();
-                if (keywordToken.Kind != SyntaxKind.VarKeyword)
-                    _diagnostics.ReportError(keywordToken.Location, $"for 循环变量只能用 var 声明（不能用 {keywordToken.Text}）。");
-                varKeyword = keywordToken;
-            }
-            SyntaxToken? identifier = null;
-            SyntaxToken? equalsToken = null;
-            if (varKeyword != null || Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.EqualsToken)
-            {
-                identifier = MatchToken(SyntaxKind.IdentifierToken);
-                equalsToken = MatchToken(SyntaxKind.EqualsToken);
-            }
-            var lowerBound = ParseExpression();
-            var toKeyword = MatchToken(SyntaxKind.ToKeyword);
-            var upperBound = ParseExpression();
-            SyntaxToken? stepKeyword = null;
-            ExpressionSyntax? step = null;
-            if (Current.Kind == SyntaxKind.StepKeyword)
-            {
-                stepKeyword = NextToken();
-                step = ParseExpression();
-            }
-            SyntaxToken? closeParenToken = null;
-            if (openParenToken != null)
-                closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
-            var body = ParseStatement();
-            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, varKeyword, identifier, equalsToken, lowerBound, toKeyword, upperBound, stepKeyword, step, closeParenToken, body);
-        }
-
-        private StatementSyntax ParseCSStyleForStatement(SyntaxToken keyword)
-        {
             var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
-            var init = ParseForInitializer();
+
+            VariableDeclarationSyntax? initDeclaration = null;
+            SeparatedSyntaxList<ExpressionSyntax> initializers = default;
+            if (Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.VarKeyword || Current.Kind == SyntaxKind.ConstKeyword)
+            {
+                initDeclaration = (VariableDeclarationSyntax)ParseVariableDeclaration();
+            }
+            else if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                initDeclaration = (VariableDeclarationSyntax)ParseCSharpStyleVariableDeclaration();
+            }
+            else if (Current.Kind != SyntaxKind.SemicolonToken)
+            {
+                initializers = ParseCommaSeparatedExpressions(SyntaxKind.SemicolonToken);
+            }
+
             var semicolonToken1 = MatchToken(SyntaxKind.SemicolonToken);
             ExpressionSyntax? condition = null;
             if (Current.Kind != SyntaxKind.SemicolonToken)
                 condition = ParseExpression();
             var semicolonToken2 = MatchToken(SyntaxKind.SemicolonToken);
-            ExpressionSyntax? update = null;
+            SeparatedSyntaxList<ExpressionSyntax> incrementors = default;
             if (Current.Kind != SyntaxKind.CloseParenthesisToken)
-                update = ParseExpression();
+                incrementors = ParseCommaSeparatedExpressions(SyntaxKind.CloseParenthesisToken);
             var closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             var body = ParseStatement();
-            return new CSStyleForStatementSyntax(_syntaxTree, keyword, openParenToken, init, semicolonToken1, condition, semicolonToken2, update, closeParenToken, body);
+            return new ForStatementSyntax(_syntaxTree, keyword, openParenToken, initDeclaration, initializers, semicolonToken1, condition, semicolonToken2, incrementors, closeParenToken, body);
         }
 
-        private StatementSyntax? ParseForInitializer()
+        /// <summary>解析逗号分隔的表达式列表，直到 <paramref name="terminator"/>。</summary>
+        private SeparatedSyntaxList<ExpressionSyntax> ParseCommaSeparatedExpressions(SyntaxKind terminator)
         {
-            if (Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.VarKeyword || Current.Kind == SyntaxKind.ConstKeyword)
-                return ParseVariableDeclaration();
-            if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.IdentifierToken)
-                return ParseCSharpStyleVariableDeclaration();
-            if (Current.Kind != SyntaxKind.SemicolonToken)
-                return new ExpressionStatementSyntax(_syntaxTree, ParseExpression());
-            return null;
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            var parseNext = true;
+            while (parseNext && Current.Kind != terminator && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var expression = ParseExpression();
+                nodesAndSeparators.Add(expression);
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    var comma = MatchToken(SyntaxKind.CommaToken);
+                    nodesAndSeparators.Add(comma);
+                }
+                else
+                    parseNext = false;
+            }
+
+            return new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
         }
 
         private StatementSyntax ParseForeachStatement()

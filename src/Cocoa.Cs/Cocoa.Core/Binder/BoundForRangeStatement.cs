@@ -3,9 +3,9 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundForStatement : BoundLoopStatement
+    internal sealed class BoundForRangeStatement : BoundLoopStatement
     {
-        public BoundForStatement(SyntaxNode syntax, VariableSymbol variable, BoundExpression lowerBound, BoundExpression upperBound, BoundExpression? step, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
+        public BoundForRangeStatement(SyntaxNode syntax, VariableSymbol variable, BoundExpression lowerBound, BoundExpression upperBound, BoundExpression? step, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
             : base(syntax, breakLabel, continueLabel)
         {
             Variable = variable;
@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Binding
             Body = body;
         }
 
-        public override BoundNodeKind Kind => BoundNodeKind.ForStatement;
+        public override BoundNodeKind Kind => BoundNodeKind.ForRangeStatement;
 
         public VariableSymbol Variable { get; }
         public BoundExpression LowerBound { get; }

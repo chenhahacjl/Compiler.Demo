@@ -406,31 +406,31 @@ public class Point
         }
 
         [Fact]
-        public void Parser_Parses_CSStyleForStatement()
+        public void Parser_Parses_ForStatement()
         {
-            var syntaxTree = SyntaxTree.Parse(@"
+            var syntaxTree = SyntaxTree.ParseCs(@"
 for (var i = 0; i < 10; i++)
 {
     print(i)
 }");
-            var root = (CompilationUnitSyntax)syntaxTree.Root;
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
+            var globalStatement = Assert.IsType<CSyntax.GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<CSyntax.ForStatementSyntax>(globalStatement.Statement);
 
             Assert.Equal("for", statement.Keyword.Text);
             Assert.Equal("(", statement.OpenParenToken.Text);
-            Assert.IsType<VariableDeclarationSyntax>(statement.Init);
+            Assert.IsType<CSyntax.VariableDeclarationSyntax>(statement.InitDeclaration);
             Assert.NotNull(statement.SemicolonToken1);
-            Assert.Equal(CocoaSyntaxKind.BinaryExpression, statement.Condition!.Kind);
+            Assert.Equal(CSharpSyntaxKind.BinaryExpression, statement.Condition!.Kind);
             Assert.NotNull(statement.SemicolonToken2);
-            Assert.Equal(CocoaSyntaxKind.PostfixIncrementExpression, statement.Update!.Kind);
+            Assert.Equal(CSharpSyntaxKind.PostfixIncrementExpression, Assert.Single(statement.Incrementors).Kind);
             Assert.Equal(")", statement.CloseParenToken.Text);
-            Assert.IsType<BlockStatementSyntax>(statement.Body);
+            Assert.IsType<CSyntax.BlockStatementSyntax>(statement.Body);
 
             using (var e = new AssertingEnumerator(statement))
             {
-                e.AssertNode(SyntaxKind.CSStyleForStatement);
+                e.AssertNode(SyntaxKind.ForStatement);
                 e.AssertToken(SyntaxKind.ForKeyword, "for");
                 e.AssertToken(SyntaxKind.OpenParenthesisToken, "(");
                 e.AssertNode(SyntaxKind.VariableDeclaration);
@@ -466,35 +466,37 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
-        public void Parser_Parses_CSStyleForStatement_EmptyParts()
+        public void Parser_Parses_ForStatement_EmptyParts()
         {
-            var syntaxTree = SyntaxTree.Parse("for (;;) { break }");
-            var root = (CompilationUnitSyntax)syntaxTree.Root;
+            var syntaxTree = SyntaxTree.ParseCs("for (;;) { break }");
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
+            var globalStatement = Assert.IsType<CSyntax.GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<CSyntax.ForStatementSyntax>(globalStatement.Statement);
 
-            Assert.Null(statement.Init);
+            Assert.Null(statement.InitDeclaration);
+            Assert.Empty(statement.Initializers);
             Assert.NotNull(statement.SemicolonToken1);
             Assert.Null(statement.Condition);
             Assert.NotNull(statement.SemicolonToken2);
-            Assert.Null(statement.Update);
+            Assert.Empty(statement.Incrementors);
         }
 
         [Fact]
-        public void Parser_Parses_CSStyleForStatement_MissingParts()
+        public void Parser_Parses_ForStatement_MissingParts()
         {
-            var syntaxTree = SyntaxTree.Parse("for (; i < 10;) { i = i + 1 }");
-            var root = (CompilationUnitSyntax)syntaxTree.Root;
+            var syntaxTree = SyntaxTree.ParseCs("for (; i < 10;) { i = i + 1 }");
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
+            var globalStatement = Assert.IsType<CSyntax.GlobalStatementSyntax>(member);
+            var statement = Assert.IsType<CSyntax.ForStatementSyntax>(globalStatement.Statement);
 
-            Assert.Null(statement.Init);
+            Assert.Null(statement.InitDeclaration);
+            Assert.Empty(statement.Initializers);
             Assert.NotNull(statement.SemicolonToken1);
             Assert.NotNull(statement.Condition);
             Assert.NotNull(statement.SemicolonToken2);
-            Assert.Null(statement.Update);
+            Assert.Empty(statement.Incrementors);
         }
 
         [Fact]
@@ -543,7 +545,7 @@ for (var i = 0; i < 10; i++)
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+            var statement = Assert.IsType<ForRangeStatementSyntax>(globalStatement.Statement);
 
             Assert.Equal(SyntaxKind.OpenParenthesisToken, statement.OpenParenToken!.Kind);
             Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
@@ -559,7 +561,7 @@ for (var i = 0; i < 10; i++)
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+            var statement = Assert.IsType<ForRangeStatementSyntax>(globalStatement.Statement);
 
             Assert.Null(statement.OpenParenToken);
             Assert.Equal(SyntaxKind.VarKeyword, statement.VarKeyword!.Kind);
@@ -574,7 +576,7 @@ for (var i = 0; i < 10; i++)
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+            var statement = Assert.IsType<ForRangeStatementSyntax>(globalStatement.Statement);
 
             Assert.Equal(SyntaxKind.OpenParenthesisToken, statement.OpenParenToken!.Kind);
             Assert.Null(statement.VarKeyword);
@@ -589,7 +591,7 @@ for (var i = 0; i < 10; i++)
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+            var statement = Assert.IsType<ForRangeStatementSyntax>(globalStatement.Statement);
 
             Assert.Null(statement.VarKeyword);
             Assert.Null(statement.Identifier);
@@ -605,7 +607,7 @@ for (var i = 0; i < 10; i++)
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+            var statement = Assert.IsType<ForRangeStatementSyntax>(globalStatement.Statement);
 
             Assert.Null(statement.Identifier);
         }
@@ -617,7 +619,7 @@ for (var i = 0; i < 10; i++)
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
-            var statement = Assert.IsType<ForStatementSyntax>(globalStatement.Statement);
+            var statement = Assert.IsType<ForRangeStatementSyntax>(globalStatement.Statement);
 
             Assert.Equal(SyntaxKind.LetKeyword, statement.VarKeyword!.Kind);
             var diagnostic = Assert.Single(syntaxTree.Diagnostics);
@@ -625,14 +627,14 @@ for (var i = 0; i < 10; i++)
         }
 
         [Fact]
-        public void Parser_CSStyleFor_NotConfusedWithRangeFor()
+        public void Parser_For_NotConfusedWithRangeFor()
         {
-            var syntaxTree = SyntaxTree.Parse("for (var i = 0; i < 10; i++) { }");
-            var root = (CompilationUnitSyntax)syntaxTree.Root;
+            var syntaxTree = SyntaxTree.ParseCs("for (var i = 0; i < 10; i++) { }");
+            var root = (CSyntax.CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
-            var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
+            var globalStatement = Assert.IsType<CSyntax.GlobalStatementSyntax>(member);
 
-            Assert.IsType<CSStyleForStatementSyntax>(globalStatement.Statement);
+            Assert.IsType<CSyntax.ForStatementSyntax>(globalStatement.Statement);
         }
 
         [Fact]
@@ -1424,11 +1426,16 @@ switch (x)
         }
 
         [Fact]
-        public void Parser_Cocoa_RejectsCStyleFor()
+        public void Parser_Cocoa_ParsesCStyleFor()
         {
+            // CO 支持 C 风格 `for (init; cond; update)`（与 range 形态共存）
             var syntaxTree = SyntaxTree.Parse("function Main() { for (var i = 0; i < 10; i++) { } }");
 
-            Assert.Contains(syntaxTree.Diagnostics, d => d.Message.Contains("不支持 C 风格 `for (初始化; 条件; 更新)`"));
+            var globalStatement = Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members);
+            var function = Assert.IsType<FunctionDeclarationSyntax>(globalStatement);
+            var forStatement = Assert.IsType<ForStatementSyntax>(function.Body!.Statements[0]);
+            Assert.NotNull(forStatement.InitDeclaration);
+            Assert.Single(forStatement.Incrementors);
         }
 
         [Fact]
@@ -1455,7 +1462,7 @@ switch (x)
 
             var function = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
             var block = function.Body!;
-            var forStatement = Assert.IsType<ForStatementSyntax>(block.Statements[0]);
+            var forStatement = Assert.IsType<ForRangeStatementSyntax>(block.Statements[0]);
 
             Assert.Equal(SyntaxKind.StepKeyword, forStatement.StepKeyword!.Kind);
             Assert.Equal("2", ((LiteralExpressionSyntax)forStatement.Step!).LiteralToken.Text);

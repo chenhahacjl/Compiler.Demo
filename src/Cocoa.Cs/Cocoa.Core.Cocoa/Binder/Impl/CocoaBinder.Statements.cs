@@ -62,9 +62,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case SSyntax.CocoaSyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case SSyntax.CocoaSyntaxKind.ForRangeStatement: return BindForRangeStatement((ForRangeStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
-                case SSyntax.CocoaSyntaxKind.CSStyleForStatement: return BindCSStyleForStatement((CSStyleForStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
@@ -994,6 +994,77 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         private BoundStatement BindForStatement(ForStatementSyntax syntax)
         {
+            _scope = new BoundScope(_scope);
+
+            var initStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+            if (syntax.InitDeclaration != null)
+            {
+                initStatements.Add(BindStatement(syntax.InitDeclaration));
+            }
+
+            foreach (var initializer in syntax.Initializers)
+            {
+                initStatements.Add(new BoundExpressionStatement(syntax, BindExpression(initializer)));
+            }
+
+            var condition = syntax.Condition == null ? null : BindExpression(syntax.Condition, TypeSymbol.Boolean);
+            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
+
+            var incrementorExpressions = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var incrementor in syntax.Incrementors)
+            {
+                incrementorExpressions.Add(BindExpression(incrementor));
+            }
+
+            _scope = _scope.Parent!;
+
+            // C 风格 for 在绑定期脱糖为既有的纯循环节点：
+            // {
+            //     init...
+            //     while (true)
+            //     {
+            //         if (condition) { } else break;
+            //         body
+            //         continue:
+            //         update...
+            //     }
+            // }
+
+            _labelCounter++;
+            var whileContinueLabel = new BoundLabel($"continue{_labelCounter}");
+
+            var whileBody = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            if (condition != null)
+            {
+                var emptyThen = new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
+                var breakGoto = new BoundGotoStatement(syntax, breakLabel);
+                var conditionCheck = new BoundIfStatement(syntax, condition, emptyThen, breakGoto);
+                whileBody.Add(conditionCheck);
+            }
+
+            whileBody.Add(body);
+            whileBody.Add(new BoundLabelStatement(syntax, continueLabel));
+
+            foreach (var incrementor in incrementorExpressions)
+            {
+                whileBody.Add(new BoundExpressionStatement(syntax, incrementor));
+            }
+
+            var whileStatement = new BoundWhileStatement(
+                syntax,
+                new BoundLiteralExpression(syntax, true),
+                new BoundBlockStatement(syntax, whileBody.ToImmutable()),
+                breakLabel,
+                whileContinueLabel);
+
+            initStatements.Add(whileStatement);
+
+            return new BoundBlockStatement(syntax, initStatements.ToImmutable());
+        }
+
+        private BoundStatement BindForRangeStatement(ForRangeStatementSyntax syntax)
+        {
             var lowerBound = BindExpression(syntax.LowerBound, TypeSymbol.Int32);
             var upperBound = BindExpression(syntax.UpperBound, TypeSymbol.Int32);
 
@@ -1068,7 +1139,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             _scope = _scope.Parent!;
 
-            return new BoundForStatement(syntax, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
+            return new BoundForRangeStatement(syntax, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
         }
 
         /// <summary>foreach 绑定期脱糖为 while 索引循环（策略点：v1 数组/字符串）：</summary>
@@ -1419,72 +1490,6 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             _diagnostics.ReportError(last.Location, "switch 节体必须以 break/return/continue 结尾（不支持 fall-through）。");
-        }
-
-        private BoundStatement BindCSStyleForStatement(CSStyleForStatementSyntax syntax)
-        {
-            _scope = new BoundScope(_scope);
-
-            BoundStatement? init = null;
-            if (syntax.Init != null)
-            {
-                init = BindStatement(syntax.Init);
-            }
-
-            var condition = syntax.Condition == null ? null : BindExpression(syntax.Condition, TypeSymbol.Boolean);
-            var update = syntax.Update == null ? null : BindExpression(syntax.Update);
-            var body = BindLoopBody(syntax.Body, out var breakLabel, out var continueLabel);
-
-            _scope = _scope.Parent!;
-
-            // C 风格 for 在绑定期脱糖为既有的纯循环节点：
-            // {
-            //     init
-            //     while (true)
-            //     {
-            //         if (condition) { } else break;
-            //         body
-            //         continue:
-            //         update
-            //     }
-            // }
-
-            _labelCounter++;
-            var whileContinueLabel = new BoundLabel($"continue{_labelCounter}");
-
-            var whileBody = ImmutableArray.CreateBuilder<BoundStatement>();
-
-            if (condition != null)
-            {
-                var emptyThen = new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
-                var breakGoto = new BoundGotoStatement(syntax, breakLabel);
-                var conditionCheck = new BoundIfStatement(syntax, condition, emptyThen, breakGoto);
-                whileBody.Add(conditionCheck);
-            }
-
-            whileBody.Add(body);
-            whileBody.Add(new BoundLabelStatement(syntax, continueLabel));
-
-            if (update != null)
-            {
-                whileBody.Add(new BoundExpressionStatement(syntax, update));
-            }
-
-            var whileStatement = new BoundWhileStatement(
-                syntax,
-                new BoundLiteralExpression(syntax, true),
-                new BoundBlockStatement(syntax, whileBody.ToImmutable()),
-                breakLabel,
-                whileContinueLabel);
-
-            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
-            if (init != null)
-            {
-                statements.Add(init);
-            }
-            statements.Add(whileStatement);
-
-            return new BoundBlockStatement(syntax, statements.ToImmutable());
         }
 
         private BoundStatement BindLoopBody(StatementSyntax body, out BoundLabel breakLabel, out BoundLabel continueLabel)

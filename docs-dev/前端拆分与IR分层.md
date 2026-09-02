@@ -17,9 +17,9 @@
 | 双 Binder | ✅ 已完成 | 删共享 `Binding/Binder.cs`（5 个 partial）；`CocoaBinder`/`CSharpBinder` 独立副本接管绑定；`IBinder` 窄接口（单态化种子收集面）+ `Language.BuildFunctionBodyForMonomorphization` 分派；共享 HIR 服务（Monomorphizer/CFG/确定赋值/常量折叠）留 Core（S-4.1~4.3） |
 | 双 Compilation | ✅ 已完成 | `CocoaCompilation`/`CSharpCompilation` 迁语言库；`Language.CreateCompilation` 工厂；`Compilation` 抽象 `BindGlobalScope`/`BindProgram`（S-4.2~4.3a） |
 | Parser 产出语言节点 | ✅ 已完成 | **S-5 原子切换（793e016）**：`SyntaxTree.Root`/`IParser`/`ParseHandler` 语言中性化（抽象 `SyntaxNode`）；`CocoaParser`/`CSharpParser` 迁语言命名空间产出语言节点；Binder 副本切语言节点（`SSyntax` 别名 + 节点 kind 改语言枚举，token 判断保留共享 `SyntaxKind`）；消费者（Compilation/CocoaRepl/NativeImportValidator/DiagnosticBag）经语言钩子分派；`GreenNode.CreateTypedRed` 随迁语言库（CocoaGreenNodeFactory/CSharpGreenNodeFactory）；删除共享 75 节点类（`SyntaxNode.Kind` 改经抽象 `RawKind:int` 具名）；测试迁移 388 处引用 |
-| 每语言 Lower | ⏳ 待实施 | 方言构造（CO for-to / C# for(;;)）收口（§5 Phase 1c） |
+| 每语言 Lower | ✅ 完成（S-6 收口） | 共享 Core 默认采用 Cocoa 语法——`BoundForRangeStatement`（原 range-for，CO 次数循环内部名 forrange）保留 Core，共享 `Lowerer.RewriteForRangeStatement` 降级；**不建语言专属 Lower**。定稿：**CO 具备双形态 for**——C 风格 `for (init; cond; update)`（逗号多 init/update，与 C# 共用 `SyntaxKind.ForStatement`=159）与 `for N to M [step k]`（range，`SyntaxKind.ForRangeStatement`=161，internal ForRangeStatementSyntax/BoundForRangeStatement/ForRangeStatementSyntax）；C 风格 for 两语言绑定期各自脱糖为 while/if/goto（§5 Phase 1c） |
 
-全量回归 41805 绿。下一步：S-6 每语言 Lower（方言构造收口）。
+全量回归 41808 绿。S-6（方言构造收口）已完成：共享 Core 默认 Cocoa 语法、CO 双形态 for（C 风格 + range 内部名 forrange）、C# 仅 C 风格 for。
 
 ---
 
@@ -51,7 +51,7 @@
 | 5 | IR 层数认知纠偏 | "高/规范"是同一棵树的降级前/后（一个 pass，不是两层） |
 | 6 | 命名 | 采纳 HIR / MIR / LIR（对齐 Rust，避开 LLVM 撞名） |
 | 7 | 再简化 | 删除"绑定输出"的 HIR 命名；MIR 标定为 HIR → 最终 HIR + LIR 两层 |
-| 8 | 每语言 lower | 需要。每门语言一个专属 Lower，把方言构造（两种 for 等）统一为共享规范高节点 |
+| 8 | 每语言 lower | 原案每门语言一个专属 Lower，把方言构造统一为共享规范高节点；**S-6 定稿：共享 Core 默认采用 Cocoa 语法**，range（`BoundForRangeStatement`/`RewriteForRangeStatement`）保留 Core，C 风格 for 两语言绑定期各自脱糖为 while，**不建语言专属 Lower**；CO 双形态 for（C 风格 + range），C# 仅 C 风格 |
 | 9 | `.coa` | 双向：库构建 →.coa，消费构建 .coa→ 合并（不是输出专属） |
 | 10 | LIR 是否也发 IL | 否。IL 吃 HIR（= Roslyn bound→CIL 做法）；LIR 仅 native（= RyuJIT 内部私有） |
 | 11 | 与 .NET 对应 | 底层 IR 由 native 后端自己做（编译期 AOT），结构同构 RyuJIT |
@@ -62,8 +62,7 @@
 
 ```
 源码（.co / .cs）
-   ↓ 各自 Lexer + Parser + Binder（全拆，token 级也拆）
-   ↓ 各自 Language-Specific Lower（方言构造→共享规范高节点）
+    ↓ 各自 Lexer + Parser + Binder（全拆，token 级也拆；方言 for 在绑定期各自收口）
 HIR（规范降级树：goto/条件goto/ret/赋值）【合并点 + .coa 双向边界】
    ├─▶ .coa（持久化/注入）
    ├─▶ IL 后端（CIL）
@@ -78,7 +77,7 @@ HIR（规范降级树：goto/条件goto/ret/赋值）【合并点 + .coa 双向�
 - **HIR** = 规范降级树（原 MIR），IL / Evaluator / `.coa` / native 全消费，纯净无方言。
 - **LIR** = 3-地址码，仅 native，零语法零 ABI 泄漏。
 - **Binder 原始输出**（if/while/for 高节点）= 瞬态，不命名，仅 Lowering 输入。
-- **每语言专属 Lower** 收敛方言（CO `for i to n` / C# `for(;;)` 在此并轨）。
+- **每语言 Binder** 收敛方言（CO `for i to n` 绑定期转 range-for / C# `for(;;)` 绑定期脱糖为 while），共享 Core Lowerer 保留 Cocoa range-for 降级。
 
 ---
 
@@ -275,7 +274,7 @@ FUNCTION main (p0)
 **待续（S-5/S-6，原子切换专项）：**
 
 - **Phase 1b（S-5）：Parser 产出语言节点** ✅ 已完成（提交 `793e016`）—— `SyntaxTree.Root`/`IParser.ParseCompilationUnit`/`ParseHandler` 改抽象 `SyntaxNode`（语言中性化）；`CocoaParser`/`CSharpParser` 迁语言命名空间产出语言节点；Binder 副本切语言节点（`SSyntax` 别名 + 节点 kind 改语言枚举，token 判断保留共享 `SyntaxKind`）；消费者（Compilation/CocoaRepl/NativeImportValidator/DiagnosticBag）经语言钩子分派；`GreenNode.CreateTypedRed` 随迁语言库（CocoaGreenNodeFactory/CSharpGreenNodeFactory）；删除共享 75 节点类（`SyntaxNode.Kind` 改经抽象 `RawKind:int` 具名）；测试迁移 388 处引用。数千行同步切换，任一环失败破坏基线，已单独专项一次性落地、回归 41805 绿。
-- **语言专属 Lower（S-6）** ⏳ 待实施：`Cocoa.Core.Cocoa/Lowering/`（BoundForStatement→while/if/goto）、`Cocoa.Core.CSharp/Lowering/`（C# for 脱糖移入）。
+- **语言专属 Lower（S-6）** ✅ 已完成：定稿「共享 Core 默认 Cocoa 语法」——range 形态（CO 次数循环，内部名 forrange）为 `BoundForRangeStatement`，`Lowerer.RewriteForRangeStatement` 保留共享 Core，C 风格 for 两语言绑定期各自脱糖为 while/if/goto（不建语言专属 Lower）。CO 获得双形态 for：C 风格 `for (init; cond; update)`（逗号多 init/update，`ForStatementSyntax` 结构升级为 `InitDeclaration`+`Initializers`+`Incrementors`，与 C# 共用 `SyntaxKind.ForStatement`=159）+ range `for N to M [step k]`（`ForRangeStatementSyntax`，`SyntaxKind.ForRangeStatement`=161，CocoaOnly；隐藏计数器 `for 1 to 10` 保留）。C# 仅 C 风格 for。共享 `SyntaxKind.ForRangeStatement` 槽沿用原 `CSStyleForStatement` 值（161）。回归 41808 绿。
 
 ### Phase 2：LIR 改造（LLVM 式）
 
@@ -303,11 +302,11 @@ Cocoa.Core（共享层，类比 .NET CIL/BCL）
   （共享 Binder / 共享 Lexer / 共享 75 节点类 已删除）✅
 Cocoa.Core.Cocoa
   CocoaLexer ✅ / CocoaParser（产出语言节点）✅ / CocoaSyntaxKind ✅ / 75 节点类 ✅
-  / CocoaBinder ✅ / CocoaLower（待续 S-6）/ CocoaCompilation ✅ / CocoaGreenNodeFactory ✅
+  / CocoaBinder ✅（C 风格 for 脱糖 + forrange 绑定）/ CocoaCompilation ✅ / CocoaGreenNodeFactory ✅
 Cocoa.Core.CSharp
-  CSharpLexer ✅ / CSharpParser（产出语言节点）✅ / CSharpSyntaxKind ✅ / 75 节点类 ✅
-  / CSharpBinder ✅ / CSharpLower（待续 S-6）/ CSharpCompilation ✅ / CSharpGreenNodeFactory ✅
+  CSharpLexer ✅ / CSharpParser（产出语言节点）✅ / CSharpSyntaxKind ✅ / 74 节点类 ✅
+  / CSharpBinder ✅（C 风格 for 脱糖）/ CSharpCompilation ✅ / CSharpGreenNodeFactory ✅
 coc / csc（各自引用独立前端）
 ```
 
-**一句话**：双前端（CO/C# 全量独立）+ 双层 IR（HIR 共享合并点 + LIR native 私有）的编译器架构改造；核心产出是前端 token/节点/Binder/Lower 的彻底语言化拆分，以及 IR 层的净化与新 LIR 改造。前端全量拆分（SyntaxKind/Lexer/节点类/SyntaxFacts/Binder/Compilation/Parser 产出语言节点）已落库，剩余每语言 Lower（S-6）。
+**一句话**：双前端（CO/C# 全量独立）+ 双层 IR（HIR 共享合并点 + LIR native 私有）的编译器架构改造；核心产出是前端 token/节点/Binder/Lower 的彻底语言化拆分，以及 IR 层的净化与新 LIR 改造。前端全量拆分（SyntaxKind/Lexer/节点类/SyntaxFacts/Binder/Compilation/Parser 产出语言节点）已落库，方言构造收口（S-6）已完成：共享 Core 默认 Cocoa 语法、CO 双形态 for（C 风格 + forrange）、C# 仅 C 风格 for，不建语言专属 Lower。

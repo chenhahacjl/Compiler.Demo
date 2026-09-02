@@ -205,7 +205,7 @@ namespace Cocoa.CodeAnalysis.Lowering
             return RewriteStatement(result);
         }
 
-        protected override BoundStatement RewriteForStatement(BoundForStatement node)
+        protected override BoundStatement RewriteForRangeStatement(BoundForRangeStatement node)
         {
             // for <var> = <lower> to <upper> [step <n>]
             //     <body>

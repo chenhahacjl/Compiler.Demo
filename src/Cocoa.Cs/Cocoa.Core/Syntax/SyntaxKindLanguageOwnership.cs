@@ -11,8 +11,9 @@ namespace Cocoa.CodeAnalysis.Syntax
     }
 
     /// <summary>
-    /// 节点 / token 的语言归属表。互斥 kind 对目前仅 <c>ForStatement</c>（CO 次数循环
-    /// <c>for i = 0 to n</c>）/ <c>CSStyleForStatement</c>（C# <c>for(;;)</c>）；
+    /// 节点 / token 的语言归属表。互斥 kind 对目前仅 <c>ForRangeStatement</c>（CO 次数循环
+    /// <c>for N to M [step k]</c>，内部名 forrange）；<c>ForStatement</c>（C 风格 <c>for(;;)</c>）
+    /// 为两语言共用（Shared）；
     /// 其余方言差异在词法 / 解析标志层（CocoaParser 关闭 C# 拼写、C# 拒绝 CO 关键字），节点层基本共享。
     /// 新增 CO 专属特性（A4）时在此登记，C# 侧勿使用。
     /// </summary>
@@ -20,8 +21,8 @@ namespace Cocoa.CodeAnalysis.Syntax
     {
         private static readonly HashSet<SyntaxKind> CocoaOnlyKinds = new HashSet<SyntaxKind>
         {
-            // 节点：CO 次数循环（C# 侧为 CSStyleForStatement）
-            SyntaxKind.ForStatement,
+            // 节点：CO 次数循环（C# 侧无此构造）
+            SyntaxKind.ForRangeStatement,
 
             // 词法：CO 专属关键字（C# 侧无对应 token）
             SyntaxKind.FunctionKeyword,
@@ -40,8 +41,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         private static readonly HashSet<SyntaxKind> CSharpOnlyKinds = new HashSet<SyntaxKind>
         {
-            // C# `for(;;)`；CO 侧仅在错误恢复时产生（含诊断）
-            SyntaxKind.CSStyleForStatement,
+            // 目前无互斥 C# 专属节点 kind（C 风格 for 已升为 Shared，CO 亦支持）
         };
 
         public static SyntaxLanguageOwnership Ownership(SyntaxKind kind)
