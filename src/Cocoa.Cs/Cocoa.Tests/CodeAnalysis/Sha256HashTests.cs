@@ -93,7 +93,7 @@ function Main(): i32
             var exePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-sha256", "sha-il.exe");
             Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
             var diagnostics = compilation.Emit("sha-il", References(), exePath,
-                Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
         }
 

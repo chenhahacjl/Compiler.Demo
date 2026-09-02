@@ -1,7 +1,8 @@
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Generic;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+using Cocoa.CodeAnalysis.Emit.IL;
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// 委托形状缓存（6e-M22 C4-b）：FunctionTypeSymbol → (实例化 Func/Action Type, .ctor, Invoke)。

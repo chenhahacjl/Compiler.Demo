@@ -37,7 +37,7 @@ function Main(): i32
             var exePath = Path.Combine(Path.GetTempPath(), "cocoa-launchprocess", "lp-il.exe");
             Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
             var diagnostics = compilation.Emit("lp-il", References(), exePath,
-                Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
         }
 

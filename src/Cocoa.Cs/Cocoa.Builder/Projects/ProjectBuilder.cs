@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.CocoaAssembly;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Emit;
+using Cocoa.CodeAnalysis.Emit.Managed;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;

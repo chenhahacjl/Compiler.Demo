@@ -5,7 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// netcore apphost 生成器（对齐 dotnet SDK 的 Microsoft.NET.HostModel.AppHost.HostWriter）。

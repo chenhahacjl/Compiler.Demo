@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Emit;
+using Cocoa.CodeAnalysis.Emit.Managed;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
@@ -13,6 +14,10 @@ namespace Cocoa.Compiler
         {
             // M2 种子：触达 C# 语言实例，注册 "csharp" 供 SyntaxTree.Load(.cs)/ParseCs 使用
             _ = CSharpLanguage.Instance;
+
+            // 注册拆分后的 managed/native 后端发射实现（Core 不引用后端，经委托接入）
+            ManagedBackend.Register();
+            NativeBackend.Register();
 
             if (args.Length == 0)
             {

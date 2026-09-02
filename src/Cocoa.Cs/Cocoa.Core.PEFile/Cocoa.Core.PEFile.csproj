@@ -4,8 +4,9 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Core" />
-    <InternalsVisibleTo Include="Cocoa.Core.IL" />
+    <InternalsVisibleTo Include="Cocoa.Core.Managed" />
     <InternalsVisibleTo Include="Cocoa.Core.Native" />
+    <InternalsVisibleTo Include="Cocoa.Builder" />
     <InternalsVisibleTo Include="cocoa" />
     <InternalsVisibleTo Include="Cocoa.Tests" />
   </ItemGroup>

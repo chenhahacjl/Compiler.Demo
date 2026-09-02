@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Emit;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using Xunit;
 
+using Cocoa.CodeAnalysis.Emit.Managed;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>

@@ -1,14 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeAnalysis.Emit.Native</RootNamespace>
+  </PropertyGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
     <InternalsVisibleTo Include="cocoa" />
-    <InternalsVisibleTo Include="Cocoa.Core.CSharp" />
-    <InternalsVisibleTo Include="Cocoa.Core.Cocoa" />
-    <InternalsVisibleTo Include="Cocoa.Core.PEFile" />
-    <InternalsVisibleTo Include="Cocoa.Core.Managed" />
-    <InternalsVisibleTo Include="Cocoa.Core.Native" />
     <InternalsVisibleTo Include="Cocoa.Builder" />
+    <InternalsVisibleTo Include="Cocoa.Core" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
     <ProjectReference Include="..\Cocoa.Core.PEFile\Cocoa.Core.PEFile.csproj" />
   </ItemGroup>
 

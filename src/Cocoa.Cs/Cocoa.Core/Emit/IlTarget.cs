@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+namespace Cocoa.CodeAnalysis.Emit
 {
     /// <summary>dotnet 后端的 .NET 运行时种类。</summary>
     public enum IlRuntime

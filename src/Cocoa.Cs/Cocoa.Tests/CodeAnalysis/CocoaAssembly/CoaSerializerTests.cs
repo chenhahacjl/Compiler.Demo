@@ -977,7 +977,7 @@ function Main(): void
             var ilTree = SyntaxTree.Parse(appSource);
             var ilCompilation = Compilation.Create("Main", refs, ilTree);
             var exePath = Path.Combine(dir, "app-il.exe");
-            var ilDiagnostics = ilCompilation.Emit("app-il", refs, exePath, Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+            var ilDiagnostics = ilCompilation.Emit("app-il", refs, exePath, Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
             Assert.Empty(ilDiagnostics.Select(d => d.Message));
 
             var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")

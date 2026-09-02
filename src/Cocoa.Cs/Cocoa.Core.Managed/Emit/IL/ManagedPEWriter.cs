@@ -4,7 +4,8 @@ using System.IO;
 using System.Text;
 using Cocoa.CodeAnalysis.Emit.Native.PEFile;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+using Cocoa.CodeAnalysis.Emit.IL;
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// 托管 PE 写入器：组装 .text 段（CLR 头 + 方法体 + 元数据根 + 流）+ IMAGE_COR20_HEADER + PE 壳。

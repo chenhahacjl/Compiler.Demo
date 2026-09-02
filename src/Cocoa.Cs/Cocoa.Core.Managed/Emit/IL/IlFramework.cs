@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+using Cocoa.CodeAnalysis.Emit.IL;
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// IL 后端的 .NET 框架引用集中管理（功能层 IL 实现的归属地，native 侧对应 RuntimeEmitterLir）：

@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+using Cocoa.CodeAnalysis.Emit.IL;
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// IL 编码器：IlInstruction 序列 → 方法体字节。按 OperandType 全集分派；

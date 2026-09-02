@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// 按 IlTarget 解析默认引用程序集：

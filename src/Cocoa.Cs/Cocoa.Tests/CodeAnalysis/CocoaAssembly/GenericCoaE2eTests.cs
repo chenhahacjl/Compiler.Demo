@@ -193,7 +193,7 @@ function Main(): void
             var diagnostics = compilation.Emit("app-il",
                 new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
                 exePath,
-                Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
 
             var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Emit;
 using Xunit;
 
+using Cocoa.CodeAnalysis.Emit.Managed;
+using Cocoa.CodeAnalysis.Emit.IL;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlAssemblerTests

@@ -58,7 +58,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
                 name,
                 references.ToArray(),
                 exePath,
-                Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
 
             var diagText = string.Join("\n", diagnostics);
             if (diagText.Length > 0)

@@ -1,4 +1,3 @@
-using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.CocoaAssembly;
@@ -10,6 +9,7 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
+using Cocoa.CodeAnalysis.Emit.IL;
 namespace Cocoa.CodeAnalysis.CSharp.Binding
 {
     /// <summary>

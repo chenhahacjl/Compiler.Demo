@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.CocoaAssembly;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Emit;
 using Cocoa.CodeAnalysis.Emit.Native;
 using Cocoa.CodeAnalysis.Evaluation;
 using Cocoa.CodeAnalysis.Symbols;
@@ -20,6 +20,23 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
         private readonly bool _linkCodDynamically;
+
+        /// <summary>
+        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.Core.Managed</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
+        /// Core 不引用后端，发射能力经此委托接入）。
+        /// </summary>
+        private static Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
+
+        /// <summary>native 后端发射委托（由 <c>Cocoa.Core.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。</summary>
+        private static Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>>? _nativeEmitter;
+
+        /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        internal static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
+            => _managedEmitter = emitter;
+
+        /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        internal static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>> emitter)
+            => _nativeEmitter = emitter;
 
         public abstract Language Language { get; }
 
@@ -438,7 +455,7 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        private BoundProgram GetProgram()
+        internal BoundProgram GetProgram()
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
@@ -576,7 +593,9 @@ namespace Cocoa.CodeAnalysis
                 .Where(r => !r.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
 
-            var backendDiagnostics = IlEmitter.Emit(program, moduleName, ilReferences, outputPath, target, emitLibrary);
+            var backendDiagnostics = _managedEmitter == null
+                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.Core.Managed 未初始化）"))
+                : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false);
 
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印
             return diagnostics.Concat(backendDiagnostics).ToImmutableArray();
@@ -584,76 +603,20 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>
         /// 把程序直接生成为原生可执行文件，不依赖 .NET 运行时。
+        /// 实现经 <see cref="RegisterNativeEmitter"/> 注入的 native 后端（Core 自身不引用后端）。
         /// </summary>
         internal ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default)
         {
-            var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
-
-            var diagnostics = parseDiagnostics.Concat(GlobalScope.Diagnostics).ToImmutableArray();
-            if (diagnostics.HasErrors())
+            if (_nativeEmitter == null)
             {
-                return diagnostics;
+                return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "native 后端未注册（Cocoa.Core.Native 未初始化）"));
             }
 
-            var program = GetProgram();
-
-            if (program.Diagnostics.HasErrors())
-            {
-                return program.Diagnostics;
-            }
-
-            // 6e-M22 C4-c 已落地：native 函数值发射（[typeId][fnptr][env] 三字对象 + CallReg）——门禁移除
-
-            if (program.MainFunction == null)
-            {
-                var location = new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
-                return ImmutableArray.Create(Diagnostic.Error(location, "native code generation requires a main function"));
-            }
-
-            // 6e-M19 M4：native 对象模型——用户类（字段/方法/继承/多态/vtable 虚分派）全面放行。
-            // 仍拒绝：接口声明（接口分派未实现）、含初始化器的静态构造（无 .cctor 触发时机）。
-            if (program.Classes.Length > 0)
-            {
-                var interfaceClass = program.Classes.FirstOrDefault(c => c.IsInterface);
-                if (interfaceClass != null)
-                {
-                    var location = Language.GetDeclarationNameLocation(interfaceClass.Declaration)
-                                   ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"interface '{interfaceClass.Name}' 暂不支持 native 后端（接口分派随后续里程碑落地，见 docs-dev/对象模型设计.md）"));
-                }
-
-                var staticInitClass = program.Classes.FirstOrDefault(HasStaticInitializer);
-                if (staticInitClass != null)
-                {
-                    var location = Language.GetDeclarationNameLocation(staticInitClass.Declaration)
-                                   ?? new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"class '{staticInitClass.Name}' 含静态构造函数或静态字段初始化器，native 后端暂不支持静态初始化触发（字段可声明但保持零值；请改在显式代码中赋值）"));
-                }
-            }
-
-            var backendDiagnostics = ValidateCodBackendRequirements(isNative: true);
-            if (backendDiagnostics.Length > 0)
-            {
-                return backendDiagnostics;
-            }
-
-            // M4：Object 成员面 receiver 形状校验（any/数组/枚举接收者需装箱表示，明确报错不静默错编）
-            var objectFaceBag = new DiagnosticBag();
-            NativeObjectModelValidator.Validate(program, objectFaceBag, new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0)));
-            if (objectFaceBag.Any())
-            {
-                return diagnostics.Concat(objectFaceBag).ToImmutableArray();
-            }
-
-            var importWarnings = NativeImportValidator.Validate(program, platform.Arch);
-
-            NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);
-
-            return diagnostics.Concat(importWarnings).ToImmutableArray();
+            return _nativeEmitter(this, moduleName, outputPath, platform);
         }
 
         /// <summary>校验 `.coa` 库的 `requires` 与消费方后端匹配。</summary>
-        private ImmutableArray<Diagnostic> ValidateCodBackendRequirements(bool isNative)
+        internal ImmutableArray<Diagnostic> ValidateCodBackendRequirements(bool isNative)
         {
             if (!isNative || _codLibraries.IsDefaultOrEmpty)
             {
@@ -734,7 +697,7 @@ namespace Cocoa.CodeAnalysis
         /// Binder 仅在存在静态初始化器或显式声明时创建 .cctor 符号，故符号存在即需运行期触发——
         /// native 后端无该时机，门禁拒绝并提示改写为显式赋值。
         /// </summary>
-        private static bool HasStaticInitializer(NamedTypeSymbol classType)
+        internal static bool HasStaticInitializer(NamedTypeSymbol classType)
         {
             foreach (var method in classType.Methods)
             {

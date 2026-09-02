@@ -750,7 +750,7 @@ function Main(): i32
             var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa_c4b_il_tests");
             System.IO.Directory.CreateDirectory(directory);
             var exePath = System.IO.Path.Combine(directory, name + ".exe");
-            var diagnostics = compilation.Emit(name, references, exePath, Cocoa.CodeAnalysis.Emit.IL.IlTarget.Parse("net9.0"));
+            var diagnostics = compilation.Emit(name, references, exePath, Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
 
             Assert.True(diagnostics.IsEmpty, string.Join("; ", diagnostics.Select(d => d.Message)));
 

@@ -2,9 +2,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeAnalysis.Emit;
 using Xunit;
 
+using Cocoa.CodeAnalysis.Emit.Managed;
 namespace Cocoa.Tests.Compiler
 {
     public class AppHostTests

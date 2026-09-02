@@ -7,7 +7,7 @@ using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+namespace Cocoa.CodeAnalysis.Emit.Managed
 {
     /// <summary>
     /// IL 路径发射器：绑定树 → 自研 IL 组件（IlAssembler/MetadataBuilder/ManagedPEWriter）。
