@@ -265,5 +265,51 @@ namespace Cocoa.Tests.Compiler
             AssertBlocks(RunDirectExe, runDir);
             AssertFunctionsEntry(RunDirectExe, runDir);
         }
+
+        /// <summary>黄金基线（重构阶段 0.1）：samples.cosln 全量项目在 dotnet 后端的产物输出快照。</summary>
+        private static string SampleExe(string runDir, string relative)
+            => Path.Combine(runDir, relative, "out", Path.GetFileName(relative) + ".exe");
+
+        private static void AssertExeOutput(Func<string, string[], string> run, string exePath, string[] expectedLines)
+        {
+            var stdout = run(exePath, Array.Empty<string>());
+            foreach (var line in expectedLines)
+            {
+                Assert.Contains(line, stdout);
+            }
+        }
+
+        /// <summary>
+        /// 黄金基线：dotnet 后端构建全量 samples.cosln（含 Libraries 双库示例 + Classes OOP 示例），
+        /// 断言三个非 Tutorial 项目的完整输出。任何重构若改变可观测行为，先在此暴露。
+        /// </summary>
+        [Fact]
+        public void Golden_DotNet_LibrariesAndClasses_Snapshot()
+        {
+            var runDir = Build(backend: "dotnet", dotnetRuntime: "net9.0")!;
+
+            // .coa 库消费（编译期 IR 合并）：Add/Mul/Factorial/enum 判定/字符串拼接
+            AssertExeOutput(RunDirectExe, SampleExe(runDir, "Libraries/CodLibrary/app"),
+                new[] { "5", "12", "120", "weekend", "Hello, Cocoa" });
+            // .NET dll 库消费（类实例化 + 方法调用）：Point(3,4) → X/Y/Area
+            AssertExeOutput(RunDirectExe, SampleExe(runDir, "Libraries/NetLibrary/app"),
+                new[] { "3", "4", "12" });
+            // Cocoa 式 OOP：属性（Name 自动属性独立后备字段，Greet 读构造期赋值的 _name）、静态计数、构造链
+            AssertExeOutput(RunDirectExe, SampleExe(runDir, "Classes/CSharpClass"),
+                new[] { "Bob", "18", "19", "Hello, Alice", "1", "2" });
+        }
+
+        /// <summary>
+        /// 黄金基线：native 后端构建 samples.cosln（容错：dll 库/OOP 项目被门禁拒绝），
+        /// 断言 .coa 库消费路径在 native 下的输出与语义一致（双后端通用性）。
+        /// </summary>
+        [Fact]
+        public void Golden_Native_CodLibrary_Snapshot()
+        {
+            var runDir = BuildTolerant(backend: "native");
+
+            AssertExeOutput(RunNative, SampleExe(runDir, "Libraries/CodLibrary/app"),
+                new[] { "5", "12", "120", "weekend", "Hello, Cocoa" });
+        }
     }
 }
