@@ -9,17 +9,17 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 {
     /// <summary>
-    /// 绑定树（Lowerer 输出）→ IR。逐方法对照 NativeCodeEmitter 的发射语义；
-    /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
-    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler。
-    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
+    /// 绑定树（Lowerer 输出）→ IR。逐方法对�?NativeCodeEmitter 的发射语义；
+    /// 字节宽仅按类型区分；仅当 double �?8 字节运行时的寄存器参数时按平台调�?ordinal（x86 �?low/high 两寄存器）�?
+    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler�?
+    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）�?
     /// </summary>
     internal sealed partial class MirToLir
     {
         private LirVirtualRegister EmitConditionalExpression(BoundConditionalExpression node)
         {
             var instructions = _currentFunction.Instructions;
-            var result = AllocateRegister(ReturnSize(node.Type));
+            var result = AllocateRegister(TypeOf(node.Type));
             var elseLabel = AllocLabel();
             var endLabel = AllocLabel();
 
@@ -39,7 +39,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             return result;
         }
 
-        /// <summary>6e-M19 M5-b：is 动态判定——[obj] vtable 与目标祖先链 vtable 指针逐一比对（仅严格基类接收者到达）。</summary>
+        /// <summary>6e-M19 M5-b：is 动态判定——[obj] vtable 与目标祖先链 vtable 指针逐一比对（仅严格基类接收者到达）�?/summary>
         private LirVirtualRegister EmitIsExpression(BoundIsExpression node)
         {
             var result = AllocateRegister(4);
@@ -61,7 +61,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             return result;
         }
 
-        /// <summary>6e-M19 M5-b：as 动态转换——同一链比对，命中返回原引用、失败得 null（0）。</summary>
+        /// <summary>6e-M19 M5-b：as 动态转换——同一链比对，命中返回原引用、失败得 null�?）�?/summary>
         private LirVirtualRegister EmitAsExpression(BoundAsExpression node)
         {
             var result = AllocateRegister(8);
@@ -81,7 +81,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             return result;
         }
 
-        /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命中/汇合三标签交调用方回填结果。</summary>
+        /// <summary>发射 obj（可空）对目标类的类型链比较：null 短路未命中；命中/未命�?汇合三标签交调用方回填结果�?/summary>
         private void EmitTypeChainCompare(LirVirtualRegister obj, TypeSymbol targetType, out int found, out int notFound, out int done)
         {
             var instructions = _currentFunction.Instructions;
@@ -108,9 +108,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         }
 
         /// <summary>
-        /// 6e-M19 M5-b：x is/as T 的运行时命中集 = 存活类中 T 的自身与全部后代（vtable 一一比对）。
-        /// 对象头只存自身 vtable 地址、无向下类型信息，故以编译期存活类闭包枚举后代；
-        /// 抽象/接口/根不实例化（不在 _liveClasses），行序取 Ordinal 保证确定性。
+        /// 6e-M19 M5-b：x is/as T 的运行时命中�?= 存活类中 T 的自身与全部后代（vtable 一一比对）�?
+        /// 对象头只存自�?vtable 地址、无向下类型信息，故以编译期存活类闭包枚举后代；
+        /// 抽象/接口/根不实例化（不在 _liveClasses），行序�?Ordinal 保证确定性�?
         /// </summary>
         private IEnumerable<string> EnumerateDescendantVTableKeys(NamedTypeSymbol targetClass)
         {
@@ -149,9 +149,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         }
 
         /// <summary>
-        /// M4：栈 ABI 运行时调用。ObjectToString/ObjectGetHashCode/ObjectGetType/ObjectEquals 四个运行时
+        /// M4：栈 ABI 运行时调用。ObjectToString/ObjectGetHashCode/ObjectGetType/ObjectEquals 四个运行�?
         /// 函数同时作为 vtable 固定槽默认实现（槽内容可能是用户 override，callreg 无法区分 ABI），
-        /// 故统一采用与用户函数一致的 ReserveArgs/StoreArg 栈传参约定；参数一律 8 字节槽。
+        /// 故统一采用与用户函数一致的 ReserveArgs/StoreArg 栈传参约定；参数一�?8 字节槽�?
         /// </summary>
         private LirVirtualRegister EmitStackRuntimeCall(string name, int resultSize, params LirVirtualRegister[] args)
         {
@@ -201,7 +201,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var instructions = _currentFunction.Instructions;
             var count = arguments.Length;
 
-            // 平台化 SysCall：x64 寄存器 + 第 5 参槽 / x86 栈传递；当前上限 5 参（与运行时所一致）
+            // 平台�?SysCall：x64 寄存�?+ �?5 参槽 / x86 栈传递；当前上限 5 参（与运行时所一致）
             if (count > 5)
             {
                 throw new Exception($"Extern function '{function.Name}' has {count} parameters; native backend supports at most 5");
@@ -219,7 +219,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 _irProgram.Imports.Add(import);
             }
 
-            var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
+            var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(function.ReturnType));
             Add(instructions, new LirInstruction(LirOpCode.SysCall, result, LirOperand.Import(import), LirOperand.Constant(count)));
             return result ?? VoidResult();
         }
@@ -236,7 +236,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         private void EmitPrintArguments(BoundExpression argument) => EmitWriteArguments(argument, newline: true);
 
-        /// <summary>输出参数（newline=false 走 Write* 运行时函数不换行，true 走 Print* 带换行）。</summary>
+        /// <summary>输出参数（newline=false �?Write* 运行时函数不换行，true �?Print* 带换行）�?/summary>
         private void EmitWriteArguments(BoundExpression argument, bool newline)
         {
             var instructions = _currentFunction.Instructions;
@@ -308,7 +308,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
             else if (type == TypeSymbol.UInt64)
             {
-                // u64 打印：UInt64ToString（无符号十进制，支持 >2^63 大值）→ PrintString/WriteString
+                // u64 打印：UInt64ToString（无符号十进制，支持 >2^63 大值）�?PrintString/WriteString
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 var text = AllocateRegister(8);
                 Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("UInt64ToString"), LirOperand.Constant(0)));
@@ -317,7 +317,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
             else if (type == TypeSymbol.Int64)
             {
-                // long 打印：Int64ToString（x64 单 64 位参；x86 拆 low/high 两寄存器）→ PrintString/WriteString
+                // long 打印：Int64ToString（x64 �?64 位参；x86 �?low/high 两寄存器）→ PrintString/WriteString
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
                 var text = AllocateRegister(8);
                 Add(instructions, new LirInstruction(LirOpCode.Call, text, LirOperand.Runtime("Int64ToString"), LirOperand.Constant(0)));
@@ -355,13 +355,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             return EmitFunctionCall(node.Function, node.Arguments);
         }
 
-        /// <summary>用户函数调用（栈 ABI）：ReserveArgs/StoreArg/Call/FreeArgs（6e-M18 起亦服务静态容器类方法调用）。</summary>
+        /// <summary>用户函数调用（栈 ABI）：ReserveArgs/StoreArg/Call/FreeArgs�?e-M18 起亦服务静态容器类方法调用）�?/summary>
         private LirVirtualRegister EmitFunctionCall(FunctionSymbol function, ImmutableArray<BoundExpression> arguments)
             => EmitInvoke(function, null, arguments);
 
         /// <summary>
-        /// M4：统一调用发射。receiver != null → 实例调用（this 为隐藏 arg0，参数区前置 8 字节）；
-        /// indirectFunction != null → CallReg 虚分派（vtable 槽指针）。实参右→左求值（与既有顺序一致）。
+        /// M4：统一调用发射。receiver != null �?实例调用（this 为隐�?arg0，参数区前置 8 字节）；
+        /// indirectFunction != null �?CallReg 虚分派（vtable 槽指针）。实参右→左求值（与既有顺序一致）�?
         /// </summary>
         private LirVirtualRegister? EmitInvoke(
             FunctionSymbol function,
@@ -381,14 +381,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(0), LirOperand.Reg(receiver!)));
             }
 
-            // 6e-M23 R7：实参改为源顺序（左→右）求值——对齐 C#/Evaluator/IL；out 实参依赖同调用内先写后读的顺序语义
+            // 6e-M23 R7：实参改为源顺序（左→右）求值——对�?C#/Evaluator/IL；out 实参依赖同调用内先写后读的顺序语�?
             for (var i = 0; i < count; i++)
             {
                 var value = EmitExpression(arguments[i]);
                 Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(ParamByteOffset(function, i, count)), LirOperand.Reg(value)));
             }
 
-            var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
+            var result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(function.ReturnType));
             if (indirectFunction != null)
             {
                 Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(indirectFunction)));
@@ -404,10 +404,10 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         }
 
         /// <summary>
-        /// 6e-M21 Phase 5：系统化整数转换发射。
-        /// 槽内规范表示：无符号窄整型=掩码零扩展值；有符号窄整型=符号扩展后的 32 位值（shl+sar）；
-        /// ≤32 位来源转 i32/u32 位模式不变；64 位来源先 Trunc64；
-        /// →64 位按源符号性选 Movsx64/Movzx64（char 零扩展、enum 符号扩展，与既有路径一致）。
+        /// 6e-M21 Phase 5：系统化整数转换发射�?
+        /// 槽内规范表示：无符号窄整�?掩码零扩展值；有符号窄整型=符号扩展后的 32 位值（shl+sar）；
+        /// �?2 位来源转 i32/u32 位模式不变；64 位来源先 Trunc64�?
+        /// �?4 位按源符号性�?Movsx64/Movzx64（char 零扩展、enum 符号扩展，与既有路径一致）�?
         /// </summary>
         private bool TryEmitIntegerConversion(BoundConversionExpression node, LirVirtualRegister value, out LirVirtualRegister result)
         {
@@ -500,13 +500,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     result = r;
                 }
 
-                // ≤32 位来源：位模式即结果
+                // �?2 位来源：位模式即结果
                 return true;
             }
 
             if (to == TypeSymbol.Int64 || to == TypeSymbol.UInt64)
             {
-                // 64 位 ↔ 64 位：位模式即结果，免指令
+                // 64 �?�?64 位：位模式即结果，免指令
                 if (fromIs64)
                 {
                     return true;
@@ -526,9 +526,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         }
 
         /// <summary>
-        /// 6e-M21 Phase 5b：涉及浮点的系统化转换。
-        /// 无符号 ≤32 位整数经 Movzx64 零扩展后按 long 转换（值非负语义正确）；
-        /// float↔double 用 FCvtSSD/FCvtDS；f32 目标/源全部带 single 标志走 ss 族指令。
+        /// 6e-M21 Phase 5b：涉及浮点的系统化转换�?
+        /// 无符�?�?2 位整数经 Movzx64 零扩展后�?long 转换（值非负语义正确）�?
+        /// float↔double �?FCvtSSD/FCvtDS；f32 目标/源全部带 single 标志�?ss 族指令�?
         /// </summary>
         private bool TryEmitFloatConversion(BoundConversionExpression node, LirVirtualRegister value, out LirVirtualRegister result)
         {
@@ -551,12 +551,12 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var singleTarget = to == TypeSymbol.Float;
             if (!(from.IsNumeric && !from.IsPlaceholder128) && from != TypeSymbol.Char && !(from is NamedTypeSymbol { TypeKind: TypeKind.Enum }))
             {
-                return false; // 字符串等走既有专用路径
+                return false; // 字符串等走既有专用路�?
             }
 
             var instructions = _currentFunction.Instructions;
 
-            // 6e-M21 Phase 5b：float → 整数（cvttss2si 截断；宽整型经 double 中转的 64 位路径）
+            // 6e-M21 Phase 5b：float �?整数（cvttss2si 截断；宽整型�?double 中转�?64 位路径）
             if (from == TypeSymbol.Float)
             {
                 if (to == TypeSymbol.Double)
@@ -583,7 +583,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     return true;
                 }
 
-                // 窄整型：先截断到 int32，再按槽内规范表示收窄
+                // 窄整型：先截断到 int32，再按槽内规范表示收�?
                 if (to == TypeSymbol.Int8 || to == TypeSymbol.Int16 ||
                     to == TypeSymbol.UInt8 || to == TypeSymbol.UInt16)
                 {
@@ -651,7 +651,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     var r = AllocateRegister(8);
                     if (from == TypeSymbol.UInt64)
                     {
-                        // 6e-M21 Phase 7：无符号精确转换（清 MSB + 补偿 2^63），支持 >2^63 大值
+                        // 6e-M21 Phase 7：无符号精确转换（清 MSB + 补偿 2^63），支持 >2^63 大�?
                         Add(instructions, new LirInstruction(LirOpCode.FCvtSI64U, r, LirOperand.Reg(value)));
                     }
                     else
@@ -674,7 +674,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                     return true;
                 }
 
-                // 有符号整数/enum → double
+                // 有符号整�?enum �?double
                 var signedResult = AllocateRegister(8);
                 Add(instructions, new LirInstruction(LirOpCode.FCvtSI, signedResult, LirOperand.Reg(value)));
                 result = signedResult;
@@ -696,7 +696,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.Movzx64, wide, LirOperand.Reg(value)));
                 if (to == TypeSymbol.Float)
                 {
-                    // u32 值域非负：零扩展后按无符号 long 路径精确转换到 f32
+                    // u32 值域非负：零扩展后按无符�?long 路径精确转换�?f32
                     var r4 = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.FCvtSI64U, r4, LirOperand.Reg(wide), LirOperand.None, 0, 0, true));
                     result = r4;
@@ -709,7 +709,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 return true;
             }
 
-            // 有符号整数/enum → float
+            // 有符号整�?enum �?float
             var fResult = AllocateRegister(4);
             Add(instructions, new LirInstruction(LirOpCode.FCvtSI, fResult, LirOperand.Reg(value), LirOperand.None, 0, 0, true));
             result = fResult;
@@ -723,7 +723,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             var from = node.Expression.Type;
             var to = node.Type;
 
-            // 6e-M19 M5-a：null 字面量 → 引用型——Const 0 即空引用，直通
+            // 6e-M19 M5-a：null 字面�?�?引用型——Const 0 即空引用，直�?
             if (from == TypeSymbol.Null)
             {
                 return value;
@@ -734,19 +734,19 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 return value;
             }
 
-            // M4：类/接口引用转换——同一指针表示，上转/下转均为直通（运行时不做类型检查）
+            // M4：类/接口引用转换——同一指针表示，上�?下转均为直通（运行时不做类型检查）
             if (from is NamedTypeSymbol { IsValueType: false } && to is NamedTypeSymbol { IsValueType: false })
             {
                 return value;
             }
 
-            // 6e-M21 Phase 5：数值↔数值系统化整数转换（命中即返回）
+            // 6e-M21 Phase 5：数值↔数值系统化整数转换（命中即返回�?
             if (TryEmitIntegerConversion(node, value, out var integerResult))
             {
                 return integerResult;
             }
 
-            // 6e-M21 Phase 5b：涉及 float/double 的系统化转换（命中即返回）
+            // 6e-M21 Phase 5b：涉�?float/double 的系统化转换（命中即返回�?
             if (TryEmitFloatConversion(node, value, out var floatResult))
             {
                 return floatResult;
@@ -820,7 +820,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             {
                 if (to == TypeSymbol.Int32)
                 {
-                    // 低 32 位截断
+                    // �?32 位截�?
                     var result = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.Trunc64, result, LirOperand.Reg(value)));
                     return result;
@@ -872,7 +872,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             {
                 if (from == TypeSymbol.Double)
                 {
-                    // 与 C# 语义一致：(byte) 3.9 == 3（先截断到 int 再取低 8 位）
+                    // �?C# 语义一致：(byte) 3.9 == 3（先截断�?int 再取�?8 位）
                     var truncated = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.FCvtSD, truncated, LirOperand.Reg(value)));
                     var result = AllocateRegister(4);
@@ -882,7 +882,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
                 if (from == TypeSymbol.Int32)
                 {
-                    // 无符号字节截断，与 C# (byte)300 == 44 语义一致
+                    // 无符号字节截断，�?C# (byte)300 == 44 语义一�?
                     var result = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(value), LirOperand.Constant(0xFF)));
                     return result;
@@ -965,7 +965,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 return register;
             }
 
-            return AllocateRegister(variable, ReturnSize(variable.Type));
+            return AllocateRegister(variable, TypeOf(variable.Type));
         }
 
         private int GetLabel(BoundLabel label)

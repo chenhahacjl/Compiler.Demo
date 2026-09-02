@@ -437,6 +437,35 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
             type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||
             (type is NamedTypeSymbol { TypeKind: TypeKind.Struct } && !type.IsPrimitiveValueType) || type is FunctionTypeSymbol;
+
+        /// <summary>类型符号 → LirType（Phase 2 LirType 落位）：宽度与运算语义由类型驱动。</summary>
+        private static LirType TypeOf(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Double)
+            {
+                return LirType.F64;
+            }
+
+            if (type == TypeSymbol.Float)
+            {
+                return LirType.F32;
+            }
+
+            if (type == TypeSymbol.Int64 || type == TypeSymbol.UInt64)
+            {
+                return LirType.I64;
+            }
+
+            // 引用/数组/字符串/函数值/任意 → 指针（逻辑宽 8 字节）
+            if (type == TypeSymbol.String || type == TypeSymbol.Any ||
+                type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||
+                (type is NamedTypeSymbol { TypeKind: TypeKind.Struct } && !type.IsPrimitiveValueType) || type is FunctionTypeSymbol)
+            {
+                return LirType.Addr;
+            }
+
+            return LirType.I32;
+        }
         /// <summary>M4：实例方法/实例构造含隐藏 this 首参（静态成员与顶层函数无）。</summary>
         private static bool HasThisParameter(FunctionSymbol function)
             => function.ContainingClass != null && !function.IsStatic;
@@ -502,21 +531,21 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             if (_closureClass != null && function.IsLambda)
             {
                 // lambda：隐藏 __env 首参（LirParameter 已在创建时前置）即环境对象
-                _closureRegister = AllocateRegister(8);
+                _closureRegister = AllocateRegister(LirType.Addr);
                 Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _closureRegister, LirOperand.Constant(0)));
             }
 
             if (HasThisParameter(function))
             {
                 // M4：隐藏 this = 参数区偏移 0（BoundThisExpression/BaseExpression 映射该寄存器）
-                _thisRegister = AllocateRegister(8);
+                _thisRegister = AllocateRegister(LirType.Addr);
                 Add(irFunction.Instructions, new LirInstruction(LirOpCode.InitParam, _thisRegister, LirOperand.Constant(0)));
             }
 
             foreach (var parameter in function.Parameters)
             {
                 // 6e-M23 R7：byref 形参寄存器持指针（槽宽 = 指针宽），点类型尺寸仅用于解引用读写
-                var register = AllocateRegister(parameter, ParamSlotSize(parameter));
+                var register = AllocateRegister(parameter, parameter.IsByRef ? LirType.Addr : TypeOf(parameter.Type));
                 if (function.Name == _irProgram.EntryFunctionName)
                 {
                     // 入口函数参数（main(args: string[])）由运行时从命令行构造，无需 ABI 传参。
@@ -531,7 +560,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 {
                     // 明确赋值防御兜底（设计 §5.3）：out 形参入口写穿透默认值，杜绝未赋值读到帧垃圾
                     var valueSize = ReturnSize(parameter.Type);
-                    var zero = AllocateRegister(valueSize);
+                    var zero = AllocateRegister(TypeOf(parameter.Type));
                     Add(irFunction.Instructions, new LirInstruction(LirOpCode.Const, zero, LirOperand.Constant(0)));
                     Add(irFunction.Instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(register), LirOperand.Reg(zero), 0, valueSize));
                 }
@@ -544,7 +573,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 var pointerSize = _isX64 ? 8 : 4;
 
                 var sizeRegister = EmitConst(envSize + pointerSize);
-                var envObject = AllocateRegister(8);
+                var envObject = AllocateRegister(LirType.Addr);
                 Add(irFunction.Instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeRegister)));
                 Add(irFunction.Instructions, new LirInstruction(LirOpCode.Call, envObject, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
 
@@ -586,8 +615,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         private LirVirtualRegister AllocateRegister(VariableSymbol? symbol, int size)
         {
-            var register = _allocator.Allocate();
-            _currentFunction.RegisterSizes.Add(register, size);
+            var register = _allocator.Allocate(size == 8 ? LirType.I64 : LirType.I32);
+            _currentFunction.Register(register);
             if (symbol != null)
             {
                 _variables.Add(symbol, register);
@@ -598,8 +627,27 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         private LirVirtualRegister AllocateRegister(int size)
         {
-            var register = _allocator.Allocate();
-            _currentFunction.RegisterSizes.Add(register, size);
+            var register = _allocator.Allocate(size == 8 ? LirType.I64 : LirType.I32);
+            _currentFunction.Register(register);
+            return register;
+        }
+
+        private LirVirtualRegister AllocateRegister(LirType type)
+        {
+            var register = _allocator.Allocate(type);
+            _currentFunction.Register(register);
+            return register;
+        }
+
+        private LirVirtualRegister AllocateRegister(VariableSymbol? symbol, LirType type)
+        {
+            var register = _allocator.Allocate(type);
+            _currentFunction.Register(register);
+            if (symbol != null)
+            {
+                _variables.Add(symbol, register);
+            }
+
             return register;
         }
 

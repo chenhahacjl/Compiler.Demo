@@ -94,8 +94,15 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             foreach (var fn in _program.Functions)
             {
                 sb.AppendLine($"=== {fn.Name} (ret={fn.ReturnSize}) ===");
-                foreach (var ins in fn.Instructions)
-                    sb.AppendLine("  " + ins.ToString());
+                foreach (var block in fn.Blocks)
+                {
+                    var labelText = block.Labels.Count > 0 ? string.Join("/", block.Labels) : "-";
+                    sb.AppendLine($"  bb:{labelText}");
+                    foreach (var ins in block.Instructions)
+                        sb.AppendLine("    " + ins.ToString());
+                    if (block.Terminator != null)
+                        sb.AppendLine("    " + LirPrinter.Format(block.Terminator));
+                }
             }
             var fn2 = _isX64 ? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-ir-x64.txt") : System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-ir-x86.txt");
             try { System.IO.File.WriteAllText(fn2, sb.ToString()); } catch { }
@@ -295,7 +302,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             _pendingCmp64Trichotomy = false;
 
             _slots = new Dictionary<LirVirtualRegister, int>();
-            var registers = new List<LirVirtualRegister>(function.RegisterSizes.Keys);
+            var registers = new List<LirVirtualRegister>(function.Registers);
             registers.Sort((x, y) => x.Id.CompareTo(y.Id));
             var slotCount = 0;
             foreach (var register in registers)
@@ -316,7 +323,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             if (_isX64)
             {
                 var frameBytes = 8 * (_slots.Count + 1);
-                if (function.Instructions.Any(i => i.OpCode == LirOpCode.LeaSlot))
+                if (FunctionUsesOpCode(function, LirOpCode.LeaSlot))
                 {
                     frameBytes += 0x80;
                 }
@@ -339,14 +346,14 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             else
             {
                 var frameBytes = 4 * (slotCount + 3);
-                if (function.Instructions.Any(i => i.OpCode == LirOpCode.LeaSlot))
+                if (FunctionUsesOpCode(function, LirOpCode.LeaSlot))
                 {
                     frameBytes += 0x80;
                 }
 
                 // 6e-M21 Phase 5b/7：x87 控制字专用槽（-frameBytes）+ u64→浮点常量槽（[-fb+8..+16)），
                 // 与变量槽/LeaSlot 缓冲隔离，避免恢复 fldcw 覆盖 fistp 写入的转换结果
-                if (function.Instructions.Any(i => i.OpCode == LirOpCode.FCvtSD64 || i.OpCode == LirOpCode.FCvtSI64U))
+                if (FunctionUsesOpCode(function, LirOpCode.FCvtSD64) || FunctionUsesOpCode(function, LirOpCode.FCvtSI64U))
                 {
                     frameBytes += 16;
                 }
@@ -355,9 +362,66 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 _frameBytes = frameBytes;
             }
 
-            foreach (var instruction in function.Instructions)
+            foreach (var block in function.Blocks)
             {
-                EmitInstruction(instruction);
+                foreach (var labelId in block.Labels)
+                {
+                    _a.MarkLabel(GetLabel(labelId));
+                }
+
+                foreach (var instruction in block.Instructions)
+                {
+                    EmitInstruction(instruction);
+                }
+
+                if (block.Terminator != null)
+                {
+                    EmitTerminator(block);
+                }
+            }
+        }
+
+        private static bool FunctionUsesOpCode(LirFunction function, LirOpCode opCode)
+        {
+            foreach (var block in function.Blocks)
+            {
+                foreach (var instruction in block.Instructions)
+                {
+                    if (instruction.OpCode == opCode)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private void EmitTerminator(LirBasicBlock block)
+        {
+            switch (block.Terminator!.Kind)
+            {
+                case LirTerminatorKind.Jump:
+                    _a.Jmp(GetLabel(block.Terminator!.TargetLabelId));
+                    break;
+
+                case LirTerminatorKind.CondJump:
+                    if (_pendingCmp64Trichotomy)
+                    {
+                        // x86 Cmp64 三路结果在 EAX：cmp eax,0 后按条件分支
+                        _a.Cmp(X64Size.Dword, X64Register.EAX, 0);
+                        _pendingCmp64Trichotomy = false;
+                    }
+
+                    _a.Jcc(MapCond(block.Terminator!.Cond), GetLabel(block.Terminator!.TargetLabelId));
+                    break;
+
+                case LirTerminatorKind.Return:
+                    EmitRet(block.Terminator!.TargetLabelId);
+                    break;
+
+                default:
+                    throw new Exception($"Unexpected terminator: {block.Terminator!.Kind}");
             }
         }
 

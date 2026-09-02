@@ -444,7 +444,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 Add(instr, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(ParamByteOffset(function, i, function.Parameters.Length)), LirOperand.Reg(paramRegisters[i])));
             }
 
-            LirVirtualRegister? result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(function.ReturnType));
+            LirVirtualRegister? result = function.ReturnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(function.ReturnType));
             Add(instr, new LirInstruction(LirOpCode.Call, result, LirOperand.Func(realIr), LirOperand.Constant(0)));
             Add(instr, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(totalBytes)));
 
@@ -502,7 +502,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
 
             var returnType = functionType.ReturnType;
-            LirVirtualRegister? result = returnType == TypeSymbol.Void ? null : AllocateRegister(ReturnSize(returnType));
+            LirVirtualRegister? result = returnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(returnType));
             Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(functionPointer)));
             Add(instructions, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(running)));
 

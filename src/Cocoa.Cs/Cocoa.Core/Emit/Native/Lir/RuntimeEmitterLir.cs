@@ -382,8 +382,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             private LirVirtualRegister NewReg(int size)
             {
-                var register = _allocator.Allocate();
-                _currentFunction!.RegisterSizes.Add(register, size);
+                var register = _allocator.Allocate(size == 8 ? LirType.I64 : LirType.I32);
+                _currentFunction!.Register(register);
                 return register;
             }
 

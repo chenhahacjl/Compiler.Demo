@@ -79,25 +79,111 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         public int Ordinal { get; }
     }
 
-    /// <summary>IR 函数：指令列表 + 虚拟寄存器宽度表。</summary>
+    /// <summary>IR 函数：指令列表 + 虚拟寄存器登记表。生成期写线性 Instructions；消费期经 Blocks 显式 CFG。</summary>
     internal sealed class LirFunction
     {
+        private List<LirBasicBlock>? _blocks;
+        private readonly List<LirVirtualRegister> _registers = new();
+
         public LirFunction(string name, IReadOnlyList<LirParameter> parameters)
         {
             Name = name;
             Parameters = parameters;
             Instructions = new List<LirInstruction>();
-            RegisterSizes = new Dictionary<LirVirtualRegister, int>();
         }
 
         public string Name { get; }
         public IReadOnlyList<LirParameter> Parameters { get; }
         public List<LirInstruction> Instructions { get; }
-        public Dictionary<LirVirtualRegister, int> RegisterSizes { get; }
         public int ReturnSize { get; set; }
         public int EndLabelId { get; set; }
 
-        public int RegisterSize(LirVirtualRegister register) => RegisterSizes[register];
+        /// <summary>函数内登记的全部虚拟寄存器（登记顺序 = 槽位分配顺序，与线性 LIR 一致）。</summary>
+        public IReadOnlyList<LirVirtualRegister> Registers => _registers;
+
+        /// <summary>显式基本块（Phase 2 显式 CFG），第一次访问时由线性 Instructions 建块缓存。</summary>
+        public IReadOnlyList<LirBasicBlock> Blocks => _blocks ??= BuildBlocks();
+
+        /// <summary>登记虚拟寄存器（幂等，槽位按首次登记顺序）。</summary>
+        public void Register(LirVirtualRegister register)
+        {
+            if (!_registers.Contains(register))
+            {
+                _registers.Add(register);
+            }
+        }
+
+        public int RegisterSize(LirVirtualRegister register) => register.Type.Size();
+
+        /// <summary>
+        /// 把线性指令流切成基本块：Label 开启新块（顺序相邻的纯标签折叠为本块别名）；
+        /// Jmp/Jcc/Ret 收束为本块 terminator（指令本身移出 Instructions，
+        /// 对应 label id 作为目标；Ret 的 EndLabelId 作为本块别名，令跳转 EndLabelId 与 Ret 同址）。
+        /// </summary>
+        private List<LirBasicBlock> BuildBlocks()
+        {
+            var blocks = new List<LirBasicBlock>();
+            var current = new LirBasicBlock();
+
+            foreach (var instruction in Instructions)
+            {
+                switch (instruction.OpCode)
+                {
+                    case LirOpCode.Label:
+                        if (current.Instructions.Count > 0 || current.Terminator != null || current.Labels.Count > 0)
+                        {
+                            blocks.Add(current);
+                            current = new LirBasicBlock();
+                        }
+
+                        current.AddLabel((int)instruction.A.Imm);
+                        break;
+
+                    case LirOpCode.Jmp:
+                        current.Terminator = LirTerminator.Jump((int)instruction.A.Imm);
+                        blocks.Add(current);
+                        current = new LirBasicBlock();
+                        break;
+
+                    case LirOpCode.Jcc:
+                        current.Terminator = LirTerminator.CondJump((LirCond)instruction.A.Imm, (int)instruction.B.Imm);
+                        blocks.Add(current);
+                        current = new LirBasicBlock();
+                        break;
+
+                    case LirOpCode.Ret:
+                        // EndLabelId 与原语义同址：Ret 前若已有指令（fall-through 代码）
+                        // 先原样收束该块，Ret 独立落入空 epilog 块，块首标 EndLabelId =
+                        // 原 Ret 指令位置（Jmp EndLabelId 与 Ret 汇聚，不重执行中间代码）。
+                        if (current.Instructions.Count > 0)
+                        {
+                            blocks.Add(current);
+                            current = new LirBasicBlock();
+                        }
+
+                        current.AddLabel((int)instruction.A.Imm);
+                        current.Terminator = LirTerminator.Return((int)instruction.A.Imm);
+                        blocks.Add(current);
+                        current = new LirBasicBlock();
+                        break;
+
+                    default:
+                        current.Instructions.Add(instruction);
+                        break;
+                }
+            }
+
+            if (current.Instructions.Count > 0 || current.Terminator != null || current.Labels.Count > 0)
+            {
+                blocks.Add(current);
+            }
+            else if (blocks.Count == 0)
+            {
+                blocks.Add(current);
+            }
+
+            return blocks;
+        }
     }
 
     /// <summary>导入规格：DLL 名 + 函数名（DLL 导出名，已含 entry 别名）+ x86 调用约定（cdecl 调用方清理）。x64 约定统一，Cdecl 忽略。</summary>

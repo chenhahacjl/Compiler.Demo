@@ -79,12 +79,46 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
             sb.AppendLine();
 
-            foreach (var instruction in function.Instructions)
+            var blockIndex = 0;
+            foreach (var block in function.Blocks)
             {
-                sb.Append("  ").AppendLine(Format(instruction));
+                sb.Append("bb").Append(blockIndex).Append(':');
+                foreach (var labelId in block.Labels)
+                {
+                    sb.Append(" #L").Append(labelId);
+                }
+
+                sb.AppendLine();
+
+                foreach (var instruction in block.Instructions)
+                {
+                    sb.Append("  ").AppendLine(Format(instruction));
+                }
+
+                if (block.Terminator != null)
+                {
+                    sb.Append("  ").AppendLine(Format(block.Terminator));
+                }
+
+                blockIndex++;
             }
 
             return sb.ToString();
+        }
+
+        public static string Format(LirTerminator terminator)
+        {
+            switch (terminator.Kind)
+            {
+                case LirTerminatorKind.Jump:
+                    return "jmp L" + terminator.TargetLabelId;
+                case LirTerminatorKind.CondJump:
+                    return "jcc " + terminator.Cond + ", L" + terminator.TargetLabelId;
+                case LirTerminatorKind.Return:
+                    return "ret L" + terminator.TargetLabelId;
+                default:
+                    return "terminator";
+            }
         }
 
         public static string Format(LirProgram program)

@@ -223,7 +223,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                         // 6e-M23 R7：byref 形参读 = 解引用（寄存器持指针）
                         if (variable is ParameterSymbol { IsByRef: true } byRefParameter)
                         {
-                            var loaded = AllocateRegister(ReturnSize(byRefParameter.Type));
+                            var loaded = AllocateRegister(TypeOf(byRefParameter.Type));
                             Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Load, loaded, LirOperand.Reg(value), LirOperand.None, 0, ReturnSize(byRefParameter.Type)));
                             return loaded;
                         }

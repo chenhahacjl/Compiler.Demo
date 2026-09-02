@@ -25,7 +25,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Lir
         [Fact]
         public void ToString_Shows_V_Prefix()
         {
-            var register = new LirVirtualRegister(7);
+            var register = new LirVirtualRegister(7, LirType.I32);
 
             Assert.Equal("v7", register.ToString());
         }
@@ -97,6 +97,70 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Lir
         private readonly LirVirtualRegisterAllocator _allocator = new LirVirtualRegisterAllocator();
 
         [Fact]
+        public void BuildBlocks_Splits_At_Label()
+        {
+            var function = new LirFunction("main", new List<LirParameter>());
+            function.Instructions.Add(new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(1)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Label, LirOperand.Label(3)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(2)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Ret, LirOperand.Label(0)));
+
+            var blocks = function.Blocks;
+
+            Assert.Equal(3, blocks.Count);
+            Assert.Equal(0, blocks[0].Labels.Count);
+            Assert.Single(blocks[0].Instructions);
+            Assert.Null(blocks[0].Terminator);
+            Assert.Equal(new[] { 3 }, blocks[1].Labels);
+            Assert.Single(blocks[1].Instructions);
+            Assert.Null(blocks[1].Terminator);
+            Assert.Equal(new[] { 0 }, blocks[2].Labels);
+            Assert.Empty(blocks[2].Instructions);
+            Assert.Equal(LirTerminatorKind.Return, blocks[2].Terminator!.Kind);
+            Assert.Equal(0, blocks[2].Terminator!.TargetLabelId);
+        }
+
+        [Fact]
+        public void BuildBlocks_Jcc_Becomes_CondJump_Terminator()
+        {
+            var function = new LirFunction("main", new List<LirParameter>());
+            function.Instructions.Add(new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(new LirVirtualRegister(0, LirType.I32)), LirOperand.Constant(0)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.Equal), LirOperand.Label(5)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Label, LirOperand.Label(5)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Ret, LirOperand.Label(0)));
+
+            var blocks = function.Blocks;
+
+            Assert.Equal(2, blocks.Count);
+            Assert.Single(blocks[0].Instructions);
+            Assert.Equal(LirTerminatorKind.CondJump, blocks[0].Terminator!.Kind);
+            Assert.Equal(LirCond.Equal, blocks[0].Terminator!.Cond);
+            Assert.Equal(5, blocks[0].Terminator!.TargetLabelId);
+            Assert.Equal(new[] { 5, 0 }, blocks[1].Labels);
+            Assert.Empty(blocks[1].Instructions);
+            Assert.Equal(LirTerminatorKind.Return, blocks[1].Terminator!.Kind);
+            Assert.Equal(0, blocks[1].Terminator!.TargetLabelId);
+        }
+
+        [Fact]
+        public void BuildBlocks_Ret_Gets_Own_Epilog_Block_With_EndLabel()
+        {
+            var function = new LirFunction("main", new List<LirParameter>());
+            function.Instructions.Add(new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(1)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.StoreRet, LirOperand.Reg(new LirVirtualRegister(0, LirType.I32))));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Ret, LirOperand.Label(7)));
+
+            var blocks = function.Blocks;
+
+            Assert.Equal(2, blocks.Count);
+            Assert.Equal(2, blocks[0].Instructions.Count);
+            Assert.Null(blocks[0].Terminator);
+            Assert.Equal(new[] { 7 }, blocks[1].Labels);
+            Assert.Empty(blocks[1].Instructions);
+            Assert.Equal(LirTerminatorKind.Return, blocks[1].Terminator!.Kind);
+        }
+
+        [Fact]
         public void Print_Const_Show_Op_And_Imm()
         {
             var text = new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(42)).ToString();
@@ -159,7 +223,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Lir
 
             Assert.Contains("FUNCTION main (p0)", text);
             Assert.Contains("const v0 1", text);
-            Assert.Contains("ret", text);
+            Assert.Contains("ret L0", text);
+            Assert.Contains("bb1: #L0", text);
         }
 
         [Fact]

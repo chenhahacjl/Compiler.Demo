@@ -121,30 +121,11 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
                 case LirOpCode.Setcc:
                     EmitSetcc(instruction);
                     break;
-                case LirOpCode.Label:
-                    _a.MarkLabel(GetLabel((int)instruction.A.Imm));
-                    break;
-                case LirOpCode.Jmp:
-                    _a.Jmp(GetLabel((int)instruction.A.Imm));
-                    break;
-                case LirOpCode.Jcc:
-                    if (_pendingCmp64Trichotomy)
-                    {
-                        // x86 Cmp64 三路结果在 EAX：cmp eax,0 后按条件分支
-                        _a.Cmp(X64Size.Dword, X64Register.EAX, 0);
-                        _pendingCmp64Trichotomy = false;
-                    }
-
-                    _a.Jcc(MapCond((LirCond)instruction.A.Imm), GetLabel((int)instruction.B.Imm));
-                    break;
                 case LirOpCode.Call:
                     EmitCall(instruction);
                     break;
                 case LirOpCode.CallReg:
                     EmitCallReg(instruction);
-                    break;
-                case LirOpCode.Ret:
-                    EmitRet(instruction);
                     break;
                 case LirOpCode.ReserveArgs:
                     EmitReserveArgs(instruction);
@@ -1291,10 +1272,8 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             }
         }
 
-        private void EmitRet(LirInstruction instruction)
+        private void EmitRet(int endLabelId)
         {
-            _a.MarkLabel(GetLabel((int)instruction.A.Imm));
-
             var returnSize = _currentFunction!.ReturnSize;
             if (returnSize > 0)
             {
