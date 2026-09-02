@@ -116,6 +116,71 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         public int RegisterSize(LirVirtualRegister register) => register.Type.Size();
 
         /// <summary>
+        /// 可选优化 pass（Phase 2 B3，默认不启用）：显式 CFG 上的保守常量传播。
+        /// 仅折叠「块内相邻」的 `Const dst, c; Mov x, dst` → `Const x, c`（dst 不再被后续读取），
+        /// 不触碰副作用指令（Call/Store/Load/Lea*/InitParam 等），保证行为等价。
+        /// </summary>
+        public void Optimize()
+        {
+            foreach (var block in Blocks)
+            {
+                var instructions = block.Instructions;
+                for (var i = 0; i < instructions.Count - 1; i++)
+                {
+                    var a = instructions[i];
+                    if (a.OpCode != LirOpCode.Const || a.Dst == null || a.Dst.Type != LirType.I32)
+                    {
+                        continue;
+                    }
+
+                    // 仅当 a 的 dst 只在紧随的 Mov 中出现一次、且其后无任何读取 → 折叠
+                    if (i + 1 < instructions.Count &&
+                        instructions[i + 1].OpCode == LirOpCode.Mov &&
+                        instructions[i + 1].A.Kind == LirOperandKind.Register &&
+                        ReferenceEquals(instructions[i + 1].A.Register, a.Dst) &&
+                        instructions[i + 1].Dst != null &&
+                        !RegisterReadLater(instructions, i + 2, a.Dst))
+                    {
+                        var mov = instructions[i + 1];
+                        var folded = new LirInstruction(
+                            LirOpCode.Const,
+                            mov.Dst,
+                            LirOperand.Constant(a.A.Imm),
+                            LirOperand.None,
+                            0,
+                            0);
+                        instructions[i] = folded;
+                        instructions.RemoveAt(i + 1);
+                    }
+                }
+            }
+        }
+
+        private static bool RegisterReadLater(List<LirInstruction> instructions, int startIndex, LirVirtualRegister register)
+        {
+            for (var i = startIndex; i < instructions.Count; i++)
+            {
+                var instruction = instructions[i];
+                if (instruction.Dst != null && ReferenceEquals(instruction.Dst, register))
+                {
+                    return true;
+                }
+
+                if (instruction.A.Kind == LirOperandKind.Register && ReferenceEquals(instruction.A.Register, register))
+                {
+                    return true;
+                }
+
+                if (instruction.B.Kind == LirOperandKind.Register && ReferenceEquals(instruction.B.Register, register))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// 把线性指令流切成基本块：Label 开启新块（顺序相邻的纯标签折叠为本块别名）；
         /// Jmp/Jcc/Ret 收束为本块 terminator（指令本身移出 Instructions，
         /// 对应 label id 作为目标；Ret 的 EndLabelId 作为本块别名，令跳转 EndLabelId 与 Ret 同址）。

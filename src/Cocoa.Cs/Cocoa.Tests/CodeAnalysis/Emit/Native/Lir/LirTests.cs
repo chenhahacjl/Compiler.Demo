@@ -161,6 +161,46 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Lir
         }
 
         [Fact]
+        public void Optimize_Folds_Adjacent_Const_Mov()
+        {
+            var function = new LirFunction("main", new List<LirParameter>());
+            var c = _allocator.Allocate();
+            var x = _allocator.Allocate();
+            function.Instructions.Add(new LirInstruction(LirOpCode.Const, c, LirOperand.Constant(42)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Mov, x, LirOperand.Reg(c)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.StoreRet, LirOperand.Reg(x)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Ret, LirOperand.Label(0)));
+
+            function.Optimize();
+
+            var block = function.Blocks[0];
+            Assert.Equal(2, block.Instructions.Count);
+            Assert.Equal(LirOpCode.Const, block.Instructions[0].OpCode);
+            Assert.Equal(x, block.Instructions[0].Dst);
+            Assert.Equal(42, block.Instructions[0].A.Imm);
+            Assert.Equal(LirOpCode.StoreRet, block.Instructions[1].OpCode);
+        }
+
+        [Fact]
+        public void Optimize_Does_Not_Fold_When_Register_Reused()
+        {
+            var function = new LirFunction("main", new List<LirParameter>());
+            var c = _allocator.Allocate();
+            var x = _allocator.Allocate();
+            var y = _allocator.Allocate();
+            function.Instructions.Add(new LirInstruction(LirOpCode.Const, c, LirOperand.Constant(42)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Mov, x, LirOperand.Reg(c)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Mov, y, LirOperand.Reg(c)));
+            function.Instructions.Add(new LirInstruction(LirOpCode.Ret, LirOperand.Label(0)));
+
+            function.Optimize();
+
+            var block = function.Blocks[0];
+            Assert.Equal(3, block.Instructions.Count);
+            Assert.Equal(LirOpCode.Const, block.Instructions[0].OpCode);
+        }
+
+        [Fact]
         public void Print_Const_Show_Op_And_Imm()
         {
             var text = new LirInstruction(LirOpCode.Const, _allocator.Allocate(), LirOperand.Constant(42)).ToString();

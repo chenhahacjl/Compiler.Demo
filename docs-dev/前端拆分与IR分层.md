@@ -293,13 +293,18 @@ FUNCTION main (p0)
 - **Phase 1b（S-5）：Parser 产出语言节点** ✅ 已完成（提交 `793e016`）—— `SyntaxTree.Root`/`IParser.ParseCompilationUnit`/`ParseHandler` 改抽象 `SyntaxNode`（语言中性化）；`CocoaParser`/`CSharpParser` 迁语言命名空间产出语言节点；Binder 副本切语言节点（`SSyntax` 别名 + 节点 kind 改语言枚举，token 判断保留共享 `SyntaxKind`）；消费者（Compilation/CocoaRepl/NativeImportValidator/DiagnosticBag）经语言钩子分派；`GreenNode.CreateTypedRed` 随迁语言库（CocoaGreenNodeFactory/CSharpGreenNodeFactory）；删除共享 75 节点类（`SyntaxNode.Kind` 改经抽象 `RawKind:int` 具名）；测试迁移 388 处引用。数千行同步切换，任一环失败破坏基线，已单独专项一次性落地、回归 41805 绿。
 - **语言专属 Lower（S-6）** ✅ 已完成：定稿「共享 Core 默认 Cocoa 语法」——range 形态（CO 次数循环，内部名 forrange）为 `BoundForRangeStatement`，`Lowerer.RewriteForRangeStatement` 保留共享 Core，C 风格 for 两语言绑定期各自脱糖为 while/if/goto（不建语言专属 Lower）。CO 获得双形态 for：C 风格 `for (init; cond; update)`（逗号多 init/update，`ForStatementSyntax` 结构升级为 `InitDeclaration`+`Initializers`+`Incrementors`，与 C# 共用 `SyntaxKind.ForStatement`=159）+ range `for N to M [step k]`（`ForRangeStatementSyntax`，`SyntaxKind.ForRangeStatement`=161，CocoaOnly；隐藏计数器 `for 1 to 10` 保留）。C# 仅 C 风格 for。共享 `SyntaxKind.ForRangeStatement` 槽沿用原 `CSStyleForStatement` 值（161）。回归 41808 绿。
 
-### Phase 2：LIR 改造（LLVM 式）
+### Phase 2：LIR 改造（LLVM 式） ✅ 已完成（2026-09-02，分 A/B1/B2-0/B2-1 子步合入）
 
 > **S-7 命名对照**：LIR 数据节点全族 `Ir*→Lir*`；`IrToAssembler→LirToAssembler`、`BoundTreeToIr→MirToLir`。以下待续项落盘后按新名实施。
 
-- 数据结构：`IrType→LirType` / `IrBasicBlock→LirBasicBlock` / `IrTerminator→LirTerminator`；`LirToAssembler` 改遍历 Blocks。
-- opcode 归并：删 Add64/SetArg/InitRegArg/ReserveArgs/StackCheck 等平台项，宽度由 `LirType` 驱动；ABI 下沉后端。
-- 优化 pass（可选）：显式 CFG 上的死代码/常量传播。
+- 数据结构：`LirType` / `LirBasicBlock` / `LirTerminator` 落位；`LirToAssembler` 改遍历 Blocks。✅
+  - **A（显式 CFG）**：`LirFunction.BuildBlocks()` 惰性切块（Label 折叠为块别名、Jmp/Jcc/Ret 收束为 `LirTerminator`、Ret 独立 epilog 块保持 EndLabelId 同址）；`LirToAssembler` 按块遍历（帧计算过滤改用 Blocks、EmitTerminator 分发）；Printer/dump 输出 `bbN:` 块形态。
+  - **B1（LirType 载体）**：`LirType`（I32/I64/F32/F64/Addr）+ `LirVirtualRegister.Type`；删 `RegisterSizes` 字典 → `LirFunction.Registers` 登记表，`RegisterSize` 由 `reg.Type.Size()` 派生；`TypeOf(TypeSymbol)` 映射；运行时参数类型化（`BeginFunctionTyped`：string/对象→Addr、double→F64、long→I64）。
+- opcode 归并：删 16 个 64 位整型平台项，宽度由 `LirType` 驱动。✅
+  - `Add64/Sub64/Imul64/And64/Or64/Xor64/Neg64/Not64/Shl64/Shr64/Sar64/Cmp64/Idiv64/Irem64/Udiv64/Urem64` → 对应基础 opcode；后端按 `dst.Type` 分派（x64 8 字节 qword；x86 I64 进位链/双 dword/shld-shrd/三路比较/运行时除法 helper；Addr/I32 单 dword 降级 32 位）。`_pendingCmp64Trichotomy` 状态机保持。
+- 优化 pass（可选）：显式 CFG 上的死代码/常量传播。✅ `LirFunction.Optimize()` 保守常量传播（块内相邻 `Const dst;Mov x,dst` 折叠，不触碰副作用指令，默认不接入管线）+ LirTests 单测锁定。
+- COCOA_DUMP_IR 断言测试（附加）✅：`LirDumpTests` 锁基本块形态、16 个 64 位 opcode 全部移除、归并算术。
+- **待续（独立工程）**：调用序列折叠（ReserveArgs/StoreArg/FreeArgs/SetArg/SetArg64 → Call 携带 ABI）与 StackCheck/SysCall 下沉后端——当前保留为显式指令，语义正确，属更深 ABI 抽象层。
 
 ### Phase 3：测试收口
 

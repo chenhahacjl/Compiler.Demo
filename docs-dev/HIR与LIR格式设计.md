@@ -85,8 +85,10 @@ entry:
 |---|---|---|
 | R1 | 落盘本文档 + `Registry` 短 ID + `CoaSerializer` 写侧 v3（**HIR 结构化，if/while/for 保留**） | `.coa` round-trip 全绿，SDK 重建 |
 | R2 | `CoaSerializer.Read` 读侧 v3（IdContext + 结构化节点语法） | round-trip 恒等测试 |
-| R3 | LIR `LirType`/`LirBasicBlock`/`LirTerminator` + `LirToAssembler` 遍历 Blocks | native 双平台 42/42 + 全量回归 |
+| R3 | LIR `LirType`/`LirBasicBlock`/`LirTerminator` + `LirToAssembler` 遍历 Blocks ✅ 已完成 | native 双平台 42/42 + 全量回归（41813 绿） |
 | R4 | `LirPrinter` LLVM 风格输出 + 参数下沉 | `COCOA_DUMP_IR` 可读性达标 |
+
+> **R3 完成记录（2026-09-02，S-7 后 Phase 2）**：`LirType`（I32/I64/F32/F64/Addr）+ 寄存器带类型；`LirBasicBlock`/`LirTerminator` 显式 CFG（`BuildBlocks` 惰性切块）；`LirToAssembler` 按块遍历。opcode 归并删 16 个 64 位平台项（`Add64..Urem64` → 基础 opcode，宽度由 LirType 驱动，x86 进位链/三路比较/运行时除法保持）。`COCOA_DUMP_IR` 输出 bb 块形态（`LirDumpTests` 锁定）。调用序列折叠（ReserveArgs/SetArg 等 → Call ABI）与 `LirPrinter` LLVM 风格输出留作 R4 后续。
 
 ---
 
