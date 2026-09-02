@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Runtime.CompilerServices;
 
 namespace Cocoa.CodeAnalysis.Symbols
 {
@@ -11,10 +12,13 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// <item>成员构造：字段/方法签名/属性/基类/接口经 <see cref="TypeSubstituter"/> 替换后填充</item>
     /// </list>
     /// 循环引用安全：缓存槽先于成员填充预留（`class Node&lt;T&gt; { _next: Node&lt;T&gt; }` 自引用不再递归）。
+    /// 缓存生命周期（1a/A8）：键表挂在泛型定义符号上（ConditionalWeakTable）——
+    /// 提交链复用同一 definition 对象，去重跨 submission 依然成立；而不同编译的同名定义
+    /// 是不同对象实例，不再命中彼此的陈旧符号（旧进程级静态字典的跨编译泄漏已消除）。
     /// </summary>
     public static class GenericTypeInstantiator
     {
-        private static readonly ConcurrentDictionary<string, NamedTypeSymbol> _cache = new();
+        private static readonly ConditionalWeakTable<NamedTypeSymbol, ConcurrentDictionary<string, NamedTypeSymbol>> _cache = new();
 
         /// <summary>
         /// 实例化（去重）：definition 须为泛型定义类，实参数须与类型参数数一致。
@@ -32,16 +36,17 @@ namespace Cocoa.CodeAnalysis.Symbols
                 throw new InvalidOperationException($"Generic type '{definition.Name}' takes {definition.TypeParameters.Length} type arguments but {arguments.Length} were supplied.");
             }
 
-            var key = CacheKey(definition, arguments);
+            var key = CacheKey(arguments);
+            var table = _cache.GetValue(definition, _ => new ConcurrentDictionary<string, NamedTypeSymbol>());
 
-            if (_cache.TryGetValue(key, out var existing))
+            if (table.TryGetValue(key, out var existing))
             {
                 return existing;
             }
 
             // 预留缓存槽（自引用字段类型替换时命中半成品实例，仅取身份不读成员）
             var instantiated = new InstantiatedTypeSymbol(MangledName(definition, arguments), definition.Namespace, definition.Visibility, definition, arguments);
-            _cache[key] = instantiated;
+            table[key] = instantiated;
 
             return instantiated;
         }
@@ -256,17 +261,20 @@ namespace Cocoa.CodeAnalysis.Symbols
             return type.Name;
         }
 
-        private static string CacheKey(NamedTypeSymbol definition, ImmutableArray<TypeSymbol> arguments)
+        private static string CacheKey(ImmutableArray<TypeSymbol> arguments)
         {
+            // key is argument encoding only: the table is already per-definition
+            // (ConditionalWeakTable); the old definition.GetHashCode() prefix was
+            // both unnecessary and a collision hazard
             var builder = new System.Text.StringBuilder();
-            builder.Append(definition.GetHashCode());
-            builder.Append('|');
-            builder.Append(definition.FullName);
-
-            foreach (var argument in arguments)
+            for (var i = 0; i < arguments.Length; i++)
             {
-                builder.Append('|');
-                builder.Append(Encode(argument));
+                if (i > 0)
+                {
+                    builder.Append('|');
+                }
+
+                builder.Append(Encode(arguments[i]));
             }
 
             return builder.ToString();

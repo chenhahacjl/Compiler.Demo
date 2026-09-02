@@ -23,12 +23,12 @@ namespace Cocoa.CodeAnalysis
 
         /// <summary>
         /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.Core.Managed</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
-        /// Core 不引用后端，发射能力经此委托接入）。
+        /// Core 不引用后端，发射能力经此委托接入）。volatile：注册发生在宿主启动、读取在编译线程（重构阶段 1a/A7）。
         /// </summary>
-        private static Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
+        private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
 
         /// <summary>native 后端发射委托（由 <c>Cocoa.Core.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。</summary>
-        private static Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>>? _nativeEmitter;
+        private static volatile Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
         internal static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
@@ -154,13 +154,16 @@ namespace Cocoa.CodeAnalysis
         {
             get
             {
-                if (_globalScope == null)
+                var scope = _globalScope;
+                if (scope != null)
                 {
-                    var globalScope = BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references, _codLibraries);
-                    Interlocked.CompareExchange(ref _globalScope, globalScope, null);
+                    return scope;
                 }
 
-                return _globalScope;
+                var globalScope = BindGlobalScope(IsScript, Previous?.GlobalScope, SyntaxTrees, _entryPointName, _references, _codLibraries);
+                Interlocked.CompareExchange(ref _globalScope, globalScope, null);
+                // CAS 后重读（与 SourceAssembly 同模式）：并发绑定结果竞争失败方返回胜者
+                return _globalScope!;
             }
         }
 
@@ -374,7 +377,8 @@ namespace Cocoa.CodeAnalysis
                 AddFunctionsToNamespace(tree, GlobalScope.Functions.Where(f => f.ContainingClass == null));
                 AddFunctionsToNamespace(tree, _codLibraries.SelectMany(l => l.Functions).Where(f => f.ContainingClass == null));
                 Interlocked.CompareExchange(ref _globalNamespace, tree, null);
-                return _globalNamespace;
+                // CAS 后重读（与 SourceAssembly 同模式）
+                return _globalNamespace!;
             }
         }
 
@@ -586,6 +590,13 @@ namespace Cocoa.CodeAnalysis
             }
 
             var program = GetProgram();
+
+            // 与 Evaluate/EmitCocoa 一致的门禁（重构阶段 1a/A3）：绑定/单态化产出的错误
+            // 不得进入发射——否则带错程序会被静默生成为 dll/exe
+            if (program.Diagnostics.HasErrors())
+            {
+                return diagnostics.Concat(program.Diagnostics).ToImmutableArray();
+            }
 
             // 6e-M22 C4-b：IL 后端已支持函数值（Func`N 委托映射），门禁移除；native 见 EmitNative
 
@@ -914,128 +925,14 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
+        /// <summary>
+        /// 绑定树直接子节点（重构阶段 1a/A1）：实现委托给 <see cref="BoundNodeChildren"/>，
+        /// 与 BoundTreeRewriter 的节点清单保持单一事实来源。旧手写 switch（120 行、漏
+        /// Throw/Try/ConstructorChain/ByRefArgument 四类节点）已删除。
+        /// </summary>
         internal static IEnumerable<BoundNode> BoundChildren(BoundNode node)
         {
-            switch (node.Kind)
-            {
-                case BoundNodeKind.BlockStatement:
-                    return ((BoundBlockStatement)node).Statements;
-                case BoundNodeKind.VariableDeclaration:
-                    return new[] { ((BoundVariableDeclaration)node).Initializer };
-                case BoundNodeKind.IfStatement:
-                    {
-                        var n = (BoundIfStatement)node;
-                        return n.ElseStatement == null
-                            ? new BoundNode[] { n.Condition, n.ThenStatement }
-                            : new BoundNode[] { n.Condition, n.ThenStatement, n.ElseStatement };
-                    }
-                case BoundNodeKind.WhileStatement:
-                    {
-                        var n = (BoundWhileStatement)node;
-                        return new BoundNode[] { n.Condition, n.Body };
-                    }
-                case BoundNodeKind.DoWhileStatement:
-                    {
-                        var n = (BoundDoWhileStatement)node;
-                        return new BoundNode[] { n.Body, n.Condition };
-                    }
-                case BoundNodeKind.ForRangeStatement:
-                    {
-                        var n = (BoundForRangeStatement)node;
-                        return n.Step == null
-                            ? new BoundNode[] { n.LowerBound, n.UpperBound, n.Body }
-                            : new BoundNode[] { n.LowerBound, n.UpperBound, n.Step, n.Body };
-                    }
-                case BoundNodeKind.ConditionalGotoStatement:
-                    return new[] { ((BoundConditionalGotoStatement)node).Condition };
-                case BoundNodeKind.ReturnStatement:
-                    {
-                        var n = (BoundReturnStatement)node;
-                        return n.Expression == null ? Array.Empty<BoundNode>() : new[] { n.Expression };
-                    }
-                case BoundNodeKind.ExpressionStatement:
-                    return new[] { ((BoundExpressionStatement)node).Expression };
-                case BoundNodeKind.SequencePointStatement:
-                    return new[] { ((BoundSequencePointStatement)node).Statement };
-                case BoundNodeKind.LiteralExpression:
-                    return Array.Empty<BoundNode>();
-                case BoundNodeKind.VariableExpression:
-                    return Array.Empty<BoundNode>();
-                case BoundNodeKind.AssignmentExpression:
-                    {
-                        var n = (BoundAssignmentExpression)node;
-                        return new[] { n.Expression };
-                    }
-                case BoundNodeKind.CompoundAssignmentExpression:
-                    {
-                        var n = (BoundCompoundAssignmentExpression)node;
-                        return new[] { n.Expression };
-                    }
-                case BoundNodeKind.UnaryExpression:
-                    return new[] { ((BoundUnaryExpression)node).Operand };
-                case BoundNodeKind.BinaryExpression:
-                    {
-                        var n = (BoundBinaryExpression)node;
-                        return new BoundNode[] { n.Left, n.Right };
-                    }
-                case BoundNodeKind.ConditionalExpression:
-                    {
-                        var n = (BoundConditionalExpression)node;
-                        return new BoundNode[] { n.Condition, n.WhenTrue, n.WhenFalse };
-                    }
-                case BoundNodeKind.CallExpression:
-                    return ((BoundCallExpression)node).Arguments;
-                case BoundNodeKind.ConversionExpression:
-                    return new[] { ((BoundConversionExpression)node).Expression };
-                case BoundNodeKind.ArrayCreationExpression:
-                    {
-                        var n = (BoundArrayCreationExpression)node;
-                        return new BoundNode[] { n.Length }.Concat(n.Initializers);
-                    }
-                case BoundNodeKind.ElementAccessExpression:
-                    {
-                        var n = (BoundElementAccessExpression)node;
-                        return new BoundNode[] { n.Target, n.Index };
-                    }
-                case BoundNodeKind.ElementAssignmentExpression:
-                    {
-                        var n = (BoundElementAssignmentExpression)node;
-                        return new BoundNode[] { n.Target, n.Expression };
-                    }
-                case BoundNodeKind.MemberAccessExpression:
-                    return new[] { ((BoundMemberAccessExpression)node).Target };
-                case BoundNodeKind.MemberCallExpression:
-                    {
-                        var n = (BoundMemberCallExpression)node;
-                        return new BoundNode[] { n.Expression }.Concat(n.Arguments);
-                    }
-                case BoundNodeKind.MemberAssignmentExpression:
-                    return new[] { ((BoundMemberAssignmentExpression)node).Expression };
-                case BoundNodeKind.FormatExpression:
-                    return new[] { ((BoundFormatExpression)node).Value };
-                case BoundNodeKind.InterpolatedStringExpression:
-                    return ((BoundInterpolatedStringExpression)node).Items.Select(i => i.Value);
-                case BoundNodeKind.IsExpression:
-                    return new[] { ((BoundIsExpression)node).Expression };
-                case BoundNodeKind.AsExpression:
-                    return new[] { ((BoundAsExpression)node).Expression };
-                case BoundNodeKind.StaticTypeExpression:
-                    return Array.Empty<BoundNode>();
-                case BoundNodeKind.FunctionValueExpression:
-                    {
-                        var n = (BoundFunctionValueExpression)node;
-                        return n.Receiver == null
-                            ? Array.Empty<BoundNode>()
-                            : new[] { n.Receiver };
-                    }
-                case BoundNodeKind.InvocationExpression:
-                    {
-                        var n = (BoundInvocationExpression)node;
-                        return new BoundNode[] { n.Callee }.Concat(n.Arguments);
-                    }
-                default:
-                    return Array.Empty<BoundNode>();
-            }
+            return BoundNodeChildren.Of(node);
         }
     }
 }

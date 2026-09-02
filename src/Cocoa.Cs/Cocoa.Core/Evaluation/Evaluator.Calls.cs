@@ -327,7 +327,18 @@ namespace Cocoa.CodeAnalysis.Evaluation
                         RedirectStandardError = true,
                     };
                     using var proc = System.Diagnostics.Process.Start(psi);
-                    proc!.WaitForExit();
+                    if (proc == null)
+                    {
+                        throw new InvalidOperationException($"LaunchProcess: failed to start '{path}'");
+                    }
+
+                    // drain both pipes (1a/A4): unread redirected output fills the 4KB pipe
+                    // buffer and deadlocks parent/child forever
+                    var stdoutTask = proc.StandardOutput.ReadToEndAsync();
+                    var stderrTask = proc.StandardError.ReadToEndAsync();
+                    proc.WaitForExit();
+                    _ = stdoutTask.Result;
+                    _ = stderrTask.Result;
                     return proc.ExitCode;
                 }
 

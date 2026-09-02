@@ -24,7 +24,14 @@ namespace Cocoa.CodeAnalysis.Binding
             switch (op.Kind)
             {
                 case BoundUnaryOperatorKind.Identity:
-                    return new BoundConstant(NumericBox.Box(resultType, NumericBox.ToSigned64(value)));
+                    // 与运行期语义一致（Evaluator.Expressions）：非整数类型（bool/string/enum 等）
+                    // 不做整型归位，原值直接返回，避免误入 ToSigned64 崩溃
+                    if (type.IsInteger && !type.IsPlaceholder128)
+                    {
+                        return new BoundConstant(NumericBox.Box(resultType, NumericBox.ToSigned64(value)));
+                    }
+
+                    return new BoundConstant(value);
                 case BoundUnaryOperatorKind.Negation:
                     if (type.IsInteger && !type.IsPlaceholder128)
                     {
@@ -215,8 +222,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(NumericBox.Box(type, unchecked(a * b)));
                     case BoundBinaryOperatorKind.Division: return b == 0 ? null : new BoundConstant(NumericBox.Box(type, a / b));
                     case BoundBinaryOperatorKind.Modulo: return b == 0 ? null : new BoundConstant(NumericBox.Box(type, a % b));
-                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(NumericBox.Box(type, a << ((int)b & 63)));
-                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(NumericBox.Box(type, a >> ((int)b & 63)));
+                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(NumericBox.Box(type, a << ((int)b & (type.BitWidth - 1))));
+                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1))));
                     case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(NumericBox.Box(type, a & b));
                     case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(NumericBox.Box(type, a | b));
                     case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(NumericBox.Box(type, a ^ b));
@@ -239,8 +246,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     case BoundBinaryOperatorKind.Multiplication: return new BoundConstant(NumericBox.Box(type, unchecked(a * b)));
                     case BoundBinaryOperatorKind.Division: return b == 0UL ? null : new BoundConstant(NumericBox.Box(type, a / b));
                     case BoundBinaryOperatorKind.Modulo: return b == 0UL ? null : new BoundConstant(NumericBox.Box(type, a % b));
-                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(NumericBox.Box(type, a << ((int)b & 63)));
-                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(NumericBox.Box(type, a >> ((int)b & 63)));
+                    case BoundBinaryOperatorKind.ShiftLeft: return new BoundConstant(NumericBox.Box(type, a << ((int)b & (type.BitWidth - 1))));
+                    case BoundBinaryOperatorKind.ShiftRight: return new BoundConstant(NumericBox.Box(type, a >> ((int)b & (type.BitWidth - 1))));
                     case BoundBinaryOperatorKind.BitwiseAnd: return new BoundConstant(NumericBox.Box(type, a & b));
                     case BoundBinaryOperatorKind.BitwiseOr: return new BoundConstant(NumericBox.Box(type, a | b));
                     case BoundBinaryOperatorKind.BitwiseXor: return new BoundConstant(NumericBox.Box(type, a ^ b));
@@ -277,70 +284,6 @@ namespace Cocoa.CodeAnalysis.Binding
 
             throw new Exception($"Unexpected float binary operator {op.Kind}");
         }
-
-        /// <summary>按类型位宽截断归位：有符号装箱 sbyte/short/int/long，无符号装箱 byte/ushort/uint/ulong。</summary>
-        private static object Box(TypeSymbol type, long value)
-        {
-            return type.IsSigned ? BoxSigned(type, value) : BoxUnsigned(type, unchecked((ulong)value));
-        }
-
-        private static object BoxSigned(TypeSymbol type, long value)
-        {
-            // 注意：各 arm 必须显式转 object——否则 switch 表达式的自然类型会被推断为公共类型 long，
-            // 导致 (int) 归位值被静默提升回 long（6e-M21 Phase2 踩坑记录）
-            return type.BitWidth switch
-            {
-                8 => (object)(sbyte)value,
-                16 => (object)(short)value,
-                32 => (object)(int)value,
-                _ => value,
-            };
-        }
-
-        private static object Box(TypeSymbol type, ulong value)
-        {
-            return type.IsSigned ? Box(type, unchecked((long)value)) : BoxUnsigned(type, value);
-        }
-
-        private static object BoxUnsigned(TypeSymbol type, ulong value)
-        {
-            // 同 BoxSigned：arm 显式转 object，避免公共类型推断为 ulong
-            return type.BitWidth switch
-            {
-                8 => (object)(byte)value,
-                16 => (object)(ushort)value,
-                32 => (object)(uint)value,
-                _ => value,
-            };
-        }
-
-        private static long ToSigned64(object value) => value switch
-        {
-            int i => i,
-            long l => l,
-            char c => c,
-            sbyte sb => sb,
-            short s => s,
-            uint u => unchecked((long)u),
-            byte b => b,
-            ushort us => us,
-            ulong ul => unchecked((long)ul),
-            _ => throw new System.InvalidOperationException($"Not an integer constant: {value}"),
-        };
-
-        private static ulong ToUnsigned64(object value) => value switch
-        {
-            uint u => u,
-            ulong ul => ul,
-            byte b => b,
-            ushort us => us,
-            int i => unchecked((ulong)i),
-            long l => unchecked((ulong)l),
-            char c => c,
-            sbyte sb => unchecked((ulong)sb),
-            short s => unchecked((ulong)s),
-            _ => throw new System.InvalidOperationException($"Not an integer constant: {value}"),
-        };
     }
 }
 

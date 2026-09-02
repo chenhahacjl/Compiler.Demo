@@ -47,7 +47,9 @@ namespace Cocoa.CodeAnalysis.Evaluation
                     var function = kv.Key;
                     var body = kv.Value;
 
-                    _functions.Add(function, body);
+                    // indexer overwrite instead of Add (1a/A5): same symbol reused across
+                    // two levels of the submission chain takes the latest submission
+                    _functions[function] = body;
                 }
 
                 current = current.Previous;
