@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Evaluation
+namespace Cocoa.CodeGen.Interpreter
 {
     /// <summary>
     /// 求值器 byref 实参单元（6e-M23 R5）：copy-in/copy-out 装箱。

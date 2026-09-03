@@ -1,10 +1,12 @@
 using Cocoa.CodeAnalysis.Binding;
+using Binding = Cocoa.CodeAnalysis.Binding;
+using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
-namespace Cocoa.CodeAnalysis.Evaluation
+namespace Cocoa.CodeGen.Interpreter
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>

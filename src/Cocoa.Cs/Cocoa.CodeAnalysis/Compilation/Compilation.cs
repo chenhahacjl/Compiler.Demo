@@ -38,6 +38,16 @@ namespace Cocoa.CodeAnalysis
         internal static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>> emitter)
             => _nativeEmitter = emitter;
 
+        /// <summary>
+        /// 解释器求值委托（4.1）：由 <c>Cocoa.CodeGen.Interpreter</c> 经 <see cref="RegisterInterpreterEvaluator"/> 注册；
+        /// Core 自身不引用后端。args 为 null 表示无参 REPL 求值，否则为 Main(string[]) 形态。
+        /// </summary>
+        private static volatile Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?>? _interpreterEvaluator;
+
+        /// <summary>注册解释器求值实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
+        internal static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
+            => _interpreterEvaluator = evaluator;
+
         public abstract Language Language { get; }
 
         /// <summary>
@@ -488,9 +498,10 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(program.Diagnostics, null);
             }
 
-            var evaluator = new Evaluator(program, variables);
+            var evaluator = _interpreterEvaluator
+                ?? throw new InvalidOperationException("解释器后端未注册（Cocoa.CodeGen.Interpreter 未初始化）");
 
-            var value = evaluator.Evaluate();
+            var value = evaluator(program, null, variables);
 
             return new EvaluationResult(program.Diagnostics, value);
         }
@@ -509,9 +520,10 @@ namespace Cocoa.CodeAnalysis
                 return new EvaluationResult(program.Diagnostics, null);
             }
 
-            var evaluator = new Evaluator(program, variables);
+            var evaluator = _interpreterEvaluator
+                ?? throw new InvalidOperationException("解释器后端未注册（Cocoa.CodeGen.Interpreter 未初始化）");
 
-            var value = evaluator.Evaluate(args);
+            var value = evaluator(program, args, variables);
 
             return new EvaluationResult(program.Diagnostics, value);
         }

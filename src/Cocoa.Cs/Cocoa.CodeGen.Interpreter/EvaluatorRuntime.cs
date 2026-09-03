@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Symbols;
 
-namespace Cocoa.CodeAnalysis.Evaluation
+namespace Cocoa.CodeGen.Interpreter
 {
     /// <summary>
     /// Evaluator 用户类实例的运行时表示（6e-M19 M3-c）：类符号 + 扁平化字段槽（基类在前、声明序）。

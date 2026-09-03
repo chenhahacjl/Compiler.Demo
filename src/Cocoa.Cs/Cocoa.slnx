@@ -9,6 +9,7 @@
   <Project Path="Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
   <Project Path="Cocoa.CodeGen.IL/Cocoa.CodeGen.IL.csproj" />
   <Project Path="Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
+<Project Path="Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
   <Project Path="Cocoa.ProjectSystem/Cocoa.ProjectSystem.csproj" />
   <Project Path="Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
   <Project Path="Cocoa.Compiler.CSharp/Cocoa.Compiler.CSharp.csproj" />

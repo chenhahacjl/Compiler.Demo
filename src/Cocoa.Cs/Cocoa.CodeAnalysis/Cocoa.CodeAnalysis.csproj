@@ -8,6 +8,7 @@
     <InternalsVisibleTo Include="Cocoa.CodeGen.PE" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.IL" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />
+    <InternalsVisibleTo Include="Cocoa.CodeGen.Interpreter" />
     <InternalsVisibleTo Include="Cocoa.ProjectSystem" />
   </ItemGroup>
 
