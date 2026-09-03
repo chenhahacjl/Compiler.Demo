@@ -5,7 +5,7 @@ using System.Text;
 using Cocoa.CodeAnalysis.Emit;
 using Xunit;
 
-using Cocoa.CodeAnalysis.Emit.Managed;
+using Cocoa.CodeGen.IL;
 namespace Cocoa.Tests.Compiler
 {
     public class AppHostTests

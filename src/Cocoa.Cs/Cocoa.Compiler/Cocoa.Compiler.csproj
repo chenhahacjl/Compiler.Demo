@@ -10,9 +10,9 @@
     <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
     <ProjectReference Include="..\Cocoa.Core.Cocoa\Cocoa.Core.Cocoa.csproj" />
     <ProjectReference Include="..\Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj" />
-    <ProjectReference Include="..\Cocoa.Core.PEFile\Cocoa.Core.PEFile.csproj" />
-    <ProjectReference Include="..\Cocoa.Core.Managed\Cocoa.Core.Managed.csproj" />
-    <ProjectReference Include="..\Cocoa.Core.Native\Cocoa.Core.Native.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeGen.IL\Cocoa.CodeGen.IL.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
     <ProjectReference Include="..\Cocoa.Builder\Cocoa.Builder.csproj" />
   </ItemGroup>
 

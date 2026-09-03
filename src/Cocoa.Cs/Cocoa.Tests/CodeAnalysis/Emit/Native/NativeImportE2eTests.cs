@@ -3,7 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit.Native;
+using Cocoa.CodeGen.Native;
+using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 

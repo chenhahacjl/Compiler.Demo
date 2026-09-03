@@ -8,7 +8,7 @@ using System.Reflection.PortableExecutable;
 using Cocoa.CodeAnalysis.Emit;
 using Xunit;
 
-using Cocoa.CodeAnalysis.Emit.Managed;
+using Cocoa.CodeGen.IL;
 using Cocoa.CodeAnalysis.Emit.IL;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {

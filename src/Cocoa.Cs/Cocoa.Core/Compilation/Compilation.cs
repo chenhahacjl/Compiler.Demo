@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.CocoaAssembly;
 using Cocoa.CodeAnalysis.Emit;
-using Cocoa.CodeAnalysis.Emit.Native;
+using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Evaluation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
@@ -22,12 +22,12 @@ namespace Cocoa.CodeAnalysis
         private readonly bool _linkCodDynamically;
 
         /// <summary>
-        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.Core.Managed</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
+        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.IL</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
         /// Core 不引用后端，发射能力经此委托接入）。volatile：注册发生在宿主启动、读取在编译线程（重构阶段 1a/A7）。
         /// </summary>
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
 
-        /// <summary>native 后端发射委托（由 <c>Cocoa.Core.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。</summary>
+        /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。</summary>
         private static volatile Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
@@ -605,7 +605,7 @@ namespace Cocoa.CodeAnalysis
                 .ToArray();
 
             var backendDiagnostics = _managedEmitter == null
-                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.Core.Managed 未初始化）"))
+                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.IL 未初始化）"))
                 : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false);
 
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印
@@ -620,7 +620,7 @@ namespace Cocoa.CodeAnalysis
         {
             if (_nativeEmitter == null)
             {
-                return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "native 后端未注册（Cocoa.Core.Native 未初始化）"));
+                return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "native 后端未注册（Cocoa.CodeGen.Native 未初始化）"));
             }
 
             return _nativeEmitter(this, moduleName, outputPath, platform);

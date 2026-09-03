@@ -3,8 +3,8 @@ using System.Buffers.Binary;
 using System.IO;
 using System.Linq;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit.Native;
-using Cocoa.CodeAnalysis.Emit.Native.PEFile;
+using Cocoa.CodeGen.Native;
+using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 

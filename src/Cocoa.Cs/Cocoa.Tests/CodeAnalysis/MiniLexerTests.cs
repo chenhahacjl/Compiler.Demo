@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Emit;
-using Cocoa.CodeAnalysis.Emit.Native;
+using Cocoa.CodeGen.Native;
+using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System;

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
-using Cocoa.CodeAnalysis.Emit.Native;
-using Cocoa.CodeAnalysis.Emit.Native.Lir;
+using Cocoa.CodeGen.Native;
+using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.Native.Lir;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.Lir

@@ -204,7 +204,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_Closure_Counter_IndependentInstances(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(ClosureCounterProgram, "c5_counter_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(ClosureCounterProgram, "c5_counter_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("1\n2\n1\n3\n", stdout);
         }
@@ -213,7 +213,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_Closure_ParameterCapture(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(ClosureParameterProgram, "c5_param_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(ClosureParameterProgram, "c5_param_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("15\n", stdout);
         }
@@ -224,15 +224,15 @@ function Main(): i32
 
         public static System.Collections.Generic.IEnumerable<object[]> GetNativePlatforms()
         {
-            yield return new object[] { new Cocoa.CodeAnalysis.Emit.Native.TargetPlatform(Cocoa.CodeAnalysis.Emit.Native.TargetOS.Windows, Cocoa.CodeAnalysis.Emit.Native.Architecture.X64) };
-            yield return new object[] { new Cocoa.CodeAnalysis.Emit.Native.TargetPlatform(Cocoa.CodeAnalysis.Emit.Native.TargetOS.Windows, Cocoa.CodeAnalysis.Emit.Native.Architecture.X86) };
+            yield return new object[] { new Cocoa.CodeGen.PE.TargetPlatform(Cocoa.CodeGen.PE.TargetOS.Windows, Cocoa.CodeGen.PE.Architecture.X64) };
+            yield return new object[] { new Cocoa.CodeGen.PE.TargetPlatform(Cocoa.CodeGen.PE.TargetOS.Windows, Cocoa.CodeGen.PE.Architecture.X86) };
         }
 
         [Theory]
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_LambdaVariable_Invoke(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(VariableInvokeProgram, "c4c_lambda_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(VariableInvokeProgram, "c4c_lambda_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("42\n", stdout);
         }
@@ -241,7 +241,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_MethodGroup_ConvertsAndInvokes(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(MethodGroupProgram, "c4c_methodgroup_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(MethodGroupProgram, "c4c_methodgroup_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("16\n", stdout);
         }
@@ -250,18 +250,18 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_HigherOrder_FunctionTypeParameter(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(HigherOrderProgram, "c4c_higher_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(HigherOrderProgram, "c4c_higher_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("42\n10\n", stdout);
         }
 
-        private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, Cocoa.CodeAnalysis.Emit.Native.TargetPlatform platform)
+        private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, Cocoa.CodeGen.PE.TargetPlatform platform)
         {
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create(syntaxTree);
             var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa_c4c_native_tests");
             System.IO.Directory.CreateDirectory(directory);
-            var suffix = platform.Arch == Cocoa.CodeAnalysis.Emit.Native.Architecture.X86 ? "-x86" : "";
+            var suffix = platform.Arch == Cocoa.CodeGen.PE.Architecture.X86 ? "-x86" : "";
             var exePath = System.IO.Path.Combine(directory, name + suffix + ".exe");
             var diagnostics = compilation.EmitNative(name, exePath, platform);
 
@@ -423,7 +423,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_Event_BasicSubscription(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(EventBasicProgram, "c5e_event_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(EventBasicProgram, "c5e_event_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("subscribed\nfiring\nhello\n", stdout);
         }
@@ -487,7 +487,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_Event_Multicast_SubscribeOrderAndRemove(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(EventMulticastProgram, "c5e_multi_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(EventMulticastProgram, "c5e_multi_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal(ExpectedMulticastOutput, stdout);
         }
@@ -563,7 +563,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_Event_EdgeCases_NoopDuplicateResubscribe(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(EventEdgeProgram, "c5e_edge_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(EventEdgeProgram, "c5e_edge_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal(ExpectedEdgeOutput, stdout);
         }
@@ -712,7 +712,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_DeclareDelegate_AssignInvoke(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(DelegateDeclareProgram, "c5d_declare_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateDeclareProgram, "c5d_declare_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("created\nhello\n", stdout);
         }
@@ -721,7 +721,7 @@ function Main(): i32
         [MemberData(nameof(GetNativePlatforms))]
         public void Native_Delegate_MethodGroup_AssignAndInvoke(object platform)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(DelegateMethodGroupProgram, "c5d_mg_nat", (Cocoa.CodeAnalysis.Emit.Native.TargetPlatform)platform);
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateMethodGroupProgram, "c5d_mg_nat", (Cocoa.CodeGen.PE.TargetPlatform)platform);
             Assert.Equal(0, exitCode);
             Assert.Equal("16\n", stdout);
         }

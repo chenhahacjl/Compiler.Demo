@@ -1,5 +1,6 @@
-using Cocoa.CodeAnalysis.Emit.Managed;
-using Cocoa.CodeAnalysis.Emit.Native;
+using Cocoa.CodeGen.IL;
+using Cocoa.CodeGen.Native;
+using Cocoa.CodeGen.PE;
 using System.Runtime.CompilerServices;
 
 namespace Cocoa.Tests

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeGen.PE</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Cocoa.Core" />
+    <InternalsVisibleTo Include="Cocoa.CodeGen.IL" />
+    <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />
+    <InternalsVisibleTo Include="Cocoa.Builder" />
+    <InternalsVisibleTo Include="cocoa" />
+    <InternalsVisibleTo Include="Cocoa.Tests" />
+  </ItemGroup>
+</Project>

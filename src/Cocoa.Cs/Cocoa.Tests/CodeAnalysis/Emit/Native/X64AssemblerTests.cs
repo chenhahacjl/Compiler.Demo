@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
+using Cocoa.CodeGen.Native.Assembler.X64;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.Native

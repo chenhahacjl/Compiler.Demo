@@ -2,10 +2,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Cocoa.CodeAnalysis.Emit.Native;
-using Cocoa.CodeAnalysis.Emit.Native.Assembler.X64;
-using Cocoa.CodeAnalysis.Emit.Native.PEFile;
-using Cocoa.CodeAnalysis.Emit.Native.Runtime.Windows.X64;
+using Cocoa.CodeGen.Native;
+using Cocoa.CodeGen.Native.Assembler.X64;
+using Cocoa.CodeGen.PE;
+using Cocoa.CodeGen.Native.Runtime.Windows.X64;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.Native
