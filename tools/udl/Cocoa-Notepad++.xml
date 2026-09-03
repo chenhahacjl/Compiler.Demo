@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <!-- ======================================================================
      Cocoa 语言 Notepad++ 用户自定义语言 (UDL 2.1)
-     生成依据: src/Cocoa.Cs/Cocoa.Core/CodeAnalysis/Syntax/SyntaxFacts.cs
-               src/Cocoa.Cs/Cocoa.Core/CodeAnalysis/Syntax/Lexer.cs
-               src/Cocoa.Cs/Cocoa.Core/CodeAnalysis/Symbols/BuiltinFunctions.cs
+     生成依据: src/Cocoa.Cs/Cocoa.CodeAnalysis/Syntax/SyntaxFacts.cs
+               src/Cocoa.Cs/Cocoa.CodeAnalysis/Syntax/LexerBase.cs
+               src/Cocoa.Cs/Cocoa.CodeAnalysis/Symbols/BuiltinFunctions.cs
      导入方法见同目录 README.md
      ====================================================================== -->
 <NotepadPlus>

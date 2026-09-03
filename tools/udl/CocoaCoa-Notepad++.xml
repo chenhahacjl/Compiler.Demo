@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <!-- ======================================================================
      CocoaCoa (.coa 程序集格式) Notepad++ 用户自定义语言 (UDL 2.1)
-     格式依据: src/Cocoa.Cs/Cocoa.Core/CodeAnalysis/Coa/CoaSerializer.cs
+     格式依据: src/Cocoa.Cs/Cocoa.CodeAnalysis/Serialization/CoaSerializer.cs
                (S 表达式文本格式：魔数 COCOA、三大节 symbols/bodies/manifest、
                 末行 (checksum sha256:<hex>)，无注释、无引号字符串)
      导入方法见同目录 README.md

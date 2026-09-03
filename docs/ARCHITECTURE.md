@@ -2,12 +2,18 @@
 
 > 版本：v1.0
 > 日期：2026-08-31
-> 状态：实施中（2026-09-02 前端分家已落地，见下文演进注释）
+> 状态：**已由重构计划取代（2026-09-03 阶段 0-5 落地完毕）**
 >
 > **演进说明（2026-09-02）**：本文描述的是「Parser 分离 + IR 分层」设计基线；前后端五层分家
 > （双 SyntaxKind / 双 Lexer / 双节点类 / 双 Binder / 双 Compilation）已落地，实现方案与现状
 > 以 [`docs-dev/前端拆分与IR分层.md`](../docs-dev/前端拆分与IR分层.md)（实施状态表）为准。
-> 下文 §1.1「当前状态」的目录统计为分家前快照，仅作历史基线。
+>
+> **收口说明（2026-09-03）**：重构计划（`docs-dev/重构执行计划.md`）已全部执行完毕。
+> 本文 §1 的项目名与目录树是**分家前快照，仅作历史基线**，请勿按此查找代码。
+> 现行工程结构与命名空间映射以 [`CODING.md`](../CODING.md) §1 为准；
+> 关键落地差异：Cocoa.Core → **Cocoa.CodeAnalysis**（前端共享层）、Emit/Native → **Cocoa.CodeGen.Native**
+> （LIR 统一发射，旧手工布局 Runtime.X64/X86 已删）、Evaluator → **Cocoa.CodeGen.Interpreter**、
+> Builder → **Cocoa.ProjectSystem**、双 Parser 按职责拆 partial（4.5）。
 
 ---
 
