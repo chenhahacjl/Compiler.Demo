@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.CocoaAssembly;
+using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Emit;
 using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Evaluation;
@@ -82,7 +82,7 @@ namespace Cocoa.CodeAnalysis
                         // 跨库符号合并复用实例（按依赖序加载；本轮最小实现：按传入序，refcod 拓扑留待完善）
                         var external = builder.ToImmutable();
                         var library = CoaSerializer.Load(reference, external);
-                        library.Name = CocoaAssembly.CoaAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference));
+                        library.Name = Cocoa.CodeAnalysis.Serialization.CoaAssemblyNaming.ManagedAssemblyName(Path.GetFileNameWithoutExtension(reference));
                         library.SourcePath = Path.GetFullPath(reference);
                         builder.Add(library);
                     }

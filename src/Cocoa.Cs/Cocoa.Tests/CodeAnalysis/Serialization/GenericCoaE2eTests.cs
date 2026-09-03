@@ -94,7 +94,7 @@ function Main(): void
             var dir = NewDir();
             var codPath = EmitGenericLibrary(dir);
 
-            var lib = global::Cocoa.CodeAnalysis.CocoaAssembly.CoaSerializer.Load(codPath);
+            var lib = global::Cocoa.CodeAnalysis.Serialization.CoaSerializer.Load(codPath);
             var def = lib.GenericDefinitions.Single();
             var ctorDef = def.Methods.Single(m => m.IsConstructor);
 

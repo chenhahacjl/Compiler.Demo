@@ -1,6 +1,6 @@
 using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.CocoaAssembly;
+using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
 using SSyntax = Cocoa.CodeAnalysis.Syntax;

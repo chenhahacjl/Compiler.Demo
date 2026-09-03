@@ -1,5 +1,5 @@
 using Cocoa.CodeAnalysis.Binding;
-using Cocoa.CodeAnalysis.CocoaAssembly;
+using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using System.CodeDom.Compiler;
 

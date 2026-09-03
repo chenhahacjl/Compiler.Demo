@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.CocoaAssembly
+namespace Cocoa.CodeAnalysis.Serialization
 {
     /// <summary>
     /// `.coa` 后端要求（依赖清单 `requires`）。消费方后端不匹配 → 编译期报错。
