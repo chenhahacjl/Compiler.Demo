@@ -366,7 +366,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
         /// M4：统一调用发射。receiver != null �?实例调用（this 为隐�?arg0，参数区前置 8 字节）；
         /// indirectFunction != null �?CallReg 虚分派（vtable 槽指针）。实参右→左求值（与既有顺序一致）�?
         /// </summary>
-        private LirVirtualRegister? EmitInvoke(
+        private LirVirtualRegister EmitInvoke(
             FunctionSymbol function,
             LirVirtualRegister? receiver,
             ImmutableArray<BoundExpression> arguments,

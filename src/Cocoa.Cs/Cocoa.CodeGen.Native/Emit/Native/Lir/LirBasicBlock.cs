@@ -24,9 +24,8 @@ namespace Cocoa.CodeGen.Native.Lir
 
         public List<LirInstruction> Instructions { get; }
 
-        public LirTerminator Terminator { get; set; }
-
-        public LirTerminator ReturnTerminator { get; set; }
+        /// <summary>块尾控制传输；块闭合（LirProgram 构建）时写入，此前为 null。</summary>
+        public LirTerminator? Terminator { get; set; }
 
         public void AddLabel(int labelId) => _labels.Add(labelId);
     }
