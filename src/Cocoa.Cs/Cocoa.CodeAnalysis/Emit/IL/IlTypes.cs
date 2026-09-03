@@ -196,7 +196,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
             System.Linq.Enumerable.SequenceEqual(other.ParameterTypes, ParameterTypes, ReferenceEqualityComparer.Instance) &&
             (other.DeclaringTypeSpec == null
                 ? DeclaringTypeSpec == null && other.DeclaringType!.Equals(DeclaringType)
-                : DeclaringTypeSpec.Equals(other.DeclaringTypeSpec));
+                : DeclaringTypeSpec != null && DeclaringTypeSpec.Equals(other.DeclaringTypeSpec));
 
         public override int GetHashCode() => System.HashCode.Combine(DeclaringType?.GetHashCode() ?? 0, DeclaringTypeSpec, Name, ReturnType.Kind, ParameterTypes.Count, IsStatic);
     }

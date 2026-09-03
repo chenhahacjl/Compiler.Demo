@@ -245,7 +245,8 @@ namespace Cocoa.CodeAnalysis
                     return new TextLocation(SyntaxTrees[0].Text, new TextSpan(0, 0));
                 }
 
-                return new TextLocation(null, new TextSpan(0, 0));
+                // 无语法树场景（如纯库引用编译）本就无 Text 可言；TextLocation.Text 允许 null 由消费方判空
+                return new TextLocation(null!, new TextSpan(0, 0));
             }
         }
 

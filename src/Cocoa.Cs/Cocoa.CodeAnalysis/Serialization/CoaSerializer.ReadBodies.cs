@@ -32,22 +32,22 @@ namespace Cocoa.CodeAnalysis.Serialization
                             statements.Add(ReadStatement(reader, context, labels));
                         }
 
-                        return new BoundBlockStatement(null, statements.ToImmutable());
+                        return new BoundBlockStatement(NoSyntax, statements.ToImmutable());
                     }
                 case "nop":
-                    return new BoundNopStatement(null);
+                    return new BoundNopStatement(NoSyntax);
                 case "vardecl":
                     {
                         var variable = ResolveVariable(reader.ExpectString(), context);
                         var initializer = ReadExpression(reader, context, labels);
-                        return new BoundVariableDeclaration(null, variable, initializer);
+                        return new BoundVariableDeclaration(NoSyntax, variable, initializer);
                     }
                 case "if":
                     {
                         var condition = ReadExpression(reader, context, labels);
                         var then = ReadStatement(reader, context, labels);
                         var elseStatement = ReadNullableStatement(reader, context, labels);
-                        return new BoundIfStatement(null, condition, then, elseStatement);
+                        return new BoundIfStatement(NoSyntax, condition, then, elseStatement);
                     }
                 case "while":
                     {
@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                         var body = ReadStatement(reader, context, labels);
                         var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
                         var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
-                        return new BoundWhileStatement(null, condition, body, breakLabel, continueLabel);
+                        return new BoundWhileStatement(NoSyntax, condition, body, breakLabel, continueLabel);
                     }
                 case "dowhile":
                     {
@@ -63,7 +63,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                         var condition = ReadExpression(reader, context, labels);
                         var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
                         var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
-                        return new BoundDoWhileStatement(null, body, condition, breakLabel, continueLabel);
+                        return new BoundDoWhileStatement(NoSyntax, body, condition, breakLabel, continueLabel);
                     }
                 case "for":
                     {
@@ -74,28 +74,28 @@ namespace Cocoa.CodeAnalysis.Serialization
                         var body = ReadStatement(reader, context, labels);
                         var breakLabel = GetLabel(labels, Unescape(reader.ExpectString()));
                         var continueLabel = GetLabel(labels, Unescape(reader.ExpectString()));
-                        return new BoundForRangeStatement(null, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
+                        return new BoundForRangeStatement(NoSyntax, variable, lowerBound, upperBound, step, body, breakLabel, continueLabel);
                     }
                 case "label":
-                    return new BoundLabelStatement(null, GetLabel(labels, Unescape(reader.ExpectString())));
+                    return new BoundLabelStatement(NoSyntax, GetLabel(labels, Unescape(reader.ExpectString())));
                 case "goto":
-                    return new BoundGotoStatement(null, GetLabel(labels, Unescape(reader.ExpectString())));
+                    return new BoundGotoStatement(NoSyntax, GetLabel(labels, Unescape(reader.ExpectString())));
                 case "cgoto":
                     {
                         var label = GetLabel(labels, Unescape(reader.ExpectString()));
                         var condition = ReadExpression(reader, context, labels);
                         var jumpIfTrue = ParseBoolWord(reader.ExpectString());
-                        return new BoundConditionalGotoStatement(null, label, condition, jumpIfTrue);
+                        return new BoundConditionalGotoStatement(NoSyntax, label, condition, jumpIfTrue);
                     }
                 case "return":
                     {
                         var expression = ReadNullableExpression(reader, context, labels);
-                        return new BoundReturnStatement(null, expression);
+                        return new BoundReturnStatement(NoSyntax, expression);
                     }
                 case "exprstmt":
                     {
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundExpressionStatement(null, expression);
+                        return new BoundExpressionStatement(NoSyntax, expression);
                     }
                 default:
                     throw new InvalidDataException($"Unknown statement kind '{kind}'");
@@ -143,45 +143,45 @@ namespace Cocoa.CodeAnalysis.Serialization
                         var type = ResolveTypeRef(reader.ExpectString(), context);
                         var encoded = reader.ExpectString();
                         var value = DecodeValue(encoded);
-                        return new BoundLiteralExpression(null, value, type);
+                        return new BoundLiteralExpression(NoSyntax, value, type);
                     }
                 case "var":
                     {
                         var variable = ResolveVariable(reader.ExpectString(), context);
-                        return new BoundVariableExpression(null, variable);
+                        return new BoundVariableExpression(NoSyntax, variable);
                     }
                 case "assign":
                     {
                         var variable = ResolveVariable(reader.ExpectString(), context);
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundAssignmentExpression(null, variable, expression);
+                        return new BoundAssignmentExpression(NoSyntax, variable, expression);
                     }
                 case "cassign":
                     {
                         var variable = ResolveVariable(reader.ExpectString(), context);
                         var op = ReadBinaryOperator(reader, context);
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundCompoundAssignmentExpression(null, variable, op, expression);
+                        return new BoundCompoundAssignmentExpression(NoSyntax, variable, op, expression);
                     }
                 case "unary":
                     {
                         var op = ReadUnaryOperator(reader, context);
                         var operand = ReadExpression(reader, context, labels);
-                        return new BoundUnaryExpression(null, op, operand);
+                        return new BoundUnaryExpression(NoSyntax, op, operand);
                     }
                 case "binary":
                     {
                         var op = ReadBinaryOperator(reader, context);
                         var left = ReadExpression(reader, context, labels);
                         var right = ReadExpression(reader, context, labels);
-                        return new BoundBinaryExpression(null, left, op, right);
+                        return new BoundBinaryExpression(NoSyntax, left, op, right);
                     }
                 case "cond":
                     {
                         var condition = ReadExpression(reader, context, labels);
                         var whenTrue = ReadExpression(reader, context, labels);
                         var whenFalse = ReadExpression(reader, context, labels);
-                        return new BoundConditionalExpression(null, condition, whenTrue, whenFalse);
+                        return new BoundConditionalExpression(NoSyntax, condition, whenTrue, whenFalse);
                     }
                 case "call":
                     {
@@ -193,20 +193,20 @@ namespace Cocoa.CodeAnalysis.Serialization
                             arguments.Add(ReadExpression(reader, context, labels));
                         }
 
-                        return new BoundCallExpression(null, function, arguments.ToImmutable());
+                        return new BoundCallExpression(NoSyntax, function, arguments.ToImmutable());
                     }
                 case "byrefarg":
                     {
                         // 6e-M23 R8锛歰ut/ref 瀹炲弬鍖呰锛堝唴灞備负鍙祴鍊?lvalue锛?
                         var modifier = reader.ExpectString();
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundByRefArgument(null, expression, isRef: modifier == "ref");
+                        return new BoundByRefArgument(NoSyntax, expression, isRef: modifier == "ref");
                     }
                 case "conv":
                     {
                         var type = ResolveTypeRef(reader.ExpectString(), context);
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundConversionExpression(null, type, expression);
+                        return new BoundConversionExpression(NoSyntax, type, expression);
                     }
                 case "arrnew":
                     {
@@ -219,7 +219,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                             initializers.Add(ReadExpression(reader, context, labels));
                         }
 
-                        return new BoundArrayCreationExpression(null, type, length, initializers.ToImmutable());
+                        return new BoundArrayCreationExpression(NoSyntax, type, length, initializers.ToImmutable());
                     }
                 case "objnew":
                     {
@@ -232,21 +232,21 @@ namespace Cocoa.CodeAnalysis.Serialization
                             arguments.Add(ReadExpression(reader, context, labels));
                         }
 
-                        return new BoundObjectCreationExpression(null, type, arguments.ToImmutable());
+                        return new BoundObjectCreationExpression(NoSyntax, type, arguments.ToImmutable());
                     }
                 case "elem":
                     {
                         var type = ResolveTypeRef(reader.ExpectString(), context);
                         var target = ReadExpression(reader, context, labels);
                         var index = ReadExpression(reader, context, labels);
-                        return new BoundElementAccessExpression(null, type, target, index);
+                        return new BoundElementAccessExpression(NoSyntax, type, target, index);
                     }
                 case "elemassign":
                     {
                         var type = ResolveTypeRef(reader.ExpectString(), context);
                         var target = (BoundElementAccessExpression)ReadExpression(reader, context, labels);
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundElementAssignmentExpression(null, type, target, expression);
+                        return new BoundElementAssignmentExpression(NoSyntax, type, target, expression);
                     }
                 case "memberacc":
                     {
@@ -266,7 +266,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                         }
 
                         var target = ReadExpression(reader, context, labels);
-                        return new BoundMemberAccessExpression(null, type, target, identifier, field);
+                        return new BoundMemberAccessExpression(NoSyntax, type, target, identifier, field);
                     }
                 case "memberassign":
                     {
@@ -291,7 +291,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                             throw new InvalidDataException($"Unknown field '{fieldName}' in memberassign");
                         }
 
-                        return new BoundMemberAssignmentExpression(null, target, field, value);
+                        return new BoundMemberAssignmentExpression(NoSyntax, target, field, value);
                     }
                 case "membercall":
                     {
@@ -307,29 +307,29 @@ namespace Cocoa.CodeAnalysis.Serialization
                             arguments.Add(ReadExpression(reader, context, labels));
                         }
 
-                        return new BoundMemberCallExpression(null, target, identifier, arguments.ToImmutable(), type, method);
+                        return new BoundMemberCallExpression(NoSyntax, target, identifier, arguments.ToImmutable(), type, method);
                     }
                 case "statictype":
                     {
                         var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
-                        return new BoundStaticTypeExpression(null, type);
+                        return new BoundStaticTypeExpression(NoSyntax, type);
                     }
                 case "this":
                     {
                         var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
-                        return new BoundThisExpression(null, type);
+                        return new BoundThisExpression(NoSyntax, type);
                     }
                 case "istype":
                     {
                         var targetType = ResolveTypeRef(reader.ExpectString(), context);
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundIsExpression(null, expression, targetType);
+                        return new BoundIsExpression(NoSyntax, expression, targetType);
                     }
                 case "astype":
                     {
                         var targetType = ResolveTypeRef(reader.ExpectString(), context);
                         var expression = ReadExpression(reader, context, labels);
-                        return new BoundAsExpression(null, expression, targetType);
+                        return new BoundAsExpression(NoSyntax, expression, targetType);
                     }
                 default:
                     throw new InvalidDataException($"Unknown expression kind '{kind}'");

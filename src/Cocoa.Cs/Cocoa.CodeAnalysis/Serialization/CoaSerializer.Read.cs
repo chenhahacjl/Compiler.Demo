@@ -816,7 +816,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 // extern 鍑芥暟鏃犲疄鐜帮細绌?body锛堜笌 Binder.BindProgram 涓€鑷达級
                 if (function.IsExtern)
                 {
-                    body = new BoundBlockStatement(null, ImmutableArray<BoundStatement>.Empty);
+                    body = new BoundBlockStatement(NoSyntax, ImmutableArray<BoundStatement>.Empty);
                 }
 
                 bodies[function] = body;

@@ -135,7 +135,7 @@ namespace Cocoa.CodeAnalysis
         /// 按本语言创建绑定器（S-4.3b/c 分派：返回窄接口 <see cref="IBinder"/>，Core 共享服务经接口消费；
         /// CO/C# 子类各自返回语言库 Binder 副本）。
         /// </summary>
-        internal abstract IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null);
+        internal abstract IBinder CreateBinder(bool isScript, Binding.BoundScope? parent, Symbols.FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, Symbols.TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> codLibraries = default, Symbols.NamespaceSymbol? globalNamespace = null);
 
         /// <summary>
         /// 按本语言构建单态化重绑函数体（S-4.3b 分派：Core <see cref="Binder.Monomorphizer"/> 经此调用，

@@ -36,6 +36,9 @@ namespace Cocoa.CodeAnalysis.Serialization
 
         // ---------------------------------------------------------------- write
 
+        /// <summary>.coa 反序列化不携带语法节点（设计如此，见类头注释）；nullable 单点豁免。</summary>
+        private static SyntaxNode NoSyntax => null!;
+
         public static void Write(TextWriter writer, CoaProgram program)
         {
             var registry = new Registry(program.Name);

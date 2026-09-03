@@ -34,7 +34,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             // 数组类型：独立 ArrayTypeSymbol；元素替换后重建
             if (type is ArrayTypeSymbol)
             {
-                return TypeSymbol.ArrayOf(Substitute(type.ElementType, map));
+                return TypeSymbol.ArrayOf(Substitute(type.ElementType!, map));
             }
 
             if (type is InstantiatedTypeSymbol instantiated)

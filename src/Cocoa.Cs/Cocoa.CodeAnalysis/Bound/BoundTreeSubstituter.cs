@@ -229,7 +229,7 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 if (method.ContainingClass == _definition)
                 {
-                    method = MapFunction(node.Method);
+                    method = MapFunction(method);
                 }
                 else if (expression.Type is NamedTypeSymbol receiverType && receiverType != _definition)
                 {
@@ -279,7 +279,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 return node;
             }
 
-            return new BoundMemberAssignmentExpression(node.Syntax, target, field, expression);
+            return new BoundMemberAssignmentExpression(node.Syntax, target, field!, expression);
         }
 
         protected override BoundExpression RewriteCallExpression(BoundCallExpression node)

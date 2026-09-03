@@ -61,7 +61,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public TypeSymbol? TryGetType(string fullName)
         {
             var dotIndex = fullName.LastIndexOf('.');
-            NamespaceSymbol ns;
+            NamespaceSymbol? ns;
             string simpleName;
             if (dotIndex < 0)
             {
