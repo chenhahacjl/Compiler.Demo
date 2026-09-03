@@ -27,13 +27,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public SyntaxToken InterfaceKeyword { get; }
         public SyntaxToken Identifier { get; }
 
-        /// <summary>娉涘瀷绫诲瀷鍙傛暟鍒楄〃 `&lt;T&gt;`锛?e-M20锛涢潪娉涘瀷鎺ュ彛涓?null锛夈€?/summary>
+        /// <summary>泛型类型参数列表 `&lt;T&gt;`（6e-M20；非泛型接口为 null）。</summary>
         public TypeParameterListSyntax? TypeParameters { get; }
 
-        /// <summary>鍩烘帴鍙ｅ垪琛紙`interface IBird: IAnimal, IFlyable` 鐨?`: IAnimal, IFlyable`锛夈€?/summary>
+        /// <summary>基接口列表（`interface IBird: IAnimal, IFlyable` 的 `: IAnimal, IFlyable`）。</summary>
         public ImmutableArray<TypeClauseSyntax> BaseTypes { get; }
 
-        /// <summary>娉涘瀷绾︽潫瀛愬彞鍒楄〃锛坄where T: ...`锛?e-M20锛夈€?/summary>
+        /// <summary>泛型约束子句列表（`where T: ...`，6e-M20）。</summary>
         public ImmutableArray<WhereClauseSyntax> WhereClauses { get; }
 
         public SyntaxToken OpenBraceToken { get; }

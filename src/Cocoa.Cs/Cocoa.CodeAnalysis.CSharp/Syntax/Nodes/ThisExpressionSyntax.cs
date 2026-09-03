@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// this 琛ㄨ揪寮忥細`this._x` / `this.Method()`锛堟樉寮忓疄渚嬪紩鐢級銆?
+    /// this 表达式：`this._x` / `this.Method()`（显式实例引用）。
     /// </summary>
     public sealed partial class ThisExpressionSyntax : ExpressionSyntax
     {

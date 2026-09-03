@@ -5,11 +5,11 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// delegate 澹版槑锛?e-M22锛夛細`.co` `delegate void H(Object,string)` / `.cs` `public delegate void H(object,string);`
-    /// Binder 鍚堟垚涓?sealed class extends MulticastDelegate + Invoke 鏂规硶锛堝鐢ㄥ叏閮ㄧ被鏈哄埗锛夈€?
-    /// 婧愬簭鍖栫豢寰€杩旓紙P0锛夛細绾㈣妭鐐逛繚鐣?`(`/`)`锛堝強 `.cs` 鍒嗗彿锛夛紝鐪佺暐杩斿洖绫诲瀷锛?co 闅愬惈 void锛夋椂
-    /// <see cref="ReturnType"/> 涓?null锛涙娊璞¤娉曟爲褰㈡€佺粡 <see cref="ReturnType.ColonToken"/> 鍒ゅ埆
-    /// 锛堟湁鍐掑彿 = .co 鍚庣疆杩斿洖绫诲瀷锛屾棤鍐掑彿 = .cs 鍓嶇疆杩斿洖绫诲瀷锛夈€?
+    /// delegate 声明（6e-M22）：`.co` `delegate void H(Object,string)` / `.cs` `public delegate void H(object,string);`
+    /// Binder 合成为 sealed class extends MulticastDelegate + Invoke 方法（复用全部类机制）。
+    /// 源序化绿往返（P0）：红节点保留 `(`/`)`（及 `.cs` 分号），省略返回类型（.co 隐含 void）时
+    /// <see cref="ReturnType"/> 为 null；抽象语法树形态经 <see cref="ReturnType.ColonToken"/> 判别
+    /// （有冒号 = .co 后置返回类型，无冒号 = .cs 前置返回类型）。
     /// </summary>
     public sealed partial class DelegateDeclarationSyntax : MemberSyntax
     {
@@ -29,7 +29,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
         public SyntaxToken DelegateKeyword { get; }
 
-        /// <summary>杩斿洖绫诲瀷锛堝彲绌猴細`.co` 闅愬惈 void 鏃剁渷鐣ワ級銆?/summary>
+        /// <summary>返回类型（可空：`.co` 隐含 void 时省略）。</summary>
         public TypeClauseSyntax? ReturnType { get; }
 
         public SyntaxToken Identifier { get; }
@@ -40,14 +40,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
         public SyntaxToken CloseParenToken { get; }
 
-        /// <summary>`.cs` 缁撳熬鍒嗗彿锛坄.co` 鏃狅級銆?/summary>
+        /// <summary>`.cs` 结尾分号（`.co` 无）。</summary>
         public SyntaxToken? SemicolonToken { get; }
 
-        /// <summary>鏄惁涓?C# 鍓嶇疆杩斿洖绫诲瀷褰㈡€侊紙`delegate int H(...)`锛?co 褰㈡€佽繑鍥炵被鍨嬪啋鍙峰悗缃垨鐪佺暐锛夈€?/summary>
+        /// <summary>是否为 C# 前置返回类型形态（`delegate int H(...)`；.co 形态返回类型冒号后置或省略）。</summary>
         private bool IsCStyle => ReturnType != null && ReturnType.ColonToken == null;
 
-        /// <summary>绾⑩啋缁挎簮搴忓寲锛氫繚璇?`GreenRoot.ToString() == 婧愮爜` 瀵?`.cs`/`.co` 涓ゅ舰鎬佹垚绔?
-        /// 锛?co锛歞elegate 鍚?( 鍙傛暟 ) [: 杩斿洖绫诲瀷]锛?cs锛歞elegate 杩斿洖绫诲瀷 鍚?( 鍙傛暟 ) ;锛夈€?/summary>
+        /// <summary>红→绿源序化：保证 `GreenRoot.ToString() == 源码` 对 `.cs`/`.co` 两形态成立。
+        /// （.co：delegate 名（参数）[: 返回类型]；.cs：delegate 返回类型 名（参数）;）。</summary>
         public override GreenNode ToGreen()
         {
             var slots = ImmutableArray.CreateBuilder<GreenNode?>();

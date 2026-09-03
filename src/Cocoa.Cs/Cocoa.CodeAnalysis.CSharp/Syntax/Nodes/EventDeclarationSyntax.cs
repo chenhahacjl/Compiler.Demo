@@ -1,12 +1,12 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 浜嬩欢澹版槑锛?e-M22 C5+锛夛細`event Click: (Object, string) -&gt; void`锛?co锛? `event Action&lt;...&gt; Click;`锛?cs锛夈€?
-    /// 缁戝畾鏈熼檷绾т负闅愯棌鍑芥暟鍊兼暟缁?+ add/remove 鏂规硶瀵癸紱瑙﹀彂 = 绫诲唴瑁稿悕璋冪敤銆?
+    /// 事件声明（6e-M22 C5+）：`event Click: (Object, string) -&gt; void`（.co）； `event Action&lt;...&gt; Click;`（.cs）。
+    /// 绑定期降级为隐藏函数值数组 + add/remove 方法对；触发 = 类内裸名调用。
     /// </summary>
     public sealed partial class EventDeclarationSyntax : MemberSyntax
     {

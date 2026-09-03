@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// is 绫诲瀷娴嬭瘯琛ㄨ揪寮忥紙6e-M19 M5-b锛夛細expr is TypeName 鈫?bool
+    /// is 类型测试表达式（6e-M19 M5-b）：expr is TypeName → bool
     /// </summary>
     public sealed partial class IsExpressionSyntax : ExpressionSyntax
     {

@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 浜屽厓琛ㄨ揪寮忚娉?
+    /// 二元表达式语法
     /// </summary>
     public sealed partial class BinaryExpressionSyntax : ExpressionSyntax
     {

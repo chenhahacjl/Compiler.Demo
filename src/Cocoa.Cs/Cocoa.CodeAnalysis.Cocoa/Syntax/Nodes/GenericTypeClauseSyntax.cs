@@ -1,12 +1,12 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 娉涘瀷绫诲瀷璇硶锛?e-M20锛夛細`List&lt;int&gt;` / `List&lt;List&lt;int&gt;&gt;`銆?
-    /// 鍩虹被 Identifier 鎵胯浇绫诲瀷鍚嶏紙涓?ArrayTypeClauseSyntax 鍚屾瀯锛夛紝TypeArguments 涓哄疄鍙傚垪琛ㄣ€?
+    /// 泛型类型语法（6e-M20）：`List&lt;int&gt;` / `List&lt;List&lt;int&gt;&gt;`。
+    /// 基类 Identifier 承载类型名（与 ArrayTypeClauseSyntax 同构），TypeArguments 为实参列表。
     /// </summary>
     public sealed partial class GenericTypeClauseSyntax : TypeClauseSyntax
     {

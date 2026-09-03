@@ -1,8 +1,8 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
-    /// <summary>default 瀛愬彞锛歚default : 浣揱銆?/summary>
+    /// <summary>default 子句：`default : 体`。</summary>
     public sealed partial class DefaultClauseSyntax : SwitchSectionSyntax
     {
         internal DefaultClauseSyntax(SyntaxTree syntaxTree, SyntaxToken defaultKeyword, SyntaxToken colonToken, StatementSyntax body)

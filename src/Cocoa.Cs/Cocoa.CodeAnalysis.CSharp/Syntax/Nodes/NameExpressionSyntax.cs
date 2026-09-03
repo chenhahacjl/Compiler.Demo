@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 鍚嶇О琛ㄨ揪寮忚娉?
+    /// 名称表达式语法
     /// </summary>
     public sealed partial class NameExpressionSyntax : ExpressionSyntax
     {

@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 鏁扮粍绫诲瀷璇硶锛坕nt[] / int[][]锛孍lementType 閫掑綊宓屽锛?
+    /// 数组类型语法（int[] / int[][]，ElementType 递归嵌套）。
     /// </summary>
     public sealed partial class ArrayTypeClauseSyntax : TypeClauseSyntax
     {

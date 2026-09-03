@@ -1,10 +1,10 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
-    /// <summary>switch 璇彞锛歚switch (value) { case ...: ... default: ... }`銆?/summary>
+    /// <summary>switch 语句：`switch (value) { case ...: ... default: ... }`。</summary>
     public sealed partial class SwitchStatementSyntax : StatementSyntax
     {
         internal SwitchStatementSyntax(SyntaxTree syntaxTree, SyntaxToken keyword, SyntaxToken? openParenToken, ExpressionSyntax expression, SyntaxToken? closeParenToken, SyntaxToken openBraceToken, ImmutableArray<SwitchSectionSyntax> sections, SyntaxToken closeBraceToken)

@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 鎷彿琛ㄨ揪寮忚娉?
+    /// 括号表达式语法
     /// </summary>
     public sealed partial class ParenthesizedExpressionSyntax : ExpressionSyntax
     {

@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// as 绫诲瀷杞崲琛ㄨ揪寮忥紙6e-M19 M5-b锛夛細expr as TypeName 鈫?TypeName锛堝け璐ュ緱 null锛?
+    /// as 类型转换表达式（6e-M19 M5-b）：expr as TypeName → TypeName（失败得 null）。
     /// </summary>
     public sealed partial class AsExpressionSyntax : ExpressionSyntax
     {

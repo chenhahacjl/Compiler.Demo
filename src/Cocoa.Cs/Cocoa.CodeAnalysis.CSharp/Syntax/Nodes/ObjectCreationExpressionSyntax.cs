@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 瀵硅薄鍒涘缓琛ㄨ揪寮忥細`new Foo(args)` / 娉涘瀷 `new List&lt;int&gt;(args)`锛?e-M20锛夈€?
+    /// 对象创建表达式：`new Foo(args)` / 泛型 `new List&lt;int&gt;(args)`（6e-M20）。
     /// </summary>
     public sealed partial class ObjectCreationExpressionSyntax : ExpressionSyntax
     {
@@ -25,7 +25,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public SyntaxToken NewKeyword { get; }
         public SyntaxToken Identifier { get; }
 
-        /// <summary>娉涘瀷绫诲瀷瀹炲弬鍒楄〃锛坄new List<int>(鈥?`锛涢潪娉涘瀷鍒涘缓涓?null锛?e-M20锛夈€?/summary>
+        /// <summary>泛型类型实参列表（`new List<int>(…)`；非泛型创建为 null；6e-M20）。</summary>
         public TypeArgumentListSyntax? TypeArguments { get; }
 
         public SyntaxToken OpenParenthesisToken { get; }

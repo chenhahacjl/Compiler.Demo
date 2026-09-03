@@ -479,7 +479,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // WriteInt(value:4)：BuildInt + WriteStr（不换行�?
+            // WriteInt(value:4)：BuildInt + WriteStr（不换行）
             // ------------------------------------------------------------------
 
             private void EmitWriteInt()

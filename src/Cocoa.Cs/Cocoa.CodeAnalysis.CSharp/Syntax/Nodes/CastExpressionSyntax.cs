@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 绫诲瀷杞崲琛ㄨ揪寮忚娉?( type ) expr
+    /// 类型转换表达式语法 ( type ) expr
     /// </summary>
     public sealed partial class CastExpressionSyntax : ExpressionSyntax
     {

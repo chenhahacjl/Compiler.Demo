@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 琛ㄨ揪寮忚娉?
+    /// 表达式语法
     /// </summary>
     public abstract class ExpressionSyntax : CSharpSyntaxNode
     {

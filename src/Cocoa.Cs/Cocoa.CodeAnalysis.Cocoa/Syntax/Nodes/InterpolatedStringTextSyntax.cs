@@ -1,8 +1,8 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
-    /// <summary>鎻掑€煎瓧绗︿覆涓殑瀛楅潰閲忔枃鏈锛堝悎鎴?StringToken锛孷alue 涓哄凡澶勭悊杞箟鍚庣殑鏂囨湰锛夈€?/summary>
+    /// <summary>插值字符串中的字面量文本段（合成 StringToken，Value 为已处理转义后的文本）。</summary>
     public sealed partial class InterpolatedStringTextSyntax : InterpolatedStringContentSyntax
     {
         internal InterpolatedStringTextSyntax(SyntaxTree syntaxTree, SyntaxToken textToken)

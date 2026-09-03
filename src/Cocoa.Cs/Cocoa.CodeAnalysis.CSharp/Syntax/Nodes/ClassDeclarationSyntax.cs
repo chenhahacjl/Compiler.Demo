@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -27,16 +27,16 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public SyntaxToken ClassKeyword { get; }
         public SyntaxToken Identifier { get; }
 
-        /// <summary>鏄惁 struct锛堝€肩被鍨嬶級锛歝lassKeyword 涓?struct 鍏抽敭瀛楁椂鎴愮珛锛?e-M26锛夈€?/summary>
+        /// <summary>是否 struct（值类型）：classKeyword 为 struct 关键字时成立（6e-M26）。</summary>
         public bool IsStruct => ClassKeyword.Kind == (SyntaxKind)CSharpSyntaxKind.StructKeyword;
 
-        /// <summary>娉涘瀷绫诲瀷鍙傛暟鍒楄〃 `&lt;T, U&gt;`锛?e-M20锛涢潪娉涘瀷绫讳负 null锛夈€?/summary>
+        /// <summary>泛型类型参数列表 `&lt;T, U&gt;`（6e-M20；非泛型类为 null）。</summary>
         public TypeParameterListSyntax? TypeParameters { get; }
 
-        /// <summary>鍩虹被鍨嬪垪琛紙`class Foo: Bar, IA, IB` 鐨?`: ...`锛涢涓潪鎺ュ彛 = 鍩虹被锛屽叾浣欓』涓烘帴鍙ｏ級銆?/summary>
+        /// <summary>基类型列表（`class Foo: Bar, IA, IB` 的 `: ...`；首个非接口 = 基类，其余须为接口）。</summary>
         public ImmutableArray<TypeClauseSyntax> BaseTypes { get; }
 
-        /// <summary>娉涘瀷绾︽潫瀛愬彞鍒楄〃锛坄where T: ...`锛?e-M20锛夈€?/summary>
+        /// <summary>泛型约束子句列表（`where T: ...`，6e-M20）。</summary>
         public ImmutableArray<WhereClauseSyntax> WhereClauses { get; }
 
         public SyntaxToken OpenBraceToken { get; }

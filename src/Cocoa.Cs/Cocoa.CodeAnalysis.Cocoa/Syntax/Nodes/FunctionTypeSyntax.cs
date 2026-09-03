@@ -5,9 +5,9 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 鍑芥暟绫诲瀷锛?e-M22 C2锛夛細`(A, B) -&gt; R`锛堜粎 `.co`锛沗.cs` 璧?Func/Action/Predicate 瀹舵棌锛夈€?
+    /// 函数类型（6e-M22 C2）：`(A, B) -&gt; R`（仅 `.co`；`.cs` 走 Func/Action/Predicate 家族）。
     /// 缁ф壙 TypeClauseSyntax 浠ユ棤缂濊繘鍏ュ叏閮ㄧ被鍨嬩綅缃紙鍙傛暟/杩斿洖/鍙橀噺/娉涘瀷瀹炲弬锛夆€斺€?
-    /// 鍩虹被 Identifier 涓哄悎鎴愮己澶?token锛屾秷璐规柟鎸?Kind == FunctionType 鍏堣鍒嗘祦銆?
+    /// 基类 Identifier 为合成缺失 token，消费方按 Kind == FunctionType 先行分流。
     /// </summary>
     public sealed partial class FunctionTypeSyntax : TypeClauseSyntax
     {

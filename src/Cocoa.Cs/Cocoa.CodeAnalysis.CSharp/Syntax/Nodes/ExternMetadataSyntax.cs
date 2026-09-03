@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
     /// extern 鍏冩暟鎹瓙鍙ワ細`extern(entry = MessageBoxA, charset = ansi)`锛堟嫭鍙峰彲閫夛紝鍛藉悕閿€硷紝閫楀彿鍒嗛殧锛夈€?
-    /// 6e-M17 Step 5锛欴LL 瀵煎嚭鍚嶅埆鍚嶏紙entry锛? 缂栫爜鏍煎紡锛坈harset锛夈€?
+    /// 6e-M17 Step 5：DLL 导出名别名（entry）、编码格式（charset）。
     /// </summary>
     public sealed partial class ExternMetadataSyntax : CSharpSyntaxNode
     {

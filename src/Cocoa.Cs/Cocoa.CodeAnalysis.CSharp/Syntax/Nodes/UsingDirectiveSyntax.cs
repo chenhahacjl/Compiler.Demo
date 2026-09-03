@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// using 瀵煎叆锛?e-M18锛夛細`using MyLib` / `using static MyClass` / `using Alias = MyLib`
+    /// using 导入（6e-M18）：`using MyLib` / `using static MyClass` / `using Alias = MyLib`
     /// </summary>
     public sealed partial class UsingDirectiveSyntax : MemberSyntax
     {
@@ -25,7 +25,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public SyntaxToken? StaticKeyword { get; }
         public SyntaxToken? AliasToken { get; }
 
-        /// <summary>鍒悕瀵煎叆鐨?`=` 璁板彿锛坄using Alias = Foo.Bar`锛汸0 璧蜂繚鐣欙紝缁垮線杩斿畬鏁达級銆?/summary>
+        /// <summary>别名导入的 `=` 记号（`using Alias = Foo.Bar`；P0 起保留，绿往返完整）。</summary>
         public SyntaxToken? EqualsToken { get; }
         public ImmutableArray<SyntaxToken> NameTokens { get; }
 

@@ -1,13 +1,13 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// import 鍧楄妭鐐癸細`import kernel32.dll { static extern ... }`锛堢被鎴愬憳锛?e-M17 Step 4锛夈€?
-    /// 鍧楀唴鍙厑璁?`static` extern 鍑芥暟澹版槑锛孌LL 褰掑睘鐢卞潡澹版槑寮忕粦瀹氥€?
-    /// 鍙€夊潡绾?charset 閿細`import user32.dll charset = unicode`锛?e-M17 Step 5锛夈€?
+    /// import 块节点：`import kernel32.dll { static extern ... }`（类成员，6e-M17 Step 4）。
+    /// 块内只允许 `static` extern 函数声明，DLL 归属由块声明式绑定。
+    /// 可选块级 charset 键：`import user32.dll charset = unicode`（6e-M17 Step 5）。
     /// </summary>
     public sealed partial class ImportBlockSyntax : MemberSyntax
     {
@@ -33,10 +33,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
         public SyntaxToken? OpenParenthesisToken { get; }
 
-        /// <summary>鍧楃骇 charset 閿紙`charset`锛夛紝6e-M17 Step 5锛涚己鐪?null銆?/summary>
+        /// <summary>块级 charset 键（`charset`），6e-M17 Step 5；缺失为 null。</summary>
         public SyntaxToken? CharsetKey { get; }
 
-        /// <summary>鍧楃骇 charset 鍊硷紙`ansi` / `unicode` / `auto`锛夛紝6e-M17 Step 5锛涚己鐪?null锛? unicode锛夈€?/summary>
+        /// <summary>块级 charset 值（`ansi` / `unicode` / `auto`），6e-M17 Step 5；缺失为 null（默认 unicode）。</summary>
         public SyntaxToken? CharsetValue { get; }
 
         public SyntaxToken? CloseParenthesisToken { get; }

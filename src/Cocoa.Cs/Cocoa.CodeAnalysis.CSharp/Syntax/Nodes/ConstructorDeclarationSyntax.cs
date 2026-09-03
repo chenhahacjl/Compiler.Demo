@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -31,7 +31,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         /// <summary>鏋勯€犻摼鍏抽敭瀛楋紙`: base` / `: this`锛沶ull = 鏃犳樉寮忛摼锛夈€?/summary>
         public SyntaxToken? InitializerKeyword { get; }
 
-        /// <summary>鏋勯€犻摼瀹炲弬銆?/summary>
+        /// <summary>构造链实参。</summary>
         public SeparatedSyntaxList<ExpressionSyntax> InitializerArguments { get; }
 
         public BlockStatementSyntax Body { get; }

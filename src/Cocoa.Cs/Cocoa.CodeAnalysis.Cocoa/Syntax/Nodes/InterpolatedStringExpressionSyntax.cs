@@ -1,10 +1,10 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
-    /// <summary>鎻掑€煎瓧绗︿覆琛ㄨ揪寮?<c>$"..."</c>锛氬瓧闈㈤噺鏂囨湰娈典笌鎻掑€兼礊锛?c>{expr}</c>锛変氦閿欍€?/summary>
+    /// <summary>插值字符串表达式 <c>$&quot;...&quot;</c>：字面量文本段与插值洞（<c>{expr}</c>）交替。</summary>
     public sealed partial class InterpolatedStringExpressionSyntax : ExpressionSyntax
     {
         internal InterpolatedStringExpressionSyntax(SyntaxTree syntaxTree, SyntaxToken interpolatedToken, ImmutableArray<InterpolatedStringContentSyntax> contents)

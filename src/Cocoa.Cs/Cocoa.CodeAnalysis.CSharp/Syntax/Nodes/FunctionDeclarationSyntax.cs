@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public SyntaxToken? FunctionKeyword { get; }
         public SyntaxToken Identifier { get; }
 
-        /// <summary>娉涘瀷鏂规硶绫诲瀷鍙傛暟鍒楄〃 `&lt;T&gt;`锛?e-M20锛涢潪娉涘瀷鏂规硶涓?null锛夈€?/summary>
+        /// <summary>泛型方法类型参数列表 `&lt;T&gt;`（6e-M20；非泛型方法为 null）。</summary>
         public TypeParameterListSyntax? TypeParameters { get; }
 
         public SyntaxToken OpenParenthesisToken { get; }
@@ -35,10 +35,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         public TypeClauseSyntax? Type { get; }
         public BlockStatementSyntax? Body { get; }
 
-        /// <summary>extern 鍏冩暟鎹瓙鍙ワ紙`extern(entry=鈥? charset=鈥?`锛?e-M17 Step 5锛夛紱闈?extern 鍑芥暟涓?null銆?/summary>
+        /// <summary>extern 元数据子句（`extern(entry=…, charset=…)`，6e-M17 Step 5）；非 extern 函数为 null。</summary>
         public ExternMetadataSyntax? ExternMetadata { get; }
 
-        /// <summary>娉涘瀷绾︽潫瀛愬彞鍒楄〃锛坄where T: ...`锛?e-M20锛夈€?/summary>
+        /// <summary>泛型约束子句列表（`where T: ...`，6e-M20）。</summary>
         public ImmutableArray<WhereClauseSyntax> WhereClauses { get; }
 
         public override IEnumerable<SyntaxNode> GetChildren()

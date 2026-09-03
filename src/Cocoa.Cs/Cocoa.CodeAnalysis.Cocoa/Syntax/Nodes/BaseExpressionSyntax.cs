@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// base 琛ㄨ揪寮忥細`base.Method()`锛堥潪铏氳皟鐢ㄥ熀绫绘垚鍛橈級銆?
+    /// base 表达式：`base.Method()`（非虚调用基类成员）。
     /// </summary>
     public sealed partial class BaseExpressionSyntax : ExpressionSyntax
     {

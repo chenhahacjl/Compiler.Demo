@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 娉涘瀷绫诲瀷瀹炲弬鍒楄〃锛?e-M20锛夛細`&lt;int, string&gt;`锛堣皟鐢?鎴愬憳璋冪敤/瀵硅薄鍒涘缓鐨勬樉寮忓疄鍙傦紝棣栫増浠呮樉寮忥級銆?
+    /// 泛型类型实参列表（6e-M20）：`&lt;int, string&gt;`（调用/成员调用/对象创建的显式实参，首版仅显式）。
     /// </summary>
     public sealed partial class TypeArgumentListSyntax : CSharpSyntaxNode
     {

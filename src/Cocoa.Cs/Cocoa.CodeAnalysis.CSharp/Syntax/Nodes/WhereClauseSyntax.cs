@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 娉涘瀷绾︽潫瀛愬彞锛?e-M20锛夛細`where T: IComparable&lt;T&gt;` / `where T: Base, IDisposable, new()`銆?
+    /// 泛型约束子句（6e-M20）：`where T: IComparable&lt;T&gt;` / `where T: Base, IDisposable, new()`。
     /// </summary>
     public sealed partial class WhereClauseSyntax : CSharpSyntaxNode
     {

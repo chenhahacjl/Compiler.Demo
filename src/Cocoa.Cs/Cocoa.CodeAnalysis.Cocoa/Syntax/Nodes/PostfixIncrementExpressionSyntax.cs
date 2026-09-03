@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 鍚庣紑鑷/鑷噺琛ㄨ揪寮?`x++` / `x--`
+    /// 后缀自增/自减表达式 `x++` / `x--`
     /// </summary>
     public sealed partial class PostfixIncrementExpressionSyntax : ExpressionSyntax
     {

@@ -3,9 +3,9 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// Lambda 表达式（6e-M22 C2）：`(x: int, y: int) =&gt; expr | {  }`、`() => expr`＀
-    /// `.cs` 鏂硅█杩藉姞鍏嶆嫭鍙峰崟鍙?`x => expr`锛圤penParenthesisToken 涓?null锛夈€?
-    /// 绑定圀C3/C4 接入——C2 阶段 Binder 门禁报明确诊断、
+    /// Lambda 表达式（6e-M22 C2）：`(x: int, y: int) =&gt; expr | { ... }`、`() => expr` 等。
+    /// `.cs` 方言追加免括号单参 `x => expr`（OpenParenthesisToken 为 null）。
+    /// 绑定期 C3/C4 接入——C2 阶段 Binder 门禁报明确诊断。
     /// </summary>
     public sealed partial class LambdaExpressionSyntax : ExpressionSyntax
     {
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
         public override CocoaSyntaxKind Kind => CocoaSyntaxKind.LambdaExpression;
 
-        /// <summary>鍙傛暟鍒楄〃寮€鎷彿锛沶ull = 鍏嶆嫭鍙峰崟鍙傚舰鎬侊紙浠?.cs锛夈€?/summary>
+        /// <summary>参数列表开括号；null = 免括号单参形态（仅 .cs）。</summary>
         public SyntaxToken? OpenParenthesisToken { get; }
 
         public SeparatedSyntaxList<ParameterSyntax> Parameters { get; }

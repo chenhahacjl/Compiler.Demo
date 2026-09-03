@@ -1,8 +1,8 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
-    /// <summary>鎻掑€兼礊 <c>{expr[, alignment][: format]}</c>銆?/summary>
+    /// <summary>插值洞 <c>{expr[, alignment][: format]}</c>。</summary>
     public sealed partial class InterpolationSyntax : InterpolatedStringContentSyntax
     {
         internal InterpolationSyntax(SyntaxTree syntaxTree, ExpressionSyntax expression, SyntaxToken? commaToken, ExpressionSyntax? alignment, SyntaxToken? colonToken, SyntaxToken? formatToken)
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         /// <summary><c>,</c>锛堝榻愬紩瀵肩锛夈€?/summary>
         public SyntaxToken? CommaToken { get; }
 
-        /// <summary>瀵归綈瀹藉害锛堟湁绗﹀彿鏁存暟瀛楅潰閲忥級銆?/summary>
+        /// <summary>对齐宽度（有符号整数字面量）。</summary>
         public ExpressionSyntax? Alignment { get; }
 
         /// <summary><c>:</c>锛堟牸寮忓紩瀵肩锛夈€?/summary>

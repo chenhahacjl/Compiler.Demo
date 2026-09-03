@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 娉涘瀷绫诲瀷鍙傛暟鍒楄〃锛?e-M20锛夛細`&lt;T, U&gt;`銆?
+    /// 泛型类型参数列表（6e-M20）：`&lt;T, U&gt;`。
     /// </summary>
     public sealed partial class TypeParameterListSyntax : CocoaSyntaxNode
     {

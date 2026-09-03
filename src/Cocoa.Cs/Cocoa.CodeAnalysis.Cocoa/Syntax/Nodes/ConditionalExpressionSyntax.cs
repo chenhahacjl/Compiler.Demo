@@ -1,9 +1,9 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 涓夊厓琛ㄨ揪寮?`cond ? a : b`锛堝彸缁撳悎锛?
+    /// 三元表达式 `cond ? a : b`（右结合）。
     /// </summary>
     public sealed partial class ConditionalExpressionSyntax : ExpressionSyntax
     {

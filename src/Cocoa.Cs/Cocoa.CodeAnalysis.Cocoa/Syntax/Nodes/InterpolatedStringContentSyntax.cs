@@ -1,8 +1,8 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
-    /// <summary>鎻掑€煎瓧绗︿覆鍐呭鍩虹被锛氬瓧闈㈤噺鏂囨湰娈垫垨鎻掑€兼礊銆?/summary>
+    /// <summary>插值字符串内容基类：字面量文本段或插值洞。</summary>
     public abstract partial class InterpolatedStringContentSyntax : CocoaSyntaxNode
     {
         private protected InterpolatedStringContentSyntax(SyntaxTree syntaxTree)

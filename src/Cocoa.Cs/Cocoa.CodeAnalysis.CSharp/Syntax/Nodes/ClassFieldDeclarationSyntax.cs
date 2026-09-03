@@ -1,11 +1,11 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 绫诲瓧娈靛０鏄庤妭鐐癸細`private _x: int`锛堟垨 C# 寮?`private int _x;`锛屽彲甯﹀垵濮嬪寲鍣?`= expr`锛夈€?
+    /// 类字段声明节点：`private _x: int`（或 C# 系 `private int _x;`，可带初始化器 `= expr`）。
     /// </summary>
     public sealed partial class ClassFieldDeclarationSyntax : MemberSyntax
     {
