@@ -127,11 +127,6 @@ namespace Cocoa.CodeGen.IL
         public IlMethodRef ConvertToString { get; }
         public IlMethodRef ConvertToStringDouble { get; }
         public IlMethodRef StringCtorCharArray { get; }
-
-        // 6e-G7 ④：文件 IO / 环境
-        public IlMethodRef EnvironmentGetVariable { get; }
-        public IlMethodRef EnvironmentCurrentDirectory { get; }
-        public IlMethodRef EnvironmentSetCurrentDirectory { get; }
         public IlMethodRef StringChars { get; }
         public IlMethodRef StringLength { get; }
         public IlMethodRef StringSubstring { get; }
