@@ -8,4 +8,8 @@
     <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
   </ItemGroup>
 
-</Project>
+
+  <PropertyGroup>
+    <!-- Nullable 棘轮（5.3）：本项目尚未清零，沿用压制；清零后删除本组即可纳入棘轮 -->
+    <NoWarn>$(NoWarn);CS8600;CS8602;CS8603;CS8604;CS8605;CS8618;CS8620;CS8625</NoWarn>
+  </PropertyGroup></Project>

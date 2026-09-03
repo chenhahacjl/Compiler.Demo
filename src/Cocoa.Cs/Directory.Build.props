@@ -13,7 +13,7 @@
 			逐批偿还时从 NoWarn 移除对应编号，即可把该类别纳入棘轮。
 		-->
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<NoWarn>$(NoWarn);CS8602;CS8603;CS8604;CS8605;CS8600;CS8618;CS8620;CS8625;CS0108;CA1416;xUnit2013;xUnit1026</NoWarn>
+		<NoWarn>$(NoWarn);CS0108;CA1416;xUnit2013;xUnit1026</NoWarn>
 	</PropertyGroup>
 
 </Project>
