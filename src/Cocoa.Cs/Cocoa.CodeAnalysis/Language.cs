@@ -12,9 +12,9 @@ namespace Cocoa.CodeAnalysis
     /// 语言（M2 设计 X）：对标 Roslyn 语言前端抽象。每门语言一个实例，承载
     /// 名字 / 内建类型名词汇 / 解析器工厂 / 参数拼写策略；
     /// 语言专属实现以 <see cref="Language"/> 子类落入各自程序集。
-    /// C# 方言全套位于独立程序集 Cocoa.Core.CSharp（<see cref="Cocoa.CodeAnalysis.CSharpLanguage"/>）；
-    /// CO 宿主语言 CocoaLanguage（Y-A3-4）迁入独立程序集 Cocoa.Core.Cocoa，
-    /// 核心经 <see cref="Cocoa"/> 反射装载并触达之（默认解析路径依赖 Cocoa.Core.Cocoa 在应用目录）。
+    /// C# 方言全套位于独立程序集 Cocoa.CodeAnalysis.CSharp（<see cref="Cocoa.CodeAnalysis.CSharpLanguage"/>）；
+    /// CO 宿主语言 CocoaLanguage（Y-A3-4）迁入独立程序集 Cocoa.CodeAnalysis.Cocoa，
+    /// 核心经 <see cref="Cocoa"/> 反射装载并触达之（默认解析路径依赖 Cocoa.CodeAnalysis.Cocoa 在应用目录）。
     /// 新语言 = 新增 Language 子类（含解析器），核心零改动（设计 X §6.3）。
     /// </summary>
     public abstract class Language
@@ -31,10 +31,10 @@ namespace Cocoa.CodeAnalysis
 
         public string Name { get; }
 
-        /// <summary>Cocoa 宿主语言（默认，`.co`）：实例位于 Cocoa.Core.Cocoa，此处经注册表 / 反射装载解析。</summary>
+        /// <summary>Cocoa 宿主语言（默认，`.co`）：实例位于 Cocoa.CodeAnalysis.Cocoa，此处经注册表 / 反射装载解析。</summary>
         public static Language Cocoa => _cocoa ??= CreateCocoa();
 
-        /// <summary>C# 方言（`.cs`）：实例位于 Cocoa.Core.CSharp，此处经注册表 / 反射装载解析。</summary>
+        /// <summary>C# 方言（`.cs`）：实例位于 Cocoa.CodeAnalysis.CSharp，此处经注册表 / 反射装载解析。</summary>
         public static Language CSharp => _csharp ??= CreateCSharp();
 
         private static Language CreateCocoa()
@@ -44,8 +44,8 @@ namespace Cocoa.CodeAnalysis
                 return language;
             }
 
-            // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.Core.Cocoa；反射装载并触达 Instance（静态初始化经 base("cocoa") 注册）。
-            var assembly = System.Reflection.Assembly.Load("Cocoa.Core.Cocoa");
+            // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.CodeAnalysis.Cocoa；反射装载并触达 Instance（静态初始化经 base("cocoa") 注册）。
+            var assembly = System.Reflection.Assembly.Load("Cocoa.CodeAnalysis.Cocoa");
             var instance = assembly.GetType("Cocoa.CodeAnalysis.CocoaLanguage")!
                 .GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
                 .GetValue(null);
@@ -59,7 +59,7 @@ namespace Cocoa.CodeAnalysis
                 return language;
             }
 
-            var assembly = System.Reflection.Assembly.Load("Cocoa.Core.CSharp");
+            var assembly = System.Reflection.Assembly.Load("Cocoa.CodeAnalysis.CSharp");
             var instance = assembly.GetType("Cocoa.CodeAnalysis.CSharpLanguage")!
                 .GetField("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!
                 .GetValue(null);

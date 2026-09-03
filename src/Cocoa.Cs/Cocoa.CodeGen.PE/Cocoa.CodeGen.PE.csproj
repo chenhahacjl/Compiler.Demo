@@ -3,7 +3,7 @@
     <RootNamespace>Cocoa.CodeGen.PE</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <InternalsVisibleTo Include="Cocoa.Core" />
+    <InternalsVisibleTo Include="Cocoa.CodeAnalysis" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.IL" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />
     <InternalsVisibleTo Include="Cocoa.Builder" />

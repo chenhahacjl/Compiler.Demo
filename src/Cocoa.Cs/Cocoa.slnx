@@ -3,9 +3,9 @@
     <File Path="Directory.Build.props" />
     <File Path="Directory.Build.targets" />
   </Folder>
-  <Project Path="Cocoa.Core/Cocoa.Core.csproj" />
-  <Project Path="Cocoa.Core.Cocoa/Cocoa.Core.Cocoa.csproj" />
-  <Project Path="Cocoa.Core.CSharp/Cocoa.Core.CSharp.csproj" />
+  <Project Path="Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
+  <Project Path="Cocoa.CodeAnalysis.Cocoa/Cocoa.CodeAnalysis.Cocoa.csproj" />
+  <Project Path="Cocoa.CodeAnalysis.CSharp/Cocoa.CodeAnalysis.CSharp.csproj" />
   <Project Path="Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
   <Project Path="Cocoa.CodeGen.IL/Cocoa.CodeGen.IL.csproj" />
   <Project Path="Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />

@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
   </ItemGroup>
 
 </Project>

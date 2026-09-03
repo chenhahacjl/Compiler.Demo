@@ -3,8 +3,8 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
     <InternalsVisibleTo Include="cocoa" />
-    <InternalsVisibleTo Include="Cocoa.Core.CSharp" />
-    <InternalsVisibleTo Include="Cocoa.Core.Cocoa" />
+    <InternalsVisibleTo Include="Cocoa.CodeAnalysis.CSharp" />
+    <InternalsVisibleTo Include="Cocoa.CodeAnalysis.Cocoa" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.PE" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.IL" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />

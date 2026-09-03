@@ -7,9 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
-    <ProjectReference Include="..\Cocoa.Core.Cocoa\Cocoa.Core.Cocoa.csproj" />
-    <ProjectReference Include="..\Cocoa.Core.CSharp\Cocoa.Core.CSharp.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeAnalysis.Cocoa\Cocoa.CodeAnalysis.Cocoa.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeAnalysis.CSharp\Cocoa.CodeAnalysis.CSharp.csproj" />
     <ProjectReference Include="..\Cocoa.Compiler\Cocoa.Compiler.csproj" />
   </ItemGroup>
 

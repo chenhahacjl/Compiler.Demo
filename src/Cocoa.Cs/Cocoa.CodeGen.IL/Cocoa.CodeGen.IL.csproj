@@ -8,7 +8,7 @@
     <InternalsVisibleTo Include="Cocoa.Tests" />
     <InternalsVisibleTo Include="cocoa" />
     <InternalsVisibleTo Include="Cocoa.Builder" />
-    <InternalsVisibleTo Include="Cocoa.Core" />
+    <InternalsVisibleTo Include="Cocoa.CodeAnalysis" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,7 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cocoa.Core\Cocoa.Core.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
     <ProjectReference Include="..\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
   </ItemGroup>
 
