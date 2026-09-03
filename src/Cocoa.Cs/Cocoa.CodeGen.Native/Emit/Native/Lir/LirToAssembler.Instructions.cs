@@ -289,7 +289,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>�?<paramref name="instruction.A"/> 的槽内存（而非其指向的地址）按偏移直接读取。用于取 double 槽的�?dword 等标量位模式，避免把值当指针解引用�?/summary>
+        /// <summary>对 <paramref name="instruction.A"/> 的槽内存（而非其指向的地址）按偏移直接读取。用于取 double 槽的低 dword 等标量位模式，避免把值当指针解引用。</summary>
         private void EmitLoadSlotField(LirInstruction instruction)
         {
             var operand = new X64MemoryOperand(X64Register.RBP, GetSlotOffset(instruction.A.Register!) + instruction.Offset);
@@ -309,7 +309,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>�?<paramref name="instruction.B"/> 的值写�?<paramref name="instruction.A"/> 的槽内存（而非其指向的地址）的偏移处。用于把 double 的低/�?dword 拼进槽�?/summary>
+        /// <summary>把 <paramref name="instruction.B"/> 的值写入 <paramref name="instruction.A"/> 的槽内存（而非其指向的地址）的偏移处。用于把 double 的低/高 dword 拼进槽。</summary>
         private void EmitStoreSlotField(LirInstruction instruction)
         {
             LoadSlot(X64Register.EAX, instruction.B.Register!, RegisterSize(instruction.B.Register!));
@@ -363,7 +363,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>LeaVar�?e-M23 R7）：dst = &amp;变量槽——byref 实参把调用方变量的帧槽地址传给被调方�?/summary>
+        /// <summary>LeaVar（6e-M23 R7）：dst = &amp;变量槽——byref 实参把调用方变量的帧槽地址传给被调方。</summary>
         private void EmitLeaVar(LirInstruction instruction)
         {
             var slot = GetSlotOffset(instruction.A.Register!);
@@ -386,7 +386,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>x86：把参数区（字节偏移 offset）的 8 字节 double 搬到�?dword 槽（�?dword �?[slot]，高 dword �?[slot-4]）�?/summary>
+        /// <summary>x86：把参数区（字节偏移 offset）的 8 字节 double 搬到双 dword 槽（低 dword 在 [slot]，高 dword 在 [slot-4]）。</summary>
         private void InitParam8X86(LirVirtualRegister dst, int offset)
         {
             var slot = GetSlotOffset(dst);
@@ -418,8 +418,8 @@ namespace Cocoa.CodeGen.Native.Lir
         private void EmitBinary(LirInstruction instruction)
         {
         // 数据移动
-            // x64�? 字节（I64/Addr）→ qword；I32 �?dword�?
-            // x86：真 64 位整型（I64）走�?dword 进位链；I32 �?Addr（指�?4 字节）走�?dword�?
+            // x64：8 字节（I64/Addr）→ qword；I32 → dword。
+            // x86：真 64 位整型（I64）走双 dword 进位链；I32 与 Addr（指针 4 字节）走单 dword。
             if (!_isX64 && instruction.Dst!.Type == LirType.I64)
             {
                 EmitBinary64X86(instruction);
@@ -455,7 +455,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>x86 64 位整型二进制运算（进位链/交叉积）：与归并�?EmitBinary64 �?x86 分支同语义�?/summary>
+        /// <summary>x86 64 位整型二进制运算（进位链/交叉积）：与归并前 EmitBinary64 的 x86 分支同语义。</summary>
         private void EmitBinary64X86(LirInstruction instruction)
         {
             var dst = instruction.Dst!;
@@ -525,7 +525,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
         private void EmitIdiv(LirInstruction instruction)
         {
-            // Phase 2 归并：Idiv 携带 LirType 驱动�? 字节整型（I64）→ x64 qword cqo+idiv / x86 运行�?helper�?
+            // Phase 2 归并：Idiv 携带 LirType 驱动：8 字节整型（I64）→ x64 qword cqo+idiv / x86 运行时 helper。
             if (instruction.Dst!.Type.Is8Bytes())
             {
                 EmitIdiv64Core(instruction);
@@ -602,7 +602,7 @@ namespace Cocoa.CodeGen.Native.Lir
         private void EmitUnary(LirInstruction instruction)
         {
             var dst = instruction.Dst!;
-            // Neg/Not 归并（Phase 2）：x86 8 字节整型（I64）走�?dword（进位链二补�?�?not）�?
+            // Neg/Not 归并（Phase 2）：x86 8 字节整型（I64）走双 dword（进位链二补码或 not）。
             if (!_isX64 && dst.Type == LirType.I64)
             {
                 var slot = GetSlotOffset(dst);
@@ -649,7 +649,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
         private void EmitShift(LirInstruction instruction)
         {
-            // Phase 2 归并：Shl/Shr/Sar 携带 LirType 驱动。x86 8 字节整型（I64）走 shld/shrd �?dword�?
+            // Phase 2 归并：Shl/Shr/Sar 携带 LirType 驱动。x86 8 字节整型（I64）走 shld/shrd 双 dword。
             if (!_isX64 && instruction.Dst!.Type == LirType.I64)
             {
                 EmitShift64X86(instruction);
@@ -704,7 +704,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
         private bool _pendingCmp64Trichotomy;
 
-        /// <summary>x86 有符�?64×64�?4 �?64 位：无符号低积（k1 进位�? 高位交叉积（t1、t2）；补码乘积低位即位模式无符号乘积模 2^64，无需额外符号修正�?/summary>
+        /// <summary>x86 有符号 64×64→64 位：无符号低积（k1 进位），高位交叉积（t1、t2）；补码乘积低位即位模式无符号乘积模 2^64，无需额外符号修正。</summary>
         private void EmitImul64X86(
             X64MemoryOperand aLo, X64MemoryOperand aHi,
             X64MemoryOperand bLo, X64MemoryOperand bHi,
@@ -730,8 +730,8 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Imul(X64Size.Dword, X64Register.EAX, X64Register.EBX);
             _a.Add(X64Size.Dword, X64Register.ESI, X64Register.EAX);
 
-            // 注：补码 64 位乘积低�?= 位模式无符号乘积�?2^64，高�?32 �?= k1 + t1 + t2（mod 2^32），
-            // 无需额外符号修正（之前“a<0 �?bLo / b<0 �?aLo”会重复扣减而算错，�?-12345 × -2 用例）�?
+            // 注：补码 64 位乘积低位 = 位模式无符号乘积模 2^64，高位 32 位 = k1 + t1 + t2（mod 2^32），
+            // 无需额外符号修正（之前“a<0 减 bLo / b<0 减 aLo”会重复扣减而算错，见 -12345 × -2 用例）。
 
             _a.Mov(X64Size.Dword, dLo, X64Register.ECX);
             _a.Mov(X64Size.Dword, dHi, X64Register.ESI);
@@ -785,7 +785,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreCallResult(instruction.Dst!);
         }
 
-        /// <summary>6e-M21 Phase 5：无符号 64 位除法——x64 �?xor edx + div；x86 走运行时 Udiv64 helper�?/summary>
+        /// <summary>6e-M21 Phase 5：无符号 64 位除法——x64 走 xor edx + div；x86 走运行时 Udiv64 helper。</summary>
         private void EmitUdiv64Core(LirInstruction instruction)
         {
             if (_isX64)
@@ -828,7 +828,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreCallResult(instruction.Dst!);
         }
 
-        /// <summary>x86：把被除数（dst 槽）与除数（A 槽）装入 ECX/EDX/ESI/EDI�?/summary>
+        /// <summary>x86：把被除数（dst 槽）与除数（A 槽）装入 ECX/EDX/ESI/EDI。</summary>
         private void LoadIdivArgs(LirInstruction instruction)
         {
             var slot = GetSlotOffset(instruction.Dst!);
@@ -839,7 +839,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, X64Register.EDI, new X64MemoryOperand(X64Register.RBP, divisorSlot - 4));
         }
 
-        /// <summary>x86：直�?call 运行时辅助函数（对齐补丁 + 结果已在 EDX:EAX）�?/summary>
+        /// <summary>x86：直接 call 运行时辅助函数（对齐补丁 + 结果已在 EDX:EAX）。</summary>
         private void CallRuntimeHelper(string name)
         {
             var aligned = EmitAlign(0);
@@ -873,7 +873,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var count = ((int)instruction.B.Imm) & 63;
                 if (count == 0)
                 {
-                    // 移位 0：原�?
+                    // 移位 0：原样
                     _a.Mov(X64Size.Dword, X64Register.EAX, lo);
                     _a.Mov(X64Size.Dword, dLo, X64Register.EAX);
                     _a.Mov(X64Size.Dword, X64Register.EAX, hi);
@@ -942,7 +942,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, dHi, X64Register.EDX);
         }
 
-        /// <summary>按移位方向对单个 32 位寄存器执行 shl/shr/sar；count=-1 表示�?CL 计数�?/summary>
+        /// <summary>按移位方向对单个 32 位寄存器执行 shl/shr/sar；count=-1 表示用 CL 计数。</summary>
         private void EmitShift32Reg(LirOpCode opCode, int count, X64Register reg)
         {
             var size = X64Size.Dword;
@@ -999,7 +999,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
         private void EmitCmp(LirInstruction instruction)
         {
-            // Phase 2 归并：Cmp 携带 LirType 驱动。x86 8 字节整型（I64）走三路结果（_pendingCmp64Trichotomy）�?
+            // Phase 2 归并：Cmp 携带 LirType 驱动。x86 8 字节整型（I64）走三路结果（_pendingCmp64Trichotomy）。
             if (!_isX64 && instruction.A.Kind == LirOperandKind.Register && instruction.A.Register!.Type == LirType.I64
                 && instruction.B.Kind == LirOperandKind.Register)
             {
@@ -1019,12 +1019,12 @@ namespace Cocoa.CodeGen.Native.Lir
                 _a.Cmp(ToSize(RegisterSize(instruction.B.Register!)), X64Register.EAX, operand);
             }
 
-            // 32 �?Cmp 直接置标志：任何残留�?I64 三路 pending 均已过时（前一 I64 Cmp 若未被消费即孤儿）�?
+            // 32 位 Cmp 直接置标志：任何残留的 I64 三路 pending 均已过时（前一 I64 Cmp 若未被消费即孤儿）。
             _pendingCmp64Trichotomy = false;
         }
 
-        /// <summary>x86 64 位比较（与归并前 EmitCmp64 �?x86 分支同语义）：计算三路结果（-1/0/+1）入 EAX�?
-        /// 紧随其后�?Setcc/Jcc �?cmp eax,0 再按条件分支（_pendingCmp64Trichotomy 标记）�?/summary>
+        /// <summary>x86 64 位比较（与归并前 EmitCmp64 的 x86 分支同语义）：计算三路结果（-1/0/+1）入 EAX。
+        /// 紧随其后的 Setcc/Jcc 先 cmp eax,0 再按条件分支（_pendingCmp64Trichotomy 标记）。</summary>
         private void EmitCmp64X86(LirInstruction instruction)
         {
             var aSlot = GetSlotOffset(instruction.A.Register!);
@@ -1064,7 +1064,7 @@ namespace Cocoa.CodeGen.Native.Lir
         {
             if (_pendingCmp64Trichotomy)
             {
-                // x86 Cmp64 三路结果�?EAX�?1/0/+1）：cmp eax,0 后按条件 setcc
+                // x86 Cmp64 三路结果在 EAX（-1/0/+1）：cmp eax,0 后按条件 setcc
                 _a.Cmp(X64Size.Dword, X64Register.EAX, 0);
                 _pendingCmp64Trichotomy = false;
             }
@@ -1128,7 +1128,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
         }
 
-        /// <summary>调用后把返回值存入虚拟寄存器：x86 8 字节返回�?EDX:EAX，拆分存入双 dword 槽�?/summary>
+        /// <summary>调用后把返回值存入虚拟寄存器：x86 8 字节返回为 EDX:EAX，拆分存入双 dword 槽。</summary>
         private void StoreCallResult(LirVirtualRegister dst)
         {
             if (!_isX64 && RegisterSize(dst) == 8)
@@ -1142,7 +1142,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(dst, X64Register.EAX);
         }
 
-        /// <summary>x64 对齐补丁（sub rsp, 8）—�?仅用于运行时调用（无参数区，补丁自包自恢复）�?/summary>
+        /// <summary>x64 对齐补丁（sub rsp, 8）——仅用于运行时调用（无参数区，补丁自包自恢复）。</summary>
         private bool EmitAlign(int count)
         {
             if (!_isX64)
@@ -1161,7 +1161,7 @@ namespace Cocoa.CodeGen.Native.Lir
         }
 
         /// <summary>参数区预留（字节数）：x64 每参 8 字节，x86 按类型 4/8 字节累计。
-        /// 对齐补丁（sub rsp, 8）在预留前发射（与参数区同属一个调用单元），恢复由配对�?FreeArgs 完成�?/summary>
+        /// 对齐补丁（sub rsp, 8）在预留前发射（与参数区同属一个调用单元），恢复由配对的 FreeArgs 完成。</summary>
         private void EmitReserveArgs(LirInstruction instruction)
         {
             var bytes = (int)instruction.A.Imm;
@@ -1279,7 +1279,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(ToSize(size), operand, X64Register.EAX);
         }
 
-        /// <summary>x86：把�?dword 槽的 8 字节 double 搬到参数区（字节偏移 offset，低 dword 在前）�?/summary>
+        /// <summary>x86：把双 dword 槽的 8 字节 double 搬到参数区（字节偏移 offset，低 dword 在前）。</summary>
         private void StoreArg8X86(LirVirtualRegister src, int offset)
         {
             var slot = GetSlotOffset(src);
@@ -1322,7 +1322,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
         // ------------------------------------------------------------------
         // 浮点（double）
-        // 值在槽中�?64 位位模式存放：x64 �?8 字节槽；x86 �?4 字节槽（低地址=�?32 位）�?
+        // 值在槽中按 64 位位模式存放：x64 占 8 字节槽；x86 占 4 字节槽（低地址=低 32 位）。
         // 数据移动
         // ------------------------------------------------------------------
 
@@ -1414,7 +1414,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
         }
 
-        /// <summary>浮点单参数学（SSE）：值已在槽中，载入 XMM0 计算后写回槽�?/summary>
+        /// <summary>浮点单参数学（SSE）：值已在槽中，载入 XMM0 计算后写回槽。</summary>
         private void EmitFUnary(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
@@ -1472,7 +1472,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
 
-        /// <summary>float �?double 精度转换�?e-M21 Phase 5b）�?/summary>
+        /// <summary>float 与 double 精度转换（6e-M21 Phase 5b）。</summary>
         private void EmitFCvtDS(LirInstruction instruction)
         {
             // double → float：读双槽位模式，cvtsd2ss，写 4 字节槽
@@ -1489,7 +1489,7 @@ namespace Cocoa.CodeGen.Native.Lir
             StoreSlotXmm(instruction.Dst!, X64Register.XMM0, single: false);
         }
 
-        /// <summary>long �?double/float。x64：cvtsi2sd/cvtsi2ss r64；x86：fild qword + fstp qword/dword（双槽位模式直读）�?/summary>
+        /// <summary>long → double/float。x64：cvtsi2sd/cvtsi2ss r64；x86：fild qword + fstp qword/dword（双槽位模式直读）。</summary>
         private void EmitFCvtSI64(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
@@ -1541,7 +1541,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
         }
         /// <summary>
-        /// 6e-M21 Phase 7锛歶64 �?double/float 绮剧‘杞崲锛堝�?>2^63 澶у€硷級�?        /// 鎭掔瓑寮忥細(double)u = (double)(u �?MSB) + hiBit�?^63锛屽悇姝ュ潎绮剧‘鍙〃绀恒€?        /// x64锛歴hl1/shr1 �?MSB + movabs 甯搁�?2^63锛堟棤鍒嗘敮锛夛紱x86锛欶PU 鏃犲垎鏀袱娈靛拰锛堝父閲忓啓甯т笓鐢ㄦЫ锛夈€?        /// </summary>
+        /// 6e-M21 Phase 7：u64 → double/float 精确转换（覆盖>2^63 大值）。        /// 恒等式：(double)u = (double)(u − MSB) + hiBit·2^63，各步均精确可表示。        /// x64：shl1/shr1 清 MSB + movabs 常量 2^63（无分支）；x86：FPU 无分支两段和（常量写帧专用槽）。        /// </summary>
         private void EmitFCvtSI64U(LirInstruction instruction)
         {
             var single = instruction.SinglePrecision;
@@ -1554,8 +1554,8 @@ namespace Cocoa.CodeGen.Native.Lir
                 _a.Mov(X64Size.Qword, X64Register.RCX, X64Register.RAX);
                 _a.Shr(X64Size.Qword, X64Register.RCX, 63);                 // hiBit (logical)
                 _a.Mov(X64Size.Qword, X64Register.RDX, X64Register.RAX);
-                _a.Shl(X64Size.Qword, X64Register.RDX, 1);                  // 左移??MSB
-                _a.Shr(X64Size.Qword, X64Register.RDX, 1);                  // 右移??0 ????MSB
+                _a.Shl(X64Size.Qword, X64Register.RDX, 1);                  // 左移去MSB
+                _a.Shr(X64Size.Qword, X64Register.RDX, 1);                  // 右移补0 清除MSB
         // 数据移动
                 _a.Cvtsi2sd64(X64Register.XMM1, X64Register.RCX);           // hiBit as double
                 _a.Mov(X64Register.RDX, unchecked((long)0x43E0000000000000));
@@ -1578,8 +1578,8 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
 
             var bitBuf = new X64MemoryOperand(X64Register.RBP, -_frameBytes);       // hiBit 暂存（本函数不用 cw）
-            var constLo = new X64MemoryOperand(X64Register.RBP, -_frameBytes + 8);  // double 2^63 �?dword
-            var constHi = new X64MemoryOperand(X64Register.RBP, -_frameBytes + 12); // �?dword
+            var constLo = new X64MemoryOperand(X64Register.RBP, -_frameBytes + 8);  // double 2^63 低 dword
+            var constHi = new X64MemoryOperand(X64Register.RBP, -_frameBytes + 12); // 高 dword
 
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, dstSlot));
             _a.Mov(X64Size.Dword, X64Register.ECX, X64Register.EAX);
@@ -1593,7 +1593,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.FildM32(bitBuf);                                                     // st0 = hiBit (0.0/1.0)
             _a.FldM64(constLo);                                                    // st0 = 2^63, st1 = hiBit
             _a.Fmulp();                                                            // st0 = hiBit*2^63
-            _a.FildM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));       // st0 = 灏句�?
+            _a.FildM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));       // st0 = 尾数
         // 数据移动
             if (single)
             {
@@ -1651,7 +1651,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 _a.FldM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
             }
 
-            // 控制字缓冲：帧底专用槽（-frameBytes，与 LeaSlot 缓冲/变量槽隔离）；保存原�?cw，置 RC=11（截断），转换后恢复�?
+            // 控制字缓冲：帧底专用槽（-frameBytes，与 LeaSlot 缓冲/变量槽隔离）；保存原始 cw，置 RC=11（截断），转换后恢复。
             var cwBuf = new X64MemoryOperand(X64Register.RBP, -_frameBytes);
 
             _a.FnstcwM16(cwBuf);
@@ -1663,7 +1663,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
             _a.FistpM64(new X64MemoryOperand(X64Register.RBP, dstSlot - 4));
 
-            // 恢复原始控制�?
+            // 恢复原始控制字
             _a.Mov(X64Size.Word, cwBuf, X64Register.ECX);
             _a.FldcwM16(cwBuf);
 
@@ -1674,7 +1674,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.ECX);
         }
 
-        /// <summary>int/enum �?long 符号扩展。x64：movsxd；x86：cdq 后低 dword 存高槽�?/summary>
+        /// <summary>int/enum → long 符号扩展。x64：movsxd；x86：cdq 后低 dword 存高槽。</summary>
         private void EmitMovsx64(LirInstruction instruction)
         {
             if (_isX64)
@@ -1693,7 +1693,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), X64Register.EDX);
         }
 
-        /// <summary>byte/char �?long 零扩展（�?32 位值无符号）。x64：mov eax,[slot] 自动清高 32；x86：写�?dword、高 dword �?0�?/summary>
+        /// <summary>byte/char → long 零扩展（原 32 位值无符号）。x64：mov eax,[slot] 自动清高 32；x86：写低 dword、高 dword 置 0。</summary>
         private void EmitMovzx64(LirInstruction instruction)
         {
             var srcSlot = GetSlotOffset(instruction.A.Register!);
@@ -1711,7 +1711,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot - 4), 0);
         }
 
-        /// <summary>long �?int �?32 位截断。x64：qword 清高；x86：仅写低 dword�?/summary>
+        /// <summary>long → int 的 32 位截断。x64：qword 清高；x86：仅写低 dword。</summary>
         private void EmitTrunc64(LirInstruction instruction)
         {
             var srcSlot = GetSlotOffset(instruction.A.Register!);
@@ -1727,7 +1727,7 @@ namespace Cocoa.CodeGen.Native.Lir
             _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, dstSlot), X64Register.EAX);
         }
 
-        /// <summary>double 运行时参数：x64 �?64 位寄存器（rcx/rdx/r8/r9）；x86 �?low/high 两个 32 位寄存器�?/summary>
+        /// <summary>double 运行时参数：x64 用 64 位寄存器（rcx/rdx/r8/r9）；x86 拆 low/high 两个 32 位寄存器。</summary>
         private void EmitSetArg64(LirInstruction instruction)
         {
             var ordinal = (int)instruction.A.Imm;
@@ -1768,7 +1768,7 @@ namespace Cocoa.CodeGen.Native.Lir
         }
 
         // ------------------------------------------------------------------
-        // 系统调用（平台化模板�?
+        // 系统调用（平台化模板）
         // ------------------------------------------------------------------
 
         private void EmitSysCall(LirInstruction instruction)
@@ -1780,7 +1780,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
             if (_isX64)
             {
-                // fastcall + shadow space�?x20 shadow + argCount-4 栈槽；向上取整到 0x20 对齐
+                // fastcall + shadow space：0x20 shadow + argCount-4 栈槽；向上取整到 0x20 对齐
                 var stackSlots = argCount > 4 ? Math.Max(2, argCount - 4) : 2;
                 var frameSize = 0x20 + stackSlots * 8;
                 var aligned = EmitAlign(0);
@@ -1815,7 +1815,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
                 if (argCount >= 6)
                 {
-                    // �?6 参落�?shadow 尾（[RSP+0x28]），0x30 帧恰好容纳（48�? mod 16�?
+                    // 第 6 参落在 shadow 尾（[RSP+0x28]），0x30 帧恰好容纳（48字节 mod 16）
                     if (_sysArgs.Count > 5)
                     {
                         LoadSlot(X64Register.EAX, _sysArgs[5], RegisterSize(_sysArgs[5]));
@@ -1908,7 +1908,7 @@ namespace Cocoa.CodeGen.Native.Lir
         }
 
         // ------------------------------------------------------------------
-        // 栈操�?检�?
+        // 栈操作检查
         // ------------------------------------------------------------------
 
         private void EmitStackCheck()
@@ -1934,7 +1934,7 @@ namespace Cocoa.CodeGen.Native.Lir
         }
 
         // ------------------------------------------------------------------
-        // 操作�?�?
+        // 操作数大小
         // ------------------------------------------------------------------
 
         private int RegisterSize(LirVirtualRegister register) => _currentFunction!.RegisterSize(register);

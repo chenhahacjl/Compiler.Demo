@@ -11,9 +11,9 @@ namespace Cocoa.CodeGen.Native.Lir
     {
         private sealed partial class RuntimeFunctionEmitter
         {
-            // StringFromChars(chars:8 char[]) �?string�?e-G7 ③a）：
-            // char[] 布局 [len:4][元素区@8�? 字节对齐，char 2 字节）] �?CO �?[len:4][chars:2×len]�?
-            // 直接复制 UTF-16 数据区（AllocStringFromBuf 顺带�?null 结尾）�?
+            // StringFromChars(chars:8 char[]) → string（e-G7 ③a）：
+            // char[] 布局 [len:4][元素区@8（8 字节对齐，char 2 字节）] → CO 串 [len:4][chars:2×len]。
+            // 直接复制 UTF-16 数据区（AllocStringFromBuf 顺带补 null 结尾）。
             private void EmitStringFromChars()
             {
                 var arr = _args[0];
@@ -30,7 +30,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileExists(path:8) �?bool：GetFileAttributesW != INVALID_FILE_ATTRIBUTES(0xFFFFFFFF)
+            // FileExists(path:8) → bool：GetFileAttributesW != INVALID_FILE_ATTRIBUTES(0xFFFFFFFF)
             private void EmitFileExists()
             {
                 var p = WidePtrZ(_args[0]);
@@ -43,7 +43,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 4);
             }
 
-            // DirectoryExists(path:8) �?bool：attrs != INVALID 且带 FILE_ATTRIBUTE_DIRECTORY(0x10)
+            // DirectoryExists(path:8) → bool：attrs != INVALID 且带 FILE_ATTRIBUTE_DIRECTORY(0x10)
             private void EmitDirectoryExists()
             {
                 var p = WidePtrZ(_args[0]);
@@ -62,7 +62,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 4);
             }
 
-            // FileDelete(path:8) �?void
+            // FileDelete(path:8) → void
             private void EmitFileDelete()
             {
                 var p = WidePtrZ(_args[0]);
@@ -70,7 +70,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 0);
             }
 
-            // FileCopy(src:8, dst:8) �?void：CopyFileW（恒覆盖目标）；src/dst 用不同缓冲防覆盖
+            // FileCopy(src:8, dst:8) → void：CopyFileW（恒覆盖目标）；src/dst 用不同缓冲防覆盖
             private void EmitFileCopy()
             {
                 var src = WidePtrZ(_args[0]);
@@ -79,7 +79,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 0);
             }
 
-            // GetEnvironmentVariable(name:8) �?string：GetEnvironmentVariableW 两阶段；未命�?�?空串（对�?Evaluator ?? ""�?
+            // GetEnvironmentVariable(name:8) → string：GetEnvironmentVariableW 两阶段；未命名 → 空串（对应 Evaluator ?? ""）。
             private void EmitGetEnvironmentVariable()
             {
                 var p = WidePtrZ(_args[0]);
@@ -113,7 +113,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            // GetCurrentDirectory() �?string：GetCurrentDirectoryW 两阶段；�?�?空串
+            // GetCurrentDirectory() → string：GetCurrentDirectoryW 两阶段；失败 → 空串
             private void EmitGetCurrentDirectory()
             {
                 var empty = NewLabel();
@@ -142,7 +142,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            // GetExecutablePath() �?string：GetModuleFileNameW；缓冲截�?失败 �?空串
+            // GetExecutablePath() → string：GetModuleFileNameW；缓冲截断/失败 → 空串
             private void EmitGetExecutablePath()
             {
                 var empty = NewLabel();
@@ -170,7 +170,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            // SetCurrentDirectory(path:8) �?void
+            // SetCurrentDirectory(path:8) → void
             private void EmitSetCurrentDirectory()
             {
                 var p = WidePtrZ(_args[0]);
@@ -178,9 +178,9 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 0);
             }
 
-            // FileReadAllText(path:8) �?string�?
-            // 复制路径+null 结尾 �?ucrtbase _wfopen(rb) �?fread 一次读满（以实际字节数为准，免 seek）→ fclose
-            // �?MultiByteToWideChar(CP_UTF8) 两阶段直写串对象 chars 区。读缓冲动�?Alloc�?2KB），失败 �?空串�?
+            // FileReadAllText(path:8) → string：
+            // 复制路径+null 结尾 → ucrtbase _wfopen(rb) → fread 一次读满（以实际字节数为准，免 seek）→ fclose
+            // 经 MultiByteToWideChar(CP_UTF8) 两阶段直写串对象 chars 区。读缓冲动态 Alloc（32KB），失败 → 空串。
             private void EmitFileReadAllText()
             {
                 var fail = NewLabel();
@@ -233,9 +233,9 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileWriteAllText(path:8, text:8) �?void�?
-            // 手动 UTF-16→UTF-8 编码（两阶段：计数→写入 Alloc 缓冲）→ 复制路径+null 结尾 �?ucrtbase _wfopen(wb) �?fwrite �?fclose�?
-            // 编码器：ASCII 1 字节�?x80-0x7FF 2 字节、BMP(0x800-0xD7FF/0xE000-0xFFFF) 3 字节、高位代�?0xD800-0xDBFF) 4 字节�?
+            // FileWriteAllText(path:8, text:8) → void：
+            // 手动 UTF-16→UTF-8 编码（两阶段：计数→写入 Alloc 缓冲）→ 复制路径+null 结尾 → ucrtbase _wfopen(wb) → fwrite → fclose。
+            // 编码器：ASCII 1 字节、0x80-0x7FF 2 字节、BMP(0x800-0xD7FF/0xE000-0xFFFF) 3 字节、高位代理(0xD800-0xDBFF) 4 字节。
             private void EmitFileWriteAllText()
             {
                 var fail = NewLabel();
@@ -247,7 +247,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var sp = NewPtr();
                 Lea(sp, s, 4);
 
-                // Phase 1：统�?UTF-8 字节�?
+                // Phase 1：统计 UTF-8 字节数
                 var count = C(4, 0);
                 var q = NewPtr();
                 Mov(q, sp);
@@ -297,7 +297,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Cmp(buf, 0);
                 Jcc(LirCond.Equal, fail);
 
-                // Phase 2：编码写入缓�?
+                // Phase 2：编码写入缓冲
                 var q2 = NewPtr();
                 Mov(q2, sp);
                 var outp = NewPtr();
@@ -391,7 +391,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Jmp(loop2);
 
                 Mark(encodeDone);
-                // 复制路径�?_fileBuffer 并补 null（CO 串无 null 结尾�?2KB 缓冲足够，超长路径截断属文档限制�?
+                // 复制路径到 _fileBuffer 并补 null（CO 串无 null 结尾；2KB 缓冲足够，超长路径截断属文档限制）。
                 var pb = WidePtrZ(_args[0]);
                 var wb = NewPtr();
                 LeaData(wb, _wbMode);

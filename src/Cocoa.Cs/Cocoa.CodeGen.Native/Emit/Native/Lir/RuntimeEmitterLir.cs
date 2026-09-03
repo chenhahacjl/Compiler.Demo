@@ -8,10 +8,10 @@ using Cocoa.CodeGen.PE;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>
-    /// 平台无关运行�?IR 生成：把�?x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs�?
-    /// 合并为单一 IR 程序挂接�?br/>
-    /// 平台差异收敛为：指针槽宽�?/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）�?
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责�?
+    /// 平台无关运行时 IR 生成：把原本 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
+    /// 合并为单一 IR 程序挂接。<br/>
+    /// 平台差异收敛为：指针槽宽（8/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）。
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
     /// </summary>
     internal static partial class RuntimeEmitterLir
     {
@@ -20,13 +20,13 @@ namespace Cocoa.CodeGen.Native.Lir
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
-            // Y-P0-1：文�?IO / 环境 syscall（G7-�?补齐；文件读写经 msvcrt 低参 API，避开 6-7 �?ABI 上限�?
+            // Y-P0-1：文件 IO / 环境 syscall（G7-部分补齐；文件读写经 msvcrt 低参 API，避开 6-7 参 ABI 上限。
             "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
             "MultiByteToWideChar", "WideCharToMultiByte",
         };
 
-        /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）�?/summary>
+        /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）。</summary>
         private static readonly string[] UcrtImports =
         {
             "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64", "_wsystem",
@@ -114,12 +114,12 @@ namespace Cocoa.CodeGen.Native.Lir
                 EmitParseInt64();
                 if (!_isX64)
                 {
-                    // x86 64 位有符号除法/取余经运行时（x64 内联 cqo+idiv�?
+                    // x86 64 位有符号除法/取余经运行时（x64 内联 cqo+idiv）
                     _ = BeginFunction("Idiv64", 4, 4, 4, 4);
                     EmitIdiv64();
                     _ = BeginFunction("Irem64", 4, 4, 4, 4);
                     EmitIrem64();
-                    // 6e-M21 Phase 5：无符号 64 位除/余（x64 内联 xor edx + div�?
+                    // 6e-M21 Phase 5：无符号 64 位除/余（x64 内联 xor edx + div）
                     _ = BeginFunction("Udiv64", 4, 4, 4, 4);
                     EmitUdiv64();
                     _ = BeginFunction("Urem64", 4, 4, 4, 4);
@@ -288,7 +288,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 _inputBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "InputBuffer", new byte[0x2000]));
                 _fileBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
                 _fileBuffer2 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
-                // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀�?CO 串，不能直接�?LPCWSTR�?
+                // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀式 COM 串，不能直接当 LPCWSTR 用）
                 _rbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
                 _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
                 _emptyString = _program.AddData(LirDataItem.Utf16(Prefix + "EmptyString", ""));
@@ -355,9 +355,9 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             /// <summary>
-            /// �?ABI 运行时函数（M4）：参数�?ReserveArgs/StoreArg 从栈传入（与用户函数一致）�?
-            /// �?vtable 槽间接调用（callreg 无法区分槽内容是运行时默认还是用�?override�?
-            /// �?Object 面四个运行时函数统一用户 ABI）。x64 参数区每�?8 字节；x86 按宽度累计�?
+            /// 栈 ABI 运行时函数（M4）：参数经 ReserveArgs/StoreArg 从栈传入（与用户函数一致）。
+            /// 可经 vtable 槽间接调用（callreg 无法区分槽内容是运行时默认还是用户 override）。
+            /// （故 Object 面四个运行时函数统一用户 ABI）。x64 参数区每项 8 字节；x86 按宽度累计。
             /// </summary>
             private void BeginStackFunction(string name, params int[] argSizes)
             {
@@ -411,7 +411,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 return register;
             }
 
-            /// <summary>指针寄存器（对象/缓冲/地址）：x86 双槽但按 32 位指针算术（Qword 降级）�?/summary>
+            /// <summary>指针寄存器（对象/缓冲/地址）：x86 双槽但按 32 位指针算术（Qword 降级）。</summary>
             private LirVirtualRegister NewPtr()
             {
                 var register = _allocator.Allocate(LirType.Addr);
@@ -447,10 +447,10 @@ namespace Cocoa.CodeGen.Native.Lir
 
             private void Load(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int size) => Add(LirOpCode.Load, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, size);
 
-            /// <summary>�?<paramref name="baseReg"/> 的槽内存直接按偏移读取（不解引用）。x64 �?8 字节（double �?dword �?+4）；x86 �?4 字节×2（高 dword �?-4）�?/summary>
+            /// <summary>读 <paramref name="baseReg"/> 的槽内存直接按偏移读取（不解引用）。x64 一次 8 字节（double 拆两 dword，高 +4）；x86 拆 4 字节×2（高 dword 在 -4）。</summary>
             private void LoadSlotField(LirVirtualRegister dst, LirVirtualRegister baseReg, int offset, int size) => Add(LirOpCode.LoadSlotField, dst, LirOperand.Reg(baseReg), LirOperand.None, offset, size);
 
-            /// <summary>�?<paramref name="src"/> 写入 <paramref name="baseReg"/> 槽内存的偏移处（不解引用），用于 x86 �?low/high �?dword 拼装�?double 槽�?/summary>
+            /// <summary>将 <paramref name="src"/> 写入 <paramref name="baseReg"/> 槽内存的偏移处（不解引用），用于 x86 下 low/high 两 dword 拼装出 double 槽。</summary>
             private void StoreSlotField(LirVirtualRegister baseReg, int offset, LirVirtualRegister src, int size) => Add(LirOpCode.StoreSlotField, null, LirOperand.Reg(baseReg), LirOperand.Reg(src), offset, size);
 
             private void Store(LirVirtualRegister baseReg, int offset, LirVirtualRegister src, int size) => Add(LirOpCode.Store, null, LirOperand.Reg(baseReg), LirOperand.Reg(src), offset, size);
@@ -534,7 +534,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 SysCallDll(dst, "kernel32.dll", import, argCount, false, args);
             }
 
-            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true �?x86 调用方清栈。x64 fastcall / x86 stdcall 约定�?LirToAssembler.SysCall 负责�?/summary>
+            /// <summary>任意 DLL 导入调用（ucrtbase 等）；cdecl=true 时 x86 调用方清栈。x64 fastcall / x86 stdcall 约定由 LirToAssembler.SysCall 负责。</summary>
             private void SysCallDll(LirVirtualRegister? dst, string dll, string import, int argCount, bool cdecl, params LirVirtualRegister?[] args)
             {
                 for (var i = 0; i < args.Length; i++)
@@ -548,7 +548,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Add(LirOpCode.SysCall, dst, LirOperand.Import(new LirImport(dll, import, cdecl)), LirOperand.Constant(argCount));
             }
 
-            /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）�?/summary>
+            /// <summary>分配计数常量 vreg 的便捷模式（写多不读也符合三地址规范）。</summary>
             private LirVirtualRegister C(int size, long imm)
             {
                 var register = NewReg(size);
@@ -556,7 +556,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 return register;
             }
 
-            /// <summary>常量为负的立即数加法（AddI 接受�?imm）�?/summary>
+            /// <summary>常量为负的立即数加法（AddI 接受负 imm）。</summary>
             private static int SafeImm(int value) => value;
 
             private static byte[] DoubleBits(double value)

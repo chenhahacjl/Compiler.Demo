@@ -6,10 +6,10 @@ using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Emit;
 
     /// <summary>
-    /// 平台无关运行�?IR 生成：把�?x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs�?
-    /// 合并为单一 IR 程序挂接�?br/>
-    /// 平台差异收敛为：指针槽宽�?/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）�?
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责�?
+    /// 平台无关运行时 IR 生成：把原 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
+    /// 合并为单一 IR 程序挂接。<br/>
+    /// 平台差异收敛为：指针槽宽（8/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）、
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
     /// </summary>
 namespace Cocoa.CodeGen.Native.Lir
 {
@@ -51,7 +51,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ParseBool(s:8) �?bool
+            // ParseBool(s:8) → bool
             // ------------------------------------------------------------------
 
             private void EmitParseBool()
@@ -74,7 +74,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Concat(a:8, b:8) �?新字符串对象
+            // Concat(a:8, b:8) → 新字符串对象
             // ------------------------------------------------------------------
 
             private void EmitConcat()
@@ -121,7 +121,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Add(total, total, lenB);
                 Store(obj, 0, total, 4);
 
-                // 拷贝 A（源�?null 时跳过——lenA 已按 0 计入总长与偏移）
+                // 拷贝 A（源为 null 时跳过——lenA 已按 0 计入总长与偏移）
                 Cmp(a, 0);
                 Jcc(LirCond.Equal, copiedA);
                 var countA = NewReg(4);
@@ -135,7 +135,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 CallRuntime(null, "CopyChars", dstA, srcA, countA);
                 Mark(copiedA);
 
-                // 拷贝 B（目标偏移按 lenA 前进，null 时落头部�?
+                // 拷贝 B（目标偏移按 lenA 前进，null 时落头部）
                 Cmp(b, 0);
                 Jcc(LirCond.Equal, copiedB);
                 var countB = NewReg(4);
@@ -165,7 +165,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // StrEquals(a:8, b:8) �?bool
+            // StrEquals(a:8, b:8) → bool
             // ------------------------------------------------------------------
 
             private void EmitStrEquals()
@@ -177,11 +177,11 @@ namespace Cocoa.CodeGen.Native.Lir
                 var isTrue = NewLabel();
                 var done = NewLabel();
 
-                // 指针相同（含�?null）→ 相等
+                // 指针相同（含双 null）→ 相等
                 Cmp(a, b);
                 Jcc(LirCond.Equal, isTrue);
 
-                // 任一�?null �?不等
+                // 任一为 null → 不等
                 Cmp(a, C(8, 0));
                 Jcc(LirCond.Equal, isFalse);
                 Cmp(b, C(8, 0));
@@ -194,7 +194,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Cmp(lenA, lenB);
                 Jcc(LirCond.NotEqual, isFalse);
 
-                // �?2 字节字符比较（非 dword：奇数长度末 dword 含堆/数据区填充垃圾，误判不等�?
+                // 按 2 字节字符比较（非 dword：奇数长度末 dword 含堆/数据区填充垃圾，误判不等）
                 var ap = NewPtr();
                 Lea(ap, a, 4);
                 var bp = NewPtr();
@@ -234,8 +234,8 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Substring(s:8, start:4, count:4) �?字符串对�?
-            // 参数非法（start/count < 0 �?start+count > 长度）时打印错误并退�?
+            // Substring(s:8, start:4, count:4) → 字符串对象
+            // 参数非法（start/count < 0 或 start+count > 长度）时打印错误并退出
             // ------------------------------------------------------------------
 
             private void EmitSubstring()
@@ -309,7 +309,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // CharToString(c:4) �?单字符字符串对象（[len:4][char:2]�?
+            // CharToString(c:4) → 单字符字符串对象（[len:4][char:2]）
             // ------------------------------------------------------------------
 
             private void EmitCharToString()
@@ -336,16 +336,16 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // FormatInt(value:4, packed:4, exp:4) �?字符串对�?
-            // packed = (width:16 有符�? << 16 | (n:8) << 8 | (code:4) << 4 | (kind:4)
-            // kind: 0=int 1=byte 2=enum 3=bool 4=char（value 为字符码�?
-            // code: 0=�?1=D 2=X 3=F 4=G 5=E
+            // FormatInt(value:4, packed:4, exp:4) → 字符串对象
+            // packed = (width:16 有符号) << 16 | (n:8) << 8 | (code:4) << 4 | (kind:4)
+            // kind: 0=int 1=byte 2=enum 3=bool 4=char（value 为字符码）
+            // code: 0=无 1=D 2=X 3=F 4=G 5=E
             // n：D/X 零填充位数；F 小数位数；G 有效数字位数；E 小数位数
-            // exp：G/E 的十进制指数（F/int �?0�?
-            // 对齐 width（负=左对齐）。bool/char 忽略格式�?
+            // exp：G/E 的十进制指数（F/int 为 0）
+            // 对齐 width（负=左对齐）。bool/char 忽略格式符
             // ------------------------------------------------------------------
 
-            // x64：SetArg(0, value) �?DoubleToString；x86：value �?low/high 两参数�?
+            // x64：SetArg(0, value) 调 DoubleToString；x86：value 拆 low/high 两参数。
             private void EmitCallDoubleToString(LirVirtualRegister strObj, LirVirtualRegister value, LirVirtualRegister valueHigh)
             {
                 SetArg(0, value);
@@ -356,7 +356,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 CallRuntime(strObj, "DoubleToString");
             }
 
-            // x64：SetArg(0, value) SetArg(1, n) �?DoubleFixed；x86：value �?low/high + n�?
+            // x64：SetArg(0, value) SetArg(1, n) 调 DoubleFixed；x86：value 拆 low/high + n。
             private void EmitCallDoubleFixed(LirVirtualRegister scaled, LirVirtualRegister value, LirVirtualRegister valueHigh, LirVirtualRegister n)
             {
                 SetArg(0, value);
@@ -372,7 +372,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 CallRuntime(scaled, "DoubleFixed");
             }
 
-            // x64：SetArg(0, value) SetArg(1, n) �?FormatFixed；x86：value �?low/high + n�?
+            // x64：SetArg(0, value) SetArg(1, n) 调 FormatFixed；x86：value 拆 low/high + n。
             private void EmitCallFormatFixed(LirVirtualRegister strObj, LirVirtualRegister value, LirVirtualRegister valueHigh, LirVirtualRegister n)
             {
                 SetArg(0, value);
@@ -388,7 +388,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 CallRuntime(strObj, "FormatFixed");
             }
 
-            // x64：SetArg(0, value) SetArg(1, n) SetArg(2, flags) �?FormatSci（flags = lowerE<<1 | mode）；x86：value �?low/high + n + flags�?
+            // x64：SetArg(0, value) SetArg(1, n) SetArg(2, flags) 调 FormatSci（flags = lowerE<<1 | mode）；x86：value 拆 low/high + n + flags。
             private void EmitCallFormatSci(LirVirtualRegister strObj, LirVirtualRegister value, LirVirtualRegister valueHigh, LirVirtualRegister n, LirVirtualRegister flags)
             {
                 SetArg(0, value);
@@ -406,12 +406,12 @@ namespace Cocoa.CodeGen.Native.Lir
                 CallRuntime(strObj, "FormatSci");
             }
 
-            // StringFormat(value:8, fmtPtr:8, packed:4) �?字符串对�?
-            //   value   ：原始值（int/byte/enum 的低 4 字节；double �?8 字节；string/bool/char 按各自宽度）
-            //   fmtPtr  ：格式串指针（UTF-16，来�?InternString；长度存�?[fmtPtr+0]�?
-            //   packed  ：低 4 �?typeKind�?=int/byte/enum�?=double�?=string�?=bool�?=char），
-            //             �?16 位（�?4..19）为有符号对齐宽度（�?左对齐，0=不填充）
-            // 运行时解析格式串（code/n/lowerCase），统一所有类型到单一入口�?
+            // StringFormat(value:8, fmtPtr:8, packed:4) → 字符串对象
+            //   value   ：原始值（int/byte/enum 的低 4 字节；double 为 8 字节；string/bool/char 按各自宽度）
+            //   fmtPtr  ：格式串指针（UTF-16，来自 InternString；长度存于 [fmtPtr+0]）
+            //   packed  ：低 4 位 typeKind（0=int/byte/enum，1=double，2=string，3=bool，4=char），
+            //             高 16 位（位 4..19）为有符号对齐宽度（负=左对齐，0=不填充）
+            // 运行时解析格式串（code/n/lowerCase），统一所有类型到单一入口。
             private void EmitStringFormat()
             {
                 LirVirtualRegister value;
@@ -456,7 +456,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Cmp(typeKind, 3); Jcc(LirCond.Equal, boolKind);
                 Jmp(charKind);
 
-                // ---- string：原样（对齐在末尾统一处理�?---
+                // ---- string：原样（对齐在末尾统一处理）----
                 Mark(stringKind);
                 Mov(strObj, value);
                 Load(strLen, value, 0, 4);
@@ -485,7 +485,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Shl(strLen, strLen, 1);
                 Jmp(applyAlign);
 
-                // ---- int/byte/enum：D �?十进零填；X/x �?十六进制；其�?�?十进�?----
+                // ---- int/byte/enum：D → 十进零填；X/x → 十六进制；其余 → 十进制 ----
                 Mark(intKind);
                 var intHex = NewLabel();
                 var intDecPad = NewLabel();
@@ -509,7 +509,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Shl(strLen, strLen, 1);
                 Jmp(applyAlign);
 
-                // ---- double：F(n) �?预缩放后 scale-and-print；特殊�?其他格式 �?DoubleToString ----
+                // ---- double：F(n) → 预缩放后 scale-and-print；特殊值/其他格式 → DoubleToString ----
                 Mark(doubleKind);
                 var dHi = NewReg(4);
                 if (_isX64)
@@ -586,7 +586,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // PadString(str:8, width:4) �?字符串对象（对齐填充；pad �?0 恒等�?
+            // PadString(str:8, width:4) → 字符串对象（对齐填充；pad ≤ 0 恒等）
             // ------------------------------------------------------------------
 
             private void EmitPadString()
@@ -603,7 +603,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            /// <summary>�?|width|*2 &gt; baseLen：重建为带空格填充的字符串（width&gt;0 右对�?/ 左对齐）。返回最终字符串寄存器（所有路径已定义）�?/summary>
+            /// <summary>当 |width|*2 &gt; baseLen：重建为带空格填充的字符串（width&gt;0 右对齐 / 左对齐）。返回最终字符串寄存器（所有路径已定义）。</summary>
             private void EmitApplyAlignment()
             {
                 var baseObj = _args[0];
@@ -662,7 +662,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            /// <summary>�?baseObj 的全部字符拷�?bufPos 并推进（len 增加对应字节）�?/summary>
+            /// <summary>把 baseObj 的全部字符拷到 bufPos 并推进（len 增加对应字节）。</summary>
             private void EmitCopyStrChars(LirVirtualRegister bufPos, LirVirtualRegister len, LirVirtualRegister srcObj)
             {
                 var chars = NewReg(4);
@@ -697,7 +697,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>写入 count �?ch�? 字节）到 bufPos 并推进�?/summary>
+            /// <summary>写入 count 个 ch（2 字节）到 bufPos 并推进。</summary>
             private void EmitWriteRepeatedChar(LirVirtualRegister bufPos, LirVirtualRegister len, LirVirtualRegister count, char ch)
             {
                 var loop = NewLabel();
@@ -722,7 +722,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>�?_formatBuffer �?lenBytes 字节�?UTF-16 内容分配为字符串对象�?/summary>
+            /// <summary>把 _formatBuffer 前 lenBytes 字节的 UTF-16 内容分配为字符串对象。</summary>
             private void EmitAllocStringFromBuf()
             {
                 var buf = _args[0];
@@ -758,7 +758,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            /// <summary>十六进制（不�?n 位前�?'0'，大�?X / 小写 x）：写入 _formatBuffer 起始，返回字符串对象�?/summary>
+            /// <summary>十六进制（不足 n 位前补 '0'，大写 X / 小写 x）：写入 _formatBuffer 起始，返回字符串对象。</summary>
             private void EmitFormatHex()
             {
                 var value = _args[0];
@@ -816,7 +816,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Jcc(LirCond.NotEqual, loop);
                 Mark(done);
 
-                // 前补 '0' �?minDigits
+                // 前补 '0' 至 minDigits
                 var padLoop = NewLabel();
                 var padDone = NewLabel();
                 Cmp(count, minDigits);
@@ -848,7 +848,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            /// <summary>十进制零填充：|value| 的数字不�?n 位前�?'0'（负号在首位）�?/summary>
+            /// <summary>十进制零填充：|value| 的数字不足 n 位前补 '0'（负号在首位）。</summary>
             private void EmitFormatDecPad()
             {
                 var value = _args[0];
@@ -916,7 +916,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            /// <summary>scale-and-print：把 scaled（int32）按 code 组装（F：n 小数位；G：exp+1 整数位；E�? 整数�?+ E±exp）�?/summary>
+            /// <summary>scale-and-print：把 scaled（int32）按 code 组装（F：n 小数位；G：exp+1 整数位；E：1 整数位 + E±exp）。</summary>
             private void EmitScaleAssemble()
             {
                 var value = _args[0];
@@ -942,7 +942,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var digitsLen = NewReg(4);
                 Sub(digitsLen, lenChars, sign);
 
-                // 整数位个�?K
+                // 整数位个数 K
                 var K = NewReg(4);
                 var isF = NewLabel();
                 var isG = NewLabel();
@@ -997,7 +997,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Jcc(LirCond.GreaterOrEqual, intBig);
                 Cmp(K, 0);
                 Jcc(LirCond.Greater, intOk);
-                // K <= 0：整�?'0' + '.' + (-K) �?'0' + 全部 digits
+                // K <= 0：整数 '0' + '.' + (-K) 个 '0' + 全部 digits
                 Store(bufPos, 0, C(4, '0'), 2);
                 var nl0 = NewReg(4);
                 AddI(nl0, lenBytes, 2);
@@ -1008,7 +1008,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Jmp(intZero);
 
                 Mark(intBig);
-                // 全部 digits + (K-digitsLen) �?'0'
+                // 全部 digits + (K-digitsLen) 个 '0'
                 EmitCopyDigits(bufPos, lenBytes, str, digitOffset, digitsLen);
                 var extra = NewReg(4);
                 Sub(extra, K, digitsLen);
@@ -1091,7 +1091,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 8);
             }
 
-            /// <summary>�?srcObj �?startChar �?countChar 个字符拷�?bufPos 并推进�?/summary>
+            /// <summary>把 srcObj 从 startChar 取 countChar 个字符拷到 bufPos 并推进。</summary>
             private void EmitCopyDigits(LirVirtualRegister bufPos, LirVirtualRegister len, LirVirtualRegister srcObj, LirVirtualRegister startChar, LirVirtualRegister countChar)
             {
                 var loop = NewLabel();

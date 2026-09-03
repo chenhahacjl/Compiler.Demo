@@ -8,16 +8,16 @@ using Cocoa.CodeAnalysis.Emit;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>
-    /// 平台无关运行�?IR 生成：把�?x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs�?
-    /// 合并为单一 IR 程序挂接�?br/>
-    /// 平台差异收敛为：指针槽宽�?/4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount）�?
-    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责�?
+    /// 平台无关运行时 IR 生成：把原本 x86/x64 双份硬编码运行时（Runtime.cs / Runtime.X86.cs）
+    /// 合并为单一 IR 程序挂接。<br/>
+    /// 平台差异收敛为：指针槽宽（8/x86:4）、数据项宽度（Pointer）、导入名（GetTickCount64/GetTickCount），
+    /// 堆槽偏移（Ptr@8/End@16 vs Ptr@4/End@8）；调用约定（x64 fastcall+shadow / x86 stdcall）由 LirToAssembler.SysCall 负责。
     /// </summary>
     internal static partial class RuntimeEmitterLir
     {
         private sealed partial class RuntimeFunctionEmitter
         {
-            /// <summary>pow = 10^n（n �?0），运行时循环计算（n 来自格式解析，非编译期常量）�?/summary>
+            /// <summary>pow = 10^n（n ≥ 0），运行时循环计算（n 来自格式解析，非编译期常量）。</summary>
             private void EmitPow10(LirVirtualRegister n, LirVirtualRegister powOut)
             {
                 FConst(powOut, _formatOne);
@@ -36,7 +36,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>rounded = round(value × 10^n)（round-half-away-from-zero，与�?FormatInt 语义一致）。x86 �?value �?low/high 两参数，槽内拼装�?/summary>
+            /// <summary>rounded = round(value × 10^n)（round-half-away-from-zero，与运行时 FormatInt 语义一致）。x86 下 value 拆 low/high 两参数，槽内拼装。</summary>
             private void EmitDoubleFixed()
             {
                 LirVirtualRegister d;
@@ -75,7 +75,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 4);
             }
 
-            /// <summary>运行时解析格式串（UTF-16）：首字符决�?code（D/X/F/G/E 大小写），后续数字为 n；F �?n==0 默认 2�?/summary>
+            /// <summary>运行时解析格式串（UTF-16）：首字符决定 code（D/X/F/G/E 大小写），后续数字为 n；F 且 n==0 默认 2。</summary>
             private void ParseFormat(LirVirtualRegister fmtPtr, LirVirtualRegister fmtLen, LirVirtualRegister code, LirVirtualRegister n, LirVirtualRegister lowerCase)
             {
                 Const(code, 0);
@@ -149,21 +149,21 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(brk);
                 Mark(digDone);
 
-                // F 且显式精度缺失时默认 2 位小数（F0 �?0 是显式精度，保留�?
+                // F 且显式精度缺失时默认 2 位小数（F0 或 0 是显式精度，保留）
                 var fDefDone = NewLabel();
                 Cmp(code, 3); Jcc(LirCond.NotEqual, fDefDone);
                 Cmp(hasDigits, 0); Jcc(LirCond.NotEqual, fDefDone);
                 Const(n, 2);
                 Mark(fDefDone);
 
-                // E 且显式精度缺失时默认 6 位小数（对齐 .NET�?
+                // E 且显式精度缺失时默认 6 位小数（对齐 .NET）
                 var eDefDone = NewLabel();
                 Cmp(code, 5); Jcc(LirCond.NotEqual, eDefDone);
                 Cmp(hasDigits, 0); Jcc(LirCond.NotEqual, eDefDone);
                 Const(n, 6);
                 Mark(eDefDone);
 
-                // G 且显式精度缺失时默认 15 位有效数字（对齐 .NET�?
+                // G 且显式精度缺失时默认 15 位有效数字（对齐 .NET）
                 var gDefDone = NewLabel();
                 Cmp(code, 4); Jcc(LirCond.NotEqual, gDefDone);
                 Cmp(hasDigits, 0); Jcc(LirCond.NotEqual, gDefDone);
@@ -175,7 +175,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
 
             // ------------------------------------------------------------------
-            // WriteStr(buf:8, len:4)：控制台 �?WriteConsoleW，否�?WriteFile
+            // WriteStr(buf:8, len:4)：控制台用 WriteConsoleW，否则 WriteFile
             // ------------------------------------------------------------------
 
             private void EmitWriteStr()
@@ -210,7 +210,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // BuildInt(value:4, buf:8)：紧�?UTF-16 数字写入 buf，返回字节长�?
+            // BuildInt(value:4, buf:8)：紧凑 UTF-16 数字写入 buf，返回字节长度
             // ------------------------------------------------------------------
 
             private void EmitBuildInt()
@@ -274,7 +274,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Sub(endAddr, endAddr, tail);
                 Mov(len, endAddr);
 
-                // 复制 (len+2)>>2 �?dword：紧凑区 �?buf
+                // 复制 (len+2)>>2 个 dword：紧凑区 → buf
                 var count = NewReg(4);
                 Mov(count, len);
                 AddI(count, count, 2);
@@ -301,7 +301,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Alloc(size:4) �?堆指针（8/x86:4），失败 0
+            // Alloc(size:4) → 堆指针（8/x86:4），失败 0
             // ------------------------------------------------------------------
 
             private void EmitAlloc()
@@ -333,7 +333,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Store(heap, _heapPtrOffset, first, ptrSize);
 
                 Mark(have);
-                // HeapPtr + size <= HeapEnd �?直接分配；否则新�?
+                // HeapPtr + size <= HeapEnd 时直接分配；否则新块
                 var ptr = NewPtr();
                 Load(ptr, heap, _heapPtrOffset, ptrSize);
                 var newPtr = NewPtr();
@@ -430,7 +430,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 0);
             }
 
-            /// <summary>语言�?write 语义：文本不换行（Console.Write 对齐�?e-M18+ 原语 Write）�?/summary>
+            /// <summary>语言的 write 语义：文本不换行（Console.Write 对齐，6e-M18+ 原语 Write）。</summary>
             private void EmitWriteString()
             {
                 var s = _args[0];
@@ -448,7 +448,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 0);
             }
 
-            /// <summary>语言�?print 语义：文�?+ CRLF（与解释�?IL 后端 Console.WriteLine 一致）�?/summary>
+            /// <summary>语言的 print 语义：文本 + CRLF（与解释器/IL 后端 Console.WriteLine 一致）。</summary>
             private void EmitWriteNewLine()
             {
                 var newLine = NewPtr();
@@ -498,7 +498,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // IntToString(value:4) �?字符串对象（�?[len:4]�?
+            // IntToString(value:4) → 字符串对象（头 [len:4]）
             // ------------------------------------------------------------------
 
             private void EmitIntToString()
@@ -550,9 +550,9 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // DivChain(buf:8, divisor:4) �?rem:4
-            // 128 位数�? �?16 位块，LE，buf[0..15]）除以小除数�? 2^16，链式保�?
-            // rem<<16 不溢�?32 位），商写回 buf，返回余数�?
+            // DivChain(buf:8, divisor:4) → rem:4
+            // 128 位数（按 16 位块，LE，buf[0..15]）除以小除数（< 2^16），链式保余
+            // （rem<<16 不溢出 32 位），商写回 buf，返回余数。
             // ------------------------------------------------------------------
 
             private void EmitDivChain()
@@ -592,8 +592,8 @@ namespace Cocoa.CodeGen.Native.Lir
                 EndFunction(_currentFunction!, 4);
             }
 
-            // BigDiv(buf:8, divisor:4, blocks:4) �?rem:4
-            // 大整数（blocks �?16 位块，LE）除以小除数�? 2^16），链式 16 位块商写回，返回余数�?
+            // BigDiv(buf:8, divisor:4, blocks:4) → rem:4
+            // 大整数（blocks 个 16 位块，LE）除以小除数（< 2^16），链式 16 位块商写回，返回余数。
             // ------------------------------------------------------------------
 
             private void EmitBigDiv()
@@ -642,8 +642,8 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // 大整数（80×u16 = 1280 位，LE）原�?—�?�?double 范围定点格式化基础�?
-            // 布局：u32 limb i（LE）位�?buf+4i，等�?16 位块 2i/2i+1（乘/除按 16 位块，移位按 32 �?limb）�?
+            // 大整数（80×u16 = 1280 位，LE）原生运算——全 double 范围定点格式化基础。
+            // 布局：u32 limb i（LE）位于 buf+4i，等于 16 位块 2i/2i+1（乘/除按 16 位块，移位按 32 位 limb）。
             // ------------------------------------------------------------------
 
             private const int BigBlocks = 80;
@@ -707,7 +707,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>整�?×k（k �?0xFFFF 编译期常量）原地�?6 位块链式进位�?/summary>
+            /// <summary>大整数 ×k（k ≤ 0xFFFF 编译期常量），原地按 16 位块链式进位。</summary>
             private void EmitBigMulSmall(LirVirtualRegister buf, int k)
             {
                 var carry = NewReg(4);
@@ -736,7 +736,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>�?buf[idx]（idx 越界 �?0）�?/summary>
+            /// <summary>读 buf[idx]（idx 越界得 0）。</summary>
             private void EmitBigGetLimb(LirVirtualRegister buf, LirVirtualRegister idx, LirVirtualRegister val)
             {
                 Const(val, 0);
@@ -758,7 +758,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Store(addr, 0, val, 4);
             }
 
-            /// <summary>右移 bits�?..1074）截断（无舍入）�?/summary>
+            /// <summary>右移 bits（0..1074）截断（无舍入）。</summary>
             private void EmitBigShrTrunc(LirVirtualRegister buf, LirVirtualRegister bits)
             {
                 var full = NewReg(4);
@@ -842,7 +842,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(doneAll);
             }
 
-            /// <summary>左移 bits�?..1074），高位丢弃�?/summary>
+            /// <summary>左移 bits（0..1074），高位丢弃。</summary>
             private void EmitBigShl(LirVirtualRegister buf, LirVirtualRegister bits)
             {
                 var full = NewReg(4);
@@ -918,7 +918,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(doneAll);
             }
 
-            /// <summary>�?bitpos 位置 +2^bitpos（进位链，用�?away-from-zero 舍入）�?/summary>
+            /// <summary>在 bitpos 位置 +2^bitpos（进位链，用于 away-from-zero 舍入）。</summary>
             private void EmitBigAddBitAt(LirVirtualRegister buf, LirVirtualRegister bitpos)
             {
                 var limbIdx = NewReg(4);
@@ -964,7 +964,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(propDone);
             }
 
-            /// <summary>右移 bits �?round-half-away-from-zero（先�?2^(bits-1) 再截断）�?/summary>
+            /// <summary>右移 bits 按 round-half-away-from-zero（先加 2^(bits-1) 再截断）。</summary>
             private void EmitBigShrRoundAway(LirVirtualRegister buf, LirVirtualRegister bits)
             {
                 var done = NewLabel();
@@ -1000,7 +1000,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mov(z, acc);
             }
 
-            /// <summary>�?buf 的十进制数字全部提取（LSB 先出，反向写 tail），返回数字数与数字起始 tail�?/summary>
+            /// <summary>把 buf 的十进制数字全部提取（LSB 先出，反向写 tail），返回数字数与数字起始 tail。</summary>
             private void EmitBigDigitsToTail(LirVirtualRegister buf, LirVirtualRegister tailEnd, LirVirtualRegister digitCount, LirVirtualRegister newTail)
             {
                 var count = NewReg(4);
@@ -1027,10 +1027,10 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // �?double 范围格式化核心：1280 位大整数定点 v×10^S，S=6（普通）/n（F）�?
+            // 全 double 范围格式化核心：1280 位大整数定点 v×10^S，S=6（普通）/n（F）
             // ------------------------------------------------------------------
 
-            /// <summary>�?double 位模式拆�?sign/exp/m0/m1（m1 含隐式位�?e/isSpecial/isZero/isMantZero�?/summary>
+            /// <summary>把 double 位模式拆出 sign/exp/m0/m1（m1 含隐含位），e/isSpecial/isZero/isMantZero。</summary>
             private void EmitSplitDouble(LirVirtualRegister b0, LirVirtualRegister b1, LirVirtualRegister sign, LirVirtualRegister exp,
                 LirVirtualRegister m0, LirVirtualRegister m1, LirVirtualRegister e, LirVirtualRegister isSpecial, LirVirtualRegister isZero, LirVirtualRegister isMantZero)
             {
@@ -1100,7 +1100,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(done);
             }
 
-            /// <summary>�?src �?charCount �?UTF-16 字符�?fmt+pos 并推�?pos�?/summary>
+            /// <summary>把 src 的 charCount 个 UTF-16 字符拷到 fmt+pos 并推进 pos。</summary>
             private void EmitCopyCharsAt(LirVirtualRegister fmt, LirVirtualRegister pos, LirVirtualRegister src, LirVirtualRegister charCount)
             {
                 var dst = NewPtr();
@@ -1117,8 +1117,8 @@ namespace Cocoa.CodeGen.Native.Lir
                 Add(pos, pos, adv);
             }
 
-            /// <summary>固定格式组装：[sign] intpart ['.' frac] �?_formatBuffer �?字符串对象�?
-            /// n 位小数；trim=true 剪尾零并去尾随小数点（普通打印）。digits �?tail 中按正向排列�?/summary>
+            /// <summary>固定格式组装：[sign] intpart ['.' frac] 写 _formatBuffer 成字符串对象。</summary>
+            /// n 位小数；trim=true 剪尾零并去尾随小数点（普通打印）。digits 在 tail 中按正向排列。
             private void EmitAssembleFixed(LirVirtualRegister objOut, LirVirtualRegister tail, LirVirtualRegister digitCount, LirVirtualRegister nReg, LirVirtualRegister sign, bool trim)
             {
                 var fmt = NewPtr();
@@ -1214,7 +1214,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // DoubleToString(bits) �?字符串对象（全范围：6 位小数剪尾零，v×10^6 大整数定点）
+            // DoubleToString(bits) → 字符串对象（全范围：6 位小数剪尾零，v×10^6 大整数定点）
             // ------------------------------------------------------------------
 
             private void EmitDoubleToString()
@@ -1308,7 +1308,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // FormatFixed(value, n) �?字符串对象（F 格式：n 位小数零填充，away-from-zero，全范围�?
+            // FormatFixed(value, n) → 字符串对象（F 格式：n 位小数零填充，away-from-zero，全范围）
             // ------------------------------------------------------------------
 
             private void EmitFormatFixed()
@@ -1421,8 +1421,8 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // E / G 格式（FormatSci(value, n, mode)）：half-to-even 舍入�? 位补零指数（E），
-            // G 剪尾零并定点/科学切换。mode 0=E（n 小数位）1=G（n 有效数字）�?
+            // E / G 格式（FormatSci(value, n, mode)）：half-to-even 舍入，3 位补零指数（E），
+            // G 剪尾零并定点/科学切换。mode 0=E（n 小数位）1=G（n 有效数字）。
             // ------------------------------------------------------------------
 
             private void EmitLoadDigit(LirVirtualRegister tail, LirVirtualRegister idx, LirVirtualRegister ch)
@@ -1447,7 +1447,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Store(addr, 0, ch, 2);
             }
 
-            /// <summary>�?tail 中前 D 位数字按 round-half-away-from-zero 舍入写回 tail[0..D)；进位时�?carryOut 并把 tail 写为 "1" + 零�?/summary>
+            /// <summary>对 tail 中前 D 位数字按 round-half-away-from-zero 舍入写回 tail[0..D)；进位时置 carryOut 并把 tail 写为 "1" + 零。</summary>
             private void EmitRoundMantissa(LirVirtualRegister tail, LirVirtualRegister d, LirVirtualRegister D, LirVirtualRegister carryOut)
             {
                 var doUp = NewLabel();
@@ -1509,7 +1509,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(roundDone);
             }
 
-            /// <summary>�?_formatBuffer 末尾 '0'（停�?intEnd+2 即小数点前）并去除尾随小数点�?/summary>
+            /// <summary>剪 _formatBuffer 末尾 '0'（停在 intEnd+2 即小数点前）并去除尾随小数点。</summary>
             private void EmitTrimTrailingZeros(LirVirtualRegister fmt, LirVirtualRegister pos, LirVirtualRegister intEnd)
             {
                 var trimLoop = NewLabel();
@@ -1541,7 +1541,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Mark(afterTrim);
             }
 
-            /// <summary>指数后缀�?E'/'e' ± |e10|（lowerE 运行�?0=大写）。minPad 为指数最小位数（E 3 �?/ G 2 位）�?/summary>
+            /// <summary>指数后缀 'E'/'e' ± |e10|（lowerE 运行期，0=大写）。minPad 为指数最小位数（E 3 位 / G 2 位）。</summary>
             private void EmitSciExp(LirVirtualRegister fmt, LirVirtualRegister pos, LirVirtualRegister e10, int minPad, LirVirtualRegister lowerE)
             {
                 var useLower = NewLabel();
@@ -1579,7 +1579,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EmitCopyCharsAt(fmt, pos, eData, eLen);
             }
 
-            /// <summary>�?D 位尾数（tail 正向�? e10 组装。sci=true 科学�? 位整�?+ E 后缀）；否则定点（小数点�?e10+1 处）。trim 剪尾零�?/summary>
+            /// <summary>按 D 位尾数（tail 正向）与 e10 组装。sci=true 科学（1 位整数 + E 后缀）；否则定点（小数点在 e10+1 处）。trim 剪尾零。</summary>
             private void EmitAssembleSciG(LirVirtualRegister objOut, LirVirtualRegister tail, LirVirtualRegister D, LirVirtualRegister e10, LirVirtualRegister sign, bool sci, bool trim, int minPad, LirVirtualRegister lowerE)
             {
                 var fmt = NewPtr();
@@ -1718,7 +1718,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var isMantZero = NewReg(4);
                 EmitSplitDouble(b0, b1, sign, exp, m0, m1, e, isSpecial, isZero, isMantZero);
 
-                // D = mode==1(G) ? n : n+1（至�?1）—�?�?特殊分支也用到，须先�?
+                // D = mode==1(G) ? n : n+1（至少 1）——零/特殊分支也用到，须先算
                 var D = NewReg(4);
                 var dE = NewLabel();
                 var dDone = NewLabel();
@@ -1741,7 +1741,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Cmp(isZero, 0);
                 Jcc(LirCond.NotEqual, zeroLabel);
 
-                // e10_est = trunc(e*30103/100000)（按 |e| 求，负号回代；误�?�? �?S 裕量吸收�?
+                // e10_est = trunc(e*30103/100000)（按 |e| 求，负号回代；误差 ≤ 1，由 S 裕量吸收）
                 var eAbs = NewReg(4);
                 Mov(eAbs, e);
                 var negE2 = NewLabel();
@@ -1862,7 +1862,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var gZero = NewLabel();
                 Cmp(mode, 1);
                 Jcc(LirCond.Equal, gZero);
-                // E 零："0." + n �?+ "E+000"
+                // E 零："0." + n 零 + "E+000"
                 var zbuf = NewPtr();
                 LeaData(zbuf, _fmtBigBuf);
                 var ztail = NewPtr();
@@ -1901,7 +1901,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
 
-            /// <summary>复制 InternString 数据并返回新对象（sign 选择�?负串）�?/summary>
+            /// <summary>复制 InternString 数据并返回新对象（sign 选择正/负串）。</summary>
             private void EmitReturnFixedString(LirVirtualRegister sign, string positiveKey, string negativeKey)
             {
                 var oom = NewLabel();

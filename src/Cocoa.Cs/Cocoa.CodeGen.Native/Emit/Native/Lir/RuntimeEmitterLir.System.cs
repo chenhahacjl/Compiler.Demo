@@ -54,7 +54,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Shr(chars, chars, 1);
 
                 Mark(haveCount);
-                // 去尾�?\r \n
+                // 去尾部 \r \n
                 Mark(strip);
                 Cmp(chars, 0);
                 Jcc(LirCond.Equal, stripped);
@@ -108,9 +108,9 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ReadKey(intercept:4) �?char
-            // 读取单键。intercept=0 时回显（WriteConsoleW）；=1 时不回显�?
-            // �?ReadConsoleInputW �?INPUT_RECORD，取 KEY_EVENT �?bKeyDown �?UnicodeChar�?
+            // ReadKey(intercept:4) → char
+            // 读取单键。intercept=0 时回显（WriteConsoleW）；=1 时不回显。
+            // 经 ReadConsoleInputW 读 INPUT_RECORD，取 KEY_EVENT 的 bKeyDown 与 UnicodeChar。
             // ------------------------------------------------------------------
 
             private void EmitReadKey()
@@ -149,7 +149,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Cmp(keyDown, 0);
                 Jcc(LirCond.Equal, loop);
 
-                // �?intercept=0，回显该字符（WriteConsoleW 到输出句柄）
+                // 若 intercept=0，回显该字符（WriteConsoleW 到输出句柄）
                 Cmp(intercept, 0);
                 Jcc(LirCond.NotEqual, gotKey);
                 var outHandle = NewPtr();
@@ -169,7 +169,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Random(max:4) �?0..max-1（xorshift32�?
+            // Random(max:4) → 0..max-1（xorshift32）
             // ------------------------------------------------------------------
 
             private void EmitRandom()
@@ -227,7 +227,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ObjectEquals(a:8, b:8) �?bool（指针比较）
+            // ObjectEquals(a:8, b:8) → bool（指针比较）
             // ------------------------------------------------------------------
 
             private void EmitObjectEquals()
@@ -242,8 +242,8 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ObjectToString(obj:ptr) �?str�?e-M19 M4：读对象�?vtable �?名字指针�?
-            // 对象布局 [0]=vtablePtr；vtable [8]=类型全名字符串指针（伪记录自引用�?Type 值同样成立）
+            // ObjectToString(obj:ptr) → str（e-M19 M4）：读对象的 vtable 与名字指针。
+            // 对象布局 [0]=vtablePtr；vtable [8]=类型全名字符串指针（伪记录自引用的 Type 值同样成立）
             // ------------------------------------------------------------------
 
             private void EmitObjectToString()
@@ -258,8 +258,8 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ObjectGetHashCode(x:8) �?int（指�?位模式散列：lo ^ hi 后乘黄金比例常数�?
-            // x86 指针�?4，仅�?dword 参与散列
+            // ObjectGetHashCode(x:8) → int（指针位模式散列：lo ^ hi 后乘黄金比例常数）
+            // x86 指针为 4，仅低 dword 参与散列
             // ------------------------------------------------------------------
 
             private void EmitObjectGetHashCode()
@@ -288,7 +288,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ObjectGetType(obj:ptr) �?vtablePtr（GetType 非虚，占�?3 保持统一发射路径�?
+            // ObjectGetType(obj:ptr) → vtablePtr（GetType 非虚，占槽 3 保持统一发射路径）
             // ------------------------------------------------------------------
 
             private void EmitObjectGetType()
@@ -301,8 +301,8 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // TypeSimpleName(s:str) �?str（最后一�?'.' 之后的部分；无点回退原串�?
-            // �?IL FullName.Substring(LastIndexOf('.')+1) 组合语义一致，三后端统一�?
+            // TypeSimpleName(s:str) → str（最后一个 '.' 之后的部分；无点回退原串）
+            // 与 IL FullName.Substring(LastIndexOf('.')+1) 组合语义一致，三后端统一。
             // ------------------------------------------------------------------
 
             private void EmitTypeSimpleName()
@@ -396,7 +396,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Beep(frequency:4, duration:4) �?void（kernel32 Beep：扬声器蜂鸣�?
+            // Beep(frequency:4, duration:4) → void（kernel32 Beep：扬声器蜂鸣）
             // ------------------------------------------------------------------
 
             private void EmitBeep()
@@ -408,12 +408,12 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // Y-P0-1：文�?IO / 环境 syscall（G7-�?补齐�?
-            // 字符串对�?= 堆指�?[len:4][chars:2×len]（无 null 结尾），Win32 宽字符串 API 需 LPCWSTR �?WidePtrZ 复制�?null�?
-            // SysCall 上限 6 参：文件 IO �?ucrtbase 低参 API + 6 �?MultiByteToWideChar；WideCharToMultiByte(8 �? 用手动编码替代�?
+            // Y-P0-1：文件 IO / 环境 syscall（G7-③补齐）
+            // 字符串对象 = 堆指针 [len:4][chars:2×len]（无 null 结尾），Win32 宽字符串 API 需 LPCWSTR 经 WidePtrZ 复制补 null。
+            // SysCall 上限 6 参：文件 IO 用 ucrtbase 低参 API + 6 参 MultiByteToWideChar；WideCharToMultiByte(8 参) 用手动编码替代。
             // ------------------------------------------------------------------
 
-            /// <summary>�?CO 字符串对象的宽字符区指针（chars@4）�?/summary>
+            /// <summary>取 CO 字符串对象的宽字符区指针（chars@4）。</summary>
             private LirVirtualRegister WidePtr(LirVirtualRegister s)
             {
                 var p = NewPtr();
@@ -422,10 +422,10 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             /// <summary>
-            /// 复制 CO 字符串到 <paramref name="bufferKey"/> 并补 null 结尾，返�?LPCWSTR 指针�?
-            /// CO 串布局 [len:4][chars:2×len] �?null 结尾（尾 padding 可能含拷贝残留）�?
-            /// 直接传给 Win32 宽字符串 API（_wfopen/GetFileAttributesW 等）会读越界 �?非确定性失败�?
-            /// �?helper 内立即消费；两个参数（src/dst）须用不同缓冲，否则互相覆盖�?
+            /// 复制 CO 字符串到 <paramref name="bufferKey"/> 并补 null 结尾，返回 LPCWSTR 指针。
+            /// CO 串布局 [len:4][chars:2×len] 无 null 结尾（尾 padding 可能含拷贝残留）。
+            /// 直接传给 Win32 宽字符串 API（_wfopen/GetFileAttributesW 等）会读越界 → 非确定性失败。
+            /// 在 helper 内立即消费；两个参数（src/dst）须用不同缓冲，否则互相覆盖。
             /// </summary>
             private LirVirtualRegister WidePtrZInto(LirVirtualRegister s, string bufferKey)
             {
@@ -456,7 +456,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 return pb;
             }
 
-            /// <summary>复制到主缓冲（单路径场景）�?/summary>
+            /// <summary>复制到主缓冲（单路径场景）。</summary>
             private LirVirtualRegister WidePtrZ(LirVirtualRegister s) => WidePtrZInto(s, _fileBuffer);
         }
     }

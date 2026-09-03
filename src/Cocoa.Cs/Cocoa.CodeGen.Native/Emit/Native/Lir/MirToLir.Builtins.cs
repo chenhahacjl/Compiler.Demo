@@ -15,7 +15,7 @@ namespace Cocoa.CodeGen.Native.Lir
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
-    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）�?
+    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// </summary>
     internal sealed partial class MirToLir
     {
@@ -178,7 +178,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 case BuiltinKind.ObjectStaticEquals:
                 case BuiltinKind.ObjectReferenceEquals:
                 {
-                    // M4c：装箱语义——双侧均为值类型时�?false（各自独立表示）；否则指针比�?
+                    // M4c：装箱语义——双侧均为值类型时恒 false（各自独立表示）；否则指针比较
                     return EmitObjectStaticEquality(arguments);
                 }
                 case BuiltinKind.TickCount:
@@ -225,7 +225,7 @@ namespace Cocoa.CodeGen.Native.Lir
         }
 
         /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。
-        /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道�?/summary>
+        /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道。</summary>
         private LirVirtualRegister EmitFormatExpression(BoundFormatExpression node)
         {
             var type = node.Value.Type;
@@ -357,7 +357,7 @@ namespace Cocoa.CodeGen.Native.Lir
                     {
                         if (node.Operand.Type == TypeSymbol.Float)
                         {
-                            // 6e-M21 Phase 5b：单精度取反�? 字节槽翻转符号位�?
+                            // 6e-M21 Phase 5b：单精度取反用 4 字节槽翻转符号位即可
                             var resultSingle = AllocateRegister(4);
                             Add(instructions, new LirInstruction(LirOpCode.FMov, resultSingle, LirOperand.Reg(operand), LirOperand.None, 0, 0, true));
                             Add(instructions, new LirInstruction(LirOpCode.FNeg, resultSingle, LirOperand.None, LirOperand.None, 0, 0, true));
@@ -465,7 +465,7 @@ namespace Cocoa.CodeGen.Native.Lir
             var right = EmitExpression(node.Right);
             var result = AllocateRegister(4);
 
-            // 6e-M21 Phase 5�?/16/32 位整数统一�?32 位槽运算，无符号类型选择无符号语义指�?
+            // 6e-M21 Phase 5：8/16/32 位整数统一按 32 位槽运算，无符号类型选择无符号语义指令
             var isUnsigned = node.Left.Type.IsInteger && !node.Left.Type.IsSigned;
 
             switch (op)
@@ -476,7 +476,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
                 case BoundBinaryOperatorKind.BitwiseAnd:
                 case BoundBinaryOperatorKind.LogicalAnd:
-                    // 逻辑与用位与�?/1 布尔语义 = && 结果；三后端一致：Evaluator/IL 均为急切求值）
+                    // 逻辑与用位与（0/1 布尔语义 = && 结果；三后端一致：Evaluator/IL 均为急切求值）
                     Add(instructions, new LirInstruction(LirOpCode.And, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
@@ -564,7 +564,7 @@ namespace Cocoa.CodeGen.Native.Lir
             return result;
         }
 
-        /// <summary>long/u64 二元运算�?e-M19 M1）：算术/�?移位/比较�?64 �?IR 指令；u64 无符号语义（Phase 5）�?/summary>
+        /// <summary>long/u64 二元运算（6e-M19 M1）：算术/按位移位/比较走 64 位 IR 指令；u64 无符号语义（Phase 5）。</summary>
         private LirVirtualRegister EmitLongBinary(BoundBinaryExpression node)
         {
             var op = node.Op.Kind;
@@ -694,7 +694,7 @@ namespace Cocoa.CodeGen.Native.Lir
                         Add(instructions, new LirInstruction(LirOpCode.FCmp, null, LirOperand.Reg(left), LirOperand.Reg(right), 0, 0, single));
 
                         // ucomisd 在 unordered（NaN 参与）时置 ZF=PF=CF=1；
-                        // 全部 6 个比较条件对 NaN 一�?false�?= �?NaN �?true（IEEE-754 语义）�?
+                        // 全部 6 个比较条件对 NaN 一律 false，!= 对 NaN 得 true（IEEE-754 语义）。
                         var (main, fixup) = op switch
                         {
                             BoundBinaryOperatorKind.Equals => (LirCond.Equal, LirCond.NoParity),

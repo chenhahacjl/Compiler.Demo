@@ -14,7 +14,7 @@ namespace Cocoa.CodeGen.Native.Lir
             // ------------------------------------------------------------------
 
             // ------------------------------------------------------------------
-            // NewArray(size:4, elementSize:4) �?ptr:8
+            // NewArray(size:4, elementSize:4) → ptr:8
             // 布局：[0..4) 长度；[8..) 元素区（8 字节对齐，内存零初始化）
             // ------------------------------------------------------------------
 
@@ -49,7 +49,7 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // ArrayBoundsCheck(index:4, length:4) �?越界时报错退�?
+            // ArrayBoundsCheck(index:4, length:4) → 越界时报错退出
             // ------------------------------------------------------------------
 
             private void EmitArrayBoundsCheck()
@@ -82,10 +82,10 @@ namespace Cocoa.CodeGen.Native.Lir
             }
 
             // ------------------------------------------------------------------
-            // BuildArgs() �?ptr（string[]�?
-            // �?GetCommandLineW 读取命令行（UTF-16），跳过程序名，�?MS 风格解析
-            // 剩余参数：空白（空格/制表符）分隔；引号包裹的空白不分割；引号本身�?
-            // 参数内容中剥离。构�?string[]（布局�?NewArray），失败（OOM）返�?0�?
+            // BuildArgs() → ptr（string[]）
+            // 经 GetCommandLineW 读取命令行（UTF-16），跳过程序名，按 MS 风格解析
+            // 剩余参数：空白（空格/制表符）分隔；引号包裹的空白不分割；引号本身在
+            // 参数内容中剥离。构造 string[]（布局同 NewArray），失败（OOM）返回 0。
             // ------------------------------------------------------------------
 
             private void EmitBuildArgs()
@@ -101,7 +101,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var ch = NewReg(4);
                 var count = C(4, 0);
 
-                // ---- 定位程序名后的第一个参数位置（first�?---
+                // ---- 定位程序名后的第一个参数位置（first）----
                 var skipProg = NewLabel();
                 var skipProgCheck = NewLabel();
                 var skipProgNext = NewLabel();
@@ -130,7 +130,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var first = NewPtr();
                 Mov(first, p);
 
-                // ---- pass 1: 计数（count�?---
+                // ---- pass 1: 计数（count）----
                 var countWs = NewLabel();
                 var countWsNext = NewLabel();
                 var countDone = NewLabel();
@@ -190,7 +190,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Cmp(arr, 0);
                 Jcc(LirCond.Equal, oom);
 
-                // ---- pass 2: 逐个参数构�?string 并写入数�?----
+                // ---- pass 2: 逐个参数构造 string 并写入数组 ----
                 Mov(p, first);
                 var slot = NewPtr();
                 var slotBase = NewPtr();
@@ -251,7 +251,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 AddI(lenChars, lenChars, 1);
                 Jmp(buildTokNext);
 
-                // ---- 构造字符串：Alloc(lenChars*2+4 对齐 4)，剥离引号拷�?----
+                // ---- 构造字符串：Alloc(lenChars*2+4 对齐 4)，剥离引号拷贝 ----
                 Mark(buildStr);
                 var bytes = NewReg(4);
                 Mov(bytes, lenChars);
@@ -306,7 +306,7 @@ Store(obj, 0, lenChars, 4);
             }
 
             // ------------------------------------------------------------------
-            // Sha256Hash(data:8) �?u8[] (32 bytes)
+            // Sha256Hash(data:8) → u8[] (32 bytes)
             // Uses one-shot BCryptHash (Win10 1803+): BCryptHash(alg, NULL, 0, pbData, cbData, pbOutput, cbOutput)
             // Array layout: [0..4) length; [8..) element data (8-byte aligned)
             // ------------------------------------------------------------------
@@ -422,7 +422,7 @@ Store(obj, 0, lenChars, 4);
                 EndFunction(_currentFunction!, 8);
             }
 
-            // LaunchProcess(path:8, args:8) �?i32 exit code
+            // LaunchProcess(path:8, args:8) → i32 exit code
             // Uses _wsystem(path + " " + args) from ucrtbase.dll
             private void EmitLaunchProcess()
             {
@@ -483,7 +483,7 @@ Store(obj, 0, lenChars, 4);
                 Add(termAddr, termAddr, termBytes);
                 Store(termAddr, 0, nullCh, 2);
 
-                // _wsystem(cmdWbuf) �?synchronous, returns exit code
+                // _wsystem(cmdWbuf) → synchronous, returns exit code
                 var exitCode = NewReg(4);
                 SysCallDll(exitCode, "ucrtbase.dll", "_wsystem", 1, true, cmdWbuf);
 
