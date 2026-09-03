@@ -53,7 +53,8 @@ namespace Cocoa.CodeAnalysis.Binding
             foreach (var method in info.Methods)
             {
                 var methodName = method.Name == ".ctor" ? name : method.Name;
-                if (classType.GetMethod(methodName) != null)
+                // 1b/B10：按（名字, 元数）去重——旧实现按名字去重会把外部构造器/方法重载整个丢掉
+                if (classType.GetMethods(methodName).Any(m => m.Parameters.Length == method.ParameterTypes.Count))
                 {
                     continue;
                 }
@@ -70,7 +71,11 @@ namespace Cocoa.CodeAnalysis.Binding
                     ToTypeSymbol(method.ReturnType),
                     isExtern: false,
                     containingClass: classType,
-                    visibility: Visibility.Public));
+                    visibility: Visibility.Public)
+                {
+                    // .ctor 改名为类名登记，但构造器身份必须保留——绑定期构造重载解析按此筛选
+                    IsConstructor = method.Name == ".ctor",
+                });
             }
 
             return classType;

@@ -75,7 +75,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                                 var codePoint = Convert.ToInt32(_text.ToString(_position, 8), 16);
                                 if (codePoint > 0xFFFF)
                                 {
-                                    hasError = true; // char 瀹逛笉涓嬩唬鐞嗗
+                                    hasError = true;
+                                    _position += 8; // consume the 8 hex digits (1b/B5): otherwise they re-lex next round and cascade BadTokens
                                 }
                                 else
                                 {

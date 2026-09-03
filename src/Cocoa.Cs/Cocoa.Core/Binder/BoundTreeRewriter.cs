@@ -171,7 +171,7 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundConditionalGotoStatement(node.Syntax, node.Label, confition, node.JumpIfTrue);
         }
 
-        private BoundStatement RewriteReturnStatement(BoundReturnStatement node)
+        protected virtual BoundStatement RewriteReturnStatement(BoundReturnStatement node)
         {
             var expression = node.Expression == null ? null : RewriteExpression(node.Expression);
             if (expression == node.Expression)

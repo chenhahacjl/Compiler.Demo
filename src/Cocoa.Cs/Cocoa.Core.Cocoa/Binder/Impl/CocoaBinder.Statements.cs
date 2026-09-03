@@ -72,7 +72,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case SSyntax.CocoaSyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 default:
-                    throw new Exception($"Unexcepted syntax {syntax.Kind}");
+                    // 1b/B8：解析器 panic 恢复合成的意外节点报诊断 + Nop 降级，而非编译器崩溃
+                    _diagnostics.ReportError(syntax.Location, $"意外的语句语法 {syntax.Kind}。");
+                    return new BoundNopStatement(syntax);
             }
         }
 
@@ -1191,6 +1193,13 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var counterToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, counterName, counterName, ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
             var counter = BindVariableDeclaration(counterToken, isReadOnly: false, TypeSymbol.Int32);
 
+            // 隐藏集合暂存 __c（1b/B1）：集合表达式只求值一次——旧实现把 collection 节点同时
+            // 嵌入条件 Length 访问与体内元素访问，带副作用的集合（如 GetItems()）每迭代重复求值
+            var collectionTempName = $"__foreach_c{_labelCounter}";
+            var collectionTempToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, collectionTempName, collectionTempName, ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
+            var collectionDecl = BindVariableDeclaration(collectionTempToken, isReadOnly: true, collection.Type);
+            var collectionVar = BoundNodeFactory.Variable(syntax, collectionDecl);
+
             var breakLabel = new BoundLabel($"break{_labelCounter}");
             var continueLabel = new BoundLabel($"continue{_labelCounter}");
             var whileContinueLabel = new BoundLabel($"whilecontinue{_labelCounter}");
@@ -1200,7 +1209,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             // 内层作用域：循环变量 x（只读，每迭代新建，C# 语义）
             _scope = new BoundScope(_scope);
             var loopVar = BindVariableDeclaration(syntax.Identifier, isReadOnly: true, elementType);
-            var elementAccess = new BoundElementAccessExpression(syntax, elementType, collection, BoundNodeFactory.Variable(syntax, counter));
+            var elementAccess = new BoundElementAccessExpression(syntax, elementType, collectionVar, BoundNodeFactory.Variable(syntax, counter));
             loopBody.Add(BoundNodeFactory.VariableDeclaration(syntax, loopVar, elementAccess));
 
             _loopStack.Push((breakLabel, continueLabel));
@@ -1212,7 +1221,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             loopBody.Add(BoundNodeFactory.Label(syntax, continueLabel));
             loopBody.Add(BoundNodeFactory.Increment(syntax, BoundNodeFactory.Variable(syntax, counter)));
 
-            var lengthAccess = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, collection, "Length");
+            var lengthAccess = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, collectionVar, "Length");
             var condition = BoundNodeFactory.Binary(syntax,
                 BoundNodeFactory.Variable(syntax, counter),
                 SSyntax.SyntaxKind.LessToken,
@@ -1221,11 +1230,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var whileStatement = BoundNodeFactory.While(syntax, condition,
                 new BoundBlockStatement(syntax, loopBody.ToImmutable()), breakLabel, whileContinueLabel);
 
+            var collectionInit = BoundNodeFactory.VariableDeclaration(syntax, collectionDecl, collection);
             var counterInit = BoundNodeFactory.VariableDeclaration(syntax, counter, BoundNodeFactory.Literal(syntax, 0));
 
             _scope = _scope.Parent!;
 
-            return BoundNodeFactory.Block(syntax, counterInit, whileStatement);
+            return BoundNodeFactory.Block(syntax, collectionInit, counterInit, whileStatement);
         }
 
         /// <summary>
@@ -1342,7 +1352,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// </remarks>
         private BoundStatement BindSwitchStatement(SwitchStatementSyntax syntax)
         {
-            var value = BindExpression(syntax.Expression);
+            var boundValue = BindExpression(syntax.Expression);
+
+            // 隐藏判别式暂存（1b/B1）：判别式只求值一次——旧实现把 value 节点嵌入每个 case 的
+            // 等值比较，switch (GetVal()) {...} 会对每个 case 各调一次 GetVal()
+            _labelCounter++;
+            var switchTempName = $"__switch_v{_labelCounter}";
+            var switchTempToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, switchTempName, switchTempName, ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
+            var switchTempDecl = BindVariableDeclaration(switchTempToken, isReadOnly: true, boundValue.Type);
+            var value = BoundNodeFactory.Variable(syntax, switchTempDecl);
 
             _labelCounter++;
             var switchEndLabel = new BoundLabel($"switchend{_labelCounter}");
@@ -1462,6 +1480,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             var result = ImmutableArray.CreateBuilder<BoundStatement>();
+            result.Add(BoundNodeFactory.VariableDeclaration(syntax, switchTempDecl, boundValue));
             if (chain != null)
             {
                 result.Add(chain);
@@ -1728,7 +1747,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case SSyntax.CocoaSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
 
                 default:
-                    throw new Exception($"Unexpected syntax {syntax.Kind}");
+                    // 1b/B8：意外的表达式语法报诊断 + ErrorExpression 降级，而非编译器崩溃
+                    _diagnostics.ReportError(syntax.Location, $"意外的表达式语法 {syntax.Kind}。");
+                    return new BoundErrorExpression(syntax);
             }
         }
 

@@ -444,6 +444,44 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                                         }
                                     }
                                 }
+                                else if (Current == '\'')
+                                {
+                                    // 跳过洞内 char 字面量（1b/B4）：旧实现只有 '{'/'}'/'"' 三分支，
+                                    // `$"{ '}' }"` 的 char 内 '}' 会被当洞闭合符，洞被提前截断
+                                    holeText.Append(Current);
+                                    _position++;
+                                    while (Current != '\0' && Current != '\'' && !(!verbatim && (Current == '\r' || Current == '\n')))
+                                    {
+                                        if (Current == '\\' && !verbatim)
+                                        {
+                                            // 转义（'\'' / '\\'）：连同被转义字符一并跳过
+                                            holeText.Append(Current);
+                                            _position++;
+                                            if (Current == '\0')
+                                            {
+                                                break;
+                                            }
+                                        }
+
+                                        holeText.Append(Current);
+                                        _position++;
+                                    }
+
+                                    if (Current == '\'')
+                                    {
+                                        holeText.Append(Current);
+                                        _position++;
+                                    }
+                                }
+                                else if (Current == '/' && Lookahead == '/')
+                                {
+                                    // 跳过洞内行注释（1b/B4）：`// }` 注释里的 '}' 不再闭合洞
+                                    while (Current != '\0' && Current != '\r' && Current != '\n')
+                                    {
+                                        holeText.Append(Current);
+                                        _position++;
+                                    }
+                                }
                                 else
                                 {
                                     holeText.Append(Current);

@@ -245,37 +245,72 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
         }
 
-        /// <summary>块体返回类型推断：取首条带值 return 的类型；无则 void。</summary>
+        /// <summary>
+        /// Lambda return type inference (1b/B2): recursive via Compilation.BoundChildren.
+        /// BoundChildren does not descend into nested lambda bodies (FunctionValueExpression
+        /// only exposes its Receiver), so inner returns never leak into outer inference.
+        /// </summary>
         private static TypeSymbol InferLambdaReturnType(BoundBlockStatement body, LambdaExpressionSyntax syntax)
         {
-            foreach (var statement in body.Statements)
+            var found = FindReturnType(body);
+            return found ?? TypeSymbol.Void;
+
+            static TypeSymbol? FindReturnType(BoundNode node)
             {
-                if (statement is BoundReturnStatement { Expression: { } expression } &&
+                if (node is BoundReturnStatement { Expression: { } expression } &&
                     expression.Type != TypeSymbol.Void)
                 {
                     return expression.Type;
                 }
-            }
 
-            return TypeSymbol.Void;
-        }
-
-        /// <summary>块体内全部带值 return 补转换到目标返回类型（表达式体已在合成前处理）。</summary>
-        private BoundBlockStatement ConvertLambdaBodyReturns(BoundBlockStatement body, TypeSymbol targetType, SSyntax.SyntaxNode syntax)
-        {
-            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
-            foreach (var statement in body.Statements)
-            {
-                if (statement is BoundReturnStatement { Expression: { } expression } returnStatement)
+                foreach (var child in Compilation.BoundChildren(node))
                 {
-                    statements.Add(new BoundReturnStatement(returnStatement.Syntax, BindConversion(returnStatement.Syntax.Location, expression, targetType)));
-                    continue;
+                    var nested = FindReturnType(child);
+                    if (nested != null)
+                    {
+                        return nested;
+                    }
                 }
 
-                statements.Add(statement);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Convert all value-carrying returns in the block body to the target return type
+        /// (expression bodies are handled before synthesis). 1b/B2: rewrite recursively via
+        /// BoundTreeRewriter so returns in nested blocks convert too; the rewriter does not
+        /// descend into nested lambda bodies, so inner lambda returns are never converted
+        /// against the outer target type.
+        /// </summary>
+        private BoundBlockStatement ConvertLambdaBodyReturns(BoundBlockStatement body, TypeSymbol targetType, SSyntax.SyntaxNode syntax)
+        {
+            var converter = new LambdaReturnConverter(this, targetType);
+            var converted = converter.RewriteStatement(body);
+            return converted == body ? body : (BoundBlockStatement)converted;
+        }
+
+        private sealed class LambdaReturnConverter : BoundTreeRewriter
+        {
+            private readonly CocoaBinder _binder;
+            private readonly TypeSymbol _targetType;
+
+            public LambdaReturnConverter(CocoaBinder binder, TypeSymbol targetType)
+            {
+                _binder = binder;
+                _targetType = targetType;
             }
 
-            return new BoundBlockStatement(body.Syntax, statements.ToImmutable());
+            protected override BoundStatement RewriteReturnStatement(BoundReturnStatement node)
+            {
+                if (node.Expression is { } expression && expression.Type != _targetType)
+                {
+                    var converted = _binder.BindConversion(node.Syntax.Location, expression, _targetType);
+                    return new BoundReturnStatement(node.Syntax, converted);
+                }
+
+                return node;
+            }
         }
 
         private BoundExpression BindAssignmentExpression(AssignmentExpressionSyntax syntax)
@@ -582,8 +617,38 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 arguments.Add(BindExpression(argumentSyntax));
             }
 
-            // 参数个数校验：构造函数签名 == 实参个数
-            var ctor = classType.GetMethod(classType.Name);
+            // Constructor overload resolution (1b/B10): candidates are ALL methods whose
+            // name matches the class — incl. overloads, walked along the inheritance chain.
+            // Two names must be probed for instantiated generics: InstantiatedTypeSymbol.Name
+            // is the mangled name (GenericTypeInstantiator.MangledName), and constructor
+            // clones are deliberately renamed to it (the compiler-wide ctor lookup convention,
+            // see GenericTypeInstantiator.PopulateMembers nameOverride). Legacy constructors
+            // declared as `function ClassName(...)` are NOT renamed (they never got the
+            // IsConstructor flag), so they keep the generic definition's simple name. The old
+            // singular GetMethod(classType.Name) missed the legacy form on instantiated types
+            // and skipped validation entirely (new Foo(anything) passed unchecked).
+            var definitionName = classType is InstantiatedTypeSymbol instantiatedType
+                ? instantiatedType.GenericDefinition.Name
+                : null;
+            var ctors = classType.GetMethods(classType.Name);
+            if (definitionName != null && definitionName != classType.Name)
+            {
+                ctors = ctors.AddRange(classType.GetMethods(definitionName));
+            }
+
+            ctors = ctors.Distinct().ToImmutableArray();
+            var ctor = ctors.FirstOrDefault(c => c.Parameters.Length == arguments.Count);
+            if (ctor == null && (ctors.Length > 0 || arguments.Count > 0))
+            {
+                var arities = string.Join("/", ctors.Select(c => c.Parameters.Length).Distinct().OrderBy(x => x));
+                _diagnostics.ReportError(
+                    syntax.Identifier.Location,
+                    arities.Length == 0
+                        ? $"类 '{classType.Name}' 没有声明构造函数。"
+                        : $"类 '{classType.Name}' 没有接受 {arguments.Count} 个参数的构造函数（可用元数：{arities}）。");
+                return new BoundErrorExpression(syntax);
+            }
+
             if (ctor != null)
             {
                 if (!IsAccessibleMember(ctor.Visibility, ctor.ContainingClass!))

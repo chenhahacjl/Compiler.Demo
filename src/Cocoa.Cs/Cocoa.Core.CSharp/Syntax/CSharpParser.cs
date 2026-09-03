@@ -71,6 +71,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
 
         public DiagnosticBag Diagnostics => _diagnostics;
 
+        /// <summary>前瞻扫描上限（1b/B7）：防病态不平衡输入死循环；旧 128 会静默截断长参数表探测。</summary>
+        private const int MaxLookahead = 4096;
+
+
         private SyntaxToken Peek(int offset)
         {
             var index = _position + offset;
@@ -287,7 +291,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 return false;
             var depth = 0;
             var i = 0;
-            while (i < 128)
+            while (i < MaxLookahead)
             {
                 switch (Peek(i).Kind)
                 {
@@ -1254,7 +1258,42 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             var isEof = Current.Kind == SyntaxKind.EndOfFileToken;
             var sameLine = !isEof && keywordLine == currentLine;
             var expression = sameLine ? ParseExpression() : null;
+
+            // 1b/B3：语言设计为"return 表达式与 return 同行"（语句以换行结束）。
+            // 裸 return 后紧跟表达式起始 token 极可能是 `return\n<expr>` 被静默切成
+            // return; + 孤儿表达式语句——显式报错而非静默吞掉
+            if (expression == null && CanStartExpression(Current.Kind))
+            {
+                ReportError(Current.Location, "return 表达式必须写在 return 同一行（语句以换行结束）。");
+            }
+
             return new ReturnStatementSyntax(_syntaxTree, keyword, expression);
+        }
+
+        /// <summary>当前 token 能否作为表达式的起始（1b/B3 裸 return 诊断用；对应 ParsePrimaryExpression + 一元前缀）。</summary>
+        private static bool CanStartExpression(SyntaxKind kind)
+        {
+            return kind is SyntaxKind.IdentifierToken
+                or SyntaxKind.OpenParenthesisToken
+                or SyntaxKind.NewKeyword
+                or SyntaxKind.TrueKeyword
+                or SyntaxKind.FalseKeyword
+                or SyntaxKind.NullKeyword
+                or SyntaxKind.NumberToken
+                or SyntaxKind.DoubleToken
+                or SyntaxKind.StringToken
+                or SyntaxKind.VerbatimStringToken
+                or SyntaxKind.RawStringToken
+                or SyntaxKind.InterpolatedStringToken
+                or SyntaxKind.CharToken
+                or SyntaxKind.ThisKeyword
+                or SyntaxKind.BaseKeyword
+                or SyntaxKind.OutKeyword
+                or SyntaxKind.RefKeyword
+                or SyntaxKind.MinusToken
+                or SyntaxKind.PlusToken
+                or SyntaxKind.BangToken
+                or SyntaxKind.TildeToken;
         }
 
         private StatementSyntax ParseExpressionStatement()
