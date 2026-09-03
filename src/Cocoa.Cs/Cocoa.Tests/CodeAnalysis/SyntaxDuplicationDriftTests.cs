@@ -46,6 +46,88 @@ namespace Cocoa.Tests.CodeAnalysis
         private static string FactoryPath(string dialect)
             => Path.Combine(RepoRoot(), "src", "Cocoa.Cs", $"Cocoa.CodeAnalysis.{dialect}", "Syntax", "Green", $"{dialect}GreenNodeFactory.cs");
 
+        /// <summary>蓄意分化的 Binder partial（Cocoa 特有 for..range 绑定）。同步义务仍适用于其余代码。</summary>
+        private static readonly HashSet<string> DivergentBinderFiles = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "CSharpBinder.Statements.cs",
+        };
+
+        /// <summary>Roslyn 式按语言独立的 Binder/Compilation/SemanticModel partial（3c 决策：不提取 BinderBase，双写+漂移防护）。</summary>
+        private static readonly string[] BinderSyncFiles = new[]
+        {
+            Path.Combine("Binder", "Impl", "CSharpBinder.cs"),
+            Path.Combine("Binder", "Impl", "CSharpBinder.Declarations.cs"),
+            Path.Combine("Binder", "Impl", "CSharpBinder.Expressions.cs"),
+            Path.Combine("Binder", "Impl", "CSharpBinder.Statements.cs"),
+            Path.Combine("Binder", "Impl", "CSharpBinder.TypeResolution.cs"),
+            Path.Combine("Compilation", "CSharpCompilation.cs"),
+            Path.Combine("Compilation", "CSharpSemanticModel.cs"),
+        };
+
+        /// <summary>规范化比对文本：去掉纯注释行、using 行、空行——免疫注释语言/风格/位置与文件头差异，代码必须一致。</summary>
+        private static string StripCommentLines(string text)
+        {
+            var sb = new StringBuilder();
+            foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+            {
+                var trimmed = line.TrimStart();
+                if (trimmed.StartsWith("//", StringComparison.Ordinal)
+                    || trimmed.StartsWith("using ", StringComparison.Ordinal)
+                    || trimmed.Length == 0)
+                {
+                    continue;
+                }
+
+                sb.AppendLine(line);
+            }
+
+            return sb.ToString();
+        }
+
+        [Fact]
+        public void Binder_Files_Stay_In_Sync_Modulo_Prefix_And_Comments()
+        {
+            var csharpRoot = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.CSharp");
+            var cocoaRoot = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.Cocoa");
+
+            foreach (var rel in BinderSyncFiles)
+            {
+                var name = Path.GetFileName(rel);
+                var csharpPath = Path.Combine(csharpRoot, rel);
+                var cocoaPath = Path.Combine(cocoaRoot, rel.Replace("CSharp", "Cocoa"));
+                Assert.True(File.Exists(cocoaPath), $"Cocoa 侧缺少对应文件：{rel.Replace("CSharp", "Cocoa")}");
+
+                if (DivergentBinderFiles.Contains(name))
+                {
+                    continue;
+                }
+
+                var csharp = StripCommentLines(File.ReadAllText(csharpPath, Encoding.UTF8).Replace("CSharp", "Cocoa"));
+                var cocoa = StripCommentLines(File.ReadAllText(cocoaPath, Encoding.UTF8));
+                Assert.True(csharp == cocoa,
+                    $"Binder 文件代码漂移（注释外不再相同）：{rel}。单侧修复必须双写到另一方言；蓄意分化时加入 DivergentBinderFiles 白名单。");
+            }
+        }
+
+        [Fact]
+        public void Dialect_SyntaxFacts_Stay_Aligned_With_Shared()
+        {
+            var sharedPath = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis", "Syntax", "SyntaxFacts.cs");
+            var shared = StripCommentLines(File.ReadAllText(sharedPath, Encoding.UTF8));
+
+            foreach (var dialect in new[] { "CSharp", "Cocoa" })
+            {
+                var dialectPath = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", $"Cocoa.CodeAnalysis.{dialect}", "Syntax", $"{dialect}SyntaxFacts.cs");
+                var text = File.ReadAllText(dialectPath, Encoding.UTF8)
+                    .Replace("CSharp", "Cocoa")
+                    .Replace("CocoaSyntaxFacts", "SyntaxFacts")
+                    .Replace("namespace Cocoa.CodeAnalysis.Cocoa.Syntax", "namespace Cocoa.CodeAnalysis.Syntax");
+                var dialectCode = StripCommentLines(text);
+                Assert.True(dialectCode == shared,
+                    $"方言 SyntaxFacts 与共享 SyntaxFacts 漂移：{dialect}SyntaxFacts.cs。该类是 Roslyn 式公开 API 面，必须与共享实现保持同步（同步实现，或在两侧蓄意分化时更新本测试）。");
+            }
+        }
+
         [Fact]
         public void Node_Files_Are_Identical_Modulo_Dialect_Prefix()
         {
@@ -160,17 +242,20 @@ namespace Cocoa.Tests.CodeAnalysis
             return map;
         }
 
-        /// <summary>提取 kind 枚举成员 "Name = N," 的名字→值映射。</summary>
+        /// <summary>提取 kind 枚举成员（支持显式 "Name = N," 与隐式 "Name,"（值递增），容忍行内注释）。</summary>
         private static Dictionary<string, int> ParseKindMembers(string path)
         {
             var map = new Dictionary<string, int>(StringComparer.Ordinal);
-            var pattern = new Regex("^\\s*(\\w+)\\s*=\\s*(\\d+)\\s*,?\\s*$", RegexOptions.Compiled);
+            var pattern = new Regex("^\\s*(\\w+)\\s*(?:=\\s*(\\d+))?\\s*,\\s*(?://.*)?$", RegexOptions.Compiled);
+            var next = 0;
             foreach (var line in File.ReadAllLines(path, Encoding.UTF8))
             {
                 var m = pattern.Match(line);
                 if (m.Success)
                 {
-                    map[m.Groups[1].Value] = int.Parse(m.Groups[2].Value);
+                    var value = m.Groups[2].Success ? int.Parse(m.Groups[2].Value) : next;
+                    map[m.Groups[1].Value] = value;
+                    next = value + 1;
                 }
             }
 
