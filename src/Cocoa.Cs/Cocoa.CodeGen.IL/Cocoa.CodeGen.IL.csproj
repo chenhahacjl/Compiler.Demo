@@ -6,9 +6,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.Tests" />
-    <InternalsVisibleTo Include="cocoa" />
-    <InternalsVisibleTo Include="Cocoa.ProjectSystem" />
     <InternalsVisibleTo Include="Cocoa.CodeAnalysis" />
+    <InternalsVisibleTo Include="Cocoa.ProjectSystem" />
   </ItemGroup>
 
   <ItemGroup>
