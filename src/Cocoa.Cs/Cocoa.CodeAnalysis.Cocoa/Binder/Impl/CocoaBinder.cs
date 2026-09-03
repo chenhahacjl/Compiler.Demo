@@ -33,7 +33,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// 未命中回退作用域链（树只索引全局静态声明，动态/单态化/委托类型等以回退兜底）。</summary>
         private readonly NamespaceSymbol? _globalNamespace;
 
-        private Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel ContinueLabel)>();
+        private Stack<(BoundLabel BreakLabel, BoundLabel? ContinueLabel)> _loopStack = new Stack<(BoundLabel BreakLabel, BoundLabel? ContinueLabel)>();
         private int _labelCounter;
         private BoundScope _scope;
 
@@ -66,7 +66,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// <summary>设置声明绑定上下文（BindGlobalScope 阶段 3/3.2/3.5 调用）。</summary>
         internal void SetBindingClass(NamedTypeSymbol? classType) => _bindingClass = classType;
 
-        internal CocoaBinder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null, ImmutableArray<CoaProgram> codLibraries = default, NamespaceSymbol? globalNamespace = null)
+        internal CocoaBinder(bool isScript, BoundScope? parent, FunctionSymbol? function, ImmutableArray<string> references, ImmutableArray<string> usingNamespaces, Func<string, TypeSymbol?> builtinTypeResolver, ImmutableArray<string> usingStatics = default, ImmutableDictionary<string, string> usingAliases = null!, ImmutableArray<CoaProgram> codLibraries = default, NamespaceSymbol? globalNamespace = null)
         {
             _scope = new BoundScope(parent);
             _isScript = isScript;
@@ -254,7 +254,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     }
                     else
                     {
-                        binder.Diagnostics.ReportFacadeMarkerRecommended(primary.Identifier.Location, classType.FullName, facadeTarget.Name);
+                        binder.Diagnostics.ReportFacadeMarkerRecommended(primary.Identifier.Location, classType.FullName, facadeTarget!.Name);
                     }
                 }
 
@@ -703,7 +703,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             body = BuildConstructorPrefix(binder, function, bodySyntax ?? function.Syntax!, body);
 
             var returnCheckLocation = function.ReturnType != TypeSymbol.Void && !function.IsAbstract
-                ? (function.Declaration != null ? ((FunctionDeclarationSyntax)function.Declaration).Identifier.Location : bodyLocation.Location)
+                ? (function.Declaration != null ? ((FunctionDeclarationSyntax)function.Declaration).Identifier.Location : bodyLocation!.Location)
                 : (TextLocation?)null;
 
             // S-7：拆双产物——raw（构造前缀/插值归一后、未 Lower 的结构化 HIR）供 .coa 持久化；

@@ -40,7 +40,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     }
                     else
                     {
-                        var parameter = CreateParameterSymbol(parameterName, parameterType, parameterSyntax, parameters.Count);
+                        var parameter = CreateParameterSymbol(parameterName, parameterType!, parameterSyntax, parameters.Count);
                         parameters.Add(parameter);
                     }
                 }
@@ -114,7 +114,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
                 else
                 {
-                    var parameter = CreateParameterSymbol(parameterName, parameterType, parameterSyntax, parameters.Count);
+                    var parameter = CreateParameterSymbol(parameterName, parameterType!, parameterSyntax, parameters.Count);
                     parameters.Add(parameter);
                 }
             }
@@ -218,7 +218,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
             if (hasGetModifier && hasSetModifier)
             {
-                var location = (syntax.Setter?.Keyword ?? syntax.Getter?.Keyword).Location;
+                var location = (syntax.Setter?.Keyword ?? syntax.Getter?.Keyword)!.Location;
                 _diagnostics.ReportAccessorModifierOnBothAccessors(location, syntax.Identifier.Text);
             }
 
@@ -664,7 +664,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
-                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
+                        classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType!, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
                     }
                     else
                     {
@@ -898,7 +898,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             statements.Add(new BoundVariableDeclaration(syntax, handlerLocal, boundHandler));
             statements.Add(new BoundVariableDeclaration(syntax, oldListLocal, fieldAccess));
 
-            var nullLiteral = new BoundLiteralExpression(syntax, null, TypeSymbol.Null);
+            var nullLiteral = new BoundLiteralExpression(syntax, null!, TypeSymbol.Null);
 
             if (operatorKind == SSyntax.SyntaxKind.PlusEqualsToken)
             {
@@ -1142,7 +1142,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var notNullCondition = BoundNodeFactory.Binary(syntax,
                 BoundNodeFactory.Variable(syntax, snapshotLocal),
                 SSyntax.SyntaxKind.BangEqualsToken,
-                new BoundLiteralExpression(syntax, null, TypeSymbol.Null));
+                new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
 
             _labelCounter++;
             var breakLabel = new BoundLabel($"__evt{sequence}_raise_br");
@@ -1574,7 +1574,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             if (syntax.Getter != null)
             {
                 var getterParams = isIndexer ? indexParams : ImmutableArray<ParameterSymbol>.Empty;
-                getter = new FunctionSymbol("get_" + propertyName, getterParams, propertyType, null,
+                getter = new FunctionSymbol("get_" + propertyName, getterParams, propertyType!, null,
                     syntax: syntax.Getter, containingClass: interfaceType, visibility: getterVisibility)
                 {
                     IsAbstract = true,
@@ -1588,7 +1588,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             FunctionSymbol? setter = null;
             if (syntax.Setter != null)
             {
-                var valueParameter = new ParameterSymbol("value", propertyType, isIndexer ? indexParams.Length : 0);
+                var valueParameter = new ParameterSymbol("value", propertyType!, isIndexer ? indexParams.Length : 0);
                 var setterParams = isIndexer ? indexParams.Add(valueParameter) : ImmutableArray.Create(valueParameter);
                 setter = new FunctionSymbol("set_" + propertyName, setterParams, TypeSymbol.Void, null,
                     syntax: syntax.Setter, containingClass: interfaceType, visibility: setterVisibility)
@@ -1601,7 +1601,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 classFunctions.Add(setter);
             }
 
-            interfaceType.AddProperty(new PropertySymbol(propertyName, propertyType, interfaceType, getter, setter, visibility, isStatic: false, isIndexer: isIndexer));
+            interfaceType.AddProperty(new PropertySymbol(propertyName, propertyType!, interfaceType, getter, setter, visibility, isStatic: false, isIndexer: isIndexer));
         }
 
         /// <summary>接口实现完整性：类（含继承链）须实现其全部接口的每个成员（方法签名/属性访问器）。</summary>
@@ -1744,7 +1744,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             // 数组元素递归
             if (implementationType is ArrayTypeSymbol && interfaceType is ArrayTypeSymbol)
             {
-                return TypesMatchForInterfaceImplementation(implementationType.ElementType, interfaceType.ElementType);
+                return TypesMatchForInterfaceImplementation(implementationType.ElementType!, interfaceType.ElementType!);
             }
 
             return false;
@@ -1792,7 +1792,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             // 自动属性：合成后备字段 _Name（索引器禁用自动属性）
             if (isAuto && !isIndexer)
             {
-                var backingField = new FieldSymbol("_" + syntax.Identifier.Text, propertyType, visibility, classType, isReadonly: false, isStatic: isStatic);
+                var backingField = new FieldSymbol("_" + syntax.Identifier.Text, propertyType!, visibility, classType, isReadonly: false, isStatic: isStatic);
                 classType.AddField(backingField);
             }
 
@@ -1822,7 +1822,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     getterParams = new[] { thisParam }.Concat(getterParams.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal + 1))).ToImmutableArray();
                 }
 
-                getter = new FunctionSymbol(isIndexer ? "get_Item" : "get_" + syntax.Identifier.Text, getterParams, propertyType, null,
+                getter = new FunctionSymbol(isIndexer ? "get_Item" : "get_" + syntax.Identifier.Text, getterParams, propertyType!, null,
                     syntax: syntax.Getter, containingClass: classType, visibility: getterVisibility) { IsStatic = isStatic || lower, IsPropertyAccessor = true };
                 classType.AddMethod(getter);
                 classFunctions.Add(getter);
@@ -1838,7 +1838,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 var setterIndexParams = isIndexer
                     ? indexParams.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray()
                     : indexParams;
-                var valueParameter = new ParameterSymbol("value", propertyType, isIndexer ? indexParams.Length : 0);
+                var valueParameter = new ParameterSymbol("value", propertyType!, isIndexer ? indexParams.Length : 0);
                 var setterParams = isIndexer ? setterIndexParams.Add(valueParameter) : ImmutableArray.Create(valueParameter);
                 if (lower)
                 {
@@ -1855,7 +1855,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var propertyName = isIndexer ? "Item" : syntax.Identifier.Text;
             if (classType.GetDeclaredProperty(propertyName) == null)
             {
-                var property = new PropertySymbol(propertyName, propertyType, classType, getter, setter, visibility, isStatic, isIndexer: isIndexer);
+                var property = new PropertySymbol(propertyName, propertyType!, classType, getter, setter, visibility, isStatic, isIndexer: isIndexer);
                 if (getter != null) getter.ContainingProperty = property;
                 if (setter != null) setter.ContainingProperty = property;
                 classType.AddProperty(property);
@@ -1873,7 +1873,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             foreach (var p in parameters)
             {
                 var type = BindTypeClause(p.Type);
-                builder.Add(new ParameterSymbol(p.Identifier.Text, type, ordinal));
+                builder.Add(new ParameterSymbol(p.Identifier.Text, type!, ordinal));
                 ordinal++;
             }
 

@@ -200,7 +200,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            return new BoundBaseExpression(syntax, _currentClass.BaseType);
+            return new BoundBaseExpression(syntax, _currentClass.BaseType!);
         }
 
         private BoundExpression BindThisExpression(ThisExpressionSyntax syntax)

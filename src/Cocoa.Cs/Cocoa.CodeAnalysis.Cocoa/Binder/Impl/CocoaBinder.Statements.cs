@@ -201,7 +201,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            return new BoundBaseExpression(syntax, _currentClass.BaseType);
+            return new BoundBaseExpression(syntax, _currentClass.BaseType!);
         }
 
         private BoundExpression BindThisExpression(ThisExpressionSyntax syntax)

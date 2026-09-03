@@ -18,6 +18,8 @@ namespace Cocoa.CodeAnalysis.Syntax
     {
         private readonly ImmutableArray<SyntaxNode> _nodesAndSeparators;
 
+        public static SeparatedSyntaxList<T> Empty { get; } = new SeparatedSyntaxList<T>(ImmutableArray<SyntaxNode>.Empty);
+
         internal SeparatedSyntaxList(ImmutableArray<SyntaxNode> nodesAndSeparators)
         {
             _nodesAndSeparators = nodesAndSeparators;

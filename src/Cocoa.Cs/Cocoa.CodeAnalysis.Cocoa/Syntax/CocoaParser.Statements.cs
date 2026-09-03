@@ -197,7 +197,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             var openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
 
             VariableDeclarationSyntax? initDeclaration = null;
-            SeparatedSyntaxList<ExpressionSyntax> initializers = default;
+            SeparatedSyntaxList<ExpressionSyntax> initializers = SeparatedSyntaxList<ExpressionSyntax>.Empty;
             if (Current.Kind == SyntaxKind.LetKeyword || Current.Kind == SyntaxKind.VarKeyword || Current.Kind == SyntaxKind.ConstKeyword)
             {
                 initDeclaration = (VariableDeclarationSyntax)ParseVariableDeclaration();
@@ -215,7 +215,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
 
             var semicolonToken2 = MatchToken(SyntaxKind.SemicolonToken);
-            SeparatedSyntaxList<ExpressionSyntax> incrementors = default;
+            SeparatedSyntaxList<ExpressionSyntax> incrementors = SeparatedSyntaxList<ExpressionSyntax>.Empty;
             if (Current.Kind != SyntaxKind.CloseParenthesisToken)
             {
                 incrementors = ParseCommaSeparatedExpressions(SyntaxKind.CloseParenthesisToken);
