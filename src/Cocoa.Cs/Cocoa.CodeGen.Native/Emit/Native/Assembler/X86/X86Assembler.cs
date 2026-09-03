@@ -15,109 +15,9 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
     ///  - X64Size.Qword 闈欓粯闄嶇骇锟?32 浣嶏紙鎸囬拡瀹藉害 4 瀛楄妭锟?
     ///  - 鏁版嵁寮曠敤锛圡ovRip/LeaRip/CallRip锛変娇鐢ㄧ粷瀵瑰湴鍧€ [disp32] 鑰岄潪 RIP 鐩稿
     /// </summary>
-    internal sealed class X86Assembler : IAssembler
+    internal sealed class X86Assembler : AssemblerBase, IAssembler
     {
-        private readonly List<byte> _bytes = new List<byte>();
-        private readonly List<byte> _data = new List<byte>();
-        private readonly Dictionary<int, int> _labels = new Dictionary<int, int>();
-        private readonly Dictionary<int, int> _dataOffsets = new Dictionary<int, int>();
-        private readonly List<(int Offset, int Label)> _labelFixups = new List<(int Offset, int Label)>();
-        private readonly List<(int Offset, int Symbol)> _dataFixups = new List<(int Offset, int Symbol)>();
-        private readonly List<(int DataOffset, int Label)> _dataCodeFixups = new List<(int DataOffset, int Label)>();
-        private readonly List<(int DataOffset, int Symbol)> _dataDataFixups = new List<(int DataOffset, int Symbol)>();
-        private readonly List<int> _dataAbsoluteFixups = new List<int>();
-
-        public System.Collections.Generic.IReadOnlyList<int> DataAbsoluteFixups => _dataAbsoluteFixups;
-        private int _nextLabelId;
-        private int _nextSymbolId;
-
-        public int Position => _bytes.Count;
-        public int DataPosition => _data.Count;
-        public int DataLength => _data.Count;
-
-        public int CreateLabel() => _nextLabelId++;
-
-        public void MarkLabel(int label)
-        {
-            _labels.Add(label, Position);
-        }
-
-        public int GetLabelOffset(int label)
-        {
-            return _labels[label];
-        }
-
-        public int CreateDataSymbol() => _nextSymbolId++;
-
-        public void MarkDataSymbol(int symbol)
-        {
-            _dataOffsets.Add(symbol, DataPosition);
-        }
-
-        public int GetDataOffset(int symbol)
-        {
-            return _dataOffsets[symbol];
-        }
-
-        public void WriteDataByte(byte value)
-        {
-            _data.Add(value);
-        }
-
-        public void WriteDataInt32(int value)
-        {
-            _data.Add((byte)value);
-            _data.Add((byte)(value >> 8));
-            _data.Add((byte)(value >> 16));
-            _data.Add((byte)(value >> 24));
-        }
-
-        public void WriteDataInt16(int value)
-        {
-            _data.Add((byte)value);
-            _data.Add((byte)(value >> 8));
-        }
-
-        public void WriteDataInt64(long value)
-        {
-            _data.Add((byte)value);
-            _data.Add((byte)(value >> 8));
-            _data.Add((byte)(value >> 16));
-            _data.Add((byte)(value >> 24));
-            _data.Add((byte)(value >> 32));
-            _data.Add((byte)(value >> 40));
-            _data.Add((byte)(value >> 48));
-            _data.Add((byte)(value >> 56));
-        }
-
-        public void WriteDataBytes(params byte[] values)
-        {
-            _data.AddRange(values);
-        }
-
-        public void WriteDataBytes(IEnumerable<byte> values)
-        {
-            _data.AddRange(values);
-        }
-
-        public void WriteDataUtf16(string value)
-        {
-            WriteDataInt32(value.Length);
-            foreach (var c in value)
-            {
-                WriteDataInt16(c);
-            }
-        }
-
-        public void AlignData(int alignment)
-        {
-            while (_data.Count % alignment != 0)
-            {
-                _data.Add(0);
-            }
-        }
-
-        public void Patch(int dataTextDelta, long imageBase)
+        public override void Patch(int dataTextDelta, long imageBase)
         {
             foreach (var fixup in _labelFixups)
             {
@@ -161,34 +61,12 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
             }
         }
 
-        public void AddDataCodeFixup(int dataOffset, int label)
-        {
-            _dataCodeFixups.Add((dataOffset, label));
-            _dataAbsoluteFixups.Add(dataOffset);
-        }
-
-        public void AddDataDataFixup(int dataOffset, int symbol)
-        {
-            _dataDataFixups.Add((dataOffset, symbol));
-            _dataAbsoluteFixups.Add(dataOffset);
-        }
-
         private void WriteDataInt32At(int offset, long value)
         {
             _data[offset] = unchecked((byte)value);
             _data[offset + 1] = unchecked((byte)(value >> 8));
             _data[offset + 2] = unchecked((byte)(value >> 16));
             _data[offset + 3] = unchecked((byte)(value >> 24));
-        }
-
-        public byte[] ToArray()
-        {
-            return _bytes.ToArray();
-        }
-
-        public byte[] GetData()
-        {
-            return _data.ToArray();
         }
 
         public void Mov(X64Size size, X64Register dst, X64Register src)
