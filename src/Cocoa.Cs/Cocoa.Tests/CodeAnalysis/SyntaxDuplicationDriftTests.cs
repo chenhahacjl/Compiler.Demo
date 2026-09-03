@@ -113,11 +113,14 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var csharpEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.CSharp", "CSharpSyntaxKind.cs");
             var cocoaEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.Cocoa", "CocoaSyntaxKind.cs");
+            var sharedEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis", "Syntax", "SyntaxKind.cs");
             var csharpMembers = ParseKindMembers(csharpEnum);
             var cocoaMembers = ParseKindMembers(cocoaEnum);
+            var sharedMembers = ParseKindMembers(sharedEnum);
 
             Assert.NotEmpty(csharpMembers);
             Assert.NotEmpty(cocoaMembers);
+            Assert.NotEmpty(sharedMembers);
 
             foreach (var pair in csharpMembers)
             {
@@ -125,6 +128,18 @@ namespace Cocoa.Tests.CodeAnalysis
                     $"CocoaSyntaxKind 缺少成员：{pair.Key}（RawKind 值域须与共享 SyntaxKind 对齐）");
                 Assert.True(cocoaValue == pair.Value,
                     $"SyntaxKind 值漂移：{pair.Key} CSharp={pair.Value} Cocoa={cocoaValue}（(int)Kind == RawKind 约定被破坏）");
+                Assert.True(sharedMembers.TryGetValue(pair.Key, out var sharedValue),
+                    $"共享 SyntaxKind 缺少方言成员：{pair.Key}（三枚举一致性收口被破坏）");
+                Assert.True(sharedValue == pair.Value,
+                    $"SyntaxKind 值漂移：{pair.Key} CSharp={pair.Value} Shared={sharedValue}（(int)Kind == RawKind 约定被破坏）");
+            }
+
+            foreach (var pair in cocoaMembers)
+            {
+                Assert.True(sharedMembers.TryGetValue(pair.Key, out var sharedValue),
+                    $"共享 SyntaxKind 缺少方言成员：{pair.Key}（三枚举一致性收口被破坏）");
+                Assert.True(sharedValue == pair.Value,
+                    $"SyntaxKind 值漂移：{pair.Key} Cocoa={pair.Value} Shared={sharedValue}（(int)Kind == RawKind 约定被破坏）");
             }
         }
 

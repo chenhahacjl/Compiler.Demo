@@ -1,18 +1,18 @@
-﻿using Cocoa.CodeAnalysis.Symbols;
+using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Text;
 
 using Cocoa.CodeAnalysis.Syntax;
 
-namespace Cocoa.CodeAnalysis.Cocoa.Syntax
+namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
     /// 璇嶆硶鍒嗘瀽鍣?(Lexical Analyzer)
     /// <br/>
     /// 瀛楃 => Token
     /// </summary>
-    internal sealed partial class CocoaLexer : ILexer
+    internal abstract partial class LexerBase : ILexer
     {
         private void ReadToken()
         {
