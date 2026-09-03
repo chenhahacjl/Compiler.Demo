@@ -8,7 +8,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 璇嶆硶鍒嗘瀽鍣?(Lexical Analyzer)
+    /// 词法分析器 (Lexical Analyzer)
     /// <br/>
     /// 字符 => Token
     /// </summary>
@@ -41,7 +41,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     case 'u':
                     case 'x':
                         {
-                            var isFixed = Current == 'u'; // \u 鍥哄畾 4 浣嶏紱\x 鍙彉 1~4 浣?
+                            var isFixed = Current == 'u'; // \u 固定 4 位；\x 可变 1~4 位
                             var required = isFixed ? 4 : 0;
                             _position++;
                             var digits = 0;
@@ -174,10 +174,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            // 绫诲瀷鍚庣紑锛?e-M21锛夛細`42L`/`0xFFL`銆乣1u`/`1U`銆乣1ul`/`1UL`/`1lu`/`1LU`銆乣1.0f`/`1e5f`銆?
-            // 浠呭綋鍚庣紑鍚庨潪鏍囪瘑绗﹀瓧绗︽椂鐢熸晥锛岄伩鍏嶅悶鎺?let / long / ulong / using 绛夊叧閿瓧/鏍囪瘑绗?
-            // 锛堝 `9696let` 搴旀媶涓?9696 + let锛宍1234long` 搴旀媶涓?1234 + long锛宍1ul` 涓嶅簲鎷嗘垚 `1`+`ul`锛夈€?
-            // 鍙屽瓧姣嶇粍鍚堬紙ul/UL/lu/LU锛夋寜 Peek(2) 鍒ゅ畾杈圭晫銆?
+            // 类型后缀（6e-M21）：`42L`/`0xFFL`、`1u`/`1U`、`1ul`/`1UL`/`1lu`/`1LU`、`1.0f`/`1e5f`。
+            // 仅当后缀后非标识符字符时生效，避免吞掉 let / long / ulong / using 等关键字/标识符
+            // （如 `9696let` 应拆为 9696 + let，`1234long` 应拆为 1234 + long，`1ul` 不应拆成 `1`+`ul`）。
+            // 双字母组合（ul/UL/lu/LU）按 Peek(2) 判定边界。
             bool uSuffix = false, lSuffix = false, fSuffix = false;
             {
                 var s = Current;
@@ -318,7 +318,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (!parsed)
             {
-                // >int.MaxValue 鐨勬暣鏁板瓧闈㈤噺鑷姩鍗囨牸涓?long锛圕# 鍚屾瀯锛氬崄杩涘埗澶ф暣鏁板彇鏈€灏忓彲瀹圭撼绫诲瀷锛?
+                // >int.MaxValue 的整数字面量自动升格为 long（C# 同构：十进制大整数取最小可容纳类型）
                 var bigText = isHex ? text.Substring(2) : text;
                 if (long.TryParse(bigText, isHex ? System.Globalization.NumberStyles.HexNumber : System.Globalization.NumberStyles.Integer, null, out var upgraded))
                 {
@@ -351,7 +351,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             var length = _position - _start;
             var text = _text.ToString(_start, length);
 
-            // P1-A 璇嶆硶鍒嗗锛氬叧閿瓧璇嗗埆缁忚瑷€涓撳睘琛紙CO 琛?= 鍏变韩鍏ㄨ〃锛汣# 琛ㄥ湪 P1-A(ii) 鎺掗櫎 CO 鐙崰璇嶏級
+            // P1-A 词法分家：关键字识别经语言专属表（CO 表 = 共享全表；C# 表在 P1-A(ii) 排除 CO 独占词）
             _kind = _syntaxTree.Language.GetKeywordKind(text);
         }
     }

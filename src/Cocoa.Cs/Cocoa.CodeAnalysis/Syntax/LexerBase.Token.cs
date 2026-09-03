@@ -56,7 +56,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else if (Current == '>')
                     {
-                        // 鍑芥暟绫诲瀷绠ご锛?e-M22 C2锛夛細`(int) -> int`锛?cs 鏂硅█鍦ㄨВ鏋愬眰鎷掔粷
+                        // 函数类型箭头（6e-M22 C2）：`(int) -> int`（cs 方言在解析层拒绝）
                         _position++;
                         _kind = SyntaxKind.ArrowToken;
                     }
@@ -366,7 +366,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     else if (char.IsLetter(Peek(1)) || Peek(1) == '_')
                     {
-                        _position++; // 娑堣垂 '@'锛宊start 淇濇寔 @ 浣嶇疆 鈫?token 鏂囨湰鍚?@锛堝悕鍚?@锛?
+                        _position++; // 消费 '@'，_start 保持 @ 位置 → token 文本含 @（名含 @）
                         ReadIdentifierOrKeyword();
                     }
                     else

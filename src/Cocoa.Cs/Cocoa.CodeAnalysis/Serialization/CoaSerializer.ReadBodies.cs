@@ -197,7 +197,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case "byrefarg":
                     {
-                        // 6e-M23 R8锛歰ut/ref 瀹炲弬鍖呰锛堝唴灞備负鍙祴鍊?lvalue锛?
+                        // 6e-M23 R8：out/ref 实参包装（内层为可赋值 lvalue）。
                         var modifier = reader.ExpectString();
                         var expression = ReadExpression(reader, context, labels);
                         return new BoundByRefArgument(NoSyntax, expression, isRef: modifier == "ref");
@@ -465,7 +465,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 return value;
             }
 
-            /// <summary>绐ユ帰褰撳墠鍘熷 token锛堜笉璺宠繃 `(`锛夆€斺€旂敤浜庡垽鏂瓙鑺傜偣鏄惁鍑虹幇銆?/summary>
+            /// <summary>窥探当前原始 token（不跳过 `(`）——用于判断子节点是否出现。</summary>
             public string PeekRaw()
             {
                 return _pos < _tokens.Length ? _tokens[_pos] : "";
@@ -498,7 +498,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             public void End()
             {
-                // 褰撳墠 token 搴斾负鑺傜偣闂嫭鍙?`)`锛堢洿鎺ユ秷璐癸紝涓嶈烦杩?`(`锛?
+                // 当前 token 应为节点闭括号 `)`（直接消费，不跳过 `(`）。
                 if (_pos >= _tokens.Length)
                 {
                     throw new InvalidDataException($"unexpected end of .coa file at pos {_pos}; context: {Context()}");

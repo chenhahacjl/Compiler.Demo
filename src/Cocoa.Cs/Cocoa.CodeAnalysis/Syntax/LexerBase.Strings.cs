@@ -8,7 +8,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 璇嶆硶鍒嗘瀽鍣?(Lexical Analyzer)
+    /// 词法分析器 (Lexical Analyzer)
     /// <br/>
     /// 字符 => Token
     /// </summary>
@@ -76,13 +76,13 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>
-        /// verbatim 瀛楃涓?<c>@"..."</c>锛氫笉澶勭悊 <c>\</c> 杞箟锛?c>""</c> 杞箟寮曞彿锛涘厑璁稿琛岋紙鍘熸牱淇濈暀锛夈€?
+        /// verbatim 字符串 <c>@"..."</c>：不处理 <c>\</c> 转义，<c>""</c> 转义引号；允许多行（原样保留）。
         /// </summary>
         private void ReadVerbatimString()
         {
-            // 璺宠繃寮€澶村紩鍙?
+            // 当前位置在 '@'：跳过 '@'
             _position++;
-            // 璺宠繃寮€澶村紩鍙?
+            // 跳过开头引号
             _position++;
 
             var stringBuilder = new StringBuilder();
@@ -129,12 +129,12 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>
-        /// raw 瀛楃涓?<c>"""..."""</c>锛氬畾鐣岀 = 璧峰鏈€澶у紩鍙蜂覆 N锛堚墺3锛夛紝鍐呭鐩村埌鍚岄暱 N 寮曞彿涓查棴鍚堬紱
-        /// 涓嶅鐞嗚浆涔夛紱澶氳鎸夐棴鍚堝畾鐣岀鎵€鍦ㄥ垪鍓ョ姣忚鍓嶅绌虹櫧銆傛敞锛氬叏寮曞彿绌轰覆 <c>""""""</c>锛圕# 鍚堟硶锛夋澶勬姤鏈粓姝€?
+        /// raw 字符串 <c>"""..."""</c>：定界符 = 起始最大引号串 N（≥3），内容直到同长 N 引号串闭合；
+        /// 不处理转义；多行按闭合定界符所在列剥离每行前导空白。注：全引号空串 <c>""""""</c>（C# 合法）此处报未终止。
         /// </summary>
         private void ReadRawString()
         {
-            // 璺宠繃寮€澶村紩鍙?
+            // 当前位置在 '"'：统计起始引号串
             var delimiterStart = _position;
             var delimiter = 0;
             while (Current == '"')
@@ -158,7 +158,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             {
                 if (Current == '"')
                 {
-                    // 缁熻寮曞彿涓?
+                    // 统计引号串
                     var runStart = _position;
                     var run = 0;
                     while (Current == '"')
@@ -169,7 +169,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                     if (run >= delimiter)
                     {
-                        // 鍚岄暱 N 闂悎锛堟洿闀跨殑寮曞彿涓蹭互 N 缁撳熬涔熼棴鍚堬紝澶氫綑閮ㄥ垎瑙嗕负鍐呭鍓嶅紩鍙封€斺€旇椽蹇冭鍒欏彇棣栨 N 杩炲紩锛?
+                        // 同长 N 闭合（更长的引号串以 N 结尾也闭合，多余部分视为内容前引号——贪心规则取首次 N 连引号）。
                         _position = runStart + delimiter;
                         done = true;
                     }
@@ -247,7 +247,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             _value = stringBuilder.ToString();
         }
 
-        /// <summary>澶勭悊涓€涓浆涔夊簭鍒楋紙褰撳墠浣嶇疆鍦?<c>\</c>锛夛紝杩藉姞缁撴灉鍒?builder 骞舵帹杩涗綅缃€?/summary>
+        /// <summary>处理一个转义序列（当前位置在 <c>\</c>），追加结果到 builder 并推进位置。</summary>
         private void ReadEscape(StringBuilder stringBuilder)
         {
             var escapeStart = _position;
@@ -331,23 +331,23 @@ namespace Cocoa.CodeAnalysis.Syntax
         }
 
         /// <summary>
-        /// 鎻掑€煎瓧绗︿覆 <c>$"..."</c> / <c>$@"..."</c> / <c>@$"..."</c>锛氬垏鍒嗕负瀛楅潰閲忔枃鏈涓庢礊锛?c>{expr}</c>锛夈€?
-        /// 娲炴惡甯︽簮鏂囨湰涓庣粷瀵?Span锛堝惈娲炲唴瀛楃涓蹭腑鐨?<c>{</c>/<c>}</c> 璺宠繃锛夛紝渚?Parser 閫愭礊瀛愯В鏋愬苟淇濊瘉璇婃柇瀹氫綅銆?
-        /// verbatim 妯″紡锛堝惈 <c>@</c> 鍓嶇紑锛夛細瀛楅潰閲?娲炲厑璁告崲琛屽師鏍蜂繚鐣欍€佷笉澶勭悊 <c>\</c> 杞箟锛?
-        /// 鏅€氭ā寮忥細鍗曡銆佸瓧闈㈤噺娈靛鐞?<c>\</c> 杞箟銆?
+        /// 插值字符串 <c>$"..."</c> / <c>$@"..."</c> / <c>@$"..."</c>：切分为字面量文本段与洞（<c>{expr}</c>）。
+        /// 洞携带源文本与绝对 Span（含洞内字符串中的 <c>{</c>/<c>}</c> 跳过），交 Parser 逐洞子解析并保证诊断定位。
+        /// verbatim 模式（含 <c>@</c> 前缀）：字面量/洞允许换行原样保留、不处理 <c>\</c> 转义。
+        /// 普通模式：单行、字面量段处理 <c>\</c> 转义。
         /// </summary>
         private void ReadInterpolatedString(bool verbatim)
         {
             var parts = new List<InterpolatedStringPart>();
             var literal = new StringBuilder();
 
-            // 璺宠繃寮€澶村紩鍙?
-            _position++; // 娑堣垂寮€澶村紩鍙?
+            // 消费前缀（$ 或 @，再配对前缀（@ / @$），再开头引号
+            _position++; // 消费 '$' 或 '@'
             if (Current == '@' || Current == '$')
             {
                 _position++;
             }
-            _position++; // 娑堣垂寮€澶村紩鍙?
+            _position++; // 消费开头引号
 
             var literalStart = _position;
 
@@ -395,7 +395,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                                 literal.Clear();
                             }
 
-                            // 鎵弿娲炲埌鍖归厤 '}'锛堣烦杩囨礊鍐呭瓧绗︿覆涓殑 '}'/'{'锛泇erbatim 鏀捐鎹㈣锛?
+                            // 扫描洞到匹配 '}'（跳过洞内字符串中的 '}'/'{'；verbatim 放行换行）
                             var holeStart = _position + 1;
                             _position++; // 跳过 '{'
                             var depth = 1;
@@ -418,12 +418,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                                     }
                                     else
                                     {
-            _position++; // 娑堣垂寮€澶村紩鍙?
+            _position++; // 消费洞闭合 '}'
                                     }
                                 }
                                 else if (Current == '"')
                                 {
-            // 璺宠繃寮€澶村紩鍙?
+            // 跳过洞内字符串（含 "" 转义）
                                     holeText.Append(Current);
                                     _position++;
                                     while (Current != '\0' && !(!verbatim && (Current == '\r' || Current == '\n')))

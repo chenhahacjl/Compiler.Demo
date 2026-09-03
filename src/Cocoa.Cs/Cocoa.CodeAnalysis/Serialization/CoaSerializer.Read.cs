@@ -10,21 +10,21 @@ using System.Text;
 namespace Cocoa.CodeAnalysis.Serialization
 {
     /// <summary>
-    /// `.coa` 璇箟灞傚簭鍒楀寲鍣細绗﹀彿琛?+ 闄嶇骇 BoundProgram锛堝嚱鏁颁綋锛夋枃鏈?round-trip銆?
-    /// 鍙屽悗绔叡鐢紙native 鈫?MirToLir锛孖L 鈫?IlEmitter锛夛紱璇硶鑺傜偣锛圫yntax锛変笉搴忓垪鍖栵紙缃?null锛夈€?
+    /// `.coa` 语义层序列化器：符号表 + 降级 BoundProgram（函数体）文本 round-trip。
+    /// 双后端共用（native → MirToLir，IL → IlEmitter）；语法节点（Syntax）不序列化（置 null）。
     ///
-    /// 鏂囨湰鏍煎紡锛堝彲璇讳紭鍏堬紝绫诲瀷/鍑芥暟/鍙橀噺涓€寰嬫寜鍚嶅瓧寮曠敤锛屼笉鐢ㄦ暟瀛?id锛夛細
-    ///   (type)     鍐呭缓/鏁扮粍绫诲瀷鍐呰仈涓哄悕瀛楀紩鐢細int / int[] / int[][]锛涚被/鏋氫妇鐢ㄥ叏鍚?System.Console
+    /// 文本格式（可读优先，类型/函数/变量一律按名字引用，不用数字 id）：
+    ///   (type)     内建/数组类型内联为名字引用：int / int[] / int[][]；类/枚举用全名 System.Console
     ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
     ///   (systype)  (systype System.Object)——内建单例按全名映射
     ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)——方法列 Name[参数类型] 签名
     ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
     ///               params:2 (par MyLib.Add/a a i32 0) ...)
-    ///              鍑芥暟閿?= [鍛藉悕绌洪棿鎴栧涓荤被.]鍑芥暟鍚?鍙傛暟绫诲瀷鍒楄〃)锛岄噸杞介潬鍙傛暟绫诲瀷鍖哄垎
+    ///              函数键 = [命名空间或宿主类.]函数名(参数类型列表)，重载靠参数类型区分
     ///   (glb/loc)  (glb global:version true i32 (const i:1)) / (loc MyLib.Factorial/result false i32)
-    ///              鍙橀噺閿細鍏ㄥ眬 global:鍚嶅瓧锛涘眬閮?鍙傛暟 鍑芥暟閿?鍚嶅瓧锛堝悓鍚嶅啿绐佸姞 #2銆?3 鍚庣紑锛?
-    ///   杩愮畻绗?     鏂囨湰璁板彿 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
-    ///   甯冨皵/鏋氫妇璇? true false锛沺ublic internal protected private锛泈inapi cdecl stdcall锛泆nicode ansi auto
+    ///              变量键：全局 global:名字；局部（参数）函数键/名字（同名冲突加 #2、#3 后缀）。
+    ///   运算符     文本记号 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
+    ///   布尔/枚举词： true false；public internal protected private；winapi cdecl stdcall；unicode ansi auto
     /// </summary>
     internal static partial class CoaSerializer
     {
@@ -174,7 +174,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             return "";
         }
 
-        /// <summary>璇讳晶鍏变韩鐘舵€侊細鎸夊悕瀛?閿储寮曠殑绗﹀彿琛?+ 绋嬪簭闆嗙鍙锋竻鍗曘€?/summary>
+        /// <summary>读侧共享状态：按名字/键索引的符号表 + 程序集符号清单。</summary>
         private sealed class ReadContext
         {
             /// <summary>当前库名（读入符号的 ContainingLibrary 回填；FnKey 库前缀）。6e 跨库里程碑。</summary>
@@ -210,7 +210,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
             }
 
-            /// <summary>绫?鏋氫妇鍏ㄥ悕 鈫?绫诲瀷绗﹀彿锛堝唴寤虹被鍨嬩笉缁忔琛紝鐩存帴瑙ｆ瀽锛夈€?/summary>
+            /// <summary>类/枚举全名 → 类型符号（内建类型不经此表，直接解析）。</summary>
             public Dictionary<string, TypeSymbol> TypesByName { get; } = new(StringComparer.Ordinal);
 
             /// <summary>6e 跨库里程碑：本库自持类型表（全名 → 符号）——CoaProgram.TypesByName 导出源，
@@ -220,13 +220,13 @@ namespace Cocoa.CodeAnalysis.Serialization
             /// <summary>6e-G7 S1：开放类型参数限定键（!属主全名.参数名）→ 符号。文件级平铺——限定键天然无碰撞。</summary>
             public Dictionary<string, TypeParameterSymbol> OpenTypeParametersByKey { get; } = new(StringComparer.Ordinal);
 
-            /// <summary>鍑芥暟閿?鈫?鍑芥暟绗﹀彿銆?/summary>
+            /// <summary>函数键 → 函数符号。</summary>
             public Dictionary<string, FunctionSymbol> FunctionsByKey { get; } = new(StringComparer.Ordinal);
 
             /// <summary>6e 跨库里程碑：本库自持函数键（含库前缀）→ 符号——CoaProgram.FunctionKeys 导出源。</summary>
             public Dictionary<string, FunctionSymbol> LocalFunctionKeys { get; } = new(StringComparer.Ordinal);
 
-            /// <summary>鍙橀噺閿?鈫?鍙橀噺/鍙傛暟绗﹀彿銆?/summary>
+            /// <summary>变量键 → 变量/参数符号。</summary>
             public Dictionary<string, VariableSymbol> VariablesByKey { get; } = new(StringComparer.Ordinal);
 
             public ImmutableArray<FunctionSymbol>.Builder Functions { get; } = ImmutableArray.CreateBuilder<FunctionSymbol>();
@@ -327,7 +327,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
         private static void ReadSystemType(Reader reader, ReadContext context)
         {
-            // 6e-M19 M2-c锛氬唴寤哄崟渚嬫寜鍏ㄥ悕鏄犲皠锛堟垚鍛橀潰宸茬敱 Ensure 鍐呭缓娉ㄥ叆锛?
+            // 6e-M19 M2-c：内建单例按全名映射（成员面已由 Ensure 内建注入）。
             var fullName = reader.ExpectString();
             var singleton = fullName switch
             {
@@ -372,7 +372,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
-            // 6e-M19 M2-c锛?cod 绫婚粯璁ょ户鎵?System.Object锛堜笌婧愮爜缁戝畾涓€鑷达紱.coa v1 涓嶅簭鍒楀寲鎺ュ彛澹版槑锛?
+            // 6e-M19 M2-c：cod 类默认继承 System.Object（与源码绑定一致；.coa v1 不序列化接口声明）。
             classType.BaseType = NamedTypeSymbol.SystemObject;
             // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填
             if (isInterface)
@@ -668,7 +668,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 var pType = ResolveTypeRef(reader.ExpectString(), context);
                 var ordinal = reader.ExpectInt();
 
-                // 6e-M23 R8锛氱 5 涓?token = out/ref/-锛堟棫鏂囦欢鏃犳 token锛屾寜 "-" 鍏煎锛?
+                // 6e-M23 R8：第 5 个 token = out/ref/-（旧文件无此 token，按 "-" 兼容）。
                 var isOut = false;
                 var isRef = false;
                 var modifierText = reader.PeekRaw();
@@ -693,7 +693,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 reader.End();
             }
 
-            // 6e-M19 M2-c锛歄bject 鍐呭缓鏂规硶澶嶇敤鍗曚緥锛堜繚鎸佺鍙峰悓涓€鎬э紝鍙戝皠鍣ㄦ寜 BuiltinKind 鍒嗗彂锛?
+            // 6e-M19 M2-c：Object 内建方法复用单例（保持符号同一性，发射器按 BuiltinKind 分发）。
             if (containingClass != null && builtinKind != null && SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
                 var singleton = SystemObjectMembers.GetByKind(builtinKind.Value);
@@ -707,7 +707,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
             }
 
-            // 鍚被褰掑睘鎴栧唴缃绫伙細涓嶅鐢ㄥ叏灞€鍗曚緥锛堝唴缃崟渚嬫棤绫诲綊灞烇級锛岄噸寤哄甫涓婁笅鏂囩鍙?
+            // 含类归属或内置种类：不复用全局单例（内置单例无类归属），重建带上下文符号。
             FunctionSymbol function;
             if (containingClass != null || builtinKind != null)
             {
@@ -828,7 +828,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
         // ---------------------------------------------------------------- read: resolution helpers
 
-        /// <summary>娴?`.coa` 閺傚洣娆㈤崝鐘烘祰缁嬪绨梿鍡愨偓?/summary>
+        /// <summary>从 `.coa` 文件加载程序集。</summary>
         /// <summary>Load `.coa` 文件。库名由文件名回填；`external` 为已加载的依赖库（供跨库符号合并）。</summary>
         public static CoaProgram Load(string path, ImmutableArray<CoaProgram>? external = null)
         {

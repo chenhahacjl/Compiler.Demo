@@ -129,7 +129,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                         break;
                     }
                 case BoundNodeKind.SequencePointStatement:
-                    // 鐠嬪啳鐦穱鈩冧紖闂勫秶楠囬敍姘矌鎼村繐鍨崠鏍у敶鐏炲倽婢?
+                    // 调试信息降级：仅序列化内层语句。
                     WriteStatement(w, registry, labels, ((BoundSequencePointStatement)statement).Statement);
                     break;
                 default:
@@ -296,7 +296,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.ObjectCreationExpression:
                     {
-                        // M0-1c：对象创廀`new Foo(args)`——构造器由类垀元数重解析，仅需类型 + 实参
+                        // M0-1c：对象创建 `new Foo(args)`——构造器由类型+元数重解析，仅需类型 + 实参
                         var n = (BoundObjectCreationExpression)expression;
                         w.Open("objnew");
                         w.Field(TypeRef(n.Type));
@@ -330,7 +330,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.MemberAccessExpression:
                     {
-                        // 6e-G7锛氬瓧娈佃闂殢 gcls/fld 鎼哄甫锛團ield 缁?FnKey 寮忓悕瀛楀洖濉級锛涗粎鏁扮粍/瀛楃涓?`.Length` 鏃?Field == null
+                        // 6e-G7：字段访问随 gcls/fld 携带（Field 经 FnKey 式名字回填）；仅数组/字符串 `.Length` 时 Field == null
                         var n = (BoundMemberAccessExpression)expression;
                         w.Open("memberacc");
                         w.Field(TypeRef(n.Type));
@@ -378,7 +378,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
-                    // 鐠嬪啳鐦穱鈩冧紖闂勫秶楠囬敍姘矌鎼村繐鍨崠鏍у敶鐏炲倽婢?
+                    // 调试信息降级：仅序列化内层语句。
                         var n = (BoundMemberAssignmentExpression)expression;
                         w.Open("memberassign");
                         WriteExpression(w, registry, labels, n.Target);

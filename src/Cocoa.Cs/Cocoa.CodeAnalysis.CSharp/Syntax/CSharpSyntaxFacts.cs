@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
@@ -240,7 +240,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
 
             foreach (var kind in kinds)
             {
-                // is/as 浼樺厛绾у弬涓庤В鏋愪絾涓嶄骇鍑?BinaryExpressionSyntax锛堢嫭绔嬭妭鐐癸級锛屼笉鍏ラ€氱敤鏋氫妇
+                // is/as 优先级参与解析但不产出 BinaryExpressionSyntax（独立节点），不入通用枚举
                 if (kind == SyntaxKind.IsKeyword || kind == SyntaxKind.AsKeyword)
                 {
                     continue;

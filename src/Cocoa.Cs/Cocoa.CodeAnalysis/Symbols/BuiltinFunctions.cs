@@ -4,8 +4,8 @@ using System.Linq;
 namespace Cocoa.CodeAnalysis.Symbols
 {
     /// <summary>
-    /// 鍐呯疆鍑芥暟绉嶇被锛堝姛鑳藉眰鍘熻锛夈€備笁鍚庣锛圗valuator/IL/native锛夋寜 <see cref="FunctionSymbol.BuiltinKind"/> 鍒嗗彂锛?
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+    /// 内置函数种类（功能层原语）。三后端（Evaluator/IL/native）按 <see cref="FunctionSymbol.BuiltinKind"/> 分发；
+        /// 不依赖 `== BuiltinFunctions.X` 引用相等。
     /// </summary>
     public enum BuiltinKind
     {
@@ -53,15 +53,15 @@ namespace Cocoa.CodeAnalysis.Symbols
         TypeFullName,
     }
 
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>
     internal sealed record BuiltinSpec(BuiltinKind Kind, string Name, TypeSymbol ReturnType, (string Name, TypeSymbol Type)[] Parameters);
 
     /// <summary>
-    /// 鍐呯疆鍑芥暟锛堝姛鑳藉眰锛夛細瑙勬牸琛ㄧ敓鎴愮鍙凤紝涓夊悗绔寜 <see cref="BuiltinKind"/> 鏄犲皠瀹炵幇銆?
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
-    /// syscall 澹版槑 `syscall function Print(...)` 绮剧‘鍛戒腑锛涙棫灏忓啓璋冪敤 `print(...)` 鐢?
-    /// <see cref="GetByName"/> 澶у皬鍐欎笉鏁忔劅鍥為€€鍏煎锛圫tep 3 杩佺Щ鍚庣Щ闄わ級銆?
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+    /// 内置函数（功能层）：规格表生成符号，三后端按 <see cref="BuiltinKind"/> 映射实现。
+        /// 规范名为 C# 风格 PascalCase（Print/Input/Random/Sleep/Now/Exit，6e-M17）—
+    /// syscall 声明 `syscall function Print(...)` 精确命中；旧小写调用 `print(...)` 由
+    /// <see cref="GetByName"/> 大小写不敏感回退兼容（Step 3 迁移后移除）。
+        /// 新增功能层原语 = 1 行规格 + 三后端各 1 个 kind case + 1 个 IL 方法引用。
     /// </summary>
     internal static class BuiltinFunctions
     {
@@ -92,27 +92,27 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String) }));
 
         /// <summary>
-        /// 杈撳嚭瀛楃涓插苟鎹㈣: void WriteLine(any text)锛? Console.WriteLine锛?
+        /// 输出字符串并换行: void WriteLine(any text)（Console.WriteLine）
         /// </summary>
         public static readonly FunctionSymbol WriteLine = Create(BuiltinKind.WriteLine);
 
         /// <summary>
-        /// 杈撳嚭瀛楃涓蹭笉鎹㈣: void Write(any text)锛? Console.Write锛?
+        /// 输出字符串不换行: void Write(any text)（Console.Write）
         /// </summary>
         public static readonly FunctionSymbol Write = Create(BuiltinKind.Write);
 
         /// <summary>
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// 输入字符串: string ReadLine()（Console.ReadLine）
         /// </summary>
         public static readonly FunctionSymbol ReadLine = Create(BuiltinKind.ReadLine);
 
         /// <summary>
-        /// 璇诲彇鎸夐敭: char ReadKey(bool intercept)锛? Console.ReadKey(...).KeyChar锛?
+        /// 读取按键: char ReadKey(bool intercept)（Console.ReadKey(...).KeyChar）
         /// </summary>
         public static readonly FunctionSymbol ReadKey = Create(BuiltinKind.ReadKey);
 
         /// <summary>
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// 随机数: int Random(int max)
         /// </summary>
         public static readonly FunctionSymbol Random = Create(BuiltinKind.Random);
 
@@ -122,26 +122,26 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly FunctionSymbol Sleep = Create(BuiltinKind.Sleep);
 
         /// <summary>
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// 系统启动后毫秒数: int TickCount()（Environment.TickCount，对齐底层 GetTickCount）
         /// </summary>
         public static readonly FunctionSymbol TickCount = Create(BuiltinKind.TickCount);
 
         /// <summary>
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// 退出进程: void Exit(int code)
         /// </summary>
         public static readonly FunctionSymbol Exit = Create(BuiltinKind.Exit);
 
         /// <summary>
-        /// 骞虫柟鏍? double Sqrt(double x)锛? Math.Sqrt锛?
+        /// 平方根: double Sqrt(double x)（Math.Sqrt）
         /// </summary>
         public static readonly FunctionSymbol Sqrt = Create(BuiltinKind.Sqrt);
 
         /// <summary>
-        /// 鎵０鍣ㄨ渹楦? void Beep(int frequency, int duration)锛? Console.Beep锛?
+        /// 扬声器蜂鸣: void Beep(int frequency, int duration)（Console.Beep）
         /// </summary>
         public static readonly FunctionSymbol Beep = Create(BuiltinKind.Beep);
 
-        /// <summary>鍙岀簿搴﹁浆瀛楃涓? string DoubleToString(double value)锛坒acade System.Double.ToString 鐨勫簳灞傚師璇級</summary>
+        /// <summary>双精度转字符串: string DoubleToString(double value)（facade System.Double.ToString 的底层原语）</summary>
         public static readonly FunctionSymbol DoubleToString = Create(BuiltinKind.DoubleToString);
 
         /// <summary>字符数组构造字符串: string StringFromChars(char[] chars)（6e-G7 ③a：StringBuilder 底座）。</summary>
@@ -169,13 +169,13 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// 获取所有内置函数
         /// </summary>
         /// <returns></returns>
         internal static IEnumerable<FunctionSymbol> GetAll()
             => _specs.Select(s => GetByKind(s.Kind)!);
 
-        /// 鑾峰彇鎵€鏈夊唴缃嚱鏁?
+        /// <summary>按种类查找内置函数。</summary>
         internal static FunctionSymbol? GetByKind(BuiltinKind kind)
         {
             return kind switch
@@ -208,7 +208,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             };
         }
 
-        /// <summary>按名查找内置函数（`.coa` 反序列化时复用单例，保证发射器识别内置；大小写不敏感——syscall 声明可用 PascalCase 妀`Random` 命中 `random`）、/summary>
+        /// <summary>按名查找内置函数（`.coa` 反序列化时复用单例，保证发射器识别内置；大小写不敏感——syscall 声明可用 PascalCase 如 `Random` 命中 `random`）。</summary>
         internal static FunctionSymbol? GetByName(string name)
         {
             foreach (var spec in _specs)
@@ -222,7 +222,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
-        /// <summary>挀BuiltinKind 枚举名解析（`.coa` v3 序列化用名称字符串，替代 int——改名不再依赖枚举顺序）、/summary>
+        /// <summary>按 BuiltinKind 枚举名解析（`.coa` v3 序列化用名称字符串，替代 int——改名不再依赖枚举顺序）。</summary>
         internal static BuiltinKind? GetByKindName(string name)
         {
             foreach (var spec in _specs)

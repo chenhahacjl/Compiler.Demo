@@ -478,7 +478,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             };
         }
 
-        /// <summary>璇诲彇 label:value 褰㈠紡鐨勫瓧娈靛苟鏍￠獙鏍囩銆?/summary>
+        /// <summary>读取 label:value 形式的字段并校验标签。</summary>
         private static string ReadLabeledField(Reader reader, string label)
         {
             var token = reader.ExpectString();
@@ -490,7 +490,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             return Unescape(token.Substring(label.Length));
         }
 
-        /// <summary>璇诲彇 count:N 褰㈠紡鐨勮鏁板瓧娈点€?/summary>
+        /// <summary>读取 count:N 形式的计数字段。</summary>
         private static int ReadCountField(Reader reader, string label)
         {
             var token = reader.ExpectString();
@@ -502,7 +502,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             return int.Parse(token.Substring(label.Length), CultureInfo.InvariantCulture);
         }
 
-        /// <summary>鍏ㄥ悕鎷嗗垎涓猴紙鍛藉悕绌洪棿, 鍚嶏級锛涙棤鐐瑰彿鏃跺懡鍚嶇┖闂翠负绌恒€?/summary>
+        /// <summary>全名拆分为（命名空间, 名）；无点号时命名空间为空。</summary>
         private static (string Namespace, string Name) SplitFullName(string fullName)
         {
             var lastDot = fullName.LastIndexOf('.');
@@ -522,7 +522,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             return context.ModuleName;
         }
 
-        /// <summary>鍙橀噺閿繕鍘熺湡瀹炵鍙峰悕锛氬幓鎺?global:/鍑芥暟閿墠缂€涓?#N 鍐茬獊鍚庣紑銆?/summary>
+        /// <summary>变量键还原真实符号名：去掉 global:/函数键前缀与 #N 冲突后缀。</summary>
         private static string KeyToName(string key)
         {
             var name = key;

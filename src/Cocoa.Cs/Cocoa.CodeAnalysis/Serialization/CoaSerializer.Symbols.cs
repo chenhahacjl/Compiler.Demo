@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End();
         }
 
-        /// <summary>6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛夋寜鍏ㄥ悕搴忓垪鍖栵紝璇讳晶鏄犲皠鍥炲崟渚嬨€?/summary>
+        /// <summary>6e-M19 M2-c：内建单例（System.Object/System.Type）按全名序列化，读侧映射回单例。</summary>
         private static void EmitBuiltinSystemClass(Writer w, Registry registry, NamedTypeSymbol classType)
         {
             w.Open("systype");
@@ -40,7 +40,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Open("cls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
-            // 6e-G7/M0-1a锛氭帴鍙ｄ綅 + 瀹炵幇鎺ュ彛鍒楄〃锛堜緵娑堣垂鏂?IsInterface 鍒ゅ畾涓庢帴鍙ｆ垚鍛樻部 Interfaces 閾捐В鏋愶級
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（供消费方 IsInterface 判定与接口成员沿 Interfaces 链解析）
             w.Field("iface:" + BoolWord(classType.IsInterface));
             var interfaces = classType.Interfaces;
             w.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
@@ -48,15 +48,15 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 w.Field(TypeRef(iface));
             }
-            // 鎼村繐鍨崠鏍у弿闁劑娼ら幀浣规煙濞夋洜顒烽崥宥忕礄6e-M18閿涙艾顔愰崳銊ц閸忎浇顔忕敮锔跨秼闂堟瑦鈧焦鏌熷▔鏇礉婵?Console.WriteLine/Math.Max閿涙硞yscall/extern 娴滐缚璐熼棃娆愨偓渚婄礆閵?
-            // 閺傝纭堕張顑跨秼閻㈠崬鎮囬懛?fn 閺夛紕娲伴幖鍝勭敨閿涘潵wner 鐎涙顔岄崶鐐诧綖缁缍婄仦鐑囩礆閿涘矁绻栭柌灞藉灙 Name[閸欏倹鏆熺猾璇茬€穄 娓氭盯妲勭拠浼欑礄閺冪姴寮惇浣烘殣閺傝瀚崣鍑ょ礆閵?
+            // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
+            // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
             var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
                 w.Field(MethodSignature(method));
             }
-            // 6b锛歠acade 瀹炰緥绫诲睘鎬у０鏄庯紙getter/setter 璁块棶鍣ㄤ负鐙珛 fn `get_X`/`set_X`锛岃渚?fns 鍥炲～鍚庢寕鎺ワ級
+            // 6b：facade 实例类属性声明（getter/setter 访问器为独立 fn `get_X`/`set_X`，读侧 fns 回填后挂接）
             var properties = classType.Properties;
             if (properties.Length > 0)
             {
@@ -76,10 +76,10 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End();
         }
 
-        /// <summary>鏂规硶绛惧悕鐭敭锛歂ame 鎀Name[鍙傛暟绫诲瀷鍒楄〃]锛堥噸杞介潬鍙傛暟绫诲瀷鍖哄垎锛夈₀/summary>
+        /// <summary>方法签名短键：Name 或 Name[参数类型列表]（重载靠参数类型区分）。</summary>
         private static string MethodSignature(FunctionSymbol method)
         {
-            // 6e-M23 R8閿涙矮绮庡?out/ref 閻ㄥ嫰鍣告潪浠嬫暛妞よ绗夐崥宀嬬礄娣囶噣銈扮粭锕€鍙嗙粵鎯ф倳閿?
+            // 6e-M23 R8：仅有 out/ref 的重载键须不同（修饰符入签名）。
             return method.Parameters.Length == 0
                 ? method.Name
                 : method.Name + "[" + string.Join(",", method.Parameters.Select(p =>
@@ -87,8 +87,8 @@ namespace Cocoa.CodeAnalysis.Serialization
         }
 
         /// <summary>
-        /// 娉涘瀷瀹氫箟绫昏妭鐐癸紙6e-G7 S1锛夛細绫诲瀷鍙傛暟锛堝惈绾︽潫锛? 瀛楁 + 闈欐€佹柟娉曠鍚嶃€?
-        /// 鎴愬憳绫诲瀷缁?TypeRef 鎼哄甫寮€鏀惧弬鏁帮紙!灞炰富.鍚嶏級涓庡疄渚嬪寲 mangle锛涘紑鏀剧粦瀹氫綋鐢?bodies 鍖烘寜 FnKey 鎼哄甫锛圫2锛夈€?
+        /// 泛型定义类节点（6e-G7 S1）：类型参数（含约束）+ 字段 + 静态方法签名。
+        /// 成员类型经 TypeRef 携带开放参数（!属主.名）与实例化 mangle；开放绑定体经 bodies 区按 FnKey 携带（S2）。
         /// </summary>
         private static void EmitGenericClassSymbol(Writer w, Registry registry, NamedTypeSymbol classType)
         {
@@ -98,7 +98,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Open("gcls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
-            // 6e-G7/M0-1a锛氭帴鍙ｄ綅 + 瀹炵幇鎺ュ彛鍒楄〃锛堝紑鏀惧弬鏁扮粡 TypeRef `!灞炰富.鍚峘 缂栫爜锛屽 `List<T>: IEnumerable<!List.T>`锛?
+            // 6e-G7/M0-1a：接口位 + 实现接口列表（开放参数经 TypeRef `!属主.名` 编码，如 `List<T>: IEnumerable<!List.T>`）。
             w.Field("iface:" + BoolWord(classType.IsInterface));
             var interfaces = classType.Interfaces;
             w.Field("ifaces:" + interfaces.Length.ToString(CultureInfo.InvariantCulture));
@@ -155,7 +155,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End();
         }
 
-        /// <summary>tpar/ftp 瀛愯妭鐐瑰叡鐢ㄥ啓鍑猴紙6e-G7 S1锛夛細鍚?/ 搴忓彿 / 绾︽潫鏍囧織 / 鏄惧紡绾︽潫绫诲瀷鍒楄〃銆?/summary>
+        /// <summary>tpar/ftp 子节点共用写出（6e-G7 S1）：名 / 序号 / 约束标志 / 显式约束类型列表。</summary>
         private static void WriteTypeParameter(Writer w, TypeParameterSymbol typeParameter)
         {
             w.Open("tpar");
@@ -187,7 +187,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End();
         }
 
-        /// <summary>绾︽潫鏍囧織瑙ｆ瀽锛坓cls.tpar 涓?fn.tps 鍏辩敤锛?e-G7 S1锛夈€?/summary>
+        /// <summary>约束标志解析（gcls.tpar 与 fn.tps 共用，6e-G7 S1）。</summary>
         private static void ApplyTypeParameterFlags(TypeParameterSymbol parameter, string flagsText)
         {
             if (flagsText == "-")
@@ -215,8 +215,8 @@ namespace Cocoa.CodeAnalysis.Serialization
         }
 
         /// <summary>
-        /// tpar/ftp 瀛愯妭鐐硅鍙栵紙6e-G7 S1锛夛細鏋勯€犵鍙?+ 搴旂敤鏍囧織 + 鐧昏寮€鏀鹃敭锛堢被绾?闄愬畾閿?!灞炰富.鍚嶏紱
-        /// 鏂规硶绾?瑁搁敭 !鍚嶏級+ 鏆傚瓨绾︽潫鏁般€傝繑鍥?(鍙傛暟, 绾︽潫鏁?锛岀害鏉熺敱绗簩瓒熻В鏋愩€?
+        /// tpar/ftp 子节点读取（6e-G7 S1）：构造符号 + 应用标志 + 登记开放键（类级限定键 !属主.名；
+        /// 方法级裸键 !名）+ 暂存约束数。返回 (参数, 约束数)，约束由第二趟解析。
         /// </summary>
         private static (TypeParameterSymbol Parameter, int ConstraintCount) ReadTypeParameter(Reader reader, ReadContext context, string? ownerFullName)
         {
@@ -237,7 +237,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             return (parameter, constraintCount);
         }
 
-        /// <summary>绾︽潫绗簩瓒燂細鍏勫紵鍙傛暟宸插叏閮ㄦ敞鍐屽悗瑙ｆ瀽鏄惧紡绾︽潫绫诲瀷銆?/summary>
+        /// <summary>约束第二趟：兄弟参数已全部注册后解析显式约束类型。</summary>
         private static void ResolveDeferredConstraints(Reader reader, TypeParameterSymbol parameter, int constraintCount, ReadContext context)
         {
             if (constraintCount == 0)
@@ -262,7 +262,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Field(registry.FnKey(fn));
             w.Field("name:" + Str(fn.Name));
 
-            // 6e-G7 S1：方法级类型参数（顶层泛型函数）——裸销!名（无属主类＀
+            // 6e-G7 S1：方法级类型参数（顶层泛型函数）——裸键 !名（无属主类）。
             if (fn.TypeParameters.Length > 0)
             {
                 w.Field("tps:" + fn.TypeParameters.Length.ToString(CultureInfo.InvariantCulture));
@@ -282,7 +282,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Field("entry:" + (fn.EntryPoint != null ? Str(fn.EntryPoint) : "-"));
             w.Field("charset:" + (fn.CharSet != null ? fn.CharSet.Value.ToString().ToLowerInvariant() : "-"));
 
-            // 6e-G7 S2锛氬睘涓绘柟娉曟惡甯﹂潤鎬?鏋勯€?璁块棶鍣ㄤ綅锛堟硾鍨嬪畾涔変笌 6b facade 瀹炰緥绫绘樉寮忓尯鍒嗭紱瀹瑰櫒绫诲叏闈欐€?鏄惧紡 true锛?
+            // 6e-G7 S2：属主方法携带静态/构造/访问器位（泛型定义与 6b facade 实例类显式区分；容器类全静态显式 true）。
             if (fn.ContainingClass != null)
             {
                 w.Field("static:" + BoolWord(fn.IsStatic));
@@ -323,7 +323,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
         // ---------------------------------------------------------------- write: naming
 
-        /// <summary>缁鐎烽惃鍕瀮閺堫剙绱╅悽顭掔窗閸愬懎缂?閺佹壆绮嶉悽銊х叚閸氬稄绱檌nt / int[][]閿涘绱濈猾?閺嬫矮濡囬悽銊ュ弿閸氬秲鈧?/summary>
+        /// <summary>类型的文本引用：内建/数组用短名（int / int[][]），类/枚举用全名。</summary>
         private static string TypeRef(TypeSymbol type)
         {
             // 6e 跨库里程碑：基元内建 → `@` 权威记法（@i32/@string/@bool…，Rust/LLVM 式位宽名）。
@@ -332,8 +332,8 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 return primitiveName;
             }
-            // 6e-G7 S1锛氬紑鏀剧被鍨嬪弬鏁?鈫?闄愬畾鏉冨▉閿?`!灞炰富鍏ㄥ悕.鍙傛暟鍚峘锛堟柟娉曠骇鏃犲睘涓诲洖钀借８鍚嶏級锛?
-            // 瀹炰緥鍖栫被鍨?鈫?Encode v3 瀹屾暣 mangle锛坆acktick 鍏冩暟 + # + $ 鍒嗛殧閫掑綊瀹炲弬锛?
+            // 6e-G7 S1：开放类型参数 → 限定权威键 `!属主全名.参数名`（方法级无属主回落裸名）。
+            // 实例化类型 → Encode v3 完整 mangle（backtick 元数 + # + $ 分隔递归实参）。
             if (type is TypeParameterSymbol openParameter)
             {
                 return openParameter.OwningClass != null
@@ -356,8 +356,8 @@ namespace Cocoa.CodeAnalysis.Serialization
                 return classType.FullName;
             }
 
-            // 6e-M22/M0-1b：函数类垀`fnty{参数,;返回}`（递归 TypeRef；参数逗号分隔、分号接返回、{} 嵌套— 
-            // .coa 璇嶆硶浠呬互绌虹櫧涓?() 鍒囧垎锛屾晠宓屽鐢?{} 閬垮紑缁撴瀯鎷彿锛?
+            // 6e-M22/M0-1b：函数类型 `fnty{参数,;返回}`（递归 TypeRef；参数逗号分隔、分号接返回、{} 嵌套）。
+            // .coa 词法仅以空白与 () 切分，故嵌套用 {} 避开结构括号。
             if (type is FunctionTypeSymbol functionType)
             {
                 var builder = new System.Text.StringBuilder();
@@ -388,9 +388,9 @@ namespace Cocoa.CodeAnalysis.Serialization
         }
 
         /// <summary>
-        /// 瀹炰緥鍖栫被鍨嬬殑 .coa 缂栫爜锛?e-G7 S1锛夛細瀹氫箟鍏ㄥ悕 + backtick 鍏冩暟 + # + $ 鍒嗛殧瀹炲弬銆?
-        /// 瀹炲弬閫掑綊璧?<see cref="TypeRef"/>鈥斺€斿紑鏀惧弬鏁颁负闄愬畾閿?!灞炰富.鍚嶏紙鍖哄埆浜?mangle 缂撳瓨閿殑瑁?!T锛夛紝
-        /// 淇濊瘉璺ㄥ畾涔夋棤姝т箟涓旇渚у彲鐙珛瑙ｆ瀽锛涘熀鍏?绫荤敤骞冲悕锛堜笉鍚?$銆乣銆?锛屽垎闅斿畨鍏級锛涘祵濂楀疄渚嬪寲閫掑綊銆?
+        /// 实例化类型的 .coa 编码（6e-G7 S1）：定义全名 + backtick 元数 + # + $ 分隔实参。
+        /// 实参递归走 <see cref="TypeRef"/>——开放参数为限定键 !属主.名（区别于 mangle 缓存键的裸 !T），
+        /// 保证跨定义无歧义且读侧可独立解析；基元/类用平名（不含 $、` 等，分隔安全）；嵌套实例化递归。
         /// </summary>
         private static string EncodeInstantiatedTypeRef(InstantiatedTypeSymbol instantiated)
         {
@@ -413,8 +413,8 @@ namespace Cocoa.CodeAnalysis.Serialization
             return builder.ToString();
         }
 
-        /// <summary>6e-G7 S2锛氬崟鏉?body 鏉＄洰锛團nKey + 璇彞鍧楋級銆?/summary>
-        /// <summary>6e-M26锛氭硾鍨嬪紑鏀剧粦瀹氫綋纭畾鎬ф帓搴忛敭锛圙enericOpenBodies 涓?ImmutableDictionary锛屾灇涓句笉绋冲畾锛夈€?/summary>
+        /// <summary>6e-G7 S2：单个 body 条目（FnKey + 语句块）。</summary>
+        /// <summary>6e-M26：泛型开放绑定体确定性排序键（GenericOpenBodies 为 ImmutableDictionary，枚举不稳定）。</summary>
         private static string GenericOpenSortKey(FunctionSymbol function)
         {
             var owner = function.ContainingClass?.FullName ?? "";

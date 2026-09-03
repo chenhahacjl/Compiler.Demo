@@ -4,10 +4,10 @@ using System.IO;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
-    /// <see cref="Microsoft.CodeAnalysis.Syntax.InternalSyntax.GreenNode"/>锛夈€?
-    /// 绾㈡爲锛?see cref="SyntaxNode"/>锛夊彲缁忕豢鑺傜偣鎯版€у疄鐜帮紱褰撳墠鍏堣惤鍦扮豢灞?+ <see cref="SyntaxFactory"/>锛?
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
+    /// 语法绿节点（Phase 4：不可变、无父链、无引用，可跨树共享；对应 Roslyn
+    /// <see cref="Microsoft.CodeAnalysis.Syntax.InternalSyntax.GreenNode"/>）。
+    /// 红树（<see cref="SyntaxNode"/>）可经绿节点惰性实现；当前先落地绿层 + <see cref="SyntaxFactory"/>；
+    /// 解析器迁移为后续里程碑。
     /// </summary>
     public abstract class GreenNode
     {
@@ -16,16 +16,16 @@ namespace Cocoa.CodeAnalysis.Syntax
             RawKind = rawKind;
         }
 
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
+    /// <summary>语言无关的原始 kind（P1-E-1：存储层与语言枚举解耦，为拆两套 SyntaxKind 铺路）</summary>
         public int RawKind { get; }
 
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
+    /// <summary>便捷视图：当前共享联合枚举（过渡态；P1-E-2 拆两套枚举后由各语言节点层提供）。</summary>
         public SyntaxKind Kind => (SyntaxKind)RawKind;
 
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
+    /// <summary>文本宽度（含子节点 trivia）</summary>
         public abstract int Width { get; }
 
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
+    /// <summary>直接子槽位数。</summary>
         public abstract int SlotCount { get; }
 
         public abstract GreenNode? GetSlot(int index);
@@ -39,8 +39,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             return writer.ToString();
         }
 
-        /// <summary>缁库啋绾紙鐪熉锋儼鎬х孩瑙嗗浘锛夛細浜у嚭涓€涓寘瑁规湰缁胯妭鐐圭殑 <see cref="RedNode"/>锛?
-    /// 瑙ｆ瀽鍣ㄨ縼绉讳负鍚庣画閲岀▼纰戙€?
+        /// <summary>绿→红（真·惰性红视图）：产出一个包裹本绿节点的 <see cref="RedNode"/>，
+    /// 子节点经 <see cref="GreenNode.GetSlot"/> 惰性实现。</summary>
         public RedNode CreateRed(SyntaxTree syntaxTree, int position = 0, RedNode? parent = null)
         {
             return new RedNode(syntaxTree, this, position, parent);

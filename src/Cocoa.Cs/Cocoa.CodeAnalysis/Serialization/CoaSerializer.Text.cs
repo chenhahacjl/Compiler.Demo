@@ -100,10 +100,10 @@ namespace Cocoa.CodeAnalysis.Serialization
         {
             switch (value)
             {
-                case null: return "n:"; // 6e-M19 M5-a閿涙ull 鐢悂鍣?
+                case null: return "n:"; // 6e-M19 M5-a：null 常量
 case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8：i64 常量
-                case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b锛歶64 甯搁噺锛圡0-4 鎵? TryParse 寮曞叆锛?
+                case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b：u64 常量（M0-4 随 TryParse 引入）。
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
                 case byte u: return "u:" + u.ToString(CultureInfo.InvariantCulture);
@@ -120,9 +120,9 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
             var rest = token.Substring(2);
             switch (kind)
             {
-                case 'n': return null!; // 6e-M19 M5-a閿涙ull 鐢悂鍣?
+                case 'n': return null!; // 6e-M19 M5-a：null 常量
                 case 'i': return int.Parse(rest, CultureInfo.InvariantCulture);
-                case 'l': return long.Parse(rest, CultureInfo.InvariantCulture); // 6e-M23 R8閿涙64 鐢悂鍣?
+                case 'l': return long.Parse(rest, CultureInfo.InvariantCulture); // 6e-M23 R8：i64 常量
                 case 'b': return rest == "1";
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'u': return (byte)int.Parse(rest, CultureInfo.InvariantCulture);

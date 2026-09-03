@@ -10,28 +10,28 @@ using System.Text;
 namespace Cocoa.CodeAnalysis.Serialization
 {
     /// <summary>
-    /// `.coa` 鐠囶厺绠熺仦鍌氱碍閸掓瀵查崳顭掔窗缁楋箑褰跨悰?+ 闂勫秶楠?BoundProgram閿涘牆鍤遍弫棰佺秼閿涘鏋冮張?round-trip閵?
-    /// 閸欏苯鎮楃粩顖氬彙閻㈩煉绱檔ative 閳?MirToLir閿涘瓥L 閳?IlEmitter閿涘绱辩拠顓熺《閼哄倻鍋ｉ敍鍦珁ntax閿涘绗夋惔蹇撳灙閸栨牭绱欑純?null閿涘鈧?
+    /// `.coa` 语义层序列化器：符号表 + 降级 BoundProgram（函数体）文本 round-trip。
+    /// 双后端共用（native → MirToLir，IL → IlEmitter）；语法节点（Syntax）不序列化（置 null）。
     ///
-    /// 閺傚洦婀伴弽鐓庣础閿涘牆褰茬拠璁崇喘閸忓牞绱濈猾璇茬€?閸戣姤鏆?閸欐﹢鍣烘稉鈧瀣瘻閸氬秴鐡у鏇犳暏閿涘奔绗夐悽銊︽殶鐎?id閿涘绱?
-    ///   (type)     閸愬懎缂?閺佹壆绮嶇猾璇茬€烽崘鍛颁粓娑撳搫鎮曠€涙绱╅悽顭掔窗int / int[] / int[][]閿涙稓琚?閺嬫矮濡囬悽銊ュ弿閸?System.Console
+    /// 文本格式（可读优先，类型/函数/变量一律按名字引用，不用数字 id）：
+    ///   (type)     内建/数组类型内联为名字引用：int / int[] / int[][]；类/枚举用全名 System.Console
     ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
-    ///   (systype)  (systype System.Object)閳ユ柡鈧柨鍞村鍝勫礋娓氬瀵滈崗銊ユ倳閺勭姴鐨?
-    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)閳ユ柡鈧梹鏌熷▔鏇炲灙 Name[閸欏倹鏆熺猾璇茬€穄 缁涙儳鎮?
+    ///   (systype)  (systype System.Object)——内建单例按全名映射
+    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)——方法列 Name[参数类型] 签名
     ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
     ///               params:2 (par MyLib.Add/a a i32 0) ...)
-    ///              閸戣姤鏆熼柨?= [閸涜棄鎮曠粚娲？閹存牕顔栨稉鑽よ.]閸戣姤鏆熼崥?閸欏倹鏆熺猾璇茬€烽崚妤勩€?閿涘矂鍣告潪浠嬫浆閸欏倹鏆熺猾璇茬€烽崠鍝勫瀻
+    ///              函数键 = [命名空间或宿主类.]函数名(参数类型列表)，重载靠参数类型区分
     ///   (glb/loc)  (glb global:version true i32 (const i:1)) / (loc MyLib.Factorial/result false i32)
-    ///              閸欐﹢鍣洪柨顕嗙窗閸忋劌鐪?global:閸氬秴鐡ч敍娑樼湰闁?閸欏倹鏆?閸戣姤鏆熼柨?閸氬秴鐡ч敍鍫濇倱閸氬秴鍟跨粣浣稿 #2閵?3 閸氬海绱戦敍?
-    ///   杩愮畻绗?     鏂囨湰璁板彿 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
-    ///   鐢啫鐨?閺嬫矮濡囩拠? true false閿涙埠ublic internal protected private閿涙硤inapi cdecl stdcall閿涙硢nicode ansi auto
+    ///              变量键：全局 global:名字；局部（参数）函数键/名字（同名冲突加 #2、#3 后缀）。
+    ///   运算符     文本记号 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
+    ///   布尔/枚举词： true false；public internal protected private；winapi cdecl stdcall；unicode ansi auto
     /// </summary>
     internal static partial class CoaSerializer
     {
         public const string Magic = "COCOA";
         public const int Version = 1;
 
-        /// <summary>鐎瑰本鏆ｉ幀褎鐗庢宀嬬窗閺傚洣娆㈤張顐ヮ攽 `(checksum sha256:&lt;hex&gt;)` 鐟曞棛娲婇崗璺哄閸忋劑鍎寸€涙濡敍鍦睺F-8閿涘绱辩拠璁虫櫠瀵搫鍩楅弽锟犵崣閵?/summary>
+        /// <summary>完整性校验：文件末行 `(checksum sha256:&lt;hex&gt;)` 覆盖其前全部字节（UTF-8）；读侧强制校验。</summary>
         private const string ChecksumTag = "sha256:";
 
         // ---------------------------------------------------------------- write
@@ -44,12 +44,12 @@ namespace Cocoa.CodeAnalysis.Serialization
             var registry = new Registry(program.Name);
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
 
-            // 收集符号——函数体挀Functions（声明序）遍历，保证确定性（ImmutableDictionary 迭代序不稳定＀
+            // 收集符号——函数体按 Functions（声明序）遍历，保证确定性（ImmutableDictionary 迭代序不稳定）。
             foreach (var e in program.Enums)
             {
                 registry.RegisterType(e);
             }
-            // 閸忋劑鍎寸粭锕€褰块弨鍫曟肠鐎瑰本鐦崥搴″晙鐎规艾鎮曢敍鍫濆綁闁插繘鏁棁鈧憰浣稿毐閺佷即鏁敍灞肩瑬鐟曚浇娉曠粭锕€褰垮☉鍫ュ櫢閿?
+            // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）。
             foreach (var g in program.GenericDefinitions)
             {
                 registry.RegisterType(g);
@@ -78,7 +78,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 labelsByFunction[fn] = labels;
             }
 
-            // 閸忋劑鍎寸粭锕€褰块弨鍫曟肠鐎瑰本鐦崥搴″晙鐎规艾鎮曢敍鍫濆綁闁插繘鏁棁鈧憰浣稿毐閺佷即鏁敍灞肩瑬鐟曚浇娉曠粭锕€褰垮☉鍫ュ櫢閿?
+            // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）。
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
@@ -86,7 +86,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 labelsByFunction[pair.Key] = labels;
             }
 
-            // 閸忋劑鍎寸粭锕€褰块弨鍫曟肠鐎瑰本鐦崥搴″晙鐎规艾鎮曢敍鍫濆綁闁插繘鏁棁鈧憰浣稿毐閺佷即鏁敍灞肩瑬鐟曚浇娉曠粭锕€褰垮☉鍫ュ櫢閿?
+            // 全部符号收集完毕后再定名（变量键需要函数键，且要跨符号消重）。
             registry.Seal();
 
             var buffer = new StringWriter();
@@ -95,7 +95,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Field(Magic);
             w.Field(Version);
 
-            // 缁楋箑褰跨悰顭掔礄閹稿鏁為崘灞界碍閿?
+            // 符号表（按注册序）。
             w.Open("symbols");
             foreach (var emitter in registry.Emitters)
             {
@@ -103,7 +103,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             w.End();
 
-            // 鍑芥暟浣?
+            // 函数体。
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 WriteBodyEntry(w, registry, labelsByFunction, fn, body);
             }
 
-            // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入佀
+            // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入序列。
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 WriteBodyEntry(w, registry, labelsByFunction, pair.Key, pair.Value);
@@ -168,7 +168,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End(); // cod
             buffer.WriteLine();
 
-            // 瀹屾暣鎬ф牎楠岋細瀵规鏂囧叏閮ㄥ瓧鑺傦紙UTF-8锛夊彀SHA256锛岃拷鍔犱负鏂囦欢鏈锛堣渚у己鍒舵牎楠岋紝缂哄け/涓嶇鎷掕浇销
+            // 完整性校验：对正文全部字节（UTF-8）取SHA256，追加为文件末行（读侧强制校验，缺失/不符拒载）。
             var payload = buffer.ToString();
             writer.Write(payload);
             writer.WriteLine("(checksum " + ChecksumTag + ComputeChecksum(payload) + ")");
@@ -370,7 +370,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.ObjectCreationExpression:
                     {
-                        // M0-1c：开放体对象创建 `new Foo(args)`——构造器由类垀元数重解析，仅需类型 + 实参
+                        // M0-1c：开放体对象创建 `new Foo(args)`——构造器由类型+元数重解析，仅需类型 + 实参
                         var n = (BoundObjectCreationExpression)expression;
                         registry.RegisterType(n.Type);
                         foreach (var arg in n.Arguments)
