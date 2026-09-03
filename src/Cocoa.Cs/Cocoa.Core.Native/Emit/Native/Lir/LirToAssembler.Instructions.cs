@@ -353,8 +353,9 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
 
         private void EmitLeaSlot(LirInstruction instruction)
         {
-            // 指向帧底部的缓冲槽（远离返回地址；配�?EmitFunction �?LeaSlot 缓冲空间�?
-            var offset = -_frameBytes + _slotSize;
+            // 1c/C1：LeaSlot 缓冲基址须跳过帧底的 x87 暂存区（[-fb..+16)），否则两特性
+            // 共存时缓冲与 u64→浮点常量槽重叠互相踩踏（详见 LirToAssembler._x87ScratchBytes）
+            var offset = -_frameBytes + _x87ScratchBytes + _slotSize;
             _a.Lea(X64Register.EAX, new X64MemoryOperand(X64Register.RBP, offset));
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }

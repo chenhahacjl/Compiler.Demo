@@ -21,6 +21,11 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
         public const uint TextRva = 0x1000;
         private const int CorHeaderSize = 72; // IMAGE_COR20_HEADER
 
+        // 1c/C8：netfx 镜像基址唯一事实来源——入口 stub 的绝对操作数（stubTarget）与
+        // PeImageConfig 的 imageBase 必须同源，旧实现两处硬编码 0x400000 构成双写隐患
+        // （改一处漏一处时，.reloc 的 HIGHLOW 会在错误基址上叠 delta，偏移恰好差基址差值）
+        private const ulong NetFxImageBase = 0x400000;
+
         /// <summary>方法体（已编码字节 + 局部变量签名 token + 最大栈 + 可选异常表）。</summary>
         internal sealed class MethodBodyBlob
         {
@@ -143,7 +148,7 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
                 var importLayout = BuildMscoreeImport(blobBaseRva, iatSlotRva);
 
                 // 入口 stub：FF 25 <u32> = jmp dword ptr [u32]（跳 IAT 槽，加载器已填 _CorExeMain）
-                var stubTarget = 0x400000u + iatSlotRva;
+                var stubTarget = (uint)(NetFxImageBase + iatSlotRva);
                 var stub = new byte[] { 0xFF, 0x25,
                     (byte)stubTarget, (byte)(stubTarget >> 8), (byte)(stubTarget >> 16), (byte)(stubTarget >> 24) };
 
@@ -168,7 +173,7 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
             var config = pe32
                 // 6d-4 netfx：csc 同款布局（节对齐 0x2000、OS/子系统 4.0、SizeOfHeaders 0x200）；
                 // ASLR（0x8540）开，.reloc 节已提供重定位。
-                ? new PeImageConfig(PeMachine.I386, 0x400000UL, 3, 0x8540, addressOfEntryPoint)
+                ? new PeImageConfig(PeMachine.I386, NetFxImageBase, 3, 0x8540, addressOfEntryPoint)
                 {
                     SectionAlignment = 0x2000,
                     FileAlignment = 0x200,

@@ -111,6 +111,31 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
             }
         }
 
+        /// <summary>
+        /// 1c/C5 发射后自检：所有 token/字符串占位符必须已被回填为有效值。
+        /// 占位符写入时同步登记 fixup，若回填链路（BuildTokenMap/#US 注册）产出
+        /// 0xFFFFFFFF 哨兵值，此处会拦截——携带 0xFFFFFFFF token 的方法体在 JIT 时
+        /// 才崩溃，届时离发射现场太远难以定位。
+        /// </summary>
+        public void ValidatePatched(byte[] code)
+        {
+            foreach (var fixup in _tokenFixups)
+            {
+                if (BitConverter.ToInt32(code, fixup.Offset) == -1)
+                {
+                    throw new InvalidOperationException($"[il] token fixup at offset {fixup.Offset} still holds the 0xFFFFFFFF placeholder (unresolved metadata token)");
+                }
+            }
+
+            foreach (var fixup in _stringFixups)
+            {
+                if (BitConverter.ToInt32(code, fixup.Offset) == -1)
+                {
+                    throw new InvalidOperationException($"[il] string fixup at offset {fixup.Offset} still holds the 0xFFFFFFFF placeholder (missing #US registration)");
+                }
+            }
+        }
+
         /// <summary>Ldstr 引用的字符串（供 #US 堆注册）。</summary>
         public IEnumerable<string> StringFixupValues
         {
@@ -141,6 +166,13 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
                 if (depth > max)
                 {
                     max = depth;
+                }
+
+                // 1c/C2：Ret 终结当前路径——线性扫描把 Ret 后的（不可达/新路径）代码
+                // 按 0 基线重算，避免 -1 净增量把深度压负后低估后续峰值
+                if (instruction.OpCode.Value == 0x2A)
+                {
+                    depth = 0;
                 }
             }
 
@@ -290,7 +322,9 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
                     return 0;
                 case 0xFE01: // Ceq
                 case 0xFE02: // Cgt
+                case 0xFE03: // Cgt_Un（无符号/浮点 NaN 比较，发射侧在用，1c/C2 补净栈 -1）
                 case 0xFE04: // Clt
+                case 0xFE05: // Clt_Un
                     return -1;
                 case 0xFE06: // Ldftn
                     return 1;
@@ -395,7 +429,16 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
                 case IlOperandType.ShortInlineBrTarget:
                     {
                         var target = (IlInstruction)instruction.Operand!;
-                        writer.Write((sbyte)(target.Offset - (startOffset + 1)));
+                        var distance = target.Offset - (startOffset + 1);
+                        if (distance < sbyte.MinValue || distance > sbyte.MaxValue)
+                        {
+                            // 1c/C3 自检：短分支距离超界时必须改用宽格式（Br/Brtrue/Brfalse），
+                            // 静默 sbyte 截断会跳转到错误地址——宁可发射期失败也不产出坏 IL
+                            throw new InvalidOperationException(
+                                $"[il] short branch distance {distance} exceeds sbyte range (instruction at offset {startOffset}); emit the wide form instead");
+                        }
+
+                        writer.Write((sbyte)distance);
                         break;
                     }
                 case IlOperandType.InlineSwitch:

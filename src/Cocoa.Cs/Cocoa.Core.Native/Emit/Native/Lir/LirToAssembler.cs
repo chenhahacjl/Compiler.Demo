@@ -50,6 +50,13 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
         private Dictionary<LirVirtualRegister, int> _slots = new();
         private int _stackDepth;
         private int _frameBytes;
+
+        // 1c/C1：x87 暂存区字节数（帧底 [-frameBytes..) 起；cw 槽 [-fb..+4)、u64→浮点常量槽
+        // [-fb+8..+16)）。LeaSlot 缓冲必须从 -frameBytes + _x87ScratchBytes + 槽宽 起步，
+        // 否则两特性共存时（同一函数既用 BuildInt 缓冲又做 u64→浮点转换）缓冲字节会被
+        // 常量写入踩踏——旧布局两者都在 [-fb+4..) 起，构成重叠。
+        private int _x87ScratchBytes;
+
         private readonly Stack<bool> _alignStack = new();
         private LirFunction? _currentFunction;
         private int _stubLabel;
@@ -300,6 +307,7 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             _asmLabelCache.Clear();
             _sysArgs.Clear();
             _pendingCmp64Trichotomy = false;
+            _x87ScratchBytes = 0;
 
             _slots = new Dictionary<LirVirtualRegister, int>();
             var registers = new List<LirVirtualRegister>(function.Registers);
@@ -346,16 +354,20 @@ namespace Cocoa.CodeAnalysis.Emit.Native.Lir
             else
             {
                 var frameBytes = 4 * (slotCount + 3);
-                if (FunctionUsesOpCode(function, LirOpCode.LeaSlot))
-                {
-                    frameBytes += 0x80;
-                }
 
+                // 1c/C1：帧布局分区——x87 暂存区固定占据帧底 [-fb..+16)，LeaSlot 缓冲
+                // 随之上移（EmitLeaSlot 基址同步加 _x87ScratchBytes），两者不再重叠。
                 // 6e-M21 Phase 5b/7：x87 控制字专用槽（-frameBytes）+ u64→浮点常量槽（[-fb+8..+16)），
                 // 与变量槽/LeaSlot 缓冲隔离，避免恢复 fldcw 覆盖 fistp 写入的转换结果
                 if (FunctionUsesOpCode(function, LirOpCode.FCvtSD64) || FunctionUsesOpCode(function, LirOpCode.FCvtSI64U))
                 {
-                    frameBytes += 16;
+                    _x87ScratchBytes = 16;
+                    frameBytes += _x87ScratchBytes;
+                }
+
+                if (FunctionUsesOpCode(function, LirOpCode.LeaSlot))
+                {
+                    frameBytes += 0x80;
                 }
 
                 _a.Sub(X64Size.Dword, X64Register.RSP, frameBytes);

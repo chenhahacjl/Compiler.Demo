@@ -486,8 +486,12 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
             }
 
             // 6e-M22：方法体末尾补隐式 ret（若无显式 return 终结）
-            var needsImplicitRet = body.Statements.Length == 0 ||
-                                   body.Statements[^1].Kind != BoundNodeKind.ReturnStatement;
+            // 1c/C4：判断"有效尾"须下探嵌套结构——最后一条语句是块（取其尾）或双分支 if
+            // （两分支都以 return 收尾）时视为已有 return 收尾；旧实现只看最外层语句 Kind，
+            // 嵌套块尾的 return 会被误判为缺收尾而多补一个 Ret（不可达冗余），
+            // 且若 lowering 行为变化则可能反向漏补，产出 fall-through 的无效 IL。
+            var lastStatement = body.Statements.Length == 0 ? null : body.Statements[^1];
+            var needsImplicitRet = !TailEndsWithReturn(lastStatement);
             if (needsImplicitRet)
             {
                 assembler.Emit(IlOpCodeTable.Get("Ret"));
@@ -511,6 +515,7 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
             var tokenMap = _metadata.BuildTokenMap();
             assembler.PatchTokens(code, tokenMap);
             assembler.PatchStrings(code, _metadata.UserStringTokens);
+            assembler.ValidatePatched(code); // 1c/C5：占位符回填自检，拦截坏 token 于发射现场
 
             if (sigReference != null)
             {
@@ -562,6 +567,30 @@ namespace Cocoa.CodeAnalysis.Emit.Managed
             }
 
             return section.ToArray();
+        }
+
+        /// <summary>
+        /// 1c/C4：判断语句是否"以 return 收尾"。下探块（取尾语句）与双分支 if
+        /// （两分支各自收尾）；goto/throw 等按"未收尾"处理——多补的隐式 Ret
+        /// 位于不可达位置，安全冗余，漏补的 fall-through 才是无效 IL。
+        /// </summary>
+        private static bool TailEndsWithReturn(BoundStatement? statement)
+        {
+            switch (statement)
+            {
+                case BoundReturnStatement:
+                    return true;
+                case BoundBlockStatement block:
+                    return TailEndsWithReturn(block.Statements.Length == 0 ? null : block.Statements[^1]);
+                case BoundIfStatement ifStatement:
+                    return ifStatement.ElseStatement != null &&
+                           TailEndsWithReturn(ifStatement.ThenStatement) &&
+                           TailEndsWithReturn(ifStatement.ElseStatement);
+                case BoundSequencePointStatement sequencePoint:
+                    return TailEndsWithReturn(sequencePoint.Statement);
+                default:
+                    return false;
+            }
         }
 
         private void CollectLabels(BoundStatement node)
