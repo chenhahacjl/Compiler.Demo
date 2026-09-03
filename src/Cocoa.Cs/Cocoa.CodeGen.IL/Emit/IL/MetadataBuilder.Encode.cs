@@ -1,3 +1,4 @@
+using Cocoa.CodeAnalysis.Emit.IL;
 using Cocoa.CodeAnalysis.Symbols;
 using System;
 using System.Collections.Generic;
@@ -5,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Cocoa.CodeAnalysis.Emit.IL
+namespace Cocoa.CodeGen.IL
 {
     /// <summary>
     /// ECMA-335 元数据写入器（最小子集）：Module/TypeRef/TypeDef/MethodDef/Param/MemberRef/

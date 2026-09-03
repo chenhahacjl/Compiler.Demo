@@ -257,6 +257,12 @@ namespace Cocoa.CodeAnalysis.Emit.IL
     }
 
     /// <summary>StandAloneSig 引用（局部变量签名等）。</summary>
+    internal interface IIlRefIssuer
+    {
+        IlAssemblyRef DefineAssemblyRef(string name, Version version, byte[] publicKeyOrToken, string? culture, uint flags);
+        IlTypeRef DefineTypeRef(IlAssemblyRef? scope, string? namespaceName, string name);
+    }
+
     internal sealed class IlStandAloneSig : IlReference
     {
         public IlStandAloneSig(byte[] signature) => Signature = signature;

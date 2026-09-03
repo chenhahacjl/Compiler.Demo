@@ -81,7 +81,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         /// <summary>按 FullName（命名空间.名称）查找类型，返回其 TypeRef 描述。</summary>
-        public IlTypeRef? FindType(string fullName, MetadataBuilder builder)
+        public IlTypeRef? FindType(string fullName, IIlRefIssuer builder)
         {
             foreach (var assembly in _assemblies)
             {
@@ -129,7 +129,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         /// <summary>按「类型 FullName + 方法名 + 参数类型 FullName 列表」查找方法。</summary>
-        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, MetadataBuilder builder)
+        public ResolvedMethodInfo? FindMethod(string typeFullName, string methodName, string[] parameterTypeNames, IIlRefIssuer builder)
         {
             foreach (var assembly in _assemblies)
             {
@@ -168,7 +168,7 @@ namespace Cocoa.CodeAnalysis.Emit.IL
         }
 
         /// <summary>按「类型 FullName + 字段名」查找 public 字段（facade 值类型字段重定向：Vector3.X 等）。</summary>
-        public ResolvedFieldInfo? FindField(string typeFullName, string fieldName, MetadataBuilder builder)
+        public ResolvedFieldInfo? FindField(string typeFullName, string fieldName, IIlRefIssuer builder)
         {
             foreach (var assembly in _assemblies)
             {
