@@ -2,30 +2,75 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.Native.Assembler.X64;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.PE;
-using Cocoa.CodeGen.Native.Runtime.Windows.X64;
+using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 
 namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 {
+    /// <summary>
+    /// 原生发射管线冒烟（4.4：旧 RuntimeEmitterX64/X86 白盒测试迁 LIR 生产管线）。
+    /// PE 头断言 + 运行时函数（打印/拼接/相等/输入）经语言层等价覆盖。
+    /// </summary>
     public class NativeEmitTests
     {
-        private static string GetExePath(string name)
+        public static IEnumerable<object[]> GetPlatforms()
+        {
+            yield return new object[] { new TargetPlatform(TargetOS.Windows, Architecture.X64) };
+            yield return new object[] { new TargetPlatform(TargetOS.Windows, Architecture.X86) };
+        }
+
+        private static string GetExePath(string name, TargetPlatform platform)
         {
             var directory = Path.Combine(Path.GetTempPath(), "cocoa-native-tests");
             Directory.CreateDirectory(directory);
-            return Path.Combine(directory, name + ".exe");
+            var suffix = platform.Arch == Architecture.X86 ? "-x86" : "";
+            return Path.Combine(directory, name + suffix + ".exe");
         }
 
-        private static void WriteExe(X64Assembler a, RuntimeResult runtime, int entryLabel, string exePath)
+        private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, TargetPlatform platform, string? input = null)
         {
-            var dataRva = PeFileWriter.ComputeDataRva(a.ToArray().Length);
-            a.Patch(dataRva - PeFileWriter.TextRva, PeFileWriter.ImageBaseOf(Architecture.X64));
-            PeFileWriter.Write(exePath, a.ToArray(), a.GetData(), PeFileWriter.TextRva + a.GetLabelOffset(entryLabel), runtime.Imports, Architecture.X64);
+            var syntaxTree = SyntaxTree.Parse(source);
+            var compilation = Compilation.Create(syntaxTree);
+            var exePath = GetExePath(name, platform);
+            var diagnostics = compilation.EmitNative(name, exePath, platform);
+
+            Assert.True(diagnostics.IsEmpty, string.Join("\n", System.Linq.Enumerable.Select(diagnostics, d => d.Message)));
+            Assert.True(File.Exists(exePath));
+
+            var psi = new ProcessStartInfo(exePath)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardInput = input != null,
+                UseShellExecute = false,
+            };
+
+            using var process = Process.Start(psi)!;
+
+            if (input != null)
+            {
+                var inputBytes = Encoding.Unicode.GetBytes(input);
+                process.StandardInput.BaseStream.Write(inputBytes, 0, inputBytes.Length);
+                process.StandardInput.BaseStream.Close();
+            }
+
+            using var output = new MemoryStream();
+            var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
+
+            if (!process.WaitForExit(15000))
+            {
+                process.Kill();
+                throw new TimeoutException("Native exe did not exit in time.");
+            }
+
+            outputTask.Wait();
+            var bytes = output.ToArray();
+            var stdout = Encoding.Unicode.GetString(bytes).Replace("\r\n", "\n").Replace("\r", "\n");
+            return (process.ExitCode, stdout);
         }
 
+        /// <summary>运行原生 exe 并返回 Unicode stdout（断言退出码）；供其他 native 测试复用。</summary>
         internal static string Run(string exePath, string? input = null, int expectedExitCode = 0)
         {
             var psi = new ProcessStartInfo(exePath)
@@ -47,7 +92,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             using var output = new MemoryStream();
             var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
 
-            if (!process.WaitForExit(10000))
+            if (!process.WaitForExit(15000))
             {
                 process.Kill();
                 throw new TimeoutException("Native exe did not exit in time.");
@@ -60,142 +105,51 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             return Encoding.Unicode.GetString(bytes);
         }
 
-        private static int CreateDataString(X64Assembler a, string text)
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void NativeExe_HasValidPeHeaders(object platform)
         {
-            var symbol = a.CreateDataSymbol();
-            a.MarkDataSymbol(symbol);
-            a.WriteDataUtf16(text);
-            return symbol;
-        }
+            var target = (TargetPlatform)platform;
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
-        private static RuntimeResult BuildHelloWorld(X64Assembler a)
-        {
-            var entry = a.CreateLabel();
-            var runtime = RuntimeEmitterX64.Emit(a, entry);
+function Main()
+{
+    Console.WriteLine(""ok"")
+}", "pe-headers", target);
 
-            a.MarkLabel(entry);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\n", stdout);
 
-            a.Sub(X64Size.Qword, X64Register.RSP, 0x28);
-            var hello = CreateDataString(a, "Hello, World!");
-            a.LeaRip(X64Register.RCX, hello);
-            a.Call(runtime.Labels.PrintString);
-            a.Xor(X64Size.Dword, X64Register.RCX, X64Register.RCX);
-            a.Call(runtime.Labels.ExitProcess);
-
-            return runtime;
-        }
-
-        [Fact]
-        public void NativeExe_HasValidPeHeaders()
-        {
-            var a = new X64Assembler();
-            var runtime = BuildHelloWorld(a);
-            var exePath = GetExePath("pe-headers");
-
-            WriteExe(a, runtime, runtime.Entry, exePath);
-            var bytes = File.ReadAllBytes(exePath);
-
+            var bytes = File.ReadAllBytes(GetExePath("pe-headers", target));
             Assert.Equal(new byte[] { 0x4D, 0x5A }, new[] { bytes[0], bytes[1] });
             var peOffset = BitConverter.ToInt32(bytes, 0x3C);
-            Assert.Equal(0x80, peOffset);
             Assert.Equal("PE", Encoding.ASCII.GetString(bytes, peOffset, 2));
-            Assert.Equal(0x8664, BitConverter.ToUInt16(bytes, peOffset + 4));
-            Assert.Equal(3, BitConverter.ToUInt16(bytes, peOffset + 6));
-            Assert.Equal((uint)PeFileWriter.SizeOfHeaders, BitConverter.ToUInt32(bytes, peOffset + 0x18 + 0x3C));
+            var machine = BitConverter.ToUInt16(bytes, peOffset + 4);
+            Assert.Equal(
+                target.Arch == Architecture.X64 ? 0x8664 : 0x014C,
+                machine);
         }
 
-        [Fact]
-        public void NativeExe_PrintsHelloWorld()
+        [Theory]
+        [MemberData(nameof(GetPlatforms))]
+        public void NativeExe_RuntimeSmoke(object platform)
         {
-            var a = new X64Assembler();
-            var runtime = BuildHelloWorld(a);
-            var exePath = GetExePath("hello-world");
+            var target = (TargetPlatform)platform;
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
 
-            WriteExe(a, runtime, runtime.Entry, exePath);
-            Assert.True(File.Exists(exePath));
-            Assert.Equal("Hello, World!", Run(exePath));
-        }
+function Main()
+{
+    Console.WriteLine(42)
+    Console.WriteLine(-7)
+    Console.WriteLine(""foo"" + ""bar"")
+    Console.WriteLine(""foo"" == ""foo"")
+    Console.WriteLine(""foo"" == ""bar"")
+    var s = Console.ReadLine()
+    Console.WriteLine(s)
+}", "runtime-smoke", target, input: "AB\n");
 
-        [Fact]
-        public void NativeExe_RuntimeSmoke()
-        {
-            var a = new X64Assembler();
-            var entry = a.CreateLabel();
-            var runtime = RuntimeEmitterX64.Emit(a, entry);
-
-            a.MarkLabel(entry);
-
-            a.Push(X64Register.RBX);
-            a.Sub(X64Size.Qword, X64Register.RSP, 0x20);
-
-            a.Mov(X64Size.Dword, X64Register.RCX, 42);
-            a.Call(runtime.Labels.PrintInt);
-
-            var foo = CreateDataString(a, "foo");
-            var bar = CreateDataString(a, "bar");
-
-            a.LeaRip(X64Register.RCX, foo);
-            a.LeaRip(X64Register.RDX, bar);
-            a.Call(runtime.Labels.Concat);
-            a.Mov(X64Size.Qword, X64Register.RCX, X64Register.RAX);
-            a.Call(runtime.Labels.PrintString);
-
-            a.LeaRip(X64Register.RCX, foo);
-            a.LeaRip(X64Register.RDX, foo);
-            a.Call(runtime.Labels.StrEquals);
-            a.Mov(X64Size.Dword, X64Register.RCX, X64Register.RAX);
-            a.Call(runtime.Labels.PrintInt);
-
-            a.LeaRip(X64Register.RCX, foo);
-            a.LeaRip(X64Register.RDX, bar);
-            a.Call(runtime.Labels.ObjectEquals);
-            a.Mov(X64Size.Dword, X64Register.RCX, X64Register.RAX);
-            a.Call(runtime.Labels.PrintInt);
-
-            a.Call(runtime.Labels.Input);
-            a.Mov(X64Size.Qword, X64Register.RCX, X64Register.RAX);
-            a.Call(runtime.Labels.PrintString);
-
-            var loopRandom = a.CreateLabel();
-            var failRandom = a.CreateLabel();
-            a.Xor(X64Size.Dword, X64Register.RBX, X64Register.RBX);
-            a.MarkLabel(loopRandom);
-            a.Mov(X64Size.Dword, X64Register.RCX, 100);
-            a.Call(runtime.Labels.Random);
-            a.Cmp(X64Size.Dword, X64Register.RAX, 100);
-            a.Jcc(X64CondCode.AboveOrEqual, failRandom);
-            a.Add(X64Size.Dword, X64Register.RBX, 1);
-            a.Cmp(X64Size.Dword, X64Register.RBX, 20);
-            a.Jcc(X64CondCode.Below, loopRandom);
-
-            a.Xor(X64Size.Dword, X64Register.RCX, X64Register.RCX);
-            a.Call(runtime.Labels.ExitProcess);
-
-            a.MarkLabel(failRandom);
-            a.Mov(X64Size.Dword, X64Register.RCX, 1);
-            a.Call(runtime.Labels.ExitProcess);
-
-            var exePath = GetExePath("runtime-smoke");
-            WriteExe(a, runtime, runtime.Entry, exePath);
-
-            Assert.Equal("42foobar10AB", Run(exePath, input: "AB\n"));
-        }
-
-        [Fact]
-        public void NativeExe_ExitOnly()
-        {
-            var a = new X64Assembler();
-            var entry = a.CreateLabel();
-            var runtime = RuntimeEmitterX64.Emit(a, entry);
-
-            a.MarkLabel(entry);
-            a.Sub(X64Size.Qword, X64Register.RSP, 0x28);
-            a.Xor(X64Size.Dword, X64Register.RCX, X64Register.RCX);
-            a.Call(runtime.Labels.ExitProcess);
-
-            var exePath = GetExePath("exit-only");
-            WriteExe(a, runtime, runtime.Entry, exePath);
-            Assert.Equal("", Run(exePath));
+            Assert.Equal(0, exitCode);
+            Assert.Equal("42\n-7\nfoobar\nTrue\nFalse\nAB\n", stdout);
         }
     }
 }

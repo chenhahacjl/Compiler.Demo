@@ -1,8 +1,6 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.Native.Runtime.Windows.X64;
-using Cocoa.CodeGen.Native.Runtime.Windows.X86;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Text;
 using Cocoa.CodeGen.PE;
