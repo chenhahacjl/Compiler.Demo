@@ -448,7 +448,7 @@ namespace Cocoa.CodeGen.Interpreter
                 }
 
                 // 鏃犵鍙峰ぇ鍊兼寜浣嶆ā寮忔埅鏂紙涓?C# unchecked 绐勫寲涓€鑷达級
-                return unchecked((int)Binding.NumericBox.ToSigned64(value));
+                return unchecked((int)Binding.NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int64)
             {
@@ -473,7 +473,7 @@ namespace Cocoa.CodeGen.Interpreter
                     return unchecked((long)longUlong);
                 }
 
-                return Binding.NumericBox.ToSigned64(value);
+                return Binding.NumericBox.ToSigned64(value!);
             }
             else if (node.Type == TypeSymbol.Char)
             {
@@ -487,37 +487,37 @@ namespace Cocoa.CodeGen.Interpreter
                 }
 
                 // 鏃犵鍙峰瓧鑺傛埅鏂紝涓?(byte)300 == 44 璇箟涓€鑷?
-                return unchecked((byte)Binding.NumericBox.ToUnsigned64(value));
+                return unchecked((byte)Binding.NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int8)
             {
                 if (value is double sbyteDouble)
                     return unchecked((sbyte)(int)sbyteDouble);
-                return unchecked((sbyte)Binding.NumericBox.ToSigned64(value));
+                return unchecked((sbyte)Binding.NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int16)
             {
                 if (value is double shortDouble)
                     return unchecked((short)(int)shortDouble);
-                return unchecked((short)Binding.NumericBox.ToSigned64(value));
+                return unchecked((short)Binding.NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.UInt16)
             {
                 if (value is double ushortDouble)
                     return unchecked((ushort)(int)ushortDouble);
-                return unchecked((ushort)Binding.NumericBox.ToUnsigned64(value));
+                return unchecked((ushort)Binding.NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.UInt32)
             {
                 if (value is double uintDouble)
                     return unchecked((uint)(long)uintDouble);
-                return unchecked((uint)Binding.NumericBox.ToUnsigned64(value));
+                return unchecked((uint)Binding.NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.UInt64)
             {
                 if (value is double ulongDouble)
                     return unchecked((ulong)(long)ulongDouble);
-                return Binding.NumericBox.ToUnsigned64(value);
+                return Binding.NumericBox.ToUnsigned64(value!);
             }
             else if (node.Type == TypeSymbol.Float)
             {

@@ -17,7 +17,7 @@ namespace Cocoa.CodeGen.Interpreter
         private object EvaluateFormatExpression(BoundFormatExpression node)
         {
             var value = EvaluateExpression(node.Value)!;
-            var text = node.Format != null ? string.Format("{0:" + node.Format + "}", value) : Convert.ToString(value);
+            var text = node.Format != null ? string.Format("{0:" + node.Format + "}", value) : Convert.ToString(value)!;
             if (node.Width != null)
             {
                 text = node.Width.Value < 0 ? text.PadRight(-node.Width.Value) : text.PadLeft(node.Width.Value);
