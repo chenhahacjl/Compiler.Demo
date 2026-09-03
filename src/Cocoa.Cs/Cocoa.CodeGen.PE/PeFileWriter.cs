@@ -5,10 +5,10 @@ using System.Linq;
 
 namespace Cocoa.CodeGen.PE
 {
-    /// <summary>瀵煎叆瑙勬牸锛欴LL 鍚?+ 鍑芥暟鍚?+ IAT 妲藉湪 .idata blob 鍐呯殑鍋忕Щ銆?/summary>
+    /// <summary>导入规格：DLL 名 + 函数名 + IAT 槽在 .idata blob 内的偏移。</summary>
     internal readonly record struct PefileImport(string DllName, string Name, int IatOffset);
 
-    /// <summary>PE 鍐欏嚭鍣細缁勮澶寸粨鏋勫眰 + 瀵煎叆琛ㄧ粨鏋勫眰锛屼骇鍑?PE32+ / PE32 闀滃儚鏂囦欢銆?/summary>
+    /// <summary>PE 写出器：组装头结构层 + 导入表结构层，产出 PE32+ / PE32 镜像文件。</summary>
     internal static class PeFileWriter
     {
         public const int TextRva = 0x1000;
@@ -18,7 +18,7 @@ namespace Cocoa.CodeGen.PE
 
         private const int SectionAlignment = 0x1000;
 
-        /// <summary>鏃ц矾寰勶紙RuntimeEmitter 鎵嬪伐甯冨眬锛変娇鐢ㄧ殑鍥哄畾鏁版嵁娈?RVA銆傛柊璺緞椤荤敤 ComputeDataRva 鍔ㄦ€佸竷灞€銆?/summary>
+        /// <summary>旧路径（RuntimeEmitter 手工布局）使用的固定数据段 RVA。新路径页对齐用 ComputeDataRva 动态布局。</summary>
         public static int ComputeDataRva(int codeLength)
         {
             return Align(TextRva + codeLength, SectionAlignment);
@@ -56,9 +56,9 @@ namespace Cocoa.CodeGen.PE
             var slotOffsets = imports.Select(i => i.IatOffset).ToList();
             var importLayout = ImportTableBuilder.Build(specs, (uint)idataRva, pe32, slotOffsets, (uint)dataRva);
 
-            // 6c-2锛欼AT 妲界鐩樺垵鍊?= hintname RVA锛坢ingw fake-IAT 鎯緥锛夈€俉indows 鍔犺浇鍣ㄥ
-            // 鍒濆€间负 0 鐨勬Ы瑙嗕负宸插～鍏呰€岃烦杩囷紙bound-import 璇箟锛夛紝鍙湁鎸囧悜 INT 鍖哄煙鐨勨€滀吉鍊尖€?
-            // 鎵嶄細琚浛鎹负瑙ｆ瀽鍚庣殑鐪熷疄鍑芥暟鍦板潃锛屾晠妲戒笉鑳界暀闆躲€?
+            // 6c-2：IAT 槽磁盘初值 = hintname RVA（mingw fake-IAT 惯例）。Windows 加载器对
+            // 初值为 0 的槽视为已填充而跳过（bound-import 语义），只有指向 INT 区间的"伪值"
+            // 才会被替换为解析后的真实函数地址，故槽不能留空。
             var slotData = new byte[data.Length];
             Array.Copy(data, slotData, data.Length);
             foreach (var dll in importLayout.Dlls)
@@ -108,8 +108,8 @@ namespace Cocoa.CodeGen.PE
                 relocBlob = Array.Empty<byte>();
             }
 
-            // 鎵嶄細琚浛鎹负瑙ｆ瀽鍚庣殑鐪熷疄鍑芥暟鍦板潃锛屾晠妲戒笉鑳界暀闆躲€?
-            // 鍚勮妭铏氭嫙鏈锛堝榻愬悗锛夊繀椤绘伆濂借惤鍦ㄤ笅涓€鑺傝捣鐐癸紙Windows 鍔犺浇鍣ㄦ寜鐩搁偦鑺傝繛缁牎楠岋級銆?
+            // 才会被替换为解析后的真实函数地址，故槽不能留空。
+            // 各节虚拟末端（对齐后）必须恰好落在下一节起点（Windows 加载器按相邻节连续校验）。
             var sections = new List<PeSectionSpec>();
             var codeOffset = 0;
             var codeSectionIndex = 0;

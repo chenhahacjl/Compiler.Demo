@@ -142,7 +142,7 @@ namespace Cocoa.CodeGen.Interpreter
                 case BoundNodeKind.ThisExpression:
                     return _thisStack.Peek();
                 case BoundNodeKind.BaseExpression:
-                    // base 涓?this 鎸囧悜鍚屼竴瀹炰緥锛沚ase.Method() 鐨勯潪铏氱洰鏍囩敱缁戝畾鏈?Method 鐩存帴瑙ｆ瀽
+                    // base 与 this 指向同一实例；base.Method() 的非虚目标由绑定期 Method 直接解析
                     return _thisStack.Peek();
                 case BoundNodeKind.ConstructorChainExpression:
                     return EvaluateConstructorChain((BoundConstructorChainExpression)node);
@@ -173,7 +173,7 @@ namespace Cocoa.CodeGen.Interpreter
             return expression.ConstantValue.Value;
         }
 
-        /// <summary>鍑芥暟鍊艰繍琛屾湡琛ㄧず锛?e-M22 C4锛夛細鐩爣鏂规硶 + 鎺ユ敹鑰咃紙瀹炰緥鏂规硶缁勭殑鐜妲斤紱闈欐€?lambda 涓?null锛夈€?/summary>
+        /// <summary>函数值运行期表示（6e-M22 C4）：目标方法 + 接收者（实例方法组的环境槽；静态 lambda 为 null）。</summary>
         private sealed class EvaluatorFunctionValue
         {
             public EvaluatorFunctionValue(FunctionSymbol function, object? receiver)
@@ -187,7 +187,7 @@ namespace Cocoa.CodeGen.Interpreter
             public object? Receiver { get; }
         }
 
-        /// <summary>闂寘鐜瀵硅薄锛?e-M22 C5锛夛細鎹曡幏鍙橀噺鐨勫爢涓婅鑼冨瓨鍌ㄣ€?/summary>
+        /// <summary>闭包环境对象（6e-M22 C5）：捕获变量的堆上规范存储。</summary>
         internal sealed class ClosureEnvironment
         {
             public System.Collections.Generic.Dictionary<VariableSymbol, object> Slots { get; } = new();

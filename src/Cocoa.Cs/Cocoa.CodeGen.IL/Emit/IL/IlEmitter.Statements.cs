@@ -600,7 +600,7 @@ namespace Cocoa.CodeGen.IL
         /// <summary>
         /// byref 实参取址（6e-M23 R6）：
         /// 形参/局部 → ldarga/ldloca；实例字段 → 接收者 + ldflda；静态字段 → ldsflda；
-        /// 数组元素 → 数组 + 索引 + ldelema（CLR 自带越界检查）。字符串元素不可作 byref 目标（绑定层拒绝非数组元素访问?）
+        /// 数组元素 → 数组 + 索引 + ldelema（CLR 自带越界检查）。字符串元素不可作 byref 目标（绑定层拒绝非数组元素访问）。
         /// ——string 索引为只读字符，绑定层 lvalue 校验已排除。
         /// </summary>
         private void EmitByRefArgument(IlAssembler il, BoundByRefArgument node)

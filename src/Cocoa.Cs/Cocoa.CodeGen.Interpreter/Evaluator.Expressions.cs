@@ -16,7 +16,7 @@ namespace Cocoa.CodeGen.Interpreter
     {
         private object EvaluateFunctionValue(BoundFunctionValueExpression node)
         {
-            // 鎹曡幏 lambda锛歊eceiver = 褰撳墠鐜瀵硅薄锛涙柟娉曠粍锛歊eceiver = 鎺ユ敹鑰呮眰鍊?
+            // 捕获 lambda：Receiver = 当前环境对象；方法组：Receiver = 接收者求值。
             object? receiver;
             if (node.EnvironmentClass != null)
             {
@@ -57,7 +57,7 @@ namespace Cocoa.CodeGen.Interpreter
                 return ByRefBox.Deref(_globals[variable.Variable]);
             }
 
-            // 6e-M22 C5锛氭崟鑾峰彉閲忚鍐欑幆澧冨璞″瓧娈?
+            // 6e-M22 C5：捕获变量读写环境对象字段。
             if (variable.Variable.IsCaptured)
             {
                 return ByRefBox.Deref(PeekClosureEnvironment().Slots[variable.Variable]);

@@ -19,7 +19,7 @@ namespace Cocoa.CodeGen.Interpreter
         private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _functions = new Dictionary<FunctionSymbol, BoundBlockStatement>();
         private readonly Stack<Dictionary<VariableSymbol, object>> _locals = new Stack<Dictionary<VariableSymbol, object>>();
 
-        // 6e-M19 M3-c锛歄OP 杩愯鏃剁姸鎬佲€斺€斿疄渚嬪瓧娈靛竷灞€缂撳瓨 / 闈欐€佸瓧娈垫Ы / .cctor 宸插垵濮嬪寲闆?/ this 鎺ユ敹鑰呮爤
+        // 6e-M19 M3-c：OOP 运行时状态——实例字段布局缓存 / 静态字段槽 / .cctor 已初始化集 / this 接收者栈
         private readonly Dictionary<NamedTypeSymbol, ImmutableArray<FieldSymbol>> _instanceFields = new Dictionary<NamedTypeSymbol, ImmutableArray<FieldSymbol>>();
         private readonly Dictionary<FieldSymbol, object> _staticFields = new Dictionary<FieldSymbol, object>();
         private readonly HashSet<NamedTypeSymbol> _staticsInitialized = new HashSet<NamedTypeSymbol>();

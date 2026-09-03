@@ -101,7 +101,7 @@ namespace Cocoa.CodeGen.Interpreter
         {
             var method = node.Method;
 
-            // 瀹炰緥鏂规硶锛氱敤鎴风被铏氶摼鍒嗘淳 / Object 鍐呭缓闈?/ System.Type 灞炴€?getter
+            // 实例方法：用户类虚链分派 / Object 内建面 / System.Type 属性 getter
             if (method != null && !method.IsStatic)
             {
                 var receiver = EvaluateExpression(node.Expression);
@@ -124,8 +124,8 @@ namespace Cocoa.CodeGen.Interpreter
                 return EvaluateBuiltinCall(method, node.Arguments);
             }
 
-            // 闈欐€佸鍣ㄧ被鏂规硶璋冪敤锛?e-M18锛歋ystem.Console.WriteLine / System.Math.Max ...锛夛細鎸夊嚱鏁拌皟鐢ㄦ眰鍊硷紱
-            // 棣栨瑙︾绫婚潤鎬佹垚鍛樻椂瑙﹀彂鍏?.cctor锛圡3-c锛?
+            // 静态容器类方法调用（6e-M18：System.Console.WriteLine / System.Math.Max ...）：按函数调用求值；
+            // 首次触碰类静态成员时触发其 .cctor（M3-c）。
             if (method != null)
             {
                 if (method.ContainingClass != null && method.IsStatic)
@@ -144,14 +144,14 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
-        /// 鐢ㄦ埛绫诲疄渚嬩笂鐨勮皟鐢ㄥ垎娲撅細闈?base 娌胯繍琛屾椂绫婚摼鎵炬渶杩戝疄鐜帮紙override 鐢熸晥锛夛紱
-        /// 璧板埌鍐呭缓鍗曚緥鍗抽粯璁ゅ疄鐜帮紙ToString鈫掔被鍚嶇瓑锛夈€?
+        /// 用户类实例上的调用分派：非 base 沿运行时类链找最近实现（override 生效）；
+        /// 走到内建单例即默认实现（ToString→类名等）。
         /// </summary>
         private object? DispatchOnInstance(BoundMemberCallExpression node, FunctionSymbol declared, EvaluatorObject instance)
         {
             var target = node.IsBase ? declared : ResolveDispatch(instance.Class, declared) ?? declared;
 
-            // 6e-M23 R5锛氬疄鍙傜墿鍖栧彲鑳界櫥璁?byref 鍥炲啓锛屽熀绾夸紶缁?InvokeFunction 鍦ㄩ€€鍑烘椂鍥炲啓
+            // 6e-M23 R5：实参物化可能登记 byref 回写，基线传递 InvokeFunction 在退出时回写
             var byRefMarker = _byRefWriteBacks.Count;
             var savedSlots = _byRefSlotScope;
             _byRefSlotScope = new Dictionary<object, ByRefBox>();
@@ -174,7 +174,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
-        /// <summary>鍐呭缓榛樿瀹炵幇鐨勬眰鍊煎櫒璇箟锛堝榻?C# System.Object 榛樿琛屼负锛夈€?/summary>
+        /// <summary>内建默认实现的求值器语义（对齐 C# System.Object 默认行为）。</summary>
         private object? EvaluateBuiltinDefaultOnInstance(BuiltinKind kind, EvaluatorObject instance, BoundMemberCallExpression node)
         {
             switch (kind)
@@ -226,9 +226,9 @@ namespace Cocoa.CodeGen.Interpreter
             _ => throw new Exception($"Unexpected type value {receiver}"),
         };
 
-        // ------------------------------------------------------ 6e-M19 M3-c锛歄OP 杩愯鏃惰緟鍔?
+        // ------------------------------------------------------ 6e-M19 M3-c：OOP 运行时簿记
 
-        /// <summary>绫荤殑鎵佸钩鍖栧疄渚嬪瓧娈靛竷灞€锛堝熀绫诲瓧娈靛湪鍓嶃€佸０鏄庡簭锛涜法缁ф壙閾撅紝鎸夌被缂撳瓨锛夈€?/summary>
+        /// <summary>类的拍平化实例字段布局（基类字段在前、声明序；跨继承链，按类缓存）。</summary>
         private ImmutableArray<FieldSymbol> InstanceFieldsOf(NamedTypeSymbol classType)
         {
             if (_instanceFields.TryGetValue(classType, out var cached))
@@ -267,7 +267,7 @@ namespace Cocoa.CodeGen.Interpreter
             throw new Exception($"Field '{field.Name}' not found on '{classType.Name}'");
         }
 
-        /// <summary>瀛楁闆跺€奸粯璁わ紙璇█鏃?null 瀛楅潰閲忥紝鏈祴鍊艰鍙栫粰绫诲瀷闆跺€硷紱寮曠敤绫诲瀷 null锛夈€?/summary>
+        /// <summary>字段零值默认（语言无 null 字面量，未赋值读取给类型零值；引用类型 null）。</summary>
         private static object? DefaultValueOf(TypeSymbol type)
         {
             if (type == TypeSymbol.Int32 || type == TypeSymbol.UInt8 || type == TypeSymbol.Int8 ||
@@ -296,7 +296,7 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
-        /// 闈欐€佸垵濮嬪寲锛圕LR 璇箟杩戜技锛夛細棣栨瑙︾绫婚潤鎬佹垚鍛樻椂鎵ц鍏?.cctor锛堝瓧娈靛垵濮嬪寲鍣ㄥ凡鐢辩粦瀹氬墠缂€杩涗綋锛夈€?
+        /// 静态初始化（CLR 语义近似）：首次触碰类静态成员时执行其 .cctor（字段初始化器已由绑定前缀进体）。
         /// </summary>
         private void EnsureStaticInit(NamedTypeSymbol classType)
         {
@@ -323,7 +323,7 @@ namespace Cocoa.CodeGen.Interpreter
 
             var instance = new EvaluatorObject(classType, new object?[InstanceFieldsOf(classType).Length]);
 
-            // 鏋勯€犲嚱鏁拌В鏋愶細涓庣粦瀹氭湡涓€鑷达紙鍚嶅瓧=绫诲悕锛屽弬鏁颁釜鏁?绫诲瀷閫愪竴鍖归厤锛夛紱鏃犳樉寮忔瀯閫犳椂闅愬紡榛樿鏋勯€犲凡鍦?Functions 涓?
+            // 构造函数解析：与绑定期一致（名字=类名，参数个数与类型逐一匹配）；无显式构造时隐式默认构造已在 Functions 中。
             foreach (var candidate in classType.Methods)
             {
                 if (!candidate.IsConstructor || candidate.IsStatic || candidate.Parameters.Length != argumentValues.Length)
@@ -343,7 +343,7 @@ namespace Cocoa.CodeGen.Interpreter
 
                 if (match)
                 {
-                    // 鏋勯€犱綋宸茬敱缁戝畾娉ㄥ叆 base(...) 閾?+ 瀛楁鍒濆鍖栧櫒鍓嶇紑锛堥殣寮忛摼瀵?Object 鏃?.ctor 鑷姩璺宠繃锛?
+                    // 构造体已由绑定注入 base(...) 链 + 字段初始化器前缀（隐式链对 Object 时 .ctor 自动跳过）。
                     InvokeFunction(candidate, instance, argumentValues);
                     break;
                 }
@@ -360,7 +360,7 @@ namespace Cocoa.CodeGen.Interpreter
                 return null;
             }
 
-            // 6e-M23 R5锛歜yref 瀹炲弬鍥炲啓鍩虹嚎 + 鍒悕浣滅敤鍩燂紙鏋勯€犲舰鍙傚悓鏍锋敮鎸?out/ref锛?
+            // 6e-M23 R5：byref 实参回写基线 + 别名作用域（构造形参同样支持 out/ref）
             var byRefMarker = _byRefWriteBacks.Count;
             var savedSlots = _byRefSlotScope;
             _byRefSlotScope = new Dictionary<object, ByRefBox>();
@@ -451,7 +451,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         /// <summary>
         /// 虚分派（镜像 CLR 槽复用语义）：沿运行时类继承链找最近同名同签名实现— 
-        /// 鍐呭缓鍗曚緥浣嶄簬閾炬牴鑷劧鏈€鍚庡懡涓紙鍗?C# 榛樿瀹炵幇锛夈€侷sBase 鐩磋皟缁戝畾鏈熻В鏋愮殑鍩虹被瀹炵幇锛屼笉缁忔閲嶆淳鍙戙€?
+        /// 内建单例位于链根自然最后命中（即 C# 默认实现）。IsBase 直调绑定期解析的基类实现，不经此重派发。
         /// </summary>
         private FunctionSymbol? ResolveDispatch(NamedTypeSymbol runtimeClass, FunctionSymbol declared)
         {
@@ -503,7 +503,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         private void Assign(VariableSymbol variable, object? value)
         {
-            // 6e-M23 R5锛氬舰鍙傛Ы鎸佹湁 ByRefBox 鏃跺啓鍏ョ┛閫忓埌璋冪敤鏂瑰瓨鍌?
+            // 6e-M23 R5：形参槽持有 ByRefBox 时写入穿透到调用方存储
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
                 if (_globals.TryGetValue(variable, out var existingGlobal) && existingGlobal is ByRefBox globalBox)

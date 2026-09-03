@@ -48,7 +48,7 @@ namespace Cocoa.CodeGen.Interpreter
                 argumentValues[i] = value;
             }
 
-            // 绫婚潤鎬佹柟娉曠洿鍛硷紙using static 绛夛級锛氶娆¤Е纰拌Е鍙?.cctor锛圡3-c锛?
+            // 类静态方法直呼（using static 等）：首次触碰触发 .cctor（M3-c）
             if (node.Function.ContainingClass != null && node.Function.IsStatic)
             {
                 EnsureStaticInit(node.Function.ContainingClass);
@@ -56,7 +56,7 @@ namespace Cocoa.CodeGen.Interpreter
 
             _locals.Push(locals);
 
-            // 6e-M22 C5锛氬涓诲嚱鏁扮洿鍛艰矾寰勫悓鏍烽渶瑕佺幆澧冨璞?
+            // 6e-M22 C5：宿主函数直呼路径同样需要环境对象。
             ClosureEnvironment? pushedEnvironment = null;
             if (node.Function.CapturedVariables is { Count: > 0 })
             {
@@ -175,7 +175,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
-        /// <summary>鍥炲啓鏈皟鐢ㄧ櫥璁扮殑 byref 瀹炲弬锛圠IFO 鍩虹嚎涔嬩笂锛夛紝寮傚父璺緞鍚屾牱鎵ц銆?/summary>
+        /// <summary>回写本调用登记的 byref 实参（LIFO 基线之上），异常路径同样执行。</summary>
         private void RunByRefWriteBacks(int marker)
         {
             for (var i = _byRefWriteBacks.Count - 1; i >= marker; i--)
@@ -189,7 +189,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
-        /// <summary>姹傚€煎櫒鏄剧ず褰㈡€侊細鐢ㄦ埛绫诲疄渚?鈫?绫诲悕锛堝榻?IL 榛樿 ToString锛夛紱绫诲瀷鍊?鈫?鍏ㄥ悕銆?/summary>
+        /// <summary>求值器显示形态：用户类实例 → 类名（对齐 IL 默认 ToString）；类型值 → 全名。</summary>
         private static string DisplayValue(object? value) => value switch
         {
             EvaluatorObject o => o.Class.Name,
@@ -358,7 +358,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
-        /// <summary>6e-M19 M5-b锛歩s 杩愯鏃跺垽瀹氣€斺€旂敤鎴风被娌?Class 缁ф壙閾撅紝string/CLR 瀵硅薄璧板涓荤被鍨嬨€?/summary>
+        /// <summary>6e-M19 M5-b：is 运行时判定——用户类沿 Class 继承链，string/CLR 对象走宿主类型。</summary>
         private object EvaluateIsExpression(BoundIsExpression node)
         {
             var value = EvaluateExpression(node.Expression);
@@ -382,7 +382,7 @@ namespace Cocoa.CodeGen.Interpreter
                 return false;
             }
 
-            // string / CLR 瀵硅薄锛堝閮ㄤ簰鎿嶄綔鍊硷級锛氱洰鏍?string 鈫?瀹夸富绫诲瀷鍒ゅ畾锛涚被鐩爣瀵归潪 Evaluator 瀵硅薄涓嶅彲鑳?
+            // string / CLR 对象（外部互操作值）：目标 string → 宿主类型判定；类目标对非 Evaluator 对象不可能。
             if (node.TargetType == TypeSymbol.String)
             {
                 return value is string;
@@ -391,7 +391,7 @@ namespace Cocoa.CodeGen.Interpreter
             return false;
         }
 
-        /// <summary>6e-M19 M5-b锛歛s 杩愯鏃惰浆鎹⑩€斺€斿懡涓繑鍥炲師寮曠敤锛屽け璐ュ緱 null銆?/summary>
+        /// <summary>6e-M19 M5-b：as 运行时转换——命中返回原引用，失败得 null。</summary>
         private object? EvaluateAsExpression(BoundAsExpression node)
         {
             var value = EvaluateExpression(node.Expression);
@@ -447,7 +447,7 @@ namespace Cocoa.CodeGen.Interpreter
                     return (int)Convert.ToDouble(value);
                 }
 
-                // 鏃犵鍙峰ぇ鍊兼寜浣嶆ā寮忔埅鏂紙涓?C# unchecked 绐勫寲涓€鑷达級
+                // 无符号大值按位模式截断（与 C# unchecked 窄化一致）
                 return unchecked((int)Binding.NumericBox.ToSigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int64)
@@ -486,7 +486,7 @@ namespace Cocoa.CodeGen.Interpreter
                     return unchecked((byte)(int)byteDouble);
                 }
 
-                // 鏃犵鍙峰瓧鑺傛埅鏂紝涓?(byte)300 == 44 璇箟涓€鑷?
+                // 无符号字节截断，与 (byte)300 == 44 语义一致
                 return unchecked((byte)Binding.NumericBox.ToUnsigned64(value!));
             }
             else if (node.Type == TypeSymbol.Int8)
@@ -533,7 +533,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
             else if (node.Type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
             {
-                // 鏋氫妇搴曞眰涓?int锛屾棤鎿嶄綔
+                // 枚举底层为 int，无操作
                 return Convert.ToInt32(value);
             }
             else if (node.Type is Symbols.NamedTypeSymbol)
