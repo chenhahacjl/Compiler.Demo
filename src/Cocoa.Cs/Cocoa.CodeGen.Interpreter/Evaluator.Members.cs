@@ -10,7 +10,7 @@ namespace Cocoa.CodeGen.Interpreter
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
-    /// 姹傚€煎櫒
+    /// 求值器
     /// </summary>
     internal sealed partial class Evaluator
     {
@@ -67,7 +67,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         private object EvaluateMemberAccessExpression(BoundMemberAccessExpression node)
         {
-            // 6e-M19 M3-c锛氱被瀛楁璇伙紙瀹炰緥娌挎墎骞冲寲甯冨眬鍙栨Ы锛涢潤鎬佽蛋瀛楁妲藉瓧鍏革級
+            // 6e-M19 M3-c：类字段读（实例沿扁平化布局取槽；静态走字段槽字典）
             if (node.Field != null)
             {
                 if (node.Field.IsStatic)
@@ -207,7 +207,7 @@ namespace Cocoa.CodeGen.Interpreter
                 case BuiltinKind.ObjectGetType:
                     return receiver.GetType();
 
-                // 6e-M19 M3-b锛歋ystem.Type 鍙灞炴€э紙Name 涓?IL 鍚屾瀯鈥斺€擣ullName 鏈锛涚敤鎴风被涓?EvaluatorTypeInfo锛?
+                // 6e-M19 M3-b：System.Type 只读属性（Name 一IL 同构——FullName 末段；用户类一EvaluatorTypeInfo＀
                 case BuiltinKind.TypeName:
                     var fullName = FullNameOfTypeValue(receiver);
                     var lastDot = fullName.LastIndexOf('.');
@@ -354,7 +354,7 @@ namespace Cocoa.CodeGen.Interpreter
 
         private object? EvaluateConstructorChain(BoundConstructorChainExpression node)
         {
-            // 閾惧埌鍐呭缓 System.Object锛圕onstructor=null锛夛細no-op
+            // 链到内建 System.Object（Constructor=null）：no-op
             if (node.Constructor == null)
             {
                 return null;
@@ -411,7 +411,7 @@ namespace Cocoa.CodeGen.Interpreter
 
             _locals.Push(locals);
 
-            // 6e-M22 C5锛氱幆澧冨璞″叆鏍堚€斺€攍ambda 鐢ㄨ皟鐢ㄦ柟浼犻€掔殑瀹炰緥锛涘涓诲嚱鏁版柊寤猴紙鎹曡幏鍙傛暟闅忓叆鍙傛挱绉嶏級
+            // 6e-M22 C5：环境对象入栈——lambda 用调用方传递的实例；宿主函数新建（捕获参数随入参播种）
             var usesEnvironment = existingEnvironment != null || function.CapturedVariables is { Count: > 0 };
             if (usesEnvironment)
             {
@@ -450,7 +450,7 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
-        /// 铏氬垎娲撅紙闀滃儚 CLR 妲藉鐢ㄨ涔夛級锛氭部杩愯鏃剁被缁ф壙閾炬壘鏈€杩戝悓鍚嶅悓绛惧悕瀹炵幇鈥斺€?
+        /// 虚分派（镜像 CLR 槽复用语义）：沿运行时类继承链找最近同名同签名实现— 
         /// 鍐呭缓鍗曚緥浣嶄簬閾炬牴鑷劧鏈€鍚庡懡涓紙鍗?C# 榛樿瀹炵幇锛夈€侷sBase 鐩磋皟缁戝畾鏈熻В鏋愮殑鍩虹被瀹炵幇锛屼笉缁忔閲嶆淳鍙戙€?
         /// </summary>
         private FunctionSymbol? ResolveDispatch(NamedTypeSymbol runtimeClass, FunctionSymbol declared)
@@ -516,7 +516,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
             else if (variable.IsCaptured)
             {
-                // 6e-M22 C5锛氭崟鑾峰彉閲忓啓鐜瀵硅薄瀛楁
+                // 6e-M22 C5：捕获变量写环境对象字段
                 var slots = PeekClosureEnvironment().Slots;
                 if (slots.TryGetValue(variable, out var existingCaptured) && existingCaptured is ByRefBox capturedBox)
                 {

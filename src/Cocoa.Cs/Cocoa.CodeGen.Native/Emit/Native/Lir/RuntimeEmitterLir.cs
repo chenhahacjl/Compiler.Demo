@@ -239,7 +239,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 EmitSleep();
                 _ = BeginFunction("Beep", 4, 4);
                 EmitBeep();
-                // Y-P0-1：文�?IO / 环境 syscall（G7-�?补齐�?
+            // 工具
                 _ = BeginFunctionTyped("FileExists", new[] { 8 }, LirType.Addr);
                 EmitFileExists();
                 _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr);

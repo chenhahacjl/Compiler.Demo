@@ -1410,7 +1410,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 initializerKeyword = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
                 position += _green.GetSlot(slot)!.Width;
                 slot++;
-                position += _green.GetSlot(slot)!.Width; // 璺宠繃 initializer openParen
+                position += _green.GetSlot(slot)!.Width; // 跳过 initializer openParen
                 slot++;
                 var initArgsBuilder = ImmutableArray.CreateBuilder<SyntaxNode>();
                 while (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind != SyntaxKind.CloseParenthesisToken)
@@ -1420,7 +1420,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     slot++;
                 }
 
-                position += _green.GetSlot(slot)!.Width; // 璺宠繃 initializer closeParen
+                position += _green.GetSlot(slot)!.Width; // 跳过 initializer closeParen
                 slot++;
                 initializerArguments = new SeparatedSyntaxList<ExpressionSyntax>(initArgsBuilder.ToImmutable());
             }

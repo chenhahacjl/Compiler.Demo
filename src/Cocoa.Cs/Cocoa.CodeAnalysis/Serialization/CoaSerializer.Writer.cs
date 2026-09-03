@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 if (_hasChild.Count > 0)
                 {
-                    // 閺嶅洩顔囬悥鎯板Ν閻愮懓鎯堢€涙劘濡悙鐧哥窗閸忓爼妫撮幏顒€褰块幑銏ｎ攽缂傗晞绻橀敍宀冣偓宀勬姜鐞涘苯鍞撮梻顓炴値
+                    // 标记父节点含子节点：其闭括号换行缩进，而非行内闭合
                     _hasChild[_hasChild.Count - 1] = true;
                 }
 
@@ -54,7 +54,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                 if (hasChild && !_lineStart)
                 {
-                    // 婢舵俺顢戦懞鍌滃仯閿涙艾鍘涢崶鐐插煂鐞涘矂顩婚敍宀勬４閹奉剙褰挎稉搴＄磻閹奉剙褰块崥灞藉灙
+                    // 多行节点：先回到行首，闭括号与开括号同列
                     _w.WriteLine();
                     _w.Write(new string(' ', _depth * 2));
                 }
@@ -64,7 +64,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 _lineStart = false;
             }
 
-            /// <summary>鐎涙劘濡悙鐟扮磻閹奉剙褰块崜宥呯暰娴ｅ秴鍩屾稉瀣╃鐞涘瞼缂夋潻娑樺灙閿涘牆鍑￠崷銊攽妫ｆ牕鍨稉宥呭晙閹广垼顢戦敍澶堚偓?/summary>
+            /// <summary>瀛愯妭鐐瑰紑鎷彿鍓嶅畾浣嶅埌涓嬩竴琛岀缉杩涘垪锛堝凡鍦ㄨ棣栧垯涓嶅啀鎹㈣锛夈€?/summary>
             private void Indent()
             {
                 if (_depth == 0)
@@ -82,7 +82,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
         }
 
-        /// <summary>閸愭瑤鏅剁粭锕€褰垮▔銊ュ斀鐞涱煉绱伴崢濠氬櫢 + 閸欐垵鐨犳い鍝勭碍閿涘潟d 娴犲懐鏁ゆ禍搴㈠笓鎼村骏绱濇稉宥呭晸閸忋儲鏋冩禒璁圭礆閵?/summary>
+        /// <summary>鍐欎晶绗﹀彿娉ㄥ唽琛細鍘婚噸 + 鍙戝皠椤哄簭锛坕d 浠呯敤浜庢帓搴忥紝涓嶅啓鍏ユ枃浠讹級銀/summary>
         private sealed class Registry
         {
             private readonly Dictionary<object, int> _ids = new(ReferenceEqualityComparer.Instance);
@@ -106,7 +106,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             public string FnKey(FunctionSymbol fn)
         {
-            // 6e-G7锛氬紑鏀句綋鎼哄甫鍚庯紝閮ㄥ垎绗﹀彿锛堝 cod 娉ㄥ叆閾句笂鐨勫疄渚嬪寲鍓湰锛変笉缁?RegisterFunction鈥斺€?
+            // 6e-G7：开放体携带后，部分符号（如 cod 注入链上的实例化副本）不绀RegisterFunction— 
             // 缂洪敭鏃跺洖閫€鍔ㄦ€佽绠楋紙鍏紡涓?Seal 涓€鑷达級锛岃鍐欎袱渚у绉板嵆鑷唇
             return _fnKeys.TryGetValue(fn, out var key) ? key : ComputeFnKey(fn);
         }
@@ -154,7 +154,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             private void RegisterClassCore(NamedTypeSymbol classType)
             {
-                // 6e-M19 M2-c閿涙艾鍞村鍝勫礋娓氬绱橲ystem.Object/System.Type閿涘绗夐崣?cls閳ユ柡鈧棁顕版笟褌绱伴柅鐘插毉閺傛壆琚惍鏉戞綎閸楁洑绶ラ崥灞肩閹嶇幢
+                // 6e-M19 M2-c：内建单例（System.Object/System.Type）不叀cls——读侧会造出新类破坏单例同一性；
                 // 閸?systype 閹稿鍙忛崥宥嗘Ё鐏忓嫬娲栭崡鏇氱伐閿涘牊鍨氶崨姗€娼伴悽?Ensure 閸愬懎缂撳▔銊ュ弳閿涘奔绗夋惔蹇撳灙閸栨牭绱?
                 if (SystemObjectMembers.IsBuiltinSystemClass(classType))
                 {
@@ -219,7 +219,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                 // 缁粯鏌熷▔鏇窗鐎圭懓娅掔猾璇插弿闂堟瑦鈧緤绱檚yscall/extern 閸欏﹤鐢担鎾绘饯閹焦鏌熷▔鏇礉6e-M18閿涘缍旀稉铏瑰缁?fn 鎼村繐鍨崠鏍电幢鐎圭偘绶ラ弬瑙勭《/閺嬪嫰鈧姷鏁辩猾璇诧紦鏉╁洦鎶ら妴?
                 // 娓氬顦婚敍姝刡ject 閸愬懎缂撻弬瑙勭《閿涘湣2-c閿涘鐢?BuiltinKind閿涘矁顕版笟褏绮￠崡鏇氱伐婢跺秶鏁ら柌宥呯紦閿涘矂銆忛梾蹇撶穿閻劌绨崚妤€瀵?
-                // 6e-G7 S1/S2锛氭硾鍨嬪畾涔夌殑瀹炰緥鏂规硶/鏋勯€犱篃闅忓簱鎼哄甫锛堟秷璐规柟鍗曟€佸寲绱犳潗锛夛紱鍏朵綑瀹炰緥鏂规硶浠嶇敱绫诲３杩囨护
+                // 6e-G7 S1/S2：泛型定义的实例方法/构造也随库携带（消费方单态化素材）；其余实例方法仍由类壳过滤
                 if (fn.ContainingClass != null && !fn.IsStatic &&
                     !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass) &&
                     !fn.ContainingClass.IsGenericDefinition)

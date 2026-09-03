@@ -10,13 +10,13 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 璇嶆硶鍒嗘瀽鍣?(Lexical Analyzer)
     /// <br/>
-    /// 瀛楃 => Token
+    /// 字符 => Token
     /// </summary>
     internal abstract partial class LexerBase : ILexer
     {
         private void ReadChar()
         {
-            // 璺宠繃褰撳墠寮曞彿
+            // 跳过当前引号
             _position++;
 
             var value = '\0';
@@ -106,7 +106,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 return;
             }
 
-            // 璺宠繃鏀跺熬寮曞彿
+            // 跳过收尾引号
             _position++;
             _kind = SyntaxKind.CharToken;
             _value = value;

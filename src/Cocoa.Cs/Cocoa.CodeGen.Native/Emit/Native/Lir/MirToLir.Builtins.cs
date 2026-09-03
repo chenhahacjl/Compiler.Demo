@@ -12,9 +12,9 @@ using Cocoa.CodeAnalysis.Emit;
 namespace Cocoa.CodeGen.Native.Lir
 {
     /// <summary>
-    /// 绑定树（Lowerer 输出）→ IR。逐方法对�?NativeCodeEmitter 的发射语义；
-    /// 字节宽仅按类型区分；仅当 double �?8 字节运行时的寄存器参数时按平台调�?ordinal（x86 �?low/high 两寄存器）�?
-    /// 帧布局/对齐/TEB 检查收敛到 LirToAssembler�?
+    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
+    /// 字节宽仅按类型区分；仅当 double 作 8 字节运行时的寄存器参数时按平台调整 ordinal（x86 拆 low/high 两寄存器）。
+    /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）。
     /// 表达式求值顺序与现有实现完全一致（二元右操作数后求值、调用参数右→左求值、混合副作用保持）�?
     /// </summary>
     internal sealed partial class MirToLir
@@ -92,7 +92,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 }
                 case BuiltinKind.StringFromChars:
                 {
-                    // 6e-G7 ③a：char[] �?string（运行时复制 UTF-16 数据区）
+                    // 6e-G7 ③a：char[] → string（运行时复制 UTF-16 数据区）
                     var chars = EmitExpression(arguments[0]);
                     var result = AllocateRegister(LirType.Addr);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(chars)));
@@ -220,11 +220,11 @@ namespace Cocoa.CodeGen.Native.Lir
                     return result;
                 }
                 default:
-                    throw new InvalidOperationException($"native 后端未实现内建原�?{function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
+                    throw new InvalidOperationException($"native 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }
         }
 
-        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理�?
+        /// <summary>插值洞对齐/格式：单一 StringFormat 入口（value, fmtPtr, fmtLen, width, typeKind）。格式串运行时解析，对齐统一处理。
         /// 6e-M21 Phase 7：新数值类型（i8/i16/u8/u16/u32/u64/f32）预转换为字符串后走 string 通道�?/summary>
         private LirVirtualRegister EmitFormatExpression(BoundFormatExpression node)
         {
@@ -235,7 +235,7 @@ namespace Cocoa.CodeGen.Native.Lir
             var value = EmitExpression(node.Value);
             var instructions = _currentFunction.Instructions;
 
-            // 新类型预转字符串（复用既�?ToString 原语），统一�?string 通道
+            // 新类型预转字符串（复用既有 ToString 原语），统一走 string 通道
             if (type == TypeSymbol.Float)
             {
                 var asDouble = AllocateRegister(LirType.F64);
@@ -262,7 +262,7 @@ namespace Cocoa.CodeGen.Native.Lir
             else if (type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
                      type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16)
             {
-                // 窄整型槽内已�?32 位规范表示，直接�?IntToString
+                // 窄整型槽内已是 32 位规范表示，直接走 IntToString
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
                 value = AllocateRegister(LirType.Addr);
                 Add(instructions, new LirInstruction(LirOpCode.Call, value, LirOperand.Runtime("IntToString"), LirOperand.Constant(0)));
@@ -287,7 +287,7 @@ namespace Cocoa.CodeGen.Native.Lir
             var instructions = _currentFunction.Instructions;
             var packed = ((width & 0xFFFF) << 4) | (typeKind & 0xF);
             var result = AllocateRegister(LirType.Addr);
-            var is64 = typeKind == 1 || typeKind == 5; // double / long：值按 64 位传参（x86 �?low/high�?
+            var is64 = typeKind == 1 || typeKind == 5; // double / long：值按 64 位传参（x86 拆 low/high）
             if (is64)
             {
                 Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0), LirOperand.Reg(value)));
@@ -299,7 +299,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(value)));
                 if (!_isX64)
                 {
-                    // x86 StringFormat �?(low, high, fmtPtr, packed) 布局接收，非 double 用占�?high
+                    // x86 StringFormat 按 (low, high, fmtPtr, packed) 布局接收，非 double 用占位 high
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(value)));
                 }
                 Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(_isX64 ? 1 : 2), LirOperand.Reg(fmtPtr)));
@@ -503,7 +503,7 @@ namespace Cocoa.CodeGen.Native.Lir
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
-                    // 无符号类型为逻辑右移（Shr），有符号为算术右移（Sar�?
+                    // 无符号类型为逻辑右移（Shr），有符号为算术右移（Sar）
                     Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
@@ -526,7 +526,7 @@ namespace Cocoa.CodeGen.Native.Lir
                     Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.NotEqual)));
                     break;
 
-                // 6e-M19 M2-c：类类型引用相等——M4 �?native 对象即指针，直接位比�?
+                // 6e-M19 M2-c：类类型引用相等——M4 前 native 对象即指针，直接位比较
                 case BoundBinaryOperatorKind.ReferenceEquals:
                     Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
                     Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)LirCond.Equal)));
@@ -573,7 +573,7 @@ namespace Cocoa.CodeGen.Native.Lir
             var right = EmitExpression(node.Right);
             var result = AllocateRegister(LirType.I64);
 
-            // 6e-M21 Phase 5：u64 走无符号语义（Udiv64/Urem64、Shr64 逻辑右移、无符号比较�?
+            // 6e-M21 Phase 5：u64 走无符号语义（Udiv64/Urem64、Shr64 逻辑右移、无符号比较）
             var isUnsigned = node.Left.Type == TypeSymbol.UInt64;
 
             switch (op)
@@ -619,7 +619,7 @@ namespace Cocoa.CodeGen.Native.Lir
                     break;
 
                 case BoundBinaryOperatorKind.ShiftRight:
-                    // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64�?
+                    // u64 为逻辑右移（Shr64），i64 为算术右移（Sar64）
                     Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.Shr : LirOpCode.Sar, result, LirOperand.Reg(left), LirOperand.Reg(right)));
                     break;
 
@@ -660,7 +660,7 @@ namespace Cocoa.CodeGen.Native.Lir
             var left = EmitExpression(node.Left);
             var right = EmitExpression(node.Right);
 
-            // 6e-M21 Phase 5b：f32 走真正单精度 SSE（ss 族），f64 保持双精�?
+            // 6e-M21 Phase 5b：f32 走真正单精度 SSE（ss 族），f64 保持双精度
             var single = node.Left.Type == TypeSymbol.Float;
             var resultType = single ? LirType.F32 : LirType.F64;
 
@@ -693,7 +693,7 @@ namespace Cocoa.CodeGen.Native.Lir
                         var result = AllocateRegister(4);
                         Add(instructions, new LirInstruction(LirOpCode.FCmp, null, LirOperand.Reg(left), LirOperand.Reg(right), 0, 0, single));
 
-                        // ucomisd �?unordered（NaN 参与）时�?ZF=PF=CF=1�?
+                        // ucomisd 在 unordered（NaN 参与）时置 ZF=PF=CF=1；
                         // 全部 6 个比较条件对 NaN 一�?false�?= �?NaN �?true（IEEE-754 语义）�?
                         var (main, fixup) = op switch
                         {

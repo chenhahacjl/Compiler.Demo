@@ -10,7 +10,7 @@ namespace Cocoa.CodeGen.Interpreter
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
-    /// 姹傚€煎櫒
+    /// 求值器
     /// </summary>
     internal sealed partial class Evaluator
     {
@@ -27,10 +27,10 @@ namespace Cocoa.CodeGen.Interpreter
 
         private object? _lastValue;
 
-        // 6e-M23 R5锛歜yref 瀹炲弬鍥炲啓闃熷垪锛圠IFO鈥斺€旇皟鐢ㄩ€€鍑烘椂鍥炲啓鍒板熀绾挎爣璁帮級
+        // 6e-M23 R5：byref 实参回写队列（LIFO——调用退出时回写到基线标记）
         private readonly List<Action> _byRefWriteBacks = new List<Action>();
 
-        // 6e-M23 R5锛氬綋鍓嶈皟鐢ㄥ疄鍙傜墿鍖栫殑鍒悕鍘婚噸浣滅敤鍩燂紙鍚屼竴瀛樺偍鍏变韩 Box锛屼笁鍚庣鍒悕璇箟涓€鑷达級
+        // 6e-M23 R5：当前调用实参物化的别名去重作用域（同一存储共享 Box，三后端别名语义一致）
         private Dictionary<object, ByRefBox> _byRefSlotScope = new Dictionary<object, ByRefBox>();
 
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
@@ -77,7 +77,7 @@ namespace Cocoa.CodeGen.Interpreter
                 _locals.Peek()[function.Parameters[0]] = (args ?? Array.Empty<string>()).Cast<object>().ToArray();
             }
 
-            // 6e-M22 C5锛氬叆鍙ｅ嚱鏁拌嚜韬甫鎹曡幏鍙橀噺鏃讹紙椤跺眰 lambda 鎹曡幏鍏ュ彛灞€閮ㄢ€斺€斿綋鍓嶉檺瀹氶潪椤跺眰锛屽崰浣嶉槻寰★級
+            // 6e-M22 C5：入口函数自身带捕获变量时（顶层 lambda 捕获入口局部——当前限定非顶层，占位防御）
             var pushedEnvironment = false;
             if (function.CapturedVariables is { Count: > 0 })
             {

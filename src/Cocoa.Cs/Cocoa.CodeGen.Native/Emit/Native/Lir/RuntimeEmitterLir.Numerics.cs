@@ -417,7 +417,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 var s = _args[0];
                 var nullStr = NewLabel();
 
-                // 6e-M19 M5-a：null 打印为空（对�?Console.WriteLine(null)�?
+                // 6e-M19 M5-a：null 打印为空
                 Cmp(s, 0);
                 Jcc(LirCond.Equal, nullStr);
                 var len = NewReg(4);
@@ -1830,7 +1830,7 @@ namespace Cocoa.CodeGen.Native.Lir
                 AddI(e10, e10, 1);
                 Mark(noCarry);
 
-                // G 定点/科学切换�?4 <= e10 < n �?定点
+                // e10 = d - S - 1（由位数精确定）
                 var gSciLabel = NewLabel();
                 Cmp(mode, 0);
                 Jcc(LirCond.Equal, gSciLabel);

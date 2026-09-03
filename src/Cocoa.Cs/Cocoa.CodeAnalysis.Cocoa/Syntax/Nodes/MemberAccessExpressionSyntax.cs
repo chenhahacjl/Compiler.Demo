@@ -3,7 +3,7 @@
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 鎴愬憳璁块棶琛ㄨ揪寮忚娉曪細arr.Length
+    /// 成员访问表达式语法：arr.Length
     /// </summary>
     public sealed partial class MemberAccessExpressionSyntax : ExpressionSyntax
     {

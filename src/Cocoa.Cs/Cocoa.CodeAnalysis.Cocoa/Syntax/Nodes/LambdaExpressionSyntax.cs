@@ -1,11 +1,11 @@
-﻿using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// Lambda 琛ㄨ揪寮忥紙6e-M22 C2锛夛細`(x: int, y: int) =&gt; expr | { 鈥?}`銆乣() => expr`锛?
+    /// Lambda 表达式（6e-M22 C2）：`(x: int, y: int) =&gt; expr | {  }`、`() => expr`＀
     /// `.cs` 鏂硅█杩藉姞鍏嶆嫭鍙峰崟鍙?`x => expr`锛圤penParenthesisToken 涓?null锛夈€?
-    /// 缁戝畾鍦?C3/C4 鎺ュ叆鈥斺€擟2 闃舵 Binder 闂ㄧ鎶ユ槑纭瘖鏂€?
+    /// 绑定圀C3/C4 接入——C2 阶段 Binder 门禁报明确诊断、
     /// </summary>
     public sealed partial class LambdaExpressionSyntax : ExpressionSyntax
     {

@@ -16,8 +16,8 @@ namespace Cocoa.CodeAnalysis.Serialization
     /// 鏂囨湰鏍煎紡锛堝彲璇讳紭鍏堬紝绫诲瀷/鍑芥暟/鍙橀噺涓€寰嬫寜鍚嶅瓧寮曠敤锛屼笉鐢ㄦ暟瀛?id锛夛細
     ///   (type)     鍐呭缓/鏁扮粍绫诲瀷鍐呰仈涓哄悕瀛楀紩鐢細int / int[] / int[][]锛涚被/鏋氫妇鐢ㄥ叏鍚?System.Console
     ///   (enum)     (enum MyLib.Color members:3 (Red 0) (Green 1) (Blue 2))
-    ///   (systype)  (systype System.Object)鈥斺€斿唴寤哄崟渚嬫寜鍏ㄥ悕鏄犲皠
-    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)鈥斺€旀柟娉曞垪 Name[鍙傛暟绫诲瀷] 绛惧悕
+    ///   (systype)  (systype System.Object)——内建单例按全名映射
+    ///   (cls)      (cls System.Console public methods:2 WriteLine[string] ReadKey)——方法列 Name[参数类型] 签名
     ///   (fn)       (fn MyLib.Add(i32,i32) name:Add ret:i32 ns:MyLib owner:- extern:false ...
     ///               params:2 (par MyLib.Add/a a i32 0) ...)
     ///              鍑芥暟閿?= [鍛藉悕绌洪棿鎴栧涓荤被.]鍑芥暟鍚?鍙傛暟绫诲瀷鍒楄〃)锛岄噸杞介潬鍙傛暟绫诲瀷鍖哄垎
@@ -40,7 +40,7 @@ namespace Cocoa.CodeAnalysis.Serialization
         /// </summary>
         public static CoaProgram Read(string text, string moduleName, ImmutableArray<CoaProgram> external)
         {
-            // 瀹屾暣鎬ф牎楠屽墠缃細缂哄け鎴栦笉鍖归厤鍗虫嫆杞斤紙闃茶鏀?鎹熷潖锛涜搫鎰忎吉閫犻渶绛惧悕鏈哄埗锛屼笉鍦?v1 鑼冨洿锛?
+            // 约束第二趟：兄弟参数已全部注册，!限定键可解析
             var marker = "(checksum " + ChecksumTag;
             var markerIndex = text.LastIndexOf(marker, StringComparison.Ordinal);
             if (markerIndex < 0)
@@ -365,7 +365,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             var methodCount = ReadCountField(reader, "methods:");
-            // 鏂规硶鍚嶄粎渚涢槄璇伙紝鏂规硶绗﹀彿鐢卞悇 fn 鏉＄洰鐨?owner 瀛楁鍥炲～
+            // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填
             for (var i = 0; i < methodCount; i++)
             {
                 reader.ExpectString();
@@ -752,8 +752,8 @@ namespace Cocoa.CodeAnalysis.Serialization
                 function.TypeParameters = typeParameters;
             }
 
-            // 绫绘柟娉曞洖濉細鍚被褰掑睘鐨?fn 褰掑叆鍏剁被锛?e-M18锛氬鍣ㄧ被鍏ㄩ潤鎬佲€斺€攕yscall/extern 鍙婂甫浣撻潤鎬佹柟娉曪級銆?
-            // 鍐呭缓鍗曚緥锛圫ystem.Object/System.Type锛孧2-c锛夋垚鍛樺凡鐢?Ensure 娉ㄥ叆锛岃烦杩囧洖濉槻閲嶅/闃茶鏍?static
+            // 约束第二趟：兄弟参数已全部注册，!限定键可解析
+            // 约束第二趟：兄弟参数已全部注册，!限定键可解析
             // 6e-G7 S2 + 6b：属主方法按显式位还原（泛型定义/facade 实例类显式区分；容器类隐含全静态）
             if (containingClass != null && !SystemObjectMembers.IsBuiltinSystemClass(containingClass))
             {
@@ -813,7 +813,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
                 var body = (BoundBlockStatement)ReadStatement(reader, context, labels);
 
-                // extern 鍑芥暟鏃犲疄鐜帮細绌?body锛堜笌 Binder.BindProgram 涓€鑷达級
+            // 约束第二趟：兄弟参数已全部注册，!限定键可解析
                 if (function.IsExtern)
                 {
                     body = new BoundBlockStatement(NoSyntax, ImmutableArray<BoundStatement>.Empty);

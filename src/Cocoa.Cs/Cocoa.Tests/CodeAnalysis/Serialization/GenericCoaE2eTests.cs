@@ -81,7 +81,7 @@ function Main(): void
             var text = File.ReadAllText(output);
             Assert.Contains("(gcls MyLib.Box", text);
 
-            // 寮€鏀剧粦瀹氫綋闅忓簱鎼哄甫锛圫2锛夛細Get/Echo/.ctor 浣撳瓨鍦ㄤ笖寮曠敤 !MyLib.Box.T
+            // 开放绑定体随库携带（S2）：Get/Echo/.ctor 体存在且引用 !MyLib.Box.T
             Assert.Contains("!MyLib.Box.T", text);
             return output;
         }

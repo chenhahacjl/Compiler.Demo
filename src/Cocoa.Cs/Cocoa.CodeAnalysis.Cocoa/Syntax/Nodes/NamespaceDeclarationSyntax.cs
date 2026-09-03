@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 鍛藉悕绌洪棿澹版槑锛歚namespace MyLib.Models { ... }`
+    /// 命名空间声明：`namespace MyLib.Models { ... }`
     /// </summary>
     public sealed partial class NamespaceDeclarationSyntax : MemberSyntax
     {

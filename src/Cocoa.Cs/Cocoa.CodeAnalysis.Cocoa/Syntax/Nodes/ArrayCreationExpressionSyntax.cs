@@ -3,7 +3,7 @@
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 鏁扮粍鍒涘缓琛ㄨ揪寮忚娉曪細new int[3] / new int[] {1, 2, 3}
+    /// 数组创建表达式语法：new int[3] / new int[] {1, 2, 3}
     /// </summary>
     public sealed partial class ArrayCreationExpressionSyntax : ExpressionSyntax
     {

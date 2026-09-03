@@ -10,7 +10,7 @@ namespace Cocoa.CodeGen.Interpreter
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
-    /// 姹傚€煎櫒
+    /// 求值器
     /// </summary>
     internal sealed partial class Evaluator
     {
@@ -71,7 +71,7 @@ namespace Cocoa.CodeGen.Interpreter
         {
             var value = EvaluateExpression(assignment.Expression);
 
-            // 6e-M19 M5-a锛歯ull 璧嬪€煎悎娉曪紙鍙┖寮曠敤鍨嬪彉閲忥級锛涘叾浣欎粛瑙嗕负鍐呴儴缂洪櫡
+            // 6e-M19 M5-a：null 赋值合法（可空引用型变量）；其余仍视为内部缺陷
             Debug.Assert(value != null ||
                          assignment.Variable.Type is Symbols.NamedTypeSymbol ||
                          assignment.Variable.Type == TypeSymbol.String ||

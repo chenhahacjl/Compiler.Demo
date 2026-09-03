@@ -473,7 +473,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             public bool TryExpect(out string token)
             {
-                // 璺宠繃鑺傜偣寮€鎷彿 `(`
+                // 跳过节点开括号 `(`
                 while (_pos < _tokens.Length && _tokens[_pos] == "(")
                 {
                     _pos++;
@@ -485,7 +485,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     return false;
                 }
 
-                // `)` 涓嶆秷璐癸紙鐣欑粰 End()锛夛紝杩斿洖 false 缁堟褰撳墠鍒楄〃
+                // `)` 不消费（留给 End()），返回 false 终止当前列表
                 if (_tokens[_pos] == ")")
                 {
                     token = ")";
@@ -520,7 +520,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             private string Next()
             {
-                // 璺宠繃鑺傜偣寮€鎷彿 `(`锛涜繑鍥炲師瀛愭垨 `)`锛堝垪琛ㄧ粓姝級
+                // 跳过节点开括号 `(`；返回原子或 `)`（列表终止）
                 while (true)
                 {
                     if (_pos >= _tokens.Length)

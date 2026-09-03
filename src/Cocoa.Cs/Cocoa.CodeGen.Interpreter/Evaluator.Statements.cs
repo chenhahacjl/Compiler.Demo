@@ -10,7 +10,7 @@ namespace Cocoa.CodeGen.Interpreter
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
-    /// 姹傚€煎櫒
+    /// 求值器
     /// </summary>
     internal sealed partial class Evaluator
     {
@@ -136,7 +136,7 @@ namespace Cocoa.CodeGen.Interpreter
                 case BoundNodeKind.FormatExpression:
                     return EvaluateFormatExpression((BoundFormatExpression)node);
 
-                // 6e-M19 M3-c锛歄OP 浜旇妭鐐癸紙姝ゅ墠 default throw锛孯EPL 鏃犲璞℃蹇碉級
+                // 6e-M19 M3-c：OOP 五节点（此前 default throw，REPL 无对象概念）
                 case BoundNodeKind.ObjectCreationExpression:
                     return EvaluateObjectCreation((BoundObjectCreationExpression)node);
                 case BoundNodeKind.ThisExpression:
@@ -153,7 +153,7 @@ namespace Cocoa.CodeGen.Interpreter
                 case BoundNodeKind.AsExpression:
                     return EvaluateAsExpression((BoundAsExpression)node);
 
-                // 6e-M22 C4锛氬嚱鏁板€间笌闂存帴璋冪敤
+                // 6e-M22 C4：函数值与间接调用
                 case BoundNodeKind.FunctionValueExpression:
                     return EvaluateFunctionValue((BoundFunctionValueExpression)node);
                 case BoundNodeKind.ByRefArgument:

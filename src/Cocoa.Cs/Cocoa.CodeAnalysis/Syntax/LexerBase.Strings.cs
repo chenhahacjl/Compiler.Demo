@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <summary>
     /// 璇嶆硶鍒嗘瀽鍣?(Lexical Analyzer)
     /// <br/>
-    /// 瀛楃 => Token
+    /// 字符 => Token
     /// </summary>
     internal abstract partial class LexerBase : ILexer
     {
@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             // "Test "" String"
             // "Test \n String"
 
-            // 璺宠繃褰撳墠寮曞彿
+            // 跳过当前引号
             _position++;
 
             var stringBuilder = new StringBuilder();
@@ -80,7 +80,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// </summary>
         private void ReadVerbatimString()
         {
-            // 褰撳墠浣嶇疆鍦?'@'锛氳烦杩?'@'
+            // 璺宠繃寮€澶村紩鍙?
             _position++;
             // 璺宠繃寮€澶村紩鍙?
             _position++;
@@ -116,7 +116,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     default:
                     {
-                        // 澶氳锛歕r/\n 鍘熸牱淇濈暀
+                        // 多行：\r/\n 原样保留
                         stringBuilder.Append(Current);
                         _position++;
                         break;
@@ -134,7 +134,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         /// </summary>
         private void ReadRawString()
         {
-            // 褰撳墠浣嶇疆鍦?'"'锛氱粺璁¤捣濮嬪紩鍙蜂覆
+            // 璺宠繃寮€澶村紩鍙?
             var delimiterStart = _position;
             var delimiter = 0;
             while (Current == '"')
@@ -145,7 +145,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
             if (delimiter < 3)
             {
-                // 鐢卞垎娲句繚璇佷笉浼氳蛋鍒帮紝闃插尽鎬у洖閫€涓烘櫘閫氬瓧绗︿覆
+                // 由分派保证不会走到，防御性回退为普通字符串
                 _kind = SyntaxKind.BadToken;
                 return;
             }
@@ -192,10 +192,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
             }
 
-            // 澶氳缂╄繘鍓ョ锛堜粎鍐呭璺ㄨ鏃讹級锛氶棴鍚堝畾鐣岀鎵€鍦ㄥ垪 = 姣忚鍓ョ鐨勫墠瀵肩┖鐧芥暟
+            // 多行缩进剥离（仅内容跨行时）：闭合定界符所在列 = 每行剥离的前导空白数
             if (_text.GetLineIndex(contentStart) < _text.GetLineIndex(_position))
             {
-                // C# 11锛氬紑瀹氱晫绗﹀悗绱ц窡鐨勬崲琛屼笉璁″叆鍐呭
+                // C# 11：开定界符后紧跟的换行不计入内容
                 if (stringBuilder.Length > 0 && (stringBuilder[0] == '\r' || stringBuilder[0] == '\n'))
                 {
                     var remove = stringBuilder[0] == '\r' && stringBuilder.Length > 1 && stringBuilder[1] == '\n' ? 2 : 1;
@@ -204,7 +204,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 var closingLineIndex = _text.GetLineIndex(_position);
                 var closingLine = _text.Lines[closingLineIndex];
-                var indent = _position - closingLine.Start; // 闂悎瀹氱晫绗﹀湪璇ヨ鐨勫垪
+                var indent = _position - closingLine.Start; // 闭合定界符在该行的列
                 if (indent > 0)
                 {
                     var result = new StringBuilder();
@@ -235,7 +235,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     stringBuilder = result;
                 }
 
-                // C# 11锛氶棴鍚堝畾鐣岀鎵€鍦ㄨ涔嬪墠缁撳熬鐨勬崲琛屼笉璁″叆鍐呭
+                // C# 11：闭合定界符所在行之前结尾的换行不计入内容
                 if (stringBuilder.Length > 0 && stringBuilder[^1] == '\n')
                 {
                     var remove = stringBuilder.Length > 1 && stringBuilder[^2] == '\r' ? 2 : 1;
@@ -251,7 +251,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         private void ReadEscape(StringBuilder stringBuilder)
         {
             var escapeStart = _position;
-            _position++; // 娑堣垂 '\'
+            _position++; // 消费 '\'
             switch (Current)
             {
                 case 'n': stringBuilder.Append('\n'); _position++; break;
@@ -341,8 +341,8 @@ namespace Cocoa.CodeAnalysis.Syntax
             var parts = new List<InterpolatedStringPart>();
             var literal = new StringBuilder();
 
-            // 娑堣垂鍓嶇紑锛? 鎴?@锛屽啀閰嶅鍓嶇紑锛?@ / @$锛夛紝鍐嶅紑澶村紩鍙?
-            _position++; // 娑堣垂 '$' 鎴?'@'
+            // 璺宠繃寮€澶村紩鍙?
+            _position++; // 娑堣垂寮€澶村紩鍙?
             if (Current == '@' || Current == '$')
             {
                 _position++;
@@ -388,7 +388,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                         }
                         else
                         {
-                            // 鍐插埛瀛楅潰閲忔
+                            // 冲刷字面量段
                             if (literal.Length > 0)
                             {
                                 parts.Add(new InterpolatedStringPart(InterpolatedStringPartKind.Literal, literal.ToString(), literalStart, _position));
@@ -397,7 +397,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                             // 鎵弿娲炲埌鍖归厤 '}'锛堣烦杩囨礊鍐呭瓧绗︿覆涓殑 '}'/'{'锛泇erbatim 鏀捐鎹㈣锛?
                             var holeStart = _position + 1;
-                            _position++; // 璺宠繃 '{'
+                            _position++; // 跳过 '{'
                             var depth = 1;
                             var holeText = new StringBuilder();
                             while (depth > 0 && Current != '\0' && !(!verbatim && (Current == '\r' || Current == '\n')))
@@ -418,12 +418,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                                     }
                                     else
                                     {
-                                        _position++; // 娑堣垂娲為棴鍚?'}'
+            _position++; // 娑堣垂寮€澶村紩鍙?
                                     }
                                 }
                                 else if (Current == '"')
                                 {
-                                    // 璺宠繃娲炲唴瀛楃涓诧紙鍚?"" 杞箟锛?
+            // 璺宠繃寮€澶村紩鍙?
                                     holeText.Append(Current);
                                     _position++;
                                     while (Current != '\0' && !(!verbatim && (Current == '\r' || Current == '\n')))

@@ -3,7 +3,7 @@
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 璧嬪€艰〃杈惧紡璇硶锛堢洰鏍囦负鍚嶇О/鏁扮粍绱㈠紩/鎴愬憳琛ㄨ揪寮忥級
+    /// 赋值表达式语法（目标为名称/数组索引/成员表达式）
     /// </summary>
     public sealed partial class AssignmentExpressionSyntax : ExpressionSyntax
     {

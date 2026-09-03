@@ -10,7 +10,7 @@ namespace Cocoa.CodeGen.Interpreter
 {
     // TODO: Get rid of evaluator in favor of IlEmitter
     /// <summary>
-    /// 姹傚€煎櫒
+    /// 求值器
     /// </summary>
     internal sealed partial class Evaluator
     {
@@ -24,7 +24,7 @@ namespace Cocoa.CodeGen.Interpreter
             var locals = new Dictionary<VariableSymbol, object>();
             var argumentValues = new object?[node.Arguments.Length];
 
-            // 6e-M23 R5锛歜yref 瀹炲弬 copy-in/out鈥斺€旀爣璁版湰璋冪敤鐨勫洖鍐欏熀绾?+ 鍒悕鍘婚噸浣滅敤鍩燂紝閫€鍑烘椂缁熶竴鍥炲啓
+            // 6e-M23 R5：byref 实参 copy-in/out——标记本调用的回写基纀+ 别名去重作用域，退出时统一回写
             var byRefMarker = _byRefWriteBacks.Count;
             var savedSlots = _byRefSlotScope;
             _byRefSlotScope = new Dictionary<object, ByRefBox>();
@@ -89,7 +89,7 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
-        /// byref 瀹炲弬妲芥眰鍊硷紙6e-M23 R5锛夛細copy-in 褰撳墠鍊煎叆 Box锛岀櫥璁板洖鍐欏姩浣滐紱
+        /// byref 实参槽求值（6e-M23 R5）：copy-in 当前值入 Box，登记回写动作；
         /// 鍚屼竴娆¤皟鐢ㄧ殑鐩稿悓瀛樺偍锛堝埆鍚嶅幓閲嶉敭锛夊叡浜悓涓€ Box锛屼繚璇佷笁鍚庣鍒悕璇箟涓€鑷淬€?
         /// </summary>
         private ByRefBox EvaluateByRefSlot(BoundByRefArgument node)
@@ -427,7 +427,7 @@ namespace Cocoa.CodeGen.Interpreter
         {
             var value = EvaluateExpression(node.Expression);
 
-            // 6e-M19 M5-a锛歯ull 鈫?寮曠敤鍨嬬洿閫氾紙蹇呴』鍏堜簬 String 鍒嗘敮鈥斺€擟onvert.ToString(null) 浼氭姌鍙犳垚 ""锛?
+            // 6e-M19 M5-a：null ↀ引用型直通（必须先于 String 分支——Convert.ToString(null) 会折叠成 ""＀
             if (node.Expression.Type == TypeSymbol.Null)
             {
                 return value;
@@ -459,7 +459,7 @@ namespace Cocoa.CodeGen.Interpreter
 
                 if (value is int longInt)
                 {
-                    // 绗﹀彿鎵╁睍锛堜笌 C# (long)int 涓€鑷达級
+                    // 符号扩展（与 C# (long)int 一致）
                     return (long)longInt;
                 }
 
@@ -538,7 +538,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
             else if (node.Type is Symbols.NamedTypeSymbol)
             {
-                // 6e-M19 M2-c锛氱被闂村紩鐢ㄨ浆鎹紙娲剧敓鈫掑熀绫婚殣寮?/ 鍩虹被鈫掓淳鐢熸樉寮忥級鈥斺€擟LR 瀵硅薄鐩撮€?
+                // 6e-M19 M2-c：类间引用转换（派生→基类隐开/ 基类→派生显式）——CLR 对象直退
                 return value;
             }
             else

@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 缂栬瘧鍗曞厓璇硶
+    /// 编译单元语法
     /// </summary>
     public sealed partial class CompilationUnitSyntax : CSharpSyntaxNode
     {

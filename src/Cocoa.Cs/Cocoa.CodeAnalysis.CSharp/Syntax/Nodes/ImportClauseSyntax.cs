@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// import 澹版槑鑺傜偣
+    /// import 声明节点
     /// </summary>
     public sealed partial class ImportClauseSyntax : MemberSyntax
     {

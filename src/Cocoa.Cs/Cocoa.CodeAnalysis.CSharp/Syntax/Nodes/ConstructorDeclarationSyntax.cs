@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 鏋勯€犲嚱鏁拌妭鐐癸細`public constructor(x: int, y: int) : base(...) { ... }`
+    /// 构造函数节点：`public constructor(x: int, y: int) : base(...) { ... }`
     /// </summary>
     public sealed partial class ConstructorDeclarationSyntax : MemberSyntax
     {

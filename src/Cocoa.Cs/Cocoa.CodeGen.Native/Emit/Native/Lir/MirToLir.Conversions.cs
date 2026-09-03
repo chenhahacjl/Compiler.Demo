@@ -112,8 +112,8 @@ namespace Cocoa.CodeGen.Native.Lir
 
         /// <summary>
         /// 6e-M19 M5-b：x is/as T 的运行时命中�?= 存活类中 T 的自身与全部后代（vtable 一一比对）�?
-        /// 对象头只存自�?vtable 地址、无向下类型信息，故以编译期存活类闭包枚举后代；
-        /// 抽象/接口/根不实例化（不在 _liveClasses），行序�?Ordinal 保证确定性�?
+        /// 函数同时作为 vtable 固定槽默认实现（槽内容可能是用户 override，callreg 无法区分 ABI），
+        // 函数调用
         /// </summary>
         private IEnumerable<string> EnumerateDescendantVTableKeys(NamedTypeSymbol targetClass)
         {
@@ -204,7 +204,7 @@ namespace Cocoa.CodeGen.Native.Lir
             var instructions = _currentFunction.Instructions;
             var count = arguments.Length;
 
-            // 平台�?SysCall：x64 寄存�?+ �?5 参槽 / x86 栈传递；当前上限 5 参（与运行时所一致）
+        // 函数调用
             if (count > 5)
             {
                 throw new Exception($"Extern function '{function.Name}' has {count} parameters; native backend supports at most 5");
@@ -384,7 +384,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
                 Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(0), LirOperand.Reg(receiver!)));
             }
 
-            // 6e-M23 R7：实参改为源顺序（左→右）求值——对�?C#/Evaluator/IL；out 实参依赖同调用内先写后读的顺序语�?
+        // 函数调用
             for (var i = 0; i < count; i++)
             {
                 var value = EmitExpression(arguments[i]);
@@ -509,7 +509,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
 
             if (to == TypeSymbol.Int64 || to == TypeSymbol.UInt64)
             {
-                // 64 �?�?64 位：位模式即结果，免指令
+        // 函数调用
                 if (fromIs64)
                 {
                     return true;
@@ -554,7 +554,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
             var singleTarget = to == TypeSymbol.Float;
             if (!(from.IsNumeric && !from.IsPlaceholder128) && from != TypeSymbol.Char && !(from is NamedTypeSymbol { TypeKind: TypeKind.Enum }))
             {
-                return false; // 字符串等走既有专用路�?
+        // 函数调用
             }
 
             var instructions = _currentFunction.Instructions;
@@ -586,7 +586,7 @@ Add(instructions, new LirInstruction(LirOpCode.SetArg64, LirOperand.Constant(0),
                     return true;
                 }
 
-                // 窄整型：先截断到 int32，再按槽内规范表示收�?
+        // 函数调用
                 if (to == TypeSymbol.Int8 || to == TypeSymbol.Int16 ||
                     to == TypeSymbol.UInt8 || to == TypeSymbol.UInt16)
                 {
@@ -677,7 +677,7 @@ if (from.IsInteger && !from.IsSigned || from == TypeSymbol.Char)
                     return true;
                 }
 
-                // 有符号整?enum ?double
+        // 函数调用
                 var signedResult = AllocateRegister(LirType.F64);
                 Add(instructions, new LirInstruction(LirOpCode.FCvtSI, signedResult, LirOperand.Reg(value)));
                 result = signedResult;
@@ -699,7 +699,7 @@ var wide = AllocateRegister(LirType.I64);
                 Add(instructions, new LirInstruction(LirOpCode.Movzx64, wide, LirOperand.Reg(value)));
                 if (to == TypeSymbol.Float)
                 {
-                    // u32 值域非负：零扩展后按无符?long 路径精确转换?f32
+        // 函数调用
                     var r4 = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.FCvtSI64U, r4, LirOperand.Reg(wide), LirOperand.None, 0, 0, true));
                     result = r4;
@@ -712,7 +712,7 @@ var wide = AllocateRegister(LirType.I64);
                 return true;
             }
 
-            // 有符号整�?enum �?float
+        // 函数调用
             var fResult = AllocateRegister(4);
             Add(instructions, new LirInstruction(LirOpCode.FCvtSI, fResult, LirOperand.Reg(value), LirOperand.None, 0, 0, true));
             result = fResult;
@@ -726,7 +726,7 @@ var wide = AllocateRegister(LirType.I64);
             var from = node.Expression.Type;
             var to = node.Type;
 
-            // 6e-M19 M5-a：null 字面�?�?引用型——Const 0 即空引用，直�?
+        // 函数调用
             if (from == TypeSymbol.Null)
             {
                 return value;
@@ -737,19 +737,19 @@ var wide = AllocateRegister(LirType.I64);
                 return value;
             }
 
-            // M4：类/接口引用转换——同一指针表示，上�?下转均为直通（运行时不做类型检查）
+        // 函数调用
             if (from is NamedTypeSymbol { IsValueType: false } && to is NamedTypeSymbol { IsValueType: false })
             {
                 return value;
             }
 
-            // 6e-M21 Phase 5：数值↔数值系统化整数转换（命中即返回�?
+        // 函数调用
             if (TryEmitIntegerConversion(node, value, out var integerResult))
             {
                 return integerResult;
             }
 
-            // 6e-M21 Phase 5b：涉�?float/double 的系统化转换（命中即返回�?
+        // 函数调用
             if (TryEmitFloatConversion(node, value, out var floatResult))
             {
                 return floatResult;
@@ -823,7 +823,7 @@ var wide = AllocateRegister(LirType.I64);
             {
                 if (to == TypeSymbol.Int32)
                 {
-                    // �?32 位截�?
+        // 函数调用
                     var result = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.Trunc64, result, LirOperand.Reg(value)));
                     return result;

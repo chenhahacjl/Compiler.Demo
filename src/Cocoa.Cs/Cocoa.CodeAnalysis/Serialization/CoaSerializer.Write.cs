@@ -133,7 +133,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     WriteStatement(w, registry, labels, ((BoundSequencePointStatement)statement).Statement);
                     break;
                 default:
-                    // 6e-G7 S2锛氭潨缁濋潤榛樹骇鍑烘崯鍧忔祦鈥斺€旀湭瑕嗙洊鑺傜偣鏄惧紡澶辫触
+                    // 6e-G7 S2：杜绝静默产出损坏流——未覆盖节点显式失败
                     throw new NotSupportedException($"[cod] Unserializable statement kind '{statement.Kind}'");
             }
         }
@@ -296,7 +296,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.ObjectCreationExpression:
                     {
-                        // M0-1c锛氬璞″垱寤?`new Foo(args)`鈥斺€旀瀯閫犲櫒鐢辩被鍨?鍏冩暟閲嶈В鏋愶紝浠呴渶绫诲瀷 + 瀹炲弬
+                        // M0-1c：对象创廀`new Foo(args)`——构造器由类垀元数重解析，仅需类型 + 实参
                         var n = (BoundObjectCreationExpression)expression;
                         w.Open("objnew");
                         w.Field(TypeRef(n.Type));
@@ -378,7 +378,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
-                        // 6e-G7 S2锛氬瓧娈佃祴鍊硷紙寮€鏀句綋鎼哄甫锛夛細target 琛ㄨ揪寮?+ 瀛楁鍚?绫诲瀷/闈欐€佷綅 + 鍊?
+                    // 鐠嬪啳鐦穱鈩冧紖闂勫秶楠囬敍姘矌鎼村繐鍨崠鏍у敶鐏炲倽婢?
                         var n = (BoundMemberAssignmentExpression)expression;
                         w.Open("memberassign");
                         WriteExpression(w, registry, labels, n.Target);

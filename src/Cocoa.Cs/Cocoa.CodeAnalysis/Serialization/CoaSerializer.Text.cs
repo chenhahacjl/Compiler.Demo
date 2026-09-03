@@ -102,7 +102,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 case null: return "n:"; // 6e-M19 M5-a閿涙ull 鐢悂鍣?
 case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
-                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8锛歩64 甯搁噺
+                case long l: return "l:" + l.ToString(CultureInfo.InvariantCulture); // 6e-M23 R8：i64 常量
                 case ulong ul: return "U:" + ul.ToString(CultureInfo.InvariantCulture); // 6b锛歶64 甯搁噺锛圡0-4 鎵? TryParse 寮曞叆锛?
                 case bool b: return "b:" + (b ? 1 : 0);
                 case char c: return "c:" + ((int)c).ToString(CultureInfo.InvariantCulture);
@@ -126,7 +126,7 @@ case int i: return "i:" + i.ToString(CultureInfo.InvariantCulture);
                 case 'b': return rest == "1";
                 case 'c': return (char)int.Parse(rest, CultureInfo.InvariantCulture);
                 case 'u': return (byte)int.Parse(rest, CultureInfo.InvariantCulture);
-                case 'U': return ulong.Parse(rest, CultureInfo.InvariantCulture); // 6b锛歶64 甯搁噺
+                case 'U': return ulong.Parse(rest, CultureInfo.InvariantCulture); // 6b：u64 常量
                 case 'd': return double.Parse(rest, NumberStyles.Float, CultureInfo.InvariantCulture);
                 case 's': return Unescape(rest);
                 default:

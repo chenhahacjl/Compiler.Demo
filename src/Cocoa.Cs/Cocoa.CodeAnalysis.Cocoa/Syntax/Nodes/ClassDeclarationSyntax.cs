@@ -5,7 +5,7 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 绫诲畾涔夎妭鐐癸細`public class Foo&lt;T&gt;: Bar, IA, IB where T: IComparable&lt;T&gt; { ... }`
+    /// 类定义节点：`public class Foo&lt;T&gt;: Bar, IA, IB where T: IComparable&lt;T&gt; { ... }`
     /// </summary>
     public sealed partial class ClassDeclarationSyntax : MemberSyntax
     {

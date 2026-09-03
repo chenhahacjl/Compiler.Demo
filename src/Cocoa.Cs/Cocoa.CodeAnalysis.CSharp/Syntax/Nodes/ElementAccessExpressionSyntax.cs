@@ -3,7 +3,7 @@
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 鏁扮粍绱㈠紩琛ㄨ揪寮忚娉曪細a[i]
+    /// 数组索引表达式语法：a[i]
     /// </summary>
     public sealed partial class ElementAccessExpressionSyntax : ExpressionSyntax
     {

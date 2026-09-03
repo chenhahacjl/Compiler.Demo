@@ -23,7 +23,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     ///              閸戣姤鏆熼柨?= [閸涜棄鎮曠粚娲？閹存牕顔栨稉鑽よ.]閸戣姤鏆熼崥?閸欏倹鏆熺猾璇茬€烽崚妤勩€?閿涘矂鍣告潪浠嬫浆閸欏倹鏆熺猾璇茬€烽崠鍝勫瀻
     ///   (glb/loc)  (glb global:version true i32 (const i:1)) / (loc MyLib.Factorial/result false i32)
     ///              閸欐﹢鍣洪柨顕嗙窗閸忋劌鐪?global:閸氬秴鐡ч敍娑樼湰闁?閸欏倹鏆?閸戣姤鏆熼柨?閸氬秴鐡ч敍鍫濇倱閸氬秴鍟跨粣浣稿 #2閵?3 閸氬海绱戦敍?
-    ///   鏉╂劗鐣荤粭?     閺傚洦婀扮拋鏉垮娇 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
+    ///   杩愮畻绗?     鏂囨湰璁板彿 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
     ///   鐢啫鐨?閺嬫矮濡囩拠? true false閿涙埠ublic internal protected private閿涙硤inapi cdecl stdcall閿涙硢nicode ansi auto
     /// </summary>
     internal static partial class CoaSerializer
@@ -44,12 +44,12 @@ namespace Cocoa.CodeAnalysis.Serialization
             var registry = new Registry(program.Name);
             var labelsByFunction = new Dictionary<FunctionSymbol, Dictionary<string, BoundLabel>>(ReferenceEqualityComparer.Instance);
 
-            // 閺€鍫曟肠缁楋箑褰块垾鏂衡偓鏂垮毐閺侀缍嬮幐?Functions閿涘牆锛愰弰搴＄碍閿涘浜堕崢鍡礉娣囨繆鐦夌涵顔肩暰閹嶇礄ImmutableDictionary 鏉╊厺鍞惔蹇庣瑝缁嬪啿鐣鹃敍?
+            // 收集符号——函数体挀Functions（声明序）遍历，保证确定性（ImmutableDictionary 迭代序不稳定＀
             foreach (var e in program.Enums)
             {
                 registry.RegisterType(e);
             }
-            // 6e-G7 S1锛氭硾鍨嬪畾涔夊湪鏋氫妇鍚庛€佺被/鍑芥暟鍓嶆敞鍐屸€斺€攇cls 鏉＄洰椤诲厛浜庡紩鐢?!寮€鏀惧弬鏁?鐨?fn 鏉＄洰钀界洏
+            // 閸忋劑鍎寸粭锕€褰块弨鍫曟肠鐎瑰本鐦崥搴″晙鐎规艾鎮曢敍鍫濆綁闁插繘鏁棁鈧憰浣稿毐閺佷即鏁敍灞肩瑬鐟曚浇娉曠粭锕€褰垮☉鍫ュ櫢閿?
             foreach (var g in program.GenericDefinitions)
             {
                 registry.RegisterType(g);
@@ -78,7 +78,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 labelsByFunction[fn] = labels;
             }
 
-            // 6e-G7 S2锛氭硾鍨嬪畾涔夋柟娉曠殑寮€鏀剧粦瀹氫綋鍚屾牱鏀堕泦锛堟樉寮忔竻鍗曪紝涓嶈Е纰?stdlib 娉ㄥ叆浣擄級
+            // 閸忋劑鍎寸粭锕€褰块弨鍫曟肠鐎瑰本鐦崥搴″晙鐎规艾鎮曢敍鍫濆綁闁插繘鏁棁鈧憰浣稿毐閺佷即鏁敍灞肩瑬鐟曚浇娉曠粭锕€褰垮☉鍫ュ櫢閿?
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 var labels = new Dictionary<string, BoundLabel>(StringComparer.Ordinal);
@@ -103,11 +103,11 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             w.End();
 
-            // 閸戣姤鏆熸担?
+            // 鍑芥暟浣?
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
-                // 6e-G7 S2锛氭硾鍨嬪畾涔夊睘涓荤殑鏂规硶浣擄紙寮€鏀剧粦瀹氫綋锛夐殢搴撴惡甯︼紱鍏朵綑瀹炰緥鏂规硶涓嶅湪瀹瑰櫒搴忓垪鍖栬寖鍥达紝璺宠繃
+                // 6e-G7 S2：泛型定义属主的方法体（开放绑定体）随库携带；其余实例方法不在容器序列化范围，跳过
                 if (fn.ContainingClass != null && !fn.IsStatic && !fn.ContainingClass.IsGenericDefinition)
                 {
                     continue;
@@ -121,14 +121,14 @@ namespace Cocoa.CodeAnalysis.Serialization
                 WriteBodyEntry(w, registry, labelsByFunction, fn, body);
             }
 
-            // 6e-G7 S2锛氬紑鏀剧粦瀹氫綋锛堟硾鍨嬪畾涔夋柟娉曪級鈥斺€旀樉寮忛亶鍘嗭紝閬垮厤鍗峰叆 stdlib 娉ㄥ叆浣?
+            // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入佀
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
                 WriteBodyEntry(w, registry, labelsByFunction, pair.Key, pair.Value);
             }
             w.End();
 
-            // 娓氭繆绂嗗〒鍛礋
+            // 依赖清单
             w.Open("manifest");
             w.Open("requires");
             w.Field(RequirementName(program.Requires));
@@ -168,7 +168,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End(); // cod
             buffer.WriteLine();
 
-            // 鐎瑰本鏆ｉ幀褎鐗庢宀嬬窗鐎佃顒滈弬鍥у弿闁劌鐡ч懞鍌︾礄UTF-8閿涘褰?SHA256閿涘矁鎷烽崝鐘辫礋閺傚洣娆㈤張顐ヮ攽閿涘牐顕版笟褍宸遍崚鑸电墡妤犲矉绱濈紓鍝勩亼/娑撳秶顑侀幏鎺曟祰閿?
+            // 瀹屾暣鎬ф牎楠岋細瀵规鏂囧叏閮ㄥ瓧鑺傦紙UTF-8锛夊彀SHA256锛岃拷鍔犱负鏂囦欢鏈锛堣渚у己鍒舵牎楠岋紝缂哄け/涓嶇鎷掕浇销
             var payload = buffer.ToString();
             writer.Write(payload);
             writer.WriteLine("(checksum " + ChecksumTag + ComputeChecksum(payload) + ")");
@@ -370,7 +370,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.ObjectCreationExpression:
                     {
-                        // M0-1c锛氬紑鏀句綋瀵硅薄鍒涘缓 `new Foo(args)`鈥斺€旀瀯閫犲櫒鐢辩被鍨?鍏冩暟閲嶈В鏋愶紝浠呴渶绫诲瀷 + 瀹炲弬
+                        // M0-1c：开放体对象创建 `new Foo(args)`——构造器由类垀元数重解析，仅需类型 + 实参
                         var n = (BoundObjectCreationExpression)expression;
                         registry.RegisterType(n.Type);
                         foreach (var arg in n.Arguments)

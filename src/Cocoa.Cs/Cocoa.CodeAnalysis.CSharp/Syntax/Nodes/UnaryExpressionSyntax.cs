@@ -3,7 +3,7 @@
 namespace Cocoa.CodeAnalysis.CSharp.Syntax
 {
     /// <summary>
-    /// 涓€鍏冭〃杈惧紡璇硶
+    /// 一元表达式语法
     /// </summary>
     public sealed partial class UnaryExpressionSyntax : ExpressionSyntax
     {

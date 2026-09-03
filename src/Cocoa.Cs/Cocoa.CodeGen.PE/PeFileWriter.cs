@@ -108,7 +108,7 @@ namespace Cocoa.CodeGen.PE
                 relocBlob = Array.Empty<byte>();
             }
 
-            // 鍙墽琛岃妭铏氭嫙澶у皬涓嶅緱瓒呰繃 SectionAlignment锛?x1000锛夛紝鏁呬唬鐮佹寜椤垫媶鍒嗕负澶氫釜 .text 鑺傦紱
+            // 鎵嶄細琚浛鎹负瑙ｆ瀽鍚庣殑鐪熷疄鍑芥暟鍦板潃锛屾晠妲戒笉鑳界暀闆躲€?
             // 鍚勮妭铏氭嫙鏈锛堝榻愬悗锛夊繀椤绘伆濂借惤鍦ㄤ笅涓€鑺傝捣鐐癸紙Windows 鍔犺浇鍣ㄦ寜鐩搁偦鑺傝繛缁牎楠岋級銆?
             var sections = new List<PeSectionSpec>();
             var codeOffset = 0;

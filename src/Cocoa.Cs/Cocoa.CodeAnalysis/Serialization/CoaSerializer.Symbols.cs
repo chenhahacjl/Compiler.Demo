@@ -27,7 +27,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End();
         }
 
-        /// <summary>6e-M19 M2-c閿涙艾鍞村鍝勫礋娓氬绱橲ystem.Object/System.Type閿涘瀵滈崗銊ユ倳鎼村繐鍨崠鏍电礉鐠囪鏅堕弰鐘茬殸閸ョ偛宕熸笟瀣ㄢ偓?/summary>
+        /// <summary>6e-M19 M2-c锛氬唴寤哄崟渚嬶紙System.Object/System.Type锛夋寜鍏ㄥ悕搴忓垪鍖栵紝璇讳晶鏄犲皠鍥炲崟渚嬨€?/summary>
         private static void EmitBuiltinSystemClass(Writer w, Registry registry, NamedTypeSymbol classType)
         {
             w.Open("systype");
@@ -76,7 +76,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.End();
         }
 
-        /// <summary>閺傝纭剁粵鎯ф倳閻參鏁敍姝俛me 閹?Name[閸欏倹鏆熺猾璇茬€烽崚妤勩€僝閿涘牓鍣告潪浠嬫浆閸欏倹鏆熺猾璇茬€烽崠鍝勫瀻閿涘鈧?/summary>
+        /// <summary>鏂规硶绛惧悕鐭敭锛歂ame 鎀Name[鍙傛暟绫诲瀷鍒楄〃]锛堥噸杞介潬鍙傛暟绫诲瀷鍖哄垎锛夈₀/summary>
         private static string MethodSignature(FunctionSymbol method)
         {
             // 6e-M23 R8閿涙矮绮庡?out/ref 閻ㄥ嫰鍣告潪浠嬫暛妞よ绗夐崥宀嬬礄娣囶噣銈扮粭锕€鍙嗙粵鎯ф倳閿?
@@ -262,7 +262,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Field(registry.FnKey(fn));
             w.Field("name:" + Str(fn.Name));
 
-            // 6e-G7 S1锛氭柟娉曠骇绫诲瀷鍙傛暟锛堥《灞傛硾鍨嬪嚱鏁帮級鈥斺€旇８閿?!鍚嶏紙鏃犲睘涓荤被锛?
+            // 6e-G7 S1：方法级类型参数（顶层泛型函数）——裸销!名（无属主类＀
             if (fn.TypeParameters.Length > 0)
             {
                 w.Field("tps:" + fn.TypeParameters.Length.ToString(CultureInfo.InvariantCulture));
@@ -356,7 +356,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 return classType.FullName;
             }
 
-            // 6e-M22/M0-1b锛氬嚱鏁扮被鍨?`fnty{鍙傛暟,;杩斿洖}`锛堥€掑綊 TypeRef锛涘弬鏁伴€楀彿鍒嗛殧銆佸垎鍙锋帴杩斿洖銆亄} 宓屽鈥斺€?
+            // 6e-M22/M0-1b：函数类垀`fnty{参数,;返回}`（递归 TypeRef；参数逗号分隔、分号接返回、{} 嵌套— 
             // .coa 璇嶆硶浠呬互绌虹櫧涓?() 鍒囧垎锛屾晠宓屽鐢?{} 閬垮紑缁撴瀯鎷彿锛?
             if (type is FunctionTypeSymbol functionType)
             {

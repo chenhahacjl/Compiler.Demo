@@ -8,9 +8,9 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Syntax
 {
     /// <summary>
-    /// 璇嶆硶鍒嗘瀽鍣?(Lexical Analyzer)
+    /// 词法分析器 (Lexical Analyzer)
     /// <br/>
-    /// 瀛楃 => Token
+    /// 字符 => Token
     /// </summary>
     internal abstract partial class LexerBase : ILexer
     {
@@ -328,7 +328,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case '"':
                     if (Lookahead == '"' && Peek(2) == '"')
                     {
-                        // """ 寮€澶?鈫?raw 瀛楃涓?
+                        // """ 开头 → raw 字符串
                         ReadRawString();
                     }
                     else
@@ -337,7 +337,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     break;
                 case '$':
-                    // $"..."锛堟櫘閫氭彃鍊硷級/ $@"..."锛坴erbatim 鎻掑€硷級
+                    // $"..."（普通插值）/ $@"..."（verbatim 插值）
                     if (Lookahead == '"')
                     {
                         ReadInterpolatedString(verbatim: false);
@@ -355,7 +355,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                     }
                     break;
                 case '@':
-                    // @"..."锛坴erbatim 瀛楃涓诧級/ @$"..."锛坴erbatim 鎻掑€硷級/ @ident锛坴erbatim 鏍囪瘑绗︼級
+                    // @"..."（verbatim 字符串）/ @$"..."（verbatim 插值）/ @ident（verbatim 标识符）
                     if (Lookahead == '"')
                     {
                         ReadVerbatimString();
