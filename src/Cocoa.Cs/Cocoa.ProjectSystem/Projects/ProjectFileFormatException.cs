@@ -1,6 +1,6 @@
 using System;
 
-namespace Cocoa.Projects
+namespace Cocoa.ProjectSystem
 {
     public sealed class ProjectFileFormatException : Exception
     {

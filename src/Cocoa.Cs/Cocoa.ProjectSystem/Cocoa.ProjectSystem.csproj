@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Cocoa.Projects</RootNamespace>
+    <RootNamespace>Cocoa.ProjectSystem</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

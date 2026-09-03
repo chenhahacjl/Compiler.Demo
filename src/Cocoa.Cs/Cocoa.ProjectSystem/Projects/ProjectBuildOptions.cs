@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
 
-namespace Cocoa.Projects
+namespace Cocoa.ProjectSystem
 {
     public enum ProjectBackend
     {

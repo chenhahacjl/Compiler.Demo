@@ -2,7 +2,7 @@ using System;
 using System.Collections.Immutable;
 using System.IO;
 
-namespace Cocoa.Projects
+namespace Cocoa.ProjectSystem
 {
     public enum ProjectOutputFormat
     {

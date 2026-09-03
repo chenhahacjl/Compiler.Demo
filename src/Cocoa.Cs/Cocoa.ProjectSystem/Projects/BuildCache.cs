@@ -6,7 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Cocoa.Projects
+namespace Cocoa.ProjectSystem
 {
     public static class BuildCache
     {

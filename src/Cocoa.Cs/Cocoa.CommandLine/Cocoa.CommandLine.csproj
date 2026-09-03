@@ -13,7 +13,7 @@
     <ProjectReference Include="..\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
     <ProjectReference Include="..\Cocoa.CodeGen.IL\Cocoa.CodeGen.IL.csproj" />
     <ProjectReference Include="..\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
-    <ProjectReference Include="..\Cocoa.Builder\Cocoa.Builder.csproj" />
+    <ProjectReference Include="..\Cocoa.ProjectSystem\Cocoa.ProjectSystem.csproj" />
   </ItemGroup>
 
 </Project>

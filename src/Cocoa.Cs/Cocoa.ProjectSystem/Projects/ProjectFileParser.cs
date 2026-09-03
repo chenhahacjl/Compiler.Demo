@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 
-namespace Cocoa.Projects
+namespace Cocoa.ProjectSystem
 {
     /// <summary>用户级覆盖（`.cocproj.user`，仿 `.csproj.user`）：仅可覆盖构建属性，未知节/键为 IDE 预留。</summary>
     public sealed class UserProjectOverrides

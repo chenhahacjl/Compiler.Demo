@@ -10,8 +10,8 @@ set "OUT=%SDK%\out"
 
 if not exist "%OUT%" mkdir "%OUT%"
 
-dotnet build "%ROOT%\src\Cocoa.Cs\Cocoa.Compiler" --nologo || exit /b 1
-dotnet run --project "%ROOT%\src\Cocoa.Cs\Cocoa.Compiler" --no-build -- build -p "%SDK%\Cocoa.SDK.cosln" --no-incremental || exit /b 1
+dotnet build "%ROOT%\src\Cocoa.Cs\Cocoa.CommandLine" --nologo || exit /b 1
+dotnet run --project "%ROOT%\src\Cocoa.Cs\Cocoa.CommandLine" --no-build -- build -p "%SDK%\Cocoa.SDK.cosln" --no-incremental || exit /b 1
 
 REM Collect to central store src\Cocoa.Cs\libs (committed; Directory.Build.targets fans out
 REM to project bins on build, SystemLibrary walk-up probe covers pre-build gap)

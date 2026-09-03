@@ -12,7 +12,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 
-namespace Cocoa.Projects
+namespace Cocoa.ProjectSystem
 {
     public static class ProjectBuilder
     {
