@@ -383,7 +383,7 @@ public class Point
             var member = Assert.IsType<GlobalStatementSyntax>(Assert.Single(root.Members));
             var statement = Assert.IsType<VariableDeclarationSyntax>(member.Statement);
 
-            Assert.Equal(SyntaxKind.ConstKeyword, statement.Keyword.Kind);
+            Assert.Equal(SyntaxKind.ConstKeyword, statement!.Keyword!.Kind);
             Assert.Equal("x", statement.Identifier.Text);
             Assert.NotNull(statement.TypeClause);
             Assert.NotNull(statement.EqualsToken);
@@ -398,7 +398,7 @@ public class Point
             var member = Assert.IsType<GlobalStatementSyntax>(Assert.Single(root.Members));
             var statement = Assert.IsType<VariableDeclarationSyntax>(member.Statement);
 
-            Assert.Equal(SyntaxKind.VarKeyword, statement.Keyword.Kind);
+            Assert.Equal(SyntaxKind.VarKeyword, statement!.Keyword!.Kind);
             Assert.Equal("a", statement.Identifier.Text);
             Assert.NotNull(statement.TypeClause);
             Assert.Null(statement.EqualsToken);
@@ -419,13 +419,13 @@ for (var i = 0; i < 10; i++)
             var statement = Assert.IsType<CSyntax.ForStatementSyntax>(globalStatement.Statement);
 
             Assert.Equal("for", statement.Keyword.Text);
-            Assert.Equal("(", statement.OpenParenToken.Text);
+            Assert.Equal("(", statement!.OpenParenToken!.Text);
             Assert.IsType<CSyntax.VariableDeclarationSyntax>(statement.InitDeclaration);
             Assert.NotNull(statement.SemicolonToken1);
             Assert.Equal(CSharpSyntaxKind.BinaryExpression, statement.Condition!.Kind);
             Assert.NotNull(statement.SemicolonToken2);
             Assert.Equal(CSharpSyntaxKind.PostfixIncrementExpression, Assert.Single(statement.Incrementors).Kind);
-            Assert.Equal(")", statement.CloseParenToken.Text);
+            Assert.Equal(")", statement!.CloseParenToken!.Text);
             Assert.IsType<CSyntax.BlockStatementSyntax>(statement.Body);
 
             using (var e = new AssertingEnumerator(statement))

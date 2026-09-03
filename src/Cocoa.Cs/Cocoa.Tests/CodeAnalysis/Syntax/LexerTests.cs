@@ -235,7 +235,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             var token = Assert.Single(tokens);
             Assert.Equal(SyntaxKind.DoubleToken, token.Kind);
             Assert.Equal(source, token.Text);
-            Assert.Equal(expected, (double)token.Value);
+            Assert.Equal(expected, (double)token.Value!);
             Assert.Empty(diagnostics);
         }
 

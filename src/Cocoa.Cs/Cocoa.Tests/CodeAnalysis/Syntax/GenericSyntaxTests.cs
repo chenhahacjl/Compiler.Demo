@@ -19,7 +19,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(classDeclaration.TypeParameters);
-            var parameter = Assert.Single(classDeclaration.TypeParameters.Parameters);
+            var parameter = Assert.Single(classDeclaration!.TypeParameters!.Parameters);
             Assert.Equal("T", parameter.Text);
         }
 
@@ -31,7 +31,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(classDeclaration.TypeParameters);
-            Assert.Equal(2, classDeclaration.TypeParameters.Parameters.Length);
+            Assert.Equal(2, classDeclaration!.TypeParameters!.Parameters.Length);
             Assert.Equal("K", classDeclaration.TypeParameters.Parameters[0].Text);
             Assert.Equal("V", classDeclaration.TypeParameters.Parameters[1].Text);
         }
@@ -90,7 +90,7 @@ public interface IEnumerable<T>
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(interfaceDeclaration.TypeParameters);
-            Assert.Equal("T", Assert.Single(interfaceDeclaration.TypeParameters.Parameters).Text);
+            Assert.Equal("T", Assert.Single(interfaceDeclaration!.TypeParameters!.Parameters).Text);
 
             var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(interfaceDeclaration.Members));
             var returnType = Assert.IsType<GenericTypeClauseSyntax>(method.Type!);
@@ -151,7 +151,7 @@ public class Box
             var creation = Assert.IsType<ObjectCreationExpressionSyntax>(expression);
 
             Assert.NotNull(creation.TypeArguments);
-            var argument = Assert.Single(creation.TypeArguments.Arguments);
+            var argument = Assert.Single(creation!.TypeArguments!.Arguments);
             Assert.Equal("int", argument.Identifier.Text);
             Assert.Equal(10, ((LiteralExpressionSyntax)Assert.Single(creation.Arguments)).Value);
         }
@@ -164,7 +164,7 @@ public class Box
 
             Assert.Equal("Swap", call.Identifier.Text);
             Assert.NotNull(call.TypeArguments);
-            Assert.Equal("int", Assert.Single(call.TypeArguments.Arguments).Identifier.Text);
+            Assert.Equal("int", Assert.Single(call!.TypeArguments!.Arguments).Identifier.Text);
             Assert.Equal(2, call.Arguments.Count());
         }
 
@@ -176,7 +176,7 @@ public class Box
 
             Assert.Equal("Map", call.IdentifierToken.Text);
             Assert.NotNull(call.TypeArguments);
-            Assert.Equal("int", Assert.Single(call.TypeArguments.Arguments).Identifier.Text);
+            Assert.Equal("int", Assert.Single(call!.TypeArguments!.Arguments).Identifier.Text);
         }
 
         [Fact]
@@ -204,7 +204,7 @@ function Max<T>(a: T, b: T): T where T: IComparable<T>
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(function.TypeParameters);
-            Assert.Equal("T", Assert.Single(function.TypeParameters.Parameters).Text);
+            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Text);
             var parameterType = Assert.IsType<TypeClauseSyntax>(function.Parameters[0].Type);
             Assert.Equal("T", parameterType.Identifier.Text);
             var whereClause = Assert.Single(function.WhereClauses);
@@ -226,7 +226,7 @@ public static T Max<T>(T a, T b) where T : IComparable<T>
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(function.TypeParameters);
             Assert.Equal("Max", function.Identifier.Text);
-            Assert.Equal("T", Assert.Single(function.TypeParameters.Parameters).Text);
+            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Text);
             Assert.Single(function.WhereClauses);
         }
 

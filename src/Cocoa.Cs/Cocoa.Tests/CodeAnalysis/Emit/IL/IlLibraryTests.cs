@@ -51,15 +51,15 @@ public class Point
 
             var ctor = point.GetConstructor(new[] { typeof(int) });
             Assert.NotNull(ctor);
-            Assert.True(ctor.IsPublic);
+            Assert.True(ctor!.IsPublic);
 
             var get = point.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance);
             Assert.NotNull(get);
-            Assert.True(get.IsPublic);
+            Assert.True(get!.IsPublic);
 
             var x = point.GetField("_x", BindingFlags.NonPublic | BindingFlags.Instance);
             Assert.NotNull(x);
-            Assert.False(x.IsPublic);
+            Assert.False(x!.IsPublic);
         }
 
         [Fact]
@@ -94,7 +94,7 @@ namespace MyLib
             var reader = new MetadataReader(new[] { path });
             var info = reader.FindTypeInfo("MyLib.Point");
             Assert.NotNull(info);
-            Assert.Equal("MyLib.Point", info.FullName);
+            Assert.Equal("MyLib.Point", info!.FullName);
             Assert.Contains(info.Methods, m => m.Name == ".ctor" && m.ParameterTypes.Count == 1 && m.ParameterTypes[0].FullName == "System.Int32");
             Assert.Contains(info.Methods, m => m.Name == "Get");
 
@@ -209,19 +209,19 @@ namespace MyLib
             var assembly = Assembly.LoadFile(path);
             var account = assembly.GetType("MyLib.Account");
             Assert.NotNull(account);
-            Assert.True(account.IsPublic);
+            Assert.True(account!.IsPublic);
 
             var balance = account.GetField("_balance", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(balance);
-            Assert.True(balance.IsAssembly, "internal 字段应为 Assembly 可见性");
+            Assert.True(balance!.IsAssembly, "internal 字段应为 Assembly 可见性");
 
             var getBalance = account.GetMethod("GetBalance", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(getBalance);
-            Assert.True(getBalance.IsFamily, "protected 方法应为 Family 可见性");
+            Assert.True(getBalance!.IsFamily, "protected 方法应为 Family 可见性");
 
             var add = account.GetMethod("Add", BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.NotNull(add);
-            Assert.True(add.IsAssembly, "internal 方法应为 Assembly 可见性");
+            Assert.True(add!.IsAssembly, "internal 方法应为 Assembly 可见性");
 
             // internal 类型对外不可见（IsPublic=false，GetType 仅能取到、但不可作为公共 API）
             var hidden = assembly.GetType("MyLib.Hidden");
@@ -233,7 +233,7 @@ namespace MyLib
             Assert.Null(reader.FindTypeInfo("MyLib.Hidden"));
             var info = reader.FindTypeInfo("MyLib.Account");
             Assert.NotNull(info);
-            Assert.DoesNotContain(info.Methods, m => m.Name == "GetBalance");
+            Assert.DoesNotContain(info!.Methods, m => m.Name == "GetBalance");
             Assert.DoesNotContain(info.Methods, m => m.Name == "Add");
             Assert.DoesNotContain(info.Fields, f => f.Name == "_balance");
         }
@@ -325,21 +325,21 @@ public class Circle extends Shape
             var assembly = Assembly.LoadFile(libPath);
             var shape = assembly.GetType("Shape");
             var circle = assembly.GetType("Circle");
-            Assert.True(shape.BaseType == typeof(object) || shape.BaseType.Name == "Object");
-            Assert.True(circle.BaseType == shape, "Circle 应继承 Shape");
+            Assert.True(shape!.BaseType == typeof(object) || shape!.BaseType!.Name == "Object");
+            Assert.True(circle!.BaseType == shape, "Circle 应继承 Shape");
 
             var ctor = circle.GetConstructor(new[] { typeof(string), typeof(int) });
             Assert.NotNull(ctor);
-            var obj = ctor.Invoke(new object[] { "big", 4 });
+            var obj = ctor!.Invoke(new object[] { "big", 4 });
 
             var describe = circle.GetMethod("Describe");
             Assert.NotNull(describe);
-            Assert.True(describe.IsVirtual);
+            Assert.True(describe!.IsVirtual);
             Assert.Equal("big4", describe.Invoke(obj, null));
 
             var nameProperty = shape.GetProperty("Name");
             Assert.NotNull(nameProperty);
-            Assert.Equal("big", nameProperty.GetValue(obj));
+            Assert.Equal("big", nameProperty!.GetValue(obj));
             nameProperty.SetValue(obj, "renamed");
             Assert.Equal("renamed", nameProperty.GetValue(obj));
         }
@@ -376,7 +376,7 @@ public class Resource extends IDisposable
             var resource = assembly.GetType("Resource");
             Assert.NotNull(resource);
 
-            var interfaces = resource.GetInterfaces();
+            var interfaces = resource!.GetInterfaces();
             Assert.Contains(interfaces, i => i.FullName == "System.IDisposable");
 
             var dispose = resource.GetMethod("Dispose", BindingFlags.Public | BindingFlags.Instance);
@@ -384,8 +384,8 @@ public class Resource extends IDisposable
 
             var ctor = resource.GetConstructor(new[] { typeof(string) });
             Assert.NotNull(ctor);
-            var obj = ctor.Invoke(new object[] { "file.dat" });
-            Assert.Null(dispose.Invoke(obj, null)); // void 方法调用返回 null
+            var obj = ctor!.Invoke(new object[] { "file.dat" });
+            Assert.Null(dispose!.Invoke(obj, null)); // void 方法调用返回 null
         }
 
         [Fact]
@@ -412,9 +412,9 @@ public class MathHelpers
             Assert.NotNull(mathHelpers);
 
             // 回归：静态方法必须归属所属类 TypeDef（修复前落在 Program TypeDef，此处返回 null）
-            var square = mathHelpers.GetMethod("Square", BindingFlags.Public | BindingFlags.Static);
+            var square = mathHelpers!.GetMethod("Square", BindingFlags.Public | BindingFlags.Static);
             Assert.NotNull(square);
-            Assert.Equal(9, square.Invoke(null, new object[] { 3 }));
+            Assert.Equal(9, square!.Invoke(null, new object[] { 3 }));
         }
 
         [Fact]
@@ -439,16 +439,16 @@ public class Config
             Assert.NotNull(config);
 
             // .cctor 静态构造器（首次静态访问/实例化前运行）
-            var cctor = config.GetConstructor(BindingFlags.Static | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            var cctor = config!.GetConstructor(BindingFlags.Static | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
             Assert.NotNull(cctor);
 
             var maxField = config.GetField("Max", BindingFlags.Public | BindingFlags.Static);
             Assert.NotNull(maxField);
-            Assert.Equal(100, maxField.GetValue(null));
+            Assert.Equal(100, maxField!.GetValue(null));
 
             var nameField = config.GetField("Name", BindingFlags.Public | BindingFlags.Static);
             Assert.NotNull(nameField);
-            Assert.Equal("cocoa", nameField.GetValue(null));
+            Assert.Equal("cocoa", nameField!.GetValue(null));
         }
     }
 }

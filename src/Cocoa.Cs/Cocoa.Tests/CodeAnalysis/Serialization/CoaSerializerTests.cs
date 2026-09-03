@@ -358,7 +358,7 @@ namespace MyLib
             var body = cod.Bodies[Assert.Single(cod.Functions, f => f.Name == "SayHi")];
             var call = FindCallToPrint(body);
             Assert.NotNull(call);
-            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine, call.Method!.BuiltinKind);
+            Assert.Equal(Cocoa.CodeAnalysis.Symbols.BuiltinKind.WriteLine, call!.Method!.BuiltinKind);
         }
 
         private static Cocoa.CodeAnalysis.Binding.BoundMemberCallExpression? FindCallToPrint(Cocoa.CodeAnalysis.Binding.BoundNode node)
@@ -792,12 +792,12 @@ namespace System
 
             var accessor = loaded.Functions.SingleOrDefault(f => f.ContainingClass == facadeClass && f.IsPropertyAccessor);
             Assert.NotNull(accessor);
-            Assert.True(accessor.IsPropertyAccessor);
+            Assert.True(accessor!.IsPropertyAccessor);
             Assert.Equal("get_Message", accessor.Name);
 
             var message = facadeClass.GetProperty("Message");
             Assert.NotNull(message);
-            Assert.Same(Cocoa.CodeAnalysis.Symbols.TypeSymbol.String, message.Type);
+            Assert.Same(Cocoa.CodeAnalysis.Symbols.TypeSymbol.String, message!.Type);
             Assert.Same(accessor, message.Getter);
         }
 
