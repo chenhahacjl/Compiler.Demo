@@ -104,7 +104,7 @@ namespace Cocoa.CodeAnalysis
                 .ToArray();
 
             var backendDiagnostics = _managedEmitter == null
-                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.IL 未初始化）"))
+                ? ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "managed 后端未注册（Cocoa.CodeGen.Managed.Writer 未初始化）"))
                 : _managedEmitter(program, moduleName, ilReferences, outputPath, target, emitLibrary, program.CodAssemblies, false);
 
             // 成功路径也带上 GlobalScope 警告（using 未解析等），供 CLI 打印

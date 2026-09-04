@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis
         private readonly bool _linkCodDynamically;
 
         /// <summary>
-        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.IL</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
+        /// managed（dotnet/IL）后端发射委托（拆分后由 <c>Cocoa.CodeGen.Managed.Writer</c> 经 <see cref="RegisterManagedEmitter"/> 注入；
         /// Core 不引用后端，发射能力经此委托接入）。volatile：注册发生在宿主启动、读取在编译线程（重构阶段 1a/A7）。
         /// </summary>
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
