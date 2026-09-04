@@ -11,3 +11,6 @@
 *.jpg binary
 *.ico binary
 *.pdb binary
+*.coa binary
+*.stamp binary
+*.cache binary
