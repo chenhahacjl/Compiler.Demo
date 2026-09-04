@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundScope
+    public sealed class BoundScope
     {
         private Dictionary<string, Symbol>? _symbols;
         private Dictionary<string, List<FunctionSymbol>>? _functions;

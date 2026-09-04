@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 常量折叠（6e-M21 Phase 2）：运算语义已统一收口到 <see cref="PrimitiveEval"/>（5.4b 单一求值核），
     /// 本类只保留折叠层特有逻辑——&amp;&amp;/|| 单侧已知短路特判，以及"不可折叠（模零等）返回 null"。
     /// </summary>
-    internal static class ConstantFolding
+    public static class ConstantFolding
     {
         public static BoundConstant? Fold(BoundUnaryOperator op, BoundExpression operand)
         {

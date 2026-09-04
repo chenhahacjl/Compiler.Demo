@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         private static readonly ConcurrentDictionary<FunctionSymbol, (FunctionSymbol Definition, ImmutableArray<TypeSymbol> Arguments)> _provenance = new();
 
         /// <summary>实例化方法是否可溯源；成功输出定义符号与类型实参。</summary>
-        internal static bool TryGetProvenance(FunctionSymbol instantiated, out FunctionSymbol definition, out ImmutableArray<TypeSymbol> arguments)
+        public static bool TryGetProvenance(FunctionSymbol instantiated, out FunctionSymbol definition, out ImmutableArray<TypeSymbol> arguments)
         {
             if (_provenance.TryGetValue(instantiated, out var entry))
             {

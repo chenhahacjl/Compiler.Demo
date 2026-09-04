@@ -120,7 +120,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>方法签名替换 + 关联容器改指实例化类（方法体在 G2 单态化阶段经语法重绑接管）。</summary>
-        internal static FunctionSymbol SubstituteMethod(FunctionSymbol method, InstantiatedTypeSymbol containingClass, Dictionary<TypeParameterSymbol, TypeSymbol> map, string? nameOverride = null)
+        public static FunctionSymbol SubstituteMethod(FunctionSymbol method, InstantiatedTypeSymbol containingClass, Dictionary<TypeParameterSymbol, TypeSymbol> map, string? nameOverride = null)
         {
             var parameters = method.Parameters
                 .Select(p => new ParameterSymbol(p.Name, TypeSubstituter.Substitute(p.Type, map), p.Ordinal, p.IsOut, p.IsRef))

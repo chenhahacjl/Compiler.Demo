@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis;
 namespace Cocoa.CodeGen.Native.Assembler.X64
 {
 
-    internal sealed partial class X64Assembler : IAssembler
+    public sealed partial class X64Assembler : IAssembler
     {
         private void EmitSseRegReg(byte opcode, byte prefix, X64Register reg, X64Register rm, bool rexW = false)
         {

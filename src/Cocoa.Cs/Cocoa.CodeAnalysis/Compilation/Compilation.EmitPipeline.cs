@@ -115,7 +115,7 @@ namespace Cocoa.CodeAnalysis
         /// 把程序直接生成为原生可执行文件，不依赖 .NET 运行时。
         /// 实现经 <see cref="RegisterNativeEmitter"/> 注入的 native 后端（Core 自身不引用后端）。
         /// </summary>
-        internal ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default)
+        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default)
         {
             if (_nativeEmitter == null)
             {
@@ -128,7 +128,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>
         /// 把库编译为 `.coa` 语义层程序集（编译到 BoundProgram 即停，不走 IR/机器码/IL）。
         /// </summary>
-        internal ImmutableArray<Diagnostic> EmitCocoa(string moduleName, string outputPath)
+        public ImmutableArray<Diagnostic> EmitCocoa(string moduleName, string outputPath)
         {
             var parseDiagnostics = SyntaxTrees.SelectMany(st => st.Diagnostics);
 

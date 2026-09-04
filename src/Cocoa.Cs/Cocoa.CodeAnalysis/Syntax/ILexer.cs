@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// 供 <see cref="Language.CreateLexer"/> 工厂与 <see cref="SyntaxTree"/> 消费。
     /// 与 <see cref="IParser"/> 对称；共享 <see cref="SyntaxKind"/>（token 存储层留 Core）。
     /// </summary>
-    internal interface ILexer
+    public interface ILexer
     {
         SyntaxToken Lex();
         DiagnosticBag Diagnostics { get; }

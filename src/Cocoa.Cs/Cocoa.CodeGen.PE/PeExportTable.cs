@@ -5,7 +5,7 @@ using System.Text;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_EXPORT_DIRECTORY — 导出目录（40 字节）。</summary>
-    internal readonly record struct ImageExportDirectory(
+    public readonly record struct ImageExportDirectory(
         uint Characteristics,
         uint TimeDateStamp,
         ushort MajorVersion,
@@ -53,7 +53,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>导出目录索引（供 stub 生成的机器码与 C# 参照共用同一布局知识）。</summary>
-    internal readonly record struct PeExportIndex(
+    public readonly record struct PeExportIndex(
         uint ExportDirRva,
         uint OrdinalBase,
         uint FunctionCount,
@@ -68,12 +68,12 @@ namespace Cocoa.CodeGen.PE
         }
     }
 
-    internal readonly record struct PeExportEntry(string Name, uint Rva, bool IsForwarder)
+    public readonly record struct PeExportEntry(string Name, uint Rva, bool IsForwarder)
     {
     }
 
     /// <summary>导出表解析：名字数组 + ordinal 表定位导出，forwarder 判定。stub 机器码的参照实现。</summary>
-    internal static class PeExportTable
+    public static class PeExportTable
     {
         /// <summary>
         /// 在指定导出目录中按名字查找函数。大小写敏感（PE 规范语义）。

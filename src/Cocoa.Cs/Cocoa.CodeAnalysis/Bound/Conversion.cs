@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class Conversion
+    public sealed class Conversion
     {
         public static readonly Conversion None = new Conversion(exists: false, isIdentity: false, isImplicit: false);
         public static readonly Conversion Identity = new Conversion(exists: true, isIdentity: true, isImplicit: true);

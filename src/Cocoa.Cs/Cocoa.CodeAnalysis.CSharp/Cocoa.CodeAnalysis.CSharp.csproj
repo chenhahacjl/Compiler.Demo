@@ -1,10 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Cocoa.Tests" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
   </ItemGroup>
 

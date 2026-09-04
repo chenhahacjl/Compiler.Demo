@@ -13,10 +13,10 @@ namespace Cocoa.CodeGen.Managed.Writer
     /// ECMA-335 元数据写入器（最小子集）：Module/TypeRef/TypeDef/MethodDef/Param/MemberRef/
     /// CustomAttribute/Assembly/AssemblyRef/StandAloneSig 表 + #Strings/#US/#GUID/#Blob 堆。布局细节对照 Roslyn MetadataWriter / System.Reflection.Metadata.Ecma335.MetadataBuilder。
     /// </summary>
-    internal sealed partial class MetadataBuilder
+    public sealed partial class MetadataBuilder
     {
         /// <summary>序列化结果：各流字节（表流/字符串/US/GUID/Blob），由 ManagedPEWriter 组装元数据根。</summary>
-        internal sealed class MetadataBlobs
+        public sealed class MetadataBlobs
         {
             public MetadataBlobs(byte[] tables, byte[] strings, byte[] us, byte[] guid, byte[] blob)
             {

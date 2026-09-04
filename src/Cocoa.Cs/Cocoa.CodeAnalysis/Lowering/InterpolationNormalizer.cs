@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Lowering
     /// 降为 <see cref="BoundFormatExpression"/> / string 拼接（+），语义与绑定内联旧行为逐一对应，
     /// 仅迁移"组装时机"（洞的绑定/常量校验/字符串转换仍在 Binder 完成）。
     /// </summary>
-    internal static class InterpolationNormalizer
+    public static class InterpolationNormalizer
     {
         public static BoundStatement Rewrite(BoundStatement body)
         {

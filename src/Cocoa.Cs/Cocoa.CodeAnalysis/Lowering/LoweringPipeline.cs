@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Lowering
     /// 双后端（IL/原生）与求值器经 <c>BoundProgram.Functions</c> 统一消费 lowered 树。
     /// 明确赋值分析（<see cref="DefiniteAssignmentAnalysis"/>）由调用方按需执行。
     /// </summary>
-    internal static class LoweringPipeline
+    public static class LoweringPipeline
     {
         /// <summary>对单函数体执行 Lowering；<paramref name="returnCheckLocation"/> 非空时做全路径返回校验。</summary>
         public static BoundBlockStatement Lower(

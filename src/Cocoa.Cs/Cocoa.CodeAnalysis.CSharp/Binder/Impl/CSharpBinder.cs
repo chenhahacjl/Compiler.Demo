@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
     /// <summary>
     /// 绑定器
     /// </summary>
-    internal sealed partial class CSharpBinder : IBinder
+    public sealed partial class CSharpBinder : IBinder
     {
         private readonly DiagnosticBag _diagnostics = new DiagnosticBag();
         private readonly bool _isScript;

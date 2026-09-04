@@ -15,7 +15,7 @@ namespace Cocoa.CodeGen.Managed.Writer
     /// 托管 PE 写入器：组装 .text 段（CLR 头 + 方法体 + 元数据根 + 流）+ IMAGE_COR20_HEADER + PE 壳。
     /// 布局参考 Roslyn ManagedPEBuilder / System.Reflection.Metadata.Ecma335 的序列化顺序。
     /// </summary>
-    internal static class ManagedPEWriter
+    public static class ManagedPEWriter
     {
         private const uint CorHdrSignature = 0x424A5342; // "BSJB"
         private const uint CorHdrMajorVersion = 1;
@@ -31,7 +31,7 @@ namespace Cocoa.CodeGen.Managed.Writer
         private const ulong NetFxImageBase = 0x400000;
 
         /// <summary>方法体（已编码字节 + 局部变量签名 token + 最大栈 + 可选异常表）。</summary>
-        internal sealed class MethodBodyBlob
+        public sealed class MethodBodyBlob
         {
             public MethodBodyBlob(byte[] code, uint localVarSigToken, ushort maxStack, byte[]? exceptionTable = null)
             {

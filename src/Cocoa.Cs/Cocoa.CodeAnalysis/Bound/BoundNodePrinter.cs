@@ -7,7 +7,7 @@ using System.Globalization;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal static class BoundNodePrinter
+    public static class BoundNodePrinter
     {
         public static void WriteTo(this BoundNode node, TextWriter writer)
         {

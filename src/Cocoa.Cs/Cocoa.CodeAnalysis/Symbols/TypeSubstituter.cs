@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     internal static class TypeSubstituter
     {
-        internal static Dictionary<TypeParameterSymbol, TypeSymbol> BuildMap(ImmutableArray<TypeParameterSymbol> parameters, ImmutableArray<TypeSymbol> arguments)
+        public static Dictionary<TypeParameterSymbol, TypeSymbol> BuildMap(ImmutableArray<TypeParameterSymbol> parameters, ImmutableArray<TypeSymbol> arguments)
         {
             var map = new Dictionary<TypeParameterSymbol, TypeSymbol>();
 
@@ -24,7 +24,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             return map;
         }
 
-        internal static TypeSymbol Substitute(TypeSymbol type, Dictionary<TypeParameterSymbol, TypeSymbol> map)
+        public static TypeSymbol Substitute(TypeSymbol type, Dictionary<TypeParameterSymbol, TypeSymbol> map)
         {
             if (type is TypeParameterSymbol parameter)
             {

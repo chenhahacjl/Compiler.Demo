@@ -4,7 +4,7 @@ using System.Buffers.Binary;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_TLS_DIRECTORY64 — TLS 目录（40 字节）。</summary>
-    internal readonly record struct ImageTlsDirectory64(
+    public readonly record struct ImageTlsDirectory64(
         ulong StartAddressOfRawData,
         ulong EndAddressOfRawData,
         ulong AddressOfIndex,

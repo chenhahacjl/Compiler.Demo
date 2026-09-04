@@ -13,7 +13,7 @@ namespace Cocoa.CodeGen.Managed.Writer
     /// IL 编码器：IlInstruction 序列 → 方法体字节。按 OperandType 全集分派；
     /// 分支 fixup 用目标指令偏移回填；元数据/字符串 token 留占位由 <see cref="PatchTokens"/> 回填。
     /// </summary>
-    internal sealed class IlAssembler
+    public sealed class IlAssembler
     {
         public List<IlInstruction> Instructions { get; } = new List<IlInstruction>();
 
@@ -497,7 +497,7 @@ namespace Cocoa.CodeGen.Managed.Writer
     }
 
     /// <summary>.try/.catch/.finally 子句描述（SEH 异常表）。各边界用 IlInstruction 占位（Assemble 后取 .Offset）。</summary>
-    internal sealed class ExceptionClause
+    public sealed class ExceptionClause
     {
         public IlInstruction TryStart = null!;
         public IlInstruction TryEnd = null!;

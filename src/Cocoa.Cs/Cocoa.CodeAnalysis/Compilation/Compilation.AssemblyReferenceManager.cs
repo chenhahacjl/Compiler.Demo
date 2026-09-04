@@ -91,7 +91,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>校验 `.coa` 库的 `requires` 与消费方后端匹配。</summary>
-        internal ImmutableArray<Diagnostic> ValidateCodBackendRequirements(bool isNative)
+        public ImmutableArray<Diagnostic> ValidateCodBackendRequirements(bool isNative)
         {
             if (!isNative || _codLibraries.IsDefaultOrEmpty)
             {
@@ -172,7 +172,7 @@ namespace Cocoa.CodeAnalysis
         /// Binder 仅在存在静态初始化器或显式声明时创建 .cctor 符号，故符号存在即需运行期触发——
         /// native 后端无该时机，门禁拒绝并提示改写为显式赋值。
         /// </summary>
-        internal static bool HasStaticInitializer(NamedTypeSymbol classType)
+        public static bool HasStaticInitializer(NamedTypeSymbol classType)
         {
             foreach (var method in classType.Methods)
             {

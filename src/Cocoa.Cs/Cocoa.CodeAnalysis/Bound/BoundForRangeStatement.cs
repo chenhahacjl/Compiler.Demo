@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundForRangeStatement : BoundLoopStatement
+    public sealed class BoundForRangeStatement : BoundLoopStatement
     {
         public BoundForRangeStatement(SyntaxNode syntax, VariableSymbol variable, BoundExpression lowerBound, BoundExpression upperBound, BoundExpression? step, BoundStatement body, BoundLabel breakLabel, BoundLabel continueLabel)
             : base(syntax, breakLabel, continueLabel)

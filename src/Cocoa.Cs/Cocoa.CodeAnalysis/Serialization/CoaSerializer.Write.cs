@@ -9,7 +9,7 @@ using System.Text;
 
 namespace Cocoa.CodeAnalysis.Serialization
 {
-    internal static partial class CoaSerializer
+    public static partial class CoaSerializer
     {
         private static void WriteStatement(Writer w, Registry registry, Dictionary<string, BoundLabel> labels, BoundStatement statement)
         {

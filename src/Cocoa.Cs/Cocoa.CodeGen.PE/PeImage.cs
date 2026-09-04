@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>节规格：虚拟地址/大小由 Builder 决定时传 0 自动布局，否则显式指定。</summary>
-    internal sealed class PeSectionSpec
+    public sealed class PeSectionSpec
     {
         public PeSectionSpec(string name, byte[] rawData, uint virtualAddress, uint characteristics)
         {
@@ -20,7 +20,7 @@ namespace Cocoa.CodeGen.PE
         public uint Characteristics { get; }
     }
 
-    internal sealed class PeImageConfig
+    public sealed class PeImageConfig
     {
         public PeImageConfig(PeMachine machine, ulong imageBase, ushort subsystem, ushort dllCharacteristics, uint addressOfEntryPoint)
         {
@@ -48,7 +48,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>PE 镜像组装器：DOS 头 + PE 签名 + COFF + 可选头 + 节表 + 各节 raw。</summary>
-    internal static class PeImageBuilder
+    public static class PeImageBuilder
     {
         /// <summary>DOS stub 长度：位于 DOS 头（0x40）与 PE 签名之间。</summary>
         public const int DosStubSize = 0x40;
@@ -278,7 +278,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>PE 镜像读取器：RVA↔文件偏移换算 + 目录解析（磁盘镜像语义）。</summary>
-    internal sealed class PeImageReader
+    public sealed class PeImageReader
     {
         private readonly byte[] _image;
         private readonly bool _isPe32Plus;

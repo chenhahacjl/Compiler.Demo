@@ -59,7 +59,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         // 枚举常量成员（TypeKind.Enum 时使用；class/struct/interface 为 null）
         private Dictionary<string, int>? _enumMembers;
 
-        internal NamedTypeSymbol(string name, string @namespace, Visibility visibility, SyntaxNode? declaration, bool isExternal = false)
+        public NamedTypeSymbol(string name, string @namespace, Visibility visibility, SyntaxNode? declaration, bool isExternal = false)
             : base(name)
         {
             Namespace = @namespace ?? "";
@@ -79,7 +79,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsExternal { get; }
 
         /// <summary>命名类型类别（6e-M26）：class/struct/interface/enum/delegate 共用同一符号，以 TypeKind 判别。</summary>
-        public virtual TypeKind TypeKind { get; internal set; } = TypeKind.Class;
+        public virtual TypeKind TypeKind { get; set; } = TypeKind.Class;
 
         /// <summary>是否为接口（interface 声明；不可实例化、成员无实现）。</summary>
         public virtual bool IsInterface => TypeKind == TypeKind.Interface;
@@ -114,21 +114,21 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// 是否为 facade 类（6e-M19 M2-b，对齐 C# 基元别名模型）：System.Int32/System.String 等承载
         /// 基元/字符串类型的实例成员面。实例方法声明被编译期降级为静态（隐藏首参 this），不可 new、无字段。
         /// </summary>
-        public bool IsFacadeClass { get; internal set; }
+        public bool IsFacadeClass { get; set; }
 
         /// <summary>facade 承载的类型（Int32→i32、String→string；null = 自身，用于 Object/Type facade）。</summary>
-        public TypeSymbol? FacadeThisType { get; internal set; }
+        public TypeSymbol? FacadeThisType { get; set; }
 
         /// <summary>facade 合并（Phase 1-3）：基元符号在类型表中以 facade 全名登记后，成员面经此委托到
         /// `<c>System.Int32</c>`` 等 facade 类（System.Core 缓存实例，进程内共享，赋值幂等）。</summary>
-        public NamedTypeSymbol? FacadeCompanion { get; internal set; }
+        public NamedTypeSymbol? FacadeCompanion { get; set; }
 
-        public virtual bool IsAbstract { get; internal set; }
+        public virtual bool IsAbstract { get; set; }
 
         /// <summary>是否为值类型（struct/enum，6e-M26）：对齐 C#，struct 与枚举都是值类型。</summary>
         public override bool IsValueType => TypeKind is TypeKind.Struct or TypeKind.Enum;
 
-        public virtual bool IsSealed { get; internal set; }
+        public virtual bool IsSealed { get; set; }
 
         /// <summary>
         /// 成员访问前钩子（6e-M20）：泛型实例化类在首次访问时惰性物化成员（定义类可能尚未完成绑定）；
@@ -139,7 +139,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>泛型类型参数列表（6e-M20；空 = 非泛型。实例化类的此列表恒为空——实参见 <see cref="InstantiatedTypeSymbol.TypeArguments"/>）。</summary>
-        public ImmutableArray<TypeParameterSymbol> TypeParameters { get; internal set; } = ImmutableArray<TypeParameterSymbol>.Empty;
+        public ImmutableArray<TypeParameterSymbol> TypeParameters { get; set; } = ImmutableArray<TypeParameterSymbol>.Empty;
 
         /// <summary>是否为泛型定义（模板；不可直接 new，须经类型实参实例化）。</summary>
         public bool IsGenericDefinition => TypeParameters.Length > 0;
@@ -150,7 +150,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsEnum => TypeKind == TypeKind.Enum;
 
         /// <summary>注入枚举常量成员（仅 TypeKind.Enum 调用）。</summary>
-        internal void SetEnumMembers(Dictionary<string, int> members) => _enumMembers = members;
+        public void SetEnumMembers(Dictionary<string, int> members) => _enumMembers = members;
 
         /// <summary>枚举成员名→常量值查找（非枚举返回 false）。</summary>
         public bool TryGetMember(string name, out int value)
@@ -167,14 +167,14 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>枚举成员名集合（非枚举为空）。</summary>
         public IReadOnlyCollection<string> MemberNames => (IReadOnlyCollection<string>?)_enumMembers?.Keys ?? Array.Empty<string>();
 
-        internal void AddField(FieldSymbol field) => _fields.Add(field);
+        public void AddField(FieldSymbol field) => _fields.Add(field);
 
-        internal void AddMethod(FunctionSymbol method) => _methods.Add(method);
+        public void AddMethod(FunctionSymbol method) => _methods.Add(method);
 
-        internal void AddProperty(PropertySymbol property) => _properties.Add(property);
+        public void AddProperty(PropertySymbol property) => _properties.Add(property);
 
         /// <summary>6e-M22 C5+：事件集合。</summary>
-        internal void AddEvent(EventSymbol eventSymbol) => _events.Add(eventSymbol);
+        public void AddEvent(EventSymbol eventSymbol) => _events.Add(eventSymbol);
 
         /// <summary>类声明的事件（含继承链查找由调用方处理）。</summary>
         public ImmutableArray<EventSymbol> Events => _events.ToImmutableArray();
@@ -194,10 +194,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>类直接实现的接口（`class C: I` 的基类型列表中的接口）。</summary>
-        internal void AddInterface(NamedTypeSymbol interfaceType) => _interfaces.Add(interfaceType);
+        public void AddInterface(NamedTypeSymbol interfaceType) => _interfaces.Add(interfaceType);
 
         /// <summary>接口直接继承的基接口（`interface IBird: IAnimal, IFlyable`）。</summary>
-        internal void AddBaseInterface(NamedTypeSymbol interfaceType) => _baseInterfaces.Add(interfaceType);
+        public void AddBaseInterface(NamedTypeSymbol interfaceType) => _baseInterfaces.Add(interfaceType);
 
         /// <summary>类/接口直接列出的接口（不含继承）。</summary>
         public ImmutableArray<NamedTypeSymbol> Interfaces
@@ -295,7 +295,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>索引器查找（本类声明的第一个 IsIndexer 属性；6e-M24）。</summary>
-        internal PropertySymbol? GetIndexer()
+        public PropertySymbol? GetIndexer()
         {
             EnsureMembersMaterialized();
             foreach (var property in _properties)
@@ -514,7 +514,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>是否已声明同名同签名方法（重载按参数类型逐一比较，6e-M18 容器类重载支持）。</summary>
-        internal bool HasDeclaredMethodSignature(string name, FunctionSymbol candidate)
+        public bool HasDeclaredMethodSignature(string name, FunctionSymbol candidate)
         {
             EnsureMembersMaterialized();
             foreach (var method in GetDeclaredMethods(name))

@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
     /// <br/>
     /// 字符 => Token
     /// </summary>
-    internal sealed class CocoaLexer : LexerBase
+    public sealed class CocoaLexer : LexerBase
     {
         public CocoaLexer(SyntaxTree syntaxTree)
             : base(syntaxTree)

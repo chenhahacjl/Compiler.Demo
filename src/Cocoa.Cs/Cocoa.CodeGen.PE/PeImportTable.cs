@@ -6,7 +6,7 @@ using System.Text;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_IMPORT_DESCRIPTOR — 导入描述符（20 字节）。</summary>
-    internal readonly record struct ImageImportDescriptor(
+    public readonly record struct ImageImportDescriptor(
         uint OriginalFirstThunk,
         uint TimeDateStamp,
         uint ForwarderChain,
@@ -38,7 +38,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_THUNK_DATA64 — 导入项（8 字节），AddressOfData 四语义由辅助属性区分。</summary>
-    internal readonly record struct ImageThunkData64(ulong AddressOfData)
+    public readonly record struct ImageThunkData64(ulong AddressOfData)
     {
         public static int SizeOfEntry => 8;
 
@@ -62,7 +62,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_THUNK_DATA32 — 导入项（4 字节），AddressOfData 四语义由辅助属性区分。</summary>
-    internal readonly record struct ImageThunkData32(uint AddressOfData)
+    public readonly record struct ImageThunkData32(uint AddressOfData)
     {
         public static int SizeOfEntry => 4;
 
@@ -86,7 +86,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_IMPORT_BY_NAME — Hint + 以 NUL 结尾的函数名。</summary>
-    internal readonly record struct ImageImportByName(ushort Hint, byte[] Name)
+    public readonly record struct ImageImportByName(ushort Hint, byte[] Name)
     {
         public int Size => 2 + Name.Length + 1;
 
@@ -114,7 +114,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_BOUND_IMPORT_DESCRIPTOR — 绑定导入描述符（16 字节）。</summary>
-    internal readonly record struct ImageBoundImportDescriptor(
+    public readonly record struct ImageBoundImportDescriptor(
         uint TimeDateStamp,
         ushort OffsetModuleName,
         ushort NumberOfModuleForwarderRefs)
@@ -138,7 +138,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_BOUND_FORWARDER_REF — 绑定转发表项（8 字节）。</summary>
-    internal readonly record struct ImageBoundForwarderRef(uint TimeDateStamp, ushort OffsetModuleName)
+    public readonly record struct ImageBoundForwarderRef(uint TimeDateStamp, ushort OffsetModuleName)
     {
         public static int SizeOfEntry => 8;
 
@@ -157,7 +157,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_DELAYLOAD_DESCRIPTOR — 延迟加载描述符（32 字节）。</summary>
-    internal readonly record struct ImageDelayLoadDescriptor(
+    public readonly record struct ImageDelayLoadDescriptor(
         uint Attributes,
         uint DllNameRva,
         uint ModuleHandleRva,
@@ -196,13 +196,13 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>导入规格：DLL 名 + 函数名（或 ordinal）。Ordinal==0 表示按名字导入。</summary>
-    internal readonly record struct PeImportSpec(string DllName, string FunctionName, ushort Ordinal = 0)
+    public readonly record struct PeImportSpec(string DllName, string FunctionName, ushort Ordinal = 0)
     {
         public bool ByName => Ordinal == 0;
     }
 
     /// <summary>每个 DLL 的导入区块布局（offset 相对 blob 起始）。</summary>
-    internal sealed class PeImportDllLayout
+    public sealed class PeImportDllLayout
     {
         public PeImportDllLayout(string dllName, int descriptorOffset, int intOffset, int iatOffset, int dllNameOffset, IReadOnlyList<(PeImportSpec Spec, int HintNameOffset)> entries)
         {
@@ -223,7 +223,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>ImportTableBuilder 产物：blob + 各 DLL 布局。blob 不含 IAT 槽数据本体。</summary>
-    internal sealed class PeImportTableLayout
+    public sealed class PeImportTableLayout
     {
         public PeImportTableLayout(byte[] blob, int descriptorsOffset, IReadOnlyList<PeImportDllLayout> dlls)
         {
@@ -239,7 +239,7 @@ namespace Cocoa.CodeGen.PE
 
     /// <summary>按 DLL 分组的导入表构建器：DLL 名 / INT / HintName / descriptor 组 + 全零终止。
     /// 6c-2：IAT 槽位于镜像内 data 区（外部），由 OS 加载器按描述符 FirstThunk 启动时填充；blob 内不再生成 IAT 副本。</summary>
-    internal static class ImportTableBuilder
+    public static class ImportTableBuilder
     {
         public static PeImportTableLayout Build(
             IReadOnlyList<PeImportSpec> specs,
@@ -428,7 +428,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>导入表读取器：按 image span + 导入目录 RVA 解析 DLL/函数列表（供自检与测试）。</summary>
-    internal static class ImportTableReader
+    public static class ImportTableReader
     {
         public static IReadOnlyList<(string DllName, IReadOnlyList<(bool ByName, ushort Ordinal, string Name)>)> Read(ReadOnlySpan<byte> image, Func<uint, uint> rvaToOffset)
         {

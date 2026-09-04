@@ -4,7 +4,7 @@ using System.Buffers.Binary;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_RUNTIME_FUNCTION_ENTRY — 异常处理函数表项（12 字节）。</summary>
-    internal readonly record struct ImageRuntimeFunctionEntry(
+    public readonly record struct ImageRuntimeFunctionEntry(
         uint BeginAddress,
         uint EndAddress,
         uint UnwindInfoAddress)
@@ -27,7 +27,7 @@ namespace Cocoa.CodeGen.PE
         }
     }
 
-    internal enum PeUnwindOpCode : byte
+    public enum PeUnwindOpCode : byte
     {
         PushNonvol = 0, // UWOP_PUSH_NONVOL
         AllocLarge = 1, // UWOP_ALLOC_LARGE
@@ -41,7 +41,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>UNWIND_CODE — 展开指令（2 字节）。</summary>
-    internal readonly record struct PeUnwindCode(byte CodeOffset, PeUnwindOpCode UnwindOp, byte OpInfo)
+    public readonly record struct PeUnwindCode(byte CodeOffset, PeUnwindOpCode UnwindOp, byte OpInfo)
     {
         public static int SizeOfEntry => 2;
 
@@ -58,7 +58,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>UNWIND_INFO — 最小展开信息（可选 UNWIND_CODE 数组 + 4 字节对齐）。</summary>
-    internal readonly record struct PeUnwindInfo(
+    public readonly record struct PeUnwindInfo(
         byte VersionAndFlags,
         byte SizeOfProlog,
         byte CountOfCodes,

@@ -7,7 +7,7 @@ namespace Cocoa.CodeGen.Native.Assembler
     /// x86/x64 汇编器共享簿记（5.4：原两份 ~105 行逐字节复制下沉至此）。
     /// 平台分化点仅 Patch 的数据段修补：x64 rel32 + 8B 绝对 VA；x86 绝对 32 位地址。
     /// </summary>
-    internal abstract class AssemblerBase
+    public abstract class AssemblerBase
     {
         protected readonly List<byte> _bytes = new List<byte>();
         protected readonly List<byte> _data = new List<byte>();

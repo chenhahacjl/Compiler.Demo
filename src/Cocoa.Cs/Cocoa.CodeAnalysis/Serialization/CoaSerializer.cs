@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     ///   运算符     文本记号 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
     ///   布尔/枚举词： true false；public internal protected private；winapi cdecl stdcall；unicode ansi auto
     /// </summary>
-    internal static partial class CoaSerializer
+    public static partial class CoaSerializer
     {
         public const string Magic = "COCOA";
         public const int Version = 1;

@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class FieldSymbol : VariableSymbol
     {
-        internal FieldSymbol(string name, TypeSymbol type, Visibility visibility, NamedTypeSymbol containingClass, bool isReadonly = false, bool isStatic = false)
+        public FieldSymbol(string name, TypeSymbol type, Visibility visibility, NamedTypeSymbol containingClass, bool isReadonly = false, bool isStatic = false)
             : base(name, isReadOnly: isReadonly, type, constant: null)
         {
             Visibility = visibility;
@@ -23,6 +23,6 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>readonly 字段（仅构造内可赋值）。</summary>
         public bool IsReadonly { get; }
 
-        public bool IsStatic { get; internal set; }
+        public bool IsStatic { get; set; }
     }
 }

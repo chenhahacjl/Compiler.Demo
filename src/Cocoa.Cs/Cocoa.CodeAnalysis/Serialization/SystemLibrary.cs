@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis
     /// 6e 跨库里程碑：各模块可跨库调用——加载按依赖序（System.Core 首位），后续库以已加载库为
     /// external 合并符号表（复用实例），FnKey 带库维度前缀消歧。
     /// </summary>
-    internal static class SystemLibrary
+    public static class SystemLibrary
     {
         private static readonly object _sync = new();
         private static ImmutableArray<CoaProgram> _cache = ImmutableArray<CoaProgram>.Empty;
@@ -112,7 +112,7 @@ namespace Cocoa.CodeAnalysis
         /// 的祖先目录。开发期 bins 副本被构建清空/过旧时的兜底发现路径；仓库外部署
         /// （无 libs 祖先）自然回落 exe 旁目录。测试可直接注入起始目录。
         /// </summary>
-        internal static string? FindLibsStore(string? startDirectory)
+        public static string? FindLibsStore(string? startDirectory)
         {
             try
             {
@@ -141,7 +141,7 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>测试用：清缓存（便于指向不同 System.coa 目录/文件）。</summary>
-        internal static void Reset()
+        public static void Reset()
         {
             lock (_sync)
             {

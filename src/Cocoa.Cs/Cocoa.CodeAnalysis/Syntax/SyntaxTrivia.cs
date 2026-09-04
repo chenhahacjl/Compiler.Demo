@@ -4,7 +4,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 {
     public sealed class SyntaxTrivia
     {
-        internal SyntaxTrivia(SyntaxTree syntaxTree, SyntaxKind kind, int position, string text)
+        public SyntaxTrivia(SyntaxTree syntaxTree, SyntaxKind kind, int position, string text)
         {
             SyntaxTree = syntaxTree;
             Kind = kind;

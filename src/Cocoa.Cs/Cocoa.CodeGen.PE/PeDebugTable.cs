@@ -4,7 +4,7 @@ using System.Buffers.Binary;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_DEBUG_DIRECTORY — 调试目录项（28 字节）。</summary>
-    internal readonly record struct ImageDebugDirectory(
+    public readonly record struct ImageDebugDirectory(
         uint Characteristics,
         uint TimeDateStamp,
         ushort MajorVersion,
@@ -43,7 +43,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>"RSDS" 调试信息（CodeView PDB 路径）。</summary>
-    internal readonly record struct PeCodeViewRsds(uint Signature, Guid Guid, uint Age, byte[] Path)
+    public readonly record struct PeCodeViewRsds(uint Signature, Guid Guid, uint Age, byte[] Path)
     {
         public const uint RsdsSignature = 0x53445352; // "RSDS"
 

@@ -21,10 +21,10 @@ namespace Cocoa.CodeAnalysis
         {
         }
 
-        internal override BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
+        public override BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries)
             => CSharpBinderImpl.BindGlobalScope(isScript, previous, syntaxTrees, entryPointName, references, codLibraries);
 
-        internal override BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace)
+        public override BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace)
             => CSharpBinderImpl.BindProgram(isScript, previous, globalScope, codLibraries, dialect, linkCodDynamically, globalNamespace);
     }
 }

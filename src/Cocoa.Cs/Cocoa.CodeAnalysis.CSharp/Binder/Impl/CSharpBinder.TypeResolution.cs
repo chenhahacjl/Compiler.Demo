@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
     /// <summary>
     /// Partial member surface of the binder.
     /// </summary>
-    internal partial class CSharpBinder
+    public partial class CSharpBinder
     {
         private TypeSymbol? LookupType(string name)
         {

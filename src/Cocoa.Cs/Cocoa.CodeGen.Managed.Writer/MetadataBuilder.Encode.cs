@@ -13,7 +13,7 @@ namespace Cocoa.CodeGen.Managed.Writer
     /// ECMA-335 元数据写入器（最小子集）：Module/TypeRef/TypeDef/MethodDef/Param/MemberRef/
     /// CustomAttribute/Assembly/AssemblyRef/StandAloneSig 表 + #Strings/#US/#GUID/#Blob 堆。布局细节对照 Roslyn MetadataWriter / System.Reflection.Metadata.Ecma335.MetadataBuilder。
     /// </summary>
-    internal sealed partial class MetadataBuilder
+    public sealed partial class MetadataBuilder
     {
         /// <summary>DebuggableAttribute(bool, bool) 固定参数：prolog + 2 个 ELEMENT_TYPE_BOOLEAN(true)。</summary>
         public static byte[] EncodeDebuggableAttributeBlob()

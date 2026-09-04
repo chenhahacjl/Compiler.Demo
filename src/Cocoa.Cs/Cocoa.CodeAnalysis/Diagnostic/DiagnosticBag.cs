@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis
     /// <summary>
     /// 诊断信息合集
     /// </summary>
-    internal sealed class DiagnosticBag : IEnumerable<Diagnostic>
+    public sealed class DiagnosticBag : IEnumerable<Diagnostic>
     {
         private readonly List<Diagnostic> _diagnostics = new List<Diagnostic>();
 
@@ -22,7 +22,7 @@ namespace Cocoa.CodeAnalysis
             _diagnostics.AddRange(diagnostics);
         }
 
-        internal void ReportError(TextLocation location, string message)
+        public void ReportError(TextLocation location, string message)
         {
             var diagnostic = Diagnostic.Error(location, message);
             _diagnostics.Add(diagnostic);
@@ -76,13 +76,13 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
-        internal void ReportThrowTypeNotException(TextLocation location, TypeSymbol thrownType)
+        public void ReportThrowTypeNotException(TextLocation location, TypeSymbol thrownType)
         {
             var message = $"Cannot throw value of type '{thrownType}'; only Exception or a subclass may be thrown.";
             ReportError(location, message);
         }
 
-        internal void ReportCatchTypeNotException(TextLocation location, TypeSymbol catchType)
+        public void ReportCatchTypeNotException(TextLocation location, TypeSymbol catchType)
         {
             var message = $"Catch clause type '{catchType}' is not Exception or a subclass of Exception.";
             ReportError(location, message);
@@ -282,7 +282,7 @@ namespace Cocoa.CodeAnalysis
             ReportError(location, message);
         }
 
-        internal void ReportInvalidBreakOrContinue(TextLocation location, string text)
+        public void ReportInvalidBreakOrContinue(TextLocation location, string text)
         {
             var message = $"The keyword '{text}' can only be used inside of loops.";
             ReportError(location, message);
@@ -441,14 +441,14 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>using 命名空间在程序/引用/.coa 库中都未解析时发警告（6e-M15；提示 Cocoa 不绑定 .NET BCL）。</summary>
-        internal void ReportUnresolvedUsing(TextLocation location, string name)
+        public void ReportUnresolvedUsing(TextLocation location, string name)
         {
             var message = $"Using namespace '{name}' could not be resolved in the program, references, or .coa libraries. (Cocoa 不绑定 .NET BCL：System.* 等需自带 System.Core 标准库 / 显式引用)";
             ReportWarning(location, message);
         }
 
         /// <summary>`using static` 目标必须是类（6e-M18，C# 同构：导入类静态成员）。</summary>
-        internal void ReportUsingStaticTargetNotClass(TextLocation location, string name)
+        public void ReportUsingStaticTargetNotClass(TextLocation location, string name)
         {
             var message = $"using static 的目标 '{name}' 必须是类（导入其静态成员；命名空间用 `using {name};` + 限定访问）。";
             ReportWarning(location, message);

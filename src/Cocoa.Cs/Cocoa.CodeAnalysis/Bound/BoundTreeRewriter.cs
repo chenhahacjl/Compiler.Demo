@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 绑定树重写器
     /// </summary>
-    internal abstract class BoundTreeRewriter
+    public abstract class BoundTreeRewriter
     {
         public virtual BoundStatement RewriteStatement(BoundStatement node)
         {

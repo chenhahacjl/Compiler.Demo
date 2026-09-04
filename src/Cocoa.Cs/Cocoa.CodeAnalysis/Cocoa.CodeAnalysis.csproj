@@ -1,18 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <InternalsVisibleTo Include="Cocoa.Tests" />
-    <InternalsVisibleTo Include="cocoa" />
-    <InternalsVisibleTo Include="Cocoa.CodeAnalysis.CSharp" />
-    <InternalsVisibleTo Include="Cocoa.CodeAnalysis.Cocoa" />
-    <InternalsVisibleTo Include="Cocoa.CodeGen.PE" />
-    <InternalsVisibleTo Include="Cocoa.CodeGen.Managed.Writer" />
-    <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />
-    <InternalsVisibleTo Include="Cocoa.CodeGen.Interpreter" />
-    <InternalsVisibleTo Include="Cocoa.ProjectSystem" />
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="System.Collections.Immutable" Version="9.0.9" />
   </ItemGroup>
 

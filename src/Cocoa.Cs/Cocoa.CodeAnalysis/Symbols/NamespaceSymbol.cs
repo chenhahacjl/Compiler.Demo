@@ -164,7 +164,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             _typeMembers = _typeMembers.Add(type);
         }
 
-        internal void AddFunctionMember(FunctionSymbol function)
+        public void AddFunctionMember(FunctionSymbol function)
         {
             _functionMembers = _functionMembers.Add(function);
         }

@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 降级后函数体为扁平语句序列（标签/goto/条件 goto），CFG 与扫描均按扁平模型处理；
     /// lambda 体不在表达式子树内（BoundChildren 只含 Receiver），无需跳过。
     /// </summary>
-    internal static class DefiniteAssignmentAnalysis
+    public static class DefiniteAssignmentAnalysis
     {
         public static void Analyze(BoundBlockStatement loweredBody, ImmutableArray<ParameterSymbol> outParameters, DiagnosticBag diagnostics)
         {

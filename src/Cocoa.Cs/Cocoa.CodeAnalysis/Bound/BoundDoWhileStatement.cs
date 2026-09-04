@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundDoWhileStatement : BoundLoopStatement
+    public sealed class BoundDoWhileStatement : BoundLoopStatement
     {
         public BoundDoWhileStatement(SyntaxNode syntax, BoundStatement body, BoundExpression condition, BoundLabel breakLabel, BoundLabel continueLabel)
             : base(syntax, breakLabel, continueLabel)

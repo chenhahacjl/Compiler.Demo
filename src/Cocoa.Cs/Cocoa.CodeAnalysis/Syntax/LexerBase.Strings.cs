@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// <br/>
     /// 字符 => Token
     /// </summary>
-    internal abstract partial class LexerBase : ILexer
+    public abstract partial class LexerBase : ILexer
     {
         private void ReadString()
         {

@@ -11,7 +11,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// 三后端按 <see cref="FunctionSymbol.BuiltinKind"/> 分发（IL box+callvirt / Evaluator CLR / native M4 vtable）。
     /// 单例为 static readonly（跨编译共享），<see cref="Ensure"/> 幂等。
     /// </summary>
-    internal static class SystemObjectMembers
+    public static class SystemObjectMembers
     {
         private static readonly BuiltinSpec[] _specs =
         {
@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// 向 SystemObject/SystemType 单例注入成员面（幂等）。须先于类成员绑定调用，
         /// 保证用户类 override 解析与成员沿链上溯可见。SystemType 继承 SystemObject（Type 值可用 ToString/GetType 等）。
         /// </summary>
-        internal static void Ensure()
+        public static void Ensure()
         {
             if (_initialized)
             {
@@ -83,11 +83,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>是否为 Object/Type 内建单例（`.coa` 序列化跳过 cls 壳与方法回填的判据）。</summary>
-        internal static bool IsBuiltinSystemClass(NamedTypeSymbol classType)
+        public static bool IsBuiltinSystemClass(NamedTypeSymbol classType)
             => classType == NamedTypeSymbol.SystemObject || classType == NamedTypeSymbol.SystemType;
 
         /// <summary>按 BuiltinKind 解析单例符号（`.coa` 读侧重建时复用，保证发射器识别内置）。</summary>
-        internal static FunctionSymbol? GetByKind(BuiltinKind kind) => kind switch
+        public static FunctionSymbol? GetByKind(BuiltinKind kind) => kind switch
         {
             BuiltinKind.ObjectToString => ToString,
             BuiltinKind.ObjectGetHashCode => GetHashCode,

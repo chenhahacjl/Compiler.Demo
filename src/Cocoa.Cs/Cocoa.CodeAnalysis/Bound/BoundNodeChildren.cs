@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 重写器未覆盖的节点种类在此<strong>抛异常</strong>，而非旧手写 switch 的静默返回空集
     /// （旧实现曾漏 Throw/Try/ConstructorChain/ByRefArgument，导致定值分析/单态化/.coa 校验集体漏检）。
     /// </summary>
-    internal static class BoundNodeChildren
+    public static class BoundNodeChildren
     {
         /// <summary>返回 <paramref name="root"/> 的直接子节点（保持遍历序）；叶子节点返回空集。</summary>
         public static IReadOnlyList<BoundNode> Of(BoundNode root)

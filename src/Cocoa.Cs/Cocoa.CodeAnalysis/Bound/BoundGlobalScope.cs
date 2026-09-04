@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundGlobalScope
+    public sealed class BoundGlobalScope
     {
         public BoundGlobalScope(BoundGlobalScope? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableArray<FunctionSymbol> functions, ImmutableArray<NamedTypeSymbol> enums, ImmutableArray<NamedTypeSymbol> classes, ImmutableArray<VariableSymbol> variables, ImmutableArray<BoundStatement> statements, ImmutableArray<string> usingNamespaces, ImmutableArray<string> usingStatics, ImmutableDictionary<string, string> usingAliases, ImmutableArray<string> references)
         {

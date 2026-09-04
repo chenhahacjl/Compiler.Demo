@@ -63,7 +63,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// <see cref="GetByName"/> 大小写不敏感回退兼容（Step 3 迁移后移除）。
         /// 新增功能层原语 = 1 行规格 + 三后端各 1 个 kind case + 1 个 IL 方法引用。
     /// </summary>
-    internal static class BuiltinFunctions
+    public static class BuiltinFunctions
     {
         private static readonly ImmutableArray<BuiltinSpec> _specs = ImmutableArray.Create(
             new BuiltinSpec(BuiltinKind.WriteLine, "WriteLine", TypeSymbol.Void, new[] { ("text", TypeSymbol.Any) }),
@@ -172,11 +172,11 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// 获取所有内置函数
         /// </summary>
         /// <returns></returns>
-        internal static IEnumerable<FunctionSymbol> GetAll()
+        public static IEnumerable<FunctionSymbol> GetAll()
             => _specs.Select(s => GetByKind(s.Kind)!);
 
         /// <summary>按种类查找内置函数。</summary>
-        internal static FunctionSymbol? GetByKind(BuiltinKind kind)
+        public static FunctionSymbol? GetByKind(BuiltinKind kind)
         {
             return kind switch
             {
@@ -209,7 +209,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         }
 
         /// <summary>按名查找内置函数（`.coa` 反序列化时复用单例，保证发射器识别内置；大小写不敏感——syscall 声明可用 PascalCase 如 `Random` 命中 `random`）。</summary>
-        internal static FunctionSymbol? GetByName(string name)
+        public static FunctionSymbol? GetByName(string name)
         {
             foreach (var spec in _specs)
             {

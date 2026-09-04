@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class TypeParameterSymbol : TypeSymbol
     {
-        internal TypeParameterSymbol(string name, int ordinal, NamedTypeSymbol? owningClass)
+        public TypeParameterSymbol(string name, int ordinal, NamedTypeSymbol? owningClass)
             : base(name)
         {
             Ordinal = ordinal;
@@ -24,15 +24,15 @@ namespace Cocoa.CodeAnalysis.Symbols
         public NamedTypeSymbol? OwningClass { get; }
 
         /// <summary>约束类型列表（接口/基类；实例化期校验实参满足）。</summary>
-        public ImmutableArray<TypeSymbol> ConstraintTypes { get; internal set; } = ImmutableArray<TypeSymbol>.Empty;
+        public ImmutableArray<TypeSymbol> ConstraintTypes { get; set; } = ImmutableArray<TypeSymbol>.Empty;
 
         /// <summary>`new()` 无参构造约束。</summary>
-        public bool HasNewConstraint { get; internal set; }
+        public bool HasNewConstraint { get; set; }
 
         /// <summary>`class` 引用类型约束。</summary>
-        public bool HasReferenceTypeConstraint { get; internal set; }
+        public bool HasReferenceTypeConstraint { get; set; }
 
         /// <summary>`struct` 值类型约束（6e-M22 C1）：基元数值/bool/char + enum（语言暂无用户 struct）。</summary>
-        public bool HasValueTypeConstraint { get; internal set; }
+        public bool HasValueTypeConstraint { get; set; }
     }
 }

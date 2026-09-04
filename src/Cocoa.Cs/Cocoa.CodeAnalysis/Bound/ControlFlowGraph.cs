@@ -2,7 +2,7 @@ using System.CodeDom.Compiler;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class ControlFlowGraph
+    public sealed class ControlFlowGraph
     {
         public ControlFlowGraph(BasicBlock start, BasicBlock end, List<BasicBlock> blocks, List<BasicBlockBranch> branches)
         {

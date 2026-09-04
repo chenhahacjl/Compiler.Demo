@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <summary>
     /// 从引用程序集解析外部类型（消费 -r 库）。
     /// </summary>
-    internal static class ExternalTypeResolver
+    public static class ExternalTypeResolver
     {
         private static readonly ConcurrentDictionary<string, NamedTypeSymbol?> _cache = new ConcurrentDictionary<string, NamedTypeSymbol?>();
 

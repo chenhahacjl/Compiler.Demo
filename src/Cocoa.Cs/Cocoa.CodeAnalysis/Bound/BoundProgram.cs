@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundProgram
+    public sealed class BoundProgram
     {
         public BoundProgram(BoundProgram? previous, ImmutableArray<Diagnostic> diagnostics, FunctionSymbol? mainFunction, FunctionSymbol? scriptFunction, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> functions, ImmutableArray<NamedTypeSymbol> classes, ImmutableDictionary<object, string>? codAssemblies = null, ImmutableArray<NamedTypeSymbol>? genericDefinitions = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? genericOpenBodies = null, ImmutableDictionary<FunctionSymbol, BoundBlockStatement>? rawFunctions = null)
         {

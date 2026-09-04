@@ -15,7 +15,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X86
     ///  - X64Size.Qword 静默降级为 32 位（指针宽度 4 字节）。
     ///  - 数据引用（MovRip/LeaRip/CallRip）使用绝对地址 [disp32] 而非 RIP 相对
     /// </summary>
-    internal sealed class X86Assembler : AssemblerBase, IAssembler
+    public sealed class X86Assembler : AssemblerBase, IAssembler
     {
         public override void Patch(int dataTextDelta, long imageBase)
         {

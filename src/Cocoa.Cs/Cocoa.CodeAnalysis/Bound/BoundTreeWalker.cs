@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 的递归驱动深度优先遍历；派生类实现 <see cref="VisitStatement"/> / <see cref="VisitExpression"/> 钩子。
     /// 用于死代码/类型收集/CFG/语义分析等只读场景。
     /// </summary>
-    internal abstract class BoundTreeWalker
+    public abstract class BoundTreeWalker
     {
         private sealed class Rewriter : BoundTreeRewriter
         {

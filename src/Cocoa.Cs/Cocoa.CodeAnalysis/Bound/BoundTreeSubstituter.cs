@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 替换面：①类型（复用 <see cref="TypeSubstituter"/>，覆盖节点内嵌 Type 字段）；
     /// ②变量（形参按序对位、局部惰性克隆）；③字段/方法/构造（泛型定义成员 → 实例化成员，按索引对齐）。
     /// </summary>
-    internal sealed class BoundTreeSubstituter : BoundTreeRewriter
+    public sealed class BoundTreeSubstituter : BoundTreeRewriter
     {
         private readonly NamedTypeSymbol _definition;
         private readonly InstantiatedTypeSymbol _instantiated;

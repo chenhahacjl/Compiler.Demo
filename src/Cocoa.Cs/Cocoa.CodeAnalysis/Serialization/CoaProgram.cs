@@ -7,7 +7,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     /// <summary>
     /// `.coa` 程序集的内存模型：符号表 + 函数体（语义层 BoundProgram 片段）+ 依赖清单。
     /// </summary>
-    internal sealed class CoaProgram
+    public sealed class CoaProgram
     {
         public CoaProgram(
             ImmutableArray<FunctionSymbol> functions,

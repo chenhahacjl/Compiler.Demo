@@ -4,7 +4,7 @@ using System.Buffers.Binary;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_DOS_HEADER — DOS 头部（64 字节），字段名保留 winnt.h 原名。</summary>
-    internal readonly record struct ImageDosHeader(
+    public readonly record struct ImageDosHeader(
         ushort EMagic,
         ushort ECblp,
         ushort ECp,
@@ -76,7 +76,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_FILE_HEADER — COFF 文件头（20 字节）。</summary>
-    internal readonly record struct ImageFileHeader(
+    public readonly record struct ImageFileHeader(
         ushort Machine,
         ushort NumberOfSections,
         uint TimeDateStamp,
@@ -112,7 +112,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_DATA_DIRECTORY — 数据目录项（8 字节）。</summary>
-    internal readonly record struct ImageDataDirectory(uint VirtualAddress, uint Size)
+    public readonly record struct ImageDataDirectory(uint VirtualAddress, uint Size)
     {
         public static int SizeOfEntry => 8;
 
@@ -131,7 +131,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_OPTIONAL_HEADER64 — PE32+ 可选头（240 字节），无 BaseOfData。</summary>
-    internal readonly record struct ImageOptionalHeader64(
+    public readonly record struct ImageOptionalHeader64(
         PeOptionalMagic Magic,
         byte MajorLinkerVersion,
         byte MinorLinkerVersion,
@@ -246,7 +246,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_OPTIONAL_HEADER32 — PE32 可选头（96 字节），含 BaseOfData。</summary>
-    internal readonly record struct ImageOptionalHeader32(
+    public readonly record struct ImageOptionalHeader32(
         PeOptionalMagic Magic,
         byte MajorLinkerVersion,
         byte MinorLinkerVersion,
@@ -364,7 +364,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_NT_HEADERS64 — "PE\0\0" 签名 + COFF 头 + PE32+ 可选头（264 字节）。</summary>
-    internal readonly record struct ImageNtHeaders64(uint Signature, ImageFileHeader FileHeader, ImageOptionalHeader64 OptionalHeader)
+    public readonly record struct ImageNtHeaders64(uint Signature, ImageFileHeader FileHeader, ImageOptionalHeader64 OptionalHeader)
     {
         public static int Size => 4 + ImageFileHeader.Size + ImageOptionalHeader64.Size;
 
@@ -385,7 +385,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_NT_HEADERS32 — "PE\0\0" 签名 + COFF 头 + PE32 可选头（120 字节）。</summary>
-    internal readonly record struct ImageNtHeaders32(uint Signature, ImageFileHeader FileHeader, ImageOptionalHeader32 OptionalHeader)
+    public readonly record struct ImageNtHeaders32(uint Signature, ImageFileHeader FileHeader, ImageOptionalHeader32 OptionalHeader)
     {
         public static int Size => 4 + ImageFileHeader.Size + ImageOptionalHeader32.Size;
 
@@ -406,7 +406,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_SECTION_HEADER — 节表项（40 字节），Misc 按 VirtualSize 语义使用。</summary>
-    internal readonly record struct ImageSectionHeader(
+    public readonly record struct ImageSectionHeader(
         byte[] Name,
         uint VirtualSize,
         uint VirtualAddress,

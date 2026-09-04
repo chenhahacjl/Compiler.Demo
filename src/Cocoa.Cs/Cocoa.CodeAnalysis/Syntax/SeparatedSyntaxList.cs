@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
         public static SeparatedSyntaxList<T> Empty { get; } = new SeparatedSyntaxList<T>(ImmutableArray<SyntaxNode>.Empty);
 
-        internal SeparatedSyntaxList(ImmutableArray<SyntaxNode> nodesAndSeparators)
+        public SeparatedSyntaxList(ImmutableArray<SyntaxNode> nodesAndSeparators)
         {
             _nodesAndSeparators = nodesAndSeparators;
         }

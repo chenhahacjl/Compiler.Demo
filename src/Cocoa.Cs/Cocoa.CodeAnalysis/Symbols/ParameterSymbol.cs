@@ -2,7 +2,7 @@ namespace Cocoa.CodeAnalysis.Symbols
 {
     public sealed class ParameterSymbol : LocalVariableSymbol
     {
-        internal ParameterSymbol(string name, TypeSymbol type, int ordinal, bool isOut = false, bool isRef = false, bool isThis = false)
+        public ParameterSymbol(string name, TypeSymbol type, int ordinal, bool isOut = false, bool isRef = false, bool isThis = false)
             : base(name, isReadOnly: isThis, type, null)
         {
             Ordinal = ordinal;
@@ -22,6 +22,6 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         public bool IsByRef => IsOut || IsRef;
 
-        internal bool IsThisParameter => IsReadOnly;
+        public bool IsThisParameter => IsReadOnly;
     }
 }

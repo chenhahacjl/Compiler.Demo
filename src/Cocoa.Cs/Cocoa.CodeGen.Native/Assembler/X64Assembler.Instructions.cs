@@ -10,7 +10,7 @@ using Cocoa.CodeAnalysis;
 namespace Cocoa.CodeGen.Native.Assembler.X64
 {
 
-    internal sealed partial class X64Assembler : IAssembler
+    public sealed partial class X64Assembler : IAssembler
     {
         public void Mov(X64Size size, X64Register dst, X64Register src)
         {

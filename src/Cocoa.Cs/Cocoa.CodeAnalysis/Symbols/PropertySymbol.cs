@@ -5,7 +5,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     /// </summary>
     public sealed class PropertySymbol : Symbol
     {
-        internal PropertySymbol(string name, TypeSymbol type, NamedTypeSymbol containingClass, FunctionSymbol? getter, FunctionSymbol? setter, Visibility visibility, bool isStatic, bool isIndexer = false)
+        public PropertySymbol(string name, TypeSymbol type, NamedTypeSymbol containingClass, FunctionSymbol? getter, FunctionSymbol? setter, Visibility visibility, bool isStatic, bool isIndexer = false)
             : base(name)
         {
             Type = type;

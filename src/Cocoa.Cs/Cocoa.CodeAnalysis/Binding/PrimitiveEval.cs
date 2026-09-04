@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Symbols;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal enum PrimitiveEvalStatus
+    public enum PrimitiveEvalStatus
     {
         /// <summary>result 有效。</summary>
         Computed,
@@ -19,7 +19,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 结果按目标类型位宽归位（NumericBox.Box）；移位计数按位宽掩码；f32 在 float 域、f64 在 double 域；
     /// 相等比较对浮点用 IEEE 语义（NaN != NaN）、其余 object.Equals（值语义）。
     /// </summary>
-    internal static class PrimitiveEval
+    public static class PrimitiveEval
     {
         public static PrimitiveEvalStatus TryBinary(BoundBinaryOperatorKind kind, TypeSymbol type, object? left, object? right, out object? result)
         {

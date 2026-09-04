@@ -17,7 +17,7 @@ namespace Cocoa.CodeGen.Managed.Writer
     /// 枚举按 int32 表示；容器类为普通静态类），复用既有 emitLibrary 管线产出标准 .NET 库——
     /// 供消费方 exe 运行期依赖（阶段 A 动态链接）与 C# 互操作。
     /// </summary>
-    internal static class CoaLibraryCompiler
+    public static class CoaLibraryCompiler
     {
         /// <summary>从 `.coa` 文件发射同名托管库 dll。返回诊断（含错误时调用方不应使用产物）。</summary>
         public static ImmutableArray<Diagnostic> EmitManagedDll(string coaPath, string dllPath, IlTarget target)

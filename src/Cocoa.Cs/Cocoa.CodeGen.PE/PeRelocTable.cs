@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_BASE_RELOCATION — 基址重定位块（8 字节头 + TypeOffset 数组）。</summary>
-    internal readonly record struct ImageBaseRelocation(uint VirtualAddress, uint SizeOfBlock)
+    public readonly record struct ImageBaseRelocation(uint VirtualAddress, uint SizeOfBlock)
     {
         public static int SizeOfEntry => 8;
 
@@ -26,7 +26,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>TypeOffset 解码：类型与偏移以 WORD 位域存储。</summary>
-    internal readonly record struct PeRelocationEntry(PeRelocType Type, int Offset)
+    public readonly record struct PeRelocationEntry(PeRelocType Type, int Offset)
     {
         public static PeRelocationEntry FromWord(ushort value)
         {
@@ -39,10 +39,10 @@ namespace Cocoa.CodeGen.PE
         }
     }
 
-    internal sealed record PeRelocationBlock(uint PageRva, IReadOnlyList<PeRelocationEntry> Entries);
+    public sealed record PeRelocationBlock(uint PageRva, IReadOnlyList<PeRelocationEntry> Entries);
 
     /// <summary>重定位块序列解析。</summary>
-    internal static class PeRelocTable
+    public static class PeRelocTable
     {
         public static IReadOnlyList<PeRelocationBlock> Read(ReadOnlySpan<byte> image, Func<uint, uint> rvaToOffset, uint relocRva, uint relocSize)
         {

@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
     /// <summary>
     /// Partial member surface of the binder.
     /// </summary>
-    internal partial class CocoaBinder
+    public partial class CocoaBinder
     {
         private BoundExpression CreateFunctionValue(SSyntax.SyntaxNode syntax, BoundExpression? receiver, FunctionSymbol function)
         {

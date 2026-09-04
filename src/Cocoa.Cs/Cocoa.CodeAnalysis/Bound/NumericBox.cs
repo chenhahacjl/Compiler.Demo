@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 数值装箱/取值工具（6e-M21 Phase 3）：常量折叠与求值器共用，保证编译期与运行期表示一致。
     /// 有符号整数运行时装箱 sbyte/short/int/long；无符号装箱 byte/ushort/uint/ulong；浮点 float/double。
     /// </summary>
-    internal static class NumericBox
+    public static class NumericBox
     {
         /// <summary>按类型位宽与符号性归位装箱（接受有符号域计算结果）。</summary>
         public static object Box(TypeSymbol type, long value)

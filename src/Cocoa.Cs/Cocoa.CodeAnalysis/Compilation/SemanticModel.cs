@@ -21,7 +21,7 @@ namespace Cocoa.CodeAnalysis
 
         private Dictionary<SyntaxNode, BoundNode>? _boundBySyntax;
 
-        internal SemanticModel(Compilation compilation, SyntaxTree syntaxTree)
+        public SemanticModel(Compilation compilation, SyntaxTree syntaxTree)
         {
             _compilation = compilation;
             _syntaxTree = syntaxTree;

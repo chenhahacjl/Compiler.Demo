@@ -10,7 +10,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 经 <see cref="Language.CreateBinder"/> 返回；共享 Binder 与语言库副本均实现。
     /// 完整实例绑定逻辑随语言库落位（CocoaBinder / CSharpBinder），本接口仅暴露单态化展开需要的方法。
     /// </summary>
-    internal interface IBinder
+    public interface IBinder
     {
         void RegisterSourceGenericDefinitionsForSeed(BoundGlobalScope globalScope);
         void RegisterCodGenericDefinitionsForSeed(ImmutableArray<CoaProgram> libraries);

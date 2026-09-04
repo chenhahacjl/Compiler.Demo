@@ -30,11 +30,11 @@ namespace Cocoa.CodeAnalysis
         private static volatile Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
-        internal static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
             => _managedEmitter = emitter;
 
         /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
-        internal static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>> emitter)
             => _nativeEmitter = emitter;
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Cocoa.CodeAnalysis
         private static volatile Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?>? _interpreterEvaluator;
 
         /// <summary>注册解释器求值实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
-        internal static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
+        public static void RegisterInterpreterEvaluator(Func<BoundProgram, string[]?, Dictionary<VariableSymbol, object>, object?> evaluator)
             => _interpreterEvaluator = evaluator;
 
         public abstract Language Language { get; }
@@ -53,10 +53,10 @@ namespace Cocoa.CodeAnalysis
         /// 按本语言绑定全局作用域（S-4.3 Compilation 驱动 Binder：对齐 Roslyn
         /// <c>CSharpCompilation</c> 驱动 <c>CSharpBinder</c>）。语言子类调用各自语言库的 Binder 静态编排。
         /// </summary>
-        internal abstract BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries);
+        public abstract BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SyntaxTree> syntaxTrees, string entryPointName, string[]? references, ImmutableArray<CoaProgram> codLibraries);
 
         /// <summary>按本语言绑定程序（含单态化/降级；见 <see cref="BindGlobalScope"/>）。</summary>
-        internal abstract BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace);
+        public abstract BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, bool linkCodDynamically, NamespaceSymbol? globalNamespace);
 
         protected Compilation(bool isScript, Compilation? previous, string entryPointName, string[]? references, bool linkCodDynamically = false, params SyntaxTree[] syntaxTrees)
         {
@@ -137,9 +137,9 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<VariableSymbol> Variables => GlobalScope.Variables;
 
         /// <summary>已加载的 `.coa` 库（含系统库；动态链接 CopyLocal 依据）。</summary>
-        internal ImmutableArray<CoaProgram> CodLibraries => _codLibraries;
+        public ImmutableArray<CoaProgram> CodLibraries => _codLibraries;
 
-        internal BoundGlobalScope GlobalScope
+        public BoundGlobalScope GlobalScope
         {
             get
             {
@@ -208,7 +208,7 @@ namespace Cocoa.CodeAnalysis
         public ImmutableArray<MetadataReference> References => _metadataReferences;
 
 
-        internal BoundProgram GetProgram()
+        public BoundProgram GetProgram()
         {
             var previous = Previous == null ? null : Previous.GetProgram();
 
@@ -276,7 +276,7 @@ namespace Cocoa.CodeAnalysis
         /// 与 BoundTreeRewriter 的节点清单保持单一事实来源。旧手写 switch（120 行、漏
         /// Throw/Try/ConstructorChain/ByRefArgument 四类节点）已删除。
         /// </summary>
-        internal static IEnumerable<BoundNode> BoundChildren(BoundNode node)
+        public static IEnumerable<BoundNode> BoundChildren(BoundNode node)
         {
             return BoundNodeChildren.Of(node);
         }

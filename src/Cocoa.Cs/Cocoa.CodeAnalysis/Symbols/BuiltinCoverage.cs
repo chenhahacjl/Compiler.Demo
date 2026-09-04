@@ -5,7 +5,7 @@ using System.Linq;
 namespace Cocoa.CodeAnalysis.Symbols
 {
     [Flags]
-    internal enum BuiltinBackend
+    public enum BuiltinBackend
     {
         None = 0,
         Evaluator = 1 << 0,
@@ -14,7 +14,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         All = Evaluator | Il | Native,
     }
 
-    internal sealed record BuiltinCoverageRow(BuiltinKind Kind, BuiltinBackend Backends, string? GapReason);
+    public sealed record BuiltinCoverageRow(BuiltinKind Kind, BuiltinBackend Backends, string? GapReason);
 
     /// <summary>
     /// 内建原语的三后端覆盖表——新增一个 <see cref="BuiltinKind"/> 必须同时在此加一行，
@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Symbols
     ///   Il        → Emit/IL/IlEmitter.Expressions.cs（Random 为 switch 前的 if 分支）
     ///   Native    → Emit/Native/Lir/MirToLir.Builtins.cs / .Expressions.cs
     /// </summary>
-    internal static class BuiltinCoverage
+    public static class BuiltinCoverage
     {
         private static readonly ImmutableArray<BuiltinCoverageRow> Rows = ImmutableArray.Create<BuiltinCoverageRow>(
             new(BuiltinKind.WriteLine, BuiltinBackend.All, null),

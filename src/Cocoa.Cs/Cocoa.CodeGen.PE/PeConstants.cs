@@ -1,6 +1,6 @@
 namespace Cocoa.CodeGen.PE
 {
-    internal static class PeConstants
+    public static class PeConstants
     {
         public const byte DosHeaderSize = 64;
         public const uint DosSignature = 0x5A4D; // "MZ"
@@ -10,13 +10,13 @@ namespace Cocoa.CodeGen.PE
         public const uint OrdinalFlag32 = 0x80000000; // IMAGE_ORDINAL_FLAG32
     }
 
-    internal enum PeOptionalMagic : ushort
+    public enum PeOptionalMagic : ushort
     {
         Pe32 = 0x10B, // IMAGE_NT_OPTIONAL_HDR32_MAGIC
         Pe32Plus = 0x20B, // IMAGE_NT_OPTIONAL_HDR64_MAGIC
     }
 
-    internal enum PeMachine : ushort
+    public enum PeMachine : ushort
     {
         Unknown = 0,
         I386 = 0x014C, // IMAGE_FILE_MACHINE_I386
@@ -24,7 +24,7 @@ namespace Cocoa.CodeGen.PE
         ARM64 = 0xAA64, // IMAGE_FILE_MACHINE_ARM64
     }
 
-    internal enum PeSubsystem : ushort
+    public enum PeSubsystem : ushort
     {
         Unknown = 0,
         Native = 1, // IMAGE_SUBSYSTEM_NATIVE
@@ -32,7 +32,7 @@ namespace Cocoa.CodeGen.PE
         WindowsCui = 3, // IMAGE_SUBSYSTEM_WINDOWS_CUI
     }
 
-    internal enum PeDataDirectoryEntry
+    public enum PeDataDirectoryEntry
     {
         Export = 0,
         Import = 1,
@@ -52,7 +52,7 @@ namespace Cocoa.CodeGen.PE
         Reserved = 15,
     }
 
-    internal static class PeFileCharacteristics
+    public static class PeFileCharacteristics
     {
         public const ushort RelocsStripped = 0x0001;
         public const ushort ExecutableImage = 0x0002; // IMAGE_FILE_EXECUTABLE_IMAGE
@@ -73,7 +73,7 @@ namespace Cocoa.CodeGen.PE
         public const ushort CurrentImage = ExecutableImage | LargeAddressAware;
     }
 
-    internal static class PeDllCharacteristics
+    public static class PeDllCharacteristics
     {
         public const ushort HighEntropyVA = 0x0020; // IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA
         public const ushort DynamicBase = 0x0040; // IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE
@@ -90,7 +90,7 @@ namespace Cocoa.CodeGen.PE
         public const ushort CurrentImage = HighEntropyVA | DynamicBase | NxChipCompat;
     }
 
-    internal static class PeSectionCharacteristics
+    public static class PeSectionCharacteristics
     {
         public const uint TypeNoPad = 0x00000008;
         public const uint CntCode = 0x00000020; // IMAGE_SCN_CNT_CODE
@@ -113,7 +113,7 @@ namespace Cocoa.CodeGen.PE
         public const uint Data = CntInitializedData | MemRead | MemWrite;
     }
 
-    internal enum PeRelocType : byte
+    public enum PeRelocType : byte
     {
         Absolute = 0, // IMAGE_REL_BASED_ABSOLUTE
         High = 1,
@@ -126,7 +126,7 @@ namespace Cocoa.CodeGen.PE
         Dir64 = 10, // IMAGE_REL_BASED_DIR64
     }
 
-    internal enum PeDebugType : uint
+    public enum PeDebugType : uint
     {
         Unknown = 0, // IMAGE_DEBUG_TYPE_UNKNOWN
         Coff = 1,

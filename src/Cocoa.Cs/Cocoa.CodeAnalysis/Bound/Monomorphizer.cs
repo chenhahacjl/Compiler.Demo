@@ -18,7 +18,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// <item><b>发射清单</b>：过滤泛型定义类（模板不发射），并入全部活实例化类。</item>
     /// </list>
     /// </summary>
-    internal static class Monomorphizer
+    public static class Monomorphizer
     {
         public static (ImmutableArray<NamedTypeSymbol> Classes, ImmutableArray<NamedTypeSymbol> GenericDefinitions) Expand(
             BoundGlobalScope globalScope,
@@ -379,7 +379,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>声明语法根集合（类声明 / 函数语法），供泛型用法扫描共用（P2-5：语言钩子经此复用）。</summary>
-        internal static IEnumerable<SyntaxNode> CollectDeclarationRoots(BoundGlobalScope globalScope)
+        public static IEnumerable<SyntaxNode> CollectDeclarationRoots(BoundGlobalScope globalScope)
         {
             var roots = new HashSet<SyntaxNode>();
 
@@ -404,7 +404,7 @@ namespace Cocoa.CodeAnalysis.Binding
         }
 
         /// <summary>深度优先遍历（P2-5：语言钩子经此复用）。</summary>
-        internal static IEnumerable<SyntaxNode> Walk(SyntaxNode node)
+        public static IEnumerable<SyntaxNode> Walk(SyntaxNode node)
         {
             yield return node;
 

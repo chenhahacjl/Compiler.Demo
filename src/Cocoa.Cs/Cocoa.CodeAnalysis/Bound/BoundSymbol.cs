@@ -1,6 +1,6 @@
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal sealed class BoundSymbol
+    public sealed class BoundSymbol
     {
         internal BoundSymbol(string name)
         {

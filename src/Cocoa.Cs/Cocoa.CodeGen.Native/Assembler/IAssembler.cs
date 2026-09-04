@@ -8,7 +8,7 @@ namespace Cocoa.CodeGen.Native.Assembler
     /// <summary>
     /// 汇编器抽象：标签/数据符号/指令编码。X64 与X86 各有一个实现。
     /// </summary>
-    internal interface IAssembler
+    public interface IAssembler
     {
         int Position { get; }
         int DataLength { get; }

@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Syntax
     /// </summary>
     public sealed class SyntaxToken : SyntaxNode
     {
-        internal SyntaxToken(SyntaxTree syntaxTree, SyntaxKind kind, int position, string? text, object? value, ImmutableArray<SyntaxTrivia> leadingTrivia, ImmutableArray<SyntaxTrivia> trailingTrivia)
+        public SyntaxToken(SyntaxTree syntaxTree, SyntaxKind kind, int position, string? text, object? value, ImmutableArray<SyntaxTrivia> leadingTrivia, ImmutableArray<SyntaxTrivia> trailingTrivia)
             : base(syntaxTree)
         {
             Kind = kind;

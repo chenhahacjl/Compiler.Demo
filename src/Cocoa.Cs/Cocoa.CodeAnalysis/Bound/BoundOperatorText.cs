@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.Binding
     /// 直接产出 glyph 与优先级——供打印器（BoundNodePrinter）、IL 默认诊断臂与 .coa 编解码（CoaSerializer）单一真相源。
     /// glyph 字符串与旧 SyntaxKind 形态逐字一致（.coa 文本兼容）；优先级数值与 <see cref="SyntaxFacts"/> 现行表一致。
     /// </summary>
-    internal static class BoundOperatorText
+    public static class BoundOperatorText
     {
         /// <summary>二元运算符符号（对齐 CoaSerializer.BinaryOpText / SyntaxFacts.GetText 的旧映射，含 Reference* 并入 &amp;==/!=）。</summary>
         public static string BinaryGlyph(BoundBinaryOperatorKind kind)

@@ -9,7 +9,7 @@ using Cocoa.CodeAnalysis;
 
 namespace Cocoa.CodeGen.Native.Assembler.X64
 {
-    internal enum X64Size
+    public enum X64Size
     {
         Byte = 0,
         Dword = 1,
@@ -17,7 +17,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         Word = 3,
     }
 
-    internal enum X64Register
+    public enum X64Register
     {
         RAX = 0,
         RCX = 1,
@@ -63,7 +63,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         XMM15 = 31,
     }
 
-    internal enum X64CondCode
+    public enum X64CondCode
     {
         Equal,
         NotEqual,
@@ -79,7 +79,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         NoParity,
     }
 
-    internal readonly struct X64MemoryOperand
+    public readonly struct X64MemoryOperand
     {
         public X64MemoryOperand(X64Register baseRegister, int displacement)
         {
@@ -91,7 +91,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         public int Displacement { get; }
     }
 
-    internal sealed partial class X64Assembler : AssemblerBase, IAssembler
+    public sealed partial class X64Assembler : AssemblerBase, IAssembler
     {
         public override void Patch(int dataTextDelta, long imageBase)
         {

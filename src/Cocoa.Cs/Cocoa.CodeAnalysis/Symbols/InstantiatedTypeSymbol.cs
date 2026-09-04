@@ -15,7 +15,7 @@ namespace Cocoa.CodeAnalysis.Symbols
         private readonly object _gate = new();
         private bool _materialized;
 
-        internal InstantiatedTypeSymbol(string name, string @namespace, Visibility visibility, NamedTypeSymbol genericDefinition, ImmutableArray<TypeSymbol> typeArguments)
+        public InstantiatedTypeSymbol(string name, string @namespace, Visibility visibility, NamedTypeSymbol genericDefinition, ImmutableArray<TypeSymbol> typeArguments)
             : base(name, @namespace, visibility, genericDefinition.Declaration)
         {
             GenericDefinition = genericDefinition;
@@ -55,7 +55,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             }
         }
 
-        internal bool IsMaterialized
+        public bool IsMaterialized
         {
             get
             {

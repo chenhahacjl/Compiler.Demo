@@ -26,7 +26,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     ///   运算符     文本记号 + - * / % << >> &amp; | ^ == != &lt; &lt;= &gt; &gt;= &amp;&amp; || ! ~
     ///   布尔/枚举词： true false；public internal protected private；winapi cdecl stdcall；unicode ansi auto
     /// </summary>
-    internal static partial class CoaSerializer
+    public static partial class CoaSerializer
     {
         /// <summary>读 `.coa` 文本（兼容入口：无库名/无 external，跨库符号解析留空）。</summary>
         public static CoaProgram Read(string text)

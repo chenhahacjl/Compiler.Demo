@@ -6,7 +6,7 @@ using System.Text;
 namespace Cocoa.CodeGen.PE
 {
     /// <summary>IMAGE_RESOURCE_DIRECTORY — 资源目录（16 字节）。</summary>
-    internal readonly record struct ImageResourceDirectory(
+    public readonly record struct ImageResourceDirectory(
         uint Characteristics,
         uint TimeDateStamp,
         ushort MajorVersion,
@@ -41,7 +41,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_RESOURCE_DIRECTORY_ENTRY — 目录项（8 字节），高位为 NameIsString / DataIsDirectory。</summary>
-    internal readonly record struct ImageResourceDirectoryEntry(uint Name, uint OffsetToData)
+    public readonly record struct ImageResourceDirectoryEntry(uint Name, uint OffsetToData)
     {
         public const uint NameIsString = 0x80000000;
         public const uint DataIsDirectory = 0x80000000;
@@ -73,7 +73,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_RESOURCE_DIRECTORY_STRING — 资源目录名字符串（Length + UTF-16LE）。</summary>
-    internal readonly record struct ImageResourceDirectoryString(ushort Length, byte[] Value)
+    public readonly record struct ImageResourceDirectoryString(ushort Length, byte[] Value)
     {
         public string ValueString => Encoding.Unicode.GetString(Value);
 
@@ -91,7 +91,7 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>IMAGE_RESOURCE_DATA_ENTRY — 资源数据项（16 字节）。</summary>
-    internal readonly record struct ImageResourceDataEntry(
+    public readonly record struct ImageResourceDataEntry(
         uint OffsetToData,
         uint Size,
         uint CodePage,
@@ -118,12 +118,12 @@ namespace Cocoa.CodeGen.PE
     }
 
     /// <summary>资源树节点（解析产物）。</summary>
-    internal sealed record PeResourceNode(string Name, uint Id, IReadOnlyList<PeResourceNode> Children, PeResourceLeaf? Leaf);
+    public sealed record PeResourceNode(string Name, uint Id, IReadOnlyList<PeResourceNode> Children, PeResourceLeaf? Leaf);
 
-    internal sealed record PeResourceLeaf(uint Rva, uint Size);
+    public sealed record PeResourceLeaf(uint Rva, uint Size);
 
     /// <summary>资源表读取器：展开三层目录树（类型 → 名称 → 语言）。</summary>
-    internal static class PeResourceTable
+    public static class PeResourceTable
     {
         public static PeResourceNode? Read(ReadOnlySpan<byte> image, Func<uint, uint> rvaToOffset, uint rootRva)
         {

@@ -5,7 +5,7 @@ using System.Diagnostics;
 
 namespace Cocoa.CodeAnalysis.Binding
 {
-    internal static class BoundNodeFactory
+    public static class BoundNodeFactory
     {
         public static BoundBlockStatement Block(SyntaxNode syntax, params BoundStatement[] statements)
         {

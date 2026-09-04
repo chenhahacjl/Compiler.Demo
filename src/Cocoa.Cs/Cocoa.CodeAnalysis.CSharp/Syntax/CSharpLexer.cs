@@ -8,7 +8,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
     /// <br/>
     /// 字符 => Token
     /// </summary>
-    internal sealed class CSharpLexer : LexerBase
+    public sealed class CSharpLexer : LexerBase
     {
         public CSharpLexer(SyntaxTree syntaxTree)
             : base(syntaxTree)

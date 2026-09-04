@@ -9,7 +9,7 @@ namespace Cocoa.CodeAnalysis.Serialization
     /// `.coa` 文件名与目录发现约定（System*.coa 等）不受影响；消费方构建时按需生成并部署
     /// （缺失或 stamp 过期即现场再生，见 ProjectBuilder EnsureManagedDlls）。
     /// </summary>
-    internal static class CoaAssemblyNaming
+    public static class CoaAssemblyNaming
     {
         public const string ManagedSuffix = ".Managed";
 
