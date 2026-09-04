@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 /// <summary>补全状态机：触发时向 provider 请求候选，弹窗的选择/展示由 CompletionPopup 承担。</summary>
 internal sealed class CompletionEngine

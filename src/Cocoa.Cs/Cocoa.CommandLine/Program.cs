@@ -74,7 +74,7 @@ namespace Cocoa.Compiler
 
         private static void RunInteractive()
         {
-            using var engine = new Cocoa.Compiler.Terminal.ReplEngine();
+            using var engine = new Cocoa.Cli.Repl.ReplEngine();
             engine.Run();
         }
 

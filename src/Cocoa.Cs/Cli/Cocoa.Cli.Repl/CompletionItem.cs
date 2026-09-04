@@ -1,4 +1,4 @@
-namespace Cocoa.Compiler
+namespace Cocoa.Cli.Repl
 {
     internal sealed class CompletionItem
     {

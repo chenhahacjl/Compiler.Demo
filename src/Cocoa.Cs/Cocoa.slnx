@@ -17,6 +17,7 @@
   <Project Path="Cocoa.ProjectSystem/Cocoa.ProjectSystem.csproj" />
   <Project Path="Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
   <Project Path="Cocoa.Compiler.CSharp/Cocoa.Compiler.CSharp.csproj" />
+  <Project Path="Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
   <Project Path="Cocoa.CommandLine/Cocoa.CommandLine.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
 </Solution>

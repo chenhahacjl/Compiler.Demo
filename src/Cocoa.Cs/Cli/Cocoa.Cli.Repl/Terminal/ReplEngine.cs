@@ -4,13 +4,13 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Authoring;
+using Cocoa.Cli.Repl.Authoring;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
-internal sealed class ReplEngine : IDisposable
+public sealed class ReplEngine : IDisposable
 {
     private static readonly Dictionary<char, char> OpenToClose = new()
     {

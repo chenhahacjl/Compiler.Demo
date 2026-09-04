@@ -1,4 +1,4 @@
-namespace Cocoa.CodeAnalysis.Authoring
+namespace Cocoa.Cli.Repl.Authoring
 {
     public enum Classification
     {

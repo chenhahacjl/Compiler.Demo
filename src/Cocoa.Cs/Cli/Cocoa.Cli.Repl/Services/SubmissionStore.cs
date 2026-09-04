@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 /// <summary>提交文本的持久化（%LOCALAPPDATA%\Cocoa\Submissions）。</summary>
 internal sealed class SubmissionStore

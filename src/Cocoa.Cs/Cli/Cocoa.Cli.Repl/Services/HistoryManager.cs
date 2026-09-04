@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 /// <summary>提交历史与 PageUp/PageDown 导航（_index == Count 表示未在导航中）。</summary>
 internal sealed class HistoryManager

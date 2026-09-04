@@ -6,7 +6,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Symbols;
 using CocoaUsingSyntax = Cocoa.CodeAnalysis.Cocoa.Syntax.UsingDirectiveSyntax;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 internal sealed class CocoaCompletionProvider : ICompletionProvider
 {

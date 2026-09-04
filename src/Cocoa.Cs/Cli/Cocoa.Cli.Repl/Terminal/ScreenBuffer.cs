@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 internal sealed class ScreenBuffer
 {

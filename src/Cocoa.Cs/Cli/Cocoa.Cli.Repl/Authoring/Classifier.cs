@@ -2,7 +2,7 @@ using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 
-namespace Cocoa.CodeAnalysis.Authoring
+namespace Cocoa.Cli.Repl.Authoring
 {
     public sealed class Classifier
     {

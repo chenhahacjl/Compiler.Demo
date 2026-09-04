@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 internal sealed class InputHandler
 {

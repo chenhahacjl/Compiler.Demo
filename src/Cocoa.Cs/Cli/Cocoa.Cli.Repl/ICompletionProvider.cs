@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 internal interface ICompletionProvider
 {

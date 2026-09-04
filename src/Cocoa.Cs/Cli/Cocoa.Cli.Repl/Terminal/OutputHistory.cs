@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 /// <summary>输出区行缓冲：每行由带颜色的文本段组成（回显代码经语法分类着色，普通消息纯白）。</summary>
 internal sealed class OutputHistory

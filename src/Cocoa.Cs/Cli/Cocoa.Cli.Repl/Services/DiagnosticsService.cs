@@ -4,7 +4,7 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Cocoa.CodeAnalysis;
 
-namespace Cocoa.Compiler.Terminal;
+namespace Cocoa.Cli.Repl;
 
 /// <summary>后台实时诊断：主线程投递最新 live compilation，worker 排空队列只编译最新版本，
 /// 结果经 <see cref="TryTakePendingResult"/> 由主循环取回渲染（避免跨线程改 UI 状态）。</summary>
