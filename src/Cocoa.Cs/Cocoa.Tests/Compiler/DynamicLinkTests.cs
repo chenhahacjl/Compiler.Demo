@@ -90,5 +90,34 @@ namespace MyLib
             process.WaitForExit(30000);
             return (process.ExitCode, stdout + stderr);
         }
+
+        [Fact]
+        public void Closure_BareCli_UnifiedDynamicLink_DeploysManagedDlls()
+        {
+            // 阶段 6 并轨 Step C：裸 CLI（cocoa file.co -b dotnet）与 cocoa build 统一动态链接——
+            // 产物依赖系统托管 dll（不内联库体），运行期布局 = apphost + app.dll + X.Managed.dll。
+            // 闭包经统一链路求值，回归"裸 CLI 只测内联单 dll"的盲区。
+            var dir = CliTestRunner.NewTempDir("closure-cli");
+            File.WriteAllText(Path.Combine(dir, "Main.co"), @"using System
+function Main(): i32
+{
+    var x = 21
+    var f: (i32) -> i32 = (v: i32) => x + v
+    Console.WriteLine(f(21))
+    return 0
+}
+");
+
+            var build = CliTestRunner.Run("\"Main.co\" -b dotnet -o app.exe", dir);
+            Assert.True(build.ExitCode == 0, $"bare cli build failed: {build.Stdout}{build.Stderr}");
+
+            Assert.True(File.Exists(Path.Combine(dir, "System.Core.Managed.dll")), "系统库托管 dll 应按需生成（统一动态链接）");
+            Assert.True(File.Exists(Path.Combine(dir, "System.Core.Managed.dll.stamp")), "stamp 应随托管 dll 生成");
+            Assert.True(File.Exists(Path.Combine(dir, "app.exe")), "apphost 应存在");
+
+            var run = RunExe(Path.Combine(dir, "app.exe"));
+            Assert.Equal(0, run.exitCode);
+            Assert.Contains("42", run.output);
+        }
     }
 }

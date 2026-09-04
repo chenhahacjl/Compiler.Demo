@@ -281,7 +281,10 @@ namespace Cocoa.Cli
             }
 
             // 绑定期带引用（供 using 命名空间解析/外部类型解析；6e-M15）
-            var compilation = Compilation.Create(referencePaths.ToArray(), syntaxTrees.ToArray());
+            // 动态链接（阶段 B/C，对齐 ProjectBuilder.cs:92）：dotnet 后端默认链路——`.coa` 库成员经外部
+            // dll 依赖接入（产物不内联库体）；native 保持编译期合并。裸 CLI 与 cocoa build 从此语义一致。
+            var useDynamicLink = backend == CodeBackend.DotNet;
+            var compilation = Compilation.Create(referencePaths.ToArray(), useDynamicLink, syntaxTrees.ToArray());
 
             ImmutableArray<Diagnostic> diagnostics;
             try
@@ -330,9 +333,74 @@ namespace Cocoa.Cli
                 Console.Error.WriteDiagnostics(diagnostics);
             }
 
+            // 动态链接部署（阶段 C，对齐 ProjectBuilder.cs:195-209）：被消费 `.coa` 库按需生成
+            // X.Managed.dll 部署到输出目录（含 SystemLibrary 自动发现的系统库）；误删/过期现场再生。
+            if (useDynamicLink)
+            {
+                var outputDir = Path.GetDirectoryName(Path.GetFullPath(outputPath));
+                if (string.IsNullOrEmpty(outputDir))
+                {
+                    outputDir = ".";
+                }
+
+                if (!EnsureManagedDlls(compilation.CodLibraries.Select(l => (l.Name, l.SourcePath)), outputDir, effectiveTarget))
+                {
+                    return 1;
+                }
+            }
+
             Console.WriteLine(outputPath);
 
             return 0;
+        }
+
+        /// <summary>
+        /// 动态链接：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
+        /// 缺失或 stamp（cod sha256）过期 → 从 cod 现场再生（与 cocoa build 同机制）。
+        /// </summary>
+        private static bool EnsureManagedDlls(IEnumerable<(string Name, string SourcePath)> libraries, string outputDirectory, IlTarget target)
+        {
+            try
+            {
+                Directory.CreateDirectory(outputDirectory);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"error: 创建输出目录失败：{ex.Message}");
+                return false;
+            }
+
+            var ok = true;
+            foreach (var (name, sourcePath) in libraries)
+            {
+                if (name.Length == 0 || sourcePath.Length == 0 || !File.Exists(sourcePath))
+                {
+                    continue;
+                }
+
+                var managedDll = Path.Combine(outputDirectory, name + ".dll");
+                var stampPath = managedDll + ".stamp";
+                var codHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sourcePath));
+                var hashText = Convert.ToHexString(codHash).ToLowerInvariant();
+                var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
+
+                if (File.Exists(managedDll) && stamped == hashText)
+                {
+                    continue;
+                }
+
+                var diagnostics = CoaLibraryCompiler.EmitManagedDll(sourcePath, managedDll, target);
+                if (diagnostics.HasErrors())
+                {
+                    Console.Error.WriteDiagnostics(diagnostics);
+                    ok = false;
+                    continue;
+                }
+
+                File.WriteAllText(stampPath, hashText);
+            }
+
+            return ok;
         }
 
         private static bool TryTakeValue(string[] args, ref int index, string? inlineValue, out string value)
