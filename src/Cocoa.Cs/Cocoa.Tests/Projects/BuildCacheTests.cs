@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.IO;
-using Cocoa.ProjectSystem;
+using Cocoa.Build;
 using Xunit;
 
 namespace Cocoa.Tests.Projects

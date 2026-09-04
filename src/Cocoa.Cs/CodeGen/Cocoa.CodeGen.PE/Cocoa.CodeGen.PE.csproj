@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Nullable 已清零（5.3 首个项目），无 NoWarn 覆盖：任何 nullable 警告都会构建失败（棘轮） -->
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeGen.PE</RootNamespace>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+  </ItemGroup>
+</Project>

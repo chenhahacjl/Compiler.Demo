@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeGen.Managed.Writer</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Structure\Cocoa.CodeGen.Managed.Structure.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Reader\Cocoa.CodeGen.Managed.Reader.csproj" />
+  </ItemGroup>
+
+
+</Project>

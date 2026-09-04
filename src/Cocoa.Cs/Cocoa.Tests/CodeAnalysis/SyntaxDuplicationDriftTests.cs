@@ -41,10 +41,10 @@ namespace Cocoa.Tests.CodeAnalysis
         }
 
         private static string NodesDir(string dialect)
-            => Path.Combine(RepoRoot(), "src", "Cocoa.Cs", $"Cocoa.CodeAnalysis.{dialect}", "Syntax", "Nodes");
+            => Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", $"Cocoa.Dialects.{dialect}", "Syntax", "Nodes");
 
         private static string FactoryPath(string dialect)
-            => Path.Combine(RepoRoot(), "src", "Cocoa.Cs", $"Cocoa.CodeAnalysis.{dialect}", "Syntax", "Green", $"{dialect}GreenNodeFactory.cs");
+            => Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", $"Cocoa.Dialects.{dialect}", "Syntax", $"{dialect}GreenNodeFactory.cs");
 
         /// <summary>蓄意分化的 Binder partial（Cocoa 特有 for..range 绑定）。同步义务仍适用于其余代码。</summary>
         private static readonly HashSet<string> DivergentBinderFiles = new HashSet<string>(StringComparer.Ordinal)
@@ -55,11 +55,11 @@ namespace Cocoa.Tests.CodeAnalysis
         /// <summary>Roslyn 式按语言独立的 Binder/Compilation/SemanticModel partial（3c 决策：不提取 BinderBase，双写+漂移防护）。</summary>
         private static readonly string[] BinderSyncFiles = new[]
         {
-            Path.Combine("Binder", "Impl", "CSharpBinder.cs"),
-            Path.Combine("Binder", "Impl", "CSharpBinder.Declarations.cs"),
-            Path.Combine("Binder", "Impl", "CSharpBinder.Expressions.cs"),
-            Path.Combine("Binder", "Impl", "CSharpBinder.Statements.cs"),
-            Path.Combine("Binder", "Impl", "CSharpBinder.TypeResolution.cs"),
+            Path.Combine("Binder", "CSharpBinder.cs"),
+            Path.Combine("Binder", "CSharpBinder.Declarations.cs"),
+            Path.Combine("Binder", "CSharpBinder.Expressions.cs"),
+            Path.Combine("Binder", "CSharpBinder.Statements.cs"),
+            Path.Combine("Binder", "CSharpBinder.TypeResolution.cs"),
             Path.Combine("Compilation", "CSharpCompilation.cs"),
             Path.Combine("Compilation", "CSharpSemanticModel.cs"),
         };
@@ -87,8 +87,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Binder_Files_Stay_In_Sync_Modulo_Prefix_And_Comments()
         {
-            var csharpRoot = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.CSharp");
-            var cocoaRoot = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.Cocoa");
+            var csharpRoot = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", "Cocoa.Dialects.CSharp");
+            var cocoaRoot = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", "Cocoa.Dialects.Cocoa");
 
             foreach (var rel in BinderSyncFiles)
             {
@@ -112,12 +112,12 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Dialect_SyntaxFacts_Stay_Aligned_With_Shared()
         {
-            var sharedPath = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis", "Syntax", "SyntaxFacts.cs");
+            var sharedPath = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", "Cocoa.Compiler.Core", "Syntax", "SyntaxFacts.cs");
             var shared = StripCommentLines(File.ReadAllText(sharedPath, Encoding.UTF8));
 
             foreach (var dialect in new[] { "CSharp", "Cocoa" })
             {
-                var dialectPath = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", $"Cocoa.CodeAnalysis.{dialect}", "Syntax", $"{dialect}SyntaxFacts.cs");
+                var dialectPath = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", $"Cocoa.Dialects.{dialect}", "Syntax", $"{dialect}SyntaxFacts.cs");
                 var text = File.ReadAllText(dialectPath, Encoding.UTF8)
                     .Replace("CSharp", "Cocoa")
                     .Replace("CocoaSyntaxFacts", "SyntaxFacts")
@@ -193,9 +193,9 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void Dialect_Kind_Enums_Stay_Value_Aligned()
         {
-            var csharpEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.CSharp", "CSharpSyntaxKind.cs");
-            var cocoaEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis.Cocoa", "CocoaSyntaxKind.cs");
-            var sharedEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Cocoa.CodeAnalysis", "Syntax", "SyntaxKind.cs");
+            var csharpEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", "Cocoa.Dialects.CSharp", "CSharpSyntaxKind.cs");
+            var cocoaEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", "Cocoa.Dialects.Cocoa", "CocoaSyntaxKind.cs");
+            var sharedEnum = Path.Combine(RepoRoot(), "src", "Cocoa.Cs", "Compiler", "Cocoa.Compiler.Core", "Syntax", "SyntaxKind.cs");
             var csharpMembers = ParseKindMembers(csharpEnum);
             var cocoaMembers = ParseKindMembers(cocoaEnum);
             var sharedMembers = ParseKindMembers(sharedEnum);

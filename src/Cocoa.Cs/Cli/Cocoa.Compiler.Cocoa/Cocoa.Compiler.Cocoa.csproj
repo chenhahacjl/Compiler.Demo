@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>coc</AssemblyName>
+    <RootNamespace>Cocoa.Compiler.Cocoa</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
+    <ProjectReference Include="..\..\Compiler\Cocoa.Dialects.Cocoa\Cocoa.Dialects.Cocoa.csproj" />
+    <ProjectReference Include="..\..\Cli\Cocoa.Cli\Cocoa.Cli.csproj" />
+  </ItemGroup>
+
+
+  <PropertyGroup>
+    <!-- Nullable 棘轮（5.3）：本项目尚未清零，沿用压制；清零后删除本组即可纳入棘轮 -->
+    <NoWarn>$(NoWarn);CS8600;CS8602;CS8603;CS8604;CS8605;CS8618;CS8620;CS8625</NoWarn>
+  </PropertyGroup></Project>

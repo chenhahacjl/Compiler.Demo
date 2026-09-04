@@ -1,23 +1,22 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
-    <File Path="Directory.Build.targets" />
   </Folder>
-  <Project Path="Cocoa.CodeAnalysis/Cocoa.CodeAnalysis.csproj" />
-  <Project Path="Cocoa.CodeAnalysis.Cocoa/Cocoa.CodeAnalysis.Cocoa.csproj" />
-  <Project Path="Cocoa.CodeAnalysis.CSharp/Cocoa.CodeAnalysis.CSharp.csproj" />
-  <Project Path="Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
-  <Project Path="Cocoa.CodeGen.Managed.Writer/Cocoa.CodeGen.Managed.Writer.csproj" />
-  <Project Path="Cocoa.CodeGen.Managed.Structure/Cocoa.CodeGen.Managed.Structure.csproj" />
-  <Project Path="Cocoa.CodeGen.Managed.Reader/Cocoa.CodeGen.Managed.Reader.csproj" />
-  <Project Path="Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
-  <Project Path="Cocoa.CodeGen.Native.Lir/Cocoa.CodeGen.Native.Lir.csproj" />
   <Project Path="Cocoa.Targeting/Cocoa.Targeting.csproj" />
-<Project Path="Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
-  <Project Path="Cocoa.ProjectSystem/Cocoa.ProjectSystem.csproj" />
-  <Project Path="Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
-  <Project Path="Cocoa.Compiler.CSharp/Cocoa.Compiler.CSharp.csproj" />
+  <Project Path="Compiler/Cocoa.Compiler.Core/Cocoa.Compiler.Core.csproj" />
+  <Project Path="Compiler/Cocoa.Dialects.Cocoa/Cocoa.Dialects.Cocoa.csproj" />
+  <Project Path="Compiler/Cocoa.Dialects.CSharp/Cocoa.Dialects.CSharp.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.Managed.Structure/Cocoa.CodeGen.Managed.Structure.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.Managed.Reader/Cocoa.CodeGen.Managed.Reader.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.Managed.Writer/Cocoa.CodeGen.Managed.Writer.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.Native.Lir/Cocoa.CodeGen.Native.Lir.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
+  <Project Path="CodeGen/Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
+  <Project Path="Cli/Cocoa.Cli/Cocoa.Cli.csproj" />
   <Project Path="Cli/Cocoa.Cli.Repl/Cocoa.Cli.Repl.csproj" />
-  <Project Path="Cocoa.CommandLine/Cocoa.CommandLine.csproj" />
+  <Project Path="Cli/Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
+  <Project Path="Cli/Cocoa.Compiler.CSharp/Cocoa.Compiler.CSharp.csproj" />
+  <Project Path="Cocoa.Build/Cocoa.Build.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
 </Solution>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeAnalysis</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Structure\Cocoa.CodeGen.Managed.Structure.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Reader\Cocoa.CodeGen.Managed.Reader.csproj" />
+  </ItemGroup>
+
+
+</Project>

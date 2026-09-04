@@ -1,8 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
-  </ItemGroup>
-
-
-</Project>

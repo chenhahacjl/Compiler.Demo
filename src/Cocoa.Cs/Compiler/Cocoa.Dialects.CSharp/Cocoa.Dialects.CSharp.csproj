@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Cocoa.CodeAnalysis.CSharp</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
+  </ItemGroup>
+
+
+</Project>

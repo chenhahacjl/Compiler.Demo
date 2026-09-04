@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>Cocoa.Cli.Repl</RootNamespace>
+    <RootNamespace>Cocoa.CodeGen.Native</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,7 +10,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
-    <ProjectReference Include="..\..\Compiler\Cocoa.Dialects.Cocoa\Cocoa.Dialects.Cocoa.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native.Lir\Cocoa.CodeGen.Native.Lir.csproj" />
   </ItemGroup>
+
 
 </Project>

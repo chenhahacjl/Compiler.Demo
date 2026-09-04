@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using Cocoa.ProjectSystem;
+using Cocoa.Build;
 using Xunit;
 
 namespace Cocoa.Tests.Projects

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>cocoa</AssemblyName>
+    <RootNamespace>Cocoa.Cli</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Compiler\Cocoa.Compiler.Core\Cocoa.Compiler.Core.csproj" />
+    <ProjectReference Include="..\..\Compiler\Cocoa.Dialects.Cocoa\Cocoa.Dialects.Cocoa.csproj" />
+    <ProjectReference Include="..\..\Compiler\Cocoa.Dialects.CSharp\Cocoa.Dialects.CSharp.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Managed.Writer\Cocoa.CodeGen.Managed.Writer.csproj" />
+    <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
+    <ProjectReference Include="..\..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+  <ProjectReference Include="..\..\CodeGen\Cocoa.CodeGen.Interpreter\Cocoa.CodeGen.Interpreter.csproj" />
+    <ProjectReference Include="..\..\Cli\Cocoa.Cli.Repl\Cocoa.Cli.Repl.csproj" />
+    <ProjectReference Include="..\..\Cocoa.Build\Cocoa.Build.csproj" />
+  </ItemGroup>
+
+
+  <PropertyGroup>
+    <!-- Nullable 棘轮（5.3）：本项目尚未清零，沿用压制；清零后删除本组即可纳入棘轮 -->
+    <NoWarn>$(NoWarn);CS8600;CS8602;CS8603;CS8604;CS8605;CS8618;CS8620;CS8625</NoWarn>
+  </PropertyGroup></Project>

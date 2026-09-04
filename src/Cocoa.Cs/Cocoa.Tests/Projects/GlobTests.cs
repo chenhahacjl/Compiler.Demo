@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
-using Cocoa.ProjectSystem;
+using Cocoa.Build;
 using Xunit;
 
 namespace Cocoa.Tests.Projects

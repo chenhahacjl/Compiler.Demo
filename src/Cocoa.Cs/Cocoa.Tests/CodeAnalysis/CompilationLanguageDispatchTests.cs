@@ -68,7 +68,7 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             // Y-A3-4：CocoaLanguage 随 CO L1 迁入 Cocoa.CodeAnalysis.Cocoa；核心经 Language.Cocoa 反射装载解析
             var cocoa = Language.Cocoa;
-            Assert.Equal("Cocoa.CodeAnalysis.Cocoa", cocoa.GetType().Assembly.GetName().Name);
+            Assert.Equal("Cocoa.Dialects.Cocoa", cocoa.GetType().Assembly.GetName().Name);
             Assert.NotEqual(typeof(SyntaxTree).Assembly.GetName().Name, cocoa.GetType().Assembly.GetName().Name);
         }
 
