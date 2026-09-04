@@ -112,12 +112,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             parentScope.TryDeclareClass(NamedTypeSymbol.SystemMulticastDelegate);
 
             var language = syntaxTrees.IsDefaultOrEmpty ? Language.Cocoa : syntaxTrees[0].Language;
-            var binder = new CocoaBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, CocoaLanguage.Instance.LookupBuiltinType, codLibraries: codLibraries);
+            // 脚本链（REPL）：using 延续先前提交（对齐 csi）；非脚本编译每次独立
+            var seedUsings = isScript && previous != null ? previous.UsingNamespaces : ImmutableArray<string>.Empty;
+            var seedStatics = isScript && previous != null ? previous.UsingStatics : default(ImmutableArray<string>);
+            var binder = new CocoaBinder(isScript, parentScope, null, references?.ToImmutableArray() ?? ImmutableArray<string>.Empty, seedUsings, CocoaLanguage.Instance.LookupBuiltinType, seedStatics, codLibraries: codLibraries);
 
             binder.Diagnostics.AddRange(syntaxTrees.SelectMany(st => st.Diagnostics));
             if (binder.Diagnostics.HasErrors())
             {
-                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, ImmutableArray<string>.Empty, ImmutableArray<string>.Empty, ImmutableDictionary<string, string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
+                return new BoundGlobalScope(previous, binder.Diagnostics.ToImmutableArray(), null, null, ImmutableArray<FunctionSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<NamedTypeSymbol>.Empty, ImmutableArray<VariableSymbol>.Empty, ImmutableArray<BoundStatement>.Empty, seedUsings, seedStatics, ImmutableDictionary<string, string>.Empty, (references ?? Array.Empty<string>()).ToImmutableArray());
             }
 
             var globalStatements = syntaxTrees.SelectMany(st => st.Language.GetRootMembers(st))

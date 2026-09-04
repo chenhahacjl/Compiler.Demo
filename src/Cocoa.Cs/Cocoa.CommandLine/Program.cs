@@ -34,6 +34,12 @@ namespace Cocoa.Compiler
                 return 0;
             }
 
+            if (args.Any(a => a is "-i" or "--interactive"))
+            {
+                RunInteractive();
+                return 0;
+            }
+
             switch (args[0])
             {
                 case "build":
@@ -54,17 +60,23 @@ namespace Cocoa.Compiler
                     return DumpCommand.Run(args.Skip(1).ToArray());
                 case "-i":
                 case "--interactive":
-                    new CocoaRepl().Run();
+                    RunInteractive();
                     return 0;
             }
 
             if (args.Any(a => a is "-i" or "--interactive"))
             {
-                new CocoaRepl().Run();
+                RunInteractive();
                 return 0;
             }
 
             return Compile(args);
+        }
+
+        private static void RunInteractive()
+        {
+            using var engine = new Cocoa.Compiler.Terminal.ReplEngine();
+            engine.Run();
         }
 
         private static int Compile(string[] args)

@@ -8,5 +8,7 @@ namespace Cocoa.CodeAnalysis.Authoring
         Number,
         String,
         Comment,
+        Punctuation,
+        Operator,
     }
 }

@@ -113,6 +113,12 @@ namespace Cocoa.CodeAnalysis
             return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: null, linkCodDynamically: false, syntaxTrees);
         }
 
+        /// <summary>带引用的脚本编译（REPL #import 场景）：references 为 `.coa` 库/程序集路径。</summary>
+        public static Compilation CreateScript(Compilation? previous, string[]? references, params SyntaxTree[] syntaxTrees)
+        {
+            return CreateCompilation(isScript: true, previous, entryPointName: "Main", references: references, linkCodDynamically: false, syntaxTrees);
+        }
+
         /// <summary>
         /// 经语言工厂分派（Y §6.7 A0 + S-4.2 Compilation 分家）：CO → <see cref="CocoaCompilation"/>，
         /// C# → <see cref="CSharpCompilation"/>；子类随语言库落位，Core 仅持 <see cref="Language"/> 抽象。

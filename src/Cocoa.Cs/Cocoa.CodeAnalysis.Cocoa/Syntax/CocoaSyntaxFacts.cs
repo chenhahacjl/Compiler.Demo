@@ -538,6 +538,50 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             return !kind.IsTrivia() &&
                    (kind.IsKeyword() || kind.ToString().EndsWith("Token"));
         }
+        public static bool IsOpenBracket(this SyntaxKind kind)
+        {
+            return kind == SyntaxKind.OpenParenthesisToken ||
+                   kind == SyntaxKind.OpenBracketToken ||
+                   kind == SyntaxKind.OpenBraceToken;
+        }
+
+        public static bool IsCloseBracket(this SyntaxKind kind)
+        {
+            return kind == SyntaxKind.CloseParenthesisToken ||
+                   kind == SyntaxKind.CloseBracketToken ||
+                   kind == SyntaxKind.CloseBraceToken;
+        }
+
+        public static SyntaxKind GetCloseBracketKind(this SyntaxKind openKind)
+        {
+            switch (openKind)
+            {
+                case SyntaxKind.OpenParenthesisToken:
+                    return SyntaxKind.CloseParenthesisToken;
+                case SyntaxKind.OpenBracketToken:
+                    return SyntaxKind.CloseBracketToken;
+                case SyntaxKind.OpenBraceToken:
+                    return SyntaxKind.CloseBraceToken;
+                default:
+                    throw new Exception($"Unexpected open bracket: '{openKind}'");
+            }
+        }
+
+        public static SyntaxKind GetOpenBracketKind(this SyntaxKind closeKind)
+        {
+            switch (closeKind)
+            {
+                case SyntaxKind.CloseParenthesisToken:
+                    return SyntaxKind.OpenParenthesisToken;
+                case SyntaxKind.CloseBracketToken:
+                    return SyntaxKind.OpenBracketToken;
+                case SyntaxKind.CloseBraceToken:
+                    return SyntaxKind.OpenBraceToken;
+                default:
+                    throw new Exception($"Unexpected close bracket: '{closeKind}'");
+            }
+        }
     }
 }
+
 

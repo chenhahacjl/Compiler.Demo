@@ -75,8 +75,10 @@ namespace Cocoa.CodeAnalysis.Authoring
             var isKeyword = kind.IsKeyword();
             var isIdentifier = kind == SyntaxKind.IdentifierToken;
             var isNumber = kind == SyntaxKind.NumberToken;
-            var isString = kind == SyntaxKind.StringToken;
+            var isString = IsString(kind);
             var isComment = kind.IsComment();
+            var isPunctuation = IsPunctuation(kind);
+            var isOperator = !isKeyword && !isIdentifier && !isNumber && !isString && !isComment && !isPunctuation && IsOperator(kind);
 
             if (isKeyword)
                 return Classification.Keyword;
@@ -88,8 +90,36 @@ namespace Cocoa.CodeAnalysis.Authoring
                 return Classification.String;
             else if (isComment)
                 return Classification.Comment;
+            else if (isPunctuation)
+                return Classification.Punctuation;
+            else if (isOperator)
+                return Classification.Operator;
             else
                 return Classification.Text;
+        }
+
+        private static bool IsPunctuation(SyntaxKind kind)
+        {
+            return kind.IsOpenBracket() ||
+                   kind.IsCloseBracket() ||
+                   kind == SyntaxKind.DotToken ||
+                   kind == SyntaxKind.CommaToken ||
+                   kind == SyntaxKind.SemicolonToken ||
+                   kind == SyntaxKind.ColonToken;
+        }
+
+        private static bool IsString(SyntaxKind kind)
+        {
+            return kind == SyntaxKind.StringToken ||
+                   kind == SyntaxKind.VerbatimStringToken ||
+                   kind == SyntaxKind.RawStringToken ||
+                   kind == SyntaxKind.InterpolatedStringToken;
+        }
+
+        private static bool IsOperator(SyntaxKind kind)
+        {
+            return kind != SyntaxKind.EndOfFileToken &&
+                   kind != SyntaxKind.BadToken;
         }
     }
 }
