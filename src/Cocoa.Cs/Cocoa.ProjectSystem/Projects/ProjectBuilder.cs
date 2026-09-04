@@ -1,9 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
-using Cocoa.CodeAnalysis.Emit;
-using Cocoa.CodeGen.IL;
-using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.Targeting;
+using Cocoa.CodeGen.Managed.Writer;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IO;
 using System;
@@ -91,7 +89,7 @@ namespace Cocoa.ProjectSystem
 
             // 动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时以外部 dll 依赖接入（产物不内联库体）；
             // native 后端保持编译期合并（PE 静态链接）；cocoa 库产物自身不涉及
-            var linkCodDynamically = backend == ProjectBackend.DotNet && format != ProjectOutputFormat.Cod;
+            var linkCodDynamically = backend == CodeBackend.DotNet && format != ProjectOutputFormat.Cod;
 
             var fingerprint = BuildCache.ComputeFingerprint(
                 expansion.Files,
@@ -126,7 +124,7 @@ namespace Cocoa.ProjectSystem
                     // 托管 dll 不在此预生成——由消费方构建时按需生成（lazy，防派生产物被删后断链）
                     diagnostics = compilation.EmitCocoa(project.Name, outputFile);
                 }
-                else if (backend == ProjectBackend.Native)
+                else if (backend == CodeBackend.Native)
                 {
                     if (project.Output == ProjectOutputFormat.Dll)
                     {
@@ -321,21 +319,14 @@ namespace Cocoa.ProjectSystem
                 || sourceInfo.LastWriteTimeUtc != destinationInfo.LastWriteTimeUtc;
         }
 
-        private static TargetPlatform ParseTargetPlatform(string? overrideText, CocoaProjectPlatform projectPlatform)
+        private static TargetPlatform ParseTargetPlatform(string? overrideText, Architecture projectArch)
         {
-            var arch = projectPlatform == CocoaProjectPlatform.X86
-                ? Architecture.X86
-                : Architecture.X64;
-
-            if (overrideText != null)
+            var arch = overrideText?.ToLowerInvariant() switch
             {
-                arch = overrideText.ToLowerInvariant() switch
-                {
-                    "x86" => Architecture.X86,
-                    "x64" => Architecture.X64,
-                    _ => arch,
-                };
-            }
+                "x86" => Architecture.X86,
+                "x64" => Architecture.X64,
+                _ => projectArch,
+            };
 
             return new TargetPlatform(TargetOS.Windows, arch);
         }

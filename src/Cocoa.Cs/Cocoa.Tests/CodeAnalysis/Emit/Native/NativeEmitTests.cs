@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.PE;
+ using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 
@@ -80,8 +81,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
                 UseShellExecute = false,
             };
 
-            using var process = Process.Start(psi)!;
 
+            using var process = Process.Start(psi)!;
             if (input != null)
             {
                 var inputBytes = Encoding.Unicode.GetBytes(input);

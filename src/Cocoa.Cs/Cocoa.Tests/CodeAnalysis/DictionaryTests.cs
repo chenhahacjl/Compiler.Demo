@@ -308,7 +308,7 @@ function Main(): void
             var emitDiagnostics = compilation.Emit("dict-il",
                 new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
                 exePath,
-                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
+                Cocoa.Targeting.IlTarget.Parse("net9.0"));
             Assert.True(emitDiagnostics.IsEmpty, string.Join("\n", emitDiagnostics.Select(d => d.Message)));
         }
     }

@@ -15,9 +15,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Cocoa.CodeAnalysis\Cocoa.CodeAnalysis.csproj" />
-    <ProjectReference Include="..\Cocoa.CodeGen.IL\Cocoa.CodeGen.IL.csproj" />
-    <ProjectReference Include="..\Cocoa.CodeGen.Native\Cocoa.CodeGen.Native.csproj" />
-    <ProjectReference Include="..\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeGen.Managed.Writer\Cocoa.CodeGen.Managed.Writer.csproj" />
+    <ProjectReference Include="..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
   </ItemGroup>
 
 

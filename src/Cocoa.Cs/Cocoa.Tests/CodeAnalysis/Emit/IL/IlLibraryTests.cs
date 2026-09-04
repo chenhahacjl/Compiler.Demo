@@ -1,13 +1,14 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit;
+using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using Xunit;
 
-using Cocoa.CodeAnalysis.Emit.IL;
-using Cocoa.CodeGen.IL;
+using Cocoa.CodeGen.Managed.Structure;
+ using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.CodeGen.Managed.Writer;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlLibraryTests

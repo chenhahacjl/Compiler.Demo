@@ -1,16 +1,11 @@
+using Cocoa.Targeting;
 using System.Collections.Immutable;
 
 namespace Cocoa.ProjectSystem
 {
-    public enum ProjectBackend
-    {
-        Native,
-        DotNet,
-    }
-
     public sealed class ProjectBuildOptions
     {
-        public const ProjectBackend DefaultBackend = ProjectBackend.DotNet;
+        public const CodeBackend DefaultBackend = CodeBackend.DotNet;
 
         public ProjectOutputFormat? FormatOverride { get; set; }
         public string? PlatformOverride { get; set; }
@@ -18,7 +13,7 @@ namespace Cocoa.ProjectSystem
         public bool? DebugOverride { get; set; }
         public string? OutputFileOverride { get; set; }
         public ImmutableArray<string> ReferenceOverrides { get; set; } = ImmutableArray<string>.Empty;
-        public ProjectBackend? Backend { get; set; }
+        public CodeBackend? Backend { get; set; }
         public string? DotnetRuntimeOverride { get; set; }
         public string? CacheRoot { get; set; }
     }

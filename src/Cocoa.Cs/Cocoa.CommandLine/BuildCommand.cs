@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Emit;
+using Cocoa.Targeting;
 using Cocoa.ProjectSystem;
 using System;
 using System.Collections.Generic;
@@ -169,10 +169,10 @@ namespace Cocoa.Compiler
 
             var backend = backendText switch
             {
-                null => ProjectBackend.DotNet,
-                "dotnet" => ProjectBackend.DotNet,
-                "native" => ProjectBackend.Native,
-                _ => (ProjectBackend?)null,
+                null => CodeBackend.DotNet,
+                "dotnet" => CodeBackend.DotNet,
+                "native" => CodeBackend.Native,
+                _ => (CodeBackend?)null,
             };
             if (backend == null)
             {

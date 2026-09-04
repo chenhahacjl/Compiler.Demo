@@ -5,11 +5,12 @@ using System.IO;
 using System.Linq;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using Cocoa.CodeAnalysis.Emit;
+using Cocoa.Targeting;
 using Xunit;
 
-using Cocoa.CodeGen.IL;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed.Structure;
+ using Cocoa.CodeGen.Managed.Reader;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlPInvokeTests

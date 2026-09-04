@@ -44,7 +44,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
                 name,
                 new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
                 exePath,
-                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
+                Cocoa.Targeting.IlTarget.Parse("net9.0"));
 
             var diagText = string.Join("\n", diagnostics);
             if (diagText.Length > 0)

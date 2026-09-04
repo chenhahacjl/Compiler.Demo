@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using Cocoa.ProjectSystem;
+using Cocoa.Targeting;
 using Xunit;
 
 namespace Cocoa.Tests.Projects
@@ -38,7 +39,7 @@ outputPath = bin
 
             Assert.Equal("MyApp", project.Name);
             Assert.Equal(ProjectOutputFormat.Exe, project.Output);
-            Assert.Equal(CocoaProjectPlatform.X64, project.Platform);
+            Assert.Equal(Architecture.X64, project.Platform);
             Assert.Equal("main", project.Entry);
             Assert.Equal(new[] { "src/*.co", "main.co" }, project.SourcePatterns.ToArray());
             Assert.Equal(new[] { "lib.coa" }, project.References.ToArray());
@@ -55,7 +56,7 @@ outputPath = bin
 
             Assert.Equal("Greeter", project.Name);
             Assert.Equal(ProjectOutputFormat.Exe, project.Output);
-            Assert.Equal(CocoaProjectPlatform.X64, project.Platform);
+            Assert.Equal(Architecture.X64, project.Platform);
             Assert.True(project.Incremental);
             Assert.False(project.Debug);
             Assert.Null(project.Entry);
@@ -208,7 +209,7 @@ outputPath = bin
 
             Assert.Equal("MyLocal", overrides.Name);
             Assert.Equal(ProjectOutputFormat.Dll, overrides.Output);
-            Assert.Equal(CocoaProjectPlatform.X86, overrides.Platform);
+            Assert.Equal(Architecture.X86, overrides.Platform);
             Assert.Equal("run", overrides.Entry);
             Assert.False(overrides.Incremental);
             Assert.True(overrides.Debug);
@@ -234,7 +235,7 @@ anything = goes
             var overrides = ProjectFileParser.ParseUserOverrides(text, "x.cocproj.user");
 
             Assert.Null(overrides.Name);
-            Assert.Equal(CocoaProjectPlatform.X86, overrides.Platform);
+            Assert.Equal(Architecture.X86, overrides.Platform);
             Assert.Null(overrides.Output);
         }
 
@@ -288,7 +289,7 @@ anything = goes
             var project = CocoaProjectFile.Load(projectPath);
 
             Assert.Equal("App", project.Name);
-            Assert.Equal(CocoaProjectPlatform.X86, project.Platform);
+            Assert.Equal(Architecture.X86, project.Platform);
             Assert.False(project.Incremental);
             Assert.Equal("local-bin", project.OutputPath);
             Assert.False(project.Debug);
@@ -304,7 +305,7 @@ anything = goes
             var project = CocoaProjectFile.Load(projectPath);
 
             Assert.Equal("App", project.Name);
-            Assert.Equal(CocoaProjectPlatform.X64, project.Platform);
+            Assert.Equal(Architecture.X64, project.Platform);
             Assert.True(project.Incremental);
         }
 

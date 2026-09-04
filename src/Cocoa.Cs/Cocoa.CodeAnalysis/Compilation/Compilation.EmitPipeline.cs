@@ -1,7 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
-using Cocoa.CodeAnalysis.Emit;
-using Cocoa.CodeGen.PE;
+using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Evaluation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;

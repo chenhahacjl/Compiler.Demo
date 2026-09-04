@@ -7,9 +7,12 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Cocoa.CodeAnalysis" />
     <InternalsVisibleTo Include="Cocoa.ProjectSystem" />
-    <InternalsVisibleTo Include="Cocoa.CodeGen.IL" />
+    <InternalsVisibleTo Include="Cocoa.CodeGen.Managed.Writer" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />
     <InternalsVisibleTo Include="cocoa" />
     <InternalsVisibleTo Include="Cocoa.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
   </ItemGroup>
 </Project>

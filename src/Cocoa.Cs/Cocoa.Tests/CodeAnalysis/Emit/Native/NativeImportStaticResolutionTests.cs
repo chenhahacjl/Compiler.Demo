@@ -5,6 +5,7 @@ using System.Linq;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.Native;
 using Cocoa.CodeGen.PE;
+ using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
 

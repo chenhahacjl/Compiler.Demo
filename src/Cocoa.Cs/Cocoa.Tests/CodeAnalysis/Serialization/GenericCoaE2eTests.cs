@@ -8,7 +8,7 @@ using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Tests.CodeAnalysis.Emit.IL;
@@ -194,7 +194,7 @@ function Main(): void
             var diagnostics = compilation.Emit("app-il",
                 new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location },
                 exePath,
-                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
+                Cocoa.Targeting.IlTarget.Parse("net9.0"));
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
 
             var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")

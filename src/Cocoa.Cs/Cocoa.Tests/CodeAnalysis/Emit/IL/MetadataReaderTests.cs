@@ -1,8 +1,9 @@
-using Cocoa.CodeAnalysis.Emit;
+
 using Xunit;
 
-using Cocoa.CodeAnalysis.Emit.IL;
-using Cocoa.CodeGen.IL;
+using Cocoa.CodeGen.Managed.Structure;
+ using Cocoa.CodeGen.Managed.Reader;
+using Cocoa.CodeGen.Managed.Writer;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class MetadataReaderTests

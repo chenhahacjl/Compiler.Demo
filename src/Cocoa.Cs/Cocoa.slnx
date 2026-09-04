@@ -7,8 +7,12 @@
   <Project Path="Cocoa.CodeAnalysis.Cocoa/Cocoa.CodeAnalysis.Cocoa.csproj" />
   <Project Path="Cocoa.CodeAnalysis.CSharp/Cocoa.CodeAnalysis.CSharp.csproj" />
   <Project Path="Cocoa.CodeGen.PE/Cocoa.CodeGen.PE.csproj" />
-  <Project Path="Cocoa.CodeGen.IL/Cocoa.CodeGen.IL.csproj" />
+  <Project Path="Cocoa.CodeGen.Managed.Writer/Cocoa.CodeGen.Managed.Writer.csproj" />
+  <Project Path="Cocoa.CodeGen.Managed.Structure/Cocoa.CodeGen.Managed.Structure.csproj" />
+  <Project Path="Cocoa.CodeGen.Managed.Reader/Cocoa.CodeGen.Managed.Reader.csproj" />
   <Project Path="Cocoa.CodeGen.Native/Cocoa.CodeGen.Native.csproj" />
+  <Project Path="Cocoa.CodeGen.Native.Lir/Cocoa.CodeGen.Native.Lir.csproj" />
+  <Project Path="Cocoa.Targeting/Cocoa.Targeting.csproj" />
 <Project Path="Cocoa.CodeGen.Interpreter/Cocoa.CodeGen.Interpreter.csproj" />
   <Project Path="Cocoa.ProjectSystem/Cocoa.ProjectSystem.csproj" />
   <Project Path="Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Immutable;
 using System.IO;
+using Cocoa.Targeting;
 
 namespace Cocoa.ProjectSystem
 {
@@ -11,19 +12,13 @@ namespace Cocoa.ProjectSystem
         Cod,
     }
 
-    public enum CocoaProjectPlatform
-    {
-        X64,
-        X86,
-    }
-
     public sealed class CocoaProjectFile
     {
         public CocoaProjectFile(
             string filePath,
             string name,
             ProjectOutputFormat output,
-            CocoaProjectPlatform platform,
+            Architecture platform,
             string? entry,
             ImmutableArray<string> sourcePatterns,
             ImmutableArray<string> references,
@@ -52,7 +47,7 @@ namespace Cocoa.ProjectSystem
         public string Directory { get; }
         public string Name { get; }
         public ProjectOutputFormat Output { get; }
-        public CocoaProjectPlatform Platform { get; }
+        public Architecture Platform { get; }
         public string? Entry { get; }
         public ImmutableArray<string> SourcePatterns { get; }
         public ImmutableArray<string> References { get; }

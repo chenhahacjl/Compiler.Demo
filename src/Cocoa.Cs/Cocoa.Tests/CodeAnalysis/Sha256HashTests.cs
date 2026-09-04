@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
@@ -94,7 +94,7 @@ function Main(): i32
             var exePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cocoa-sha256", "sha-il.exe");
             Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
             var diagnostics = compilation.Emit("sha-il", References(), exePath,
-                Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
+                Cocoa.Targeting.IlTarget.Parse("net9.0"));
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
         }
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Cocoa.Targeting;
 using System.Linq;
 
 namespace Cocoa.CodeGen.PE

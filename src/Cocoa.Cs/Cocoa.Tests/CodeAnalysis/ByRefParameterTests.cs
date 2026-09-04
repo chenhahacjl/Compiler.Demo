@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Tests.CodeAnalysis.Emit.IL;

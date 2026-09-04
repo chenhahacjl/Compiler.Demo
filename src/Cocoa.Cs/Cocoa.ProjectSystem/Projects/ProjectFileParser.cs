@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using Cocoa.Targeting;
 
 namespace Cocoa.ProjectSystem
 {
@@ -10,7 +11,7 @@ namespace Cocoa.ProjectSystem
     {
         public string? Name { get; set; }
         public ProjectOutputFormat? Output { get; set; }
-        public CocoaProjectPlatform? Platform { get; set; }
+        public Architecture? Platform { get; set; }
         public string? Entry { get; set; }
         public bool? Incremental { get; set; }
         public bool? Debug { get; set; }
@@ -314,12 +315,12 @@ namespace Cocoa.ProjectSystem
             };
         }
 
-        private static CocoaProjectPlatform ParsePlatform(string text)
+        private static Architecture ParsePlatform(string text)
         {
             return text.ToLowerInvariant() switch
             {
-                "x64" => CocoaProjectPlatform.X64,
-                "x86" => CocoaProjectPlatform.X86,
+                "x64" => Architecture.X64,
+                "x86" => Architecture.X86,
                 _ => throw new ProjectFileFormatException($"invalid platform '{text}'. Expected: x86, x64"),
             };
         }

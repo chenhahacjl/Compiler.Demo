@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Cocoa.CodeAnalysis.Emit;
+using Cocoa.Targeting;
 using Xunit;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {

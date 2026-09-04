@@ -1,7 +1,6 @@
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit;
+using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.Tests.CodeAnalysis.Emit.Native;
@@ -11,7 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using Xunit;
 
-using Cocoa.CodeGen.IL;
+using Cocoa.CodeGen.Managed.Writer;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>

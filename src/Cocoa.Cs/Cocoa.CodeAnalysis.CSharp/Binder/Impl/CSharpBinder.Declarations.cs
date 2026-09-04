@@ -9,7 +9,8 @@ using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeGen.Managed.Structure;
+ using Cocoa.CodeGen.Managed.Reader;
 namespace Cocoa.CodeAnalysis.CSharp.Binding
 {
     /// <summary>

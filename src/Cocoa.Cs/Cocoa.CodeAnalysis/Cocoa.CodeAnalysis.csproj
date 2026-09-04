@@ -6,7 +6,7 @@
     <InternalsVisibleTo Include="Cocoa.CodeAnalysis.CSharp" />
     <InternalsVisibleTo Include="Cocoa.CodeAnalysis.Cocoa" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.PE" />
-    <InternalsVisibleTo Include="Cocoa.CodeGen.IL" />
+    <InternalsVisibleTo Include="Cocoa.CodeGen.Managed.Writer" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.Native" />
     <InternalsVisibleTo Include="Cocoa.CodeGen.Interpreter" />
     <InternalsVisibleTo Include="Cocoa.ProjectSystem" />
@@ -17,7 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Cocoa.CodeGen.PE\Cocoa.CodeGen.PE.csproj" />
+    <ProjectReference Include="..\Cocoa.Targeting\Cocoa.Targeting.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeGen.Managed.Structure\Cocoa.CodeGen.Managed.Structure.csproj" />
+    <ProjectReference Include="..\Cocoa.CodeGen.Managed.Reader\Cocoa.CodeGen.Managed.Reader.csproj" />
   </ItemGroup>
 
 

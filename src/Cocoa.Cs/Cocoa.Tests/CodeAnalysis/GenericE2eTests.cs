@@ -6,9 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Cocoa.CodeAnalysis;
-using Cocoa.CodeAnalysis.Emit;
+using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using Xunit;
@@ -791,8 +790,8 @@ function Main()
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
             };
-            using var process = Process.Start(psi)!;
             using var output = new MemoryStream();
+            using var process = Process.Start(psi)!;
             var outputTask = process.StandardOutput.BaseStream.CopyToAsync(output);
 
             if (!process.WaitForExit(15000))

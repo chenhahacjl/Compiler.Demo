@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
-using Cocoa.CodeAnalysis.Emit;
+
 using Xunit;
 
-using Cocoa.CodeGen.IL;
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeGen.Managed.Writer;
+using Cocoa.CodeGen.Managed.Structure;
+ using Cocoa.CodeGen.Managed.Reader;
 namespace Cocoa.Tests.CodeAnalysis.Emit.IL
 {
     public class IlAssemblerTests

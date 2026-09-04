@@ -1,4 +1,5 @@
-using Cocoa.CodeAnalysis.Emit.IL;
+using Cocoa.CodeGen.Managed.Structure;
+ using Cocoa.CodeGen.Managed.Reader;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;

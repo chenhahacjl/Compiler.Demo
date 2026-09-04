@@ -1,7 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeGen.Native;
-using Cocoa.CodeGen.PE;
+using Cocoa.Targeting;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Diagnostics;
@@ -978,7 +978,7 @@ function Main(): void
             var ilTree = SyntaxTree.Parse(appSource);
             var ilCompilation = Compilation.Create("Main", refs, ilTree);
             var exePath = Path.Combine(dir, "app-il.exe");
-            var ilDiagnostics = ilCompilation.Emit("app-il", refs, exePath, Cocoa.CodeAnalysis.Emit.IlTarget.Parse("net9.0"));
+            var ilDiagnostics = ilCompilation.Emit("app-il", refs, exePath, Cocoa.Targeting.IlTarget.Parse("net9.0"));
             Assert.Empty(ilDiagnostics.Select(d => d.Message));
 
             var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"")

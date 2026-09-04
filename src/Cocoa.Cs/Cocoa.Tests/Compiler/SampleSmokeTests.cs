@@ -83,8 +83,8 @@ namespace Cocoa.Tests.Compiler
                 psi.ArgumentList.Add(arg);
             }
 
-            using var process = Process.Start(psi)!;
             using var output = new MemoryStream();
+            using var process = Process.Start(psi)!;
             var copyTask = process.StandardOutput.BaseStream.CopyToAsync(output);
             process.WaitForExit(30000);
             copyTask.Wait();
