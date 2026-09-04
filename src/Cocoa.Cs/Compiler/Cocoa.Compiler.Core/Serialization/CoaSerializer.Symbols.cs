@@ -56,6 +56,19 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 w.Field(MethodSignature(method));
             }
+            // 6e-Step D-a：类字段（含闭包环境类 __Env_* 捕获实例成员）随 fld 携带——供闭包读侧重建
+            var classFields = classType.Fields.ToArray();
+            w.Field("fields:" + classFields.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var field in classFields)
+            {
+                w.Open("fld");
+                w.Field(Str(field.Name));
+                w.Field(TypeRef(field.Type));
+                w.Field(field.Visibility.ToString().ToLowerInvariant());
+                w.Field(BoolWord(field.IsStatic));
+                w.Field(BoolWord(field.IsReadonly));
+                w.End();
+            }
             // 6b：facade 实例类属性声明（getter/setter 访问器为独立 fn `get_X`/`set_X`，读侧 fns 回填后挂接）
             var properties = classType.Properties;
             if (properties.Length > 0)

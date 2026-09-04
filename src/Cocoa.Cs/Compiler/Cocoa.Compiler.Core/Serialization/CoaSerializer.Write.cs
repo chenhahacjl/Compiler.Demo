@@ -378,7 +378,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
-                    // 调试信息降级：仅序列化内层语句。
+                    // 调试降级：memberassign 不携带调试信息（读侧不回填）。
                         var n = (BoundMemberAssignmentExpression)expression;
                         w.Open("memberassign");
                         WriteExpression(w, registry, labels, n.Target);
@@ -386,6 +386,33 @@ namespace Cocoa.CodeAnalysis.Serialization
                         w.Field(TypeRef(n.Field.Type));
                         w.Field(BoolWord(n.Field.IsStatic));
                         WriteExpression(w, registry, labels, n.Expression);
+                        w.End();
+                        break;
+                    }
+                case BoundNodeKind.FunctionValueExpression:
+                    {
+                        // Step D-a：函数值/捕获闭包——FnKey（lambda 合成方法或方法组）+ 可选接收者 + 可选闭包环境类
+                        var fd = (BoundFunctionValueExpression)expression;
+                        w.Open("fnval");
+                        w.Field(TypeRef(fd.Type));
+                        w.Field(registry.FnKey(fd.Function));
+                        WriteNullableExpression(w, registry, labels, fd.Receiver);
+                        w.Field(fd.EnvironmentClass != null ? TypeRef(fd.EnvironmentClass) : "-");
+                        w.End();
+                        break;
+                    }
+                case BoundNodeKind.InvocationExpression:
+                    {
+                        // Step D-a：函数值间接调用 `f(x)` / `obj.handler(a, b)`
+                        var iv = (BoundInvocationExpression)expression;
+                        w.Open("invoc");
+                        w.Field(TypeRef(iv.Type));
+                        w.Field(iv.Arguments.Length);
+                        WriteExpression(w, registry, labels, iv.Callee);
+                        foreach (var a in iv.Arguments)
+                        {
+                            WriteExpression(w, registry, labels, a);
+                        }
                         w.End();
                         break;
                     }

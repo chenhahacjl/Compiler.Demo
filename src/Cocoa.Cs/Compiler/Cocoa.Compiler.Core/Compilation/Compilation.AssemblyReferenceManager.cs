@@ -117,6 +117,13 @@ namespace Cocoa.CodeAnalysis
         /// </summary>
         private bool IsCodSerializableClass(NamedTypeSymbol classType)
         {
+            // 6e-Step D-a：闭包环境类（Binder 合成 __Env_*，捕获成员为实例字段）随库携带——
+            // 含实例字段/隐式构造，但其本体的捕获字段列与 lambda 方法（归 fn）序列化路径已具备。
+            if (classType.Name.StartsWith("__Env_", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
             return IsPureContainerClass(classType) || classType.IsFacadeClass || DeclaredFacade(classType);
         }
 

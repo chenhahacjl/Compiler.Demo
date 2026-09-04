@@ -389,6 +389,28 @@ namespace Cocoa.CodeAnalysis.Serialization
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
 
+            // 6e-Step D-a：类字段（含闭包环境类 __Env_* 捕获实例成员）解析回填——与写侧 fields:/methods: 顺序一致
+            if (reader.PeekRaw().StartsWith("fields:", StringComparison.Ordinal))
+            {
+                var classFieldCount = ReadCountField(reader, "fields:");
+                for (var i = 0; i < classFieldCount; i++)
+                {
+                    reader.Expect("fld");
+                    var fieldName = Unescape(reader.ExpectString());
+                    var fieldType = ResolveTypeRef(reader.ExpectString(), context);
+                    var fieldVisibilityText = reader.ExpectString();
+                    if (!Enum.TryParse<Visibility>(fieldVisibilityText, ignoreCase: true, out var fieldVisibility))
+                    {
+                        throw new InvalidDataException($"Unknown visibility '{fieldVisibilityText}' on field '{fullName}.{fieldName}'");
+                    }
+
+                    var isStatic = ParseBoolWord(reader.ExpectString());
+                    var isReadonly = ParseBoolWord(reader.ExpectString());
+                    classType.AddField(new FieldSymbol(fieldName, fieldType, fieldVisibility, classType, isReadonly, isStatic));
+                    reader.End();
+                }
+            }
+
             // 6b：facade 类属性声明解析（访问器 `get_X`/`set_X` 为独立 fn，读毕后回填挂接）
             if (reader.PeekRaw().StartsWith("props:", StringComparison.Ordinal))
             {

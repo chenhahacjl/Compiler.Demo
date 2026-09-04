@@ -331,6 +331,32 @@ namespace Cocoa.CodeAnalysis.Serialization
                         var expression = ReadExpression(reader, context, labels);
                         return new BoundAsExpression(NoSyntax, expression, targetType);
                     }
+                case "fnval":
+                    {
+                        // Step D-a：函数值/闭包入口——类型 + FnKey + 可选接收者 + 可选闭包环境类
+                        var fnType = (FunctionTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                        var function = ResolveFunction(reader.ExpectString(), context);
+                        var receiver = ReadNullableExpression(reader, context, labels);
+                        var envToken = reader.ExpectString();
+                        var environmentClass = envToken == "-"
+                            ? null
+                            : ResolveNamedType(envToken, context) as NamedTypeSymbol;
+
+                        return new BoundFunctionValueExpression(NoSyntax, function, receiver, body: null, fnType, environmentClass);
+                    }
+                case "invoc":
+                    {
+                        var ivType = ResolveTypeRef(reader.ExpectString(), context);
+                        var count = reader.ExpectInt();
+                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                        var callee = ReadExpression(reader, context, labels);
+                        for (var i = 0; i < count; i++)
+                        {
+                            arguments.Add(ReadExpression(reader, context, labels));
+                        }
+
+                        return new BoundInvocationExpression(NoSyntax, callee, arguments.ToImmutable(), ivType);
+                    }
                 default:
                     throw new InvalidDataException($"Unknown expression kind '{kind}'");
             }

@@ -145,12 +145,8 @@ namespace Cocoa.CodeAnalysis
                 return program.Diagnostics;
             }
 
-            // 6e-M22：lambda/函数值节点入 `.coa` 序列化于 C6 接入——先行明确诊断
-            var cocoaFunctionValueDiagnostic = FindFunctionValueDiagnostic(program);
-            if (cocoaFunctionValueDiagnostic != null)
-            {
-                return ImmutableArray.Create(cocoaFunctionValueDiagnostic);
-            }
+            // 6e-Step D-a：lambda/函数值/闭包环境类库体接入 .coa 序列化（fnval/invoc 节点 + cls 字段）。
+            // 门禁由序列化器兜底（未覆盖节点显式抛错），此处不再拦截。
 
             // 校验 1：库无入口
             if (program.MainFunction != null || program.ScriptFunction != null)
@@ -170,16 +166,6 @@ namespace Cocoa.CodeAnalysis
                 }
             }
 
-            // 校验 3：库体不含 OOP/.NET API 节点（类字段/方法/对象创建/this/base/静态类型等）
-            // S-7：.coa 持久化 raw（未 Lower）体——校验对象与序列化源一致（program.RawFunctions）
-            foreach (var (fn, body) in program.RawFunctions)
-            {
-                if (HasOopNode(body))
-                {
-                    return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, $"库函数 '{fn.Name}' 含 class/OOP 或 .NET API 调用，.coa 阶段 6b 后置（requires:dotnet）"));
-                }
-            }
-
             // 校验 4：必须声明 namespace
             var namespaces = CollectNamespaceNames();
             if (namespaces.Length == 0)
@@ -187,8 +173,27 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "output = cocoa 库必须声明 namespace（如 `namespace MyLib { ... }`）"));
             }
 
-            var functions = GlobalScope.Functions;
-            var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableArray();
+// 6e-Step D-a：库函数符号集 = 顶层声明序 ∪ 绑定体原始符号 ∪ 嵌套函数值（λ 合成 __Lambda$N）——
+// 否则 fnval 携带的 FnKey 消费方符号表缺失（"Unknown function"）。
+var rawBodies = program.RawFunctions;
+var collected = new Dictionary<FunctionSymbol, BoundBlockStatement>();
+var collectedOrder = new List<FunctionSymbol>();
+foreach (var (_, rawBody) in rawBodies)
+{
+    CollectFunctionValueBodies(rawBody, collected, collectedOrder);
+}
+// 嵌套 λ（内层函数值体再含函数值）至不动点
+for (var pass = 0; pass < collectedOrder.Count; pass++)
+{
+    CollectFunctionValueBodies(collected[collectedOrder[pass]], collected, collectedOrder);
+}
+
+var functions = GlobalScope.Functions
+    .Concat(rawBodies.Keys.Where(f => !GlobalScope.Functions.Contains(f)))
+    .Concat(collectedOrder)
+    .ToImmutableArray();
+var bodies = rawBodies.AddRange(collected);
+var globals = GlobalScope.Variables.OfType<GlobalVariableSymbol>().ToImmutableArray();
             var enums = GlobalScope.Enums;
 
             if (globals.Length > 0)
@@ -212,7 +217,7 @@ namespace Cocoa.CodeAnalysis
                 containerClasses,
                 // S-7：.coa bodies 序列化 raw（未 Lower 结构化 HIR：for/while/if 保留），
                 // 非 program.Functions（lowered/MIR）。消费方链接/动态发射处统一补 Lower。
-                program.RawFunctions,
+                bodies,
                 CoaRequirement.Any,
                 ImmutableArray<string>.Empty,
                 ImmutableArray<string>.Empty,
@@ -249,73 +254,27 @@ namespace Cocoa.CodeAnalysis
             }
         }
 
-        /// <summary>函数值节点扫描（6e-M22 C4 + M0-1b）：函数类型签名（参数/返回/字段）经 fnty 序列化已放行；
-        /// lambda/函数值表达式/间接调用的库体序列化未接入前仍拒绝。S-7：扫 raw（序列化源）。</summary>
-        private Diagnostic? FindFunctionValueDiagnostic(BoundProgram program)
+        /// <summary>新增节点序列化以兜底抛错为准（Write/Read 未覆盖的 kind 会在 EmitCocoa/载入时报显式错误，杜绝静默损坏流）。</summary>
+
+        /// <summary>Step D-a：从已经绑定 raw 体中抽取得 λ/方法值携带的已绑定体，入库符号+body 集合（至不动点，嵌套 λ 递归发现）。</summary>
+        private static void CollectFunctionValueBodies(
+            BoundNode node,
+            Dictionary<FunctionSymbol, BoundBlockStatement> collected,
+            List<FunctionSymbol> order)
         {
-            foreach (var (function, body) in program.RawFunctions)
+            if (node is BoundFunctionValueExpression { Body: not null } functionValue &&
+                !collected.ContainsKey(functionValue.Function))
             {
-                if (HasFunctionValueNode(body))
+                collected.Add(functionValue.Function, functionValue.Body);
+                order.Add(functionValue.Function);
+            }
+
+            foreach (var child in Compilation.BoundChildren(node))
+            {
+                if (child != null)
                 {
-                    var location = function.Syntax?.Location ?? ZeroLocation;
-                    return Diagnostic.Error(location, "lambda/函数值的库体序列化（fnty 并轨）未接入前，cod 库暂不支持。");
+                    CollectFunctionValueBodies(child, collected, order);
                 }
-            }
-
-            return null;
-        }
-
-        private static bool HasFunctionValueNode(BoundNode node)
-        {
-            if (node.Kind == BoundNodeKind.FunctionValueExpression || node.Kind == BoundNodeKind.InvocationExpression)
-            {
-                return true;
-            }
-
-            foreach (var child in BoundChildren(node))
-            {
-                if (HasFunctionValueNode(child))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        /// <summary>库体是否含 OOP/.NET API 节点（v1 拒绝：序列化阶段 6b 后置）。</summary>
-        private static bool HasOopNode(BoundNode node)
-        {
-            switch (node.Kind)
-            {
-                case BoundNodeKind.ObjectCreationExpression:
-                case BoundNodeKind.ThisExpression:
-                case BoundNodeKind.BaseExpression:
-                case BoundNodeKind.ConstructorChainExpression:
-                case BoundNodeKind.MemberAssignmentExpression:
-                case BoundNodeKind.ErrorExpression:
-                    return true;
-                case BoundNodeKind.StaticTypeExpression:
-                    // 容器类静态类型表达式（System.Runtime.Print 的目标）不是 OOP
-                    return false;
-                case BoundNodeKind.MemberAccessExpression:
-                    return ((BoundMemberAccessExpression)node).Field != null;
-                case BoundNodeKind.MemberCallExpression:
-                    {
-                        var call = (BoundMemberCallExpression)node;
-                        // 静态容器类方法调用（syscall/extern/带体静态方法，6e-M18）不是 OOP；实例方法/继承仍是
-                        return call.IsBase || (call.Method != null && !call.Method.IsStatic);
-                    }
-                default:
-                    foreach (var child in BoundChildren(node))
-                    {
-                        if (HasOopNode(child))
-                        {
-                            return true;
-                        }
-                    }
-
-                    return false;
             }
         }
     }
