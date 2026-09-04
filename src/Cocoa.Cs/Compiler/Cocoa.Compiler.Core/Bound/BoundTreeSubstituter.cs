@@ -363,6 +363,17 @@ namespace Cocoa.CodeAnalysis.Binding
             return new BoundElementAssignmentExpression(node.Syntax, targetType, target, value);
         }
 
+        protected override BoundExpression RewriteThisExpression(BoundThisExpression node)
+        {
+            var type = SubstituteType(node.Type);
+            if (type == node.Type)
+            {
+                return node;
+            }
+
+            return new BoundThisExpression(node.Syntax, (NamedTypeSymbol)type);
+        }
+
         protected override BoundExpression RewriteIsExpression(BoundIsExpression node)
         {
             var expression = RewriteExpression(node.Expression);

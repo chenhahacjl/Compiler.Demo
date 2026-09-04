@@ -5,7 +5,7 @@
 
 namespace System.Collections.Generic
 {
-    public class Dictionary<K, V>
+    public class Dictionary<K, V> extends IEnumerable<KeyValuePair<K, V>>
     {
         private _keys: K[]
         private _values: V[]
@@ -290,6 +290,50 @@ namespace System.Collections.Generic
             _values = newValues
             _next = newNext
             _buckets = newBuckets
+        }
+
+        /// <summary>返回键值对枚举器（快照数组），支撑 foreach。BCL Dictionary 枚举器同构。</summary>
+        public function GetEnumerator(): DictionaryEnumerator<K, V>
+        {
+            return new DictionaryEnumerator<K, V>(_keys, _values, _count)
+        }
+    }
+
+    /// <summary>Dictionary&lt;K,V&gt; 的前向枚举器（支撑 foreach），实现 IEnumerator&lt;KeyValuePair&lt;K,V&gt;&gt;。</summary>
+    public class DictionaryEnumerator<K, V> extends IEnumerator<KeyValuePair<K, V>>
+    {
+        private _keys: K[]
+        private _values: V[]
+        private _count: i32
+        private _index: i32
+
+        public constructor(keys: K[], values: V[], count: i32)
+        {
+            _keys = keys
+            _values = values
+            _count = count
+            _index = -1
+        }
+
+        /// <summary>推进到下一键值对，越界返回 false。</summary>
+        public function MoveNext(): bool
+        {
+            _index = _index + 1
+            if _index < _count
+            {
+                return true
+            }
+
+            return false
+        }
+
+        /// <summary>当前键值对（只读，每次构造新对）。</summary>
+        public property Current: KeyValuePair<K, V>
+        {
+            get
+            {
+                return new KeyValuePair<K, V>(_keys[_index], _values[_index])
+            }
         }
     }
 }

@@ -183,10 +183,10 @@ namespace System.Collections.Generic
         // 枚举（支持 foreach）
         // ------------------------------------------------------------------
 
-        /// <summary>返回枚举器供 foreach 使用（BCL IEnumerable&lt;T&gt;.GetEnumerator）。</summary>
+        /// <summary>返回快照数组 + 长度（与 HashSet/Queue/Stack 枚举器同构——传快照数组而非 this 引用，物化期签名稳定）。</summary>
         public function GetEnumerator(): ListEnumerator<T>
         {
-            return new ListEnumerator<T>(this)
+            return new ListEnumerator<T>(_items, _count)
         }
 
         // ------------------------------------------------------------------
@@ -218,32 +218,34 @@ namespace System.Collections.Generic
         }
     }
 
-    /// <summary>List&lt;T&gt; 的前向枚举器（支撑 foreach），实现 IEnumerator&lt;T&gt;。</summary>
-    public class ListEnumerator<T> extends IEnumerator<T>
+/// <summary>List&lt;T&gt; 的前向枚举器（支撑 foreach），实现 IEnumerator&lt;T&gt;。</summary>
+public class ListEnumerator<T> extends IEnumerator<T>
+{
+    private _items: T[]
+    private _count: i32
+    private _index: i32
+
+    public constructor(items: T[], count: i32)
     {
-        private _list: List<T>
-        private _index: i32
+        _items = items
+        _count = count
+        _index = -1
+    }
 
-        public constructor(list: List<T>)
-        {
-            _list = list
-            _index = -1
-        }
+    /// <summary>推进到下一元素，越界返回 false。</summary>
+    public function MoveNext(): bool
+    {
+        _index = _index + 1
+        return _index < _count
+    }
 
-        /// <summary>推进到下一元素，越界返回 false。</summary>
-        public function MoveNext(): bool
+    /// <summary>当前元素（只读）。</summary>
+    public property Current: T
+    {
+        get
         {
-            _index = _index + 1
-            return _index < _list.Count
-        }
-
-        /// <summary>当前元素（只读）。</summary>
-        public property Current: T
-        {
-            get
-            {
-                return _list[_index]
-            }
+            return _items[_index]
         }
     }
+}
 }

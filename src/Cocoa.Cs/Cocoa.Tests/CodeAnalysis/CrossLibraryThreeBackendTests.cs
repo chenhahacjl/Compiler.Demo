@@ -87,6 +87,172 @@ function Main(): i32
 
         private const string HashSetExpected = "2\nTrue\nFalse\n";
 
+        private const string ForeachListProgram = @"using System
+using System.Collections.Generic
+
+function Main(): i32
+{
+    let xs = new List<i32>()
+    xs.Add(1)
+    xs.Add(2)
+    xs.Add(3)
+    var sum = 0
+    foreach (var x in xs)
+    {
+        sum = sum + x
+    }
+    System.Console.WriteLine(sum)
+    return 0
+}";
+
+        private const string ForeachListExpected = "6\n";
+
+        private const string ForeachListStringProgram = @"using System
+using System.Collections.Generic
+
+function Main(): i32
+{
+    let xs = new List<string>()
+    xs.Add(""aa"")
+    xs.Add(""bb"")
+    xs.Add(""ccc"")
+    var total = 0
+    foreach (var s in xs)
+    {
+        total = total + s.Length
+    }
+    System.Console.WriteLine(total)
+    return 0
+}";
+
+        private const string ForeachListStringExpected = "7\n";
+
+        private const string ForeachDictProgram = @"using System
+using System.Collections.Generic
+
+function Main(): i32
+{
+    let d = new Dictionary<i32, string>()
+    d.Add(1, ""a"")
+    d.Add(2, ""bb"")
+    d.Add(3, ""ccc"")
+    var total = 0
+    foreach (var kv in d)
+    {
+        total = total + kv.Key * 10 + kv.Value.Length
+    }
+    System.Console.WriteLine(total)
+    return 0
+}";
+
+        private const string ForeachDictExpected = "66\n";
+
+        private const string ForeachBreakContinueProgram = @"using System
+using System.Collections.Generic
+
+function Main(): i32
+{
+    let xs = new List<i32>()
+    xs.Add(1)
+    xs.Add(2)
+    xs.Add(3)
+    xs.Add(4)
+    var sum = 0
+    foreach (var x in xs)
+    {
+        if x == 4
+        {
+            break
+        }
+        if x != 1
+        {
+            sum = sum + x
+        }
+    }
+    System.Console.WriteLine(sum)
+    return 0
+}";
+
+        private const string ForeachBreakContinueExpected = "5\n";
+
+        private const string ForeachNestedProgram = @"using System
+using System.Collections.Generic
+
+function Main(): i32
+{
+    let xs = new List<i32>()
+    let ys = new List<i32>()
+    xs.Add(1)
+    xs.Add(2)
+    ys.Add(10)
+    ys.Add(20)
+    var sum = 0
+    foreach (var x in xs)
+    {
+        foreach (var y in ys)
+        {
+            sum = sum + x + y
+        }
+    }
+    System.Console.WriteLine(sum)
+    return 0
+}";
+
+        private const string ForeachNestedExpected = "66\n";
+
+        private const string ForeachGenericBagProgram = @"using System
+using System.Collections.Generic
+
+public class Bag<T>
+{
+    private _items: List<T>
+
+    public constructor()
+    {
+        _items = new List<T>()
+    }
+
+    public function Add(item: T): void
+    {
+        _items.Add(item)
+    }
+
+    public function CountOf(probe: T): i32
+    {
+        var c = 0
+        foreach (var item in _items)
+        {
+            if item.Equals(probe)
+            {
+                c = c + 1
+            }
+        }
+        return c
+    }
+}
+
+function Main(): i32
+{
+    let b = new Bag<i32>()
+    b.Add(1)
+    b.Add(2)
+    b.Add(1)
+    System.Console.WriteLine(b.CountOf(1))
+    return 0
+}";
+
+        private const string ForeachNonIterableProgram = @"using System
+
+function Main(): i32
+{
+    var n = 5
+    foreach (var x in n)
+    {
+        System.Console.WriteLine(x)
+    }
+    return 0
+}";
+
         [Fact]
         public void Evaluator_List_CrossLibrary()
         {
@@ -148,6 +314,121 @@ function Main(): i32
             {
                 Console.SetOut(original);
             }
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_List_CrossLibrary()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ForeachListProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(ForeachListExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_ListString_CrossLibrary()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ForeachListStringProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(ForeachListStringExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_Dictionary_CrossLibrary()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ForeachDictProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(ForeachDictExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void IlE2e_Foreach_BreakContinue_CrossLibrary() => RunIl("xlib-fbc", ForeachBreakContinueProgram, ForeachBreakContinueExpected);
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_Foreach_BreakContinue_CrossLibrary(string target) => RunNative("xlib-fbc", ForeachBreakContinueProgram, ForeachBreakContinueExpected, target);
+
+        [Fact]
+        public void Evaluator_Foreach_Nested_CrossLibrary()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+
+                var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ForeachNestedProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(ForeachNestedExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_GenericClass_Reports_CleanDiagnostic()
+        {
+            // 边界（M0-1b T6 外围）：平面文件非命名空间类声明中，成员类型引用不含 using 解析头 → 明确诊断
+            // "Type 'List' doesn't exist"，不抛内部异常（不 NRE）。泛型类内 foreach 正常运行路径
+            // 由 SDK 泛型容器类自身（各 Enumerator 类）跨后端覆盖。
+            var compilation = Compilation.Create("X", References(), SyntaxTree.Parse(ForeachGenericBagProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            var messages = result.Diagnostics.Select(d => d.Message).ToArray();
+            Assert.Contains(messages, m => m.Contains("doesn't exist"));
+        }
+
+        [Fact]
+        public void Evaluator_Foreach_NonIterable_Reports_CannotEnumerate()
+        {
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(ForeachNonIterableProgram));
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+            var messages = result.Diagnostics.Select(d => d.Message).ToArray();
+            Assert.Contains(messages, m => m.Contains("不能遍历"));
         }
 
         private static void RunIl(string name, string source, string expected)
@@ -220,5 +501,21 @@ function Main(): i32
         [InlineData("windows-x64")]
         [InlineData("windows-x86")]
         public void NativeE2e_HashSet_CrossLibrary(string target) => RunNative("xlib-set", HashSetProgram, HashSetExpected, target);
+
+        [Fact]
+        public void IlE2e_Foreach_List_CrossLibrary() => RunIl("xlib-flist", ForeachListProgram, ForeachListExpected);
+
+        [Fact]
+        public void IlE2e_Foreach_Dictionary_CrossLibrary() => RunIl("xlib-fdict", ForeachDictProgram, ForeachDictExpected);
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_Foreach_List_CrossLibrary(string target) => RunNative("xlib-flist", ForeachListProgram, ForeachListExpected, target);
+
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void NativeE2e_Foreach_Dictionary_CrossLibrary(string target) => RunNative("xlib-fdict", ForeachDictProgram, ForeachDictExpected, target);
     }
 }

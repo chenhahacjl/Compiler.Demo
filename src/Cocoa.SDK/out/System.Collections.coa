@@ -1,6 +1,17 @@
 (cod COCOA 1
   (symbols
-    (gcls System.Collections.Generic.Dictionary public iface:false ifaces:0 tparams:2
+    (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0
+    )
+    (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
+      (tpar TKey 0 - c:0)
+      (tpar TValue 1 - c:0) fields:2
+      (fld _key !System.Collections.Generic.KeyValuePair.TKey private false false)
+      (fld _value !System.Collections.Generic.KeyValuePair.TValue private false false) methods:0 props:2
+      (prop Key !System.Collections.Generic.KeyValuePair.TKey true false public false)
+      (prop Value !System.Collections.Generic.KeyValuePair.TValue true false public false)
+    )
+    (gcls System.Collections.Generic.Dictionary public iface:false ifaces:1 System.Collections.Generic.IEnumerable`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.Dictionary.K$!System.Collections.Generic.Dictionary.V tparams:2
       (tpar K 0 - c:0)
       (tpar V 1 - c:0) fields:5
       (fld _keys !System.Collections.Generic.Dictionary.K[] private false false)
@@ -13,21 +24,23 @@
       (prop Values !System.Collections.Generic.Dictionary.V[] true false public false)
       (prop Item !System.Collections.Generic.Dictionary.V true true public false)
     )
-    (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
-      (tpar TKey 0 - c:0)
-      (tpar TValue 1 - c:0) fields:2
-      (fld _key !System.Collections.Generic.KeyValuePair.TKey private false false)
-      (fld _value !System.Collections.Generic.KeyValuePair.TValue private false false) methods:0 props:2
-      (prop Key !System.Collections.Generic.KeyValuePair.TKey true false public false)
-      (prop Value !System.Collections.Generic.KeyValuePair.TValue true false public false)
+    (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
+      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
+    )
+    (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V tparams:2
+      (tpar K 0 - c:0)
+      (tpar V 1 - c:0) fields:4
+      (fld _keys !System.Collections.Generic.DictionaryEnumerator.K[] private false false)
+      (fld _values !System.Collections.Generic.DictionaryEnumerator.V[] private false false)
+      (fld _count @i32 private false false)
+      (fld _index @i32 private false false) methods:0 props:1
+      (prop Current System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V true false public false)
     )
     (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 tparams:1
       (tpar T 0 - c:0) fields:0 methods:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
-    )
-    (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0
     )
     (gcls System.Collections.Generic.HashSet public iface:false ifaces:2 System.Collections.Generic.ICollection`1#!System.Collections.Generic.HashSet.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.HashSet.T tparams:1
       (tpar T 0 - c:0) fields:2
@@ -35,10 +48,6 @@
       (fld _count @i32 private false false) methods:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
-    )
-    (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0 props:1
-      (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.HashSetEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.HashSetEnumerator.T tparams:1
       (tpar T 0 - c:0) fields:3
@@ -69,8 +78,9 @@
       (prop Item !System.Collections.Generic.List.T true true public false)
     )
     (gcls System.Collections.Generic.ListEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.ListEnumerator.T tparams:1
-      (tpar T 0 - c:0) fields:2
-      (fld _list System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T private false false)
+      (tpar T 0 - c:0) fields:3
+      (fld _items !System.Collections.Generic.ListEnumerator.T[] private false false)
+      (fld _count @i32 private false false)
       (fld _index @i32 private false false) methods:0 props:1
       (prop Current !System.Collections.Generic.ListEnumerator.T true false public false)
     )
@@ -261,9 +271,17 @@
     (fn System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32] name:Rehash ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
       (par System.Collections!System.Collections.Generic.Dictionary.Rehash[@i32]/newLen newLen @i32 0 - -)
     )
+    (fn System.Collections!System.Collections.Generic.Dictionary.GetEnumerator[] name:GetEnumerator ret:System.Collections.Generic.DictionaryEnumerator`2#!System.Collections.Generic.Dictionary.K$!System.Collections.Generic.Dictionary.V ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32] name:DictionaryEnumerator ret:@void ns:- owner:System.Collections.Generic.DictionaryEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:3
+      (par System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]/keys keys !System.Collections.Generic.DictionaryEnumerator.K[] 0 - -)
+      (par System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]/values values !System.Collections.Generic.DictionaryEnumerator.V[] 1 - -)
+      (par System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]/count count @i32 2 - -)
+    )
+    (fn System.Collections!System.Collections.Generic.DictionaryEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.DictionaryEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Collections!System.Collections.Generic.DictionaryEnumerator.get_Current[] name:get_Current ret:System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V ns:- owner:System.Collections.Generic.DictionaryEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Collections!System.Collections.Generic.KeyValuePair.get_Key[] name:get_Key ret:!System.Collections.Generic.KeyValuePair.TKey ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Collections!System.Collections.Generic.KeyValuePair.get_Value[] name:get_Value ret:!System.Collections.Generic.KeyValuePair.TValue ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
-    (fn System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue] name:KeyValuePair ret:@void ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+    (fn System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue] name:KeyValuePair ret:@void ns:- owner:System.Collections.Generic.KeyValuePair extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
       (par System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]/key key !System.Collections.Generic.KeyValuePair.TKey 0 - -)
       (par System.Collections!System.Collections.Generic.KeyValuePair.KeyValuePair[!System.Collections.Generic.KeyValuePair.TKey,!System.Collections.Generic.KeyValuePair.TValue]/value value !System.Collections.Generic.KeyValuePair.TValue 1 - -)
     )
@@ -343,8 +361,9 @@
     (fn System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32] name:EnsureCapacity ret:@void ns:- owner:System.Collections.Generic.List extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
       (par System.Collections!System.Collections.Generic.List.EnsureCapacity[@i32]/required required @i32 0 - -)
     )
-    (fn System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T] name:ListEnumerator ret:@void ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
-      (par System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T]/list list System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T 0 - -)
+    (fn System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[!System.Collections.Generic.ListEnumerator.T[],@i32] name:ListEnumerator ret:@void ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[!System.Collections.Generic.ListEnumerator.T[],@i32]/items items !System.Collections.Generic.ListEnumerator.T[] 0 - -)
+      (par System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[!System.Collections.Generic.ListEnumerator.T[],@i32]/count count @i32 1 - -)
     )
     (fn System.Collections!System.Collections.Generic.ListEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Collections!System.Collections.Generic.ListEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.ListEnumerator.T ns:- owner:System.Collections.Generic.ListEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
@@ -439,6 +458,96 @@
     (loc System.Collections!System.Collections.Generic.Stack.Push[!System.Collections.Generic.Stack.T]/i false @i32)
   )
   (bodies
+    (body System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]
+      (block 4
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.DictionaryEnumerator) name:_keys !System.Collections.Generic.DictionaryEnumerator.K[] false
+            (var System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]/keys)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.DictionaryEnumerator) name:_values !System.Collections.Generic.DictionaryEnumerator.V[] false
+            (var System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]/values)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.DictionaryEnumerator) name:_count @i32 false
+            (var System.Collections!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]/count)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.DictionaryEnumerator) name:_index @i32 false
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.DictionaryEnumerator.MoveNext[]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.DictionaryEnumerator) name:_index @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _index owner:System.Collections.Generic.DictionaryEnumerator
+                (this System.Collections.Generic.DictionaryEnumerator)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (if
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _index owner:System.Collections.Generic.DictionaryEnumerator
+              (this System.Collections.Generic.DictionaryEnumerator)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.DictionaryEnumerator
+              (this System.Collections.Generic.DictionaryEnumerator)
+            )
+          )
+          (block 1
+            (return
+              (lit @bool b:1)
+            )
+          ) -
+        )
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.DictionaryEnumerator.get_Current[]
+      (block 1
+        (return
+          (objnew System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V 2
+            (elem !System.Collections.Generic.DictionaryEnumerator.K
+              (memberacc !System.Collections.Generic.DictionaryEnumerator.K[] _keys owner:System.Collections.Generic.DictionaryEnumerator
+                (this System.Collections.Generic.DictionaryEnumerator)
+              )
+              (memberacc @i32 _index owner:System.Collections.Generic.DictionaryEnumerator
+                (this System.Collections.Generic.DictionaryEnumerator)
+              )
+            )
+            (elem !System.Collections.Generic.DictionaryEnumerator.V
+              (memberacc !System.Collections.Generic.DictionaryEnumerator.V[] _values owner:System.Collections.Generic.DictionaryEnumerator
+                (this System.Collections.Generic.DictionaryEnumerator)
+              )
+              (memberacc @i32 _index owner:System.Collections.Generic.DictionaryEnumerator
+                (this System.Collections.Generic.DictionaryEnumerator)
+              )
+            )
+          )
+        )
+      )
+    )
     (body System.Collections!System.Collections.Generic.Dictionary.Add[!System.Collections.Generic.Dictionary.K,!System.Collections.Generic.Dictionary.V]
       (block 2
         (if
@@ -692,6 +801,23 @@
           (unary
             (uop - @i32)
             (lit @i32 i:1)
+          )
+        )
+      )
+    )
+    (body System.Collections!System.Collections.Generic.Dictionary.GetEnumerator[]
+      (block 1
+        (return
+          (objnew System.Collections.Generic.DictionaryEnumerator`2#!System.Collections.Generic.Dictionary.K$!System.Collections.Generic.Dictionary.V 3
+            (memberacc !System.Collections.Generic.Dictionary.K[] _keys owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (memberacc !System.Collections.Generic.Dictionary.V[] _values owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.Dictionary
+              (this System.Collections.Generic.Dictionary)
+            )
           )
         )
       )
@@ -2113,12 +2239,18 @@
         )
       )
     )
-    (body System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T]
-      (block 2
+    (body System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[!System.Collections.Generic.ListEnumerator.T[],@i32]
+      (block 3
         (exprstmt
           (memberassign
-            (this System.Collections.Generic.ListEnumerator) name:_list System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T false
-            (var System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T]/list)
+            (this System.Collections.Generic.ListEnumerator) name:_items !System.Collections.Generic.ListEnumerator.T[] false
+            (var System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[!System.Collections.Generic.ListEnumerator.T[],@i32]/items)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Collections.Generic.ListEnumerator) name:_count @i32 false
+            (var System.Collections!System.Collections.Generic.ListEnumerator.ListEnumerator[!System.Collections.Generic.ListEnumerator.T[],@i32]/count)
           )
         )
         (exprstmt
@@ -2152,10 +2284,8 @@
             (memberacc @i32 _index owner:System.Collections.Generic.ListEnumerator
               (this System.Collections.Generic.ListEnumerator)
             )
-            (membercall @i32 get_Count System.Collections!System.Collections.Generic.System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T.get_Count[] 0
-              (memberacc System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T _list owner:System.Collections.Generic.ListEnumerator
-                (this System.Collections.Generic.ListEnumerator)
-              )
+            (memberacc @i32 _count owner:System.Collections.Generic.ListEnumerator
+              (this System.Collections.Generic.ListEnumerator)
             )
           )
         )
@@ -2164,8 +2294,8 @@
     (body System.Collections!System.Collections.Generic.ListEnumerator.get_Current[]
       (block 1
         (return
-          (membercall !System.Collections.Generic.ListEnumerator.T get_Item System.Collections!System.Collections.Generic.System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T.get_Item[@i32] 1
-            (memberacc System.Collections.Generic.List`1#!System.Collections.Generic.ListEnumerator.T _list owner:System.Collections.Generic.ListEnumerator
+          (elem !System.Collections.Generic.ListEnumerator.T
+            (memberacc !System.Collections.Generic.ListEnumerator.T[] _items owner:System.Collections.Generic.ListEnumerator
               (this System.Collections.Generic.ListEnumerator)
             )
             (memberacc @i32 _index owner:System.Collections.Generic.ListEnumerator
@@ -2386,8 +2516,13 @@
     (body System.Collections!System.Collections.Generic.List.GetEnumerator[]
       (block 1
         (return
-          (objnew System.Collections.Generic.ListEnumerator`1#!System.Collections.Generic.List.T 1
-            (this System.Collections.Generic.List)
+          (objnew System.Collections.Generic.ListEnumerator`1#!System.Collections.Generic.List.T 2
+            (memberacc !System.Collections.Generic.List.T[] _items owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
+            (memberacc @i32 _count owner:System.Collections.Generic.List
+              (this System.Collections.Generic.List)
+            )
           )
         )
       )
@@ -3415,4 +3550,4 @@
     (ns System.Collections.Generic)
   )
 )
-(checksum sha256:dc620cb3122c73425b43eb104f5192dd3d76e410b5dc1f38f1ed0a382644e052)
+(checksum sha256:90e9a770995958010d4a5a6bef109e395b13c798728c54581283700e90df4a46)

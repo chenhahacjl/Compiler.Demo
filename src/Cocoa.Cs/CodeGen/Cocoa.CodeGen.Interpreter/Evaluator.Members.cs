@@ -193,7 +193,7 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
-        /// <summary>闈炵敤鎴风被鎺ユ敹鑰咃紙鍩哄厓/string/CLR Type/EvaluatorTypeInfo锛夌殑鍐呭缓闈㈢洿閫氥€?/summary>
+        /// <summary>非用户类接收者（基元/string/CLR Type/EvaluatorTypeInfo）的内建实例面通道。</summary>
         private object? EvaluateBuiltinInstanceFace(BuiltinKind kind, object receiver, BoundMemberCallExpression node)
         {
             switch (kind)
@@ -399,7 +399,7 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
-        /// 瀹炰緥鍑芥暟璋冪敤鐜锛氬弬鏁板叆灞€閮ㄥ抚 + this 鍘嬫帴鏀惰€呮爤锛圔oundThisExpression 姹傚€艰繑鍥炴爤椤讹級锛岄€€鍑哄绉板脊鏍堛€?
+        /// 实例函数调用环境：参数入局部帧 + this 压接收者栈（BoundThisExpression 求值返回栈顶），退出对称弹栈。
         /// </summary>
         private object? InvokeFunction(FunctionSymbol function, object? thisReceiver, object?[] argumentValues, ClosureEnvironment? existingEnvironment = null, int byRefMarker = -1)
         {

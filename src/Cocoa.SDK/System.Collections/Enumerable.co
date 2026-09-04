@@ -84,7 +84,7 @@ namespace System.Collections.Generic
         public property Key: TKey { get { return _key } }
         public property Value: TValue { get { return _value } }
 
-        public function KeyValuePair(key: TKey, value: TValue)
+        public constructor(key: TKey, value: TValue)
         {
             _key = key
             _value = value
