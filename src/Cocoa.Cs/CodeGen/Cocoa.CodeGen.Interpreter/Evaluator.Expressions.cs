@@ -36,18 +36,41 @@ namespace Cocoa.CodeGen.Interpreter
 
         private object? EvaluateInvocation(BoundInvocationExpression node)
         {
-            var target = EvaluateExpression(node.Callee) as EvaluatorFunctionValue
-                ?? throw new Exception($"'{node.Callee.Type}' 不是可调用的函数值。");
+            var target = EvaluateExpression(node.Callee);
 
-            if (target.Function.ContainingClass != null && target.Function.IsStatic)
+            // 6e-M22 委托真实类型化：具名 delegate（调用列表）→ 快照遍历调用，非 void 返回最后结果
+            if (target is EvaluatorDelegateValue multiTarget)
             {
-                EnsureStaticInit(target.Function.ContainingClass);
+                var argumentValues = node.Arguments.Select(EvaluateExpression).ToArray();
+                object? result = null;
+                foreach (var entry in multiTarget.Targets)
+                {
+                    if (entry.Function.ContainingClass != null && entry.Function.IsStatic)
+                    {
+                        EnsureStaticInit(entry.Function.ContainingClass);
+                    }
+
+                    var environment = entry.Function.IsLambdaWithEnvironment ? entry.Receiver as ClosureEnvironment : null;
+                    result = InvokeFunction(entry.Function, entry.Function.IsLambdaWithEnvironment ? null : entry.Receiver, argumentValues, environment);
+                }
+
+                return result;
             }
 
-            var argumentValues = node.Arguments.Select(EvaluateExpression).ToArray();
-            var environment = target.Function.IsLambdaWithEnvironment ? target.Receiver as ClosureEnvironment : null;
+            if (target is not EvaluatorFunctionValue functionValue)
+            {
+                throw new Exception($"'{node.Callee.Type}' 不是可调用的函数值。");
+            }
 
-            return InvokeFunction(target.Function, target.Function.IsLambdaWithEnvironment ? null : target.Receiver, argumentValues, environment);
+            if (functionValue.Function.ContainingClass != null && functionValue.Function.IsStatic)
+            {
+                EnsureStaticInit(functionValue.Function.ContainingClass);
+            }
+
+            var argumentValuesSingle = node.Arguments.Select(EvaluateExpression).ToArray();
+            var environmentSingle = functionValue.Function.IsLambdaWithEnvironment ? functionValue.Receiver as ClosureEnvironment : null;
+
+            return InvokeFunction(functionValue.Function, functionValue.Function.IsLambdaWithEnvironment ? null : functionValue.Receiver, argumentValuesSingle, environmentSingle);
         }
 
         private object? EvaluateVariableExpression(BoundVariableExpression variable)
@@ -122,6 +145,22 @@ namespace Cocoa.CodeGen.Interpreter
             }
 
             // Unsupported：引用相等（6e-M19 M2-c）与 string+double 定点拼接由解释器自行处理
+            // 6e-M22 委托真实类型化：具名 delegate 组合/移除/调用列表相等
+            if (left is EvaluatorDelegateValue leftDelegate && right is EvaluatorDelegateValue rightDelegate)
+            {
+                switch (binary.Op.Kind)
+                {
+                    case BoundBinaryOperatorKind.Addition:
+                        return leftDelegate.Combine(rightDelegate);
+                    case BoundBinaryOperatorKind.Subtraction:
+                        return leftDelegate.Remove(rightDelegate);
+                    case BoundBinaryOperatorKind.ReferenceEquals:
+                        return leftDelegate.Equals(rightDelegate);
+                    case BoundBinaryOperatorKind.ReferenceNotEquals:
+                        return !leftDelegate.Equals(rightDelegate);
+                }
+            }
+
             switch (binary.Op.Kind)
             {
                 case BoundBinaryOperatorKind.Addition:

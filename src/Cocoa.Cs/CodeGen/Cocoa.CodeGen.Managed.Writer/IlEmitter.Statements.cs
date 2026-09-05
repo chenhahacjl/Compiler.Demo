@@ -800,6 +800,33 @@ namespace Cocoa.CodeGen.Managed.Writer
             EmitExpression(il, node.Left);
             EmitExpression(il, node.Right);
 
+            // 6e-M22 委托真实类型化：具名 delegate 二元运算——
+            // `+` = Delegate.Combine(a,b) castclass Handler；`-` = Delegate.Remove(a,b) castclass；
+            // `==`/`!=` = Object.Equals（virtual 分派至 Delegate.Equals override → 调用列表相等）
+            if (node.Left.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } leftDel &&
+                node.Right.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } && leftDel.FullName == ((NamedTypeSymbol)node.Right.Type).FullName)
+            {
+                switch (node.Op.Kind)
+                {
+                    case BoundBinaryOperatorKind.Addition:
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.DelegateCombine);
+                        il.Emit(IlOpCodeTable.Get("Castclass"), ToIlType(node.Type));
+                        return;
+                    case BoundBinaryOperatorKind.Subtraction:
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.DelegateRemove);
+                        il.Emit(IlOpCodeTable.Get("Castclass"), ToIlType(node.Type));
+                        return;
+                    case BoundBinaryOperatorKind.ReferenceEquals:
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
+                        return;
+                    case BoundBinaryOperatorKind.ReferenceNotEquals:
+                        il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectEquals);
+                        il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));
+                        il.Emit(IlOpCodeTable.Get("Ceq"));
+                        return;
+                }
+            }
+
             if (node.Op.Kind == BoundBinaryOperatorKind.Equals)
             {
                 if (node.Left.Type == TypeSymbol.Any && node.Right.Type == TypeSymbol.Any ||

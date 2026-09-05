@@ -984,5 +984,50 @@ function HandlerOfInt(x: i32): string { return """" }";
             var result = Evaluate(code);
             Assert.Empty(result.Diagnostics.Where(d => d.IsError));
         }
+
+        // ── 6e-M22 委托真实类型化 M3：多播对象（+ 组合 / - 调用列表移除 / == 调用列表相等）──
+
+        private const string DelegateMulticastProgram = @"using System
+delegate IntTransform(x: i32): i32
+function Double(x: i32): i32 { return x * 2 }
+function Triple(x: i32): i32 { return x * 3 }
+function Main(): i32
+{
+    var d: IntTransform = Double
+    var e: IntTransform = Triple
+    var m = d + e
+    if m(2) != 6
+    {
+        return 1
+    }
+
+    if !((d + e) == (d + e))
+    {
+        return 2
+    }
+
+    var r = m - d
+    if r(2) != 6
+    {
+        return 3
+    }
+
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Delegate_Multicast_CombineRemoveEquality()
+        {
+            var result = Evaluate(DelegateMulticastProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Il_Delegate_Multicast_CombineRemoveEquality()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(DelegateMulticastProgram, "c5d_multicast_il");
+            Assert.Equal(0, exitCode);
+        }
     }
 }

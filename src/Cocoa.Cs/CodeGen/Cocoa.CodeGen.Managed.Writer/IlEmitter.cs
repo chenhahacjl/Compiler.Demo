@@ -792,16 +792,8 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return IlType.Int32;
             }
 
-            // 6e-M22 D-B：delegate 类 → Func`N 等价类型（运行期表示与函数值一致）
-            if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateClassType)
-            {
-                var sig = delegateClassType.DelegateSignature();
-                if (sig != null)
-                {
-                    return _delegateShapes.Resolve(sig, ToIlType).Type;
-                }
-            }
-
+            // 6e-M22 委托真实类型化：delegate 类即真实 TypeDef（进 classes 发射清单），不再映射 Func`N——
+            // 旧 D-B 遗留"delegate 类→Func 等价类型"映射删除后，走下方 NamedTypeSymbol → TypeDef 分支。
             if (type is NamedTypeSymbol classType)
             {
                 // facade 类：整类映射到 BCL（非泛型 → TypeRef；泛型实例化 → TypeSpec）。

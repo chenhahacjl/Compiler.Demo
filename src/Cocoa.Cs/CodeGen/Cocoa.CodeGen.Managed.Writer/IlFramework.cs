@@ -34,6 +34,10 @@ namespace Cocoa.CodeGen.Managed.Writer
             ObjectEqualsInstance = RequireMethod("System.Object", "Equals", new[] { "System.Object" });
             ObjectGetType = RequireMethod("System.Object", "GetType", Array.Empty<string>());
             ObjectReferenceEquals = RequireMethod("System.Object", "ReferenceEquals", new[] { "System.Object", "System.Object" });
+
+            // 6e-M22 委托真实类型化：System.Delegate 组合/移除（多播委托对象）
+            DelegateCombine = RequireMethod("System.Delegate", "Combine", new[] { "System.Delegate", "System.Delegate" });
+            DelegateRemove = RequireMethod("System.Delegate", "Remove", new[] { "System.Delegate", "System.Delegate" });
             // net9 CoreLib 的 System.Type 无 get_Name（Name 属性非虚实现），Type.Name 经 FullName+切分组合
             TypeGetFullName = RequireMethod("System.Type", "get_FullName", Array.Empty<string>());
             StringLastIndexOfChar = RequireMethod("System.String", "LastIndexOf", new[] { "System.Char" });
@@ -108,6 +112,10 @@ namespace Cocoa.CodeGen.Managed.Writer
         public IlMethodRef ObjectEqualsInstance { get; }
         public IlMethodRef ObjectGetType { get; }
         public IlMethodRef ObjectReferenceEquals { get; }
+
+        /// <summary>6e-M22 委托真实类型化：System.Delegate 静态 Combine/Remove（调用列表多播）。</summary>
+        public IlMethodRef DelegateCombine { get; }
+        public IlMethodRef DelegateRemove { get; }
 
         /// <summary>6e-M19 M3-b：System.Type 只读属性（Type.Name 经 FullName 切分；Type.FullName 直取）。</summary>
         public IlMethodRef TypeGetFullName { get; }

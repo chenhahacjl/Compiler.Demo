@@ -536,6 +536,11 @@ namespace Cocoa.CodeGen.Interpreter
                 // 枚举底层为 int，无操作
                 return Convert.ToInt32(value);
             }
+            else if (node.Type is Symbols.NamedTypeSymbol { TypeKind: TypeKind.Delegate })
+            {
+                // 6e-M22 委托真实类型化：fnty 值 → 具名 delegate（调用列表对象，单元素）
+                return value is EvaluatorDelegateValue existing ? existing : new EvaluatorDelegateValue((EvaluatorFunctionValue)value!);
+            }
             else if (node.Type is Symbols.NamedTypeSymbol)
             {
                 // 6e-M19 M2-c：类间引用转换（派生→基类隐开/ 基类→派生显式）——CLR 对象直退

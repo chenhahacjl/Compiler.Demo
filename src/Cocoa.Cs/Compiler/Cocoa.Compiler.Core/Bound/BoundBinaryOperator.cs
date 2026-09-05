@@ -145,6 +145,23 @@ namespace Cocoa.CodeAnalysis.Binding
                     return new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, enumType, TypeSymbol.Boolean);
             }
 
+            // 6e-M22 委托真实类型化：具名 delegate 二元运算——
+            // `+`/`-` = Delegate.Combine/Remove（调用列表组合，结果同委托类型）；`==`/`!=` = 调用列表相等。
+            if (leftType is NamedTypeSymbol { TypeKind: TypeKind.Delegate } leftDelegate &&
+                rightType is NamedTypeSymbol { TypeKind: TypeKind.Delegate } rightDelegate &&
+                (leftDelegate == rightDelegate || leftDelegate.FullName == rightDelegate.FullName))
+            {
+                if (kind == BoundBinaryOperatorKind.Addition || kind == BoundBinaryOperatorKind.Subtraction)
+                {
+                    return new BoundBinaryOperator(kind, leftDelegate, rightDelegate, leftDelegate);
+                }
+
+                if (kind == BoundBinaryOperatorKind.Equals)
+                    return new BoundBinaryOperator(BoundBinaryOperatorKind.ReferenceEquals, leftDelegate, rightDelegate, TypeSymbol.Boolean);
+                if (kind == BoundBinaryOperatorKind.NotEquals)
+                    return new BoundBinaryOperator(BoundBinaryOperatorKind.ReferenceNotEquals, leftDelegate, rightDelegate, TypeSymbol.Boolean);
+            }
+
             // 6e-M19 M2-c：类类型 == / != → 引用相等（动态合成，仿 enum 先例）。
             // 条件：双侧均为类（含 System.Object/接口/外部类），且存在继承关系（同型或一侧可隐式转换到另一侧）。
             // string/值类型/any 走既有值比较表，不受影响。

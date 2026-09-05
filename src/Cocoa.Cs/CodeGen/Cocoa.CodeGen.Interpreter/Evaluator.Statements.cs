@@ -185,6 +185,81 @@ namespace Cocoa.CodeGen.Interpreter
             public FunctionSymbol Function { get; }
 
             public object? Receiver { get; }
+
+            public override int GetHashCode() => System.HashCode.Combine(Function, Receiver);
+
+            public override bool Equals(object? obj) =>
+                obj is EvaluatorFunctionValue other && other.Function == Function &&
+                (other.Receiver == null ? Receiver == null : other.Receiver.Equals(Receiver));
+        }
+
+        /// <summary>6e-M22 委托真实类型化：具名 delegate 运行期值 = 调用列表（元素为函数值）。
+        /// `+` = 列表拼接；`-` = 调用列表子序列匹配移除（对齐 Delegate.Remove）；相等 = 列表逐元素。</summary>
+        private sealed class EvaluatorDelegateValue
+        {
+            private readonly System.Collections.Generic.List<EvaluatorFunctionValue> _targets;
+
+            public EvaluatorDelegateValue(EvaluatorFunctionValue single) => _targets = new System.Collections.Generic.List<EvaluatorFunctionValue> { single };
+
+            public EvaluatorDelegateValue(System.Collections.Generic.List<EvaluatorFunctionValue> targets) => _targets = targets;
+
+            public IReadOnlyList<EvaluatorFunctionValue> Targets => _targets;
+
+            public EvaluatorDelegateValue Combine(EvaluatorDelegateValue other)
+            {
+                var combined = new System.Collections.Generic.List<EvaluatorFunctionValue>(_targets);
+                combined.AddRange(other._targets);
+                return new EvaluatorDelegateValue(combined);
+            }
+
+            /// <summary>调用列表移除：自后向前查找完整子序列（最后一次出现）并移除（对齐 Delegate.Remove）。</summary>
+            public EvaluatorDelegateValue Remove(EvaluatorDelegateValue invocation)
+            {
+                var result = new System.Collections.Generic.List<EvaluatorFunctionValue>(_targets);
+                var pattern = invocation._targets;
+                if (pattern.Count == 0 || result.Count < pattern.Count)
+                {
+                    return new EvaluatorDelegateValue(result);
+                }
+
+                for (var start = result.Count - pattern.Count; start >= 0; start--)
+                {
+                    var matches = true;
+                    for (var i = 0; i < pattern.Count; i++)
+                    {
+                        if (!result[start + i].Equals(pattern[i]))
+                        {
+                            matches = false;
+                            break;
+                        }
+                    }
+
+                    if (!matches)
+                    {
+                        continue;
+                    }
+
+                    result.RemoveRange(start, pattern.Count);
+                    break;
+                }
+
+                return new EvaluatorDelegateValue(result);
+            }
+
+            public override int GetHashCode()
+            {
+                var hash = new System.HashCode();
+                foreach (var target in _targets)
+                {
+                    hash.Add(target);
+                }
+
+                return hash.ToHashCode();
+            }
+
+            public override bool Equals(object? obj) =>
+                obj is EvaluatorDelegateValue other && other._targets.Count == _targets.Count &&
+                _targets.Zip(other._targets, (a, b) => a.Equals(b)).All(x => x);
         }
 
         /// <summary>闭包环境对象（6e-M22 C5）：捕获变量的堆上规范存储。</summary>
