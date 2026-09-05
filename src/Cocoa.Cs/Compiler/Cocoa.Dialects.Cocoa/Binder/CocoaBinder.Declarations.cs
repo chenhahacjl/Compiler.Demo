@@ -2481,12 +2481,46 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         }
 
         /// <summary>把 `.coa` 库的公共符号注入作用域（v1 无命名空间 → 裸注册；非空命名空间留扩展位，.coa v2 时启用）。</summary>
+        /// <summary>6f-3：跨用户库同名类型全名集（类/枚举/泛型定义）——同一全名被 ≥2 个不同用户库声明即歧义。
+        /// 系统库（System*）权威内置、允许覆盖/补充，不参与判定（与装载侧 DetectAmbiguousTypes 一致）。</summary>
+        private static ImmutableHashSet<string> ComputeAmbiguousCodTypeNames(ImmutableArray<CoaProgram> codLibraries)
+        {
+            var byFullName = new Dictionary<string, CoaProgram>(StringComparer.Ordinal);
+            var ambiguous = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var library in codLibraries)
+            {
+                if (library.Name.StartsWith("System", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var type in library.Classes.Concat(library.Enums).Concat(library.GenericDefinitions))
+                {
+                    var key = type.FullName;
+                    if (byFullName.TryGetValue(key, out var first) && !ReferenceEquals(first, library))
+                    {
+                        ambiguous.Add(key);
+                    }
+                    else
+                    {
+                        byFullName[key] = library;
+                    }
+                }
+            }
+
+            return ambiguous.ToImmutableHashSet();
+        }
+
         private static void InjectCodSymbols(BoundScope scope, ImmutableArray<CoaProgram> codLibraries)
         {
             if (codLibraries.IsDefaultOrEmpty)
             {
                 return;
             }
+
+            // 6f-3：跨用户库同名类型（类/枚举/泛型定义）全名集——非限定使用拒绝注入（绑定期诊断），
+            // 消歧经 `using X = 库名.全名` 库限定解析（LookupType.TryResolveLibraryScopedType）。
+            var ambiguousCodTypeNames = ComputeAmbiguousCodTypeNames(codLibraries);
 
             foreach (var library in codLibraries)
             {
@@ -2507,6 +2541,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
                 foreach (var enumType in library.Enums)
                 {
+                    if (ambiguousCodTypeNames.Contains(enumType.FullName))
+                    {
+                        continue;
+                    }
+
                     scope.TryDeclareEnum(enumType);
                 }
 
@@ -2517,6 +2556,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     // （IL/native 遇开放类型参数抛 Unexpected type K），且遮蔽源码同名集合类；
                     // 泛型定义经 GlobalNamespace 树 + Monomorphizer 种子消费。
                     if (classType.IsGenericDefinition)
+                    {
+                        continue;
+                    }
+
+                    // 6f-3：跨库同名类型拒绝注入（非限定使用即诊断；库限定别名解析唯一化）
+                    if (ambiguousCodTypeNames.Contains(classType.FullName))
                     {
                         continue;
                     }

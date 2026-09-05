@@ -13,7 +13,7 @@ namespace Cocoa.CodeAnalysis
     /// </summary>
     public abstract partial class Compilation
     {
-        private static ImmutableArray<CoaProgram> LoadCodLibraries(string[]? references)
+        private static (ImmutableArray<CoaProgram> Libraries, ImmutableArray<string> AmbiguousTypeNames) LoadCodLibraries(string[]? references)
         {
             var builder = ImmutableArray.CreateBuilder<CoaProgram>();
 
@@ -42,15 +42,15 @@ namespace Cocoa.CodeAnalysis
         }
 
         /// <summary>
-        /// 6e-Step E（同名歧义，其一）：跨库同名类型检测——两个及以上「已被引用」的 `.coa` 公开同一
-        /// 「库名!全名」规范类型（类/枚举/泛型定义）时，装载即报 CS0104 式歧义（首个命中仍有效，其余丢弃的
-        /// 现状 → 显式报错，不再静默 first-wins）。别名消歧（`using X = Lib1.Foo;` / 全名限定）留档。
+        /// 6e-Step E（同名歧义）：跨库同名类型检测——两个及以上「已被引用」的用户 `.coa` 公开同一全名类型
+        /// （类/枚举/泛型定义）时，装载不再抛错（6f-3 别名消歧可行），改为登记歧义全名集：
+        /// 消费方「非限定使用」经 InjectCodSymbols 拒绝注入 → 绑定期诊断；`using X = 库名.全名` 走库限定解析。
         /// </summary>
-        private static ImmutableArray<CoaProgram> DetectAmbiguousTypes(ImmutableArray<CoaProgram> libraries)
+        private static (ImmutableArray<CoaProgram> Libraries, ImmutableArray<string> AmbiguousTypeNames) DetectAmbiguousTypes(ImmutableArray<CoaProgram> libraries)
         {
             // 仅约束到「当前已加载的用户库」间；系统库（System*）作为权威内置、允许用户覆盖/补充，不参与同名判定。
             var byFullName = new Dictionary<string, CoaProgram>(StringComparer.Ordinal);
-            List<CoaProgram>? conflicting = null;
+            var ambiguous = new HashSet<string>(StringComparer.Ordinal);
             foreach (var library in libraries)
             {
                 if (library.Name.StartsWith("System", StringComparison.OrdinalIgnoreCase))
@@ -63,15 +63,7 @@ namespace Cocoa.CodeAnalysis
                     var key = type.FullName;
                     if (byFullName.TryGetValue(key, out var first) && !ReferenceEquals(first, library))
                     {
-                        if (conflicting == null)
-                        {
-                            conflicting = new List<CoaProgram> { first };
-                        }
-
-                        if (!conflicting.Contains(library))
-                        {
-                            conflicting.Add(library);
-                        }
+                        ambiguous.Add(key);
                     }
                     else
                     {
@@ -80,14 +72,7 @@ namespace Cocoa.CodeAnalysis
                 }
             }
 
-            if (conflicting != null && conflicting.Count >= 2)
-            {
-                throw new InvalidDataException(
-                    "CS0104 式歧义：以下 cod 库同时声明了同名类型，消费者无法决定取用哪份（消歧手段：别名库 / 全名限定，留档后续）:\n" +
-                    string.Join("\n", conflicting.Select((c, i) => $"  {i + 1}. {c.Name}")));
-            }
-
-            return libraries;
+            return (libraries, ambiguous.OrderBy(x => x, StringComparer.Ordinal).ToImmutableArray());
         }
 
         private static IEnumerable<NamedTypeSymbol> IterateLibraryTypes(CoaProgram library)

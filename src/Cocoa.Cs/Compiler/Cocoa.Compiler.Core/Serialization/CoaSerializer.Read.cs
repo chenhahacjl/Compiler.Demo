@@ -319,6 +319,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                 TypeKind = TypeKind.Enum,
                 IsSealed = true,
             };
+            enumType.ContainingLibrary = context.ModuleName;
             enumType.SetEnumMembers(members);
             context.Enums.Add(enumType);
             context.AddNamedType(fullName, enumType);
@@ -379,6 +380,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
+            classType.ContainingLibrary = context.ModuleName;
             // 6e-M19 M2-c：cod 类默认继承 System.Object（与源码绑定一致；.coa v1 不序列化接口声明）。
             classType.BaseType = NamedTypeSymbol.SystemObject;
             // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填
@@ -498,6 +500,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             var typeParameterCount = ReadCountField(reader, "tparams:");
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
+            classType.ContainingLibrary = context.ModuleName;
             classType.BaseType = NamedTypeSymbol.SystemObject;
 
             var pendingConstraints = new (TypeParameterSymbol Parameter, string[] ConstraintRefs)[typeParameterCount];

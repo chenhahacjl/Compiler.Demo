@@ -78,6 +78,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>外部引用程序集类型（消费 -r 库时 true）。</summary>
         public bool IsExternal { get; }
 
+        /// <summary>6f-3：来源库名（.coa 读入回填，复合键库维度；null = 源码声明/系统内建）。</summary>
+        public string? ContainingLibrary { get; internal set; }
+
         /// <summary>命名类型类别（6e-M26）：class/struct/interface/enum/delegate 共用同一符号，以 TypeKind 判别。</summary>
         public virtual TypeKind TypeKind { get; set; } = TypeKind.Class;
 

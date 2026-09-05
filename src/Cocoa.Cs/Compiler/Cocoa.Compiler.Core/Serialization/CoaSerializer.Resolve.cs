@@ -107,6 +107,30 @@ namespace Cocoa.CodeAnalysis.Serialization
 
         private static TypeSymbol ResolveNamedType(string name, ReadContext context)
         {
+            // 6f-3：库限定类型引用 `库名!全名`（复合键读侧）——按归属库 TypesByName 解析；
+            // 库名==当前模块时走本地表（round-trip 自限定引用）。
+            var bangIndex = name.IndexOf('!');
+            if (bangIndex > 0 && bangIndex < name.Length - 1)
+            {
+                var libraryToken = name.Substring(0, bangIndex);
+                var fullName = name.Substring(bangIndex + 1);
+                foreach (var library in context.ExternalLibraries)
+                {
+                    if (IsLibraryMatch(library, libraryToken) &&
+                        library.TypesByName.TryGetValue(fullName, out var scoped))
+                    {
+                        return scoped;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(context.ModuleName) &&
+                    string.Equals(context.ModuleName, libraryToken, StringComparison.Ordinal) &&
+                    context.TypesByName.TryGetValue(fullName, out var selfScoped))
+                {
+                    return selfScoped;
+                }
+            }
+
             if (context.TypesByName.TryGetValue(name, out var known))
             {
                 return known;
@@ -345,7 +369,7 @@ namespace Cocoa.CodeAnalysis.Serialization
         /// （`Lib!...System.Collections.Generic.List`1#...T`，InstanceTypeSymbol.FullName = ns + mangle）。
         /// 从 TypesByName（含 external 预播种）按「最长匹配 key + backtick」反解泛型定义类。
         /// </summary>
-        private static NamedTypeSymbol? ResolveOwnerClassFromHead(string ownerText, ReadContext context)
+        private static NamedTypeSymbol? ResolveOwnerClassFromHead(string ownerText, ReadContext context, string libraryName = "")
         {
             if (ownerText == "System.Object")
             {
@@ -355,6 +379,19 @@ namespace Cocoa.CodeAnalysis.Serialization
             if (ownerText == "System.Type")
             {
                 return NamedTypeSymbol.SystemType;
+            }
+
+            // 6f-3：库前缀优先——跨库同名类型按键归属库查其 TypesByName（复合键解析）
+            if (!string.IsNullOrEmpty(libraryName))
+            {
+                foreach (var library in context.ExternalLibraries)
+                {
+                    if (IsLibraryMatch(library, libraryName) &&
+                        library.TypesByName.TryGetValue(ownerText, out var scoped) && scoped is NamedTypeSymbol scopedClass)
+                    {
+                        return scopedClass;
+                    }
+                }
             }
 
             if (context.TypesByName.TryGetValue(ownerText, out var direct))
@@ -390,6 +427,31 @@ namespace Cocoa.CodeAnalysis.Serialization
             return null;
         }
 
+        /// <summary>6f-3：库名匹配——键前缀/引用首段（coa 基名，如 "LibOne"）与已加载库（Name="LibOne.Managed"）对齐。</summary>
+        private static bool IsLibraryMatch(CoaProgram library, string libraryName)
+        {
+            if (string.IsNullOrEmpty(libraryName))
+            {
+                return false;
+            }
+
+            if (string.Equals(library.Name, libraryName, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (library.Name.EndsWith(CoaAssemblyNaming.ManagedSuffix, StringComparison.Ordinal) &&
+                string.Equals(
+                    library.Name.Substring(0, library.Name.Length - CoaAssemblyNaming.ManagedSuffix.Length),
+                    libraryName,
+                    StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         private static VariableSymbol ResolveVariable(string key, ReadContext context)
         {
             if (!context.VariablesByKey.TryGetValue(key, out var variable))
@@ -409,10 +471,13 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             // 6e 跨库里程碑：键带库前缀（`库名!head[...]`）——先剥离前缀，再按方法名+元数在
             // 本库 + external 库函数集中归一（消费方替换期再映射回实例化副本）。
+            // 6f-3：库前缀参与消歧——同名跨库符号按归属库确定性择优（杜绝 first-load-wins）。
             var searchKey = key;
+            var libraryName = "";
             var bangIndex = key.IndexOf('!');
             if (bangIndex > 0 && key.IndexOf('[') > bangIndex)
             {
+                libraryName = key.Substring(0, bangIndex);
                 searchKey = key.Substring(bangIndex + 1);
             }
 
@@ -433,7 +498,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     // （实例化副本键 `Lib!...List`1#...T.get_Count[]`），在 TypesByName（含 external 预播种）
                     // 定义类内按名+元数匹配。避免全集搜索歧义（多个类同签名方法时非唯一）。
                     var ownerText = head.Substring(0, dotIndex);
-                    var ownerClass = ResolveOwnerClassFromHead(ownerText, context);
+                    var ownerClass = ResolveOwnerClassFromHead(ownerText, context, libraryName);
 
                     if (ownerClass != null)
                     {
@@ -466,6 +531,33 @@ namespace Cocoa.CodeAnalysis.Serialization
                         }
                     }
 
+                    // 6f-3：键归属库候选优先——同名跨库函数按库前缀确定性择优（只在该库内取唯一匹配）
+                    if (candidates.Count > 1 && !string.IsNullOrEmpty(libraryName))
+                    {
+                        foreach (var library in context.ExternalLibraries)
+                        {
+                            if (!IsLibraryMatch(library, libraryName))
+                            {
+                                continue;
+                            }
+
+                            var scoped = library.Functions.Where(f =>
+                                f.Name == methodName &&
+                                f.Parameters.Length == parameterCount).ToList();
+                            if (scoped.Count > 1)
+                            {
+                                throw new InvalidDataException($"Ambiguous library function '{key}' in library '{libraryName}'");
+                            }
+
+                            if (scoped.Count == 1)
+                            {
+                                return scoped[0];
+                            }
+
+                            break;
+                        }
+                    }
+
                     if (candidates.Count == 1)
                     {
                         return candidates[0];
@@ -473,9 +565,14 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                     // 6f-2：外部库属主类方法兜底——本库 `(cls System.Console)` 桩只带方法名、无方法符号，
                     // 属主方法以 external（系统/依赖库）已加载的同名类为权威：按名+元数命中即复用其符号
-                    // （跨库符号回归统一，Binder 按引用相等合并函数体）。
+                    // （跨库符号回归统一，Binder 按引用相等合并函数体）。6f-3：库前缀过滤避免跨库同名误配。
                     foreach (var library in context.ExternalLibraries)
                     {
+                        if (!string.IsNullOrEmpty(libraryName) && !IsLibraryMatch(library, libraryName))
+                        {
+                            continue;
+                        }
+
                         if (!library.TypesByName.TryGetValue(ownerText, out var extType) ||
                             extType is not NamedTypeSymbol extOwner)
                         {

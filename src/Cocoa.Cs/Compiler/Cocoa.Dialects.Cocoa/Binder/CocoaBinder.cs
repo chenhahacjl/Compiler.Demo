@@ -28,6 +28,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         private readonly Dictionary<string, string> _usingAliases = new Dictionary<string, string>();
         private readonly ImmutableArray<CoaProgram> _codLibraries;
 
+        /// <summary>6f-3：跨用户库同名类型全名集（绑定侧缓存；非限定使用拒绝解析）。</summary>
+        private readonly ImmutableHashSet<string> _ambiguousCodTypeNames;
+
         /// <summary>全局命名空间树（Phase 1-5：声明阶段后才可用——树由已完成的全局作用域构建）。
         /// 仅在函数体绑定阶段注入；`FindDeclaredClassByFullName/Enum` 优先用它做全名/using 定位，
         /// 未命中回退作用域链（树只索引全局静态声明，动态/单态化/委托类型等以回退兜底）。</summary>
@@ -75,6 +78,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             _references = references.ToArray();
             _builtinTypeResolver = builtinTypeResolver;
             _codLibraries = codLibraries.IsDefault ? ImmutableArray<CoaProgram>.Empty : codLibraries;
+            _ambiguousCodTypeNames = ComputeAmbiguousCodTypeNames(_codLibraries);
             _globalNamespace = globalNamespace;
             _usingNamespaces.AddRange(usingNamespaces);
             if (!usingStatics.IsDefaultOrEmpty)

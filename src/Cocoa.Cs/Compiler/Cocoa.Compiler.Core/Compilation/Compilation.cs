@@ -16,6 +16,11 @@ namespace Cocoa.CodeAnalysis
         private readonly string[] _references;
         private readonly ImmutableArray<MetadataReference> _metadataReferences;
         private readonly ImmutableArray<CoaProgram> _codLibraries;
+        private readonly ImmutableArray<string> _ambiguousCodTypeNames;
+
+        /// <summary>6f-3：跨用户库同名类型（类/枚举/泛型定义）全名集——非限定使用即绑定期歧义；
+        /// 消歧经 `using X = 库名.全名` 库限定解析。</summary>
+        public ImmutableArray<string> AmbiguousCodTypeNames => _ambiguousCodTypeNames;
 
         /// <summary>动态链接（阶段 A2）：dotnet 后端消费 `.coa` 时不内联库体，发射外部 Ref 指向各库 dll。</summary>
         private readonly bool _linkCodDynamically;
@@ -70,7 +75,9 @@ namespace Cocoa.CodeAnalysis
             _metadataReferences = (references ?? Array.Empty<string>())
                 .Select(r => new MetadataReference(r))
                 .ToImmutableArray();
-            _codLibraries = LoadCodLibraries(references);
+            var loadedLibraries = LoadCodLibraries(references);
+            _codLibraries = loadedLibraries.Libraries;
+            _ambiguousCodTypeNames = loadedLibraries.AmbiguousTypeNames;
             SyntaxTrees = syntaxTrees.ToImmutableArray();
         }
 

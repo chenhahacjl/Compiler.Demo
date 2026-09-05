@@ -388,12 +388,12 @@ if (properties.Length > 0)
 
             if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
             {
-                return enumType.FullName;
+                return LibraryQualify(enumType);
             }
 
             if (type is NamedTypeSymbol classType)
             {
-                return classType.FullName;
+                return LibraryQualify(classType);
             }
 
             // 6e-M22/M0-1b：函数类型 `fnty{参数,;返回}`（递归 TypeRef；参数逗号分隔、分号接返回、{} 嵌套）。
@@ -425,6 +425,15 @@ if (properties.Length > 0)
             }
 
             return type.Name;
+        }
+
+        /// <summary>6f-3：库限定全名（复合键写侧）——读入库的类型带来源库名，`库名!全名` 引用唯一化；
+        /// 源码声明/系统内建（ContainingLibrary 空）回落裸全名。</summary>
+        private static string LibraryQualify(NamedTypeSymbol type)
+        {
+            return string.IsNullOrEmpty(type.ContainingLibrary)
+                ? type.FullName
+                : type.ContainingLibrary + "!" + type.FullName;
         }
 
         /// <summary>
