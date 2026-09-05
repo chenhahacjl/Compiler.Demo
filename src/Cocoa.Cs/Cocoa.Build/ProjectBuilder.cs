@@ -20,6 +20,23 @@ namespace Cocoa.Build
 
             var backend = options.Backend ?? ProjectBuildOptions.DefaultBackend;
 
+            // T3：`<TreatWarningsAsErrors>` 把构建告警（模式未命中 / [imports] / Content 未命中 + 诊断 Warning 级）升级为错误
+            var warningsAsErrors = project.TreatWarningsAsErrors;
+            var warningsFailed = false;
+
+            void ReportWarning(string message)
+            {
+                if (warningsAsErrors)
+                {
+                    warningsFailed = true;
+                    messageWriter.WriteLine("error: " + message);
+                }
+                else
+                {
+                    messageWriter.WriteLine("warning: " + message);
+                }
+            }
+
             var outputDirectory = project.GetOutputDirectory();
             var outputFile = options.OutputFileOverride != null
                 ? Path.GetFullPath(options.OutputFileOverride)
@@ -29,7 +46,7 @@ namespace Cocoa.Build
             var expansion = Glob.Expand(project.SourcePatterns, project.Directory);
             foreach (var pattern in expansion.UnmatchedPatterns)
             {
-                messageWriter.WriteLine($"warning: source pattern '{pattern}' did not match any file");
+                ReportWarning($"source pattern '{pattern}' did not match any file");
             }
 
             if (expansion.Files.Length == 0)
@@ -60,7 +77,7 @@ namespace Cocoa.Build
 
             foreach (var import in project.Imports)
             {
-                messageWriter.WriteLine($"warning: [imports] section is not implemented yet; declare 'import {import}' in source files instead");
+                ReportWarning($"[imports] section is not implemented yet; declare 'import {import}' in source files instead");
             }
 
             var useIncremental = !options.NoIncremental;
@@ -103,7 +120,11 @@ namespace Cocoa.Build
                     EnsureManagedDlls(CollectReferencedCodLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
                 }
 
-                CopyContentToOutput(project, outputDirectory, messageWriter);
+                CopyContentToOutput(project, outputDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
+                if (warningsFailed)
+                {
+                    return new ProjectBuildResult(success: false, upToDate: false);
+                }
 
                 messageWriter.WriteLine($"'{project.Name}' is up to date ({backend.ToString().ToLowerInvariant()})");
                 return new ProjectBuildResult(success: true, upToDate: true);
@@ -194,9 +215,15 @@ namespace Cocoa.Build
             {
                 messageWriter.WriteDiagnostics(diagnostics);
                 hasErrors = diagnostics.HasErrors();
+
+                // T3：警告级诊断（如 using 未解析、未实现警告）在 TreatWarningsAsErrors 下视为错误
+                if (!hasErrors && warningsAsErrors && diagnostics.Any(d => d.IsWarning))
+                {
+                    hasErrors = true;
+                }
             }
 
-            if (hasErrors)
+            if (hasErrors || warningsFailed)
             {
                 return new ProjectBuildResult(success: false, upToDate: false);
             }
@@ -223,7 +250,11 @@ namespace Cocoa.Build
                 BuildCache.Write(cachePath, fingerprint);
             }
 
-            CopyContentToOutput(project, outputDirectory, messageWriter);
+            CopyContentToOutput(project, outputDirectory, warningsAsErrors, messageWriter, ref warningsFailed);
+            if (warningsFailed)
+            {
+                return new ProjectBuildResult(success: false, upToDate: false);
+            }
 
             messageWriter.WriteLine(outputFile);
 
@@ -233,9 +264,9 @@ namespace Cocoa.Build
         /// <summary>
         /// `<Content Include="..." CopyToOutput="true">`：按项目目录解析 glob，把命中文件
         /// 部署到输出目录（保留相对路径；越界路径回退文件名）。增量命中与全量成功两路都执行，
-        /// 幂等（NeedsCopy 判定跳过）。
+        /// 幂等（NeedsCopy 判定跳过）。未命中模式按 warningsAsErrors 升级为错误。
         /// </summary>
-        private static void CopyContentToOutput(CocoaProjectFile project, string outputDirectory, TextWriter messageWriter)
+        private static void CopyContentToOutput(CocoaProjectFile project, string outputDirectory, bool warningsAsErrors, TextWriter messageWriter, ref bool warningsFailed)
         {
             if (project.Content.IsEmpty)
             {
@@ -254,7 +285,15 @@ namespace Cocoa.Build
                 var expansion = Glob.Expand(new[] { entry.Include }, project.Directory);
                 foreach (var pattern in expansion.UnmatchedPatterns)
                 {
-                    messageWriter.WriteLine($"warning: content pattern '{pattern}' did not match any file");
+                    if (warningsAsErrors)
+                    {
+                        warningsFailed = true;
+                        messageWriter.WriteLine("error: content pattern '" + pattern + "' did not match any file");
+                    }
+                    else
+                    {
+                        messageWriter.WriteLine("warning: content pattern '" + pattern + "' did not match any file");
+                    }
                 }
 
                 foreach (var source in expansion.Files)
