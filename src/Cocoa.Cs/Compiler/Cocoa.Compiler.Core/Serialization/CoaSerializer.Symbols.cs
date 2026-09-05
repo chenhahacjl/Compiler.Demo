@@ -71,7 +71,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             // 6b：facade 实例类属性声明（getter/setter 访问器为独立 fn `get_X`/`set_X`，读侧 fns 回填后挂接）
             var properties = classType.Properties;
-            if (properties.Length > 0)
+if (properties.Length > 0)
             {
                 w.Field("props:" + properties.Length.ToString(CultureInfo.InvariantCulture));
                 foreach (var property in properties)
@@ -85,6 +85,17 @@ namespace Cocoa.CodeAnalysis.Serialization
                     w.Field(BoolWord(property.IsStatic));
                     w.End();
                 }
+            }
+            // 6e-Step D-b：事件声明（符号多播 + 后备字段 `_<e>` 已在 fields: 携带）——读侧回填 EventSymbol
+            var events = classType.Events;
+            w.Field("events:" + events.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var eventSymbol in events)
+            {
+                w.Open("evt");
+                w.Field(Str(eventSymbol.Name));
+                w.Field(TypeRef(eventSymbol.HandlerType));
+                w.Field(eventSymbol.Visibility.ToString().ToLowerInvariant());
+                w.End();
             }
             w.End();
         }
@@ -149,20 +160,31 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             // 6e 跨库里程碑：泛型定义类属性声明（访问器 get_X/set_X 为独立 fn，读侧 fns 回填后挂接）。
             var properties = classType.Properties;
-            if (properties.Length > 0)
-            {
-                w.Field("props:" + properties.Length.ToString(CultureInfo.InvariantCulture));
-                foreach (var property in properties)
+if (properties.Length > 0)
                 {
-                    w.Open("prop");
-                    w.Field(Str(property.Name));
-                    w.Field(TypeRef(property.Type));
-                    w.Field(BoolWord(property.Getter != null));
-                    w.Field(BoolWord(property.Setter != null));
-                    w.Field(property.Visibility.ToString().ToLowerInvariant());
-                    w.Field(BoolWord(property.IsStatic));
-                    w.End();
+                    w.Field("props:" + properties.Length.ToString(CultureInfo.InvariantCulture));
+                    foreach (var property in properties)
+                    {
+                        w.Open("prop");
+                        w.Field(Str(property.Name));
+                        w.Field(TypeRef(property.Type));
+                        w.Field(BoolWord(property.Getter != null));
+                        w.Field(BoolWord(property.Setter != null));
+                        w.Field(property.Visibility.ToString().ToLowerInvariant());
+                        w.Field(BoolWord(property.IsStatic));
+                        w.End();
+                    }
                 }
+            // 6e-Step D-b：泛型定义类事件声明（handler 类型可含开放参数）
+            var genericEvents = classType.Events;
+            w.Field("events:" + genericEvents.Length.ToString(CultureInfo.InvariantCulture));
+            foreach (var eventSymbol in genericEvents)
+            {
+                w.Open("evt");
+                w.Field(Str(eventSymbol.Name));
+                w.Field(TypeRef(eventSymbol.HandlerType));
+                w.Field(eventSymbol.Visibility.ToString().ToLowerInvariant());
+                w.End();
             }
 
             w.End();

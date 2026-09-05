@@ -220,9 +220,12 @@ namespace Cocoa.CodeAnalysis.Serialization
                 // 类方法：容器类全静态（syscall/extern 及带体静态方法，6e-M18）作为独立 fn 序列化；实例方法/构造由类壳过滤。
                 // 例外：Object 内建方法（M2-c）按 BuiltinKind，读侧经单例复用重建，须随引用序列化。
                 // 6e-G7 S1/S2：泛型定义的实例方法/构造也随库携带（消费方单态化素材）；其余实例方法仍由类壳过滤
-                if (fn.ContainingClass != null && !fn.IsStatic &&
-                    !SystemObjectMembers.IsBuiltinSystemClass(fn.ContainingClass) &&
-                    !fn.ContainingClass.IsGenericDefinition)
+                // 6e-Step D-b：普通实例类（base=Object 无属性）实例方法/构造器随库携带——事件类触发/订阅体依赖
+                var containingClass = fn.ContainingClass;
+                if (containingClass != null && !fn.IsStatic &&
+                    !SystemObjectMembers.IsBuiltinSystemClass(containingClass) &&
+                    !containingClass.IsGenericDefinition &&
+                    !IsPlainInstanceCodClass(containingClass))
                 {
                     return;
                 }
@@ -273,6 +276,12 @@ namespace Cocoa.CodeAnalysis.Serialization
                 var library = fn.ContainingLibrary ?? _moduleName;
                 return (library.Length > 0 ? library + "!" : "") + head + "[" + paramTypes + "]";
             }
+
+            // 6e-Step D-b：普通实例类（base 可继承 Object，无属性）判定——与发射门（AssemblyReferenceManager）同规。
+            private static bool IsPlainInstanceCodClass(NamedTypeSymbol classType)
+                => classType != null &&
+                   (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot) &&
+                   classType.Properties.Length == 0;
 
             public void Seal()
             {

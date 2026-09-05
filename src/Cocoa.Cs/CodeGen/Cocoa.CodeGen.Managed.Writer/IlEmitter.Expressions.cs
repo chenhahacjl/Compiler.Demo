@@ -690,7 +690,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                 case BoundMemberAccessExpression member when member.Field != null:
                     EmitValueTypeReceiverAddress(il, member.Target);
-                    il.Emit(IlOpCodeTable.Get("Ldflda"), _fieldDefs[member.Field]);
+                    il.Emit(IlOpCodeTable.Get("Ldflda"), _fieldToken(member.Field));
                     return;
 
                 default:
@@ -702,7 +702,7 @@ namespace Cocoa.CodeGen.Managed.Writer
         {
             if (node.Field != null && node.Field.IsStatic)
             {
-                il.Emit(IlOpCodeTable.Get("Ldsfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldsfld"), _fieldToken(node.Field));
                 return;
             }
 
@@ -717,7 +717,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                     EmitExpression(il, node.Target);
                 }
 
-                il.Emit(IlOpCodeTable.Get("Ldfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Ldfld"), _fieldToken(node.Field));
                 return;
             }
 
@@ -911,7 +911,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                 EmitExpression(il, node.Expression);
                 il.Emit(IlOpCodeTable.Get("Dup"));
                 il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
-                il.Emit(IlOpCodeTable.Get("Stfld"), _fieldDefs[node.Field]);
+                il.Emit(IlOpCodeTable.Get("Stfld"), _fieldToken(node.Field));
                 il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
                 return;
             }
@@ -920,7 +920,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             EmitExpression(il, node.Expression);
             il.Emit(IlOpCodeTable.Get("Dup"));
             il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)temporaryLocal);
-            il.Emit(IlOpCodeTable.Get("Stfld"), _fieldDefs[node.Field]);
+            il.Emit(IlOpCodeTable.Get("Stfld"), _fieldToken(node.Field));
             il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)temporaryLocal);
         }
 
@@ -970,6 +970,19 @@ namespace Cocoa.CodeGen.Managed.Writer
                 EmitExpression(il, argument);
             }
 
+            if (_codAssemblies.TryGetValue(classType, out var codObjectAssembly))
+            {
+                // 6e-Step D-b：动态链接 + cod 普通实例类 → Newobj MemberRef（库托管 dll 宿主 TypeRef）
+                var codCtor = classType.GetMethod(classType.Name);
+                if (codCtor == null)
+                {
+                    throw new System.Exception($"cod 类型 {classType.Name} 无构造函数。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), CodMethodRef(codCtor, codObjectAssembly));
+                return;
+            }
+
             if (classType.IsExternal)
             {
                 var parameterNames = new string[node.Arguments.Length];
@@ -1001,6 +1014,28 @@ namespace Cocoa.CodeGen.Managed.Writer
         {
             // this 恒为 arg.0：引用类型=对象引用(O)；struct 实例方法=托管指针(Point&)（调用端按 ref 传参）
             il.Emit(IlOpCodeTable.Get("Ldarg"), (ushort)0);
+        }
+
+        private readonly Dictionary<(string asm, string type, string name), IlFieldRef> _codFieldRefs =
+            new Dictionary<(string, string, string), IlFieldRef>();
+
+        /// <summary>6e-Step D-b：cod 类的字段 token——本地 TypeDef 用 _fieldDefs；cod 类走库 dll 宿主 TypeRef 的 FieldRef。</summary>
+        private object _fieldToken(FieldSymbol field)
+        {
+            var owner = field.ContainingClass;
+            if (owner != null && _codAssemblies.TryGetValue(owner, out var asm))
+            {
+                var cacheKey = (asm, owner.Namespace + "." + owner.Name, field.Name);
+                if (!_codFieldRefs.TryGetValue(cacheKey, out var reference))
+                {
+                    reference = _metadata.DefineFieldRef(CodTypeRef(asm, owner.Namespace, owner.Name), field.Name, ToIlType(field.Type));
+                    _codFieldRefs[cacheKey] = reference;
+                }
+
+                return reference;
+            }
+
+            return _fieldDefs[field];
         }
 
         private void EmitConstructorChainExpression(IlAssembler il, BoundConstructorChainExpression node)

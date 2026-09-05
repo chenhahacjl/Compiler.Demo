@@ -124,6 +124,15 @@ namespace Cocoa.CodeAnalysis
                 return true;
             }
 
+            // 6e-Step D-b：普通实例类（如事件类：实例字段 + 实例方法体）入 .coa ——
+            // base 限制 System.Object（无多继承依赖），属性仍止于读取接入；实例构造允许隐式（无体）。
+            if (!classType.IsInterface &&
+                (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot) &&
+                classType.Properties.Length == 0)
+            {
+                return true;
+            }
+
             return IsPureContainerClass(classType) || classType.IsFacadeClass || DeclaredFacade(classType);
         }
 

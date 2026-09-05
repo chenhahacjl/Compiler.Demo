@@ -411,6 +411,26 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
             }
 
+            // 6e-Step D-b：事件声明读回（handler 解析为 FunctionTypeSymbol）
+            if (reader.PeekRaw().StartsWith("events:", StringComparison.Ordinal))
+            {
+                var eventCount = ReadCountField(reader, "events:");
+                for (var i = 0; i < eventCount; i++)
+                {
+                    reader.Expect("evt");
+                    var eventName = Unescape(reader.ExpectString());
+                    var handlerType = (FunctionTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                    var eventVisibilityText = reader.ExpectString();
+                    if (!Enum.TryParse<Visibility>(eventVisibilityText, ignoreCase: true, out var eventVisibility))
+                    {
+                        throw new InvalidDataException($"Unknown visibility '{eventVisibilityText}' on event '{fullName}.{eventName}'");
+                    }
+
+                    classType.AddEvent(new EventSymbol(eventName, handlerType, eventVisibility, classType));
+                    reader.End();
+                }
+            }
+
             // 6b：facade 类属性声明解析（访问器 `get_X`/`set_X` 为独立 fn，读毕后回填挂接）
             if (reader.PeekRaw().StartsWith("props:", StringComparison.Ordinal))
             {
@@ -565,6 +585,26 @@ namespace Cocoa.CodeAnalysis.Serialization
             // Managed dll 时把开放类型参数类当普通类发射（IL Unexpected type K）。类型注入经 GenericDefinitions。
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
+
+            // 6e-Step D-b：泛型定义类事件声明读回
+            if (reader.PeekRaw().StartsWith("events:", StringComparison.Ordinal))
+            {
+                var eventCount = ReadCountField(reader, "events:");
+                for (var i = 0; i < eventCount; i++)
+                {
+                    reader.Expect("evt");
+                    var eventName = Unescape(reader.ExpectString());
+                    var handlerType = (FunctionTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
+                    var eventVisibilityText = reader.ExpectString();
+                    if (!Enum.TryParse<Visibility>(eventVisibilityText, ignoreCase: true, out var eventVisibility))
+                    {
+                        throw new InvalidDataException($"Unknown visibility '{eventVisibilityText}' on event '{fullName}.{eventName}'");
+                    }
+
+                    classType.AddEvent(new EventSymbol(eventName, handlerType, eventVisibility, classType));
+                    reader.End();
+                }
+            }
 
             // 6e 跨库里程碑：泛型定义类属性声明解析（访问器 `get_X`/`set_X` 为独立 fn，读毕后回填挂接）。
             if (reader.PeekRaw().StartsWith("props:", StringComparison.Ordinal))
