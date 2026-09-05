@@ -77,7 +77,7 @@ namespace Cocoa.Build
                 FormatOverride = options.FormatOverride,
                 PlatformOverride = options.PlatformOverride,
                 NoIncremental = options.NoIncremental,
-                DebugOverride = options.DebugOverride,
+                ConfigurationOverride = options.ConfigurationOverride,
                 OutputFileOverride = options.OutputFileOverride,
                 ReferenceOverrides = options.ReferenceOverrides,
                 Backend = options.Backend,

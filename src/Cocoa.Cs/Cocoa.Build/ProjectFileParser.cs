@@ -1,301 +1,171 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.IO;
-using Cocoa.Targeting;
+using System.Linq;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace Cocoa.Build
 {
-    /// <summary>用户级覆盖（`.cocproj.user`，仿 `.csproj.user`）：仅可覆盖构建属性，未知节/键为 IDE 预留。</summary>
+    /// <summary>用户级覆盖（`.coproj.user`，仿 `.csproj.user`）：仅可覆盖构建属性，未知节/键为 IDE 预留。</summary>
     public sealed class UserProjectOverrides
     {
-        public string? Name { get; set; }
+        public string? AssemblyName { get; set; }
         public ProjectOutputFormat? Output { get; set; }
-        public Architecture? Platform { get; set; }
-        public string? Entry { get; set; }
-        public bool? Incremental { get; set; }
-        public bool? Debug { get; set; }
+        public string? Platform { get; set; }
+        public string? TargetFramework { get; set; }
+        public CocoaTargetOs? TargetOs { get; set; }
+        public ProjectConfiguration? Configuration { get; set; }
         public string? OutputPath { get; set; }
-        public string? DotnetRuntime { get; set; }
     }
 
+    /// <summary>SDK-style XML 项目/解决方案文件解析器。</summary>
     public static class ProjectFileParser
     {
+        public const string CurrentFormatVersion = "1";
+
+        // ---- .coproj ----
+
+        public static CocoaProjectSpec ParseProjectSpec(string text, string fileName)
+        {
+            var root = ParseXml(text, "Project");
+            var version = RootVersion(root);
+            if (version != null && version != CurrentFormatVersion)
+            {
+                throw new ProjectFileFormatException($"unsupported format version '{version}'; supported: {CurrentFormatVersion}", LineOf(root));
+            }
+
+            var groups = ImmutableArray.CreateBuilder<PropertyGroupDecl>();
+            var itemGroups = ImmutableArray.CreateBuilder<ItemGroupDecl>();
+
+            foreach (var element in root.Elements())
+            {
+                var localName = element.Name.LocalName;
+                if (localName.Equals("PropertyGroup", StringComparison.Ordinal))
+                {
+                    var label = (string?)element.Attribute("Label") ?? string.Empty;
+                    var condition = element.Attribute("Condition")?.Value;
+                    var values = ImmutableArray.CreateBuilder<PropertyValue>();
+                    foreach (var child in element.Elements())
+                    {
+                        values.Add(new PropertyValue(child.Name.LocalName, child.Value.Trim()));
+                    }
+
+                    groups.Add(new PropertyGroupDecl(label, condition, values.ToImmutable()));
+                }
+                else if (localName.Equals("ItemGroup", StringComparison.Ordinal))
+                {
+                    var condition = element.Attribute("Condition")?.Value;
+                    var items = ImmutableArray.CreateBuilder<ItemDecl>();
+                    foreach (var child in element.Elements())
+                    {
+                        var include = child.Attribute("Include")?.Value ?? string.Empty;
+                        var attributes = ImmutableArray.CreateBuilder<(string Key, string Value)>();
+                        foreach (var attr in child.Attributes())
+                        {
+                            if (attr.Name.LocalName == "Include")
+                            {
+                                continue;
+                            }
+
+                            attributes.Add((attr.Name.LocalName, attr.Value));
+                        }
+
+                        items.Add(new ItemDecl(child.Name.LocalName, include, attributes.ToImmutable()));
+                    }
+
+                    itemGroups.Add(new ItemGroupDecl(condition, items.ToImmutable()));
+                }
+                // 未知元素忽略（IDE 预留）
+            }
+
+            return new CocoaProjectSpec(fileName, groups.ToImmutable(), itemGroups.ToImmutable());
+        }
+
+        /// <summary>兼容入口：解析并求值为终态项目（无外部覆盖）。</summary>
         public static CocoaProjectFile ParseProject(string text, string fileName)
         {
-            var name = (string?)null;
-            var outputText = "executable";
-            var platformText = "x64";
-            var entry = (string?)null;
-            var incremental = true;
-            var debug = false;
-            var outputPath = (string?)null;
-            var dotnetRuntime = (string?)null;
-            var sources = new List<string>();
-            var references = new List<string>();
-            var imports = new List<string>();
-
-            var section = (string?)null;
-
-            foreach (var (lineNumber, line) in EnumerateLines(text))
-            {
-                var trimmed = line.Trim();
-                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (trimmed.StartsWith("[", StringComparison.Ordinal))
-                {
-                    if (!trimmed.EndsWith("]", StringComparison.Ordinal) || trimmed.Length < 3)
-                    {
-                        throw new ProjectFileFormatException("malformed section header", lineNumber);
-                    }
-
-                    section = trimmed.Substring(1, trimmed.Length - 2).Trim();
-                    continue;
-                }
-
-                var eq = trimmed.IndexOf('=');
-
-                if (section == null)
-                {
-                    if (eq < 0)
-                    {
-                        throw new ProjectFileFormatException("expected 'key = value'", lineNumber);
-                    }
-
-                    var key = trimmed.Substring(0, eq).Trim();
-                    var value = trimmed.Substring(eq + 1).Trim();
-
-                    switch (key)
-                    {
-                        case "name":
-                            name = value;
-                            break;
-                        case "output":
-                            outputText = value;
-                            break;
-                        case "platform":
-                            platformText = value;
-                            break;
-                        case "entry":
-                            entry = value;
-                            break;
-                        case "dotnetRuntime":
-                            dotnetRuntime = value;
-                            break;
-                    }
-                }
-                else
-                {
-                    string? key;
-                    string value;
-
-                    if (eq < 0)
-                    {
-                        key = null;
-                        value = trimmed;
-                    }
-                    else
-                    {
-                        key = trimmed.Substring(0, eq).Trim();
-                        value = trimmed.Substring(eq + 1).Trim();
-                    }
-
-                    switch (section)
-                    {
-                        case "sources":
-                            sources.Add(value);
-                            break;
-                        case "references":
-                            references.Add(value);
-                            break;
-                        case "imports":
-                            imports.Add(value);
-                            break;
-                        case "options":
-                            if (key == null)
-                            {
-                                throw new ProjectFileFormatException("options entries require 'key = value'", lineNumber);
-                            }
-
-                            switch (key)
-                            {
-                                case "incremental":
-                                    incremental = ParseBool(value, lineNumber);
-                                    break;
-                                case "debug":
-                                    debug = ParseBool(value, lineNumber);
-                                    break;
-                                case "outputPath":
-                                    outputPath = value;
-                                    break;
-                            }
-                            break;
-                    }
-                }
-            }
-
-            if (sources.Count == 0)
-            {
-                throw new ProjectFileFormatException("[sources] section requires at least one source pattern");
-            }
-
-            return new CocoaProjectFile(
-                fileName,
-                name ?? Path.GetFileNameWithoutExtension(fileName),
-                ParseOutput(outputText),
-                ParsePlatform(platformText),
-                entry,
-                sources.ToImmutableArray(),
-                references.ToImmutableArray(),
-                imports.ToImmutableArray(),
-                incremental,
-                debug,
-                outputPath,
-                dotnetRuntime);
+            var spec = ParseProjectSpec(text, fileName);
+            return ProjectEvaluator.Evaluate(spec, new UserProjectOverrides());
         }
+
+        // ---- .cosln ----
 
         public static CocoaSolutionFile ParseSolution(string text, string fileName)
         {
-            var name = (string?)null;
-            var projects = new List<string>();
-            var section = (string?)null;
-
-            foreach (var (lineNumber, line) in EnumerateLines(text))
+            var root = ParseXml(text, "Solution");
+            var version = RootVersion(root);
+            if (version != null && version != CurrentFormatVersion)
             {
-                var trimmed = line.Trim();
-                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
+                throw new ProjectFileFormatException($"unsupported format version '{version}'; supported: {CurrentFormatVersion}", LineOf(root));
+            }
+
+            var projects = ImmutableArray.CreateBuilder<string>();
+            foreach (var element in root.Elements())
+            {
+                if (element.Name.LocalName.Equals("Project", StringComparison.Ordinal))
                 {
-                    continue;
+                    projects.Add(element.Attribute("Include")?.Value ?? string.Empty);
                 }
-
-                if (trimmed.StartsWith("[", StringComparison.Ordinal))
-                {
-                    if (!trimmed.EndsWith("]", StringComparison.Ordinal) || trimmed.Length < 3)
-                    {
-                        throw new ProjectFileFormatException("malformed section header", lineNumber);
-                    }
-
-                    section = trimmed.Substring(1, trimmed.Length - 2).Trim();
-                    continue;
-                }
-
-                var eq = trimmed.IndexOf('=');
-
-                if (section == null)
-                {
-                    if (eq < 0)
-                    {
-                        throw new ProjectFileFormatException("expected 'key = value'", lineNumber);
-                    }
-
-                    var key = trimmed.Substring(0, eq).Trim();
-                    var value = trimmed.Substring(eq + 1).Trim();
-
-                    switch (key)
-                    {
-                        case "name":
-                            name = value;
-                            break;
-                    }
-                }
-                else if (section == "projects")
-                {
-                    projects.Add(eq < 0 ? trimmed : trimmed.Substring(eq + 1).Trim());
-                }
+                // PropertyGroup / 未知元素忽略
             }
 
             if (projects.Count == 0)
             {
-                throw new ProjectFileFormatException("[projects] section requires at least one project");
+                throw new ProjectFileFormatException("[Solution] requires at least one <Project Include .../>");
             }
 
-            return new CocoaSolutionFile(fileName, name, projects.ToImmutableArray());
+            return new CocoaSolutionFile(fileName, null, projects.ToImmutable());
         }
 
-        /// <summary>解析 `.cocproj.user`：顶层构建属性 + `[options]` 可覆盖；未知节/未知键忽略（IDE 预留）。</summary>
+        // ---- .user ----
+
+        /// <summary>解析 `.coproj.user`：仅可覆盖键；未知元素/键忽略（IDE 预留）。</summary>
         public static UserProjectOverrides ParseUserOverrides(string text, string fileName)
         {
             var overrides = new UserProjectOverrides();
-            var section = (string?)null;
-
-            foreach (var (lineNumber, line) in EnumerateLines(text))
+            if (string.IsNullOrWhiteSpace(text))
             {
-                var trimmed = line.Trim();
-                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
+                return overrides;
+            }
+
+            var root = ParseXml(text, "Project");
+            foreach (var groupElement in root.Elements())
+            {
+                if (!groupElement.Name.LocalName.Equals("PropertyGroup", StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                if (trimmed.StartsWith("[", StringComparison.Ordinal))
+                foreach (var child in groupElement.Elements())
                 {
-                    if (!trimmed.EndsWith("]", StringComparison.Ordinal) || trimmed.Length < 3)
+                    var value = child.Value.Trim();
+                    switch (child.Name.LocalName)
                     {
-                        throw new ProjectFileFormatException("malformed section header", lineNumber);
-                    }
-
-                    section = trimmed.Substring(1, trimmed.Length - 2).Trim();
-                    continue;
-                }
-
-                if (section != null && section != "options")
-                {
-                    continue;
-                }
-
-                var eq = trimmed.IndexOf('=');
-
-                if (section == null)
-                {
-                    if (eq < 0)
-                    {
-                        throw new ProjectFileFormatException("expected 'key = value'", lineNumber);
-                    }
-
-                    var key = trimmed.Substring(0, eq).Trim();
-                    var value = trimmed.Substring(eq + 1).Trim();
-
-                    switch (key)
-                    {
-                        case "name":
-                            overrides.Name = value;
+                        case "AssemblyName":
+                            overrides.AssemblyName = value;
                             break;
-                        case "output":
-                            overrides.Output = ParseOutput(value);
+                        case "OutputType":
+                            overrides.Output = ParseOutput(value, LineOf(child));
                             break;
-                        case "platform":
-                            overrides.Platform = ParsePlatform(value);
+                        case "Platform":
+                            overrides.Platform = ValidatePlatform(value, LineOf(child));
                             break;
-                        case "entry":
-                            overrides.Entry = value;
+                        case "TargetFramework":
+                            overrides.TargetFramework = value;
                             break;
-                        case "dotnetRuntime":
-                            overrides.DotnetRuntime = value;
+                        case "TargetOS":
+                            overrides.TargetOs = ParseTargetOs(value, LineOf(child));
                             break;
-                    }
-                }
-                else
-                {
-                    if (eq < 0)
-                    {
-                        throw new ProjectFileFormatException("options entries require 'key = value'", lineNumber);
-                    }
-
-                    var key = trimmed.Substring(0, eq).Trim();
-                    var value = trimmed.Substring(eq + 1).Trim();
-
-                    switch (key)
-                    {
-                        case "incremental":
-                            overrides.Incremental = ParseBool(value, lineNumber);
+                        case "Configuration":
+                            overrides.Configuration = ParseConfiguration(value, LineOf(child));
                             break;
-                        case "debug":
-                            overrides.Debug = ParseBool(value, lineNumber);
-                            break;
-                        case "outputPath":
+                        case "OutputPath":
                             overrides.OutputPath = value;
+                            break;
+                        default:
                             break;
                     }
                 }
@@ -304,60 +174,137 @@ namespace Cocoa.Build
             return overrides;
         }
 
-        private static ProjectOutputFormat ParseOutput(string text)
+        // ---- shared ----
+
+        private static XElement ParseXml(string text, string expectedRoot)
+        {
+            XDocument document;
+            try
+            {
+                document = XDocument.Parse(text, LoadOptions.SetLineInfo);
+            }
+            catch (XmlException ex)
+            {
+                throw new ProjectFileFormatException($"malformed XML: {ex.Message}", ex.LineNumber);
+            }
+
+            var root = document.Root;
+            if (root == null)
+            {
+                throw new ProjectFileFormatException("empty document; expected <Project> root element");
+            }
+
+            if (root.Name.LocalName != expectedRoot)
+            {
+                throw new ProjectFileFormatException($"expected <{expectedRoot}> root element; found <{root.Name.LocalName}>");
+            }
+
+            return root;
+        }
+
+        private static string? RootVersion(XElement root)
+        {
+            return root.Attribute("Version")?.Value;
+        }
+
+        private static int LineOf(XObject obj)
+        {
+            if (obj is IXmlLineInfo info && info.HasLineInfo())
+            {
+                return info.LineNumber;
+            }
+
+            return 0;
+        }
+
+        internal static ProjectOutputFormat ParseOutput(string text, int line)
         {
             return text.ToLowerInvariant() switch
             {
                 "executable" => ProjectOutputFormat.Exe,
                 "library" => ProjectOutputFormat.Dll,
                 "cocoa" => ProjectOutputFormat.Cod,
-                _ => throw new ProjectFileFormatException($"invalid output '{text}'. Expected: executable, library, cocoa"),
+                _ => throw new ProjectFileFormatException($"invalid OutputType '{text}'. Expected: executable, library, cocoa", line),
             };
         }
 
-        private static Architecture ParsePlatform(string text)
+        internal static string NormalizePlatform(string text)
         {
             return text.ToLowerInvariant() switch
             {
-                "x64" => Architecture.X64,
-                "x86" => Architecture.X86,
-                _ => throw new ProjectFileFormatException($"invalid platform '{text}'. Expected: x86, x64"),
+                "x86" => "x86",
+                "x64" => "x64",
+                "anycpu" => "AnyCPU",
+                _ => throw new ProjectFileFormatException($"invalid Platform '{text}'. Expected: x86, x64, AnyCPU"),
             };
         }
 
-        private static bool ParseBool(string text, int lineNumber)
+        internal static string ValidatePlatform(string text, int line)
+        {
+            try
+            {
+                return NormalizePlatform(text);
+            }
+            catch (ProjectFileFormatException ex)
+            {
+                throw new ProjectFileFormatException(ex.Message, line);
+            }
+        }
+
+        private static string ValidatePlatformValue(string text, int line)
+        {
+            return ValidatePlatform(text, line);
+        }
+
+        internal static bool ParseBool(string text, int line)
         {
             return text.ToLowerInvariant() switch
             {
                 "true" => true,
                 "false" => false,
-                _ => throw new ProjectFileFormatException($"invalid boolean '{text}'. Expected: true, false", lineNumber),
+                _ => throw new ProjectFileFormatException($"invalid boolean '{text}'. Expected: true, false", line),
             };
         }
 
-        private static IEnumerable<(int LineNumber, string Line)> EnumerateLines(string text)
+        internal static ProjectConfiguration ParseConfiguration(string text, int line)
         {
-            var lineNumber = 0;
-            var start = 0;
-            while (start <= text.Length)
+            return text.ToLowerInvariant() switch
             {
-                var end = text.IndexOf('\n', start);
-                if (end < 0)
-                {
-                    end = text.Length;
-                }
+                "debug" => ProjectConfiguration.Debug,
+                "release" => ProjectConfiguration.Release,
+                _ => throw new ProjectFileFormatException($"invalid Configuration '{text}'. Expected: debug, release", line),
+            };
+        }
 
-                lineNumber++;
-                var line = text.Substring(start, end - start).TrimEnd('\r');
-                yield return (lineNumber, line);
+        internal static CocoaTargetOs ParseTargetOs(string text, int line)
+        {
+            return text.ToLowerInvariant() switch
+            {
+                "windows" => CocoaTargetOs.Windows,
+                "linux" => CocoaTargetOs.Linux,
+                _ => throw new ProjectFileFormatException($"invalid TargetOS '{text}'. Expected: windows, linux", line),
+            };
+        }
 
-                if (end == text.Length)
-                {
-                    yield break;
-                }
+        internal static RequestedExecutionLevel ParseRequestedExecutionLevel(string text, int line)
+        {
+            return text.ToLowerInvariant() switch
+            {
+                "asinvoker" => RequestedExecutionLevel.AsInvoker,
+                "highestavailable" => RequestedExecutionLevel.HighestAvailable,
+                "requireadministrator" => RequestedExecutionLevel.RequireAdministrator,
+                _ => throw new ProjectFileFormatException($"invalid RequestedExecutionLevel '{text}'. Expected: AsInvoker, HighestAvailable, RequireAdministrator", line),
+            };
+        }
 
-                start = end + 1;
-            }
+        internal static CocoaProjectLanguage ParseLanguage(string text, int line)
+        {
+            return text.ToLowerInvariant() switch
+            {
+                "cocoa" => CocoaProjectLanguage.Cocoa,
+                "csharp" => CocoaProjectLanguage.CSharp,
+                _ => throw new ProjectFileFormatException($"invalid Language '{text}'. Expected: cocoa, csharp", line),
+            };
         }
     }
 }

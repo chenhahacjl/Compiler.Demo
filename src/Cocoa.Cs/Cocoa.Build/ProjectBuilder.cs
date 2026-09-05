@@ -20,8 +20,6 @@ namespace Cocoa.Build
 
             var backend = options.Backend ?? ProjectBuildOptions.DefaultBackend;
 
-            var platform = ParseTargetPlatform(options.PlatformOverride, project.Platform);
-
             var outputDirectory = project.GetOutputDirectory();
             var outputFile = options.OutputFileOverride != null
                 ? Path.GetFullPath(options.OutputFileOverride)
@@ -65,7 +63,7 @@ namespace Cocoa.Build
                 messageWriter.WriteLine($"warning: [imports] section is not implemented yet; declare 'import {import}' in source files instead");
             }
 
-            var useIncremental = project.Incremental && !options.NoIncremental;
+            var useIncremental = !options.NoIncremental;
             var cacheRoot = options.CacheRoot ?? BuildCache.GetDefaultCacheRoot(project.Directory);
             var cachePath = BuildCache.GetCachePath(cacheRoot, project.Directory, project.Name);
 
@@ -79,9 +77,9 @@ namespace Cocoa.Build
             var optionTokens = new[]
             {
                 $"format={format}",
-                $"platform={platform}",
+                $"platform={options.PlatformOverride ?? project.Platform}",
                 $"backend={backend}",
-                $"debug={options.DebugOverride ?? project.Debug}",
+                $"configuration={options.ConfigurationOverride ?? project.Configuration}",
                 $"output={outputFile}",
                 $"entry={project.Entry}",
                 $"dotnetRuntime={dotnetRuntime}",
@@ -134,6 +132,11 @@ namespace Cocoa.Build
                         return new ProjectBuildResult(success: true, upToDate: false);
                     }
 
+                    if (!TryParseTargetPlatform(options.PlatformOverride, project.Platform, out var platform, out var platformError))
+                    {
+                        messageWriter.WriteLine($"error: {platformError}");
+                        return ProjectBuildResult.Failed;
+                    }
 
                     diagnostics = compilation.EmitNative(project.Name, outputFile, platform);
                 }
@@ -358,16 +361,31 @@ namespace Cocoa.Build
                 || sourceInfo.LastWriteTimeUtc != destinationInfo.LastWriteTimeUtc;
         }
 
-        private static TargetPlatform ParseTargetPlatform(string? overrideText, Architecture projectArch)
+        /// <summary>解析 native 目标平台：`x86`/`x64`。`AnyCPU`（默认或缺省）须显式 `--platform`。</summary>
+        private static bool TryParseTargetPlatform(string? overrideText, string projectPlatform, out TargetPlatform platform, out string? error)
         {
-            var arch = overrideText?.ToLowerInvariant() switch
+            var text = (overrideText ?? projectPlatform)?.Trim();
+            switch (text?.ToLowerInvariant())
             {
-                "x86" => Architecture.X86,
-                "x64" => Architecture.X64,
-                _ => projectArch,
-            };
-
-            return new TargetPlatform(TargetOS.Windows, arch);
+                case "x86":
+                    platform = new TargetPlatform(TargetOS.Windows, Architecture.X86);
+                    error = null;
+                    return true;
+                case "x64":
+                    platform = new TargetPlatform(TargetOS.Windows, Architecture.X64);
+                    error = null;
+                    return true;
+                case "anycpu":
+                case null:
+                case "":
+                    platform = default;
+                    error = "platform 'AnyCPU' cannot be used with the native backend; specify --platform x86 or x64";
+                    return false;
+                default:
+                    platform = default;
+                    error = $"invalid platform '{text}'. Expected: x86, x64, AnyCPU";
+                    return false;
+            }
         }
     }
 }

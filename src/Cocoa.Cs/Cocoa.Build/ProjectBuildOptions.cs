@@ -10,7 +10,7 @@ namespace Cocoa.Build
         public ProjectOutputFormat? FormatOverride { get; set; }
         public string? PlatformOverride { get; set; }
         public bool NoIncremental { get; set; }
-        public bool? DebugOverride { get; set; }
+        public ProjectConfiguration? ConfigurationOverride { get; set; }
         public string? OutputFileOverride { get; set; }
         public ImmutableArray<string> ReferenceOverrides { get; set; } = ImmutableArray<string>.Empty;
         public CodeBackend? Backend { get; set; }
