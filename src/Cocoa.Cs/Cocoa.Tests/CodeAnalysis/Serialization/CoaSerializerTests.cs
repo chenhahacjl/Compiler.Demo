@@ -447,8 +447,10 @@ function Add(a: i32, b: i32): i32
         }
 
         [Fact]
-        public void Cod_Reject_Oop()
+        public void Cod_PlainInstanceClass_Serializes()
         {
+            // 6e-Step D-b：普通实例类（base=Object、真实例语义：实例字段/实例方法）现可入 .coa——
+            // 读侧往返可重建（曾拒绝"实例类"，门放行为容器判定专门豁免）。
             var dir = NewDir();
             var source = @"
 namespace MyLib
@@ -464,9 +466,14 @@ namespace MyLib
             File.WriteAllText(libPath, source);
             var compilation = Compilation.Create(SyntaxTree.Load(libPath));
 
-            var diagnostics = compilation.EmitCocoa("Lib", Path.Combine(dir, "Lib.coa"));
-            Assert.True(diagnostics.HasErrors());
-            Assert.Contains("实例类", diagnostics[0].Message);
+            var output = Path.Combine(dir, "Lib.coa");
+            var diagnostics = compilation.EmitCocoa("Lib", output);
+            Assert.False(diagnostics.HasErrors());
+
+            var loaded = CoaSerializer.Load(output);
+            var point = Assert.Single(loaded.Classes, c => c.Name == "Point");
+            Assert.Equal("MyLib.Point", point.FullName);
+            Assert.Contains(point.Methods, m => m.Name == "X");
         }
 
         [Fact]

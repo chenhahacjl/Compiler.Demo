@@ -37,7 +37,132 @@ namespace Cocoa.CodeAnalysis
                 }
             }
 
-            return builder.ToImmutable();
+            return TopologicalOrder(builder.ToImmutable());
+        }
+
+        /// <summary>
+        /// 6e-Step E：`.coa` 库引用拓扑序（Kahn）——按各自 `CodReferences`（refcod 清单）构造依赖图，
+        /// 被依赖库先行（读侧 external 按序合并，首次命中实例复用）。环检测报错；未加载依赖计为无约束（宽松）。
+        /// 排序稳定：同层保持原相对顺序。
+        /// </summary>
+        public static ImmutableArray<CoaProgram> TopologicalOrder(ImmutableArray<CoaProgram> libraries)
+        {
+            if (libraries.Length < 2)
+            {
+                return libraries;
+            }
+
+            // 名 → 已加载程序（同库多个文件取首；重名场景由歧义诊断层负责，此处只保证依赖序）。
+            var byName = new Dictionary<string, CoaProgram>(StringComparer.Ordinal);
+            foreach (var library in libraries)
+            {
+                byName.TryAdd(LibraryKey(library), library);
+            }
+
+            var dependencyCount = new int[libraries.Length];
+            var dependents = new List<int>[libraries.Length];
+            for (var i = 0; i < dependents.Length; i++)
+            {
+                dependents[i] = new List<int>();
+            }
+
+            for (var i = 0; i < libraries.Length; i++)
+            {
+                foreach (var reference in libraries[i].CodReferences)
+                {
+                    if (!byName.TryGetValue(NormalizeReference(reference), out var dependency))
+                    {
+                        continue; // 未加载依赖（消费者名单外）——不做约束，待消费解析层报缺失
+                    }
+
+                    var j = libraries.IndexOf(dependency);
+                    if (j < 0 || j == i)
+                    {
+                        continue;
+                    }
+
+                    dependencyCount[i]++;
+                    dependents[j].Add(i);
+                }
+            }
+
+            var order = ImmutableArray.CreateBuilder<CoaProgram>(libraries.Length);
+            var scheduled = new bool[libraries.Length];
+            var priority = new Queue<int>();
+            for (var i = 0; i < libraries.Length; i++)
+            {
+                if (dependencyCount[i] == 0)
+                {
+                    priority.Enqueue(i);
+                }
+            }
+
+            var emitted = 0;
+            while (priority.Count > 0)
+            {
+                var index = priority.Dequeue();
+                if (scheduled[index])
+                {
+                    continue;
+                }
+
+                scheduled[index] = true;
+                order.Add(libraries[index]);
+                emitted++;
+
+                foreach (var dependent in dependents[index])
+                {
+                    dependencyCount[dependent]--;
+                    if (dependencyCount[dependent] == 0)
+                    {
+                        priority.Enqueue(dependent);
+                    }
+                }
+            }
+
+            if (emitted < libraries.Length)
+            {
+                var cyclic = new List<string>();
+                for (var i = 0; i < libraries.Length; i++)
+                {
+                    if (!scheduled[i])
+                    {
+                        cyclic.Add(LibraryKey(libraries[i]));
+                    }
+                }
+
+                throw new InvalidOperationException("cod 库循环引用: " + string.Join(", ", cyclic) + "。refcod 依赖不能成环。");
+            }
+
+            return order.ToImmutable();
+        }
+
+        private static string LibraryKey(CoaProgram library)
+        {
+            var name = library.Name;
+            if (name.Length > 0)
+            {
+                return name;
+            }
+
+            return Path.GetFileNameWithoutExtension(library.SourcePath ?? "");
+        }
+
+        private static string NormalizeReference(string reference)
+        {
+            // refcod 清单可能带 `X.Managed` 形式（命名对齐），压平为库键
+            var baseName = reference;
+            if (baseName.EndsWith(".coa", StringComparison.OrdinalIgnoreCase))
+            {
+                baseName = Path.GetFileNameWithoutExtension(baseName);
+            }
+
+            if (baseName.EndsWith(".Managed", StringComparison.Ordinal))
+            {
+                baseName = baseName.Substring(0, baseName.Length - ".Managed".Length);
+            }
+
+            return baseName;
         }
 
         private AssemblySymbol? _sourceAssembly;
@@ -125,10 +250,13 @@ namespace Cocoa.CodeAnalysis
             }
 
             // 6e-Step D-b：普通实例类（如事件类：实例字段 + 实例方法体）入 .coa ——
-            // base 限制 System.Object（无多继承依赖），属性仍止于读取接入；实例构造允许隐式（无体）。
+            // base 限制 System.Object（无多继承依赖），仍需真实实例语义（否则落入纯容器判定，杜绝容器默认构造器泄漏）。
             if (!classType.IsInterface &&
                 (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot) &&
-                classType.Properties.Length == 0)
+                classType.Properties.Length == 0 &&
+                (classType.Fields.Any(f => !f.IsStatic) ||
+                 classType.Events.Length > 0 ||
+                 classType.Methods.Any(m => !m.IsStatic && !m.IsConstructor)))
             {
                 return true;
             }

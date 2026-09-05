@@ -282,11 +282,29 @@ namespace Cocoa.CodeAnalysis.Serialization
                 return (library.Length > 0 ? library + "!" : "") + head + "[" + paramTypes + "]";
             }
 
-            // 6e-Step D-b：普通实例类（base 可继承 Object，无属性）判定——与发射门（AssemblyReferenceManager）同规。
+            // 6e-Step D-b：普通实例类（base=Object 无属性）实例方法/构造随库携带——事件类触发/订阅体依赖。
+            // 收紧：需真实实例语义（实例字段/非构造实例方法/事件），杜绝纯静态容器类的隐式默认构造器泄漏进库。
             private static bool IsPlainInstanceCodClass(NamedTypeSymbol classType)
-                => classType != null &&
-                   (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot) &&
-                   classType.Properties.Length == 0;
+            {
+                if (classType == null || classType.TypeKind == TypeKind.Interface)
+                {
+                    return false;
+                }
+
+                if (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot)
+                {
+                    return false;
+                }
+
+                if (classType.Properties.Length > 0)
+                {
+                    return false;
+                }
+
+                return classType.Fields.Any(f => !f.IsStatic) ||
+                       classType.Events.Length > 0 ||
+                       classType.Methods.Any(m => !m.IsStatic && !m.IsConstructor);
+            }
 
             public void Seal()
             {
