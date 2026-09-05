@@ -120,10 +120,12 @@ namespace Cocoa.CodeAnalysis.Binding
             return ops.ToArray();
         }
 
-        /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 比较与引用转换的合法目标。</summary>
+        /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 比较与引用转换的合法目标。
+        /// 6f：函数值类型同属引用语义（事件后备/委托字段 == / != null）。</summary>
         private static bool IsNullableReference(TypeSymbol type)
         {
-            return !type.IsValueType && (type is NamedTypeSymbol || type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null);
+            return !type.IsValueType && (type is NamedTypeSymbol || type is FunctionTypeSymbol ||
+                type == TypeSymbol.String || type == TypeSymbol.Any || type.ElementType != null);
         }
 
         /// <summary>兼容词法门（HIR 净化）：token → 语义 kind 翻译后委托语义入口。</summary>

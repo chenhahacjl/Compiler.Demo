@@ -83,6 +83,10 @@ entry = Main
 
             // 6e-Step D-b 边界：.coa 携带 evt 符号 + fld 后备字段 + 实例方法/ctor，消费方编译与托管 dll 物化通过；
             // 运行期事件往返（newobj MemberRef 挂接库内实例方法的符号同一性）待 Step F 完善后在此追加 run 断言。
+            // 6f-2 检查记录：库 dll 缺实例方法体 → 运行期 MissingMethod(Greeter..ctor)。根因：写侧不序列化实例
+            // 方法体，A1 库编译仅得到空壳；放开后读侧要求 System.Core!System.Console.WriteLine[@string] 在消费
+            // 方注册表中可解析（当前 candidates=0/owner.Methods=0）→ 未闭环，暂回退写侧门。
+            _ = AppDomain.CurrentDomain.BaseDirectory;
         }
 
         // （运行期断言延后至 Step F；见测试注释）

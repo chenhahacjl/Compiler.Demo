@@ -470,10 +470,11 @@ namespace Cocoa.CodeAnalysis.Serialization
                     {
                         return candidates[0];
                     }
+                    throw new InvalidDataException($"Unknown function '{key}' [debug head={head} owner={ownerText} ownerCandidates={(ownerClass?.Methods.Count(m => m.Name == methodName && m.Parameters.Length == parameterCount) ?? -1)} candidates={candidates.Count}]");
                 }
             }
 
-            throw new InvalidDataException($"Unknown function '{key}'");
+            throw new InvalidDataException($"Unknown function '{key}' [outer]");
         }
 
         private static bool ParseBoolWord(string text)

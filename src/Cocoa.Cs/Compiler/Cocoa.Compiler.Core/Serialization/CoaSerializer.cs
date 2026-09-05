@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Binding;
+﻿using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 using System.Collections.Immutable;
@@ -120,7 +120,6 @@ namespace Cocoa.CodeAnalysis.Serialization
 
                 WriteBodyEntry(w, registry, labelsByFunction, fn, body);
             }
-
             // 6e-G7 S2：开放绑定体（泛型定义方法）——显式遍历，避免卷入 stdlib 注入序列。
             foreach (var pair in program.GenericOpenBodies.OrderBy(kv => GenericOpenSortKey(kv.Key), StringComparer.Ordinal))
             {
