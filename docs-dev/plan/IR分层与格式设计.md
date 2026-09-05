@@ -1,4 +1,5 @@
 # 前端拆分与 IR 分层（架构演进方案）
+> 规划标记：🧭 规划/待办（2026-09-06 文档体系整理；定位见 docs-dev/README）
 
 > 状态：🧭 定稿（S-7 修订 2026-10-11 + 拆分实施已完成）· 取代 docs-dev 旧稿 CIR设计.md / IR设计.md / HIR与LIR格式设计.md
 > 前置阅读：[docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md)（架构总览与演进）、[docs-dev/README](../README.md)（分类索引）

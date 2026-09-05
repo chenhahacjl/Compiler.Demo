@@ -1,4 +1,5 @@
 # Cocoa 完整 OOP 设计（M5）
+> 归档标记：🛑 已归档（2026-09-06 文档体系整理；特性已落地，设计与决策依据保留，正文以 docs/ 为准）
 
 > 状态：已实现（M5）+ 6e-M10 扩展 + **6e-M19 已全部落地（2026-08-24：Object 基类 / 全类型成员方法 / System.Type / native 对象模型 / null·is·as / `==` 语义收尾，见 `docs-dev/archive/对象模型设计.md`）**
 > 目标：在 M2 class 语言（字段/构造/方法/new/this/可见性）基础上，补齐完整 OOP：**继承、构造链、多态、static、readonly、显式 this.、属性**。
