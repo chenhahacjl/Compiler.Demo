@@ -1,0 +1,21 @@
+<Project Version="1">
+  <PropertyGroup Label="Language">
+    <Language>CSharp</Language>
+  </PropertyGroup>
+  <PropertyGroup Label="Assembly">
+    <AssemblyName>CSharpDialect</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
+    <TargetFramework>net48</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label="Output">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="Build">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include="*.cs" />
+  </ItemGroup>
+</Project>

@@ -3,13 +3,17 @@
     <Language>Cocoa</Language>
   </PropertyGroup>
   <PropertyGroup Label="Assembly">
-    <AssemblyName>System.Core</AssemblyName>
+    <AssemblyName>Types</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
+    <TargetFramework>net48</TargetFramework>
   </PropertyGroup>
   <PropertyGroup Label="Output">
-    <OutputType>Cocoa</OutputType>
+    <OutputType>Executable</OutputType>
   </PropertyGroup>
   <PropertyGroup Label="Build">
-    <OutputPath>..\out</OutputPath>
+    <OutputPath>out</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Source Include="*.co" />

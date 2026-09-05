@@ -3,13 +3,16 @@
     <Language>Cocoa</Language>
   </PropertyGroup>
   <PropertyGroup Label="Assembly">
-    <AssemblyName>System.Core</AssemblyName>
+    <AssemblyName>MyLib</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
   </PropertyGroup>
   <PropertyGroup Label="Output">
     <OutputType>Cocoa</OutputType>
   </PropertyGroup>
   <PropertyGroup Label="Build">
-    <OutputPath>..\out</OutputPath>
+    <OutputPath>out</OutputPath>
   </PropertyGroup>
   <ItemGroup>
     <Source Include="*.co" />

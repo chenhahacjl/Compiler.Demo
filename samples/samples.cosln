@@ -1,25 +1,20 @@
-name = Samples
-
-[projects]
-# ---- Tutorial 教程（Basics / Data / Dialects / Interop 四组，详见 samples/README.md）----
-Tutorial/Basics/HelloWorld/HelloWorld.cocproj
-Tutorial/Basics/Types/Types.cocproj
-Tutorial/Basics/ControlFlow/ControlFlow.cocproj
-Tutorial/Basics/Functions/Functions.cocproj
-Tutorial/Data/Arrays/Arrays.cocproj
-Tutorial/Data/Strings/Strings.cocproj
-Tutorial/Data/Doubles/Doubles.cocproj
-Tutorial/Data/ByteArrays/ByteArrays.cocproj
-Tutorial/Data/Enums/Enums.cocproj
-Tutorial/Interop/Interop/Interop.cocproj
-Tutorial/Dialects/CsStyle/CsStyle.cocproj
-Tutorial/Dialects/TopLevelFunctions/TopLevelFunctions.cocproj
-Tutorial/Dialects/CSharpDialect/CSharpDialect.cocproj
-# ---- 库示例：MyLib.dll 引用不在依赖图内，列表序即构建序（mylib 先于 app）----
-Libraries/NetLibrary/mylib/MyLib.cocproj
-Libraries/NetLibrary/app/App.cocproj
-# ---- Cod 库示例：cod 引用由拓扑排序自动识别 ----
-Libraries/CodLibrary/mylib/MyLib.cocproj
-Libraries/CodLibrary/app/App.cocproj
-# ---- 单项目 ----
-Classes/CSharpClass/CSharpClass.cocproj
+<Solution Version="1">
+  <Project Include="Tutorial/Basics/HelloWorld/HelloWorld.coproj" />
+  <Project Include="Tutorial/Basics/Types/Types.coproj" />
+  <Project Include="Tutorial/Basics/ControlFlow/ControlFlow.coproj" />
+  <Project Include="Tutorial/Basics/Functions/Functions.coproj" />
+  <Project Include="Tutorial/Data/Arrays/Arrays.coproj" />
+  <Project Include="Tutorial/Data/Strings/Strings.coproj" />
+  <Project Include="Tutorial/Data/Doubles/Doubles.coproj" />
+  <Project Include="Tutorial/Data/ByteArrays/ByteArrays.coproj" />
+  <Project Include="Tutorial/Data/Enums/Enums.coproj" />
+  <Project Include="Tutorial/Interop/Interop/Interop.coproj" />
+  <Project Include="Tutorial/Dialects/CsStyle/CsStyle.coproj" />
+  <Project Include="Tutorial/Dialects/TopLevelFunctions/TopLevelFunctions.coproj" />
+  <Project Include="Tutorial/Dialects/CSharpDialect/CSharpDialect.coproj" />
+  <Project Include="Libraries/NetLibrary/mylib/MyLib.coproj" />
+  <Project Include="Libraries/NetLibrary/app/App.coproj" />
+  <Project Include="Libraries/CodLibrary/mylib/MyLib.coproj" />
+  <Project Include="Libraries/CodLibrary/app/App.coproj" />
+  <Project Include="Classes/CSharpClass/CSharpClass.coproj" />
+</Solution>
