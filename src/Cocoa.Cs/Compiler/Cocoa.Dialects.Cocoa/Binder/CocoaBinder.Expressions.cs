@@ -1859,18 +1859,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         {
             // 6e-M22 D-A：delegate 类目标——函数值与 delegate 类型的结构兼容（同表示，类型身份编译期）
             // 6e-M22 委托真实类型化：方差赋值兼容（参数逆变 + 返回协变，Reference-preserving）
+            // M5：泛型 delegate 实例化同真实化（TypeKind 透传 + 单态化 TypeDef），不再按 fnty 直通
             if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateTarget &&
                 delegateTarget.DelegateSignature() is { } delegateSignature &&
                 FunctionVariance.IsVarianceCompatible(expression.Type, delegateSignature))
             {
-                // 非泛型具名 delegate → 包装 BoundConversionExpression：IL 发真 CLR 委托实例
-                // （newobj Handler::.ctor）；Evaluator/native 直通内层（M5 前保持函数值语义）
-                if (delegateTarget is not InstantiatedTypeSymbol)
-                {
-                    return new BoundConversionExpression(expression.Syntax!, delegateTarget, expression);
-                }
-
-                return expression;
+                return new BoundConversionExpression(expression.Syntax!, delegateTarget, expression);
             }
 
             var conversion = Conversion.Classify(expression.Type, type);

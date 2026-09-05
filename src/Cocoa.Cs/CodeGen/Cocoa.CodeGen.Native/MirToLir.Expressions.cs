@@ -470,6 +470,11 @@ namespace Cocoa.CodeGen.Native
         /// <summary>间接调用（6e-M22 C4-c）：加载 fnptr/env → 参数区(this=env@0 + 实参) → CallReg。签名形状取自被调者静态函数类型。</summary>
         private LirVirtualRegister EmitInvocationExpression(BoundInvocationExpression node)
         {
+            if (node.Callee.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate })
+            {
+                return EmitDelegateInvocation(node);
+            }
+
             var instructions = _currentFunction.Instructions;
             var pointerSize = _isX64 ? 8 : 4;
             var functionType = node.Callee.Type switch
@@ -510,6 +515,82 @@ namespace Cocoa.CodeGen.Native
             Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(functionPointer)));
             Add(instructions, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(running)));
 
+            return result ?? VoidResult();
+        }
+
+        /// <summary>6e-M22 M5：委托对象调用 = 快照遍历 list 数组逐个调用（非 void 取最后返回；空列表 → 0）。</summary>
+        private LirVirtualRegister EmitDelegateInvocation(BoundInvocationExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var functionType = ((NamedTypeSymbol)node.Callee.Type).DelegateSignature()!;
+
+            var callee = EmitExpression(node.Callee);
+            var list = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Load, list, LirOperand.Reg(callee), LirOperand.None, NativeObjectModel.HeaderBytes, pointerSize));
+            var length = AllocateRegister(4);
+            Add(instructions, new LirInstruction(LirOpCode.Load, length, LirOperand.Reg(list), LirOperand.None, 0, 4));
+
+            // 参数区：this(env, 8B) + 实参（x64 每参 8；x86 按 ReturnSize 累计）——与 fnty 间接调用同构
+            var argumentOffsets = new int[node.Arguments.Length];
+            var running = 8;
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                argumentOffsets[i] = running;
+                running += _isX64 ? 8 : ReturnSize(functionType.ParameterTypes[i]);
+            }
+
+            // 实参求值一次（右→左），循环内每轮重复填参（同 fnty 路径副作用顺序）
+            var argumentRegisters = new LirVirtualRegister[node.Arguments.Length];
+            for (var i = node.Arguments.Length - 1; i >= 0; i--)
+            {
+                argumentRegisters[i] = EmitExpression(node.Arguments[i]);
+            }
+            Add(instructions, new LirInstruction(LirOpCode.ReserveArgs, LirOperand.Constant(running)));
+
+            var returnType = functionType.ReturnType;
+            var result = returnType == TypeSymbol.Void ? null : AllocateRegister(TypeOf(returnType));
+            if (returnType != TypeSymbol.Void)
+            {
+                // 空列表（已退订至空）→ 返回 0（对齐 Evaluator 快照遍历空列表结果）
+                Add(instructions, new LirInstruction(LirOpCode.Const, result!, LirOperand.Constant(0)));
+            }
+
+            var index = AllocateRegister(4);
+            Add(instructions, new LirInstruction(LirOpCode.Const, index, LirOperand.Constant(0)));
+            var loop = AllocLabel();
+            var done = AllocLabel();
+
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(loop)));
+            Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(index), LirOperand.Reg(length)));
+            Add(instructions, new LirInstruction(LirOpCode.Jcc, LirOperand.Constant((int)LirCond.AboveOrEqual), LirOperand.Label(done)));
+
+            var elementOffset = AllocateRegister(4);
+            Add(instructions, new LirInstruction(LirOpCode.Mov, elementOffset, LirOperand.Reg(index)));
+            Add(instructions, new LirInstruction(LirOpCode.Shl, elementOffset, LirOperand.Reg(elementOffset), LirOperand.Constant(3)));
+            var elementAddress = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Lea, elementAddress, LirOperand.Reg(list), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Add, elementAddress, LirOperand.Reg(elementAddress), LirOperand.Reg(elementOffset)));
+
+            var fnValue = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Load, fnValue, LirOperand.Reg(elementAddress), LirOperand.None, 0, pointerSize));
+            var functionPointer = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Load, functionPointer, LirOperand.Reg(fnValue), LirOperand.None, pointerSize, pointerSize));
+            var environment = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Load, environment, LirOperand.Reg(fnValue), LirOperand.None, pointerSize * 2, pointerSize));
+
+            Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(0), LirOperand.Reg(environment)));
+            for (var i = 0; i < node.Arguments.Length; i++)
+            {
+                Add(instructions, new LirInstruction(LirOpCode.StoreArg, LirOperand.Constant(argumentOffsets[i]), LirOperand.Reg(argumentRegisters[i])));
+            }
+            Add(instructions, new LirInstruction(LirOpCode.CallReg, result, LirOperand.None, LirOperand.Reg(functionPointer)));
+
+            Add(instructions, new LirInstruction(LirOpCode.Add, index, LirOperand.Reg(index), LirOperand.Constant(1)));
+            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(loop)));
+
+            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(done)));
+            Add(instructions, new LirInstruction(LirOpCode.FreeArgs, LirOperand.Constant(running)));
             return result ?? VoidResult();
         }
 

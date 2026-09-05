@@ -245,10 +245,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
         }
 
-        /// <summary>块体返回类型推断：取首条带值 return 的类型；无则 void。
-        /// 递归遍历（1b/B2）：嵌套块（if/while/try…）中的 return 同样参与推断——
-        /// 旧实现只扫顶层语句，`=> { if(..) { return 1 } }` 会被误推断为 void。
-        /// BoundChildren 不进入嵌套 lambda 体（FunctionValueExpression 只含 Receiver），内层 return 不串味。</summary>
+        /// <summary>
+        /// Lambda return type inference (1b/B2): recursive via Compilation.BoundChildren.
+        /// BoundChildren does not descend into nested lambda bodies (FunctionValueExpression
+        /// only exposes its Receiver), so inner returns never leak into outer inference.
+        /// </summary>
         private static TypeSymbol InferLambdaReturnType(BoundBlockStatement body, LambdaExpressionSyntax syntax)
         {
             var found = FindReturnType(body);
@@ -275,9 +276,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
         }
 
-        /// <summary>块体内全部带值 return 补转换到目标返回类型（表达式体已在合成前处理）。
-        /// 递归改写（1b/B2）：嵌套块中的 return 同样转换；Rewriter 不下探嵌套 lambda 体，
-        /// 内层 lambda 的 return 不会被外层目标类型污染。</summary>
+        /// <summary>
+        /// Convert all value-carrying returns in the block body to the target return type
+        /// (expression bodies are handled before synthesis). 1b/B2: rewrite recursively via
+        /// BoundTreeRewriter so returns in nested blocks convert too; the rewriter does not
+        /// descend into nested lambda bodies, so inner lambda returns are never converted
+        /// against the outer target type.
+        /// </summary>
         private BoundBlockStatement ConvertLambdaBodyReturns(BoundBlockStatement body, TypeSymbol targetType, SSyntax.SyntaxNode syntax)
         {
             var converter = new LambdaReturnConverter(this, targetType);
@@ -1854,18 +1859,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             // 6e-M22 D-A：delegate 类目标——函数值与 delegate 类型的结构兼容（同表示，类型身份编译期）
             // 6e-M22 委托真实类型化：方差赋值兼容（参数逆变 + 返回协变，Reference-preserving）
+            // M5：泛型 delegate 实例化同真实化（TypeKind 透传 + 单态化 TypeDef），不再按 fnty 直通
             if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateTarget &&
                 delegateTarget.DelegateSignature() is { } delegateSignature &&
                 FunctionVariance.IsVarianceCompatible(expression.Type, delegateSignature))
             {
-                // 非泛型具名 delegate → 包装 BoundConversionExpression：IL 发真 CLR 委托实例
-                // （newobj Handler::.ctor）；Evaluator/native 直通内层（M5 前保持函数值语义）
-                if (delegateTarget is not InstantiatedTypeSymbol)
-                {
-                    return new BoundConversionExpression(expression.Syntax!, delegateTarget, expression);
-                }
-
-                return expression;
+                return new BoundConversionExpression(expression.Syntax!, delegateTarget, expression);
             }
 
             var conversion = Conversion.Classify(expression.Type, type);

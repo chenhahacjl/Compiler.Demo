@@ -1070,5 +1070,51 @@ function Main(): i32
             Assert.Equal(0, exitCode);
             Assert.Equal("A:hello\nB:hello\nB:world\n", stdout);
         }
+
+        // ── 6e-M22 委托真实类型化 M5：native 委托对象（构造/多播调用/组合/移除/相等/事件）──
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Delegate_Multicast_CombineRemoveEquality(Cocoa.Targeting.TargetPlatform platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateMulticastProgram, "m5_multicast_nat", platform);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Event_DelegateBacked_SubscribeRaiseUnsubscribe(Cocoa.Targeting.TargetPlatform platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateBackedEventCSharpStyleProgram, "m5_event_nat", platform);
+            Assert.Equal(0, exitCode);
+            Assert.Equal("A:hello\nB:hello\nB:world\n", stdout);
+        }
+
+        private const string DelegateGenericProgram = @"using System
+delegate Transform<T, R>(x: T): R
+function Inc(x: i32): i32 { return x + 1 }
+function Main(): i32
+{
+    var f: Transform<i32, i32> = Inc
+    var g: Transform<i32, i32> = Inc
+    var m = f + g
+    if m(10) != 11 { return 1 }
+    return 0
+}";
+
+        [Theory]
+        [MemberData(nameof(GetNativePlatforms))]
+        public void Native_Delegate_Generic_Monomorphized_CombineInvoke(Cocoa.Targeting.TargetPlatform platform)
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(DelegateGenericProgram, "m5_generic_nat", platform);
+            Assert.Equal(0, exitCode);
+        }
+
+        [Fact]
+        public void Il_Delegate_Generic_Monomorphized_Invoke()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(DelegateGenericProgram, "m5_generic_il");
+            Assert.Equal(0, exitCode);
+        }
     }
 }

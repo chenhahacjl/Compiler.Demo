@@ -422,6 +422,16 @@ namespace Cocoa.CodeGen.Native
             var op = node.Op.Kind;
             var instructions = _currentFunction.Instructions;
 
+            // 6e-M22 委托真实类型化 M5：具名 delegate 多播对象语义（Combine/Remove/调用列表相等）
+            if ((node.Left.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } ||
+                 node.Right.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate }) &&
+                op is BoundBinaryOperatorKind.Addition or BoundBinaryOperatorKind.Subtraction or
+                    BoundBinaryOperatorKind.Equals or BoundBinaryOperatorKind.NotEquals or
+                    BoundBinaryOperatorKind.ReferenceEquals or BoundBinaryOperatorKind.ReferenceNotEquals)
+            {
+                return EmitDelegateBinary(node);
+            }
+
             if (op == BoundBinaryOperatorKind.Addition && node.Left.Type == TypeSymbol.String)
             {
                 var concatLeft = EmitExpression(node.Left);
@@ -564,6 +574,152 @@ namespace Cocoa.CodeGen.Native
             }
 
             return result;
+        }
+
+        /// <summary>6e-M22 M5：具名 delegate 多播对象二元运算（Combine/Remove → 新委托对象；相等 → 调用列表相等）。null 操作数不读 list 槽。</summary>
+        private LirVirtualRegister EmitDelegateBinary(BoundBinaryExpression node)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var leftNull = node.Left.Type == TypeSymbol.Null;
+            var rightNull = node.Right.Type == TypeSymbol.Null;
+            var op = node.Op.Kind;
+
+            // 相等/不等：null 侧按空列表语义（调用列表为空 ⇔ 委托为 null）
+            if (op is BoundBinaryOperatorKind.Equals or BoundBinaryOperatorKind.NotEquals or
+                BoundBinaryOperatorKind.ReferenceEquals or BoundBinaryOperatorKind.ReferenceNotEquals)
+            {
+                if (leftNull && rightNull)
+                {
+                    var both = AllocateRegister(4);
+                    Add(instructions, new LirInstruction(LirOpCode.Const, both, LirOperand.Constant(
+                        op is BoundBinaryOperatorKind.Equals or BoundBinaryOperatorKind.ReferenceEquals ? 1 : 0)));
+                    return both;
+                }
+
+                if (leftNull || rightNull)
+                {
+                    // 引用相等语义：非 null 侧对象指针与 null(0) 比较（list 空 ⇒ null 由 Combine/Remove 末次移除的
+                    // Remove 恒建新对象保证，此处只判引用；事件订阅 `_e == null` 走此路径）
+                    var operand = EmitExpression(leftNull ? node.Right : node.Left);
+                    var result = AllocateRegister(4);
+                    Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(operand), LirOperand.Constant(0)));
+                    var cond = op is BoundBinaryOperatorKind.NotEquals or BoundBinaryOperatorKind.ReferenceNotEquals
+                        ? LirCond.NotEqual
+                        : LirCond.Equal;
+                    Add(instructions, new LirInstruction(LirOpCode.Setcc, result, LirOperand.Constant((int)cond)));
+                    return result;
+                }
+            }
+
+            var left = EmitExpression(node.Left);
+            var right = EmitExpression(node.Right);
+
+            switch (op)
+            {
+                case BoundBinaryOperatorKind.Addition:
+                    if (leftNull && rightNull)
+                    {
+                        return left;
+                    }
+                    if (leftNull)
+                    {
+                        return right;
+                    }
+                    if (rightNull)
+                    {
+                        return left;
+                    }
+                    {
+                        var array = AllocateRegister(LirType.Addr);
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(EmitLoadDelegateList(left))));
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(EmitLoadDelegateList(right))));
+                        Add(instructions, new LirInstruction(LirOpCode.Call, array, LirOperand.Runtime("DelegateCombine"), LirOperand.Constant(0)));
+                        return EmitDelegateObjectFromList((NamedTypeSymbol)node.Type, array);
+                    }
+
+                case BoundBinaryOperatorKind.Subtraction:
+                    if (leftNull || rightNull)
+                    {
+                        return leftNull ? left : right;
+                    }
+                    {
+                        var array = AllocateRegister(LirType.Addr);
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(EmitLoadDelegateList(left))));
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(EmitLoadDelegateList(right))));
+                        Add(instructions, new LirInstruction(LirOpCode.Call, array, LirOperand.Runtime("DelegateRemove"), LirOperand.Constant(0)));
+                        return EmitDelegateObjectFromList((NamedTypeSymbol)node.Type, array);
+                    }
+
+                case BoundBinaryOperatorKind.Equals:
+                case BoundBinaryOperatorKind.ReferenceEquals:
+                case BoundBinaryOperatorKind.NotEquals:
+                case BoundBinaryOperatorKind.ReferenceNotEquals:
+                    {
+                        var result = AllocateRegister(4);
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(EmitLoadDelegateList(left))));
+                        Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(EmitLoadDelegateList(right))));
+                        Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("DelegateEquals"), LirOperand.Constant(0)));
+                        if (op == BoundBinaryOperatorKind.NotEquals || op == BoundBinaryOperatorKind.ReferenceNotEquals)
+                        {
+                            var invert = AllocateRegister(4);
+                            Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(result), LirOperand.Constant(0)));
+                            Add(instructions, new LirInstruction(LirOpCode.Setcc, invert, LirOperand.Constant((int)LirCond.Equal)));
+                            return invert;
+                        }
+                        return result;
+                    }
+
+                default:
+                    throw new Exception($"Unexpected delegate binary operator: {op}");
+            }
+        }
+
+        /// <summary>读委托对象 list 槽的调用列表数组指针（对象头 8B 后）。</summary>
+        private LirVirtualRegister EmitLoadDelegateList(LirVirtualRegister delegateObject)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var list = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Load, list, LirOperand.Reg(delegateObject), LirOperand.None, NativeObjectModel.HeaderBytes, pointerSize));
+            return list;
+        }
+
+        /// <summary>委托对象 = Alloc(实例布局 + list 槽) + vtable + list 数组指针（GetType/is 走对象头 vtable）。</summary>
+        private LirVirtualRegister EmitDelegateObjectFromList(NamedTypeSymbol delegateClass, LirVirtualRegister listArray)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+            var (_, instanceSize) = GetLayout(delegateClass);
+            var objSize = instanceSize + pointerSize;
+
+            var sizeRegister = EmitConst(objSize);
+            var obj = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeRegister)));
+            Add(instructions, new LirInstruction(LirOpCode.Call, obj, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
+
+            var vtable = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(NativeObjectModel.VTableKey(delegateClass))));
+            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(vtable), 0, pointerSize));
+            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(listArray), instanceSize, pointerSize));
+            return obj;
+        }
+
+        /// <summary>单播委托对象：list = [函数值对象指针]，对象头 = 具体 delegate 类。</summary>
+        private LirVirtualRegister EmitDelegateWrap(NamedTypeSymbol delegateClass, LirVirtualRegister fnValue)
+        {
+            var instructions = _currentFunction.Instructions;
+            var pointerSize = _isX64 ? 8 : 4;
+
+            var array = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(EmitConst(1))));
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(EmitConst(8))));
+            Add(instructions, new LirInstruction(LirOpCode.Call, array, LirOperand.Runtime("NewArray"), LirOperand.Constant(0)));
+
+            var address = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.Lea, address, LirOperand.Reg(array), LirOperand.None, 8, 0));
+            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(address), LirOperand.Reg(fnValue), 0, pointerSize));
+            return EmitDelegateObjectFromList(delegateClass, array);
         }
 
         /// <summary>long/u64 二元运算（6e-M19 M1）：算术/按位移位/比较走 64 位 IR 指令；u64 无符号语义（Phase 5）。</summary>

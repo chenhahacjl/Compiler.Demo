@@ -176,6 +176,12 @@ namespace Cocoa.CodeGen.Native
                 EmitConcat();
                 _ = BeginFunctionTyped("StrEquals", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitStrEquals();
+                _ = BeginFunctionTyped("DelegateCombine", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
+                EmitDelegateCombine();
+                _ = BeginFunctionTyped("DelegateRemove", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
+                EmitDelegateRemove();
+                _ = BeginFunctionTyped("DelegateEquals", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
+                EmitDelegateEquals();
                 _ = BeginFunctionTyped("Substring", new[] { 8, 4, 4 }, LirType.Addr);
                 EmitSubstring();
                 _ = BeginFunction("CharToString", 4);

@@ -243,6 +243,15 @@ namespace Cocoa.CodeGen.Native
             var pendingClasses = new Stack<NamedTypeSymbol>();
             pendingFunctions.Push(entry);
 
+            // 6e-M22 委托真实类型化 M5：具名 delegate 类全部存活（委托对象 vtable 由 MirToLir 构造时引用）
+            foreach (var classType in _program.Classes)
+            {
+                if (classType.TypeKind == TypeKind.Delegate && !_liveClasses.Contains(classType))
+                {
+                    pendingClasses.Push(classType);
+                }
+            }
+
             while (pendingFunctions.Count > 0 || pendingClasses.Count > 0)
             {
                 if (pendingClasses.Count > 0)
@@ -351,6 +360,13 @@ namespace Cocoa.CodeGen.Native
             if (node.Kind == BoundNodeKind.ObjectCreationExpression && ((BoundObjectCreationExpression)node).Type is NamedTypeSymbol created)
             {
                 yield return created;
+            }
+
+            // 6e-M22 委托真实类型化 M5：具名 delegate 转换目标（方法组→委托）标记载活（委托对象 vtable）
+            if (node.Kind == BoundNodeKind.ConversionExpression &&
+                ((BoundConversionExpression)node).Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateTarget)
+            {
+                yield return delegateTarget;
             }
 
             // 6e-M19 M5-b：is/as 目标类标记存活（vtable 链比对依赖目标及祖先已发射）；抽象/接口无 vtable 不入
