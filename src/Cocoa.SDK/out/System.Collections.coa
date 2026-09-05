@@ -1,125 +1,125 @@
 (cod COCOA 1
   (symbols
     (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
     )
     (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
-      (tpar TKey 0 - c:0)
-      (tpar TValue 1 - c:0) fields:2
+      (tpar TKey 0 - v:- c:0)
+      (tpar TValue 1 - v:- c:0) fields:2
       (fld _key !System.Collections.Generic.KeyValuePair.TKey private false false)
-      (fld _value !System.Collections.Generic.KeyValuePair.TValue private false false) methods:0 props:2
+      (fld _value !System.Collections.Generic.KeyValuePair.TValue private false false) methods:0 events:0 props:2
       (prop Key !System.Collections.Generic.KeyValuePair.TKey true false public false)
       (prop Value !System.Collections.Generic.KeyValuePair.TValue true false public false)
     )
     (gcls System.Collections.Generic.Dictionary public iface:false ifaces:1 System.Collections.Generic.IEnumerable`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.Dictionary.K$!System.Collections.Generic.Dictionary.V tparams:2
-      (tpar K 0 - c:0)
-      (tpar V 1 - c:0) fields:5
+      (tpar K 0 - v:- c:0)
+      (tpar V 1 - v:- c:0) fields:5
       (fld _keys !System.Collections.Generic.Dictionary.K[] private false false)
       (fld _values !System.Collections.Generic.Dictionary.V[] private false false)
       (fld _next @i32[] private false false)
       (fld _buckets @i32[] private false false)
-      (fld _count @i32 private false false) methods:0 props:4
+      (fld _count @i32 private false false) methods:0 events:0 props:4
       (prop Count @i32 true false public false)
       (prop Keys !System.Collections.Generic.Dictionary.K[] true false public false)
       (prop Values !System.Collections.Generic.Dictionary.V[] true false public false)
       (prop Item !System.Collections.Generic.Dictionary.V true true public false)
     )
     (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V tparams:2
-      (tpar K 0 - c:0)
-      (tpar V 1 - c:0) fields:4
+      (tpar K 0 - v:- c:0)
+      (tpar V 1 - v:- c:0) fields:4
       (fld _keys !System.Collections.Generic.DictionaryEnumerator.K[] private false false)
       (fld _values !System.Collections.Generic.DictionaryEnumerator.V[] private false false)
       (fld _count @i32 private false false)
-      (fld _index @i32 private false false) methods:0 props:1
+      (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V true false public false)
     )
     (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0 props:2
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
     (gcls System.Collections.Generic.HashSet public iface:false ifaces:2 System.Collections.Generic.ICollection`1#!System.Collections.Generic.HashSet.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.HashSet.T tparams:1
-      (tpar T 0 - c:0) fields:2
+      (tpar T 0 - v:- c:0) fields:2
       (fld _items !System.Collections.Generic.HashSet.T[] private false false)
-      (fld _count @i32 private false false) methods:0 props:2
+      (fld _count @i32 private false false) methods:0 events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
     (gcls System.Collections.Generic.HashSetEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.HashSetEnumerator.T tparams:1
-      (tpar T 0 - c:0) fields:3
+      (tpar T 0 - v:- c:0) fields:3
       (fld _items !System.Collections.Generic.HashSetEnumerator.T[] private false false)
       (fld _count @i32 private false false)
-      (fld _index @i32 private false false) methods:0 props:1
+      (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.HashSetEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.IList public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Item !System.Collections.Generic.IList.T true true public false)
     )
     (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Item !System.Collections.Generic.IReadOnlyList.T true false public false)
     )
     (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
       (prop Count @i32 true false public false)
     )
     (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T tparams:1
-      (tpar T 0 - c:0) fields:2
+      (tpar T 0 - v:- c:0) fields:2
       (fld _items !System.Collections.Generic.List.T[] private false false)
-      (fld _count @i32 private false false) methods:0 props:4
+      (fld _count @i32 private false false) methods:0 events:0 props:4
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
       (prop Capacity @i32 true false public false)
       (prop Item !System.Collections.Generic.List.T true true public false)
     )
     (gcls System.Collections.Generic.ListEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.ListEnumerator.T tparams:1
-      (tpar T 0 - c:0) fields:3
+      (tpar T 0 - v:- c:0) fields:3
       (fld _items !System.Collections.Generic.ListEnumerator.T[] private false false)
       (fld _count @i32 private false false)
-      (fld _index @i32 private false false) methods:0 props:1
+      (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.ListEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.Queue public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Queue.T tparams:1
-      (tpar T 0 - c:0) fields:4
+      (tpar T 0 - v:- c:0) fields:4
       (fld _items !System.Collections.Generic.Queue.T[] private false false)
       (fld _count @i32 private false false)
       (fld _head @i32 private false false)
-      (fld _capacity @i32 private false false) methods:0 props:1
+      (fld _capacity @i32 private false false) methods:0 events:0 props:1
       (prop Count @i32 true false public false)
     )
     (gcls System.Collections.Generic.QueueEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.QueueEnumerator.T tparams:1
-      (tpar T 0 - c:0) fields:5
+      (tpar T 0 - v:- c:0) fields:5
       (fld _items !System.Collections.Generic.QueueEnumerator.T[] private false false)
       (fld _head @i32 private false false)
       (fld _count @i32 private false false)
       (fld _capacity @i32 private false false)
-      (fld _index @i32 private false false) methods:0 props:1
+      (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.QueueEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.Stack public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Stack.T tparams:1
-      (tpar T 0 - c:0) fields:2
+      (tpar T 0 - v:- c:0) fields:2
       (fld _items !System.Collections.Generic.Stack.T[] private false false)
-      (fld _count @i32 private false false) methods:0 props:1
+      (fld _count @i32 private false false) methods:0 events:0 props:1
       (prop Count @i32 true false public false)
     )
     (gcls System.Collections.Generic.StackEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.StackEnumerator.T tparams:1
-      (tpar T 0 - c:0) fields:3
+      (tpar T 0 - v:- c:0) fields:3
       (fld _items !System.Collections.Generic.StackEnumerator.T[] private false false)
       (fld _count @i32 private false false)
-      (fld _index @i32 private false false) methods:0 props:1
+      (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.StackEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
-      (tpar T 0 - c:0) fields:0 methods:0
+      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
     )
     (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 tparams:2
-      (tpar TKey 0 - c:0)
-      (tpar TValue 1 - c:0) fields:0 methods:0 props:5
+      (tpar TKey 0 - v:- c:0)
+      (tpar TValue 1 - v:- c:0) fields:0 methods:0 events:0 props:5
       (prop Item !System.Collections.Generic.IDictionary.TValue true true public false)
       (prop Keys System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey true false public false)
       (prop Values System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue true false public false)
@@ -3550,4 +3550,4 @@
     (ns System.Collections.Generic)
   )
 )
-(checksum sha256:90e9a770995958010d4a5a6bef109e395b13c798728c54581283700e90df4a46)
+(checksum sha256:dc032ff4d24c9d48cc851db6e82d3d8d9f52ddffa0fe156b01871f23741b7fa3)

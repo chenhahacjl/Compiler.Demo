@@ -315,7 +315,7 @@ public readonly int Id = 42;           // readonly + 初始化器（构造内赋
 | 命名参数、可选参数、`params`、`in` | 🔧 §30（后置切片） |
 | `ref` / `out` 参数 | ✅ 6e-M23（含普通参数可赋值与明确赋值分析；lambda 捕获禁止 v1） |
 | `is` / `as` 类型测试、模式匹配 | 🔧 §27/§9.11 |
-| 委托 `delegate` / Lambda / 匿名方法 | 🔧 §11.3/§20 |
+| 委托 `delegate` / Lambda / 匿名方法 | ✅ 6e-M22 委托真实类型化（C5++ 起）：Lambda/闭包三后端 e2e；delegate 为存续运行期真实类型（IL MulticastDelegate 子类 / Evaluator 调用列表 / native 委托对象），多播 Combine/Remove/列表相等，事件 C# 式 add/remove，泛型 delegate + `<in T>/<out T>` 型变（M0-M5 落地） |
 | 扩展方法 | — |
 
 #### 其他（C# 对象模型相关）

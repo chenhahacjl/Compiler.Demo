@@ -1,8 +1,8 @@
 # 委托 / Lambda / 闭包 / 事件 设计
 
-> 状态：🔧 设计定稿（2026-08-24，6e-M22 规划，随 6e-M20 G6/G7 收尾同轮实施）
-> 关联：`docs/泛型设计.md`（G6 stdlib / G7 `.coa` 泛型序列化，本轮合并推进）、`docs-dev/对象模型设计.md`（M4 native vtable 复用）、`docs/语法手册.md` §9.12/§15/§20
-> 核心决策：**结构化函数类型为内核**（Kotlin/F# 路线），delegate 声明为纯语法糖；event 自研多播（三后端同构）；方言只在 Parser 分叉，语义层单一。
+> 状态：✅ 已演进（2026-09-06 委托真实类型化 M0-M5 落地：delegate 由语法糖升级为存续运行期的真实类型——IL 真 CLR `MulticastDelegate` 子类、Evaluator 调用列表对象、native 委托对象；事件 delegate 后备字段 C# 式 add/remove）
+> 关联：`docs/泛型设计.md`（G6 stdlib / G7 `.coa` 泛型序列化，本轮合并推进）、`docs-dev/对象模型设计.md`（M4 native vtable 复用）、`docs/语法手册.md` §9.12/§15/§20、`docs-dev/委托真实类型化方案.md`（M0-M6 分步设计）
+> 核心决策：**结构化函数类型为内核**（Kotlin/F# 路线）；delegate 声明在语法层独立、语义层真实化（M2-M5：IL/Evaluator/native 三后端委托对象，不再纯语法糖）；event 自研多播（fnty 处理器数组脱糖 / 具名 delegate 处理器 C# 式 Combine/Remove 后备字段，三后端同构）；方言只在 Parser 分叉，语义层单一。
 
 ---
 
@@ -15,9 +15,9 @@
 | 无捕获调用 | 函数值存储、传递、`f(x)` 间接调用 ×三后端 | C4 |
 | 闭包捕获 | 局部变量/`this` 捕获 → 环境对象 | C5 |
 | 事件 `event` | 多播订阅/退订/触发 | C5+ |
-| delegate 声明糖 | 带名函数类型，双向隐式转换 | C5++ |
+| delegate 声明（真实类型） | 带名函数类型，M2-M5 三后端真实委托对象（IL MulticastDelegate 子类 / Evaluator 调用列表 / native 委托对象 + Combine/Remove/列表相等） | C5++ → 6e-M22 |
 
-**明确不做**：`in`/`out` 型变注解（解析报诊断，泛型无运行时型变）、默认参数 lambda、表达式树、`?.Invoke` 空条件调用首版（判空由触发方显式写）。
+**演进（6e-M22 委托真实类型化）**：`in`/`out` 型变注解已实现（M0：`TypeParameterSyntax` 型变位、CS1961/CS1962 诊断、序列化 `v:` 位、方差赋值兼容判定）。仍不做：默认参数 lambda、表达式树、`?.Invoke` 空条件调用首版（判空由触发方显式写）。
 
 ---
 
@@ -182,6 +182,7 @@ let f: (int) -> int = Math.Abs // 静态方法 → 函数值（env = null）
 > - CS0070 对齐：删除单播版成员访问重定向；外部读/调用/直接赋值均报 `ReportEventNotAValue`；`static` 事件报明确拒绝诊断（§7.3 后置项兑现）
 > - IL 后端配套补齐三处既有缺口：`Newarr` 操作数 TypeSpec 化（泛型实例化必须经 DefineTypeSpec——`.Reference` 直填会错回填泛型定义 TypeRef token）、引用型元素 `Ldelem_Ref`/`Stelem_Ref` 分支、成员赋值临时局部改按字段类型分配（null 字面量存入无 Null 映射）；native/Evaluator 零改动验证通过
 > - 测试：LambdaBindingTests 事件区块 ×15（Evaluator 多播/边界/delegate 类型往返/4 诊断 + IL e2e ×3 + native x64/x86 e2e ×3）；全量 35262 绿
+> **演进（6e-M22 M4 事件迁移 C# 式）**：处理器类型为**具名 delegate 类**时，隐藏字段改为**委托类实例字段**（非数组）：`+=` = `_e==null?h:Combine(_e,h)`、`-=` = `Remove(_e,h)`（M3 delegate 二元合成，三后端经委托对象管道）、类内裸名触发 = 判空 + `_e(args)`（Invoke 快照遍历）。fnty 处理器事件保留数组脱糖路径。CSharp 侧 Declarations.cs 镜像生成保漂移。
 
 ### 7.1 语法
 
@@ -220,18 +221,24 @@ button.Click += (s, e) => { ... };
 
 ---
 
-## 8. delegate 声明语法糖（C5++）
+## 8. delegate 声明（C5++ → 6e-M22 真实类型化）
 
 ```
 // .co                              // .cs
 delegate void Handler(Object, string)   public delegate void Handler(Object sender, string msg);
-delegate T Selector<in T>(T item)       public delegate T Selector<in T>(T item);   // in/out 解析后报诊断
+delegate T Selector<in T>(T item)       public delegate T Selector<in T>(T item);   // in/out 型变位（M0 起）
 ```
 
-- 语义：声明 = 注册**带名的 FunctionTypeSymbol 别名**（`ClassTypeSymbol.DelegateAliases` / 命名空间级表）
-- 双向隐式转换：`Handler h = ...` 与 `(Object,string)->void` 互通（结构相等即兼容）
-- 可用于事件类型、字段、API 签名；发射层复用 §5 ABI 零新概念；`.coa` 增 `dlgalias` 节点导出
-- 命名空间级与类内嵌套两级；泛型 delegate 别名 = 类型参数化模板，实例化走既有 Instantiator 缓存
+- 语法层独立声明；语义层（6e-M22 M0-M5）**真实委托类型，不再纯语法糖**：
+  - M0 型变基建：`<in T>`/`<out T>` 语法 + 方差安全位诊断（CS1961/CS1962）+ `.coa` 序列化 `v:` 位
+  - M1 语义真实化：按名方差赋值兼容判定（参数逆变 + 返回协变）；泛型 delegate 实例化 TypeKind 透传
+  - M2 IL 真委托：`MulticastDelegate` 子类 TypeDef（Runtime 方法 + NewSlot 复刻）+ `newobj/callvirt` 分派
+  - M3 多播对象：`+`（Combine）/`-`（Remove）/`==`（调用列表相等）三后端绑定合成；Evaluator 调用列表对象
+  - M4 事件 C# 式：delegate 后备字段 add/remove + Invoke 触发
+  - M5 native 委托对象：`[vtable][list 数组]` 对象 + 快照遍历调用 + 运行时 Combine/Remove/Equals 助手 + 泛型单态化对齐
+- 双向隐式转换：`Handler h = ...` 与 `(Object,string)->void` 互通（结构相等即兼容，方差兼容即合法）
+- 可用于事件类型、字段、API 签名；`.coa` 导出 delegate 类（完整类型，非别名）
+- 命名空间级与类内嵌套两级；泛型 delegate = 类型参数化模板，实例化走既有 Instantiator 缓存
 
 ---
 
