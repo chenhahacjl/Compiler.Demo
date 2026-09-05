@@ -3,6 +3,7 @@
 > 状态：✅ 已演进（2026-09-06 委托真实类型化 M0-M5 落地：delegate 由语法糖升级为存续运行期的真实类型——IL 真 CLR `MulticastDelegate` 子类、Evaluator 调用列表对象、native 委托对象；事件 delegate 后备字段 C# 式 add/remove）
 > 关联：`docs/泛型设计.md`（G6 stdlib / G7 `.coa` 泛型序列化，本轮合并推进）、`docs-dev/对象模型设计.md`（M4 native vtable 复用）、`docs/语法手册.md` §9.12/§15/§20、`docs-dev/委托真实类型化方案.md`（M0-M6 分步设计）
 > 核心决策：**结构化函数类型为内核**（Kotlin/F# 路线）；delegate 声明在语法层独立、语义层真实化（M2-M5：IL/Evaluator/native 三后端委托对象，不再纯语法糖）；event 自研多播（fnty 处理器数组脱糖 / 具名 delegate 处理器 C# 式 Combine/Remove 后备字段，三后端同构）；方言只在 Parser 分叉，语义层单一。
+> **ADR（2026-09-05 Q1-Q4 用户拍板，原方案稿已归档）**：Q1 后端覆盖 = IL 真 CLR 委托（MulticastDelegate 子类）/ native 等价真类型对象（vtable + 函数指针数组）/ Evaluator 托管列表对象，三后端类型身份存续；Q2 事件多播 = 迁 C# 式 add/remove（后备字段=委托类，Combine/Remove，删数组脱糖）；Q3 相等/移除 = `==`/`!=`/`+=`/`-=` 全面升调用列表语义（Delegate.Equals/Combine/Remove）；Q4 泛型 = 支持泛型 delegate + in/out 型变（安全位诊断 + 赋值兼容 = 参数逆变 + 返回协变；纯函数类型不变型）。
 
 ---
 
