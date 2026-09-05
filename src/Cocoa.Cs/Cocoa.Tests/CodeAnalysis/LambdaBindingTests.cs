@@ -646,7 +646,7 @@ function Main(): i32
             Assert.Contains(result.Diagnostics, d => d.IsError);
         }
 
-        private const string DelegateEventProgram = @"using System
+        private const string DelegateBackedEventProgram = @"using System
 
 delegate Handler(msg: string): void
 
@@ -677,7 +677,7 @@ function Main(): i32
         [Fact]
         public void Evaluator_Event_DelegateTyped_RoundTrip()
         {
-            var (result, output) = EvaluateWithOutput(DelegateEventProgram);
+            var (result, output) = EvaluateWithOutput(DelegateBackedEventProgram);
             Assert.Empty(result.Diagnostics.Where(d => d.IsError));
             Assert.Equal(0, result.Value);
             Assert.Equal("got:ping\n", output);
@@ -1028,6 +1028,47 @@ function Main(): i32
         {
             var (exitCode, stdout) = EmitIlAndRun(DelegateMulticastProgram, "c5d_multicast_il");
             Assert.Equal(0, exitCode);
+        }
+
+        // ── 6e-M22 委托真实类型化 M4：delegate 后备事件（C# 式 add/remove + Invoke 触发）──
+
+        private const string DelegateBackedEventCSharpStyleProgram = @"using System
+delegate GreetHandler(msg: string): void
+class Greeter
+{
+    public event onGreet: GreetHandler
+    public function Fire(msg: string): void
+    {
+        onGreet(msg)
+    }
+}
+function PrintA(m: string): void { Console.WriteLine(""A:"" + m) }
+function PrintB(m: string): void { Console.WriteLine(""B:"" + m) }
+function Main(): i32
+{
+    var g = new Greeter()
+    g.onGreet += PrintA
+    g.onGreet += PrintB
+    g.Fire(""hello"")
+    g.onGreet -= PrintA
+    g.Fire(""world"")
+    return 0
+}";
+
+        [Fact]
+        public void Evaluator_Event_DelegateBacked_SubscribeRaiseUnsubscribe()
+        {
+            var result = Evaluate(DelegateBackedEventCSharpStyleProgram);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+            Assert.Equal(0, result.Value);
+        }
+
+        [Fact]
+        public void Il_Event_DelegateBacked_SubscribeRaiseUnsubscribe()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(DelegateBackedEventCSharpStyleProgram, "c5e_delegate_il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal("A:hello\nB:hello\nB:world\n", stdout);
         }
     }
 }

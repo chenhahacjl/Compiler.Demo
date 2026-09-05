@@ -822,8 +822,16 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var eventSymbol = new EventSymbol(eventName, resolvedHandler, visibility, classType);
             classType.AddEvent(eventSymbol);
 
-            // 多播存储：函数值数组字段（初值 null；+= 尾插 / -= 引用相等移除首匹配 / 触发判空快照遍历）
-            classType.AddField(new FieldSymbol("_" + eventName, TypeSymbol.ArrayOf(resolvedHandler), visibility, classType));
+            // 多播存储（6e-M22 委托真实类型化 M4）：
+            // 具名 delegate 处理器 → 委托类实例字段（C# 式 add/remove：Combine/Remove）；fnty 处理器 → 函数值数组（既有脱糖）
+            if (handlerType is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateHandler)
+            {
+                classType.AddField(new FieldSymbol("_" + eventName, delegateHandler, visibility, classType));
+            }
+            else
+            {
+                classType.AddField(new FieldSymbol("_" + eventName, TypeSymbol.ArrayOf(resolvedHandler), visibility, classType));
+            }
         }
 
         /// <summary>
@@ -885,6 +893,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var signature = eventSymbol.HandlerType;
             var backingField = ownerClass.GetField("_" + eventName)!;
             var handlerArray = TypeSymbol.ArrayOf(signature);
+
+            // 6e-M22 委托真实类型化 M4：事件迁移 C# 式——后备字段为具名 delegate 类时，
+            // 订阅/退订走 Delegate.Combine/Remove（`_<e> = Combine(_<e>, h)` / `Remove`），触发走 `Invoke`。
+            if (backingField.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateBacking)
+            {
+                return BuildDelegateEventSubscription(syntax, operatorKind, receiver, backingField, delegateBacking);
+            }
 
             _labelCounter++;
             var sequence = _labelCounter;
@@ -1112,6 +1127,57 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return BoundNodeFactory.Block(syntax, statements.ToArray());
         }
 
+        /// <summary>6e-M22 委托真实类型化 M4：C# 式事件订阅/退订——后备字段为具名 delegate 类时走
+        /// `_<e> = Combine(_<e>, h)` / `Remove(_<e>, h)`（+= / -= 绑定层合成 delegate 二元运算，三后端经委托管道）。</summary>
+        private BoundStatement BuildDelegateEventSubscription(AssignmentExpressionSyntax syntax, SSyntax.SyntaxKind operatorKind, BoundExpression receiver, FieldSymbol backingField, NamedTypeSymbol delegateBacking)
+        {
+            _labelCounter++;
+            var sequence = _labelCounter;
+            var handlerLocal = new LocalVariableSymbol($"__evt{sequence}_h", isReadOnly: true, delegateBacking, null);
+
+            var boundHandler = BindConversion(syntax.Expression, delegateBacking);
+            if (boundHandler is BoundFunctionValueExpression && boundHandler.Type != delegateBacking)
+            {
+                // 方法组/lambda → 具名 delegate：包装 BoundConversion（IL newobj Handler::.ctor）
+                boundHandler = new BoundConversionExpression(syntax, delegateBacking, boundHandler);
+            }
+            else if (boundHandler.Type != delegateBacking && boundHandler.Type != TypeSymbol.Error)
+            {
+                boundHandler = BindConversion(boundHandler.Syntax.Location, boundHandler, delegateBacking);
+            }
+
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            statements.Add(new BoundVariableDeclaration(syntax, handlerLocal, boundHandler));
+
+            var fieldAccess = new BoundMemberAccessExpression(syntax, delegateBacking, receiver, backingField.Name, backingField);
+            var nullLiteral = new BoundLiteralExpression(syntax, null!, TypeSymbol.Null);
+
+            if (operatorKind == SSyntax.SyntaxKind.PlusEqualsToken)
+            {
+                // if _e == null { _e = h } else { _e = _e + h }
+                var isNullCondition = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.EqualsEqualsToken, nullLiteral);
+                var storeHandler = new BoundExpressionStatement(syntax,
+                    new BoundMemberAssignmentExpression(syntax, receiver, backingField, BoundNodeFactory.Variable(syntax, handlerLocal)));
+                var combined = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.PlusToken,
+                    BoundNodeFactory.Variable(syntax, handlerLocal));
+                var storeCombine = new BoundExpressionStatement(syntax,
+                    new BoundMemberAssignmentExpression(syntax, receiver, backingField, combined));
+                statements.Add(new BoundIfStatement(syntax, isNullCondition, storeHandler, storeCombine));
+            }
+            else
+            {
+                // if _e != null { _e = _e - h }
+                var notNullCondition = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.BangEqualsToken, nullLiteral);
+                var removed = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.MinusToken,
+                    BoundNodeFactory.Variable(syntax, handlerLocal));
+                var storeRemove = new BoundExpressionStatement(syntax,
+                    new BoundMemberAssignmentExpression(syntax, receiver, backingField, removed));
+                statements.Add(new BoundIfStatement(syntax, notNullCondition, storeRemove, elseStatement: null));
+            }
+
+            return BoundNodeFactory.Block(syntax, statements.ToArray());
+        }
+
         /// <summary>
         /// 类内触发脱糖（6e-M22 C5+ 多播）：`e(args)` → 判空 + 快照遍历逐个调用。
         /// 实参只求值一次（提升隐藏局部，防遍历期间重复执行副作用）。
@@ -1127,12 +1193,42 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return new BoundBlockStatement(syntax, ImmutableArray<BoundStatement>.Empty);
             }
 
+            var backingField = _currentClass.GetField("_" + eventName)!;
+
+            // 6e-M22 委托真实类型化 M4：后备字段为具名 delegate 类 → 触发 = 判空 + `_e(args)`（Invoke 快照遍历）
+            if (backingField.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate })
+            {
+                var dlgReceiver = new BoundThisExpression(syntax.Expression, _currentClass);
+                var dlgFieldAccess = new BoundMemberAccessExpression(syntax, backingField.Type, dlgReceiver, backingField.Name, backingField);
+                var dlgStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+
+                var dlgArgumentLocals = new LocalVariableSymbol[argumentSyntaxes.Count];
+                for (var i = 0; i < argumentSyntaxes.Count; i++)
+                {
+                    dlgArgumentLocals[i] = new LocalVariableSymbol($"__evt{_labelCounter}_a{i}", isReadOnly: true, signature.ParameterTypes[i], null);
+                    dlgStatements.Add(new BoundVariableDeclaration(
+                        syntax, dlgArgumentLocals[i],
+                        BindConversion(argumentSyntaxes[i], signature.ParameterTypes[i])));
+                }
+
+                _labelCounter++;
+                var dlgNotNull = BoundNodeFactory.Binary(syntax, dlgFieldAccess,
+                    SSyntax.SyntaxKind.BangEqualsToken,
+                    new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
+                var dlgInvocationArguments = dlgArgumentLocals
+                    .Select(local => (BoundExpression)BoundNodeFactory.Variable(syntax, local))
+                    .ToImmutableArray();
+                var dlgInvocation = new BoundInvocationExpression(syntax.Expression, dlgFieldAccess, dlgInvocationArguments, signature.ReturnType);
+                dlgStatements.Add(new BoundIfStatement(syntax, dlgNotNull,
+                    new BoundExpressionStatement(syntax, dlgInvocation), elseStatement: null));
+
+                return BoundNodeFactory.Block(syntax, dlgStatements.ToArray());
+            }
+
             _labelCounter++;
             var sequence = _labelCounter;
             var snapshotLocal = new LocalVariableSymbol($"__evt{sequence}_snap", isReadOnly: true, TypeSymbol.ArrayOf(signature), null);
             var indexLocal = new LocalVariableSymbol($"__evt{sequence}_i", isReadOnly: false, TypeSymbol.Int32, null);
-
-            var backingField = _currentClass.GetField("_" + eventName)!;
             var thisReceiver = new BoundThisExpression(syntax.Expression, _currentClass);
             var fieldAccess = new BoundMemberAccessExpression(syntax, snapshotLocal.Type, thisReceiver, backingField.Name, backingField);
 
@@ -1149,7 +1245,6 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     BindConversion(argumentSyntaxes[i], signature.ParameterTypes[i])));
             }
 
-            // 快照遍历计数器（判空通过后才进入循环，声明置于其前保证线性执行序）
             statements.Add(new BoundVariableDeclaration(syntax, indexLocal, BoundNodeFactory.Literal(syntax, 0)));
 
             var notNullCondition = BoundNodeFactory.Binary(syntax,
