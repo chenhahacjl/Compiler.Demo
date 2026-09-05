@@ -330,6 +330,25 @@ if (properties.Length > 0)
                 w.Field("acc:" + BoolWord(fn.IsPropertyAccessor));
             }
 
+            // 6f-4：捕获闭包元数据（宿主函数 EnvClass/Captures + lambda IsLambdaWithEnvironment）——
+            // A1 库发射重建环境类与捕获播种必需（Step F 闭包经库；旧文件无此字段 → 读侧按缺省）。
+            if (fn.IsLambdaWithEnvironment || fn.EnvironmentClass != null ||
+                (fn.CapturedVariables != null && fn.CapturedVariables.Count > 0))
+            {
+                w.Field("envn:" + BoolWord(fn.IsLambdaWithEnvironment));
+                w.Field("envl:" + BoolWord(fn.IsLambda));
+                w.Field("envc:" + (fn.EnvironmentClass != null ? fn.EnvironmentClass.FullName : "-"));
+                var captures = fn.CapturedVariables;
+                w.Field("envcap:" + (captures != null ? captures.Count : 0).ToString(CultureInfo.InvariantCulture));
+                if (captures != null)
+                {
+                    foreach (var captured in captures)
+                    {
+                        w.Field(registry.VarKey(captured));
+                    }
+                }
+            }
+
             w.Field("params:" + fn.Parameters.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var p in fn.Parameters)
             {

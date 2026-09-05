@@ -94,6 +94,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                     case "symbols":
                         ReadSymbols(reader, context);
                         ApplyPendingProperties(context);
+                        ApplyPendingClosures(context);
                         break;
                     case "bodies":
                         ReadBodies(reader, context, bodies);
@@ -243,6 +244,9 @@ namespace Cocoa.CodeAnalysis.Serialization
             /// <summary>6b：facade 类属性待挂接声明（访问器 fns 读毕后重建 PropertySymbol）。</summary>
             public List<(NamedTypeSymbol ClassType, string Name, TypeSymbol Type, bool HasGet, bool HasSet, Visibility Visibility, bool IsStatic)> PendingProperties { get; } = new();
 
+            /// <summary>6f-4：捕获闭包元数据待回填（捕获变量 loc 晚于 fn 记录——全符号读毕后再解析）。</summary>
+            public List<(FunctionSymbol Function, bool IsLambdaWithEnvironment, NamedTypeSymbol? EnvironmentClass, List<string> CapturedKeys)> PendingClosures { get; } = new();
+
             public void AddNamedType(string fullName, TypeSymbol type)
             {
                 TypesByName[fullName] = type;
@@ -298,6 +302,35 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             context.PendingProperties.Clear();
+        }
+
+        /// <summary>6f-4：捕获闭包元数据回填——全符号读毕后按变量键解析捕获清单（host 播种 / lambda env 依赖）。</summary>
+        private static void ApplyPendingClosures(ReadContext context)
+        {
+            foreach (var (function, isLambdaWithEnvironment, environmentClass, capturedKeys) in context.PendingClosures)
+            {
+                if (capturedKeys.Count == 0)
+                {
+                    continue;
+                }
+
+                var captures = new List<VariableSymbol>(capturedKeys.Count);
+                foreach (var key in capturedKeys)
+                {
+                    if (!context.VariablesByKey.TryGetValue(key, out var variable))
+                    {
+                        throw new InvalidDataException($"Unknown captured variable '{key}' for closure function '{function.Name}'");
+                    }
+
+                    // 捕获标记回填：宿主/lambda 两侧读取统一走环境字段（发射器按 IsCaptured 分派）
+                    variable.IsCaptured = true;
+                    captures.Add(variable);
+                }
+
+                function.CapturedVariables = captures;
+            }
+
+            context.PendingClosures.Clear();
         }
 
         private static void ReadEnum(Reader reader, ReadContext context)
@@ -698,6 +731,24 @@ namespace Cocoa.CodeAnalysis.Serialization
                 explicitIsAccessor = ParseBoolWord(ReadLabeledField(reader, "acc:"));
             }
 
+            // 6f-4：捕获闭包元数据（旧文件无此字段 → 缺省非 lambda/无 env/无捕获）
+            var isLambdaWithEnvironment = false;
+            var isLambda = false;
+            NamedTypeSymbol? environmentClass = null;
+            var capturedKeys = new List<string>();
+            if (reader.PeekRaw().StartsWith("envn:", StringComparison.Ordinal))
+            {
+                isLambdaWithEnvironment = ParseBoolWord(ReadLabeledField(reader, "envn:"));
+                isLambda = ParseBoolWord(ReadLabeledField(reader, "envl:"));
+                var envcText = ReadLabeledField(reader, "envc:");
+                environmentClass = envcText == "-" ? null : (NamedTypeSymbol)ResolveTypeRef(envcText, context);
+                var envcapCount = ReadCountField(reader, "envcap:");
+                for (var i = 0; i < envcapCount; i++)
+                {
+                    capturedKeys.Add(reader.ExpectString());
+                }
+            }
+
 
             var ns = nsText == "-" ? "" : nsText;
             var dllName = dllText == "-" ? null : dllText;
@@ -841,6 +892,20 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
 
                 containingClass.AddMethod(function);
+            }
+
+            // 6f-4：捕获闭包元数据回填——IsLambdaWithEnvironment/IsLambda/EnvironmentClass 即时；
+            // 捕获变量（param/loc 引用）待全符号读毕（loc 晚于 fn 记录）统一解析。
+            if (isLambdaWithEnvironment || environmentClass != null || capturedKeys.Count > 0)
+            {
+                function.IsLambda = isLambda;
+                function.IsLambdaWithEnvironment = isLambdaWithEnvironment;
+                if (environmentClass != null)
+                {
+                    function.EnvironmentClass = environmentClass;
+                }
+
+                context.PendingClosures.Add((function, isLambdaWithEnvironment, environmentClass, capturedKeys));
             }
 
             reader.End();
