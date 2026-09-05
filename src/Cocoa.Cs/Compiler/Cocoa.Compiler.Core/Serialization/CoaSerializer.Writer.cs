@@ -221,8 +221,13 @@ namespace Cocoa.CodeAnalysis.Serialization
                 // 例外：Object 内建方法（M2-c）按 BuiltinKind，读侧经单例复用重建，须随引用序列化。
                 // 6e-G7 S1/S2：泛型定义的实例方法/构造也随库携带（消费方单态化素材）；其余实例方法仍由类壳过滤
                 // 6e-Step D-b：普通实例类（base=Object 无属性）实例方法/构造器随库携带——事件类触发/订阅体依赖
+                // 6e-Step D-c：delegate 类的 Invoke（签名载体，供消费方 DelegateSignature/事件类型解析）
                 var containingClass = fn.ContainingClass;
-                if (containingClass != null && !fn.IsStatic &&
+                var isDelegateInvoke = containingClass != null &&
+                                       containingClass.TypeKind == TypeKind.Delegate &&
+                                       string.Equals(fn.Name, "Invoke", StringComparison.Ordinal);
+                if (!isDelegateInvoke &&
+                    containingClass != null && !fn.IsStatic &&
                     !SystemObjectMembers.IsBuiltinSystemClass(containingClass) &&
                     !containingClass.IsGenericDefinition &&
                     !IsPlainInstanceCodClass(containingClass))

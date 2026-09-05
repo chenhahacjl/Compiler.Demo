@@ -40,6 +40,11 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Open("cls");
             w.Field(classType.FullName);
             w.Field(classType.Visibility.ToString().ToLowerInvariant());
+            // 6e-Step D-c：delegate 标记（Invoke 按 fn owner 携带，读侧据此重建 TypeKind.Delegate）
+            if (classType.TypeKind == TypeKind.Delegate)
+            {
+                w.Field("tk:Delegate");
+            }
             // 6e-G7/M0-1a：接口位 + 实现接口列表（供消费方 IsInterface 判定与接口成员沿 Interfaces 链解析）
             w.Field("iface:" + BoolWord(classType.IsInterface));
             var interfaces = classType.Interfaces;

@@ -350,6 +350,13 @@ namespace Cocoa.CodeAnalysis.Serialization
                 throw new InvalidDataException($"Unknown visibility '{visibilityText}' on class '{fullName}'");
             }
 
+            // 6e-Step D-c：delegate 标记（紧随 visibility；读侧重建 TypeKind.Delegate，Invoke 由 fn owner 挂到 Methods）
+            var isDelegateKind = false;
+            if (reader.PeekRaw().StartsWith("tk:", StringComparison.Ordinal))
+            {
+                isDelegateKind = ReadLabeledField(reader, "tk:").Equals("delegate", StringComparison.Ordinal);
+            }
+
             // 6e-G7/M0-1a：接口位 + 实现接口列表（向后兼容：旧版 .coa 无 iface 字段 → 默认非接口、无实现）
             var isInterface = false;
             var interfaceRefs = new string[0];
@@ -378,6 +385,10 @@ namespace Cocoa.CodeAnalysis.Serialization
             if (isInterface)
             {
                 classType.TypeKind = TypeKind.Interface;
+            }
+            else if (isDelegateKind)
+            {
+                classType.TypeKind = TypeKind.Delegate;
             }
 
             foreach (var interfaceRef in interfaceRefs)
