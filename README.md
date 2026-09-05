@@ -44,16 +44,16 @@ cocoa build -p samples/samples.cosln
 ./samples/Tutorial/Basics/HelloWorld/out/HelloWorld.exe
 
 # 库互操作三形态（.NET dll 库 / .coa 程序集 / native DLL import），命令见 samples/README.md
-cocoa build -p samples/Libraries/CodLibrary/app/App.cocproj -b native
+cocoa build -p samples/Libraries/CodLibrary/app/App.coproj -b native
 ./samples/Libraries/CodLibrary/app/out/App.exe
 
 # 指定输出格式与 .NET 目标框架
-cocoa build -p foo.cocproj -f library
-cocoa build -p foo.cocproj --dotnet-runtime net9.0
+cocoa build -p foo.coproj -f library
+cocoa build -p foo.coproj --dotnet-runtime net9.0
 # netcore 产物 = 托管 x.dll + 原生 apphost x.exe（SDK 标准布局）：x.exe 直接/双击运行，dotnet x.dll 亦可
 
 # netfx 默认：产出 .NET Framework 4.x 镜像，直接运行（无需 dotnet 前缀）
-cocoa build -p foo.cocproj -b dotnet
+cocoa build -p foo.coproj -b dotnet
 ./foo.exe
 ```
 

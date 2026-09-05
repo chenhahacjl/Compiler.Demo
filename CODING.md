@@ -16,7 +16,7 @@
 | `Cocoa.CodeGen.IL` | `Cocoa.CodeGen.IL` | 同名 | IL 后端：IlEmitter、MetadataBuilder（写侧，`IIlRefIssuer` 解耦） |
 | `Cocoa.CodeGen.Native` | `Cocoa.CodeGen.Native` | 同名 | Native 后端：MIR/LIR、LirToAssembler、RuntimeEmitterLir（x86/x64 统一 IR 发射） |
 | `Cocoa.CodeGen.Interpreter` | `Cocoa.CodeGen.Interpreter` | 同名 | 解释执行后端：Evaluator |
-| `Cocoa.ProjectSystem` | `Cocoa.ProjectSystem` | 同名 | 构建：.cocproj/.cosln 解析、ProjectBuilder/SolutionBuilder、CoaLibraryCompiler（.coa→DLL） |
+| `Cocoa.ProjectSystem` | `Cocoa.ProjectSystem` | 同名 | 构建：.coproj/.cosln 解析、ProjectBuilder/SolutionBuilder、CoaLibraryCompiler（.coa→DLL） |
 | `Cocoa.Compiler.Cocoa` | — | — | 单语言 CLI 入口（Program.cs） |
 | `Cocoa.Compiler.CSharp` | — | — | 单语言 CLI 入口（Program.cs） |
 | `Cocoa.CommandLine` | `Cocoa.Compiler`（**保留历史 ns**） | **`cocoa`**（**不变，IVT 依赖此名**） | 主 CLI |
@@ -117,7 +117,7 @@ RootNamespace 保留 `Cocoa.Compiler`（历史约定，避免全仓替换）。
 - CLI 参数面（`cocoa` 命令）。
 - `.coa` 文本格式：魔数 `COCOA`、symbols/bodies/manifest 三节、末行 `(checksum sha256:<hex>)`
   （`tools/udl/` 有 Notepad++ 高亮定义）。
-- `.cocproj` / `.cosln` 项目格式（`docs/项目格式规范.md`）。
+- `.coproj` / `.cosln` 项目格式（`docs/项目格式规范.md`）。
 - 方言公共 API 面（`<X>SyntaxFacts` 等，Roslyn 式公开类型）。
 - `libs/System.Core.coa` 等标准库与 Golden 快照（阶段 0 建立）。
 

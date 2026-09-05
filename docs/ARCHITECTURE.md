@@ -531,8 +531,8 @@ Core（Binder, Syntax, Symbols, MetadataReader, PEWriter, Evaluation）
 
 ### 9.4 项目系统
 
-- `.cocproj` / `.cosln` 轻量文本格式（`key = value` + 分节 + `#` 注释）；`cocoa new/list/add reference/remove reference/build/run/clean/-i` 单二进制 CLI。
-- 增量构建 = SHA-256 哈希缓存命中跳过；编译序 = `[references]` 依赖图拓扑 + 环检测。
+- `.coproj` / `.cosln` SDK-style XML（`<Project Version="1">` / `<Solution Version="1">`，`PropertyGroup` + `ItemGroup` + `Condition`，`System.Xml.Linq` 解析 → 条件求值 → 终态模型）；`cocoa new/list/add reference/remove reference/build/run/clean/-i` 单二进制 CLI。
+- 增量构建 = SHA-256 哈希缓存命中跳过；编译序 = `<Reference>` 依赖图拓扑 + 环检测。
 
 ### 9.5 自举设计
 
@@ -573,7 +573,7 @@ Core（Binder, Syntax, Symbols, MetadataReader, PEWriter, Evaluation）
 
 ### 10.3 已落地记录
 
-- M1（绿模型自描述：using 别名 `=` + delegate 绿往返）→ M2（`Language` 抽象 + 程序集拆分）→ M3（`coc`/`csc` 薄入口 + `.cocproj`/`.cscproj` 迁移）✅
+- M1（绿模型自描述：using 别名 `=` + delegate 绿往返）→ M2（`Language` 抽象 + 程序集拆分）→ M3（`coc`/`csc` 薄入口 + `.coproj`/`.coproj` 迁移）✅
 - A0（`CocoaCompilation`/`CSharpCompilation : Compilation` 子类，按源语言分派）✅
 - A1（`IsLambda`/`IsPropertyAccessor` 语义标志，替换 9 处 `Syntax is` 探测；附带 IL 闭包可见性 `public` 修正 + 捕获变量 `stfld` 栈序修复）✅
 - A2-F1（插值降级迁出 Binder → `InterpolationNormalizer`，接入 `CanonicalIr` 契约校验）✅

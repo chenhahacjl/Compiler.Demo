@@ -13,7 +13,7 @@
 | [语法对照表](语法对照表.md) | `.co` / `.cs` 两方言拼写逐行对照 | ✅ |
 | [编译手册](编译手册.md) | 单二进制 `cocoa` CLI 用法（子命令/参数/REPL） | ✅ v0.3 |
 | [互操作手册](互操作手册.md) | native DLL / .NET DLL / `.coa` 三类互操作 | ✅ |
-| [项目格式规范](项目格式规范.md) | `.cocproj` / `.cosln` / `.coa` / 增量缓存 | ✅ |
+| [项目格式规范](项目格式规范.md) | `.coproj` / `.cosln` / `.coa` / 增量缓存 | ✅ |
 | [标准库API参考](标准库API参考.md) | System.Core / System.Collections 现行成员清单 | ✅ |
 | [ARCHITECTURE](ARCHITECTURE.md) | 架构总览 + 演进蓝图（服务与设计稿） | ✅ |
 | [文档格式规范](文档格式规范.md) | 本仓库 .md 写作约定 | ✅ |
