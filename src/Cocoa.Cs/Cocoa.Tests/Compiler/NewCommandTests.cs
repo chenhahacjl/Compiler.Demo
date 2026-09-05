@@ -22,6 +22,7 @@ namespace Cocoa.Tests.Compiler
 
             var source = File.ReadAllText(Path.Combine(dir, "main.co"));
             Assert.Contains("function Main()", source);
+            Assert.Contains("Factorial", source);
         }
 
         [Fact]
