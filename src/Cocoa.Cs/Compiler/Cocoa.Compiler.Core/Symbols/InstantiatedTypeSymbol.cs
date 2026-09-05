@@ -28,6 +28,14 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>类型实参（与定义的 TypeParameters 一一对应；可为具体类型或外层类型参数——嵌套泛型上下文）。</summary>
         public ImmutableArray<TypeSymbol> TypeArguments { get; }
 
+        /// <summary>类型类别即时透传泛型定义（6e-M22 委托真实类型化）：
+        /// delegate 泛型实例化须 TypeKind.Delegate 才能走 DelegateSignature/方差/事件处理器管道。</summary>
+        public override TypeKind TypeKind
+        {
+            get => GenericDefinition.TypeKind;
+            set => base.TypeKind = value;
+        }
+
         public override bool IsInterface
         {
             get

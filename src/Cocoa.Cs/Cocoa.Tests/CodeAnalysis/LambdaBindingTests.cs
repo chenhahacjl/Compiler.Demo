@@ -900,5 +900,89 @@ function Main(): i32 { return 0 }";
             var result = Evaluate(code);
             Assert.Contains(result.Diagnostics, d => d.Message.Contains("型变注解"));
         }
+
+        // ── 6e-M22 委托真实类型化 M1：方差赋值兼容（参数逆变 + 返回协变）──
+
+        [Fact]
+        public void Binder_DelegateVariance_ParameterContravariance_Assignable()
+        {
+            // Handler<in T, out R>：方法组 (Animal)->Animal 赋给 Handler<Dog, Animal>（目标参数 Dog 可赋给来源 Animal）
+            var code = @"using System
+class Animal
+{
+}
+class Dog extends Animal
+{
+}
+delegate Mapper<in T, out R>(x: T): R
+function Label(a: Animal): Animal { return a }
+function Main(): i32
+{
+    var h: Mapper<Dog, Animal> = Label
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+        }
+
+        [Fact]
+        public void Binder_DelegateVariance_ReturnCovariance_Assignable()
+        {
+            // 方法组 (Dog)->Dog 赋给 Handler<Dog, Animal>（返回 Dog→Animal 协变 + 参数恒等）
+            var code = @"using System
+class Animal
+{
+}
+class Dog extends Animal
+{
+}
+delegate Mapper<in T, out R>(x: T): R
+function Pet(d: Dog): Dog { return d }
+function Main(): i32
+{
+    var h: Mapper<Dog, Animal> = Pet
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+        }
+
+        [Fact]
+        public void Binder_DelegateVariance_ReturnNotAssignable_Diagnosed()
+        {
+            // 方法组 (Animal)->Animal 赋给 Handler<Animal, Dog>：返回 Animal→Dog 非引用上转 → 报错
+            var code = @"using System
+class Animal
+{
+}
+class Dog extends Animal
+{
+}
+delegate Mapper<in T, out R>(x: T): R
+function Label(a: Animal): Animal { return a }
+function Main(): i32
+{
+    var h: Mapper<Animal, Dog> = Label
+    return 0
+}";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.IsError && (d.Message.Contains("Cannot convert") || d.Message.Contains("不能")));
+        }
+
+        [Fact]
+        public void Binder_DelegateVariance_GenericInstantiation_TypeKindIsDelegate()
+        {
+            // Handler<int, string> 实例化后 TypeKind 须为 Delegate（方可作事件处理器/委托变量）
+            var code = @"using System
+delegate DHandler<in T, out R>(x: T): R
+function Main(): i32
+{
+    var h: DHandler<i32, string> = HandlerOfInt
+    return 0
+}
+function HandlerOfInt(x: i32): string { return """" }";
+            var result = Evaluate(code);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+        }
     }
 }

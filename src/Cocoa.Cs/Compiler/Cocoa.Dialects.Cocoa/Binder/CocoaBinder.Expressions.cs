@@ -1778,7 +1778,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
                     if (asValue != null)
                     {
-                        if (asValue.Type != delegateSignature)
+                        // 6e-M22 委托真实类型化：方差赋值兼容（方法组/命名函数 → 具名 delegate）
+                        if (!FunctionVariance.IsVarianceCompatible(asValue.Type, delegateSignature))
                         {
                             _diagnostics.ReportCannotConvert(syntax.Location, asValue.Type, delegateSignature);
                             return new BoundErrorExpression(syntax);
@@ -1857,8 +1858,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         private BoundExpression BindConversion(TextLocation diagnosticLocation, BoundExpression expression, TypeSymbol type, bool allowExplicit = false)
         {
             // 6e-M22 D-A：delegate 类目标——函数值与 delegate 类型的结构兼容（同表示，类型身份编译期）
+            // 6e-M22 委托真实类型化：方差赋值兼容（参数逆变 + 返回协变，Reference-preserving）
             if (type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateTarget &&
-                expression.Type == delegateTarget.DelegateSignature())
+                delegateTarget.DelegateSignature() is { } delegateSignature &&
+                FunctionVariance.IsVarianceCompatible(expression.Type, delegateSignature))
             {
                 return expression;
             }
