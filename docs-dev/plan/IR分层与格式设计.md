@@ -1,8 +1,9 @@
 # 前端拆分与 IR 分层（架构演进方案）
 
-> 状态：拆分实施中（2026-09-02 更新）· 设计定稿（2026-08-31）· 取代 `docs-dev/CIR设计.md`、`docs-dev/IR设计.md`
-> 前置阅读：[`Roslyn架构重构蓝图.md`](Roslyn架构重构蓝图.md)（L1–L5 与 Y/A/B/W 系列）、[`docs/ARCHITECTURE.md`](../docs/ARCHITECTURE.md)（旧架构基线）
+> 状态：🧭 定稿（S-7 修订 2026-10-11 + 拆分实施已完成）· 取代 docs-dev 旧稿 CIR设计.md / IR设计.md / HIR与LIR格式设计.md
+> 前置阅读：[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)（架构总览与演进）、[docs/dev README](README.md)（分类索引）
 > 本文裁决：**双前端全量拆分（CO/C# 各自 Lexer/Parser/SyntaxKind/节点类/Binder/Lower）+ 双层 IR（HIR 共享合并点 / LIR native 私有）**；`.coa` 为 HIR 的双向持久化。
+> **S-7 定稿（2026-10-11，原 `HIR与LIR格式设计.md` 并入）**：三层语义与命名——**HIR** = 绑定后未降级树（for/while/if 保留，`.coa` 持久化）；**MIR** = Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions` 契约，**不落盘**）；**LIR** = 3 地址码（native 私有，数据节点全族 `Lir*`）。原方案约定 ".coa 存 goto-only + `.ll` dump" 被修正为：**`.coa` 存结构化 HIR（保留 if/while/for）**，存储层与 MIR 分离；`.coa` Version 硬升级至 3 读取侧拒绝 v1/v2 的决策记录见下正文。
 
 ## 实施状态（2026-09-02 更新）
 

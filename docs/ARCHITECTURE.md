@@ -1,19 +1,22 @@
-# Cocoa.Cs 架构重构设计方案
+# Cocoa 编译器架构 — 总览与演进
 
-> 版本：v1.0
-> 日期：2026-08-31
-> 状态：**已由重构计划取代（2026-09-03 阶段 0-5 落地完毕）**
+> 版本：v2.0
+> 日期：2026-09-06
+> 状态：✅ 生效（架构总览 + 演进记录；§1-§8 为 2026-08-31 重构方案历史基线，请勿按此查找代码）
 >
-> **演进说明（2026-09-02）**：本文描述的是「Parser 分离 + IR 分层」设计基线；前后端五层分家
+> **演进说明（2026-09-02）**：本文 §1-§8 描述「Parser 分离 + IR 分层」设计基线；前后端五层分家
 > （双 SyntaxKind / 双 Lexer / 双节点类 / 双 Binder / 双 Compilation）已落地，实现方案与现状
-> 以 [`docs-dev/前端拆分与IR分层.md`](../docs-dev/前端拆分与IR分层.md)（实施状态表）为准。
+> 以 [`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md)（实施状态表）为准。
 >
 > **收口说明（2026-09-03）**：重构计划（`docs-dev/重构执行计划.md`）已全部执行完毕。
-> 本文 §1 的项目名与目录树是**分家前快照，仅作历史基线**，请勿按此查找代码。
+> §1 的项目名与目录树是**分家前快照，仅作历史基线**。
 > 现行工程结构与命名空间映射以 [`CODING.md`](../CODING.md) §1 为准；
 > 关键落地差异：Cocoa.Core → **Cocoa.CodeAnalysis**（前端共享层）、Emit/Native → **Cocoa.CodeGen.Native**
 > （LIR 统一发射，旧手工布局 Runtime.X64/X86 已删）、Evaluator → **Cocoa.CodeGen.Interpreter**、
 > Builder → **Cocoa.ProjectSystem**、双 Parser 按职责拆 partial（4.5）。
+>
+> **合并吸收（2026-09-06）**：本文扩为「架构总览与演进」权威——§9 吸收 `docs-dev/实现目标.md`、
+> §10 吸收 `docs-dev/Roslyn架构重构蓝图.md` 与 `docs-dev/符号模型Roslyn对齐计划.md`（三稿已归档删除，git 可追溯）。
 
 ---
 
@@ -477,7 +480,7 @@ Core（Binder, Syntax, Symbols, MetadataReader, PEWriter, Evaluation）
 | 循环依赖未完全打破 | 编译失败 | Phase 1 优先处理 |
 | Namespace 冲突 | 编译错误 | 统一命名空间规划 |
 | Tests 依赖被移动的类型 | 测试编译失败 | Phase 8 修复引用 |
-| Native/IR 命名混淆 | 开发者困惑 | 文档说明：LIR（native 归属 `Ir*`）是底层中间表示，HIR（Core 语义层）是高层中间表示（见 `docs-dev/前端拆分与IR分层.md`） |
+| Native/IR 命名混淆 | 开发者困惑 | 文档说明：LIR（native 归属 `Ir*`）是底层中间表示，HIR（Core 语义层）是高层中间表示（见 `docs-dev/plan/IR分层与格式设计.md`） |
 
 ---
 
@@ -490,3 +493,101 @@ Core（Binder, Syntax, Symbols, MetadataReader, PEWriter, Evaluation）
 - [ ] CO 和 CS Parser 完全独立
 - [ ] Binder 完全语言无关（sealed，Func 委托）
 - [ ] IR 是唯一的语言合并点
+
+---
+
+## 九、架构现状总览（吸收 docs-dev/实现目标，2026-09-06）
+
+> 现状工程结构与命名以 [`CODING.md`](../CODING.md)（工程映射 / 目录约束）与 [`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md)（分层）为准；本节省略实现细节，仅记总览与关键选型。
+
+### 9.1 管道
+
+```
+.库源 → Lexer → Parser → Binder → Lowerer → 后端
+  ├─ Native：BoundTree → LIR（三地址码）→ IAssembler(x86/x64) → 自研 PE(纯零依赖)
+  ├─ IL：    BoundTree → IlEmitter → 自研 ECMA-335 编码器 + 元数据 + 托管 PE
+  └─ Evaluator / REPL：直接求值（调试器复用）
+```
+
+- 前端（Lexer/Parser/Binder/Lowerer）两后端 / 两方言共用；`IR 为分水岭`——语言特性写一次（语义层）即双后端获得。
+- `.coa` = 语义层（HIR）双向持久化，编译期合并，native/IL 通用；跨语言互操作锚 = 规范 IR（§10.2）。
+
+### 9.2 后端与运行时
+
+- Native：`Cocoa.CodeGen.Native` — IAssembler / X86·X64Assembler / PeFile（.text/.data/.idata）/ RuntimeEmitterIR（17 个运行时函数 IR 化，阶段 4 合并 x86/x64 双份）。
+- IL：`IlEmitter` + 自研 IL 编码器 + 元数据写入器；Mono.Cecil / Mono.Options 已移除（csproj 仅剩 `System.Collections.Immutable`）。
+- 测试基线：语法/求值 `Cocoa.Tests`；Native 发射 `X86NativeEmitTests`/`NativeSourceEmitTests`/`X64AssemblerTests`；全量 41k+ 绿。
+
+### 9.3 互操作与输出
+
+| 目标 | 机制 | 状态 |
+|------|------|------|
+| native DLL | `import kernel32.dll` → 导入表（syscall 内部调用声明 + import 块，6e-M17） | ✅ |
+| .NET DLL 消费 | `-r` + `using`，IL AssemlyRef 直通（M4） | ✅ |
+| `.coa` 程序集 | 语义层持久化 + 依赖清单 + 公共符号表，读侧拓扑装载 | ✅ v2→v3 规划 |
+| CLR Hosting（Native 路径） | 阶段 9 可选 | 🧭 |
+
+输出：`exe`（Native PE / IL 程序集）✅ · `library`（.NET 托管 dll）✅ · `cocoa`（`.coa`）✅ · 写侧导出 `dll`（PeExportTable + 重定位 + `export fn`）待实现。
+
+### 9.4 项目系统
+
+- `.cocproj` / `.cosln` 轻量文本格式（`key = value` + 分节 + `#` 注释）；`cocoa new/list/add reference/remove reference/build/run/clean/-i` 单二进制 CLI。
+- 增量构建 = SHA-256 哈希缓存命中跳过；编译序 = `[references]` 依赖图拓扑 + 环检测。
+
+### 9.5 自举设计
+
+```
+阶段 7：编译器组件按依赖序用 Cocoa 重写（Lexer → Syntax → Parser → Binder → Lowerer → IR → 后端）
+        Native 与 IL 双路径均自举；编译器只依赖阶段 6 语言特性
+阶段 8：Stage0（C# 编译器→B0）→ Stage1（B0 编源码→B1）→ Stage2（B1 编源码→B2）；验证 B1 ≡ B2
+```
+
+前置清点见 [`docs-dev/plan/自举缺口分析.md`](../docs-dev/plan/自举缺口分析.md)。
+
+### 9.6 代码模式要点
+
+不可变语法树 / 不可变 BoundNode + 工厂 / ImmutableArray / DiagnosticBag 统一 `ReportXXX` / 目录·命名空间单向依赖 / 后端命名（IL `Il` 前缀、native `Ir` 前缀、PE `Pe` 前缀、平台对称、文件名==主类名）/ 内置函数按 `BuiltinKind` 分派（禁用引用相等）。现行规范以 [`CODING.md`](../CODING.md) 为准。
+
+---
+
+## 十、多语言平台与 Roslyn 形态演进（吸收 Roslyn蓝图 + 符号模型对齐，2026-09-06）
+
+### 10.1 当前架构形态（Y 决议，2026-08-29 定稿并落地）
+
+按 Roslyn 官方边界（语言形态每语言独立、语言中性归 Core、PE/元数据在 Core）定为「双前端 + 共享规范 IR 作模块层」：
+
+| 层 | 内容 | 分/合 |
+|----|------|-------|
+| L1 语言形态 | Cocoa / CSharp 各自 Syntax · Lexer · Parser · Binder · 高 Bound（含糖绑定） | **双分** |
+| L2 共享规范 IR | 高 Bound 规范化 pass 后的语言无关 IR（`program.Functions` 契约） | 单分 |
+| L3 模块 + 发射 | `.coa` 文本格式（本项目"IL/PE 模块层"）+ IL / native / Evaluator 三后端 | 单分 |
+| L4 共享 Core | Diagnostic / 符号基 / Green·SyntaxTree / MetadataReference / 构建·CLI | 单分 |
+| L5 机器层 | IL 汇编 / PE 写出 / native IR→x86/x64 | 单分 |
+
+程序集三舱：`Cocoa.Core`（共享）/ `Cocoa.Core.Cocoa`（CO L1，A3-4 就位）/ `Cocoa.Core.CSharp`（CS L1）。
+
+### 10.2 关键不变式
+
+- **高 Bound 双分、规范 IR 单分**——跨语言 `.coa` 互操作与三后端共享的锚；新增 CO 特性缺 IR 形状 → 反向回补 L2。
+- 规范 IR 的 Bound 节点形态不变 → `.coa` 文本格式/读侧/三后端输出保持不变，仅合成时机从绑定期移到规范化期。
+
+### 10.3 已落地记录
+
+- M1（绿模型自描述：using 别名 `=` + delegate 绿往返）→ M2（`Language` 抽象 + 程序集拆分）→ M3（`coc`/`csc` 薄入口 + `.cocproj`/`.cscproj` 迁移）✅
+- A0（`CocoaCompilation`/`CSharpCompilation : Compilation` 子类，按源语言分派）✅
+- A1（`IsLambda`/`IsPropertyAccessor` 语义标志，替换 9 处 `Syntax is` 探测；附带 IL 闭包可见性 `public` 修正 + 捕获变量 `stfld` 栈序修复）✅
+- A2-F1（插值降级迁出 Binder → `InterpolationNormalizer`，接入 `CanonicalIr` 契约校验）✅
+- A3-0~A3-4（语言归属契约 / `SyntaxKindLanguageOwnership` 归属表 / 基类去 C# 偏置 / F2 共享 `Binder.BuildConstructorPrefix` / `Cocoa.Core.Cocoa` 程序集受控种子迁移）✅
+- A4-1/A4-2（range-for 负 step / `for i=10 to 1` 自动降序，二者合一为"常量界 `lower>upper` 自动降序 + step 按幅值"）✅
+
+### 10.4 待办
+
+- F2-F4 共享绑定服务抽取（构造前缀已完成，is/as、foreach 属单站点深耦合 → 随 A3/B2 binder 分叉落地）；F6 高/规范节点分离。
+- Phase B：B1 C# 节点层自足 → B2 CSharpBinder + 高 Bound → B3 CS 特性补全。
+- 符号模型对齐：**阶段一 A+B ✅**（delegate 符号规范化 `DelegateInvokeMethod` + `SymbolKind.NamedType`）；**阶段二 C（基元 NamedTypeSymbol 化 + SpecialType）已暂停回退**——实测基元转 `NamedTypeSymbol` 触发原生/Evaluator 16 处回归（引用型判定 `type is NamedTypeSymbol` 须先改 `IsValueType` 感知），前置重构单列排期。SpecialType 枚举与 `TypeSymbol.SpecialType` 属性已交付（C1+C2）。
+
+### 10.5 索引
+
+- 分层细节与实施状态：[`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md)
+- 工程结构/命名映射与流程：[`CODING.md`](../CODING.md)
+- 决策索引（ADR）：[`docs-dev/README.md`](../docs-dev/README.md) §4
