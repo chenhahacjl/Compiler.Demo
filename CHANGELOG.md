@@ -20,7 +20,14 @@
 ### 文档体系整理（本轮）
 - 文档分层重构：`docs/`（正式参考）与 `docs-dev/`（开发文档：总纲 / `plan/` 规划 / `archive/` 已实现归档）分离；新增双 README 索引 + [docs/文档格式规范.md](docs/文档格式规范.md)（全仓 .md 约定）。
 - 合并三族重叠文档：架构（实现目标 + Roslyn 蓝图 + 符号模型对齐 → ARCHITECTURE §9/§10）、IR（前端拆分 + HIR/LIR 格式 → plan/IR分层与格式设计）、标准库（类库设计 + SDK 增强 → 标准库设计）；消除全部纯进度流水文档（S5/S7/项目结构重组/委托方案，决策已吸收）。
-- 修复 33 处文档坏链；新增 [docs/快速上手.md](docs/快速上手.md) 与 [docs/标准库API参考.md](docs/标准库API参考.md)；语法手册状态标记核对补齐。
+- 修复 33 处文档坏链；新增 [docs/快速上手.md](docs/快速上手.md)；语法手册状态标记核对补齐。
+
+### `.coproj` 零功能元素接线 + console 模板实例化（2026-09-06）
+- `<Content CopyToOutput>`：按 glob 复制到输出目录（保留相对路径 / 越界回退文件名），增量命中与全量两路径均幂等执行，未命中告警。
+- `<Subsystem>`：native PE 头子系统（`Console` 默认 / `Windows` 无控制台窗口），经 EmitNative 全链透传。
+- `<TreatWarningsAsErrors>`：源码 / Content 模式未命中、`[imports]` 未实现、诊断 Warning 级统一升级为错误，构建失败。
+- `cocoa new console` `main.co` 升级为有代表性示例（阶乘函数 + 数组 + 循环 + 字符串拼插）；dotnet / native x64 双端冒烟通过。
+- 新增 `ContentCopyTests` 4 例、`SubsystemPEEmitTests` 2 例、`TreatWarningsAsErrorsTests` 3 例；文档（项目格式规范 / 编译手册）同步。
 
 ## 2026-09-05 ~ 09-06
 
