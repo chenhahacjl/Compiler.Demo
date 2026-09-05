@@ -796,6 +796,25 @@ namespace Cocoa.CodeGen.Managed.Writer
                     return IlType.Class(CodClassRef(classType, codAssembly));
                 }
 
+                // 6f-1 库类兜底：溯源表按 identity 索引，消费侧绑定可能经重建符号持有不同实例，
+                // 依全名唯一性补一次匹配（与 6e-M23 泛型 owner 反解同系）。
+                if (codAssembly == null)
+                {
+                    foreach (var entry in _codAssemblies)
+                    {
+                        if (entry.Key is NamedTypeSymbol named && named.FullName == classType.FullName)
+                        {
+                            codAssembly = entry.Value;
+                            break;
+                        }
+                    }
+
+                    if (codAssembly != null)
+                    {
+                        return IlType.Class(CodClassRef(classType, codAssembly));
+                    }
+                }
+
                 if (classType.IsExternal)
                 {
                     return IlType.Class(ResolveExternalTypeRef(classType));

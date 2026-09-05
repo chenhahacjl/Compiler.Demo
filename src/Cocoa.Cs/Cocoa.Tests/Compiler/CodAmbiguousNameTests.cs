@@ -64,11 +64,23 @@ namespace Shared
             var dir = NewDir();
             var lib1 = WriteLib(dir, "LibOne", "1");
 
-            var compilation = Compilation.Create(new[] { lib1 },
-                SyntaxTree.Parse("function Main(): i32 { return 0 }"));
-            // 单库装载无歧义，且类型经全局命名空间树可见
-            var conflict = compilation.GetTypeByMetadataName("Shared.Conflict");
-            Assert.NotNull(conflict);
+            // 真用途：动态链接消费（linkCodDynamically）——实例化库类、调用实例方法并产出可执行 dll 引用
+            var compilation = Compilation.Create(new[] { lib1 }, linkCodDynamically: true,
+                SyntaxTree.Parse(@"
+using Shared
+function Main(): i32
+{
+    let c = new Conflict()
+    return c.Value()
+}
+"));
+            var exePath = Path.Combine(dir, "app.exe");
+            var diagnostics = compilation.Emit("app-exe",
+                new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location, lib1 },
+                exePath, Cocoa.Targeting.IlTarget.Parse("net9.0"));
+            Assert.False(diagnostics.HasErrors(),
+                "单库实例类消费应无诊断：" + string.Join(" | ", diagnostics.Select(d => d.Message)));
+            Assert.True(File.Exists(exePath));
         }
     }
 }
