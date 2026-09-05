@@ -544,9 +544,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     }
                 }
 
-                // 6e-M22 D-B：delegate 合成类不进发射（运行期表示 = Func/Action 对象，非自定义类）
+                // 6e-M22 委托真实类型化：delegate 合成类入发射清单（IL 侧发真 MulticastDelegate 子类 TypeDef）
                 emittedClasses = emittedClasses
-                    .Where(c => c.TypeKind != TypeKind.Delegate)
                     .Concat(environmentClasses)
                     .ToImmutableArray();
             }

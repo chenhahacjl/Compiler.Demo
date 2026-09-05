@@ -237,9 +237,45 @@ namespace Cocoa.CodeGen.Managed.Writer
             il.Emit(IlOpCodeTable.Get("Newobj"), shape.Ctor);
         }
 
+        /// <summary>6e-M22 委托真实类型化：delegate 目标位函数值构造——`newobj &lt;delegateType&gt;::.ctor(object, IntPtr)`。</summary>
+        private void EmitDelegateValueConstruction(IlAssembler il, BoundFunctionValueExpression node, NamedTypeSymbol delegateClass)
+        {
+            if (node.EnvironmentClass != null)
+            {
+                // 捕获闭包：target = 当前环境对象
+                il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_closureEnvLocalIndex!.Value);
+            }
+            else if (node.Receiver != null)
+            {
+                // 实例方法组：接收者为委托 target（用户类引用型，无需装箱）
+                EmitExpression(il, node.Receiver);
+            }
+            else
+            {
+                il.Emit(IlOpCodeTable.Get("Ldnull"));
+            }
+
+            il.Emit(IlOpCodeTable.Get("Ldftn"), _methods[node.Function]);
+            il.Emit(IlOpCodeTable.Get("Newobj"), _delegateCtors[delegateClass]);
+        }
+
         /// <summary>间接调用（6e-M22 C4-b/D-B）：callee + args → callvirt Func\`N/委托类::Invoke。</summary>
         private void EmitInvocationExpression(IlAssembler il, BoundInvocationExpression node)
         {
+            // 6e-M22 委托真实类型化：callee 为具名 delegate 类型 → callvirt 该类型 TypeDef::Invoke
+            if (node.Callee.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateClass &&
+                _delegateInvokes.TryGetValue(delegateClass, out var delegateInvoke))
+            {
+                EmitExpression(il, node.Callee);
+                foreach (var argument in node.Arguments)
+                {
+                    EmitExpression(il, argument);
+                }
+
+                il.Emit(IlOpCodeTable.Get("Callvirt"), delegateInvoke);
+                return;
+            }
+
             var functionType = node.Callee.Type switch
             {
                 FunctionTypeSymbol ft => ft,

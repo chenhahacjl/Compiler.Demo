@@ -238,12 +238,18 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var method in methodDefs)
             {
                 writer.Write(methodRvas.TryGetValue(method, out var rva) ? rva : 0u);
-                var implFlags = (ushort)(method.DllName != null ? 0x0080 : 0); // ImplFlags: extern 方法 PreserveSig（对齐 csc）
+                var implFlags = method.IsRuntimeImplementation
+                    ? (ushort)0x0003  // MethodImplAttributes.Runtime：CLR 特判方法（委托 .ctor/Invoke），RVA=0
+                    : (ushort)(method.DllName != null ? 0x0080 : 0); // ImplFlags: extern 方法 PreserveSig（对齐 csc）
                 writer.Write(implFlags);
                 var methodFlags = (ushort)(VisibilityToFlags(method.Visibility) | 0x0080 | 0x0010 | (method.DllName != null ? 0x2000 : 0)); // Flags: 可见性|HideBySig|Static|PInvokeImpl
                 if (!method.IsStatic)
                 {
                     methodFlags = (ushort)(methodFlags & ~0x0010); // 清掉 Static
+                }
+                if (method.IsNewSlot)
+                {
+                    methodFlags = (ushort)(methodFlags | 0x0100); // NewSlot（MethodAttributes.NewSlot）
                 }
                 if (method.IsVirtual)
                 {

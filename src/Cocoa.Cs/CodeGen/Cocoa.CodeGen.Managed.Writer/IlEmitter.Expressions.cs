@@ -223,6 +223,14 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private void EmitConversionExpression(IlAssembler il, BoundConversionExpression node)
         {
+            // 6e-M22 委托真实类型化：fnty 值 → 具名 delegate（true CLR 委托实例）
+            if (node.Type is NamedTypeSymbol { TypeKind: TypeKind.Delegate } delegateType &&
+                node.Expression is BoundFunctionValueExpression innerDelegateValue)
+            {
+                EmitDelegateValueConstruction(il, innerDelegateValue, delegateType);
+                return;
+            }
+
             EmitExpression(il, node.Expression);
 
             // 6e-M19 M5-a：null 字面量 → 引用型（类/接口/string/数组/any）——栈上已是 ldnull，直通

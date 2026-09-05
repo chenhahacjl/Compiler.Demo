@@ -734,6 +734,12 @@ var wide = AllocateRegister(LirType.I64);
                 return value;
             }
 
+            // 6e-M22 委托真实类型化：向具名 delegate 类型的转换（方差兼容已保证引用语义）——直通函数值
+            if (to is NamedTypeSymbol { TypeKind: TypeKind.Delegate })
+            {
+                return value;
+            }
+
             if (from == TypeSymbol.Any || to == TypeSymbol.Any)
             {
                 return value;

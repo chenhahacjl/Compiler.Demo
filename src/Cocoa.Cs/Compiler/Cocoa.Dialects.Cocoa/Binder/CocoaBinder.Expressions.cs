@@ -1863,6 +1863,13 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 delegateTarget.DelegateSignature() is { } delegateSignature &&
                 FunctionVariance.IsVarianceCompatible(expression.Type, delegateSignature))
             {
+                // 非泛型具名 delegate → 包装 BoundConversionExpression：IL 发真 CLR 委托实例
+                // （newobj Handler::.ctor）；Evaluator/native 直通内层（M5 前保持函数值语义）
+                if (delegateTarget is not InstantiatedTypeSymbol)
+                {
+                    return new BoundConversionExpression(expression.Syntax!, delegateTarget, expression);
+                }
+
                 return expression;
             }
 

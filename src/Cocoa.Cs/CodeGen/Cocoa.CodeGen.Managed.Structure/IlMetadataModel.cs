@@ -150,6 +150,12 @@ namespace Cocoa.CodeGen.Managed.Structure
         public bool IsAbstract { get; set; }
 
         public bool IsSealed { get; set; }
+
+        /// <summary>NewSlot（0x0001 <see cref="MethodAttributes.NewSlot"/>）：委托 Invoke 等 newslot virtual 方法。</summary>
+        public bool IsNewSlot { get; set; }
+
+        /// <summary>运行时实现（委托 Invoke 等 CLR 特判方法）：ImplFlags=Runtime(0x0003)，RVA=0。</summary>
+        public bool IsRuntimeImplementation { get; set; }
     }
 
     /// <summary>

@@ -54,6 +54,11 @@ namespace Cocoa.CodeGen.Managed.Writer
         private Dictionary<string, IlFieldDef>? _closureFieldDefs;
         private readonly Dictionary<NamedTypeSymbol, IlMethodDef> environmentCtorDefs = new();
 
+        /// <summary>6e-M22 委托真实类型化：delegate 类合成 `.ctor(object, IntPtr)` MethodDef（newobj 目标）。</summary>
+        private readonly Dictionary<NamedTypeSymbol, IlMethodDef> _delegateCtors = new();
+        /// <summary>6e-M22 委托真实类型化：delegate 类合成 `Invoke` MethodDef（callvirt 目标）。</summary>
+        private readonly Dictionary<NamedTypeSymbol, IlMethodDef> _delegateInvokes = new();
+
         /// <summary>闭包环境类判定：Binder 合成的 `__Env_<fn>` 命名约定。</summary>
         private static bool IsClosureEnvironmentClass(NamedTypeSymbol classType)
             => classType.Name.StartsWith("__Env_", StringComparison.Ordinal);
@@ -218,6 +223,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var function in orderedFunctions)
             {
                 if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue; // 6e-M22 真实类型化：Invoke 已合成
                 if (function.BuiltinKind != null)
                 {
                     // syscall 内部原语：无方法体、调用点按 BuiltinKind 分发，不声明为 IL 方法
@@ -258,6 +264,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var function in orderedFunctions)
             {
                 if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue; // 6e-M22 真实类型化：Invoke 体由 CLR 填充
                 if (function.IsExtern || function.IsAbstract || function.BuiltinKind != null)
                 {
                     continue;
@@ -418,6 +425,35 @@ namespace Cocoa.CodeGen.Managed.Writer
                 var fieldDef = new IlFieldDef(field.Name, ToIlType(field.Type), ToIlVisibility(field.Visibility), isStatic: field.IsStatic);
                 typeDef.Fields.Add(fieldDef);
                 _fieldDefs.Add(field, fieldDef);
+            }
+
+            // 6e-M22 委托真实类型化：delegate 类合成 `.ctor(object, IntPtr)` + `Invoke(签名)` MethodDef。
+            // csc 同构（见 DlgCS 反射基线）：委托类所有方法均为 **Runtime 实现**（impl=0x0003、RVA=0），
+            // 由 CLR 在委托实例化时填充——.ctor(object,IntPtr) 设置 target/method，Invoke 提供委托分派。
+            if (classType.TypeKind == TypeKind.Delegate)
+            {
+                var ctorDef = new IlMethodDef(".ctor", IlType.Void, new[] { IlType.Object, IlType.NativeInt }, null, isStatic: false)
+                {
+                    Visibility = IlVisibility.Public,
+                    IsRuntimeImplementation = true,
+                };
+                _metadata.AddMethodDef(typeDef, ctorDef);
+                _delegateCtors[classType] = ctorDef;
+
+                var signature = classType.DelegateSignature();
+                if (signature != null)
+                {
+                    var parameterTypes = signature.ParameterTypes.Select(ToIlType).ToList();
+                    var invokeDef = new IlMethodDef("Invoke", ToIlType(signature.ReturnType), parameterTypes, null, isStatic: false)
+                    {
+                        Visibility = IlVisibility.Public,
+                        IsVirtual = true,
+                        IsNewSlot = true,
+                        IsRuntimeImplementation = true,
+                    };
+                    _metadata.AddMethodDef(typeDef, invokeDef);
+                    _delegateInvokes[classType] = invokeDef;
+                }
             }
         }
 
