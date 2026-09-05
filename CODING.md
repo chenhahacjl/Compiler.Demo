@@ -20,7 +20,7 @@
 | `Cocoa.Compiler.Cocoa` | — | — | 单语言 CLI 入口（Program.cs） |
 | `Cocoa.Compiler.CSharp` | — | — | 单语言 CLI 入口（Program.cs） |
 | `Cocoa.CommandLine` | `Cocoa.Compiler`（**保留历史 ns**） | **`cocoa`**（**不变，IVT 依赖此名**） | 主 CLI |
-| `Cocoa.Tests` | 各测试 ns | — | 41,821 测试 |
+| `Cocoa.Tests` | 各测试 ns | — | 41,871 测试 |
 
 依赖链：`CommandLine/Compiler.* → ProjectSystem → {CodeGen.IL, CodeGen.Native, CodeGen.Interpreter, CodeAnalysis.Cocoa/CSharp} → CodeAnalysis → CodeGen.PE`。
 
@@ -104,8 +104,12 @@ RootNamespace 保留 `Cocoa.Compiler`（历史约定，避免全仓替换）。
 ## 8. 验证与提交纪律
 
 - 验证：`dotnet build src/Cocoa.Cs/Cocoa.slnx --no-incremental`（增量构建在 stash/mtime 往返后
-  会用陈旧二进制骗人）+ `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量。
-- 每步独立 commit，前缀 `refactor(plan)`；文档与进度日志随每步更新。
+  会用陈旧二进制骗人）+ `dotnet test src/Cocoa.Cs/Cocoa.Tests` 全量（基线 41871，见 §1）。
+- 全量回归推荐显式滚转：`DOTNET_ROLL_FORWARD=LatestMajor dotnet test src/Cocoa.Cs/Cocoa.slnx`。
+- 标准库重建：改 `src/Cocoa.SDK/` 后 `dotnet cocoa.dll build src/Cocoa.SDK/Cocoa.SDK.cosln`
+  并把产物复制回 `src/Cocoa.Cs/libs/`（或跑 `tools\build-stdlib.cmd`）。
+- 每步独立 commit，前缀 `refactor(plan)`（文档类用 `docs(fmt|org|merge|fix|new|manual)`）；
+  文档与进度日志随每步更新。
 - 源文件 UTF-8；测试期望字符串注意 `\r\n` 与 Unicode 控制台输出（native exe 输出为 UTF-16）。
 
 ## 9. 外部契约（不可破坏）
