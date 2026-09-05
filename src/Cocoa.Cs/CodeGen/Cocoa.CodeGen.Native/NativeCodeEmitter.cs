@@ -20,7 +20,7 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal sealed class NativeCodeEmitter
     {
-        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform)
+        public static void Emit(BoundProgram program, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem)
         {
             IAssembler a = platform.Arch == Architecture.X64
                 ? new X64Assembler()
@@ -45,7 +45,7 @@ namespace Cocoa.CodeGen.Native
             var code = a.ToArray();
             var entryPointRva = PeFileWriter.TextRva + a.GetLabelOffset(result.StubLabel);
             // M4a：数据段绝对地址槽 → .reloc（ASLR 下加载器同步修正 vtable 函数/名字指针）
-            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups);
+            PeFileWriter.Write(outputPath, code, a.GetData(), entryPointRva, result.Imports, platform.Arch, a.DataAbsoluteFixups, subsystem);
         }
     }
 }

@@ -19,6 +19,9 @@ namespace Cocoa.CodeGen.PE
 
         private const int SectionAlignment = 0x1000;
 
+        /// <summary>默认子系统：WindowsConsole（IMAGE_SUBSYSTEM_WINDOWS_CUI，3）。</summary>
+        public const ushort PeSubsystemWindowsCui = 3;
+
         /// <summary>旧路径（RuntimeEmitter 手工布局）使用的固定数据段 RVA。新路径页对齐用 ComputeDataRva 动态布局。</summary>
         public static int ComputeDataRva(int codeLength)
         {
@@ -41,7 +44,7 @@ namespace Cocoa.CodeGen.PE
             return architecture == Architecture.X86 ? 0x400000 : 0x140000000;
         }
 
-        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null)
+        public static void Write(string outputPath, byte[] code, byte[] data, int entryPointRva, IReadOnlyList<PefileImport> imports, Architecture architecture, IReadOnlyList<int>? dataAbsoluteFixups = null, ushort subsystem = PeSubsystemWindowsCui)
         {
             var pe32 = architecture == Architecture.X86;
 
@@ -135,7 +138,7 @@ namespace Cocoa.CodeGen.PE
             var config = new PeImageConfig(
                 pe32 ? PeMachine.I386 : PeMachine.AMD64,
                 (ulong)ImageBaseOf(architecture),
-                (ushort)PeSubsystem.WindowsCui,
+                (ushort)subsystem,
                 pe32 ? (ushort)(PeDllCharacteristics.NxChipCompat | PeDllCharacteristics.NoSeh | PeDllCharacteristics.TerminalServerAware)
                      : (ushort)(PeDllCharacteristics.CurrentImage | PeDllCharacteristics.TerminalServerAware),
                 (uint)entryPointRva)

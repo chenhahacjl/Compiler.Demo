@@ -32,14 +32,14 @@ namespace Cocoa.CodeAnalysis
         private static volatile Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>>? _managedEmitter;
 
         /// <summary>native 后端发射委托（由 <c>Cocoa.CodeGen.Native</c> 经 <see cref="RegisterNativeEmitter"/> 注入，含后端专属校验）。</summary>
-        private static volatile Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>>? _nativeEmitter;
+        private static volatile Func<Compilation, string, string, TargetPlatform, ushort, ImmutableArray<Diagnostic>>? _nativeEmitter;
 
         /// <summary>注册 managed（dotnet/IL）后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
         public static void RegisterManagedEmitter(Func<BoundProgram, string, string[], string, IlTarget, bool, ImmutableDictionary<object, string>?, bool, ImmutableArray<Diagnostic>> emitter)
             => _managedEmitter = emitter;
 
         /// <summary>注册 native 后端发射实现（后端/宿主启动时调用；Core 自身不引用后端）。</summary>
-        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ImmutableArray<Diagnostic>> emitter)
+        public static void RegisterNativeEmitter(Func<Compilation, string, string, TargetPlatform, ushort, ImmutableArray<Diagnostic>> emitter)
             => _nativeEmitter = emitter;
 
         /// <summary>

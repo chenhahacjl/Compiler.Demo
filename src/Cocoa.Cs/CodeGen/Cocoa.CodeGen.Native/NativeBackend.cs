@@ -22,7 +22,7 @@ namespace Cocoa.CodeGen.Native
             Compilation.RegisterNativeEmitter(EmitNative);
         }
 
-        private static ImmutableArray<Diagnostic> EmitNative(Compilation compilation, string moduleName, string outputPath, TargetPlatform platform)
+        private static ImmutableArray<Diagnostic> EmitNative(Compilation compilation, string moduleName, string outputPath, TargetPlatform platform, ushort subsystem)
         {
             var parseDiagnostics = compilation.SyntaxTrees.SelectMany(st => st.Diagnostics);
 
@@ -79,7 +79,7 @@ namespace Cocoa.CodeGen.Native
 
             var importWarnings = NativeImportValidator.Validate(program, platform.Arch);
 
-            NativeCodeEmitter.Emit(program, moduleName, outputPath, platform);
+            NativeCodeEmitter.Emit(program, moduleName, outputPath, platform, subsystem);
 
             return diagnostics.Concat(importWarnings).ToImmutableArray();
         }

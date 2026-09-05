@@ -115,14 +115,14 @@ namespace Cocoa.CodeAnalysis
         /// 把程序直接生成为原生可执行文件，不依赖 .NET 运行时。
         /// 实现经 <see cref="RegisterNativeEmitter"/> 注入的 native 后端（Core 自身不引用后端）。
         /// </summary>
-        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default)
+        public ImmutableArray<Diagnostic> EmitNative(string moduleName, string outputPath, TargetPlatform platform = default, ushort subsystem = 3 /* PeSubsystem.WindowsCui */)
         {
             if (_nativeEmitter == null)
             {
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "native 后端未注册（Cocoa.CodeGen.Native 未初始化）"));
             }
 
-            return _nativeEmitter(this, moduleName, outputPath, platform);
+            return _nativeEmitter(this, moduleName, outputPath, platform, subsystem);
         }
 
         /// <summary>

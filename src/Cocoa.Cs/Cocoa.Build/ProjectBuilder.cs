@@ -140,7 +140,11 @@ namespace Cocoa.Build
                         return ProjectBuildResult.Failed;
                     }
 
-                    diagnostics = compilation.EmitNative(project.Name, outputFile, platform);
+                    var subsystem = string.Equals(project.Subsystem, "Windows", StringComparison.OrdinalIgnoreCase)
+                            ? (ushort)2 /* PeSubsystem.WindowsGui */
+                            : (ushort)3 /* PeSubsystem.WindowsCui */;
+
+                    diagnostics = compilation.EmitNative(project.Name, outputFile, platform, subsystem);
                 }
                 else
                 {
