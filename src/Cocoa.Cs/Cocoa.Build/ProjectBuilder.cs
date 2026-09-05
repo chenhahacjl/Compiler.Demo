@@ -103,6 +103,8 @@ namespace Cocoa.Build
                     EnsureManagedDlls(CollectReferencedCodLibraries(references), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter);
                 }
 
+                CopyContentToOutput(project, outputDirectory, messageWriter);
+
                 messageWriter.WriteLine($"'{project.Name}' is up to date ({backend.ToString().ToLowerInvariant()})");
                 return new ProjectBuildResult(success: true, upToDate: true);
             }
@@ -217,9 +219,57 @@ namespace Cocoa.Build
                 BuildCache.Write(cachePath, fingerprint);
             }
 
+            CopyContentToOutput(project, outputDirectory, messageWriter);
+
             messageWriter.WriteLine(outputFile);
 
             return new ProjectBuildResult(success: true, upToDate: false);
+        }
+
+        /// <summary>
+        /// `<Content Include="..." CopyToOutput="true">`：按项目目录解析 glob，把命中文件
+        /// 部署到输出目录（保留相对路径；越界路径回退文件名）。增量命中与全量成功两路都执行，
+        /// 幂等（NeedsCopy 判定跳过）。
+        /// </summary>
+        private static void CopyContentToOutput(CocoaProjectFile project, string outputDirectory, TextWriter messageWriter)
+        {
+            if (project.Content.IsEmpty)
+            {
+                return;
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+
+            foreach (var entry in project.Content)
+            {
+                if (!entry.CopyToOutput)
+                {
+                    continue;
+                }
+
+                var expansion = Glob.Expand(new[] { entry.Include }, project.Directory);
+                foreach (var pattern in expansion.UnmatchedPatterns)
+                {
+                    messageWriter.WriteLine($"warning: content pattern '{pattern}' did not match any file");
+                }
+
+                foreach (var source in expansion.Files)
+                {
+                    var relative = Path.GetRelativePath(project.Directory, source);
+                    if (relative.StartsWith("..", StringComparison.Ordinal))
+                    {
+                        // 越界（如 `../assets`）回退为仅文件名，避免逃逸输出目录
+                        relative = Path.GetFileName(source);
+                    }
+
+                    var destination = Path.Combine(outputDirectory, relative);
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                    if (NeedsCopy(source, destination))
+                    {
+                        File.Copy(source, destination, overwrite: true);
+                    }
+                }
+            }
         }
 
         /// <summary>条件复制引用产物到输出目录：源与目标的 Length + LastWriteTimeUtc 相同则跳过。</summary>
