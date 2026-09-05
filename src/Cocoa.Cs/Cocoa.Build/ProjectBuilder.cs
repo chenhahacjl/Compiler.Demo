@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis;
+﻿using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed.Writer;
@@ -202,7 +202,7 @@ namespace Cocoa.Build
                 // 含系统库（SystemLibrary 自动发现）。缺失或 stamp（cod sha256）过期 → 现场再生，自愈误删
                 if (linkCodDynamically)
                 {
-                    if (!EnsureManagedDlls(compilation.CodLibraries.Select(l => (l.Name, l.SourcePath)), outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
+                    if (!EnsureManagedDlls(compilation.CodLibraries, outputDirectory, IlTarget.Parse(dotnetRuntime!) ?? IlTarget.Default, messageWriter))
                     {
                         return new ProjectBuildResult(success: false, upToDate: false);
                     }
@@ -274,6 +274,45 @@ namespace Cocoa.Build
                 }
 
                 var diagnostics = CoaLibraryCompiler.EmitManagedDll(sourcePath, managedDll, target);
+                if (diagnostics.HasErrors())
+                {
+                    messageWriter.WriteDiagnostics(diagnostics);
+                    ok = false;
+                    continue;
+                }
+
+                File.WriteAllText(stampPath, codHash);
+            }
+
+            return ok;
+        }
+
+        /// <summary>
+        /// 6f-2：库清单版——完整目录（含用户库）参与 provenance，库间动态链接生效（主构建路径）。
+        /// </summary>
+        private static bool EnsureManagedDlls(System.Collections.Immutable.ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> libraries, string outputDirectory, IlTarget target, TextWriter messageWriter)
+        {
+            Directory.CreateDirectory(outputDirectory);
+
+            var ok = true;
+            foreach (var library in libraries)
+            {
+                if (string.IsNullOrEmpty(library.Name) || string.IsNullOrEmpty(library.SourcePath) || !File.Exists(library.SourcePath))
+                {
+                    continue;
+                }
+
+                var managedDll = Path.Combine(outputDirectory, library.Name + ".dll");
+                var stampPath = managedDll + ".stamp";
+                var codHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath))).ToLowerInvariant();
+                var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
+
+                if (File.Exists(managedDll) && stamped == codHash)
+                {
+                    continue;
+                }
+
+                var diagnostics = CoaLibraryCompiler.EmitManagedDll(library, managedDll, target, libraries);
                 if (diagnostics.HasErrors())
                 {
                     messageWriter.WriteDiagnostics(diagnostics);

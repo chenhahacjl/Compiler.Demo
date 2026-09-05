@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis;
+﻿using Cocoa.CodeAnalysis;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Managed.Writer;
 using Cocoa.CodeGen.Interpreter;
@@ -343,7 +343,7 @@ namespace Cocoa.Cli
                     outputDir = ".";
                 }
 
-                if (!EnsureManagedDlls(compilation.CodLibraries.Select(l => (l.Name, l.SourcePath)), outputDir, effectiveTarget))
+                if (!EnsureManagedDlls(compilation.CodLibraries, outputDir, effectiveTarget))
                 {
                     return 1;
                 }
@@ -358,7 +358,7 @@ namespace Cocoa.Cli
         /// 动态链接：确保被消费 `.coa` 库的托管 dll（X.Managed.dll）在输出目录就绪——
         /// 缺失或 stamp（cod sha256）过期 → 从 cod 现场再生（与 cocoa build 同机制）。
         /// </summary>
-        private static bool EnsureManagedDlls(IEnumerable<(string Name, string SourcePath)> libraries, string outputDirectory, IlTarget target)
+        private static bool EnsureManagedDlls(System.Collections.Immutable.ImmutableArray<Cocoa.CodeAnalysis.Serialization.CoaProgram> libraries, string outputDirectory, IlTarget target)
         {
             try
             {
@@ -371,16 +371,16 @@ namespace Cocoa.Cli
             }
 
             var ok = true;
-            foreach (var (name, sourcePath) in libraries)
+            foreach (var library in libraries)
             {
-                if (name.Length == 0 || sourcePath.Length == 0 || !File.Exists(sourcePath))
+                if (string.IsNullOrEmpty(library.Name) || string.IsNullOrEmpty(library.SourcePath) || !File.Exists(library.SourcePath))
                 {
                     continue;
                 }
 
-                var managedDll = Path.Combine(outputDirectory, name + ".dll");
+                var managedDll = Path.Combine(outputDirectory, library.Name + ".dll");
                 var stampPath = managedDll + ".stamp";
-                var codHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(sourcePath));
+                var codHash = System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(library.SourcePath));
                 var hashText = Convert.ToHexString(codHash).ToLowerInvariant();
                 var stamped = File.Exists(stampPath) ? File.ReadAllText(stampPath).Trim() : "";
 
@@ -389,7 +389,7 @@ namespace Cocoa.Cli
                     continue;
                 }
 
-                var diagnostics = CoaLibraryCompiler.EmitManagedDll(sourcePath, managedDll, target);
+                var diagnostics = CoaLibraryCompiler.EmitManagedDll(library, managedDll, target, libraries);
                 if (diagnostics.HasErrors())
                 {
                     Console.Error.WriteDiagnostics(diagnostics);

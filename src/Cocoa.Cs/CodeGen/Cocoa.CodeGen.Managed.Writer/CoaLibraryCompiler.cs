@@ -26,16 +26,35 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 6f-2：库体引用系统库符号——读侧以系统库为 external 解析（Console/Array/…），
             // 库内跨库调用经 BuildExternalProvenance 目录映射到对应 Managed dll 的动态链接。
             var external = SystemLibrary.Load();
-            return EmitManagedDll(CoaSerializer.Load(coaPath, external), dllPath, target, BuildExternalProvenance(external));
+            return EmitManagedDllCore(CoaSerializer.Load(coaPath, external), dllPath, target, BuildExternalProvenance(external));
         }
 
-        /// <summary>从内存中的 CoaProgram 发射托管库 dll。</summary>
+        /// <summary>从内存中的 CoaProgram 发射托管库 dll（仅系统库外部目录）。</summary>
         public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target)
         {
-            return EmitManagedDll(cod, dllPath, target, BuildExternalProvenance(SystemLibrary.Load()));
+            return EmitManagedDllCore(cod, dllPath, target, BuildExternalProvenance(SystemLibrary.Load()));
         }
 
-        private static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target, ImmutableDictionary<object, string> codAssemblies)
+        /// <summary>6f-2：从内存中的 CoaProgram 发射托管库 dll，外部目录 = 完整库集合（系统库 + 引用用户库）——
+        /// 库间动态链接（阶段 A3）：本库体调用其他用户库时，对该库符号命中 provenance → Call [X.Managed]member。
+        /// 自身从目录排除（自身符号按本地方法/类型发射）。</summary>
+        public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target, ImmutableArray<CoaProgram> allLibraries)
+        {
+            var builder = ImmutableDictionary.CreateBuilder<object, string>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
+            foreach (var library in allLibraries)
+            {
+                if (ReferenceEquals(library, cod) || string.IsNullOrEmpty(library.Name))
+                {
+                    continue;
+                }
+
+                PopulateProvenance(builder, library);
+            }
+
+            return EmitManagedDllCore(cod, dllPath, target, builder.ToImmutable());
+        }
+
+        private static ImmutableArray<Diagnostic> EmitManagedDllCore(CoaProgram cod, string dllPath, IlTarget target, ImmutableDictionary<object, string> codAssemblies)
         {
             // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
             // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。
@@ -76,7 +95,6 @@ namespace Cocoa.CodeGen.Managed.Writer
         private static ImmutableDictionary<object, string> BuildExternalProvenance(ImmutableArray<CoaProgram> external)
         {
             var builder = ImmutableDictionary.CreateBuilder<object, string>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
-
             foreach (var library in external)
             {
                 if (string.IsNullOrEmpty(library.Name))
@@ -84,34 +102,39 @@ namespace Cocoa.CodeGen.Managed.Writer
                     continue;
                 }
 
-                foreach (var fn in library.Functions)
-                {
-                    if (fn.IsExtern || fn.BuiltinKind != null)
-                    {
-                        continue;
-                    }
-
-                    builder[fn] = library.Name;
-                    var containingClass = fn.ContainingClass;
-                    if (containingClass is { } cc2 &&
-                        cc2 != NamedTypeSymbol.SystemObject &&
-                        cc2 != NamedTypeSymbol.SystemType)
-                    {
-                        builder[cc2] = library.Name;
-                    }
-                }
-
-                foreach (var containerClass in library.Classes)
-                {
-                    if (containerClass != NamedTypeSymbol.SystemObject &&
-                        containerClass != NamedTypeSymbol.SystemType)
-                    {
-                        builder[containerClass] = library.Name;
-                    }
-                }
+                PopulateProvenance(builder, library);
             }
 
             return builder.ToImmutable();
+        }
+
+        private static void PopulateProvenance(ImmutableDictionary<object, string>.Builder builder, CoaProgram library)
+        {
+            foreach (var fn in library.Functions)
+            {
+                if (fn.IsExtern || fn.BuiltinKind != null)
+                {
+                    continue;
+                }
+
+                builder[fn] = library.Name;
+                var containingClass = fn.ContainingClass;
+                if (containingClass is { } cc2 &&
+                    cc2 != NamedTypeSymbol.SystemObject &&
+                    cc2 != NamedTypeSymbol.SystemType)
+                {
+                    builder[cc2] = library.Name;
+                }
+            }
+
+            foreach (var containerClass in library.Classes)
+            {
+                if (containerClass != NamedTypeSymbol.SystemObject &&
+                    containerClass != NamedTypeSymbol.SystemType)
+                {
+                    builder[containerClass] = library.Name;
+                }
+            }
         }
     }
 }
