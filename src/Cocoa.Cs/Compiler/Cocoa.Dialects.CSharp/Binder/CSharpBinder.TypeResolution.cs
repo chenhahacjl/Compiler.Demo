@@ -1,4 +1,4 @@
-using Cocoa.CodeAnalysis.Lowering;
+﻿using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -83,6 +83,20 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             // 点号全名（`Foo.Bar.Point` / `Foo.Bar.Color`）：内部类/枚举按 FullName 匹配，或外部类型直查
             if (name.IndexOf('.') >= 0)
             {
+                // 6f-3：库限定消歧——`库名.全名` 首段命中已加载用户库 → 库内 TypesByName 解析
+                // （复合键的绑定侧消费：`using X = Lib1.Shared.Conflict` 跨库同名唯一化）
+                var libraryScoped = TryResolveLibraryScopedType(name);
+                if (libraryScoped != null)
+                {
+                    return libraryScoped;
+                }
+
+                // 6f-3：跨库同名类型（非库限定）拒绝解析——非限定/裸全名使用即绑定期诊断
+                if (_ambiguousCodTypeNames.Contains(name))
+                {
+                    return null;
+                }
+
                 var fullNameClass = FindDeclaredClassByFullName(name);
                 if (fullNameClass != null)
                 {
@@ -109,6 +123,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             foreach (var ns in _usingNamespaces)
             {
                 var fullName = ns.Length == 0 ? name : ns + "." + name;
+
+                // 6f-3：跨库同名类型非限定使用拒绝解析（绑定期歧义诊断；消歧走 `using X = 库名.全名`）
+                if (_ambiguousCodTypeNames.Contains(fullName))
+                {
+                    continue;
+                }
+
                 var internalClass = FindDeclaredClassByFullName(fullName);
                 if (internalClass != null)
                 {
@@ -135,6 +156,56 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             return null;
+        }
+
+        /// <summary>6f-3：库限定类型解析（复合键绑定侧消费）——`库名.全名` 首段命中已加载用户库，
+        /// 以其 TypesByName 解析余部全名；跨库同名类型经此前缀唯一化（`using X = Lib1.Shared.Conflict`）。</summary>
+        private TypeSymbol? TryResolveLibraryScopedType(string name)
+        {
+            var dotIndex = name.IndexOf('.');
+            if (dotIndex <= 0)
+            {
+                return null;
+            }
+
+            var libraryToken = name.Substring(0, dotIndex);
+            var remainder = name.Substring(dotIndex + 1);
+            foreach (var library in _codLibraries)
+            {
+                if (!IsLibraryTokenMatch(library, libraryToken))
+                {
+                    continue;
+                }
+
+                return library.TypesByName.TryGetValue(remainder, out var type) ? type : null;
+            }
+
+            return null;
+        }
+
+        private static bool IsLibraryTokenMatch(CoaProgram library, string token)
+        {
+            if (string.IsNullOrEmpty(library.Name))
+            {
+                return false;
+            }
+
+            if (string.Equals(library.Name, token, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // FnKey/引用前缀 = coa 基名（如 "LibOne"）；库 Name 为托管程序集名（"LibOne.Managed"）。
+            if (library.Name.EndsWith(CoaAssemblyNaming.ManagedSuffix, StringComparison.Ordinal) &&
+                string.Equals(
+                    library.Name.Substring(0, library.Name.Length - CoaAssemblyNaming.ManagedSuffix.Length),
+                    token,
+                    StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>6e-M19 M2-b：facade 类全名 → 承载类型映射（null 值 = 自身，Object/Type facade）。</summary>

@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Lowering;
+using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -158,6 +158,56 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return null;
         }
 
+        /// <summary>6f-3：库限定类型解析（复合键绑定侧消费）——`库名.全名` 首段命中已加载用户库，
+        /// 以其 TypesByName 解析余部全名；跨库同名类型经此前缀唯一化（`using X = Lib1.Shared.Conflict`）。</summary>
+        private TypeSymbol? TryResolveLibraryScopedType(string name)
+        {
+            var dotIndex = name.IndexOf('.');
+            if (dotIndex <= 0)
+            {
+                return null;
+            }
+
+            var libraryToken = name.Substring(0, dotIndex);
+            var remainder = name.Substring(dotIndex + 1);
+            foreach (var library in _codLibraries)
+            {
+                if (!IsLibraryTokenMatch(library, libraryToken))
+                {
+                    continue;
+                }
+
+                return library.TypesByName.TryGetValue(remainder, out var type) ? type : null;
+            }
+
+            return null;
+        }
+
+        private static bool IsLibraryTokenMatch(CoaProgram library, string token)
+        {
+            if (string.IsNullOrEmpty(library.Name))
+            {
+                return false;
+            }
+
+            if (string.Equals(library.Name, token, StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            // FnKey/引用前缀 = coa 基名（如 "LibOne"）；库 Name 为托管程序集名（"LibOne.Managed"）。
+            if (library.Name.EndsWith(CoaAssemblyNaming.ManagedSuffix, StringComparison.Ordinal) &&
+                string.Equals(
+                    library.Name.Substring(0, library.Name.Length - CoaAssemblyNaming.ManagedSuffix.Length),
+                    token,
+                    StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>6e-M19 M2-b：facade 类全名 → 承载类型映射（null 值 = 自身，Object/Type facade）。</summary>
         private static readonly Dictionary<string, TypeSymbol?> FacadeTargets = new Dictionary<string, TypeSymbol?>
         {
@@ -290,58 +340,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case "System.Type":
                     return NamedTypeSymbol.SystemType;
                 default:
-            return null;
-        }
-        }
-
-        /// <summary>6f-3：库限定类型解析（复合键绑定侧消费）——`库名.全名` 首段命中已加载用户库，
-        /// 以其 TypesByName 解析余部全名；跨库同名类型经此前缀唯一化（`using X = Lib1.Shared.Conflict`）。</summary>
-        private TypeSymbol? TryResolveLibraryScopedType(string name)
-        {
-            var dotIndex = name.IndexOf('.');
-            if (dotIndex <= 0)
-            {
-                return null;
+                    return null;
             }
-
-            var libraryToken = name.Substring(0, dotIndex);
-            var remainder = name.Substring(dotIndex + 1);
-            foreach (var library in _codLibraries)
-            {
-                if (!IsLibraryTokenMatch(library, libraryToken))
-                {
-                    continue;
-                }
-
-                return library.TypesByName.TryGetValue(remainder, out var type) ? type : null;
-            }
-
-            return null;
-        }
-
-        private static bool IsLibraryTokenMatch(CoaProgram library, string token)
-        {
-            if (string.IsNullOrEmpty(library.Name))
-            {
-                return false;
-            }
-
-            if (string.Equals(library.Name, token, StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            // FnKey/引用前缀 = coa 基名（如 "LibOne"）；库 Name 为托管程序集名（"LibOne.Managed"）。
-            if (library.Name.EndsWith(CoaAssemblyNaming.ManagedSuffix, StringComparison.Ordinal) &&
-                string.Equals(
-                    library.Name.Substring(0, library.Name.Length - CoaAssemblyNaming.ManagedSuffix.Length),
-                    token,
-                    StringComparison.Ordinal))
-            {
-                return true;
-            }
-
-            return false;
         }
 
         /// <summary>
