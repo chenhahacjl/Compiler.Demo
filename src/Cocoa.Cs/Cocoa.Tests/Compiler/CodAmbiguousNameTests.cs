@@ -138,9 +138,21 @@ function Main(): i32
             Directory.CreateDirectory(appDir);
 
             File.WriteAllText(Path.Combine(libOne, "LibOne.co"), "namespace Shared\n{\n    public class Conflict\n    {\n        public function Value(): i32\n        {\n            return 1\n        }\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libOne, "LibOne.cocproj"), "name = LibOne\noutput = cocoa\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libOne, "LibOne.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>LibOne</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
             File.WriteAllText(Path.Combine(libTwo, "LibTwo.co"), "namespace Shared\n{\n    public class Conflict\n    {\n        public function Value(): i32\n        {\n            return 2\n        }\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libTwo, "LibTwo.cocproj"), "name = LibTwo\noutput = cocoa\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libTwo, "LibTwo.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>LibTwo</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             File.WriteAllText(Path.Combine(mid, "LibMid.co"), @"namespace Mid
 {
@@ -153,36 +165,49 @@ function Main(): i32
     }
 }
 ");
-            File.WriteAllText(Path.Combine(mid, "LibMid.cocproj"), @"name = LibMid
-output = cocoa
-
-[sources]
-*.co
-
-[references]
-../LibOne/LibOne.coa
-../LibTwo/LibTwo.coa
+            File.WriteAllText(Path.Combine(mid, "LibMid.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>LibMid</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+    <Reference Include=""../LibOne/LibOne.coa"" />
+    <Reference Include=""../LibTwo/LibTwo.coa"" />
+  </ItemGroup>
+</Project>
 ");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "using Mid\nfunction Main(): void\n{\n    Console.WriteLine(Get())\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), @"name = App
-output = executable
-entry = Main
-
-[sources]
-*.co
-
-[references]
-../LibOne/LibOne.coa
-../LibTwo/LibTwo.coa
-../LibMid/LibMid.coa
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>App</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+    <Reference Include=""../LibOne/LibOne.coa"" />
+    <Reference Include=""../LibTwo/LibTwo.coa"" />
+    <Reference Include=""../LibMid/LibMid.coa"" />
+  </ItemGroup>
+</Project>
 ");
 
-            Assert.True(CliTestRunner.Run($"build \"{Path.Combine(libOne, "LibOne.cocproj")}\"", root).ExitCode == 0, "LibOne build failed");
-            Assert.True(CliTestRunner.Run($"build \"{Path.Combine(libTwo, "LibTwo.cocproj")}\"", root).ExitCode == 0, "LibTwo build failed");
-            Assert.True(CliTestRunner.Run($"build \"{Path.Combine(mid, "LibMid.cocproj")}\"", root).ExitCode == 0, "LibMid build failed");
+            Assert.True(CliTestRunner.Run($"build \"{Path.Combine(libOne, "LibOne.coproj")}\"", root).ExitCode == 0, "LibOne build failed");
+            Assert.True(CliTestRunner.Run($"build \"{Path.Combine(libTwo, "LibTwo.coproj")}\"", root).ExitCode == 0, "LibTwo build failed");
+            Assert.True(CliTestRunner.Run($"build \"{Path.Combine(mid, "LibMid.coproj")}\"", root).ExitCode == 0, "LibMid build failed");
 
-            var appProject = Path.Combine(appDir, "App.cocproj");
+            var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));

@@ -34,11 +34,20 @@ namespace Cocoa.Tests.Compiler
     }
 }
 ");
-File.WriteAllText(Path.Combine(libDir, "MathLib.cocproj"), @"name = MathLib
-output = cocoa
-
-[sources]
-*.co
+File.WriteAllText(Path.Combine(libDir, "MathLib.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>MathLib</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ");
 
             File.WriteAllText(Path.Combine(appDir, "app.co"), @"using MathLib
@@ -55,23 +64,29 @@ function Main(): i32
     return 0
 }
 ");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), @"name = App
-output = executable
-entry = Main
-
-[sources]
-*.co
-
-[references]
-../MathLib/MathLib.coa
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>App</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+    <Reference Include=""../MathLib/MathLib.coa"" />
+  </ItemGroup>
+</Project>
 ");
 
-            var libProject = Path.Combine(libDir, "MathLib.cocproj");
+            var libProject = Path.Combine(libDir, "MathLib.coproj");
             var libBuild = CliTestRunner.Run($"build \"{libProject}\"", root);
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(libDir, "MathLib.coa")));
 
-            var appProject = Path.Combine(appDir, "App.cocproj");
+            var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));

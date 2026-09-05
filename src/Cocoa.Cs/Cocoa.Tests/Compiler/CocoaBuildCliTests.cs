@@ -56,16 +56,26 @@ namespace Cocoa.Tests.Compiler
             var directory = Path.Combine(NewRunDir(run), projectName);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, projectName + ".co"), source);
-            File.WriteAllText(Path.Combine(directory, projectName + ".cocproj"), $@"
-name = {projectName}
-output = executable
-platform = x64
-
-[sources]
-*.co
-{extraProjectContent}
+            File.WriteAllText(Path.Combine(directory, projectName + ".coproj"), $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{projectName}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  {extraProjectContent}
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ");
-            return Path.Combine(directory, projectName + ".cocproj");
+            return Path.Combine(directory, projectName + ".coproj");
         }
 
         [Fact]
@@ -130,19 +140,29 @@ platform = x64
             File.WriteAllText(
                 Path.Combine(libDir, "Math.co"),
                 "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libDir, "MyLib.cocproj"), @"
-name = MyLib
-output = cocoa
-platform = x64
-
-[sources]
-*.co
-
-[options]
-outputPath = out
+            File.WriteAllText(Path.Combine(libDir, "MyLib.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>MyLib</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ");
 
-            var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.cocproj")}\"");
+            var libBuild = Run($"build \"{Path.Combine(libDir, "MyLib.coproj")}\"");
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
             var codPath = Path.Combine(libDir, "out", "MyLib.coa");
             Assert.True(File.Exists(codPath), $"cod not emitted: {libBuild.Stdout}{libBuild.Stderr}");
@@ -156,19 +176,27 @@ outputPath = out
             File.WriteAllText(
                 Path.Combine(appDir, "App.co"),
                 "using MyLib\nfunction Main()\n{\n    Console.WriteLine(Add(1, 2))\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), $@"
-name = App
-output = executable
-platform = x64
-
-[sources]
-*.co
-
-[references]
-../MyLib/out/MyLib.coa
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>App</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+    <Reference Include=""../MyLib/out/MyLib.coa"" />
+  </ItemGroup>
+</Project>
 ");
 
-            var appBuild = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\"");
+            var appBuild = Run($"build \"{Path.Combine(appDir, "App.coproj")}\"");
             Assert.NotEqual(0, appBuild.ExitCode);
             var output = appBuild.Stdout + appBuild.Stderr;
             Assert.Contains(".coa version 99", output);
@@ -231,20 +259,28 @@ platform = x64
                 var projectDir = Path.Combine(dir, name);
                 Directory.CreateDirectory(projectDir);
                 File.WriteAllText(Path.Combine(projectDir, name + ".co") + "", $"function Main() {{ Console.WriteLine(\"{name}\") }}");
-                File.WriteAllText(Path.Combine(projectDir, name + ".cocproj"), $@"
-name = {name}
-[sources]
-*.co
+                File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ");
             }
 
             var solutionPath = Path.Combine(dir, "Sln.cosln");
-            File.WriteAllText(solutionPath, $@"
-name = Sln
-
-[projects]
-Core/Core.cocproj
-App/App.cocproj
+            File.WriteAllText(solutionPath, @"<Solution Version=""1"">
+  <Project Include=""Core/Core.coproj"" />
+  <Project Include=""App/App.coproj"" />
+</Solution>
 ");
 
             var (exitCode, stdout, stderr) = Run($"build \"{solutionPath}\"");
@@ -271,20 +307,26 @@ App/App.cocproj
             foreach (var name in new[] { "A", "B" })
             {
                 var projectDir = Path.Combine(dir, name);
-                File.WriteAllText(Path.Combine(projectDir, name + ".cocproj"), $@"
-name = {name}
-output = cocoa
-
-[sources]
-*.co
-
-[references]
-{other(name)}
+                File.WriteAllText(Path.Combine(projectDir, name + ".coproj"), $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+    <Reference Include=""{other(name)}"" />
+  </ItemGroup>
+</Project>
 ");
             }
 
             var solutionPath = Path.Combine(dir, "Cycle.cosln");
-            File.WriteAllText(solutionPath, "[projects]\nA/A.cocproj\nB/B.cocproj\n");
+            File.WriteAllText(solutionPath, "<Solution Version=\"1\">\n  <Project Include=\"A/A.coproj\" />\n  <Project Include=\"B/B.coproj\" />\n</Solution>\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{solutionPath}\"");
             Assert.Equal(1, exitCode);
@@ -298,8 +340,14 @@ output = cocoa
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "namespace MyLib\n{\n    function Add(a: i32, b: i32): i32\n    {\n        return a + b\n    }\n}\n");
-            var projectPath = Path.Combine(dir, "Lib.cocproj");
-            File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
+            var projectPath = Path.Combine(dir, "Lib.coproj");
+            File.WriteAllText(projectPath,
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>Lib</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(0, exitCode);
@@ -314,8 +362,14 @@ output = cocoa
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "Lib.co"), "function Main() { }");
-            var projectPath = Path.Combine(dir, "Lib.cocproj");
-            File.WriteAllText(projectPath, "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
+            var projectPath = Path.Combine(dir, "Lib.coproj");
+            File.WriteAllText(projectPath,
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>Lib</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(1, exitCode);
@@ -344,20 +398,23 @@ namespace MyLib
     }
 }
 ");
-            File.WriteAllText(Path.Combine(libDir, "Lib.cocproj"), "name = Lib\noutput = cocoa\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libDir, "Lib.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>Lib</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "using MyLib\nfunction Main(): void\n{\n    Console.WriteLine(Triple(3))\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), $@"
-name = App
-output = executable
-entry = Main
-
-[sources]
-*.co
-
-[references]
-../Lib/Lib.coa
-");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.coa\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
             return (libDir, appDir);
         }
 
@@ -387,8 +444,8 @@ entry = Main
         public void Build_CodReference_Consume_Runs(string backend)
         {
             var (libDir, appDir) = CreateCodLibraryAndApp("cod-consume-" + backend, backend);
-            var libProject = Path.Combine(libDir, "Lib.cocproj");
-            var appProject = Path.Combine(appDir, "App.cocproj");
+            var libProject = Path.Combine(libDir, "Lib.coproj");
+            var appProject = Path.Combine(appDir, "App.coproj");
 
             var libResult = Run($"build \"{libProject}\"");
             Assert.Equal(0, libResult.ExitCode);
@@ -412,10 +469,10 @@ entry = Main
         public void Build_CodReference_CopiedToOutput()
         {
             var (libDir, appDir) = CreateCodLibraryAndApp("copylocal-cod", "dotnet");
-            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.cocproj")}\"");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\"");
             Assert.Equal(0, libResult.ExitCode);
 
-            var appResult = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\" -b dotnet --dotnet-runtime net9.0");
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.coa")), "Lib.coa 应复制到 app 输出目录");
         }
@@ -430,16 +487,28 @@ entry = Main
             Directory.CreateDirectory(appDir);
 
             File.WriteAllText(Path.Combine(libDir, "lib.co"), "namespace MyLib\n{\n    public class Util\n    {\n        public function Double(x: i32): i32\n        {\n            return x * 2\n        }\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libDir, "Lib.cocproj"), "name = Lib\noutput = library\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libDir, "Lib.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>Lib</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Library</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "function Main(): void\n{\n    Console.WriteLine(\"hi\")\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), "name = App\noutput = executable\nentry = Main\n\n[sources]\n*.co\n\n[references]\n../Lib/Lib.dll\n");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../Lib/Lib.dll\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
-            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.cocproj")}\" -b dotnet");
+            var libResult = Run($"build \"{Path.Combine(libDir, "Lib.coproj")}\" -b dotnet");
             Assert.Equal(0, libResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(libDir, "Lib.dll")));
 
-            var appResult = Run($"build \"{Path.Combine(appDir, "App.cocproj")}\" -b dotnet --dotnet-runtime net9.0");
+            var appResult = Run($"build \"{Path.Combine(appDir, "App.coproj")}\" -b dotnet --dotnet-runtime net9.0");
             Assert.Equal(0, appResult.ExitCode);
             Assert.True(File.Exists(Path.Combine(appDir, "Lib.dll")), "Lib.dll 应复制到 app 输出目录");
         }
@@ -460,13 +529,21 @@ entry = Main
             var run = "malformed";
             var dir = NewRunDir(run);
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "App.co"), "function Main() { }");
-            var projectPath = Path.Combine(dir, "App.cocproj");
-            File.WriteAllText(projectPath, "name = App\n\n[sources]\n*.co\n[options]\nincremental = maybe\n");
+File.WriteAllText(Path.Combine(dir, "App.co"), "function Main() { }");
+            var projectPath = Path.Combine(dir, "App.coproj");
+            File.WriteAllText(projectPath,
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n" +
+                "    <Language>Cocoa</Language>\n" +
+                "  </PropertyGroup>\n" +
+                "  <ItemGroup>\n" +
+                "    <Source Include=\"*.co\"\n" +
+                "  </ItemGroup>\n" +
+                "</Project>\n");
 
             var (exitCode, stdout, stderr) = Run($"build \"{projectPath}\"");
             Assert.Equal(1, exitCode);
-            Assert.Contains("line 6", stderr);
+            Assert.Contains("line 7", stderr);
         }
 
         [Fact]

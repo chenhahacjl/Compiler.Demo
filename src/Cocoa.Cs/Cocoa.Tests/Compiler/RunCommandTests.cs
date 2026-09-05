@@ -8,11 +8,18 @@ namespace Cocoa.Tests.Compiler
         private static string WriteConsoleProject(string dir)
         {
             Directory.CreateDirectory(dir);
-            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
-                "name = App\noutput = executable\nplatform = x64\nentry = Main\ndotnetRuntime = net48\n\n[sources]\n*.co\n\n[options]\nincremental = true\ndebug = false\noutputPath = out\n");
+            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n    <TargetFramework>net48</TargetFramework>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Build\">\n    <OutputPath>out</OutputPath>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
             File.WriteAllText(Path.Combine(dir, "main.co"),
                 "function Main()\n{\n    Console.WriteLine(\"run-test-output\")\n}\n");
-            return Path.Combine(dir, "App.cocproj");
+            return Path.Combine(dir, "App.coproj");
         }
 
         [Fact]
@@ -45,11 +52,16 @@ namespace Cocoa.Tests.Compiler
         public void Run_NonExecutableProject_Fails()
         {
             var dir = CliTestRunner.NewTempDir("run");
-            File.WriteAllText(Path.Combine(dir, "Lib.cocproj"),
-                "name = Lib\noutput = library\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(dir, "Lib.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>Lib</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Library</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
             File.WriteAllText(Path.Combine(dir, "lib.co"), "function F() { }\n");
 
-            var (exitCode, stdout, stderr) = CliTestRunner.Run($"run -p \"{Path.Combine(dir, "Lib.cocproj")}\"", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run($"run -p \"{Path.Combine(dir, "Lib.coproj")}\"", dir);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("non-executable", stderr);
@@ -59,7 +71,7 @@ namespace Cocoa.Tests.Compiler
         public void Run_MissingProject_Fails()
         {
             var dir = CliTestRunner.NewTempDir("run");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("run -p missing.cocproj", dir);
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("run -p missing.coproj", dir);
 
             Assert.Equal(1, exitCode);
             Assert.Contains("doesn't exist", stderr);

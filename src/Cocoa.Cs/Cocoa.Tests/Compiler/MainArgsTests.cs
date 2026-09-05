@@ -175,13 +175,20 @@ namespace Cocoa.Tests.Compiler
             Directory.CreateDirectory(appDir);
             var coPath = Path.Combine(appDir, "App.co");
             File.WriteAllText(coPath, source);
-            var projectPath = Path.Combine(appDir, "App.cocproj");
+            var projectPath = Path.Combine(appDir, "App.coproj");
             File.WriteAllText(projectPath,
-                $"name=App\nplatform=x64\nentry={entryName}\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
+                $"<Project Version=\"1\">\n" +
+                $"  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n    <StartupObject>{entryName}</StartupObject>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Build\">\n    <OutputPath>.</OutputPath>\n  </PropertyGroup>\n" +
+                $"  <ItemGroup>\n    <Source Include=\"App.co\" />\n  </ItemGroup>\n" +
+                $"</Project>\n");
             var runtime = backend == "dotnet" ? " --dotnet-runtime net9.0" : "";
             var (exitCode, stdout, stderr) = InvokeCli($"build \"{projectPath}\" --no-incremental -b {backend}{runtime}");
             Assert.True(exitCode == 0, $"build failed ({exitCode}). stdout=[{stdout}] stderr=[{stderr}]");
-            exePath = Path.Combine(appDir, "app.exe");
+            exePath = Path.Combine(appDir, "App.exe");
             return projectPath;
         }
 
@@ -238,11 +245,18 @@ namespace Cocoa.Tests.Compiler
             Directory.CreateDirectory(appDir);
             File.WriteAllText(Path.Combine(appDir, "App.co"),
                 "namespace My.App { public class Program { public x: i32 = 0\npublic static function Main() { Console.WriteLine(7) } } }");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"),
-                $"name=App\nplatform=x64\nentry=My.App.Program.Main\noutput=executable\noutputPath=app.exe\n\n[sources]\nApp.co\n");
-            var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.cocproj")}\" --no-incremental -b native");
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"),
+                $"<Project Version=\"1\">\n" +
+                $"  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n    <StartupObject>My.App.Program.Main</StartupObject>\n  </PropertyGroup>\n" +
+                $"  <PropertyGroup Label=\"Build\">\n    <OutputPath>.</OutputPath>\n  </PropertyGroup>\n" +
+                $"  <ItemGroup>\n    <Source Include=\"App.co\" />\n  </ItemGroup>\n" +
+                $"</Project>\n");
+            var (exitCode, stdout, stderr) = InvokeCli($"build \"{Path.Combine(appDir, "App.coproj")}\" --no-incremental -b native");
             Assert.Equal(0, exitCode);
-            var output = RunOutput(Path.Combine(appDir, "app.exe"), "");
+            var output = RunOutput(Path.Combine(appDir, "App.exe"), "");
             Assert.Contains("7", output);
         }
     }

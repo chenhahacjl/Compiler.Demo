@@ -178,16 +178,25 @@ namespace Cocoa.Tests.Compiler
             var directory = Path.Combine(NewRunDir(run), projectName);
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, projectName + ".co"), source);
-            File.WriteAllText(Path.Combine(directory, projectName + ".cocproj"), $@"
-name = {projectName}
-output = executable
-platform = x64
-entry = Main
-
-[sources]
-*.co
+            File.WriteAllText(Path.Combine(directory, projectName + ".coproj"), $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{projectName}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ");
-            return Path.Combine(directory, projectName + ".cocproj");
+            return Path.Combine(directory, projectName + ".coproj");
         }
 
         private static int IndexOf(byte[] haystack, byte[] needle)

@@ -24,41 +24,41 @@ namespace Cocoa.Tests.Compiler
             Directory.CreateDirectory(appDir);
 
             File.WriteAllText(Path.Combine(libB, "LibB.co"), "namespace B\n{\n    function Make(): i32\n    {\n        return 21\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libB, "LibB.cocproj"), "name = LibB\noutput = cocoa\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(libB, "LibB.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>LibB</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             File.WriteAllText(Path.Combine(libA, "LibA.co"), "using B\nnamespace A\n{\n    function Double(): i32\n    {\n        return B.Make() * 2\n    }\n}\n");
-            File.WriteAllText(Path.Combine(libA, "LibA.cocproj"), @"name = LibA
-output = cocoa
-
-[sources]
-*.co
-
-[references]
-../LibB/LibB.coa
-");
+            File.WriteAllText(Path.Combine(libA, "LibA.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>LibA</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Cocoa</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../LibB/LibB.coa\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), "using A\nfunction Main(): void\n{\n    Console.WriteLine(A.Double())\n}\n");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), @"name = App
-output = executable
-entry = Main
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Target\">\n    <Platform>x64</Platform>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n    <Reference Include=\"../LibB/LibB.coa\" />\n    <Reference Include=\"../LibA/LibA.coa\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
 
-[sources]
-*.co
-
-[references]
-../LibB/LibB.coa
-../LibA/LibA.coa
-");
-
-            var libBBuild = CliTestRunner.Run($"build \"{Path.Combine(libB, "LibB.cocproj")}\"", root);
+            var libBBuild = CliTestRunner.Run($"build \"{Path.Combine(libB, "LibB.coproj")}\"", root);
             Assert.True(libBBuild.ExitCode == 0, $"LibB build failed: {libBBuild.Stdout}{libBBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(libB, "LibB.coa")));
 
-            var libABuild = CliTestRunner.Run($"build \"{Path.Combine(libA, "LibA.cocproj")}\"", root);
+            var libABuild = CliTestRunner.Run($"build \"{Path.Combine(libA, "LibA.coproj")}\"", root);
             Assert.True(libABuild.ExitCode == 0, $"LibA build failed: {libABuild.Stdout}{libABuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(libA, "LibA.coa")));
 
-            var appProject = Path.Combine(appDir, "App.cocproj");
+            var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));

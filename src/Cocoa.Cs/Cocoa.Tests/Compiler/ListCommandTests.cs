@@ -23,21 +23,30 @@ namespace Cocoa.Tests.Compiler
         {
             var dir = CliTestRunner.NewTempDir("list");
             File.WriteAllText(Path.Combine(dir, "Sol.cosln"),
-                "name = Sol\n\n[projects]\nApp/App.cocproj\nLib/Lib.cocproj\n");
+                "<Solution Version=\"1\">\n  <Project Include=\"App/App.coproj\" />\n  <Project Include=\"Lib/Lib.coproj\" />\n</Solution>\n");
             var (exitCode, stdout, stderr) = CliTestRunner.Run("list projects -p Sol.cosln", dir);
 
             Assert.True(exitCode == 0, stderr);
-            Assert.Contains("App/App.cocproj", stdout);
-            Assert.Contains("Lib/Lib.cocproj", stdout);
+            Assert.Contains("App/App.coproj", stdout);
+            Assert.Contains("Lib/Lib.coproj", stdout);
         }
 
         [Fact]
         public void List_References_ShowsProjectReferences()
         {
             var dir = CliTestRunner.NewTempDir("list");
-            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
-                "name = App\noutput = executable\n\n[sources]\n*.co\n\n[references]\n../Libs/MyLib.coa\nmylib.dll\n");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.cocproj", dir);
+            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n" +
+                "    <Source Include=\"*.co\" />\n" +
+                "    <Reference Include=\"../Libs/MyLib.coa\" />\n" +
+                "    <Reference Include=\"mylib.dll\" />\n" +
+                "  </ItemGroup>\n" +
+                "</Project>\n");
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.coproj", dir);
 
             Assert.True(exitCode == 0, stderr);
             Assert.Contains("../Libs/MyLib.coa", stdout);
@@ -48,9 +57,14 @@ namespace Cocoa.Tests.Compiler
         public void List_References_ShowsNone_WhenEmpty()
         {
             var dir = CliTestRunner.NewTempDir("list");
-            File.WriteAllText(Path.Combine(dir, "App.cocproj"),
-                "name = App\noutput = executable\n\n[sources]\n*.co\n");
-            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.cocproj", dir);
+            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
+            var (exitCode, stdout, stderr) = CliTestRunner.Run("list references -p App.coproj", dir);
 
             Assert.True(exitCode == 0, stderr);
             Assert.Contains("(none)", stdout);
@@ -60,11 +74,17 @@ namespace Cocoa.Tests.Compiler
         public void List_Projects_FindsSingleProjectInDirectory()
         {
             var dir = CliTestRunner.NewTempDir("list");
-            File.WriteAllText(Path.Combine(dir, "App.cocproj"), "name = App\noutput = executable\n\n[sources]\n*.co\n");
+            File.WriteAllText(Path.Combine(dir, "App.coproj"),
+                "<Project Version=\"1\">\n" +
+                "  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Assembly\">\n    <AssemblyName>App</AssemblyName>\n  </PropertyGroup>\n" +
+                "  <PropertyGroup Label=\"Output\">\n    <OutputType>Executable</OutputType>\n  </PropertyGroup>\n" +
+                "  <ItemGroup>\n    <Source Include=\"*.co\" />\n  </ItemGroup>\n" +
+                "</Project>\n");
             var (exitCode, stdout, stderr) = CliTestRunner.Run("list projects -p .", dir);
 
             Assert.True(exitCode == 0, stderr);
-            Assert.Contains("App.cocproj", stdout);
+            Assert.Contains("App.coproj", stdout);
         }
 
         [Fact]

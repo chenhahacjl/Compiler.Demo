@@ -39,11 +39,20 @@ namespace Cocoa.Tests.Compiler
     }
 }
 ");
-            File.WriteAllText(Path.Combine(libDir, "ClosureLib.cocproj"), @"name = ClosureLib
-output = cocoa
-
-[sources]
-*.co
+            File.WriteAllText(Path.Combine(libDir, "ClosureLib.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>ClosureLib</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ");
 
             File.WriteAllText(Path.Combine(appDir, "main.co"), @"using ClosureLib
@@ -59,18 +68,24 @@ function Main(): void
     System.Console.WriteLine(cnt(32))
 }
 ");
-            File.WriteAllText(Path.Combine(appDir, "App.cocproj"), @"name = App
-output = executable
-entry = Main
-
-[sources]
-*.co
-
-[references]
-../ClosureLib/ClosureLib.coa
+            File.WriteAllText(Path.Combine(appDir, "App.coproj"), @"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>App</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+    <Reference Include=""../ClosureLib/ClosureLib.coa"" />
+  </ItemGroup>
+</Project>
 ");
 
-            var libProject = Path.Combine(libDir, "ClosureLib.cocproj");
+            var libProject = Path.Combine(libDir, "ClosureLib.coproj");
             var libBuild = CliTestRunner.Run($"build \"{libProject}\"", root);
             Assert.True(libBuild.ExitCode == 0, $"lib build failed: {libBuild.Stdout}{libBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(libDir, "ClosureLib.coa")));
@@ -81,7 +96,7 @@ entry = Main
             Assert.Contains("envc:__Env_MakeAdder", libText);
             Assert.Contains("envcap:1", libText);
 
-            var appProject = Path.Combine(appDir, "App.cocproj");
+            var appProject = Path.Combine(appDir, "App.coproj");
             var appBuild = CliTestRunner.Run($"build \"{appProject}\" -b dotnet --dotnet-runtime net9.0", root);
             Assert.True(appBuild.ExitCode == 0, $"app build failed: {appBuild.Stdout}{appBuild.Stderr}");
             Assert.True(File.Exists(Path.Combine(appDir, "App.exe")));
