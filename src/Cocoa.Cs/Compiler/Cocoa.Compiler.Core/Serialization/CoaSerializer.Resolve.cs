@@ -325,6 +325,14 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             if (!context.TypesByName.TryGetValue(fullName, out var type) || type is not NamedTypeSymbol classType)
             {
+                // 6e-G7/fix：实例化 mangle owner（`MyLib.Box`1#…` 或含多前缀的副本）直查无果 →
+                // 复用 mangle 头反解（最长匹配 key+反引号子串），兜底回落定义类。
+                var fromHead = ResolveOwnerClassFromHead(fullName, context);
+                if (fromHead != null)
+                {
+                    return fromHead;
+                }
+
                 throw new InvalidDataException($"Unknown owner class '{fullName}'");
             }
 
