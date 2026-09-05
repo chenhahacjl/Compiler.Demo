@@ -1,5 +1,6 @@
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
+using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeGen.Managed.Structure;
  using Cocoa.CodeGen.Managed.Reader;
 using Cocoa.CodeAnalysis.Lowering;
@@ -22,11 +23,19 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// <summary>从 `.coa` 文件发射同名托管库 dll。返回诊断（含错误时调用方不应使用产物）。</summary>
         public static ImmutableArray<Diagnostic> EmitManagedDll(string coaPath, string dllPath, IlTarget target)
         {
-            return EmitManagedDll(CoaSerializer.Load(coaPath), dllPath, target);
+            // 6f-2：库体引用系统库符号——读侧以系统库为 external 解析（Console/Array/…），
+            // 库内跨库调用经 BuildExternalProvenance 目录映射到对应 Managed dll 的动态链接。
+            var external = SystemLibrary.Load();
+            return EmitManagedDll(CoaSerializer.Load(coaPath, external), dllPath, target, BuildExternalProvenance(external));
         }
 
         /// <summary>从内存中的 CoaProgram 发射托管库 dll。</summary>
         public static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target)
+        {
+            return EmitManagedDll(cod, dllPath, target, BuildExternalProvenance(SystemLibrary.Load()));
+        }
+
+        private static ImmutableArray<Diagnostic> EmitManagedDll(CoaProgram cod, string dllPath, IlTarget target, ImmutableDictionary<object, string> codAssemblies)
         {
             // 6e 跨库里程碑：gcls 开放方法（泛型定义/泛型方法，开放类型参数无法编码 IL）不进库发射——
             // 否则其 ContainingClass（泛型定义类）被当作普通类发射，遇 K/T 报 Unexpected type K。
@@ -56,7 +65,53 @@ namespace Cocoa.CodeGen.Managed.Writer
                 ?? new[] { typeof(object).Assembly.Location, typeof(Console).Assembly.Location };
 
             // 动态链接库：分发面即公共契约——internal 门面也发布为 public（消费方跨程序集调用必需）
-            return IlEmitter.Emit(program, moduleName, references, dllPath, target, emitLibrary: true, codAssemblies: null, publishPublicSurface: true);
+            return IlEmitter.Emit(program, moduleName, references, dllPath, target, emitLibrary: true, codAssemblies: codAssemblies, publishPublicSurface: true);
+        }
+
+        /// <summary>
+        /// 6f-2：外部库符号 → Managed dll 程序集名 溯源目录（动态链接 A3）。与 CocoaBinder 动态 provenance
+        /// 同构：A1 库发射时跨库调用（本库体调用 System.Core 等）需在 codAssemblies 命中才能输出
+        /// `Call [X.Managed]member` 而非落到本地方法定义。用户库间依赖后续经 refcod 拓扑扩展。
+        /// </summary>
+        private static ImmutableDictionary<object, string> BuildExternalProvenance(ImmutableArray<CoaProgram> external)
+        {
+            var builder = ImmutableDictionary.CreateBuilder<object, string>(System.Collections.Generic.ReferenceEqualityComparer.Instance);
+
+            foreach (var library in external)
+            {
+                if (string.IsNullOrEmpty(library.Name))
+                {
+                    continue;
+                }
+
+                foreach (var fn in library.Functions)
+                {
+                    if (fn.IsExtern || fn.BuiltinKind != null)
+                    {
+                        continue;
+                    }
+
+                    builder[fn] = library.Name;
+                    var containingClass = fn.ContainingClass;
+                    if (containingClass is { } cc2 &&
+                        cc2 != NamedTypeSymbol.SystemObject &&
+                        cc2 != NamedTypeSymbol.SystemType)
+                    {
+                        builder[cc2] = library.Name;
+                    }
+                }
+
+                foreach (var containerClass in library.Classes)
+                {
+                    if (containerClass != NamedTypeSymbol.SystemObject &&
+                        containerClass != NamedTypeSymbol.SystemType)
+                    {
+                        builder[containerClass] = library.Name;
+                    }
+                }
+            }
+
+            return builder.ToImmutable();
         }
     }
 }

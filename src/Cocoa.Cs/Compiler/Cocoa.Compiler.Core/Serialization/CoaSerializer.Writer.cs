@@ -104,6 +104,9 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             public List<Action<Writer, Registry>> Emitters { get; } = new();
 
+            /// <summary>6f-2：该函数是否已注册（具 fn 记录）——体序列化前校验，避免无符号孤儿体。</summary>
+            public bool IsFunctionRegistered(FunctionSymbol fn) => _ids.ContainsKey(fn);
+
             public string FnKey(FunctionSymbol fn)
         {
             // 6e-G7：开放体携带后，部分符号（如 cod 注入链上的实例化副本）不经 RegisterFunction——

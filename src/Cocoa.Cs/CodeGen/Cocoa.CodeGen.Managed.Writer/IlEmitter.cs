@@ -938,12 +938,16 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (function.ContainingClass != null)
             {
                 declaringType = CodClassRef(function.ContainingClass, assemblyName);
-                methodName = function.EmitName;
+                methodName = function.IsConstructor
+                    ? (function.IsStatic ? ".cctor" : ".ctor")
+                    : function.EmitName;
             }
             else
             {
                 declaringType = CodTopLevelTypeRef(assemblyName);
-                methodName = function.EmitName;
+                methodName = function.IsConstructor
+                    ? (function.IsStatic ? ".cctor" : ".ctor")
+                    : function.EmitName;
                 if (_codOverloadedGroups.Contains((assemblyName, function.Namespace, function.Name)))
                 {
                     methodName += "$" + string.Join("$", function.Parameters.Select(p => EncodeTypeNameForMethodName(p.Type)));
@@ -952,7 +956,9 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             var returnType = ToIlType(function.ReturnType);
             var parameterTypes = function.Parameters.Select(p => ToIlType(p.Type)).ToArray();
-            return _metadata.DefineMethodRef(declaringType, methodName, returnType, parameterTypes, isStatic: true);
+            // 静态位与本地方法发射一致（316 行）：顶层函数（ContainingClass==null）恒 static；类成员按 IsStatic。
+            var isStaticMethod = function.ContainingClass == null || function.IsStatic;
+            return _metadata.DefineMethodRef(declaringType, methodName, returnType, parameterTypes, isStatic: isStaticMethod);
         }
 
         private IlTypeRef ResolveExternalTypeRef(NamedTypeSymbol classType)

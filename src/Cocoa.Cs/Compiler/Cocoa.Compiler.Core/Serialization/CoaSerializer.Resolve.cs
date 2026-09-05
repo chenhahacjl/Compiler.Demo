@@ -470,6 +470,33 @@ namespace Cocoa.CodeAnalysis.Serialization
                     {
                         return candidates[0];
                     }
+
+                    // 6f-2：外部库属主类方法兜底——本库 `(cls System.Console)` 桩只带方法名、无方法符号，
+                    // 属主方法以 external（系统/依赖库）已加载的同名类为权威：按名+元数命中即复用其符号
+                    // （跨库符号回归统一，Binder 按引用相等合并函数体）。
+                    foreach (var library in context.ExternalLibraries)
+                    {
+                        if (!library.TypesByName.TryGetValue(ownerText, out var extType) ||
+                            extType is not NamedTypeSymbol extOwner)
+                        {
+                            continue;
+                        }
+
+                        var extCandidates = extOwner.Methods.Where(m =>
+                            m.Name == methodName &&
+                            m.Parameters.Length == parameterCount).ToList();
+
+                        if (extCandidates.Count == 1)
+                        {
+                            return extCandidates[0];
+                        }
+
+                        if (extCandidates.Count > 1)
+                        {
+                            throw new InvalidDataException($"Ambiguous external owner-class method '{key}'");
+                        }
+                    }
+
                     throw new InvalidDataException($"Unknown function '{key}' [debug head={head} owner={ownerText} ownerCandidates={(ownerClass?.Methods.Count(m => m.Name == methodName && m.Parameters.Length == parameterCount) ?? -1)} candidates={candidates.Count}]");
                 }
             }

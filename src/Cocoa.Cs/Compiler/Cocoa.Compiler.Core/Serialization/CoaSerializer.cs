@@ -103,12 +103,25 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             w.End();
 
-            // 函数体。
+// 函数体。
             w.Open("bodies");
             foreach (var fn in program.Functions)
             {
-                // 6e-G7 S2：泛型定义属主的方法体（开放绑定体）随库携带；其余实例方法不在容器序列化范围，跳过
-                if (fn.ContainingClass != null && !fn.IsStatic && !fn.ContainingClass.IsGenericDefinition)
+                // 6e-G7 S2：泛型定义属主的方法体（开放绑定体）随库携带；6f-2 其余实例方法（事件类等）
+                // 方法体同样随库携带，供动态链接库（A1/CoaLibraryCompiler）重建可运行体。
+                if (fn.ContainingClass != null && fn.ContainingClass.IsGenericDefinition)
+                {
+                    continue;
+                }
+
+                if (fn.IsExtern || fn.BuiltinKind != null)
+                {
+                    continue;
+                }
+
+                // 6f-2：仅写出已注册（带 fn 记录、读侧可解析）的函数体——实例方法若未过 RegisterFunction
+                // 门（如非 plain-instance 容器类），体无符号可挂接，写出即成孤儿损失。
+                if (!registry.IsFunctionRegistered(fn))
                 {
                     continue;
                 }

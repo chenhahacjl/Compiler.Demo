@@ -87,6 +87,27 @@ entry = Main
             // 方法体，A1 库编译仅得到空壳；放开后读侧要求 System.Core!System.Console.WriteLine[@string] 在消费
             // 方注册表中可解析（当前 candidates=0/owner.Methods=0）→ 未闭环，暂回退写侧门。
             _ = AppDomain.CurrentDomain.BaseDirectory;
+            Assert.True(File.Exists(Path.Combine(appDir, "App.dll")), "托管主程序集 App.dll 应在构建期产出");
+
+            // Step F 6f-2 闭环：运行期事件往返（newobj MemberRef 挂接库内实例方法 + System 动态链接）
+            var appDll = Path.Combine(appDir, "App.dll");
+            var runPsi = new System.Diagnostics.ProcessStartInfo("dotnet", $"\"{appDll}\"")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = appDir,
+            };
+            using (var runProcess = System.Diagnostics.Process.Start(runPsi)!)
+            {
+                var stdout = runProcess.StandardOutput.ReadToEnd();
+                var stderr = runProcess.StandardError.ReadToEnd();
+                runProcess.WaitForExit(30000);
+                Assert.True(runProcess.ExitCode == 0, $"app run failed exit={runProcess.ExitCode}: {stdout}{stderr}");
+                Assert.Contains("subscribed", stdout);
+                Assert.Contains("hello", stdout);
+                Assert.Contains("world", stdout);
+            }
         }
 
         // （运行期断言延后至 Step F；见测试注释）
