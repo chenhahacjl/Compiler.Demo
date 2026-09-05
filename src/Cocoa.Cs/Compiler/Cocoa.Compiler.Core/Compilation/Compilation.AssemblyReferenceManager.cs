@@ -37,7 +37,75 @@ namespace Cocoa.CodeAnalysis
                 }
             }
 
-            return TopologicalOrder(builder.ToImmutable());
+            var ordered = TopologicalOrder(builder.ToImmutable());
+            return DetectAmbiguousTypes(ordered);
+        }
+
+        /// <summary>
+        /// 6e-Step E（同名歧义，其一）：跨库同名类型检测——两个及以上「已被引用」的 `.coa` 公开同一
+        /// 「库名!全名」规范类型（类/枚举/泛型定义）时，装载即报 CS0104 式歧义（首个命中仍有效，其余丢弃的
+        /// 现状 → 显式报错，不再静默 first-wins）。别名消歧（`using X = Lib1.Foo;` / 全名限定）留档。
+        /// </summary>
+        private static ImmutableArray<CoaProgram> DetectAmbiguousTypes(ImmutableArray<CoaProgram> libraries)
+        {
+            // 仅约束到「当前已加载的用户库」间；系统库（System*）作为权威内置、允许用户覆盖/补充，不参与同名判定。
+            var byFullName = new Dictionary<string, CoaProgram>(StringComparer.Ordinal);
+            List<CoaProgram>? conflicting = null;
+            foreach (var library in libraries)
+            {
+                if (library.Name.StartsWith("System", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                foreach (var type in IterateLibraryTypes(library))
+                {
+                    var key = type.FullName;
+                    if (byFullName.TryGetValue(key, out var first) && !ReferenceEquals(first, library))
+                    {
+                        if (conflicting == null)
+                        {
+                            conflicting = new List<CoaProgram> { first };
+                        }
+
+                        if (!conflicting.Contains(library))
+                        {
+                            conflicting.Add(library);
+                        }
+                    }
+                    else
+                    {
+                        byFullName[key] = library;
+                    }
+                }
+            }
+
+            if (conflicting != null && conflicting.Count >= 2)
+            {
+                throw new InvalidDataException(
+                    "CS0104 式歧义：以下 cod 库同时声明了同名类型，消费者无法决定取用哪份（消歧手段：别名库 / 全名限定，留档后续）:\n" +
+                    string.Join("\n", conflicting.Select((c, i) => $"  {i + 1}. {c.Name}")));
+            }
+
+            return libraries;
+        }
+
+        private static IEnumerable<NamedTypeSymbol> IterateLibraryTypes(CoaProgram library)
+        {
+            foreach (var t in library.Classes)
+            {
+                yield return t;
+            }
+
+            foreach (var t in library.Enums)
+            {
+                yield return t;
+            }
+
+            foreach (var t in library.GenericDefinitions)
+            {
+                yield return t;
+            }
         }
 
         /// <summary>
