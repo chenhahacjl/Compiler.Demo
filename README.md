@@ -64,21 +64,21 @@ cocoa build -p foo.cocproj -b dotnet
 | [`docs/语法手册.md`](docs/语法手册.md) | Cocoa 语言语法参考（状态标记：✅ 已实现 · 🔧 设计中 · 📋 待实现） |
 | [`docs/语法对照表.md`](docs/语法对照表.md) | **Cocoa ↔ C# 方言具体拼写对照**（描述 / `.co` 写法 / `.cs` 写法，变体逐行，含 `.cs` 拒绝清单） |
 | [`docs/编译手册.md`](docs/编译手册.md) | 编译器使用手册（`cocoa` 子命令：`new`/`build`/`run`/`list`/`add reference`/`remove reference`/`clean`、`-i` REPL、构建选项、增量构建） |
-| [`docs-dev/类库设计.md`](docs-dev/类库设计.md) | 类库体系设计（class/namespace/using/三格式分工：`.coa` Cocoa 程序集 / .NET dll 跨语言桥 / native 对象模型规划） |
-| [`docs-dev/OOP设计.md`](docs-dev/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型规划） |
-| [`docs-dev/对象模型设计.md`](docs-dev/对象模型设计.md) | **System.Object 基类 + 全类型成员方法 + System.Type + native vtable 对象模型**（6e-M19 规划） |
-| [`docs-dev/泛型设计.md`](docs-dev/泛型设计.md) | **泛型（类/接口/方法 + 约束）编译期单态化设计**（6e-M20 规划） |
-| [`docs-dev/委托与Lambda设计.md`](docs-dev/委托与Lambda设计.md) | **函数类型 / Lambda / 闭包 / event / delegate 糖设计**（6e-M22 规划：结构化函数类型内核 + 三后端函数值 ABI + 自研事件多播） |
-| [`docs-dev/out与ref参数设计.md`](docs-dev/out与ref参数设计.md) | **out / ref 参数 + 可赋值形参 + 明确赋值分析设计**（6e-M23 规划：修饰符标志位建模 + DFA 对齐 C# + 三后端传址 + `.coa` 格式扩展；自举前置语言件） |
-| [`docs-dev/文档注释设计.md`](docs-dev/文档注释设计.md) | **`///` 文档注释 + 编译期 XML 文档文件 + `.coa` 内嵌 docs 段设计**（6e-M24 规划：.NET DocID 兼容格式 + `--doc`/coproj 开关默认关 + REPL/IDE 悬停前置；开发延后） |
-| [`docs-dev/自举缺口分析.md`](docs-dev/自举缺口分析.md) | **自举前置盘点：语言/stdlib 缺口分级与实施顺序**（BCL 依赖面全库扫描 → P0/P1/P2 缺口清单、文件 IO syscall 路线、Dictionary/API 形态方针、mini-Lexer 开工信号） |
-| [`docs-dev/Cocoa.IDE设计.md`](docs-dev/Cocoa.IDE设计.md) | **类 Visual Studio 桌面 IDE 总体设计**（Avalonia 11 + SemanticModel 门面 + 语言服务 + M7 解释器调试器；功能矩阵与里程碑） |
+| [`docs-dev/archive/类库设计.md`](docs-dev/archive/类库设计.md) | 类库体系设计（class/namespace/using/三格式分工：`.coa` Cocoa 程序集 / .NET dll 跨语言桥 / native 对象模型规划） |
+| [`docs-dev/archive/OOP设计.md`](docs-dev/archive/OOP设计.md) | 完整 OOP 设计（继承/多态/static/属性/native 对象模型规划） |
+| [`docs-dev/archive/对象模型设计.md`](docs-dev/archive/对象模型设计.md) | **System.Object 基类 + 全类型成员方法 + System.Type + native vtable 对象模型**（6e-M19 规划） |
+| [`docs-dev/archive/泛型设计.md`](docs-dev/archive/泛型设计.md) | **泛型（类/接口/方法 + 约束）编译期单态化设计**（6e-M20 规划） |
+| [`docs-dev/archive/委托与Lambda设计.md`](docs-dev/archive/委托与Lambda设计.md) | **函数类型 / Lambda / 闭包 / event / delegate 糖设计**（6e-M22 规划：结构化函数类型内核 + 三后端函数值 ABI + 自研事件多播） |
+| [`docs-dev/archive/out与ref参数设计.md`](docs-dev/archive/out与ref参数设计.md) | **out / ref 参数 + 可赋值形参 + 明确赋值分析设计**（6e-M23 规划：修饰符标志位建模 + DFA 对齐 C# + 三后端传址 + `.coa` 格式扩展；自举前置语言件） |
+| [`docs-dev/plan/文档注释设计.md`](docs-dev/plan/文档注释设计.md) | **`///` 文档注释 + 编译期 XML 文档文件 + `.coa` 内嵌 docs 段设计**（6e-M24 规划：.NET DocID 兼容格式 + `--doc`/coproj 开关默认关 + REPL/IDE 悬停前置；开发延后） |
+| [`docs-dev/plan/自举缺口分析.md`](docs-dev/plan/自举缺口分析.md) | **自举前置盘点：语言/stdlib 缺口分级与实施顺序**（BCL 依赖面全库扫描 → P0/P1/P2 缺口清单、文件 IO syscall 路线、Dictionary/API 形态方针、mini-Lexer 开工信号） |
+| [`docs-dev/plan/Cocoa.IDE设计.md`](docs-dev/plan/Cocoa.IDE设计.md) | **类 Visual Studio 桌面 IDE 总体设计**（Avalonia 11 + SemanticModel 门面 + 语言服务 + M7 解释器调试器；功能矩阵与里程碑） |
 | [`docs/项目格式规范.md`](docs/项目格式规范.md) | `.cocproj` / `.cosln` 轻量文本格式规范、`.coa` 程序集格式、增量哈希 |
-| [`docs-dev/实现目标.md`](docs-dev/实现目标.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | 架构设计（Native / IR / IL 三路径、ABI、自举设计） |
 | [`docs-dev/开发计划.md`](docs-dev/开发计划.md) | 阶段 0-9 路线图与里程碑 |
-| [`docs-dev/输出格式.md`](docs-dev/输出格式.md) | executable / library / cocoa 三种输出格式规范 |
+| [`docs-dev/archive/输出格式.md`](docs-dev/archive/输出格式.md) | executable / library / cocoa 三种输出格式规范 |
 | [`docs/互操作手册.md`](docs/互操作手册.md) | native DLL / .NET DLL / `.coa` 程序集导入与调用约定 |
-| [`docs-dev/IR设计.md`](docs-dev/IR设计.md) | IR 指令集、虚拟寄存器、后端映射（阶段 1-3 落地时细化） |
+| [`docs-dev/plan/IR分层与格式设计.md`](docs-dev/plan/IR分层与格式设计.md) | IR 指令集、虚拟寄存器、HIR/MIR/LIR 分层与后端映射（S-7 定稿） |
 
 ## 参考实现
 

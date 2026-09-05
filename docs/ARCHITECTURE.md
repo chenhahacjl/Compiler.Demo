@@ -8,15 +8,15 @@
 > （双 SyntaxKind / 双 Lexer / 双节点类 / 双 Binder / 双 Compilation）已落地，实现方案与现状
 > 以 [`docs-dev/plan/IR分层与格式设计.md`](../docs-dev/plan/IR分层与格式设计.md)（实施状态表）为准。
 >
-> **收口说明（2026-09-03）**：重构计划（`docs-dev/重构执行计划.md`）已全部执行完毕。
+> **收口说明（2026-09-03）**：重构计划（`docs-dev/plan/重构执行计划.md`）已全部执行完毕。
 > §1 的项目名与目录树是**分家前快照，仅作历史基线**。
 > 现行工程结构与命名空间映射以 [`CODING.md`](../CODING.md) §1 为准；
 > 关键落地差异：Cocoa.Core → **Cocoa.CodeAnalysis**（前端共享层）、Emit/Native → **Cocoa.CodeGen.Native**
 > （LIR 统一发射，旧手工布局 Runtime.X64/X86 已删）、Evaluator → **Cocoa.CodeGen.Interpreter**、
 > Builder → **Cocoa.ProjectSystem**、双 Parser 按职责拆 partial（4.5）。
 >
-> **合并吸收（2026-09-06）**：本文扩为「架构总览与演进」权威——§9 吸收 `docs-dev/实现目标.md`、
-> §10 吸收 `docs-dev/Roslyn架构重构蓝图.md` 与 `docs-dev/符号模型Roslyn对齐计划.md`（三稿已归档删除，git 可追溯）。
+> **合并吸收（2026-09-06）**：本文扩为「架构总览与演进」权威——§9 吸收 `docs/ARCHITECTURE.md`、
+> §10 吸收 `docs/ARCHITECTURE.md` 与 `docs/ARCHITECTURE.md`（三稿已归档删除，git 可追溯）。
 
 ---
 

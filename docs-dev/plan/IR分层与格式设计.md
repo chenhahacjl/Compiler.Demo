@@ -1,7 +1,7 @@
 # 前端拆分与 IR 分层（架构演进方案）
 
 > 状态：🧭 定稿（S-7 修订 2026-10-11 + 拆分实施已完成）· 取代 docs-dev 旧稿 CIR设计.md / IR设计.md / HIR与LIR格式设计.md
-> 前置阅读：[docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)（架构总览与演进）、[docs/dev README](README.md)（分类索引）
+> 前置阅读：[docs/ARCHITECTURE.md](../../docs/ARCHITECTURE.md)（架构总览与演进）、[docs-dev/README](../README.md)（分类索引）
 > 本文裁决：**双前端全量拆分（CO/C# 各自 Lexer/Parser/SyntaxKind/节点类/Binder/Lower）+ 双层 IR（HIR 共享合并点 / LIR native 私有）**；`.coa` 为 HIR 的双向持久化。
 > **S-7 定稿（2026-10-11，原 `HIR与LIR格式设计.md` 并入）**：三层语义与命名——**HIR** = 绑定后未降级树（for/while/if 保留，`.coa` 持久化）；**MIR** = Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions` 契约，**不落盘**）；**LIR** = 3 地址码（native 私有，数据节点全族 `Lir*`）。原方案约定 ".coa 存 goto-only + `.ll` dump" 被修正为：**`.coa` 存结构化 HIR（保留 if/while/for）**，存储层与 MIR 分离；`.coa` Version 硬升级至 3 读取侧拒绝 v1/v2 的决策记录见下正文。
 
@@ -19,7 +19,7 @@
 | 双 Compilation | ✅ 已完成 | `CocoaCompilation`/`CSharpCompilation` 迁语言库；`Language.CreateCompilation` 工厂；`Compilation` 抽象 `BindGlobalScope`/`BindProgram`（S-4.2~4.3a） |
 | Parser 产出语言节点 | ✅ 已完成 | **S-5 原子切换（793e016）**：`SyntaxTree.Root`/`IParser`/`ParseHandler` 语言中性化（抽象 `SyntaxNode`）；`CocoaParser`/`CSharpParser` 迁语言命名空间产出语言节点；Binder 副本切语言节点（`SSyntax` 别名 + 节点 kind 改语言枚举，token 判断保留共享 `SyntaxKind`）；消费者（Compilation/CocoaRepl/NativeImportValidator/DiagnosticBag）经语言钩子分派；`GreenNode.CreateTypedRed` 随迁语言库（CocoaGreenNodeFactory/CSharpGreenNodeFactory）；删除共享 75 节点类（`SyntaxNode.Kind` 改经抽象 `RawKind:int` 具名）；测试迁移 388 处引用 |
 | 每语言 Lower | ✅ 完成（S-6 收口） | 共享 Core 默认采用 Cocoa 语法——`BoundForRangeStatement`（原 range-for，CO 次数循环内部名 forrange）保留 Core，共享 `Lowerer.RewriteForRangeStatement` 降级；**不建语言专属 Lower**。定稿：**CO 具备双形态 for**——C 风格 `for (init; cond; update)`（逗号多 init/update，与 C# 共用 `SyntaxKind.ForStatement`=159）与 `for N to M [step k]`（range，`SyntaxKind.ForRangeStatement`=161，internal ForRangeStatementSyntax/BoundForRangeStatement/ForRangeStatementSyntax）；C 风格 for 两语言绑定期各自脱糖为 while/if/goto（§5 Phase 1c） |
-| HIR/LIR 分层命名 + `.coa` 存 HIR | 📝 已定稿（S-7，待实施） | **三层语义**：HIR=绑定后未降级树（for/while/if 保留，`.coa` 持久化）；MIR=Lowerer（Hir→Mir）输出的 goto 化规范树（`program.Functions` 契约，三后端/求值器消费，`CanonicalIr.Verify` 校验）；LIR=3 地址码（仅 native）。实施拆分见 [`docs-dev/S7-HIRLIR.md`](S7-HIRLIR.md) |
+| HIR/LIR 分层命名 + `.coa` 存 HIR | 📝 已定稿（S-7，待实施） | **三层语义**：HIR=绑定后未降级树（for/while/if 保留，`.coa` 持久化）；MIR=Lowerer（Hir→Mir）输出的 goto 化规范树（`program.Functions` 契约，三后端/求值器消费，`CanonicalIr.Verify` 校验）；LIR=3 地址码（仅 native）。实施拆分见 [`docs-dev/plan/IR鍒嗗眰涓庢牸寮忚璁?md`](S7-HIRLIR.md) |
 
 全量回归 41808 绿。S-6（方言构造收口）已完成。S-7 已定稿待实施：`.coa` 存 HIR（结构化）、三层命名 HIR/MIR/LIR、`BoundTreeToIr→MirToLir`/`IrToAssembler→LirToAssembler`/`RuntimeEmitterIR→RuntimeEmitterLir`/LIR 数据节点全族 `Lir*`。
 
@@ -57,7 +57,7 @@
 | 9 | `.coa` | 双向：库构建 →.coa，消费构建 .coa→ 合并（不是输出专属）；**S-7 定稿：存 HIR（结构化，for/while/if 保留）**，消费方链接时统一 Lower 成 MIR 后再分发三后端 |
 | 10 | LIR 是否也发 IL | 否。IL 吃 MIR（`program.Functions` 规范树，Roslyn bound→CIL 同构）；LIR 仅 native（= RyuJIT 内部私有） |
 | 11 | 与 .NET 对应 | 底层 IR 由 native 后端自己做（编译期 AOT），结构同构 RyuJIT |
-| 12 | **S-7：IR 分层语义修正** | 恢复**三层清晰命名**：HIR=绑定后未降级树（`.coa` 持久化）；MIR=Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions`，`CanonicalIr.Verify` 契约）；LIR=3 地址码（native 私有）。命名：`BoundTreeToIr→MirToLir`、`IrToAssembler→LirToAssembler`、`RuntimeEmitterIR→RuntimeEmitterLir`、LIR 数据节点全族 `Ir*→Lir*`；**MIR 不落盘**（仅内存流转，debug 可环境变量 dump）。详见 [`docs-dev/S7-HIRLIR.md`](S7-HIRLIR.md) |
+| 12 | **S-7：IR 分层语义修正** | 恢复**三层清晰命名**：HIR=绑定后未降级树（`.coa` 持久化）；MIR=Lowerer（Hir→Mir）输出 goto 化规范树（`program.Functions`，`CanonicalIr.Verify` 契约）；LIR=3 地址码（native 私有）。命名：`BoundTreeToIr→MirToLir`、`IrToAssembler→LirToAssembler`、`RuntimeEmitterIR→RuntimeEmitterLir`、LIR 数据节点全族 `Ir*→Lir*`；**MIR 不落盘**（仅内存流转，debug 可环境变量 dump）。详见 [`docs-dev/plan/IR鍒嗗眰涓庢牸寮忚璁?md`](S7-HIRLIR.md) |
 
 ---
 
@@ -90,7 +90,7 @@ HIR（绑定后未降级树：for/while/if 等保留）【语言合并点 + .coa
 
 ## 4. IR 分层详解
 
-> **S-7 定稿（2026-10-11）：恢复三层语义**——HIR（绑定后未降级）/ MIR（Lowerer 输出 goto 化规范树）/ LIR（3 地址码）。原 §4.1 将 HIR 定义为"Lowering 后规范树"，现按 S-7 修正为"绑定后未降级树"；Lowering 后形态定名为 **MIR**。实施拆分见 [`docs-dev/S7-HIRLIR.md`](S7-HIRLIR.md)。
+> **S-7 定稿（2026-10-11）：恢复三层语义**——HIR（绑定后未降级）/ MIR（Lowerer 输出 goto 化规范树）/ LIR（3 地址码）。原 §4.1 将 HIR 定义为"Lowering 后规范树"，现按 S-7 修正为"绑定后未降级树"；Lowering 后形态定名为 **MIR**。实施拆分见 [`docs-dev/plan/IR鍒嗗眰涓庢牸寮忚璁?md`](S7-HIRLIR.md)。
 
 ### 4.1 HIR（绑定后高层 IR，未降级）
 
@@ -178,7 +178,7 @@ MIR（BoundProgram.Functions 规范树）
 
 #### 4.4.6 组件（预计，S-7 后命名）
 
-> **S-7 命名对照**：以下旧名（`BoundTreeToIr`/`IrToAssembler`/`Ir*`）按定稿改名——`BoundTreeToIr→MirToLir`、`IrToAssembler→LirToAssembler`、`RuntimeEmitterIR→RuntimeEmitterLir`、LIR 数据节点全族 `Ir*→Lir*`（详见 `docs-dev/S7-HIRLIR.md`）。下方为当前实现布局（未改名状态）。
+> **S-7 命名对照**：以下旧名（`BoundTreeToIr`/`IrToAssembler`/`Ir*`）按定稿改名——`BoundTreeToIr→MirToLir`、`IrToAssembler→LirToAssembler`、`RuntimeEmitterIR→RuntimeEmitterLir`、LIR 数据节点全族 `Ir*→Lir*`（详见 `docs-dev/plan/IR鍒嗗眰涓庢牸寮忚璁?md`）。下方为当前实现布局（未改名状态）。
 
 ```
 Emit/IR/

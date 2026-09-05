@@ -1,7 +1,7 @@
 # CODING.md — Cocoa.Cs 开发规范
 
 > 本文档是阶段 5（规范文档化）的落地产物，描述重构收口后的现行结构、约定与流程。
-> 历史设计文档见 `docs/ARCHITECTURE.md`（已封存）；重构决策链见 `docs-dev/重构执行计划.md`。
+> 历史设计文档见 `docs/ARCHITECTURE.md`（已封存）；重构决策链见 `docs-dev/plan/重构执行计划.md`。
 
 ## 1. 项目 ↔ 命名空间映射
 
@@ -83,7 +83,7 @@ internal static volatile Func<...>? s_InterpreterEvaluator;   // 未注册时抛
 
 ## 6. InternalsVisibleTo 基线
 
-现挂接关系（新增工程照抄；收窄见 `docs-dev/重构执行计划.md` 5.5）：
+现挂接关系（新增工程照抄；收窄见 `docs-dev/plan/重构执行计划.md` 5.5）：
 
 - `Cocoa.CodeAnalysis` → Tests、`cocoa`、四个 CodeGen.*、两个方言、ProjectSystem
 - 各 CodeGen.* → Tests、`cocoa`、（按需）Cocoa.CodeAnalysis、ProjectSystem
@@ -97,7 +97,7 @@ RootNamespace 保留 `Cocoa.Compiler`（历史约定，避免全仓替换）。
 当前基线：**全仓 0 NoWarn、0 警告、0 错误**（SDK 10.0.400 构建）。
 
 - 禁止新增大范围 `<NoWarn>$(NoWarn);CSxxxx</NoWarn>`。
-- 确需抑制：单条目 + 行内注释说明原因 + 对应债务条目号（`docs-dev/重构执行计划.md` §5.2/5.3），
+- 确需抑制：单条目 + 行内注释说明原因 + 对应债务条目号（`docs-dev/plan/重构执行计划.md` §5.2/5.3），
   并在债务清单登记清零计划（棘轮只进不退）。
 - Nullable 债务逐项目清零中（起点 `Cocoa.CodeGen.PE`，见计划 5.3）。
 
@@ -119,6 +119,6 @@ RootNamespace 保留 `Cocoa.Compiler`（历史约定，避免全仓替换）。
 
 ## 10. 已知债务索引（定夺类，非 bug）
 
-见 `docs-dev/重构执行计划.md` §5.2-5.5：语义债务清单（重载计分、CFG 对 try 盲区、诊断无 ID、
+见 `docs-dev/plan/重构执行计划.md` §5.2-5.5：语义债务清单（重载计分、CFG 对 try 盲区、诊断无 ID、
 非虚方法 vtable 分派、BuiltinFunctions 三表人肉同步）、Nullable 866、Assembler 簿记下沉、
 IVT 收窄、A10 GBK 文档批次（`docs/` 下语言手册仍为 GBK，按 A10 流程统一转 UTF-8）。

@@ -3,7 +3,7 @@
 > 状态：✅ 已落地（2026-08-26，R1-R9 三后端收官；全量 37020 测试通过；实施记录见 `docs-dev/开发计划.md` §6k）
 > 目标：为 Cocoa 增加 **out / ref 参数修饰符**、**普通参数可赋值**与**明确赋值分析（对齐 C#）**，解锁 stdlib `TryParse(s, out v)` / `TryGetValue(k, out v)` 与编译器自身的多返回值助手模式，作为自举前置语言件。
 > 核心决策：修饰符是 **ParameterSymbol 标志位，不引入 byref TypeSymbol**（泛型/函数类型系统零侵入）；明确赋值分析基于既有 ControlFlowGraph 做前向数据流；lambda 捕获 out/ref 参数 **v1 禁止**。
-> 相关文档：`docs-dev/自举缺口分析.md` §2.3/§4.5、`docs-dev/开发计划.md` §6k、`docs-dev/OOP设计.md` §13（§30 关联）、`docs-dev/委托与Lambda设计.md`（型变拒绝先例）
+> 相关文档：`docs-dev/plan/自举缺口分析.md` §2.3/§4.5、`docs-dev/开发计划.md` §6k、`docs-dev/archive/OOP设计.md` §13（§30 关联）、`docs-dev/archive/委托与Lambda设计.md`（型变拒绝先例）
 > 最后更新：2026-08-26
 
 ---

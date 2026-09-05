@@ -1,7 +1,7 @@
 # Cocoa.IDE — Cocoa 语言 IDE
 
 > 状态：**技术路线已定稿**（2026-08-25）——采用 **Avalonia 11 自研桌面 IDE** 路线。
-> 完整设计见 [`docs-dev/Cocoa.IDE设计.md`](../../docs-dev/Cocoa.IDE设计.md)
+> 完整设计见 [`docs-dev/plan/Cocoa.IDE设计.md`](../../docs-dev/plan/Cocoa.IDE设计.md)
 > （架构分层 / SemanticModel 门面 / 功能矩阵 M0–M7 + P1–P3 / 语言服务 / M7 解释器调试器 / 里程碑验收）。
 
 ## 路线定稿摘要

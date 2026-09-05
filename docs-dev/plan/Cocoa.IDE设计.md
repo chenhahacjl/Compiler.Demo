@@ -3,7 +3,7 @@
 > 状态：🔧 设计中（2026-08-25 定稿技术路线与功能矩阵，实施排期见 §12）
 > 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用 `Cocoa.Core` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**public 门面优先**（新增 `Cocoa.CodeAnalysis.Authoring.SemanticModel`，零 `InternalsVisibleTo`）；**调试器基于解释器**（复用 REPL 的 `Evaluator` 执行路径，后端无关）。
-> 相关文档：`src/Cocoa.IDE/README.md`（路线定稿记录）、`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.cocproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
+> 相关文档：`src/Cocoa.IDE/README.md`（路线定稿记录）、`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.cocproj`/`.cosln`）、`docs/ARCHITECTURE.md`（编译器架构）
 > 最后更新：2026-08-26（§12 增补与编译器开发的并行策略）
 
 ---

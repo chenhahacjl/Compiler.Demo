@@ -1,8 +1,8 @@
 # Cocoa 完整 OOP 设计（M5）
 
-> 状态：已实现（M5）+ 6e-M10 扩展 + **6e-M19 已全部落地（2026-08-24：Object 基类 / 全类型成员方法 / System.Type / native 对象模型 / null·is·as / `==` 语义收尾，见 `docs/对象模型设计.md`）**
+> 状态：已实现（M5）+ 6e-M10 扩展 + **6e-M19 已全部落地（2026-08-24：Object 基类 / 全类型成员方法 / System.Type / native 对象模型 / null·is·as / `==` 语义收尾，见 `docs-dev/archive/对象模型设计.md`）**
 > 目标：在 M2 class 语言（字段/构造/方法/new/this/可见性）基础上，补齐完整 OOP：**继承、构造链、多态、static、readonly、显式 this.、属性**。
-> 相关文档：`docs/类库设计.md`（§4 class 语言）、`docs/语法手册.md`（§12 类与面向对象、§14 属性、§44 C# 兼容语法）、**`docs/对象模型设计.md`（System.Object 基类 / 全类型成员方法 / System.Type / native vtable 对象模型）**
+> 相关文档：`docs-dev/archive/类库设计.md`（§4 class 语言）、`docs/语法手册.md`（§12 类与面向对象、§14 属性、§44 C# 兼容语法）、**`docs-dev/archive/对象模型设计.md`（System.Object 基类 / 全类型成员方法 / System.Type / native vtable 对象模型）**
 > 最后更新：2026-08-24
 
 ---
@@ -17,12 +17,12 @@
 | 属性：完整属性 + 自动属性（§14）、访问器修饰符、表达式体、初始化器 | ✅ |
 | 接口（声明/实现/继承/类多接口）、部分类（§12.9）、`internal`/`protected` | ✅ |
 | 嵌套类（§12.8） | 后置 |
-| System.Object 基类 + Object 方法（ToString/GetHashCode/Equals/GetType + 静态 Equals/ReferenceEquals） | 🔧 `docs/对象模型设计.md` §3 |
-| 全类型成员方法（`1.ToString()` / `"abc".Substring(0,2)` / `arr.Sum()`） | 🔧 `docs/对象模型设计.md` §4/§5 |
-| System.Type 类型对象 | 🔧 `docs/对象模型设计.md` §6 |
-| native 用户类对象模型（真 vtable 虚分派） | 🔧 `docs/对象模型设计.md` §8 |
+| System.Object 基类 + Object 方法（ToString/GetHashCode/Equals/GetType + 静态 Equals/ReferenceEquals） | 🔧 `docs-dev/archive/对象模型设计.md` §3 |
+| 全类型成员方法（`1.ToString()` / `"abc".Substring(0,2)` / `arr.Sum()`） | 🔧 `docs-dev/archive/对象模型设计.md` §4/§5 |
+| System.Type 类型对象 | 🔧 `docs-dev/archive/对象模型设计.md` §6 |
+| native 用户类对象模型（真 vtable 虚分派） | 🔧 `docs-dev/archive/对象模型设计.md` §8 |
 
-后端：**IL 后端**（CLR 引用类型天然支持继承/虚分派）；native 对象模型由"整体后置"转为**6e-M19 规划落地**（`docs/对象模型设计.md` §8 真 vtable 设计）。
+后端：**IL 后端**（CLR 引用类型天然支持继承/虚分派）；native 对象模型由"整体后置"转为**6e-M19 规划落地**（`docs-dev/archive/对象模型设计.md` §8 真 vtable 设计）。
 
 ---
 
@@ -235,7 +235,7 @@ public readonly int Id = 42;           // readonly + 初始化器（构造内赋
 
 ---
 
-## 10. C# 兼容语法（6e-M10，见 `语法手册.md` §44）
+## 10. C# 兼容语法（6e-M10，见 `../../docs/语法手册.md` §44）
 
 成员声明支持 **C# 式类型前置写法**与 Cocoa 式混用：字段 `private int _x;`、方法 `public int Area() {...}`、属性 `public string Name { get; set; }`、构造函数 `public Point(int x)`、参数 `int x`/`int[] arr`、局部变量 `int x = 10;`、语句分号可选、接口成员 `int Area();`。解析归一为同一批语法节点，绑定/发射共用管道。
 
@@ -244,7 +244,7 @@ public readonly int Id = 42;           // readonly + 初始化器（构造内赋
 ## 11. 对象模型与 native 后端
 
 - IL 后端：CLR 引用类型 + 继承 + 虚分派，天然支持（无需自研布局）
-- native 后端：**6e-M19 规划落地**——用户类对象模型（对象头 vtable 指针 + 8 字节对齐字段、真 vtable 虚分派、实例方法 `this` 隐藏首参、`new`=Alloc+构造链），见 `docs/对象模型设计.md` §8；class 程序不再编译期拒绝。
+- native 后端：**6e-M19 规划落地**——用户类对象模型（对象头 vtable 指针 + 8 字节对齐字段、真 vtable 虚分派、实例方法 `this` 隐藏首参、`new`=Alloc+构造链），见 `docs-dev/archive/对象模型设计.md` §8；class 程序不再编译期拒绝。
 
 ---
 
@@ -265,7 +265,7 @@ public readonly int Id = 42;           // readonly + 初始化器（构造内赋
 
 ## 13. 对照 C# 未实现特性清单
 
-> 更新：2026-08-22。基准：`docs/语法手册.md` 状态标记（✅ 已实现 · 🔧 设计中 · 📋 待实现）与 `docs/开发计划.md` P8+ 路线。用途：OOP 后续补齐路线图。
+> 更新：2026-08-22。基准：`docs/语法手册.md` 状态标记（✅ 已实现 · 🔧 设计中 · 📋 待实现）与 `docs-dev/开发计划.md` P8+ 路线。用途：OOP 后续补齐路线图。
 
 ### 13.1 已实现基准
 
@@ -289,7 +289,7 @@ public readonly int Id = 42;           // readonly + 初始化器（构造内赋
 
 | 特性 | 状态 | 说明 |
 |------|------|------|
-| 泛型类 / 接口 / 方法 + 约束 | 🔧 `docs/泛型设计.md` | **设计已定稿（2026-08-22，6e-M20）**：编译期单态化（模板式特化），解锁泛型集合 `List<T>` 与枚举器模式 foreach；连锁解锁委托/模式匹配 |
+| 泛型类 / 接口 / 方法 + 约束 | 🔧 `docs-dev/archive/泛型设计.md` | **设计已定稿（2026-08-22，6e-M20）**：编译期单态化（模板式特化），解锁泛型集合 `List<T>` 与枚举器模式 foreach；连锁解锁委托/模式匹配 |
 | `struct` / `record` / `record struct` | 📋 §32/§33 | 值类型 + 记录语义 |
 | 嵌套类 | 🔧 §12.8 | P8+ |
 | 接口默认方法、接口 `static abstract` / `static virtual` 成员 | — | 对象模型扩展，依赖泛型体系 |
@@ -323,13 +323,13 @@ public readonly int Id = 42;           // readonly + 初始化器（构造内赋
 | 特性 | 状态 |
 |------|------|
 | 主构造函数、`init` 访问器、`required` 成员、`with` 表达式 | 📋 §33 |
-| 引用相等语义、`Equals` / `GetHashCode` / `ToString` 重写 | 🔧 `docs/对象模型设计.md` §3/§4（Object 基类 + 成员面规划，6e-M19） |
-| `==`/`!=` 多态语义（当前运算符按类型静态绑定，无引用比较） | 🔧 `docs/对象模型设计.md` §9（类引用相等对齐规划，6e-M19） |
-| native 用户类对象模型（对象布局/vtable/虚分派） | 🔧 `docs/对象模型设计.md` §8（真 vtable 规划，6e-M19） |
+| 引用相等语义、`Equals` / `GetHashCode` / `ToString` 重写 | 🔧 `docs-dev/archive/对象模型设计.md` §3/§4（Object 基类 + 成员面规划，6e-M19） |
+| `==`/`!=` 多态语义（当前运算符按类型静态绑定，无引用比较） | 🔧 `docs-dev/archive/对象模型设计.md` §9（类引用相等对齐规划，6e-M19） |
+| native 用户类对象模型（对象布局/vtable/虚分派） | 🔧 `docs-dev/archive/对象模型设计.md` §8（真 vtable 规划，6e-M19） |
 
 ### 13.3 实施优先级
 
-1. **泛型**（6e-M20，设计已定稿）：泛型类/接口/方法 + 约束（编译期单态化），解锁泛型集合 `List<T>` 与枚举器模式 foreach——见 `docs/泛型设计.md`。
+1. **泛型**（6e-M20，设计已定稿）：泛型类/接口/方法 + 约束（编译期单态化），解锁泛型集合 `List<T>` 与枚举器模式 foreach——见 `docs-dev/archive/泛型设计.md`。
 2. **嵌套类**：纯语法/符号层扩展，风险低。
 3. **索引器 / 运算符重载 / 事件**：成员级特性，改动集中于 Parser/Binder + IL 元数据。
 4. **显式接口实现 / 抽象属性**：接口体系补全。
