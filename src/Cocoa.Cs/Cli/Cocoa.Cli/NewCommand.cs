@@ -183,10 +183,9 @@ namespace Cocoa.Cli
 
             CreateProject(ConsoleTemplate, name, projectDirectory, dotnetRuntime);
 
-            var solution = $@"name = {name}
-
-[projects]
-{name}/{name}.cocproj
+var solution = $@"<Solution Version=""1"">
+  <Project Include=""{name}/{name}.coproj"" />
+</Solution>
 ";
             File.WriteAllText(solutionPath, solution);
             Console.WriteLine(solutionPath);
@@ -197,8 +196,7 @@ namespace Cocoa.Cli
         {
             Directory.CreateDirectory(targetDirectory);
 
-            var projectPath = Path.Combine(targetDirectory,
-                name + (string.Equals(template, CSharpTemplate, StringComparison.OrdinalIgnoreCase) ? ".cscproj" : ".cocproj"));
+            var projectPath = Path.Combine(targetDirectory, name + ".coproj");
             EnsureFileDoesNotExist(projectPath);
 
             var (coproj, sourceFileName, source) = BuildTemplate(template, name, dotnetRuntime);
@@ -230,17 +228,26 @@ namespace Cocoa.Cli
             {
                 case LibraryTemplate:
                     return (
-                        $@"name = {name}
-output = library
-platform = x64
-
-[sources]
-*.co
-
-[options]
-incremental = true
-debug = false
-outputPath = out
+                        $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ",
                         name + ".co",
                         $@"namespace {name}
@@ -257,17 +264,26 @@ outputPath = out
 
                 case CocoaTemplate:
                     return (
-                        $@"name = {name}
-output = cocoa
-platform = x64
-
-[sources]
-*.co
-
-[options]
-incremental = true
-debug = false
-outputPath = out
+                        $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ",
                         name + ".co",
                         $@"namespace {name}
@@ -286,19 +302,27 @@ outputPath = out
 
                 case CSharpTemplate:
                     return (
-                        $@"name = {name}
-output = executable
-platform = x64
-entry = Main
-dotnetRuntime = {tfm}
-
-[sources]
-*.cs
-
-[options]
-incremental = true
-debug = false
-outputPath = out
+                        $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>CSharp</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+    <TargetFramework>{tfm}</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.cs"" />
+  </ItemGroup>
+</Project>
 ",
                         name + ".cs",
                         $@"// C# 方言（.cs 严格子集，6e-M15）：类型前置、分号必选；不绑定 .NET BCL（用 System.Console.WriteLine/System.Runtime.* 核心库）
@@ -319,19 +343,27 @@ public int Add(int a, int b)
 
                 case SolutionTemplate:
                     return (
-                        $@"name = {name}
-output = executable
-platform = x64
-entry = Main
-dotnetRuntime = {tfm}
-
-[sources]
-*.co
-
-[options]
-incremental = true
-debug = false
-outputPath = out
+                        $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+    <TargetFramework>{tfm}</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ",
                         "main.co",
                         $@"using System
@@ -344,19 +376,27 @@ function Main()
 
                 default: // console
                     return (
-                        $@"name = {name}
-output = executable
-platform = x64
-entry = Main
-dotnetRuntime = {tfm}
-
-[sources]
-*.co
-
-[options]
-incremental = true
-debug = false
-outputPath = out
+                        $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+    <TargetFramework>{tfm}</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Executable</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.co"" />
+  </ItemGroup>
+</Project>
 ",
                         "main.co",
                         $@"using System
@@ -378,7 +418,7 @@ function Main()
             Console.WriteLine("  console (default)  A console application (executable)");
             Console.WriteLine("  library            A .NET library (dll)");
             Console.WriteLine("  cocoa              A .coa Cocoa assembly (cocoa library)");
-            Console.WriteLine("  csharp             A C# dialect console application (.cs files, .cscproj, 6e-M15)");
+            Console.WriteLine("  csharp             A C# dialect console application (.cs files, .coproj, 6e-M15)");
             Console.WriteLine("  solution           A solution (.cosln) with a console sub-project");
             Console.WriteLine();
             Console.WriteLine("options:");

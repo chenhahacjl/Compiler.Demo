@@ -3,11 +3,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace Cocoa.Cli
 {
     /// <summary>
-    /// `cocoa add reference` / `cocoa remove reference` — 在 .cocproj 的 [references] 节增删引用（轻量文本编辑）。
+    /// `cocoa add reference` / `cocoa remove reference` — 在 .coproj 的 <ItemGroup> 中增删
+    /// <Reference Include="..."/>（System.Xml.Linq DOM 操作）。
     /// </summary>
     internal static class ReferenceCommand
     {
@@ -101,10 +105,10 @@ namespace Cocoa.Cli
                 return 1;
             }
 
-            if (!projectPath.EndsWith(".cocproj", StringComparison.OrdinalIgnoreCase) &&
-                !projectPath.EndsWith(".cscproj", StringComparison.OrdinalIgnoreCase))
+            if (!projectPath.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase) &&
+                !projectPath.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase))
             {
-                Console.Error.WriteLine($"error: '{projectPath}' is not a .cocproj/.cscproj file");
+                Console.Error.WriteLine($"error: '{projectPath}' is not a .coproj file");
                 return 1;
             }
 
@@ -132,39 +136,41 @@ namespace Cocoa.Cli
             var project = CocoaProjectFile.Load(projectPath);
             var relative = Normalize(ToRelative(project.Directory, reference));
 
-            var (text, newline, lines) = ReadLines(projectPath);
-            var sectionStart = IndexOfSection(lines, "references");
-            if (sectionStart < 0)
-            {
-                if (lines.Count > 0 && lines[lines.Count - 1].Length == 0)
-                {
-                    lines.Add("[references]");
-                    lines.Add(relative);
-                }
-                else
-                {
-                    lines.Add("");
-                    lines.Add("[references]");
-                    lines.Add(relative);
-                }
+            var document = XDocument.Load(projectPath);
+            var root = Root(document);
 
-                File.WriteAllText(projectPath, string.Join(newline, lines));
-                Console.WriteLine($"Added reference '{relative}' to {Path.GetFileName(projectPath)}");
-                return true;
-            }
-
-            var sectionEnd = FindSectionEnd(lines, sectionStart);
-            for (var i = sectionStart + 1; i < sectionEnd; i++)
+            foreach (var element in root.Descendants())
             {
-                if (Normalize(lines[i]) == relative)
+                if (element.Name.LocalName.Equals("Reference", StringComparison.Ordinal) &&
+                    Normalize(element.Attribute("Include")?.Value ?? string.Empty) == relative)
                 {
                     Console.WriteLine($"Reference '{relative}' is already present");
                     return true;
                 }
             }
 
-            lines.Insert(sectionEnd, relative);
-            File.WriteAllText(projectPath, string.Join(newline, lines));
+            var itemGroups = root.Elements().Where(e => IsLocalName(e, "ItemGroup")).ToList();
+            if (itemGroups.Count > 0)
+            {
+                itemGroups[0].Add(new XElement("Reference", new XAttribute("Include", relative)));
+            }
+            else
+            {
+                var newGroup = new XElement(
+                    "ItemGroup",
+                    new XElement("Reference", new XAttribute("Include", relative)));
+                var lastPropertyGroup = root.Elements().LastOrDefault(e => IsLocalName(e, "PropertyGroup"));
+                if (lastPropertyGroup != null)
+                {
+                    lastPropertyGroup.AddAfterSelf(newGroup);
+                }
+                else
+                {
+                    root.Add(newGroup);
+                }
+            }
+
+            Save(document, projectPath);
             Console.WriteLine($"Added reference '{relative}' to {Path.GetFileName(projectPath)}");
             return true;
         }
@@ -174,69 +180,61 @@ namespace Cocoa.Cli
             var project = CocoaProjectFile.Load(projectPath);
             var relative = Normalize(ToRelative(project.Directory, reference));
 
-            var (text, newline, lines) = ReadLines(projectPath);
-            var sectionStart = IndexOfSection(lines, "references");
-            if (sectionStart < 0)
+            var document = XDocument.Load(projectPath);
+            var root = document.Root;
+            if (root == null)
             {
-                Console.Error.WriteLine($"error: reference '{relative}' was not found (no [references] section)");
-                return false;
+                throw new ProjectFileFormatException("empty document; expected <Project> root element");
             }
 
-            var sectionEnd = FindSectionEnd(lines, sectionStart);
-            var targetIndex = -1;
-            for (var i = sectionStart + 1; i < sectionEnd; i++)
-            {
-                if (Normalize(lines[i]) == relative)
-                {
-                    targetIndex = i;
-                    break;
-                }
-            }
-
-            if (targetIndex < 0)
+            var targets = root.Descendants()
+                .Where(element => element.Name.LocalName.Equals("Reference", StringComparison.Ordinal) &&
+                                  Normalize(element.Attribute("Include")?.Value ?? string.Empty) == relative)
+                .ToList();
+            if (targets.Count == 0)
             {
                 Console.Error.WriteLine($"error: reference '{relative}' was not found");
                 return false;
             }
 
-            lines.RemoveAt(targetIndex);
-            File.WriteAllText(projectPath, string.Join(newline, lines));
+            foreach (var target in targets)
+            {
+                target.Remove();
+            }
+
+            Save(document, projectPath);
             Console.WriteLine($"Removed reference '{relative}' from {Path.GetFileName(projectPath)}");
             return true;
         }
 
-        private static (string Text, string Newline, List<string> Lines) ReadLines(string path)
+        private static XElement Root(XDocument document)
         {
-            var text = File.ReadAllText(path);
-            var newline = text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
-            var lines = text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).ToList();
-            return (text, newline, lines);
-        }
-
-        private static int IndexOfSection(List<string> lines, string sectionName)
-        {
-            for (var i = 0; i < lines.Count; i++)
+            var root = document.Root;
+            if (root == null)
             {
-                if (lines[i].Trim() == $"[{sectionName}]")
-                {
-                    return i;
-                }
+                throw new ProjectFileFormatException("empty document; expected <Project> root element");
             }
 
-            return -1;
+            return root;
         }
 
-        private static int FindSectionEnd(List<string> lines, int sectionStart)
+        private static bool IsLocalName(XElement element, string localName)
         {
-            for (var i = sectionStart + 1; i < lines.Count; i++)
-            {
-                if (lines[i].TrimStart().StartsWith("[", StringComparison.Ordinal))
-                {
-                    return i;
-                }
-            }
+            return element.Name.LocalName.Equals(localName, StringComparison.Ordinal);
+        }
 
-            return lines.Count;
+        private static void Save(XDocument document, string projectPath)
+        {
+            var settings = new XmlWriterSettings
+            {
+                Indent = true,
+                OmitXmlDeclaration = true,
+                Encoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            };
+            using (var writer = XmlWriter.Create(projectPath, settings))
+            {
+                document.Save(writer);
+            }
         }
 
         private static string ToRelative(string projectDirectory, string reference)
@@ -257,7 +255,7 @@ namespace Cocoa.Cli
             Console.WriteLine($"usage: cocoa {action} reference [-p <project>] <path>");
             Console.WriteLine();
             Console.WriteLine("options:");
-            Console.WriteLine("  -p <path>          The .cocproj/.cscproj project file (default: the single project in the current directory)");
+            Console.WriteLine("  -p <path>          The .coproj project file (default: the single project in the current directory)");
             Console.WriteLine("  -?, -h, --help     Prints help");
         }
     }
