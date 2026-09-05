@@ -973,15 +973,26 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             if (Current.Kind != SyntaxKind.LessToken || !IsTypeParameterListAhead())
                 return null;
             var lessThanToken = NextToken();
-            var parameters = ImmutableArray.CreateBuilder<SyntaxToken>();
-            while (Current.Kind == SyntaxKind.IdentifierToken)
+            var parameters = ImmutableArray.CreateBuilder<TypeParameterSyntax>();
+            while (Current.Kind is SyntaxKind.IdentifierToken or SyntaxKind.InKeyword or SyntaxKind.OutKeyword)
             {
-                parameters.Add(NextToken());
+                // 型变注解（delegate/接口类型参数；类/方法处绑定层报诊断）
+                SyntaxToken? varianceKeyword = null;
+                if (Current.Kind is SyntaxKind.InKeyword or SyntaxKind.OutKeyword)
+                {
+                    varianceKeyword = NextToken();
+                    if (Current.Kind is not SyntaxKind.IdentifierToken)
+                        break;
+                }
+
+                var identifier = NextToken();
+                parameters.Add(new TypeParameterSyntax(_syntaxTree, varianceKeyword, identifier));
                 if (Current.Kind == SyntaxKind.CommaToken)
                     NextToken();
                 else
                     break;
             }
+
             var greaterThanToken = ParseClosingAngle();
             return new TypeParameterListSyntax(_syntaxTree, lessThanToken, parameters.ToImmutable(), greaterThanToken);
         }
@@ -996,6 +1007,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 switch (kind)
                 {
                     case SyntaxKind.IdentifierToken: sawIdentifier = true; offset++; break;
+                    case SyntaxKind.InKeyword:
+                    case SyntaxKind.OutKeyword: offset++; break;
                     case SyntaxKind.CommaToken: offset++; break;
                     case SyntaxKind.GreaterToken: return sawIdentifier;
                     case SyntaxKind.ShiftRightToken: return false;
@@ -1888,16 +1901,21 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         private MemberSyntax ParseDelegateDeclaration(ImmutableArray<SyntaxToken> modifiers)
         {
             var delegateKeyword = MatchToken(SyntaxKind.DelegateKeyword);
-            var isCoForm = Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.OpenParenthesisToken;
+            var isCoForm = Current.Kind == SyntaxKind.IdentifierToken && (Peek(1).Kind == SyntaxKind.OpenParenthesisToken || Peek(1).Kind == SyntaxKind.LessToken);
             SyntaxToken identifier;
             SeparatedSyntaxList<ParameterSyntax> parameters;
             TypeClauseSyntax? returnType = null;
+            TypeParameterListSyntax? typeParameters = null;
             SyntaxToken openParenToken;
             SyntaxToken closeParenToken;
             SyntaxToken? semicolonToken = null;
             if (isCoForm)
             {
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+                // 泛型类型参数（6e-M22 delegate 真实类型化）：`delegate 名<T>(...)`——两形态均在名字与 `(` 之间。
+                typeParameters = ParseOptionalTypeParameterList();
+
                 openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                 parameters = ParseParameterList();
                 closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
@@ -1908,12 +1926,17 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 if (!(Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.OpenParenthesisToken))
                     returnType = ParsePrefixTypeClause();
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+                // 泛型类型参数（6e-M22 delegate 真实类型化）：`delegate 返回类型 名<T>(...)`
+                typeParameters = ParseOptionalTypeParameterList();
+
                 openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                 parameters = ParseParameterList();
                 closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
                 if (Current.Kind == SyntaxKind.SemicolonToken) semicolonToken = MatchToken(SyntaxKind.SemicolonToken);
             }
-            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, openParenToken, parameters, closeParenToken, semicolonToken);
+
+            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, typeParameters, openParenToken, parameters, closeParenToken, semicolonToken);
         }
 
         private PropertyAccessorSyntax ParsePropertyAccessor()

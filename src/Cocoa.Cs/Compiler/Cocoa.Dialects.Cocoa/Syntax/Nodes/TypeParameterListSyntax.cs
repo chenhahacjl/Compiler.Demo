@@ -5,11 +5,11 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// 泛型类型参数列表（6e-M20）：`&lt;T, U&gt;`。
+    /// 泛型类型参数列表（6e-M20）：`&lt;T, U&gt;`；delegate 处支持型变 `&lt;in T, out U&gt;`。
     /// </summary>
     public sealed partial class TypeParameterListSyntax : CocoaSyntaxNode
     {
-        internal TypeParameterListSyntax(SyntaxTree syntaxTree, SyntaxToken lessThanToken, ImmutableArray<SyntaxToken> parameters, SyntaxToken greaterThanToken)
+        internal TypeParameterListSyntax(SyntaxTree syntaxTree, SyntaxToken lessThanToken, ImmutableArray<TypeParameterSyntax> parameters, SyntaxToken greaterThanToken)
             : base(syntaxTree)
         {
             LessThanToken = lessThanToken;
@@ -20,7 +20,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public override CocoaSyntaxKind Kind => CocoaSyntaxKind.TypeParameterList;
 
         public SyntaxToken LessThanToken { get; }
-        public ImmutableArray<SyntaxToken> Parameters { get; }
+        public ImmutableArray<TypeParameterSyntax> Parameters { get; }
         public SyntaxToken GreaterThanToken { get; }
 
         public override IEnumerable<SyntaxNode> GetChildren()

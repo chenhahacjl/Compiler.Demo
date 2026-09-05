@@ -13,12 +13,13 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
     /// </summary>
     public sealed partial class DelegateDeclarationSyntax : MemberSyntax
     {
-        internal DelegateDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken delegateKeyword, TypeClauseSyntax? returnType, SyntaxToken identifier, SyntaxToken openParenToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, SyntaxToken? semicolonToken)
+        internal DelegateDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken delegateKeyword, TypeClauseSyntax? returnType, SyntaxToken identifier, TypeParameterListSyntax? typeParameters, SyntaxToken openParenToken, SeparatedSyntaxList<ParameterSyntax> parameters, SyntaxToken closeParenToken, SyntaxToken? semicolonToken)
             : base(syntaxTree, modifiers)
         {
             DelegateKeyword = delegateKeyword;
             ReturnType = returnType;
             Identifier = identifier;
+            TypeParameters = typeParameters;
             OpenParenToken = openParenToken;
             Parameters = parameters;
             CloseParenToken = closeParenToken;
@@ -33,6 +34,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public TypeClauseSyntax? ReturnType { get; }
 
         public SyntaxToken Identifier { get; }
+
+        /// <summary>泛型类型参数（6e-M22 delegate 真实类型化）：`&lt;T&gt;` / `&lt;in T&gt;` / `&lt;out T&gt;`。</summary>
+        public TypeParameterListSyntax? TypeParameters { get; }
 
         public SyntaxToken OpenParenToken { get; }
 
@@ -65,6 +69,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
 
             slots.Add(Identifier.ToGreen());
+
+            if (TypeParameters != null)
+            {
+                slots.Add(TypeParameters.ToGreen());
+            }
+
             slots.Add(OpenParenToken.ToGreen());
 
             foreach (var node in Parameters.GetWithSeparators())
@@ -99,6 +109,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 yield return ReturnType;
             }
             yield return Identifier;
+            if (TypeParameters != null)
+            {
+                yield return TypeParameters;
+            }
             yield return OpenParenToken;
             foreach (var child in Parameters.GetWithSeparators())
             {

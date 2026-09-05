@@ -313,10 +313,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
 
             var lessThanToken = NextToken();
-            var parameters = ImmutableArray.CreateBuilder<SyntaxToken>();
-            while (Current.Kind == SyntaxKind.IdentifierToken)
+            var parameters = ImmutableArray.CreateBuilder<TypeParameterSyntax>();
+            while (Current.Kind is SyntaxKind.IdentifierToken or SyntaxKind.InKeyword or SyntaxKind.OutKeyword)
             {
-                parameters.Add(NextToken());
+                // 型变注解（delegate/接口类型参数；类/方法处绑定层报诊断）
+                SyntaxToken? varianceKeyword = null;
+                if (Current.Kind is SyntaxKind.InKeyword or SyntaxKind.OutKeyword)
+                {
+                    varianceKeyword = NextToken();
+                    if (Current.Kind is not SyntaxKind.IdentifierToken)
+                    {
+                        break;
+                    }
+                }
+
+                var identifier = NextToken();
+                parameters.Add(new TypeParameterSyntax(_syntaxTree, varianceKeyword, identifier));
 
                 if (Current.Kind == SyntaxKind.CommaToken)
                 {
@@ -344,6 +356,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 {
                     case SyntaxKind.IdentifierToken:
                         sawIdentifier = true;
+                        offset++;
+                        break;
+
+                    case SyntaxKind.InKeyword:
+                    case SyntaxKind.OutKeyword:
                         offset++;
                         break;
 

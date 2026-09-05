@@ -34,5 +34,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         /// <summary>`struct` 值类型约束（6e-M22 C1）：基元数值/bool/char + enum（语言暂无用户 struct）。</summary>
         public bool HasValueTypeConstraint { get; set; }
+
+        /// <summary>型变注解（6e-M22 delegate 真实类型化）：delegate/接口类型参数可标 in/out，类参数恒 Invariant。</summary>
+        public VarianceKind Variance { get; set; }
     }
 }

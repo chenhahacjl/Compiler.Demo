@@ -20,7 +20,7 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(classDeclaration.TypeParameters);
             var parameter = Assert.Single(classDeclaration!.TypeParameters!.Parameters);
-            Assert.Equal("T", parameter.Text);
+            Assert.Equal("T", parameter.Identifier.Text);
         }
 
         [Fact]
@@ -32,8 +32,8 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(classDeclaration.TypeParameters);
             Assert.Equal(2, classDeclaration!.TypeParameters!.Parameters.Length);
-            Assert.Equal("K", classDeclaration.TypeParameters.Parameters[0].Text);
-            Assert.Equal("V", classDeclaration.TypeParameters.Parameters[1].Text);
+            Assert.Equal("K", classDeclaration.TypeParameters.Parameters[0].Identifier.Text);
+            Assert.Equal("V", classDeclaration.TypeParameters.Parameters[1].Identifier.Text);
         }
 
         [Fact]
@@ -90,7 +90,7 @@ public interface IEnumerable<T>
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(interfaceDeclaration.TypeParameters);
-            Assert.Equal("T", Assert.Single(interfaceDeclaration!.TypeParameters!.Parameters).Text);
+            Assert.Equal("T", Assert.Single(interfaceDeclaration!.TypeParameters!.Parameters).Identifier.Text);
 
             var method = Assert.IsType<FunctionDeclarationSyntax>(Assert.Single(interfaceDeclaration.Members));
             var returnType = Assert.IsType<GenericTypeClauseSyntax>(method.Type!);
@@ -204,7 +204,7 @@ function Max<T>(a: T, b: T): T where T: IComparable<T>
 
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(function.TypeParameters);
-            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Text);
+            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Identifier.Text);
             var parameterType = Assert.IsType<TypeClauseSyntax>(function.Parameters[0].Type);
             Assert.Equal("T", parameterType.Identifier.Text);
             var whereClause = Assert.Single(function.WhereClauses);
@@ -226,7 +226,7 @@ public static T Max<T>(T a, T b) where T : IComparable<T>
             Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
             Assert.NotNull(function.TypeParameters);
             Assert.Equal("Max", function.Identifier.Text);
-            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Text);
+            Assert.Equal("T", Assert.Single(function!.TypeParameters!.Parameters).Identifier.Text);
             Assert.Single(function.WhereClauses);
         }
 
@@ -269,6 +269,51 @@ class Box
             var globalStatement = Assert.IsType<GlobalStatementSyntax>(member);
 
             return Assert.IsType<ExpressionStatementSyntax>(globalStatement.Statement).Expression;
+        }
+
+        [Fact]
+        public void Co_DelegateTypeParameter_Variance_Annotation_Parses()
+        {
+            var syntaxTree = SyntaxTree.Parse("delegate Selector<in T>(x: T): T");
+            var delegateDeclaration = Assert.IsType<DelegateDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
+
+            Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
+            Assert.Equal("Selector", delegateDeclaration.Identifier.Text);
+            Assert.NotNull(delegateDeclaration.TypeParameters);
+            var parameter = Assert.Single(delegateDeclaration!.TypeParameters!.Parameters);
+            Assert.Equal(SyntaxKind.InKeyword, parameter.VarianceKeyword!.Kind);
+            Assert.Equal("T", parameter.Identifier.Text);
+        }
+
+        [Fact]
+        public void Cs_DelegateTypeParameter_Variance_Annotation_Parses()
+        {
+            var syntaxTree = SyntaxTree.ParseCs("delegate TResult Handler<in T, out TResult>(T arg);");
+            var delegateDeclaration = Assert.IsType<CSyntax.DelegateDeclarationSyntax>(Assert.Single(((CSyntax.CompilationUnitSyntax)syntaxTree.Root).Members));
+
+            Assert.Empty(syntaxTree.Diagnostics.Where(d => d.IsError));
+            Assert.Equal("Handler", delegateDeclaration.Identifier.Text);
+            Assert.NotNull(delegateDeclaration.TypeParameters);
+            var parameters = delegateDeclaration!.TypeParameters!.Parameters;
+            Assert.Equal(2, parameters.Length);
+            Assert.Equal(SyntaxKind.InKeyword, parameters[0].VarianceKeyword!.Kind);
+            Assert.Equal("T", parameters[0].Identifier.Text);
+            Assert.Equal(SyntaxKind.OutKeyword, parameters[1].VarianceKeyword!.Kind);
+            Assert.Equal("TResult", parameters[1].Identifier.Text);
+        }
+
+        [Fact]
+        public void Delegate_TypeParameter_Variance_GreenRed_RoundTrips()
+        {
+            var tree = SyntaxTree.Parse("delegate Selector<in T, out U>(x: T): U");
+            var delegateDeclaration = Assert.IsType<DelegateDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)tree.Root).Members));
+
+            var typed = Assert.IsType<DelegateDeclarationSyntax>(delegateDeclaration.ToGreen().CreateTypedRed(tree));
+            Assert.NotNull(typed.TypeParameters);
+            var parameters = typed!.TypeParameters!.Parameters;
+            Assert.Equal(2, parameters.Length);
+            Assert.Equal(SyntaxKind.InKeyword, parameters[0].VarianceKeyword!.Kind);
+            Assert.Equal("U", parameters[1].Identifier.Text);
         }
     }
 }

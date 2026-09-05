@@ -1014,7 +1014,7 @@ function Main()
             var typeParameters = tree.Root.DescendantNodes().OfType<TypeParameterListSyntax>().First();
             var typedTypeParameters = Assert.IsType<TypeParameterListSyntax>(typeParameters.ToGreen().CreateTypedRed(tree));
             Assert.Equal(1, typedTypeParameters.Parameters.Length);
-            Assert.Equal("T", typedTypeParameters.Parameters[0].Text);
+            Assert.Equal("T", typedTypeParameters.Parameters[0].Identifier.Text);
 
             var field = tree.Root.DescendantNodes().OfType<ClassFieldDeclarationSyntax>().First();
             var typedField = Assert.IsType<ClassFieldDeclarationSyntax>(field.ToGreen().CreateTypedRed(tree));

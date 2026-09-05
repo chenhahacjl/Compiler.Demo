@@ -986,11 +986,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             var delegateKeyword = MatchToken(SyntaxKind.DelegateKeyword);
 
             var isCoForm = Current.Kind == SyntaxKind.IdentifierToken &&
-                           Peek(1).Kind == SyntaxKind.OpenParenthesisToken;
+                           (Peek(1).Kind == SyntaxKind.OpenParenthesisToken || Peek(1).Kind == SyntaxKind.LessToken);
 
             SyntaxToken identifier;
             SeparatedSyntaxList<ParameterSyntax> parameters;
             TypeClauseSyntax? returnType = null;
+            TypeParameterListSyntax? typeParameters = null;
             SyntaxToken openParenToken;
             SyntaxToken closeParenToken;
             SyntaxToken? semicolonToken = null;
@@ -998,6 +999,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             if (isCoForm)
             {
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+                // 泛型类型参数（6e-M22 delegate 真实类型化）：`delegate 名<T>(...)`——两形态均在名字与 `(` 之间。
+                typeParameters = ParseOptionalTypeParameterList();
+
                 openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                 parameters = ParseParameterList();
                 closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
@@ -1011,6 +1016,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     returnType = ParsePrefixTypeClause();
 
                 identifier = MatchToken(SyntaxKind.IdentifierToken);
+
+                // 泛型类型参数（6e-M22 delegate 真实类型化）：`delegate 返回类型 名<T>(...)`
+                typeParameters = ParseOptionalTypeParameterList();
+
                 openParenToken = MatchToken(SyntaxKind.OpenParenthesisToken);
                 parameters = ParseParameterList();
                 closeParenToken = MatchToken(SyntaxKind.CloseParenthesisToken);
@@ -1019,7 +1028,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     semicolonToken = MatchToken(SyntaxKind.SemicolonToken);
             }
 
-            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, openParenToken, parameters, closeParenToken, semicolonToken);
+            return new DelegateDeclarationSyntax(_syntaxTree, modifiers, delegateKeyword, returnType, identifier, typeParameters, openParenToken, parameters, closeParenToken, semicolonToken);
         }
 
         private MemberSyntax ParsePropertyDeclaration(ImmutableArray<SyntaxToken> modifiers)

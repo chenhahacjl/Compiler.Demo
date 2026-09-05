@@ -149,17 +149,23 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 seen.Add(outer.Name);
             }
 
-            foreach (var parameterToken in syntax.Parameters)
+            foreach (var parameterSyntax in syntax.Parameters)
             {
-                var parameterName = parameterToken.Text ?? "";
+                var parameterName = parameterSyntax.Identifier.Text ?? "";
                 if (parameterName.Length == 0)
                 {
                     continue;
                 }
 
+                if (parameterSyntax.VarianceKeyword != null)
+                {
+                    _diagnostics.ReportError(parameterSyntax.VarianceKeyword.Location, $"型变注解 '{VarianceKeywordText(parameterSyntax)}' 仅适用于 delegate/接口类型参数（方法类型参数保持不变）。");
+                    continue;
+                }
+
                 if (!seen.Add(parameterName))
                 {
-                    _diagnostics.ReportError(parameterToken.Location, $"类型参数 '{parameterName}' 重复或与外层类型参数同名。");
+                    _diagnostics.ReportError(parameterSyntax.Identifier.Location, $"类型参数 '{parameterName}' 重复或与外层类型参数同名。");
                     continue;
                 }
 
@@ -393,17 +399,23 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var parameters = ImmutableArray.CreateBuilder<TypeParameterSymbol>();
             var seen = new HashSet<string>();
 
-            foreach (var parameterToken in syntax.Parameters)
+            foreach (var parameterSyntax in syntax.Parameters)
             {
-                var parameterName = parameterToken.Text ?? "";
+                var parameterName = parameterSyntax.Identifier.Text ?? "";
                 if (parameterName.Length == 0)
                 {
                     continue;
                 }
 
+                if (parameterSyntax.VarianceKeyword != null)
+                {
+                    _diagnostics.ReportError(parameterSyntax.VarianceKeyword.Location, $"型变注解 '{VarianceKeywordText(parameterSyntax)}' 仅适用于 delegate/接口类型参数（类类型参数保持不变）。");
+                    continue;
+                }
+
                 if (!seen.Add(parameterName))
                 {
-                    _diagnostics.ReportError(parameterToken.Location, $"类型参数 '{parameterName}' 重复。");
+                    _diagnostics.ReportError(parameterSyntax.Identifier.Location, $"类型参数 '{parameterName}' 重复。");
                     continue;
                 }
 
@@ -433,7 +445,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             for (var i = 0; i < syntax.Parameters.Length; i++)
             {
-                if (syntax.Parameters[i].Text != expected[i].Name)
+                if (syntax.Parameters[i].Identifier.Text != expected[i].Name)
                 {
                     return false;
                 }
@@ -1224,16 +1236,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// </summary>
         private void BindDelegateDeclaration(DelegateDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
-            var returnType = syntax.ReturnType == null ? TypeSymbol.Void : BindTypeClause(syntax.ReturnType);
-            if (returnType == null)
-                return;
-
             if (ReportByRefDelegateParameters(syntax))
             {
                 return;
             }
-
-            var parameters = BindParameters(syntax.Parameters);
 
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var delegateName = syntax.Identifier.Text;
@@ -1245,38 +1251,52 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 IsSealed = true,
                 TypeKind = TypeKind.Delegate,
             };
+            delegateClass.TypeParameters = BindDelegateTypeParameters(syntax.TypeParameters, delegateClass);
 
-            // Invoke 方法签名匹配 delegate 声明
-            var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
-            var invokeFn = new FunctionSymbol("Invoke", invokeParams, returnType, null, containingClass: delegateClass, visibility: Visibility.Public)
+            // 6e-M22 delegate 真实类型化：签名绑定期间 delegate 类为类型参数查找语境（外层宿主不遮蔽）
+            var previousBindingClass = _bindingClass;
+            _bindingClass = delegateClass;
+            try
             {
-                IsStatic = false,
-            };
-            delegateClass.AddMethod(invokeFn);
+                var returnType = syntax.ReturnType == null ? TypeSymbol.Void : BindTypeClause(syntax.ReturnType);
+                if (returnType == null)
+                {
+                    return;
+                }
 
-            // 注册到类的事件/委托集合（类内 delegate）
-            if (!_scope.TryDeclareClass(delegateClass))
+                var parameters = BindParameters(syntax.Parameters);
+                CheckDelegateVariancePositions(delegateClass.TypeParameters, returnType, parameters, syntax);
+
+                // Invoke 方法签名匹配 delegate 声明
+                var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
+                var invokeFn = new FunctionSymbol("Invoke", invokeParams, returnType, null, containingClass: delegateClass, visibility: Visibility.Public)
+                {
+                    IsStatic = false,
+                };
+                delegateClass.AddMethod(invokeFn);
+
+                // 注册到类的事件/委托集合（类内 delegate）
+                if (!_scope.TryDeclareClass(delegateClass))
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"delegate '{delegateName}' 已声明。");
+                }
+            }
+            finally
             {
-                _diagnostics.ReportError(syntax.Identifier.Location, $"delegate '{delegateName}' 已声明。");
+                _bindingClass = previousBindingClass;
             }
         }
 
         /// <summary>顶层（命名空间级）delegate 声明：同 BindDelegateDeclaration 但注册到全局作用域。</summary>
         internal void BindTopLevelDelegateDeclaration(DelegateDeclarationSyntax syntax, string ns)
         {
-            var returnType = syntax.ReturnType == null ? TypeSymbol.Void : BindTypeClause(syntax.ReturnType);
-            if (returnType == null)
-                return;
-
             if (ReportByRefDelegateParameters(syntax))
             {
                 return;
             }
 
-            var parameters = BindParameters(syntax.Parameters);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Public);
             var delegateName = syntax.Identifier.Text;
-            var fullName = ns.Length == 0 ? delegateName : ns + "." + delegateName;
 
             var delegateClass = new NamedTypeSymbol(delegateName, ns, visibility, declaration: null)
             {
@@ -1284,16 +1304,141 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 IsSealed = true,
                 TypeKind = TypeKind.Delegate,
             };
+            delegateClass.TypeParameters = BindDelegateTypeParameters(syntax.TypeParameters, delegateClass);
 
-            var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
-            var invokeFn = new FunctionSymbol("Invoke", invokeParams, returnType, null, containingClass: delegateClass, visibility: Visibility.Public)
+            // 6e-M22 delegate 真实类型化：签名绑定期间 delegate 类为类型参数查找语境
+            var previousBindingClass = _bindingClass;
+            _bindingClass = delegateClass;
+            try
             {
-                IsStatic = false,
-            };
-            delegateClass.AddMethod(invokeFn);
+                var returnType = syntax.ReturnType == null ? TypeSymbol.Void : BindTypeClause(syntax.ReturnType);
+                if (returnType == null)
+                {
+                    return;
+                }
 
-            // 命名空间级 delegate 直接注册进当前作用域（Namespace 属性承载限定）
-            _scope.TryDeclareClass(delegateClass);
+                var parameters = BindParameters(syntax.Parameters);
+                CheckDelegateVariancePositions(delegateClass.TypeParameters, returnType, parameters, syntax);
+
+                var invokeParams = parameters.Select(p => new ParameterSymbol(p.Name, p.Type, p.Ordinal)).ToImmutableArray();
+                var invokeFn = new FunctionSymbol("Invoke", invokeParams, returnType, null, containingClass: delegateClass, visibility: Visibility.Public)
+                {
+                    IsStatic = false,
+                };
+                delegateClass.AddMethod(invokeFn);
+
+                // 命名空间级 delegate 直接注册进当前作用域（Namespace 属性承载限定）
+                _scope.TryDeclareClass(delegateClass);
+            }
+            finally
+            {
+                _bindingClass = previousBindingClass;
+            }
+        }
+
+        /// <summary>delegate 类型参数绑定（6e-M22 真实类型化）：建 TypeParameterSymbol 列表（含型变注解；
+        /// 外层类型参数先入集禁遮蔽/重名；与 delegate 名冲突诊断；类参数同规格）。</summary>
+        private ImmutableArray<TypeParameterSymbol> BindDelegateTypeParameters(TypeParameterListSyntax? syntax, NamedTypeSymbol delegateClass)
+        {
+            if (syntax == null)
+            {
+                return ImmutableArray<TypeParameterSymbol>.Empty;
+            }
+
+            var parameters = ImmutableArray.CreateBuilder<TypeParameterSymbol>();
+            var seen = new HashSet<string>();
+
+            foreach (var outer in _currentClass?.TypeParameters ?? ImmutableArray<TypeParameterSymbol>.Empty)
+            {
+                seen.Add(outer.Name);
+            }
+
+            foreach (var parameterSyntax in syntax.Parameters)
+            {
+                var parameterName = parameterSyntax.Identifier.Text ?? "";
+                if (parameterName.Length == 0)
+                {
+                    continue;
+                }
+
+                if (!seen.Add(parameterName))
+                {
+                    _diagnostics.ReportError(parameterSyntax.Identifier.Location, $"类型参数 '{parameterName}' 重复或与外层类型参数同名。");
+                    continue;
+                }
+
+                parameters.Add(new TypeParameterSymbol(parameterName, parameters.Count, delegateClass)
+                {
+                    Variance = VarianceOf(parameterSyntax),
+                });
+            }
+
+            if (parameters.Any(p => p.Name == delegateClass.Name))
+            {
+                _diagnostics.ReportError(syntax.Location, $"类型参数不能与 delegate '{delegateClass.Name}' 同名。");
+            }
+
+            return parameters.ToImmutable();
+        }
+
+        private static VarianceKind VarianceOf(TypeParameterSyntax syntax)
+        {
+            if (syntax.VarianceKeyword == null)
+            {
+                return VarianceKind.Invariant;
+            }
+
+            return syntax.VarianceKeyword.Kind == SSyntax.SyntaxKind.InKeyword ? VarianceKind.In : VarianceKind.Out;
+        }
+
+        private static string VarianceKeywordText(TypeParameterSyntax syntax)
+        {
+            return syntax.VarianceKeyword?.Kind == SSyntax.SyntaxKind.InKeyword ? "in" : "out";
+        }
+
+        /// <summary>delegate 型变安全位诊断（6e-M22 真实类型化，对齐 C# CS1961/CS1962）：
+        /// `in` 仅可出现在逆变（入）位、`out` 仅可出现在协变（出）位。</summary>
+        private void CheckDelegateVariancePositions(ImmutableArray<TypeParameterSymbol> typeParameters, TypeSymbol returnType, ImmutableArray<ParameterSymbol> parameters, DelegateDeclarationSyntax syntax)
+        {
+            foreach (var typeParameter in typeParameters)
+            {
+                if (typeParameter.Variance == VarianceKind.In && TypeContainsParameter(returnType, typeParameter))
+                {
+                    _diagnostics.ReportError(syntax.Identifier.Location, $"in 逆变类型参数 '{typeParameter.Name}' 出现在协变（返回）位置，禁止（对齐 CS1962）。");
+                }
+
+                if (typeParameter.Variance == VarianceKind.Out)
+                {
+                    foreach (var parameter in parameters)
+                    {
+                        if (TypeContainsParameter(parameter.Type, typeParameter))
+                        {
+                            _diagnostics.ReportError(syntax.Identifier.Location, $"out 协变类型参数 '{typeParameter.Name}' 出现在逆变（参数）位置，禁止（对齐 CS1961）。");
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>递归判定类型是否包含给定类型参数（泛型实参 / 函数类型参数与返回递归）。</summary>
+        private static bool TypeContainsParameter(TypeSymbol type, TypeParameterSymbol typeParameter)
+        {
+            if (ReferenceEquals(type, typeParameter))
+            {
+                return true;
+            }
+
+            switch (type)
+            {
+                case InstantiatedTypeSymbol instantiated when instantiated.TypeArguments.Length > 0:
+                    return instantiated.TypeArguments.Any(argument => TypeContainsParameter(argument, typeParameter));
+                case FunctionTypeSymbol functionType:
+                    return functionType.ParameterTypes.Any(p => TypeContainsParameter(p, typeParameter))
+                        || TypeContainsParameter(functionType.ReturnType, typeParameter);
+                default:
+                    return false;
+            }
         }
 
         /// <summary>delegate 声明 byref 形参拦截（6e-M23 R3）：函数值签名无修饰符概念。有则报诊断并返回 true。</summary>

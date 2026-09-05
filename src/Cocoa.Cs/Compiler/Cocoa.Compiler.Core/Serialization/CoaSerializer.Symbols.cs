@@ -218,6 +218,10 @@ if (properties.Length > 0)
             }
 
             w.Field(flags.Count == 0 ? "-" : string.Join("+", flags));
+
+            // 6e-M22 委托真实类型化：型变注解位（in/out；Invariant 不写）
+            w.Field("v:" + VarianceText(typeParameter.Variance));
+
             w.Field("c:" + typeParameter.ConstraintTypes.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var constraint in typeParameter.ConstraintTypes)
             {
@@ -254,6 +258,38 @@ if (properties.Length > 0)
             }
         }
 
+        /// <summary>型变注解位解析（6e-M22 委托真实类型化）：`v:in` / `v:out` / `v:-`；未知值报错。</summary>
+        private static void ApplyVarianceFlag(TypeParameterSymbol parameter, string varianceText)
+        {
+            switch (varianceText)
+            {
+                case "v:-":
+                case "-":
+                    parameter.Variance = VarianceKind.Invariant;
+                    break;
+                case "v:in":
+                case "in":
+                    parameter.Variance = VarianceKind.In;
+                    break;
+                case "v:out":
+                case "out":
+                    parameter.Variance = VarianceKind.Out;
+                    break;
+                default:
+                    throw new InvalidDataException($"Unknown variance flag '{varianceText}'");
+            }
+        }
+
+        private static string VarianceText(VarianceKind variance)
+        {
+            return variance switch
+            {
+                VarianceKind.In => "in",
+                VarianceKind.Out => "out",
+                _ => "-",
+            };
+        }
+
         /// <summary>
         /// tpar/ftp 子节点读取（6e-G7 S1）：构造符号 + 应用标志 + 登记开放键（类级限定键 !属主.名；
         /// 方法级裸键 !名）+ 暂存约束数。返回 (参数, 约束数)，约束由第二趟解析。
@@ -264,10 +300,17 @@ if (properties.Length > 0)
             var parameterName = Unescape(reader.ExpectString());
             var ordinal = reader.ExpectInt();
             var flagsText = reader.ExpectString();
+            var varianceText = "-";
+            if (reader.PeekRaw().StartsWith("v:", StringComparison.Ordinal))
+            {
+                varianceText = reader.ExpectString();
+            }
+
             var constraintCount = ReadCountField(reader, "c:");
 
             var parameter = new TypeParameterSymbol(parameterName, ordinal, owningClass: null);
             ApplyTypeParameterFlags(parameter, flagsText);
+            ApplyVarianceFlag(parameter, varianceText);
 
             var openKey = ownerFullName == null
                 ? "!" + parameterName

@@ -215,5 +215,6 @@ ColonToken,               // :
         Interpolation,            // 插值洞 {expr}
         IsExpression,             // is 类型测试表达式（6e-M19 M5-b）
         AsExpression,             // as 类型转换表达式（6e-M19 M5-b）
+        TypeParameter,            // 泛型类型参数个体 T / in T / out T（6e-M22 delegate 真实类型化）
     }
 }

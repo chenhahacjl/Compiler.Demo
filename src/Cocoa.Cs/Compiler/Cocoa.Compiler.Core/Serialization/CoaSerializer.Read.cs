@@ -543,9 +543,21 @@ namespace Cocoa.CodeAnalysis.Serialization
                 var parameterName = Unescape(reader.ExpectString());
                 var ordinal = reader.ExpectInt();
                 var flagsText = reader.ExpectString();
+                var varianceText = "-";
+                if (reader.PeekRaw().StartsWith("v:", StringComparison.Ordinal))
+                {
+                    varianceText = reader.ExpectString();
+                }
+
                 var constraintCount = ReadCountField(reader, "c:");
 
                 var parameter = new TypeParameterSymbol(parameterName, ordinal, classType);
+                if (varianceText == "-")
+                {
+                    varianceText = "v:-";
+                }
+
+                ApplyVarianceFlag(parameter, varianceText);
                 if (flagsText != "-")
                 {
                     foreach (var flag in flagsText.Split('+'))

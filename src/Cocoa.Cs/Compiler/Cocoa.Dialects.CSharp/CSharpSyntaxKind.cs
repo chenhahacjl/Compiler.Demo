@@ -203,6 +203,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         InterpolatedStringText = 194,
         Interpolation = 195,
         IsExpression = 196,
-        AsExpression = 197
+        AsExpression = 197,
+        TypeParameter = 198
     }
 }

@@ -853,5 +853,52 @@ function Main(): i32
             var compilation = Compilation.Create(tree);
             return compilation.Evaluate(new Dictionary<VariableSymbol, object>());
         }
+
+        // ── 6e-M22 委托真实类型化 M0：泛型 delegate + in/out 型变安全位诊断 ──
+
+        [Fact]
+        public void Binder_DelegateGeneric_VarianceAnnotations_InvokeSignatureUsesTypeParameters()
+        {
+            var code = @"using System
+delegate Transform<in T, out U>(x: T): U
+function Main(): i32 { return 0 }";
+            var result = Evaluate(code);
+            Assert.Empty(result.Diagnostics.Where(d => d.IsError));
+        }
+
+        [Fact]
+        public void Binder_DelegateGeneric_InVariantInReturn_PositionError()
+        {
+            // 对齐 C# CS1962：`in T` 不得出现在协变（返回）位置
+            var code = @"using System
+delegate Transform<in T>(x: T): T
+function Main(): i32 { return 0 }";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.Message.Contains("in 逆变类型参数") && d.Message.Contains("CS1962"));
+        }
+
+        [Fact]
+        public void Binder_DelegateGeneric_OutVariantInParameter_PositionError()
+        {
+            // 对齐 C# CS1961：`out T` 不得出现在逆变（参数）位置
+            var code = @"using System
+delegate Transform<out T>(x: T): T
+function Main(): i32 { return 0 }";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.Message.Contains("out 协变类型参数") && d.Message.Contains("CS1961"));
+        }
+
+        [Fact]
+        public void Binder_LambdaMethodTypeParameter_Variance_Annotation_Diagnosed()
+        {
+            // 类/方法类型参数不支持型变（仅 delegate/接口）
+            var code = @"using System
+class Box<in T>
+{
+}
+function Main(): i32 { return 0 }";
+            var result = Evaluate(code);
+            Assert.Contains(result.Diagnostics, d => d.Message.Contains("型变注解"));
+        }
     }
 }

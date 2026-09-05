@@ -63,6 +63,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 SyntaxKind.GlobalStatement => BuildGlobalStatement(syntaxTree, position),
                 SyntaxKind.ConditionalExpression => BuildConditionalExpression(syntaxTree, position),
                 SyntaxKind.TypeParameterList => BuildTypeParameterList(syntaxTree, position),
+                SyntaxKind.TypeParameter => BuildTypeParameter(syntaxTree, position),
                 SyntaxKind.ClassFieldDeclaration => BuildClassFieldDeclaration(syntaxTree, position),
                 SyntaxKind.ArrayTypeClause => BuildArrayTypeClause(syntaxTree, position),
                 SyntaxKind.FunctionType => BuildFunctionType(syntaxTree, position),
@@ -669,7 +670,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         {
             var lessThanToken = (SyntaxToken)_green.GetSlot(0)!.CreateTypedRed(syntaxTree, position);
             var parametersPosition = position + _green.GetSlot(0)!.Width;
-            var parameters = BuildSlotArray<SyntaxToken>(syntaxTree, parametersPosition, 1, _green.SlotCount - 2);
+            var parameters = BuildSlotArray<TypeParameterSyntax>(syntaxTree, parametersPosition, 1, _green.SlotCount - 2);
             var greaterPosition = parametersPosition;
             for (var i = 1; i < _green.SlotCount - 1; i++)
             {
@@ -678,6 +679,21 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
             var greaterThanToken = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, greaterPosition);
             return new TypeParameterListSyntax(syntaxTree, lessThanToken, parameters, greaterThanToken);
+        }
+
+        private SyntaxNode BuildTypeParameter(SyntaxTree syntaxTree, int position)
+        {
+            SyntaxToken? varianceKeyword = null;
+            var slot = 0;
+            if (_green.GetSlot(0)!.Kind is SyntaxKind.InKeyword or SyntaxKind.OutKeyword)
+            {
+                varianceKeyword = (SyntaxToken)_green.GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(0)!.Width;
+                slot++;
+            }
+
+            var identifier = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            return new TypeParameterSyntax(syntaxTree, varianceKeyword, identifier);
         }
 
         private SyntaxNode BuildClassFieldDeclaration(SyntaxTree syntaxTree, int position)
@@ -830,6 +846,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 slot++;
             }
 
+            // 6e-M22 delegate 真实类型化：类型参数列表槽（identifier 与 openParen 之间，两形态统一源序）
+            TypeParameterListSyntax? typeParameters = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.TypeParameterList)
+            {
+                typeParameters = (TypeParameterListSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
             var openParenToken = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             position += _green.GetSlot(slot)!.Width;
             slot++;
@@ -860,7 +885,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
 
             var parameters = new SeparatedSyntaxList<ParameterSyntax>(parametersBuilder.ToImmutable());
-            return new DelegateDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), delegateKeyword, returnType, identifier, openParenToken, parameters, closeParenToken, semicolonToken);
+            return new DelegateDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), delegateKeyword, returnType, identifier, typeParameters, openParenToken, parameters, closeParenToken, semicolonToken);
         }
 
         private SyntaxNode BuildEventDeclaration(SyntaxTree syntaxTree, int position)
