@@ -8,6 +8,14 @@
 
 ## 未发布（2026-09-06）
 
+### 自举 IO 底层原语收口 + System.IO 门面化前期（P1/P2/P3）
+- `ReadAllBytes` / `WriteAllBytes`（二进制全读写）三后端落地：native `_fileBuffer` `_wfopen/fread×2 计长+回零重读 / fwrite`，fail→空数组；`RuntimeIoSyscallThreeBackendTests` 覆盖往返。
+- 新增 UTF-8↔UTF-16 原语 `StringFromBytes` / `StringToBytes`（三后端；native 经 MultiByteToWideChar 与手写代理对编码），顺带修复 IL 调用 facade receiver 压栈序缺陷。
+- `LaunchProcess` 由 2 参升 3 参（`workdir`），native 用 `SetCurrentDirectoryW` 临时切换 + `_wsystem` + 恢复；既有 LaunchProcessTests 迁移。
+- FacadeTargets 扩列 `System.IO.{File,Directory,FileInfo,DirectoryInfo,FileStream,StreamReader,StreamWriter}` 与 `System.Diagnostics.{Process,ProcessStartInfo}`（可口供 IL facade 直连 BCL）；`System.IO.File` 转 `facade class`，System.Core.coa 重编入库。
+- 全量回归 **41879** 绿（1 Skip：native 子进程相对 cwd 落点待核）。
+- 已知边界：`.coa` 序列化门禁仍为 6b 后置——带属性实例类 / 含 body 静态类不可入库，`System.IO`/`System.Diagnostics` 库本轮撤回，后续作为「流式库 + Process 完整状态机」前置项（见 docs-dev/plan/自举缺口分析.md）。
+
 ### 项目格式重构（INI → SDK-style XML，2026-09-06）
 - `.cocproj`/`.cscproj` → 统一 `.coproj`；`.cosln` 与 `.coproj.user` 一并 XML 化（`<Solution Version="1">` / `<Project Version="1">`）；旧 INI 解析器移除。
 - SDK-style 结构：5 组 `PropertyGroup Label`（Language / Assembly / Target / Output / Build）+ `ItemGroup`（Source / Reference / Import / Content）+ 组级 `Condition`（最小子集；默认值守卫 `== '` 惯用法）。
