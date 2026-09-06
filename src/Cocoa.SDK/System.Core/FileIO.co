@@ -4,7 +4,7 @@
 
 namespace System.IO
 {
-    class File
+    facade class File
     {
         /// <summary>读全文（UTF-8）。</summary>
         syscall function ReadAllText(path: string): string

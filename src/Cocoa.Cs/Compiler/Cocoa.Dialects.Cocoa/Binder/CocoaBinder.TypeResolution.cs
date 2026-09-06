@@ -227,6 +227,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             ["System.Object"] = null,
             ["System.Type"] = null,
             ["System.Exception"] = null,
+            ["System.IO.File"] = null,
+            ["System.IO.Directory"] = null,
+            ["System.IO.FileInfo"] = null,
+            ["System.IO.DirectoryInfo"] = null,
+            ["System.IO.FileStream"] = null,
+            ["System.IO.StreamReader"] = null,
+            ["System.IO.StreamWriter"] = null,
+            ["System.Diagnostics.Process"] = null,
+            ["System.Diagnostics.ProcessStartInfo"] = null,
         };
 
         /// <summary>6e-M19 M2-b：facade 静态常量表（i32.MaxValue 等，编译期折叠为字面量）。</summary>
