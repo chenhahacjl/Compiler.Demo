@@ -145,7 +145,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BuiltinKind.FileClose:
                 {
                     // 低层句柄原语仅供 native / Evaluator SDK body；IL 走 System.IO.FileStream facade 直连 BCL。
-                    throw new Exception("Runtime file-handle primitive should not reach IL: use System.IO.FileStream facade.");
+                    // 模块（System.Core.Managed.dll）整体编译时这些方法体仍须可发射——桩成 NotSupportedException，杜绝实际调用。
+                    var ctor = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>());
+                    if (ctor == null) throw new Exception("System.NotSupportedException..ctor() not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Newobj"), ctor);
+                    il.Emit(IlOpCodeTable.Get("Throw"));
+                    break;
                 }
                 case BuiltinKind.FileExists:
                 {

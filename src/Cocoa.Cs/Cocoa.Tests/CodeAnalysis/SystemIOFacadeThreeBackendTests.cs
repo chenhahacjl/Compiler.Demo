@@ -39,7 +39,7 @@ function Main(): i32
     System.Console.WriteLine(buf[0] == 98)
     System.Console.WriteLine(ms.CanRead && ms.CanSeek)
     let p = Path.Combine(""a"", ""b.txt"")
-    System.Console.WriteLine(p == ""a/b.txt"")
+    System.Console.WriteLine(p)
     System.Console.WriteLine(Path.GetFileName(p) == ""b.txt"")
     System.Console.WriteLine(Path.GetExtension(p) == "".txt"")
     System.Console.WriteLine(Path.GetFileNameWithoutExtension(p) == ""b"")
@@ -47,6 +47,8 @@ function Main(): i32
 }";
 
         private const string Expected = "True\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\nTrue\n";
+
+        private static string ExpectedForCombine => "True\nTrue\nTrue\nTrue\n" + Path.Combine("a", "b.txt") + "\nTrue\nTrue\nTrue\n";
 
         [Fact]
         public void Evaluator_SystemIO()
@@ -60,7 +62,7 @@ function Main(): i32
                 var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
                 Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
                 var actual = writer.ToString().Replace("\r\n", "\n");
-                Assert.True(actual == Expected, "DIAG:\n" + string.Join("\n", result.Diagnostics.Select(d => d.Message)) + "\nGOT:\n" + actual);
+                Assert.True(actual == ExpectedForCombine, "DIAG:\n" + string.Join("\n", result.Diagnostics.Select(d => d.Message)) + "\nGOT:\n" + actual);
             }
             finally
             {
@@ -87,7 +89,7 @@ function Main(): i32
             outputTask.Wait();
             var stdout = Encoding.UTF8.GetString(output.ToArray()).Replace("\r\n", "\n").Replace("\r", "\n");
             Assert.Equal(0, process.ExitCode);
-            Assert.Equal(Expected, stdout);
+            Assert.Equal(ExpectedForCombine, stdout);
         }
 
         [Theory]
@@ -103,7 +105,7 @@ function Main(): i32
             var diagnostics = compilation.EmitNative("iosdk", exePath, platform);
             Assert.Empty(string.Join("\n", diagnostics));
             var stdout = NativeEmitTests.Run(exePath);
-            Assert.Equal(Expected, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
+            Assert.Equal(ExpectedForCombine, stdout.Replace("\r\n", "\n").Replace("\r", "\n"));
         }
     }
 }

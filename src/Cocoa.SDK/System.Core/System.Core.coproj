@@ -13,5 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Source Include="*.co" />
+    <Source Include="IO/*.co" />
+    <Source Include="Collections/*.co" />
   </ItemGroup>
 </Project>

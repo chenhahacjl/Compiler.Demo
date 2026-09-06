@@ -24,7 +24,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
         private static string RepoRoot()
         {
             var dir = AppContext.BaseDirectory;
-            while (dir != null && !File.Exists(Path.Combine(dir, "src", "Cocoa.SDK", "System.Collections", "List.co")))
+            while (dir != null && !File.Exists(Path.Combine(dir, "src", "Cocoa.SDK", "System.Core", "Collections", "List.co")))
             {
                 dir = Path.GetDirectoryName(dir);
             }
@@ -117,7 +117,7 @@ function Main()
             var hashes = new string[3];
             for (var i = 0; i < hashes.Length; i++)
             {
-                var syntaxTrees = new[] { ParseSdkFile("System.Collections/Enumerable.co"), ParseSdkFile("System.Core/Exception.co"), Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(Source) };
+                var syntaxTrees = new[] { ParseSdkFile("System.Core/Collections/Enumerable.co"), ParseSdkFile("System.Core/Exception.co"), Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(Source) };
                 var compilation = Cocoa.CodeAnalysis.Compilation.Create("Main", References, syntaxTrees);
                 var exePath = Path.Combine(Path.GetTempPath(), "cocoa-det-tests", $"det{i}.dll");
                 Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
@@ -150,7 +150,7 @@ function Main()
         {
             for (var i = 0; i < 5; i++)
             {
-                var syntaxTrees = new[] { ParseSdkFile("System.Collections/Enumerable.co"), ParseSdkFile("System.Core/Exception.co"), Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(UncaughtSource) };
+                var syntaxTrees = new[] { ParseSdkFile("System.Core/Collections/Enumerable.co"), ParseSdkFile("System.Core/Exception.co"), Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(UncaughtSource) };
                 var compilation = Cocoa.CodeAnalysis.Compilation.Create("Main", References, syntaxTrees);
                 var exePath = Path.Combine(Path.GetTempPath(), "cocoa-det-tests", $"uncaught-{Environment.ProcessId}-{i}.exe");
                 Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);

@@ -1,0 +1,217 @@
+// Cocoa 系统标准库 · System.IO 模块
+// Path：静态容器（IL 直链 BCL System.IO.Path；native/Evaluator 走本体且语义逐字对齐 BCL，
+// 以 .NET 源码/黑盒行为为 spec，Windows 分支）。PathParityTests 逐输入对拍锁定。
+
+using System
+
+namespace System.IO
+{
+    public facade class Path
+    {
+        private static function IsSeparator(c: char): bool
+        {
+            return c == '/' || c == '\\'
+        }
+
+        public static function Combine(a: string, b: string): string
+        {
+            if String.IsNullOrEmpty(a)
+            {
+                return b
+            }
+            if String.IsNullOrEmpty(b)
+            {
+                return a
+            }
+
+            var bchars = b.ToCharArray()
+            if IsSeparator(bchars[0])
+            {
+                return b
+            }
+
+// 移除 a 尾部分隔符检查：若 a 以分隔符结尾，BCL 直接拼接 a+b（保留原分隔风格，不再 ++）
+            var achars = a.ToCharArray()
+            if IsSeparator(achars[a.Length - 1])
+            {
+                return a + b
+            }
+            return a + "\\" + b
+        }
+
+        private static function TrimTrailingSeparators(text: string): string
+        {
+            var chars = text.ToCharArray()
+            var end = text.Length - 1
+            while end >= 0
+            {
+                if !IsSeparator(chars[end])
+                {
+                    break
+                }
+                end = end - 1
+            }
+            if end < 0
+            {
+                return ""
+            }
+            return text.substring(0, end + 1)
+        }
+
+        private static function LastIndexOfSeparator(text: string): i32
+        {
+            var chars = text.ToCharArray()
+            var i = text.Length - 1
+            while i >= 0
+            {
+                if IsSeparator(chars[i])
+                {
+                    return i
+                }
+                i = i - 1
+            }
+            return -1
+        }
+
+        private static function NormalizeSeps(text: string): string
+        {
+            var chars = text.ToCharArray()
+            var i = 0
+            while i < chars.Length
+            {
+                if IsSeparator(chars[i])
+                {
+                    chars[i] = '\\'
+                }
+                i = i + 1
+            }
+            return Runtime.StringFromChars(chars)
+        }
+
+        public static function GetFileName(path: string): string
+        {
+            if String.IsNullOrEmpty(path)
+            {
+                return path
+            }
+            // 尾部为分隔符 → BCL 视为目录路径，返回空
+            var last = path.ToCharArray()[path.Length - 1]
+            if IsSeparator(last)
+            {
+                return ""
+            }
+            var sep = LastIndexOfSeparator(path)
+            if sep == -1
+            {
+                return path
+            }
+            return path.substring(sep + 1, path.Length - sep - 1)
+        }
+
+        private static function GetFileNameOrNull(path: string): string
+        {
+            if String.IsNullOrEmpty(path)
+            {
+                return ""
+            }
+            return GetFileName(path)
+        }
+
+        public static function GetExtension(path: string): string
+        {
+            if String.IsNullOrEmpty(path)
+            {
+                return path
+            }
+            var name = GetFileNameOrNull(path)
+            if name.Length == 0
+            {
+                return ""
+            }
+            var chars = name.ToCharArray()
+            var dot = name.Length - 1
+            while dot >= 0
+            {
+                if chars[dot] == '.'
+                {
+                    if dot == 0
+                    {
+                        return name
+                    }
+                    if dot == name.Length - 1
+                    {
+                        return ""
+                    }
+                    return name.substring(dot, name.Length - dot)
+                }
+                dot = dot - 1
+            }
+            return ""
+        }
+
+        public static function GetFileNameWithoutExtension(path: string): string
+        {
+            if String.IsNullOrEmpty(path)
+            {
+                return path
+            }
+            var name = GetFileNameOrNull(path)
+            if name.Length == 0
+            {
+                return name
+            }
+            var chars = name.ToCharArray()
+            var dot = name.Length - 1
+            while dot >= 0
+            {
+                if chars[dot] == '.'
+                {
+                    if dot == 0
+                    {
+                        return ""
+                    }
+                    if dot == name.Length - 1
+                    {
+                        return name
+                    }
+                    return name.substring(0, dot)
+                }
+                dot = dot - 1
+            }
+            return name
+        }
+
+public static function GetDirectoryName(path: string): string
+        {
+            if String.IsNullOrEmpty(path)
+            {
+                return ""
+            }
+            var trimmed = TrimTrailingSeparators(path)
+            if trimmed.Length == 0
+            {
+                return ""
+            }
+            // 原路径以分隔符结尾（目录路径）：BCL 返回整个修剪后路径（a/b/ → a\b）
+            var last = path.ToCharArray()[path.Length - 1]
+            if IsSeparator(last)
+            {
+                if LastIndexOfSeparator(trimmed) >= 0
+                {
+                    return NormalizeSeps(trimmed)
+                }
+                return ""
+            }
+            var sep = LastIndexOfSeparator(trimmed)
+            if sep == -1
+            {
+                return ""
+            }
+            if sep == 0
+            {
+                return "\\"
+            }
+            return NormalizeSeps(trimmed.substring(0, sep))
+        }
+    }
+}

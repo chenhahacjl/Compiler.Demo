@@ -16,7 +16,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
         private static string RepoRoot()
         {
             var dir = AppContext.BaseDirectory;
-            while (dir != null && !File.Exists(Path.Combine(dir, "src", "Cocoa.SDK", "System.Collections", "List.co")))
+            while (dir != null && !File.Exists(Path.Combine(dir, "src", "Cocoa.SDK", "System.Core", "Collections", "List.co")))
             {
                 dir = Path.GetDirectoryName(dir);
             }
@@ -38,7 +38,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
 
         private static (int ExitCode, string Stdout) EmitAndRunCore(string source, string name, string[] coFiles, bool allowNonZero)
         {
-            var collectionDir = Path.Combine(RepoRoot(), "src", "Cocoa.SDK", "System.Collections");
+            var collectionDir = Path.Combine(RepoRoot(), "src", "Cocoa.SDK", "System.Core", "Collections");
             var syntaxTrees = new List<Cocoa.CodeAnalysis.Syntax.SyntaxTree>
             {
                 Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source),

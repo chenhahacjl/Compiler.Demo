@@ -231,6 +231,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             ["System.IO.Directory"] = null,
             ["System.IO.FileInfo"] = null,
             ["System.IO.DirectoryInfo"] = null,
+            ["System.IO.Path"] = null,
             ["System.IO.FileStream"] = null,
             ["System.IO.StreamReader"] = null,
             ["System.IO.StreamWriter"] = null,

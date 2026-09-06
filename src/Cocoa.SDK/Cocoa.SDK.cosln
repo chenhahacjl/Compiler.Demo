@@ -1,5 +1,5 @@
 <Solution Version="1">
+  <!-- 单 Core 库（对齐 .NET System.Private.CoreLib 单工程结构）：System / System.IO / System.Collections.Generic 等
+       全部子命名空间收纳本模块内（子目录按命名空间组织）。 -->
   <Project Include="System.Core/System.Core.coproj" />
-  <Project Include="System.Collections/System.Collections.coproj" />
-  <Project Include="System.IO/System.IO.coproj" />
 </Solution>
