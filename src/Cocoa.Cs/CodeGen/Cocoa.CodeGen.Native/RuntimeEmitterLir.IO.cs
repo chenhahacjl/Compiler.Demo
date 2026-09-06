@@ -487,7 +487,6 @@ namespace Cocoa.CodeGen.Native
                 AddI(sIdx, sIdx, 1);
                 Jmp(innerLoop);
                 Mark(innerDone);
-                AddI(off = off); // no-op
                 Jmp(copyLoop);
                 Mark(copyDone);
 

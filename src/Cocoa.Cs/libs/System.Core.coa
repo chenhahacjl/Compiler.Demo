@@ -11,12 +11,12 @@
     (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception] fields:0 events:0 props:1
       (prop Message @string true false public false)
     )
-    (cls System.IO.File internal iface:false ifaces:0 methods:5 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] fields:0 events:0)
+    (cls System.IO.File internal iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
     (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[@i16] CompareTo[@i16,@i16] Parse[@string] Equals[@i16,@i16] GetHashCode[@i16] ToString[@i16,@string] TryParse[@string,out:@i16] fields:0 events:0)
     (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
     (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
     (cls System.Math internal iface:false ifaces:0 methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
-    (cls System.Runtime internal iface:false ifaces:0 methods:24 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Random[@i32] Sleep[@i32] TickCount Exit[@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Beep[@i32,@i32] Int32ToString[@i32] Int64ToString[@i64] DoubleToString[@f64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] StringFromChars[@char[]] Sha256Hash[@u8[]] LaunchProcess[@string,@string] fields:0 events:0)
+    (cls System.Runtime internal iface:false ifaces:0 methods:26 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Random[@i32] Sleep[@i32] TickCount Exit[@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Beep[@i32,@i32] Int32ToString[@i32] Int64ToString[@i64] DoubleToString[@f64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] StringFromChars[@char[]] Sha256Hash[@u8[]] LaunchProcess[@string,@string,@string] StringFromBytes[@u8[]] StringToBytes[@string] fields:0 events:0)
     (cls System.SByte public iface:false ifaces:0 methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8] fields:0 events:0)
     (cls System.Single public iface:false ifaces:0 methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32] fields:0 events:0)
     (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]] fields:0 events:0)
@@ -348,6 +348,13 @@
     (fn System.Core!System.IO.File.Delete[@string] name:Delete ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.IO.File.Delete[@string]/path path @string 0 - -)
     )
+    (fn System.Core!System.IO.File.ReadAllBytes[@string] name:ReadAllBytes ret:@u8[] ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllBytes entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.File.ReadAllBytes[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.File.WriteAllBytes[@string,@u8[]] name:WriteAllBytes ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllBytes entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/path path @string 0 - -)
+      (par System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/data data @u8[] 1 - -)
+    )
     (fn System.Core!System.Int16.ToString[@i16] name:ToString ret:@string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Int16.ToString[@i16]/this this @i16 0 - this)
     )
@@ -563,9 +570,16 @@
     (fn System.Core!System.Runtime.Sha256Hash[@u8[]] name:Sha256Hash ret:@u8[] ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sha256Hash entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Sha256Hash[@u8[]]/data data @u8[] 0 - -)
     )
-    (fn System.Core!System.Runtime.LaunchProcess[@string,@string] name:LaunchProcess ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:LaunchProcess entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.Runtime.LaunchProcess[@string,@string]/path path @string 0 - -)
-      (par System.Core!System.Runtime.LaunchProcess[@string,@string]/args args @string 1 - -)
+    (fn System.Core!System.Runtime.LaunchProcess[@string,@string,@string] name:LaunchProcess ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:LaunchProcess entry:- charset:- static:true ctor:false acc:false params:3
+      (par System.Core!System.Runtime.LaunchProcess[@string,@string,@string]/path path @string 0 - -)
+      (par System.Core!System.Runtime.LaunchProcess[@string,@string,@string]/args args @string 1 - -)
+      (par System.Core!System.Runtime.LaunchProcess[@string,@string,@string]/workdir workdir @string 2 - -)
+    )
+    (fn System.Core!System.Runtime.StringFromBytes[@u8[]] name:StringFromBytes ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromBytes entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Runtime.StringFromBytes[@u8[]]/data data @u8[] 0 - -)
+    )
+    (fn System.Core!System.Runtime.StringToBytes[@string] name:StringToBytes ret:@u8[] ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringToBytes entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Runtime.StringToBytes[@string]/text text @string 0 - -)
     )
     (fn System.Core!System.SByte.ToString[@i8] name:ToString ret:@string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.SByte.ToString[@i8]/this this @i8 0 - this)
@@ -9543,4 +9557,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:3ba6b6a737f15497b7b59badd41fde4e5aa1b91744b3c50e757668e0f7b778b3)
+(checksum sha256:79cbe177098fac5785ec68bd69ee1375b654e1a4dcc76dbae406ec82e4f0e7a0)

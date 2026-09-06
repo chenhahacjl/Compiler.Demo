@@ -265,6 +265,19 @@ namespace Cocoa.CodeGen.Interpreter
                 case BuiltinKind.FileWriteAllText:
                     System.IO.File.WriteAllText((string)EvaluateExpression(arguments[0])!, (string)EvaluateExpression(arguments[1])!);
                     return null;
+                case BuiltinKind.StringFromBytes:
+                    return System.Text.Encoding.UTF8.GetString(ToByteArray(EvaluateExpression(arguments[0])));
+                case BuiltinKind.StringToBytes:
+                {
+                    var encoded = System.Text.Encoding.UTF8.GetBytes((string)EvaluateExpression(arguments[0])!);
+                    var boxedEncoded = new object[encoded.Length];
+                    for (var ei = 0; ei < encoded.Length; ei++)
+                    {
+                        boxedEncoded[ei] = encoded[ei];
+                    }
+
+                    return boxedEncoded;
+                }
                 case BuiltinKind.FileReadAllBytes:
                 {
                     var blob = System.IO.File.ReadAllBytes((string)EvaluateExpression(arguments[0])!);

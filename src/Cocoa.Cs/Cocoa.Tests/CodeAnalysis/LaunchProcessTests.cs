@@ -25,7 +25,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 function Main(): i32
 {
-    var exitCode = Runtime.LaunchProcess(""cmd.exe"", ""/c echo hello"")
+    var exitCode = Runtime.LaunchProcess(""cmd.exe"", ""/c echo hello"", """")
     Runtime.WriteLine(exitCode)
     return 0
 }";

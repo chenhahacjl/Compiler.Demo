@@ -43,6 +43,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new(BuiltinKind.StringFromChars, BuiltinBackend.All, null),
             new(BuiltinKind.FileReadAllText, BuiltinBackend.All, null),
             new(BuiltinKind.FileWriteAllText, BuiltinBackend.All, null),
+            new(BuiltinKind.StringFromBytes, BuiltinBackend.All, null),
+            new(BuiltinKind.StringToBytes, BuiltinBackend.All, null),
             new(BuiltinKind.FileReadAllBytes, BuiltinBackend.All, null),
             new(BuiltinKind.FileWriteAllBytes, BuiltinBackend.All, null),
             new(BuiltinKind.FileExists, BuiltinBackend.All, null),

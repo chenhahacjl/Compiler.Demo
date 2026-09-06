@@ -34,6 +34,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
+            if (function.BuiltinKind is BuiltinKind.StringFromBytes or BuiltinKind.StringToBytes)
+            {
+                // receiver（Encoding.UTF8）必须先于参数压栈：stack = [utf8, arg]
+                var getUtf8 = _framework.ResolveMethod("System.Text.Encoding", "get_UTF8", Array.Empty<string>());
+                if (getUtf8 == null) throw new Exception("System.Text.Encoding.UTF8 not found in framework references");
+                il.Emit(IlOpCodeTable.Get("Call"), getUtf8);
+            }
+
             foreach (var argument in arguments)
             {
                 EmitExpression(il, argument);
@@ -91,6 +99,20 @@ namespace Cocoa.CodeGen.Managed.Writer
                     var m = _framework.ResolveMethod("System.IO.File", "ReadAllText", new[] { "System.String" });
                     if (m == null) throw new Exception("System.IO.File.ReadAllText not found in framework references");
                     il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.StringFromBytes:
+                {
+                    var getString = _framework.ResolveMethod("System.Text.Encoding", "GetString", new[] { "System.Byte[]" });
+                    if (getString == null) throw new Exception("System.Text.Encoding.GetString(byte[]) not found");
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), getString);
+                    break;
+                }
+                case BuiltinKind.StringToBytes:
+                {
+                    var getBytes = _framework.ResolveMethod("System.Text.Encoding", "GetBytes", new[] { "System.String" });
+                    if (getBytes == null) throw new Exception("System.Text.Encoding.GetBytes(string) not found");
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), getBytes);
                     break;
                 }
                 case BuiltinKind.FileWriteAllText:

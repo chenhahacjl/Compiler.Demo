@@ -25,6 +25,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         // ---- 加密（6e-G7 ⑤a）----
         Sha256Hash,
 
+        // ---- 解密/编码（自举 IO）----
+        StringFromBytes,
+        StringToBytes,
+
         // ---- 文件 IO（6e-G7 ④）----
         FileReadAllText,
         FileWriteAllText,
@@ -80,6 +84,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.Beep, "Beep", TypeSymbol.Void, new[] { ("frequency", TypeSymbol.Int32), ("duration", TypeSymbol.Int32) }),
             new BuiltinSpec(BuiltinKind.DoubleToString, "DoubleToString", TypeSymbol.String, new[] { ("value", TypeSymbol.Double) }),
             new BuiltinSpec(BuiltinKind.StringFromChars, "StringFromChars", TypeSymbol.String, new[] { ("chars", TypeSymbol.ArrayOf(TypeSymbol.Char)) }),
+            new BuiltinSpec(BuiltinKind.StringFromBytes, "StringFromBytes", TypeSymbol.String, new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
+            new BuiltinSpec(BuiltinKind.StringToBytes, "StringToBytes", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("text", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileReadAllText, "ReadAllText", TypeSymbol.String, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileWriteAllText, "WriteAllText", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("text", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileReadAllBytes, "ReadAllBytes", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("path", TypeSymbol.String) }),
@@ -153,6 +159,8 @@ namespace Cocoa.CodeAnalysis.Symbols
 
         // ---- 文件 IO / 环境（6e-G7 ④）----
         public static readonly FunctionSymbol FileReadAllText = Create(BuiltinKind.FileReadAllText);
+        public static readonly FunctionSymbol StringFromBytes = Create(BuiltinKind.StringFromBytes);
+        public static readonly FunctionSymbol StringToBytes = Create(BuiltinKind.StringToBytes);
         public static readonly FunctionSymbol FileWriteAllText = Create(BuiltinKind.FileWriteAllText);
         public static readonly FunctionSymbol FileReadAllBytes = Create(BuiltinKind.FileReadAllBytes);
         public static readonly FunctionSymbol FileWriteAllBytes = Create(BuiltinKind.FileWriteAllBytes);
@@ -199,6 +207,8 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.DoubleToString => DoubleToString,
                 BuiltinKind.StringFromChars => StringFromChars,
                 BuiltinKind.FileReadAllText => FileReadAllText,
+                BuiltinKind.StringFromBytes => StringFromBytes,
+                BuiltinKind.StringToBytes => StringToBytes,
                 BuiltinKind.FileWriteAllText => FileWriteAllText,
                 BuiltinKind.FileReadAllBytes => FileReadAllBytes,
                 BuiltinKind.FileWriteAllBytes => FileWriteAllBytes,

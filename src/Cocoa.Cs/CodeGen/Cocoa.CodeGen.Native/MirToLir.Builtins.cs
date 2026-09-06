@@ -109,6 +109,22 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileReadAllText"), LirOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.StringFromBytes:
+                {
+                    var data = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(LirType.Addr);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(data)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("StringFromBytes"), LirOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.StringToBytes:
+                {
+                    var text = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(LirType.Addr);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(text)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("StringToBytes"), LirOperand.Constant(0)));
+                    return result;
+                }
                 case BuiltinKind.FileWriteAllText:
                 {
                     var path = EmitExpression(arguments[0]);
