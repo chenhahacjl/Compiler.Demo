@@ -196,6 +196,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
+                case BuiltinKind.CreateDirectory:
+                {
+                    var m = _framework.ResolveMethod("System.IO.Directory", "CreateDirectory", new[] { "System.String" });
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    il.Emit(IlOpCodeTable.Get("Pop")); // BCL 返回 DirectoryInfo；builtin 为 void，弹出保持栈平衡
+                    break;
+                }
                 case BuiltinKind.SetCurrentDirectory:
                 {
                     var m = _framework.ResolveMethod("System.Environment", "SetCurrentDirectory", new[] { "System.String" });
@@ -899,6 +907,10 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                         var callOp = !isInstance || (receiver != null && IsValueTypeSymbol(receiver.Type)) ? "Call" : "Callvirt";
                         il.Emit(IlOpCodeTable.Get(callOp), methodRef);
+                        if (FacadeBclReturnsValueWhileVoid(cc, node.Method))
+                        {
+                            il.Emit(IlOpCodeTable.Get("Pop"));
+                        }
                         return;
                     }
                     // 未找到 BCL 对应（Cocoa 独有成员）→ 回退下方 Cocoa 体发射

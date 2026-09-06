@@ -380,6 +380,9 @@ namespace Cocoa.CodeGen.Interpreter
                     return null;
                 case BuiltinKind.DirectoryExists:
                     return Directory.Exists((string)EvaluateExpression(arguments[0])!);
+                case BuiltinKind.CreateDirectory:
+                    Directory.CreateDirectory((string)EvaluateExpression(arguments[0])!);
+                    return null;
                 case BuiltinKind.SetCurrentDirectory:
                     Directory.SetCurrentDirectory((string)EvaluateExpression(arguments[0])!);
                     return null;

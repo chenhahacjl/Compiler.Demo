@@ -1,0 +1,24 @@
+// Cocoa 系统标准库 · Core（namespace System.IO）——BCL 存在类型即 facade
+// class Directory —— facade：IL 直连 System.IO.Directory；native/Evaluator 转发 System.Syscall.IOSyscall
+using System.Syscall
+
+namespace System.IO
+{
+    public facade class Directory
+    {
+        public static function Exists(path: string): bool
+        {
+            return IOSyscall.DirectoryExists(path)
+        }
+
+        public static function CreateDirectory(path: string): void
+        {
+            IOSyscall.CreateDirectory(path)
+        }
+
+        public static function GetCurrentDirectory(): string
+        {
+            return EnvironmentSyscall.GetCurrentDirectory()
+        }
+    }
+}

@@ -1,4 +1,4 @@
-namespace System.Syscall
+﻿namespace System.Syscall
 {
     class IOSyscall
     {
@@ -9,5 +9,7 @@ namespace System.Syscall
         syscall function FileRead(h: i64, data: u8[], start: i32, count: i32): i32
         syscall function FileWrite(h: i64, data: u8[], start: i32, count: i32): void
         syscall function FileClose(h: i64): void
+        syscall function DirectoryExists(path: string): bool
+        syscall function CreateDirectory(path: string): void
     }
 }

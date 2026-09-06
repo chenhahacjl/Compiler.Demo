@@ -22,6 +22,7 @@
     (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
     (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
     (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
+    (cls System.IO.Directory public iface:false ifaces:0 methods:3 Exists[@string] CreateDirectory[@string] GetCurrentDirectory fields:0 events:0)
     (cls System.IO.File public iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
     (cls System.IO.FileStream public iface:false ifaces:0 methods:0 fields:1
       (fld _h @i64 private false false) events:0 props:5
@@ -180,7 +181,7 @@
     (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 methods:8 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Sleep[@i32] TickCount Exit[@i32] Beep[@i32,@i32] fields:0 events:0)
     (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
     (cls System.Syscall.FileSyscall internal iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
-    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:7 FileOpen[@string,@i32] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] fields:0 events:0)
+    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:9 FileOpen[@string,@i32] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
     (cls System.Syscall.StringSyscall internal iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
@@ -1005,6 +1006,13 @@
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/s s @string 0 - -)
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/result result @u64 1 out -)
     )
+    (fn System.Core!System.IO.Directory.Exists[@string] name:Exists ret:@bool ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Directory.Exists[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.Directory.CreateDirectory[@string] name:CreateDirectory ret:@void ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Directory.CreateDirectory[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.Directory.GetCurrentDirectory[] name:GetCurrentDirectory ret:@string ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
     (fn System.Core!System.IO.File.ReadAllText[@string] name:ReadAllText ret:@string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.IO.File.ReadAllText[@string]/path path @string 0 - -)
     )
@@ -1420,6 +1428,12 @@
     )
     (fn System.Core!System.Syscall.IOSyscall.FileClose[@i64] name:FileClose ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileClose entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.IOSyscall.FileClose[@i64]/h h @i64 0 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.DirectoryExists[@string] name:DirectoryExists ret:@bool ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:DirectoryExists entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.IOSyscall.DirectoryExists[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.CreateDirectory[@string] name:CreateDirectory ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:CreateDirectory entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.IOSyscall.CreateDirectory[@string]/path path @string 0 - -)
     )
     (fn System.Core!System.Syscall.MathSyscall.Random[@i32] name:Random ret:@i32 ns:- owner:System.Syscall.MathSyscall extern:false dll:- cc:winapi builtin:Random entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.MathSyscall.Random[@i32]/max max @i32 0 - -)
@@ -10343,6 +10357,35 @@
         )
       )
     )
+    (body System.Core!System.IO.Directory.Exists[@string]
+      (block 1
+        (return
+          (membercall @bool DirectoryExists System.Core!System.Syscall.IOSyscall.DirectoryExists[@string] 1
+            (statictype System.Syscall.IOSyscall)
+            (var System.Core!System.IO.Directory.Exists[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Directory.CreateDirectory[@string]
+      (block 1
+        (exprstmt
+          (membercall @void CreateDirectory System.Core!System.Syscall.IOSyscall.CreateDirectory[@string] 1
+            (statictype System.Syscall.IOSyscall)
+            (var System.Core!System.IO.Directory.CreateDirectory[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Directory.GetCurrentDirectory[]
+      (block 1
+        (return
+          (membercall @string GetCurrentDirectory System.Core!System.Syscall.EnvironmentSyscall.GetCurrentDirectory[] 0
+            (statictype System.Syscall.EnvironmentSyscall)
+          )
+        )
+      )
+    )
     (body System.Core!System.IO.File.ReadAllText[@string]
       (block 1
         (return
@@ -15721,4 +15764,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:36eaf539ebf8f8bd5918ccb44917ac0f2b226b5f73b48853229d4bf45a12e73b)
+(checksum sha256:c316850f07e57e2216e5bfb0e5d232b879239b37f7ef4ae319d56624ab91545b)

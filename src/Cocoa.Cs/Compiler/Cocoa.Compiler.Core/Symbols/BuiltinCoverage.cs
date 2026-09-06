@@ -58,6 +58,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             new(BuiltinKind.FileDelete, BuiltinBackend.All, null),
             new(BuiltinKind.FileCopy, BuiltinBackend.All, null),
             new(BuiltinKind.DirectoryExists, BuiltinBackend.All, null),
+            new(BuiltinKind.CreateDirectory, BuiltinBackend.All, null),
             new(BuiltinKind.GetEnvironmentVariable, BuiltinBackend.All, null),
             new(BuiltinKind.GetCurrentDirectory, BuiltinBackend.All, null),
             new(BuiltinKind.SetCurrentDirectory, BuiltinBackend.All, null),

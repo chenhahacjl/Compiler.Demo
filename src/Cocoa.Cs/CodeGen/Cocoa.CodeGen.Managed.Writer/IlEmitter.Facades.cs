@@ -73,11 +73,22 @@ namespace Cocoa.CodeGen.Managed.Writer
         /// codAssemblies 的 Cocoa 体）。泛型 facade 的重定向（直构 MemberRef）见后续实现。
         /// 规则见 docs-dev/对象模型设计.md §5.4。
         /// </summary>
-        private bool IsFacadeRedirect(NamedTypeSymbol classType)
+private bool IsFacadeRedirect(NamedTypeSymbol classType)
         {
             if (classType.IsFacadeClass) return true;
             if (classType is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true) return true;
             return false;
+        }
+
+        /// <summary>
+        /// BCL 方法带回值但 Cocoa facade 声明为 void 时（如 Directory.CreateDirectory 返回 DirectoryInfo），
+        /// IL 直连后须弹栈保持平衡，否则 InvalidProgramException。
+        /// </summary>
+        private bool FacadeBclReturnsValueWhileVoid(NamedTypeSymbol classType, FunctionSymbol method)
+        {
+            if (method.ReturnType != TypeSymbol.Void) return false;
+            var full = FacadeBclFullName(classType);
+            return full == "System.IO.Directory" && method.Name == "CreateDirectory";
         }
 
         /// <summary>facade 类型运行期映射到的 BCL 全名：优先用 FacadeThisType（struct facade 由此提供 BCL 值类型名；

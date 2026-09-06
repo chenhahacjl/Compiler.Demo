@@ -31,7 +31,7 @@ namespace Cocoa.CodeGen.Native
         /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）。</summary>
         private static readonly string[] UcrtImports =
         {
-            "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64", "_wsystem",
+            "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64", "_wsystem", "_wmkdir",
         };
 
         private static readonly string[] BcryptImports =
@@ -252,6 +252,8 @@ namespace Cocoa.CodeGen.Native
                 EmitFileExists();
                 _ = BeginFunctionTyped("DirectoryExists", new[] { 8 }, LirType.Addr);
                 EmitDirectoryExists();
+                _ = BeginFunctionTyped("CreateDirectory", new[] { 8 }, LirType.Addr);
+                EmitCreateDirectory();
                 _ = BeginFunctionTyped("FileDelete", new[] { 8 }, LirType.Addr);
                 EmitFileDelete();
                 _ = BeginFunctionTyped("FileCopy", new[] { 8, 8 }, LirType.Addr, LirType.Addr);

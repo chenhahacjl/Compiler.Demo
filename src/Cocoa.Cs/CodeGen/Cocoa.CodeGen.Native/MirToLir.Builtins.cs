@@ -255,6 +255,13 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("DirectoryExists"), LirOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.CreateDirectory:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("CreateDirectory"), LirOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.GetEnvironmentVariable:
                 {
                     var name = EmitExpression(arguments[0]);

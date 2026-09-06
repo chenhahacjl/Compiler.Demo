@@ -64,6 +64,14 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 4);
             }
 
+            // CreateDirectory(path:8) → void：ucrt _wmkdir（成功 0；已存在/失败均忽略——BCL 幂等）
+            private void EmitCreateDirectory()
+            {
+                var p = WidePtrZ(_args[0]);
+                SysCallDll(null, "ucrtbase.dll", "_wmkdir", 1, true, p);
+                EndFunction(_currentFunction!, 0);
+            }
+
             // FileDelete(path:8) → void
             private void EmitFileDelete()
             {

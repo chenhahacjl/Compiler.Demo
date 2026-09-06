@@ -56,6 +56,11 @@ FileWriteAllBytes,
         // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
         // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
         // `.coa` 序列化经 GetByKindName → SystemObjectMembers.GetByKindName 解析。
+        CreateDirectory,
+
+        // 6e-M19 M2-c：System.Object 内建成员（实例虚四方法 + 静态二方法）。
+        // 不进 _specs 表——由 SystemObjectMembers 自持 spec/单例，避免污染 GetByName 全局名表；
+        // `.coa` 序列化经 GetByKindName → SystemObjectMembers.GetByKindName 解析。
         ObjectToString,
         ObjectGetHashCode,
         ObjectEquals,
@@ -111,6 +116,7 @@ FileWriteAllBytes,
             new BuiltinSpec(BuiltinKind.FileDelete, "Delete", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileCopy, "Copy", TypeSymbol.Void, new[] { ("src", TypeSymbol.String), ("dst", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.DirectoryExists, "DirectoryExists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.CreateDirectory, "CreateDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
             new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String), ("workdir", TypeSymbol.String) }));
@@ -192,6 +198,7 @@ FileWriteAllBytes,
         public static readonly FunctionSymbol FileDelete = Create(BuiltinKind.FileDelete);
         public static readonly FunctionSymbol FileCopy = Create(BuiltinKind.FileCopy);
         public static readonly FunctionSymbol DirectoryExists = Create(BuiltinKind.DirectoryExists);
+        public static readonly FunctionSymbol CreateDirectory = Create(BuiltinKind.CreateDirectory);
         public static readonly FunctionSymbol SetCurrentDirectory = Create(BuiltinKind.SetCurrentDirectory);
         public static readonly FunctionSymbol Sha256Hash = Create(BuiltinKind.Sha256Hash);
         public static readonly FunctionSymbol LaunchProcess = Create(BuiltinKind.LaunchProcess);
@@ -247,6 +254,7 @@ FileWriteAllBytes,
                 BuiltinKind.FileDelete => FileDelete,
                 BuiltinKind.FileCopy => FileCopy,
                 BuiltinKind.DirectoryExists => DirectoryExists,
+                BuiltinKind.CreateDirectory => CreateDirectory,
                 BuiltinKind.SetCurrentDirectory => SetCurrentDirectory,
                 BuiltinKind.Sha256Hash => Sha256Hash,
                 BuiltinKind.LaunchProcess => LaunchProcess,
