@@ -1,0 +1,57 @@
+// System.IO 文本层 · StringReader（整块读入；BCL ReadLine/ReadToEnd 语义对齐
+namespace System.IO
+{
+    public class StringReader
+    {
+        private _rest: string
+
+        public constructor(text: string)
+        {
+            _rest = text
+        }
+
+        private static function TrimTrailingCR(line: string): string
+        {
+            var chars = line.ToCharArray()
+            if chars.Length > 0
+            {
+                var last = chars[chars.Length - 1]
+                if last == '\r'
+                {
+                    return line.substring(0, chars.Length - 1)
+                }
+            }
+            return line
+        }
+
+        public function ReadLine(): string
+        {
+            var text = _rest
+            if String.IsNullOrEmpty(text)
+            {
+                return text
+            }
+            var nl = text.IndexOf('\n')
+            if nl == -1
+            {
+                _rest = ""
+                return text
+            }
+            var line = TrimTrailingCR(text.substring(0, nl))
+            _rest = text.substring(nl + 1, text.Length - nl - 1)
+            return line
+        }
+
+        public function ReadToEnd(): string
+        {
+            var rest = _rest
+            _rest = ""
+            return rest
+        }
+
+        public function Close(): void
+        {
+            _rest = ""
+        }
+    }
+}

@@ -49,6 +49,20 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
+    (cls System.IO.StreamReader public iface:false ifaces:0 methods:2 DecodeSlice[@u8[],@i32] TrimTrailingCR[@string] fields:3
+      (fld _stream System.IO.MemoryStream private false false)
+      (fld _cache @string private false false)
+      (fld _eof @bool private false false) events:0
+    )
+    (cls System.IO.StreamWriter public iface:false ifaces:0 methods:1 NewLine fields:1
+      (fld _stream System.IO.MemoryStream private false false) events:0
+    )
+    (cls System.IO.StringReader public iface:false ifaces:0 methods:1 TrimTrailingCR[@string] fields:1
+      (fld _rest @string private false false) events:0
+    )
+    (cls System.IO.StringWriter public iface:false ifaces:0 methods:1 NewLine fields:1
+      (fld _value @string private false false) events:0
+    )
     (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
     )
@@ -1170,6 +1184,58 @@
     (fn System.Core!System.IO.MemoryStream.Close[] name:Close ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.IO.MemoryStream.Dispose[] name:Dispose ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.IO.MemoryStream.ToArray[] name:ToArray ret:@u8[] ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream] name:StreamReader ret:@void ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream]/stream stream System.IO.MemoryStream 0 - -)
+    )
+    (fn System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32] name:DecodeSlice ret:@string ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/bytes bytes @u8[] 0 - -)
+      (par System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/n n @i32 1 - -)
+    )
+    (fn System.Core!System.IO.StreamReader.PullAll[] name:PullAll ret:@void ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamReader.TrimTrailingCR[@string] name:TrimTrailingCR ret:@string ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/line line @string 0 - -)
+    )
+    (fn System.Core!System.IO.StreamReader.ReadLine[] name:ReadLine ret:@string ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamReader.ReadToEnd[] name:ReadToEnd ret:@string ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamReader.Close[] name:Close ret:@void ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamWriter.NewLine[] name:NewLine ret:@string ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamWriter.StreamWriter[System.IO.MemoryStream] name:StreamWriter ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.IO.StreamWriter.StreamWriter[System.IO.MemoryStream]/stream stream System.IO.MemoryStream 0 - -)
+    )
+    (fn System.Core!System.IO.StreamWriter.Write[@string] name:Write ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.IO.StreamWriter.Write[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.StreamWriter.WriteChar[@char] name:WriteChar ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.IO.StreamWriter.WriteChar[@char]/c c @char 0 - -)
+    )
+    (fn System.Core!System.IO.StreamWriter.WriteLine[@string] name:WriteLine ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.IO.StreamWriter.WriteLine[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.StreamWriter.WriteLineEmpty[] name:WriteLineEmpty ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamWriter.Flush[] name:Flush ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StreamWriter.Close[] name:Close ret:@void ns:- owner:System.IO.StreamWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StringReader.StringReader[@string] name:StringReader ret:@void ns:- owner:System.IO.StringReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.IO.StringReader.StringReader[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.StringReader.TrimTrailingCR[@string] name:TrimTrailingCR ret:@string ns:- owner:System.IO.StringReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.StringReader.TrimTrailingCR[@string]/line line @string 0 - -)
+    )
+    (fn System.Core!System.IO.StringReader.ReadLine[] name:ReadLine ret:@string ns:- owner:System.IO.StringReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StringReader.ReadToEnd[] name:ReadToEnd ret:@string ns:- owner:System.IO.StringReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StringReader.Close[] name:Close ret:@void ns:- owner:System.IO.StringReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StringWriter.NewLine[] name:NewLine ret:@string ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StringWriter.StringWriter[] name:StringWriter ret:@void ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Core!System.IO.StringWriter.Write[@string] name:Write ret:@void ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.IO.StringWriter.Write[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.StringWriter.WriteChar[@char] name:WriteChar ret:@void ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.IO.StringWriter.WriteChar[@char]/c c @char 0 - -)
+    )
+    (fn System.Core!System.IO.StringWriter.WriteLine[@string] name:WriteLine ret:@void ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.IO.StringWriter.WriteLine[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.StringWriter.WriteLineEmpty[] name:WriteLineEmpty ret:@void ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.StringWriter.GetValue[] name:GetValue ret:@string ns:- owner:System.IO.StringWriter extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.Collections.Generic.Dictionary.Dictionary[] name:Dictionary ret:@void ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
     (fn System.Core!System.Collections.Generic.Dictionary.get_Count[] name:get_Count ret:@i32 ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Core!System.Collections.Generic.Dictionary.get_Keys[] name:get_Keys ret:!System.Collections.Generic.Dictionary.K[] ns:- owner:System.Collections.Generic.Dictionary extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
@@ -1586,6 +1652,29 @@
     (loc System.Core!System.IO.MemoryStream.Seek[@i64,@i32]/pos false @i64)
     (loc System.Core!System.IO.MemoryStream.ToArray[]/result false @u8[])
     (loc System.Core!System.IO.MemoryStream.ToArray[]/i false @i32)
+    (loc System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/exact false @u8[])
+    (loc System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i false @i32)
+    (loc System.Core!System.IO.StreamReader.PullAll[]/acc false @string)
+    (loc System.Core!System.IO.StreamReader.PullAll[]/chunk false @u8[])
+    (loc System.Core!System.IO.StreamReader.PullAll[]/n false @i32)
+    (loc System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/chars false @char[])
+    (loc System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/last false @char)
+    (loc System.Core!System.IO.StreamReader.ReadLine[]/text false @string)
+    (loc System.Core!System.IO.StreamReader.ReadLine[]/nl false @i32)
+    (loc System.Core!System.IO.StreamReader.ReadLine[]/line false @string)
+    (loc System.Core!System.IO.StreamReader.ReadToEnd[]/rest false @string)
+    (loc System.Core!System.IO.StreamWriter.NewLine[]/b false @u8[])
+    (loc System.Core!System.IO.StreamWriter.Write[@string]/bytes false @u8[])
+    (loc System.Core!System.IO.StreamWriter.WriteChar[@char]/chars false @char[])
+    (loc System.Core!System.IO.StreamWriter.WriteChar[@char]/text false @string)
+    (loc System.Core!System.IO.StringReader.TrimTrailingCR[@string]/chars false @char[])
+    (loc System.Core!System.IO.StringReader.TrimTrailingCR[@string]/last false @char)
+    (loc System.Core!System.IO.StringReader.ReadLine[]/text false @string)
+    (loc System.Core!System.IO.StringReader.ReadLine[]/nl false @i32)
+    (loc System.Core!System.IO.StringReader.ReadLine[]/line false @string)
+    (loc System.Core!System.IO.StringReader.ReadToEnd[]/rest false @string)
+    (loc System.Core!System.IO.StringWriter.NewLine[]/b false @u8[])
+    (loc System.Core!System.IO.StringWriter.WriteChar[@char]/chars false @char[])
     (loc System.Core!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.Clear[]/i false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.Dictionary[]/i false @i32)
@@ -11559,6 +11648,834 @@
         )
       )
     )
+    (body System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_stream System.IO.MemoryStream false
+            (var System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream]/stream)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_cache @string false
+            (lit @string s:)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_eof @bool false
+            (lit @bool b:0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]
+      (block 5
+        (if
+          (binary
+            (bop <= @i32 @i32)
+            (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/n)
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/exact
+          (arrnew @u8[]
+            (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/n) 0
+          )
+        )
+        (vardecl System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i
+          (lit @i32 i:0)
+        )
+        (while
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i)
+            (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/n)
+          )
+          (block 2
+            (exprstmt
+              (elemassign @u8
+                (elem @u8
+                  (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/exact)
+                  (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i)
+                )
+                (elem @u8
+                  (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/bytes)
+                  (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i)
+                )
+              )
+            )
+            (exprstmt
+              (assign System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (membercall @string StringFromBytes System.Core!System.Runtime.StringFromBytes[@u8[]] 1
+            (statictype System.Runtime)
+            (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/exact)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamReader.PullAll[]
+      (block 5
+        (if
+          (memberacc @bool _eof owner:System.IO.StreamReader
+            (this System.IO.StreamReader)
+          )
+          (block 1
+            (return -)
+          ) -
+        )
+        (vardecl System.Core!System.IO.StreamReader.PullAll[]/acc
+          (memberacc @string _cache owner:System.IO.StreamReader
+            (this System.IO.StreamReader)
+          )
+        )
+        (vardecl System.Core!System.IO.StreamReader.PullAll[]/chunk
+          (arrnew @u8[]
+            (lit @i32 i:4096) 0
+          )
+        )
+        (while
+          (lit @bool b:1)
+          (block 3
+            (vardecl System.Core!System.IO.StreamReader.PullAll[]/n
+              (membercall @i32 Read System.Core!System.IO.MemoryStream.Read[@u8[],@i32,@i32] 3
+                (memberacc System.IO.MemoryStream _stream owner:System.IO.StreamReader
+                  (this System.IO.StreamReader)
+                )
+                (var System.Core!System.IO.StreamReader.PullAll[]/chunk)
+                (lit @i32 i:0)
+                (lit @i32 i:4096)
+              )
+            )
+            (if
+              (binary
+                (bop <= @i32 @i32)
+                (var System.Core!System.IO.StreamReader.PullAll[]/n)
+                (lit @i32 i:0)
+              )
+              (block 2
+                (exprstmt
+                  (memberassign
+                    (this System.IO.StreamReader) name:_eof @bool false
+                    (lit @bool b:1)
+                  )
+                )
+                (goto break1)
+              ) -
+            )
+            (exprstmt
+              (assign System.Core!System.IO.StreamReader.PullAll[]/acc
+                (binary
+                  (bop + @string @string)
+                  (var System.Core!System.IO.StreamReader.PullAll[]/acc)
+                  (membercall @string DecodeSlice System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32] 2
+                    (this System.IO.StreamReader)
+                    (var System.Core!System.IO.StreamReader.PullAll[]/chunk)
+                    (var System.Core!System.IO.StreamReader.PullAll[]/n)
+                  )
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_cache @string false
+            (var System.Core!System.IO.StreamReader.PullAll[]/acc)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamReader.TrimTrailingCR[@string]
+      (block 3
+        (vardecl System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/line)
+          )
+        )
+        (if
+          (binary
+            (bop > @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/chars)
+            )
+            (lit @i32 i:0)
+          )
+          (block 2
+            (vardecl System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/last
+              (elem @char
+                (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/chars)
+                (binary
+                  (bop - @i32 @i32)
+                  (memberacc @i32 Length
+                    (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/chars)
+                  )
+                  (lit @i32 i:1)
+                )
+              )
+            )
+            (if
+              (binary
+                (bop == @char @char)
+                (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/last)
+                (lit @char c:13)
+              )
+              (block 1
+                (return
+                  (membercall @string substring - 2
+                    (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/line)
+                    (lit @i32 i:0)
+                    (binary
+                      (bop - @i32 @i32)
+                      (memberacc @i32 Length
+                        (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/chars)
+                      )
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+              ) -
+            )
+          ) -
+        )
+        (return
+          (var System.Core!System.IO.StreamReader.TrimTrailingCR[@string]/line)
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamReader.ReadLine[]
+      (block 8
+        (exprstmt
+          (membercall @void PullAll System.Core!System.IO.StreamReader.PullAll[] 0
+            (this System.IO.StreamReader)
+          )
+        )
+        (vardecl System.Core!System.IO.StreamReader.ReadLine[]/text
+          (memberacc @string _cache owner:System.IO.StreamReader
+            (this System.IO.StreamReader)
+          )
+        )
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.StreamReader.ReadLine[]/nl
+          (call System.Core!System.String.IndexOf[@string,@char] 2
+            (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+            (lit @char c:10)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.IO.StreamReader.ReadLine[]/nl)
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+          (block 2
+            (exprstmt
+              (memberassign
+                (this System.IO.StreamReader) name:_cache @string false
+                (lit @string s:)
+              )
+            )
+            (return
+              (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.StreamReader.ReadLine[]/line
+          (membercall @string TrimTrailingCR System.Core!System.IO.StreamReader.TrimTrailingCR[@string] 1
+            (this System.IO.StreamReader)
+            (membercall @string substring - 2
+              (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+              (lit @i32 i:0)
+              (var System.Core!System.IO.StreamReader.ReadLine[]/nl)
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_cache @string false
+            (membercall @string substring - 2
+              (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+              (binary
+                (bop + @i32 @i32)
+                (var System.Core!System.IO.StreamReader.ReadLine[]/nl)
+                (lit @i32 i:1)
+              )
+              (binary
+                (bop - @i32 @i32)
+                (binary
+                  (bop - @i32 @i32)
+                  (memberacc @i32 Length
+                    (var System.Core!System.IO.StreamReader.ReadLine[]/text)
+                  )
+                  (var System.Core!System.IO.StreamReader.ReadLine[]/nl)
+                )
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (return
+          (var System.Core!System.IO.StreamReader.ReadLine[]/line)
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamReader.ReadToEnd[]
+      (block 4
+        (exprstmt
+          (membercall @void PullAll System.Core!System.IO.StreamReader.PullAll[] 0
+            (this System.IO.StreamReader)
+          )
+        )
+        (vardecl System.Core!System.IO.StreamReader.ReadToEnd[]/rest
+          (memberacc @string _cache owner:System.IO.StreamReader
+            (this System.IO.StreamReader)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_cache @string false
+            (lit @string s:)
+          )
+        )
+        (return
+          (var System.Core!System.IO.StreamReader.ReadToEnd[]/rest)
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamReader.Close[]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamReader) name:_stream System.IO.MemoryStream false
+            (conv System.IO.MemoryStream
+              (lit @null n:)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.NewLine[]
+      (block 4
+        (vardecl System.Core!System.IO.StreamWriter.NewLine[]/b
+          (arrnew @u8[]
+            (lit @i32 i:2) 0
+          )
+        )
+        (exprstmt
+          (elemassign @u8
+            (elem @u8
+              (var System.Core!System.IO.StreamWriter.NewLine[]/b)
+              (lit @i32 i:0)
+            )
+            (conv @u8
+              (lit @i32 i:13)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @u8
+            (elem @u8
+              (var System.Core!System.IO.StreamWriter.NewLine[]/b)
+              (lit @i32 i:1)
+            )
+            (conv @u8
+              (lit @i32 i:10)
+            )
+          )
+        )
+        (return
+          (membercall @string StringFromBytes System.Core!System.Runtime.StringFromBytes[@u8[]] 1
+            (statictype System.Runtime)
+            (var System.Core!System.IO.StreamWriter.NewLine[]/b)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.StreamWriter[System.IO.MemoryStream]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StreamWriter) name:_stream System.IO.MemoryStream false
+            (var System.Core!System.IO.StreamWriter.StreamWriter[System.IO.MemoryStream]/stream)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.Write[@string]
+      (block 3
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.StreamWriter.Write[@string]/text)
+          )
+          (block 1
+            (return -)
+          ) -
+        )
+        (vardecl System.Core!System.IO.StreamWriter.Write[@string]/bytes
+          (membercall @u8[] StringToBytes System.Core!System.Runtime.StringToBytes[@string] 1
+            (statictype System.Runtime)
+            (var System.Core!System.IO.StreamWriter.Write[@string]/text)
+          )
+        )
+        (if
+          (binary
+            (bop > @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.StreamWriter.Write[@string]/bytes)
+            )
+            (lit @i32 i:0)
+          )
+          (block 1
+            (exprstmt
+              (membercall @void Write System.Core!System.IO.MemoryStream.Write[@u8[],@i32,@i32] 3
+                (memberacc System.IO.MemoryStream _stream owner:System.IO.StreamWriter
+                  (this System.IO.StreamWriter)
+                )
+                (var System.Core!System.IO.StreamWriter.Write[@string]/bytes)
+                (lit @i32 i:0)
+                (memberacc @i32 Length
+                  (var System.Core!System.IO.StreamWriter.Write[@string]/bytes)
+                )
+              )
+            )
+          ) -
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.WriteChar[@char]
+      (block 4
+        (vardecl System.Core!System.IO.StreamWriter.WriteChar[@char]/chars
+          (arrnew @char[]
+            (lit @i32 i:1) 0
+          )
+        )
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.IO.StreamWriter.WriteChar[@char]/chars)
+              (lit @i32 i:0)
+            )
+            (var System.Core!System.IO.StreamWriter.WriteChar[@char]/c)
+          )
+        )
+        (vardecl System.Core!System.IO.StreamWriter.WriteChar[@char]/text
+          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
+            (statictype System.Runtime)
+            (var System.Core!System.IO.StreamWriter.WriteChar[@char]/chars)
+          )
+        )
+        (exprstmt
+          (membercall @void Write System.Core!System.IO.StreamWriter.Write[@string] 1
+            (this System.IO.StreamWriter)
+            (var System.Core!System.IO.StreamWriter.WriteChar[@char]/text)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.WriteLine[@string]
+      (block 2
+        (exprstmt
+          (membercall @void Write System.Core!System.IO.StreamWriter.Write[@string] 1
+            (this System.IO.StreamWriter)
+            (var System.Core!System.IO.StreamWriter.WriteLine[@string]/text)
+          )
+        )
+        (exprstmt
+          (membercall @void Write System.Core!System.IO.StreamWriter.Write[@string] 1
+            (this System.IO.StreamWriter)
+            (membercall @string NewLine System.Core!System.IO.StreamWriter.NewLine[] 0
+              (this System.IO.StreamWriter)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.WriteLineEmpty[]
+      (block 1
+        (exprstmt
+          (membercall @void Write System.Core!System.IO.StreamWriter.Write[@string] 1
+            (this System.IO.StreamWriter)
+            (membercall @string NewLine System.Core!System.IO.StreamWriter.NewLine[] 0
+              (this System.IO.StreamWriter)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.Flush[]
+      (block 1
+        (exprstmt
+          (membercall @void Flush System.Core!System.IO.MemoryStream.Flush[] 0
+            (memberacc System.IO.MemoryStream _stream owner:System.IO.StreamWriter
+              (this System.IO.StreamWriter)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StreamWriter.Close[]
+      (block 1
+        (exprstmt
+          (membercall @void Flush System.Core!System.IO.StreamWriter.Flush[] 0
+            (this System.IO.StreamWriter)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringReader.StringReader[@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StringReader) name:_rest @string false
+            (var System.Core!System.IO.StringReader.StringReader[@string]/text)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringReader.TrimTrailingCR[@string]
+      (block 3
+        (vardecl System.Core!System.IO.StringReader.TrimTrailingCR[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/line)
+          )
+        )
+        (if
+          (binary
+            (bop > @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/chars)
+            )
+            (lit @i32 i:0)
+          )
+          (block 2
+            (vardecl System.Core!System.IO.StringReader.TrimTrailingCR[@string]/last
+              (elem @char
+                (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/chars)
+                (binary
+                  (bop - @i32 @i32)
+                  (memberacc @i32 Length
+                    (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/chars)
+                  )
+                  (lit @i32 i:1)
+                )
+              )
+            )
+            (if
+              (binary
+                (bop == @char @char)
+                (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/last)
+                (lit @char c:13)
+              )
+              (block 1
+                (return
+                  (membercall @string substring - 2
+                    (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/line)
+                    (lit @i32 i:0)
+                    (binary
+                      (bop - @i32 @i32)
+                      (memberacc @i32 Length
+                        (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/chars)
+                      )
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+              ) -
+            )
+          ) -
+        )
+        (return
+          (var System.Core!System.IO.StringReader.TrimTrailingCR[@string]/line)
+        )
+      )
+    )
+    (body System.Core!System.IO.StringReader.ReadLine[]
+      (block 7
+        (vardecl System.Core!System.IO.StringReader.ReadLine[]/text
+          (memberacc @string _rest owner:System.IO.StringReader
+            (this System.IO.StringReader)
+          )
+        )
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.StringReader.ReadLine[]/text)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.StringReader.ReadLine[]/text)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.StringReader.ReadLine[]/nl
+          (call System.Core!System.String.IndexOf[@string,@char] 2
+            (var System.Core!System.IO.StringReader.ReadLine[]/text)
+            (lit @char c:10)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.IO.StringReader.ReadLine[]/nl)
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+          (block 2
+            (exprstmt
+              (memberassign
+                (this System.IO.StringReader) name:_rest @string false
+                (lit @string s:)
+              )
+            )
+            (return
+              (var System.Core!System.IO.StringReader.ReadLine[]/text)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.StringReader.ReadLine[]/line
+          (membercall @string TrimTrailingCR System.Core!System.IO.StringReader.TrimTrailingCR[@string] 1
+            (this System.IO.StringReader)
+            (membercall @string substring - 2
+              (var System.Core!System.IO.StringReader.ReadLine[]/text)
+              (lit @i32 i:0)
+              (var System.Core!System.IO.StringReader.ReadLine[]/nl)
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StringReader) name:_rest @string false
+            (membercall @string substring - 2
+              (var System.Core!System.IO.StringReader.ReadLine[]/text)
+              (binary
+                (bop + @i32 @i32)
+                (var System.Core!System.IO.StringReader.ReadLine[]/nl)
+                (lit @i32 i:1)
+              )
+              (binary
+                (bop - @i32 @i32)
+                (binary
+                  (bop - @i32 @i32)
+                  (memberacc @i32 Length
+                    (var System.Core!System.IO.StringReader.ReadLine[]/text)
+                  )
+                  (var System.Core!System.IO.StringReader.ReadLine[]/nl)
+                )
+                (lit @i32 i:1)
+              )
+            )
+          )
+        )
+        (return
+          (var System.Core!System.IO.StringReader.ReadLine[]/line)
+        )
+      )
+    )
+    (body System.Core!System.IO.StringReader.ReadToEnd[]
+      (block 3
+        (vardecl System.Core!System.IO.StringReader.ReadToEnd[]/rest
+          (memberacc @string _rest owner:System.IO.StringReader
+            (this System.IO.StringReader)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StringReader) name:_rest @string false
+            (lit @string s:)
+          )
+        )
+        (return
+          (var System.Core!System.IO.StringReader.ReadToEnd[]/rest)
+        )
+      )
+    )
+    (body System.Core!System.IO.StringReader.Close[]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StringReader) name:_rest @string false
+            (lit @string s:)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.NewLine[]
+      (block 4
+        (vardecl System.Core!System.IO.StringWriter.NewLine[]/b
+          (arrnew @u8[]
+            (lit @i32 i:2) 0
+          )
+        )
+        (exprstmt
+          (elemassign @u8
+            (elem @u8
+              (var System.Core!System.IO.StringWriter.NewLine[]/b)
+              (lit @i32 i:0)
+            )
+            (conv @u8
+              (lit @i32 i:13)
+            )
+          )
+        )
+        (exprstmt
+          (elemassign @u8
+            (elem @u8
+              (var System.Core!System.IO.StringWriter.NewLine[]/b)
+              (lit @i32 i:1)
+            )
+            (conv @u8
+              (lit @i32 i:10)
+            )
+          )
+        )
+        (return
+          (membercall @string StringFromBytes System.Core!System.Runtime.StringFromBytes[@u8[]] 1
+            (statictype System.Runtime)
+            (var System.Core!System.IO.StringWriter.NewLine[]/b)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.StringWriter[]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StringWriter) name:_value @string false
+            (lit @string s:)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.Write[@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StringWriter) name:_value @string false
+            (binary
+              (bop + @string @string)
+              (memberacc @string _value owner:System.IO.StringWriter
+                (this System.IO.StringWriter)
+              )
+              (var System.Core!System.IO.StringWriter.Write[@string]/text)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.WriteChar[@char]
+      (block 3
+        (vardecl System.Core!System.IO.StringWriter.WriteChar[@char]/chars
+          (arrnew @char[]
+            (lit @i32 i:1) 0
+          )
+        )
+        (exprstmt
+          (elemassign @char
+            (elem @char
+              (var System.Core!System.IO.StringWriter.WriteChar[@char]/chars)
+              (lit @i32 i:0)
+            )
+            (var System.Core!System.IO.StringWriter.WriteChar[@char]/c)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.StringWriter) name:_value @string false
+            (binary
+              (bop + @string @string)
+              (memberacc @string _value owner:System.IO.StringWriter
+                (this System.IO.StringWriter)
+              )
+              (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
+                (statictype System.Runtime)
+                (var System.Core!System.IO.StringWriter.WriteChar[@char]/chars)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.WriteLine[@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StringWriter) name:_value @string false
+            (binary
+              (bop + @string @string)
+              (binary
+                (bop + @string @string)
+                (memberacc @string _value owner:System.IO.StringWriter
+                  (this System.IO.StringWriter)
+                )
+                (var System.Core!System.IO.StringWriter.WriteLine[@string]/text)
+              )
+              (membercall @string NewLine System.Core!System.IO.StringWriter.NewLine[] 0
+                (this System.IO.StringWriter)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.WriteLineEmpty[]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.StringWriter) name:_value @string false
+            (binary
+              (bop + @string @string)
+              (memberacc @string _value owner:System.IO.StringWriter
+                (this System.IO.StringWriter)
+              )
+              (membercall @string NewLine System.Core!System.IO.StringWriter.NewLine[] 0
+                (this System.IO.StringWriter)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.StringWriter.GetValue[]
+      (block 1
+        (return
+          (memberacc @string _value owner:System.IO.StringWriter
+            (this System.IO.StringWriter)
+          )
+        )
+      )
+    )
     (body System.Core!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]
       (block 4
         (exprstmt
@@ -14653,4 +15570,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:6f6af9a7d283bae5c2996456bb67c129fa940b70d8e1560fd5fc94c38d29d3c1)
+(checksum sha256:1959a1bcc916ef95d391af604dce7137c3ce904dc36ad568a601329d7ba14605)

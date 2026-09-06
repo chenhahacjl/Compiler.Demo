@@ -233,8 +233,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             ["System.IO.DirectoryInfo"] = null,
             ["System.IO.Path"] = null,
             ["System.IO.FileStream"] = null,
-            ["System.IO.StreamReader"] = null,
-            ["System.IO.StreamWriter"] = null,
+            // StreamReader/StreamWriter 现已提供真实体（MemoryStream 同类带实例状态），不作为 facade 直链
             ["System.Diagnostics.Process"] = null,
             ["System.Diagnostics.ProcessStartInfo"] = null,
         };

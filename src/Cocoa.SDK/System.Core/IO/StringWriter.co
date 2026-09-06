@@ -1,0 +1,48 @@
+// System.IO 文本层 · StringWriter（纯字符串累积；BCL StreamWriter 语义对齐）
+namespace System.IO
+{
+    public class StringWriter
+    {
+        private static function NewLine(): string
+        {
+            var b = new u8[2]
+            b[0] = 13
+            b[1] = 10
+            return Runtime.StringFromBytes(b)
+        }
+
+        private _value: string
+
+        public constructor()
+        {
+            _value = ""
+        }
+
+        public function Write(text: string): void
+        {
+            _value = _value + text
+        }
+
+        public function WriteChar(c: char): void
+        {
+            var chars = new char[1]
+            chars[0] = c
+            _value = _value + Runtime.StringFromChars(chars)
+        }
+
+        public function WriteLine(text: string): void
+        {
+            _value = _value + text + NewLine()
+        }
+
+        public function WriteLineEmpty(): void
+        {
+            _value = _value + NewLine()
+        }
+
+        public function GetValue(): string
+        {
+            return _value
+        }
+    }
+}

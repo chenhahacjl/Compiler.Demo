@@ -1,0 +1,62 @@
+﻿// System.IO 文本层 · StreamWriter（纯 Cocoa，三后端；编码 = Runtime.StringToBytes→UTF-8）
+namespace System.IO
+{
+    public class StreamWriter
+    {
+        private static function NewLine(): string
+        {
+            var b = new u8[2]
+            b[0] = 13
+            b[1] = 10
+            return Runtime.StringFromBytes(b)
+        }
+
+        private _stream: MemoryStream
+public constructor(stream: MemoryStream)
+        {
+            _stream = stream
+        }
+
+        public function Write(text: string): void
+        {
+            if String.IsNullOrEmpty(text)
+            {
+                return
+            }
+            var bytes = Runtime.StringToBytes(text)
+            if bytes.Length > 0
+            {
+                _stream.Write(bytes, 0, bytes.Length)
+            }
+        }
+
+        public function WriteChar(c: char): void
+        {
+            var chars = new char[1]
+            chars[0] = c
+            var text = Runtime.StringFromChars(chars)
+            Write(text)
+        }
+
+        public function WriteLine(text: string): void
+        {
+            Write(text)
+            Write(NewLine())
+        }
+
+        public function WriteLineEmpty(): void
+        {
+            Write(NewLine())
+        }
+
+        public function Flush(): void
+        {
+            _stream.Flush()
+        }
+
+        public function Close(): void
+        {
+            Flush()
+        }
+    }
+}

@@ -1,0 +1,100 @@
+﻿// System.IO 文本层 · StreamReader（纯 Cocoa，三后端；编码 = Runtime.StringFromBytes→UTF-8）
+namespace System.IO
+{
+    public class StreamReader
+    {
+        private _stream: MemoryStream
+        private _cache: string
+        private _eof: bool
+
+        public constructor(stream: MemoryStream)
+        {
+            _stream = stream
+            _cache = ""
+            _eof = false
+        }
+
+        private static function DecodeSlice(bytes: u8[], n: i32): string
+        {
+            if n <= 0
+            {
+                return ""
+            }
+            var exact = new u8[n]
+            var i = 0
+            while i < n
+            {
+                exact[i] = bytes[i]
+                i = i + 1
+            }
+            return Runtime.StringFromBytes(exact)
+        }
+
+        private function PullAll(): void
+        {
+            if _eof
+            {
+                return
+            }
+            var acc = _cache
+            var chunk = new u8[4096]
+            while true
+            {
+                var n = _stream.Read(chunk, 0, 4096)
+                if n <= 0
+                {
+                    _eof = true
+                    break
+                }
+                acc = acc + DecodeSlice(chunk, n)
+            }
+            _cache = acc
+        }
+
+        private static function TrimTrailingCR(line: string): string
+        {
+            var chars = line.ToCharArray()
+            if chars.Length > 0
+            {
+                var last = chars[chars.Length - 1]
+                if last == '\r'
+                {
+                    return line.substring(0, chars.Length - 1)
+                }
+            }
+            return line
+        }
+
+        public function ReadLine(): string
+        {
+            PullAll()
+            var text = _cache
+            if String.IsNullOrEmpty(text)
+            {
+                return text
+            }
+            var nl = text.IndexOf('\n')
+            if nl == -1
+            {
+                _cache = ""
+                return text
+            }
+            var line = TrimTrailingCR(text.substring(0, nl))
+            _cache = text.substring(nl + 1, text.Length - nl - 1)
+            return line
+        }
+
+        public function ReadToEnd(): string
+        {
+            PullAll()
+            var rest = _cache
+            _cache = ""
+            return rest
+        }
+
+        public function Close(): void
+        {
+            _stream = null
+        }
+    }
+}
