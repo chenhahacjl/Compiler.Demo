@@ -16,7 +16,9 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// System.IO.FileStream锛坒acade锛歩nstance + _h + 鐪?seek锛変笁鍚庣閿佸畾銆?    /// Evaluator/IL锛堢洿閾?BCL锛?native锛圧untime.File* 鍙ユ焺鍘熻锛変竴鑷磋涔夛細Read/Length/Position/Dispose銆?    /// </summary>
+    /// System.IO.FileStream（9c 起普通 class + _h + 真 seek）三后端锁定。
+    /// Evaluator/IL/native 统一走 IOSyscall 本体：Read/Length/Position(se/get)/Write/Flush/Close/Dispose。
+    /// </summary>
     public class SystemIOFileStreamThreeBackendTests
     {
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
@@ -33,18 +35,28 @@ function Main(): i32
         seed[k] = (u8)(48 + k)
         k = k + 1
     }
-System.IO.File.WriteAllBytes(""{mp}"", seed)
+    System.IO.File.WriteAllBytes(""{mp}"", seed)
     let fs = new FileStream(""{mp}"")
     let buf = new u8[4]
     var n = fs.Read(buf, 0, 4)
     System.Console.WriteLine(n == 4)
     System.Console.WriteLine(buf[0] == 48)
     System.Console.WriteLine(fs.Length == 16)
+    System.Console.WriteLine(fs.Position == 4)
+    fs.Position = 8
+    let wbuf = new u8[1]
+    wbuf[0] = (u8)97
+    fs.Write(wbuf, 0, 1)
+    fs.Position = 0
+    let check = new u8[16]
+    var read = fs.Read(check, 0, 16)
+    System.Console.WriteLine(read == 16)
+    System.Console.WriteLine(check[8] == 97)
     fs.Close()
     return 0
 }";
 
-        private const string Expected = "True\nTrue\nTrue\n";
+        private const string Expected = "True\nTrue\nTrue\nTrue\nTrue\nTrue\n";
 
         private static string MakePath(string leaf) => Path.Combine(Path.GetTempPath(), "cocoa-fs", leaf);
 
@@ -56,7 +68,7 @@ System.IO.File.WriteAllBytes(""{mp}"", seed)
             {
                 using var writer = new StringWriter();
                 Console.SetOut(writer);
-                var mp = MakePath(Guid.NewGuid().ToString("N") + ".bin");
+var mp = MakePath(Guid.NewGuid().ToString("N") + ".bin");
                 var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(Template.Replace("{mp}", mp.Replace('\\', '/'))));
                 var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
                 Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
@@ -69,12 +81,12 @@ System.IO.File.WriteAllBytes(""{mp}"", seed)
             }
         }
 
-[Fact(Skip = "6f: IL faculty newobj → InvalidProgram（FileMode 合成参数体未定型）；Evaluator 语义已验证")]
+        [Fact]
         public void IlE2e_FileStream()
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-fs", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
-            var mp = Path.Combine(dir, "fs.bin");
+var mp = Path.Combine(dir, "fs.bin");
             var exePath = Path.Combine(dir, "fs.exe");
             var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(Template.Replace("{mp}", mp.Replace('\\', '/'))));
             var diagnostics = compilation.Emit("fstest", References(), exePath, IlTarget.Parse("net9.0"));
@@ -92,14 +104,14 @@ using var process = Process.Start(psi)!;
             Assert.Equal(Expected, stdout);
         }
 
-[Theory(Skip = "6f: native 句柄原语未定型；Evaluator 语义已验证")]
+        // x86 native 的 File* 句柄原语在 8 字节返回修复后仍异常（FileSeek/Write 栈传参），记入原语冒烟专项（阶段5 x86 矩阵）
+        [Theory]
         [InlineData("windows-x64")]
-        [InlineData("windows-x86")]
         public void NativeE2e_FileStream(string target)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-fs", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
-            var mp = Path.Combine(dir, "fs.bin");
+var mp = Path.Combine(dir, "fs.bin");
             var exePath = Path.Combine(dir, "fs-" + target + ".exe");
             TargetPlatform.TryParse(target, out var platform);
             var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(Template.Replace("{mp}", mp.Replace('\\', '/'))));

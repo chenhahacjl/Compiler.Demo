@@ -109,7 +109,9 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
         private IlType[] GetFacadeArgumentIlTypes(FunctionSymbol method, bool isInstance, IEnumerable<BoundExpression> arguments)
         {
             var args = arguments.ToList();
-            var argOffset = isInstance ? 1 : 0;
+            // 形参表是否以 this 开头（降级 facade 插入 this 参数；保留真实例的同类 facade 如 FileStream 则无）。
+            // 实参序列总是与“去 this 后的形参”对齐：CallExpression 调用方已 Skip(1)，MemberCall 的 receiver 在 node.Expression。
+            var argOffset = method.Parameters.Length > 0 && method.Parameters[0].IsThisParameter ? 1 : 0;
             var types = new IlType[args.Count];
             for (var i = 0; i < args.Count; i++)
             {

@@ -877,7 +877,11 @@ namespace Cocoa.CodeGen.Managed.Writer
                 var cc = node.Method.ContainingClass;
                 if (cc != null && IsFacadeRedirect(cc))
                 {
-                    var isInstance = node.Method.Parameters.Length > 0 && node.Method.Parameters[0].IsThisParameter;
+                    // 实例性判断：MemberCall 的 receiver 在 node.Expression，实参不含 this。
+                    // 降级 facade 实例方法已静态化（IsStatic=true）但 Parameters[0] 仍为 this（IsThisParameter）；
+                    // 保留真实例的同类 facade（FileStream._h）方法 IsStatic=false 且形参表无 this——两种都要视为实例调用。
+                    var isInstance = !node.Method.IsStatic ||
+                        (node.Method.Parameters.Length > 0 && node.Method.Parameters[0].IsThisParameter);
                     var receiver = isInstance ? node.Expression : null;
                     var paramTypes = GetFacadeArgumentIlTypes(node.Method, isInstance, node.Arguments).Select(t => t.FullName).ToArray();
                     IlMethodRef? methodRef;

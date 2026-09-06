@@ -534,7 +534,7 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 0);
             }
 
-            // FileOpenHandle(path:8, mode:8) → i64：mode 0=rb 1=wb 2=r+b；失败 → 0
+            // FileOpenHandle(path:8, mode:8) → i64：mode 0=r+b(Open 可读写) 1=wb(Create) 2=r+b(OpenOrCreate)；失败 → 0
             private void EmitFileOpenHandle()
             {
                 var fail = NewLabel();
@@ -554,7 +554,7 @@ namespace Cocoa.CodeGen.Native
                 Jcc(LirCond.Equal, useWb);
                 Jmp(useRw);
                 Mark(useRb);
-                LeaData(mw, _rbMode);
+                LeaData(mw, _rwMode);
                 Jmp(modeReady);
                 Mark(useWb);
                 LeaData(mw, _wbMode);
@@ -578,15 +578,17 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileSizeHandle(h) → 文件字节数（seek END 再恢复）
+            // FileSizeHandle(h) → 文件字节数（seek END 再恢复原位置——不得复位到 0，否则破坏调用方流的当前位置）
             private void EmitFileSizeHandle()
             {
                 var fp = NewPtr();
                 Mov(fp, _args[0]);
+                var start = NewReg(8);
+                SysCallDll(start, "ucrtbase.dll", "_ftelli64", 1, true, fp);
                 SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, C(8, 0), C(4, 2));
                 var sz = NewReg(8);
                 SysCallDll(sz, "ucrtbase.dll", "_ftelli64", 1, true, fp);
-                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 2, true, fp, C(8, 0), C(4, 0));
+                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, start, C(4, 0));
                 StoreRet(sz);
                 EndFunction(_currentFunction!, 8);
             }

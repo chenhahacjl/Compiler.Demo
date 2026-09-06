@@ -1903,7 +1903,17 @@ namespace Cocoa.CodeGen.Native
 
             if (dst != null)
             {
-                StoreSlot(dst, X64Register.EAX);
+                if (!_isX64 && RegisterSize(dst) == 8)
+                {
+                    // x86 8 字节返回值约定：EDX:EAX → 双槽（低 dword 在 slot，高 dword 在 slot-4，对齐 EmitStoreRet）
+                    var slot = GetSlotOffset(dst);
+                    _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
+                    _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.EDX);
+                }
+                else
+                {
+                    StoreSlot(dst, X64Register.EAX);
+                }
             }
 
             _sysArgs.Clear();

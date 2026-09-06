@@ -1,7 +1,8 @@
 // System.IO 模块实现（本文件归属 System.Core）
-// FileStream：真 seek 句柄（native/Evaluator 走本体；Runtime.File* 原语三端可用）。
+// FileStream：真 seek 句柄。Evaluator/native 走本体（IOSyscall.File* 句柄原语）；IL 端直链 BCL
+// （newobj FileStream(path, FileMode.Open)，成员直链 BCL，9c 解锁）。三端语义一致：Open 可读写。
 // 6f 期：BCL 直连（facade）与实例字段（_h）当前编译器不能兼得（facade 类实例方法静态化）；
-// 若 IL 端需直链 BCL 可改用全缓冲实现或等待 facade+body 支持，见 docs-dev 记录。
+// 保留 facade + 实例 body：Evaluator/native 执行本体，IL 端仍直链 BCL（见 IlEmitter.Expressions.cs）。
 
 using System
 
