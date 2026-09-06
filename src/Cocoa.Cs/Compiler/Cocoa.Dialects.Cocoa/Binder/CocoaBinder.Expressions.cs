@@ -810,8 +810,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                         return new BoundErrorExpression(syntax);
                     }
 
-                    if (classType.IsFacadeClass)
+                    var facadeStaticContainerLike = classType.FacadeThisType != null ||
+                                       !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                    if (classType.IsFacadeClass && facadeStaticContainerLike)
                     {
+                        // 基元别名 facade：getter 已静态降级 + 显式 this 首参
                         var thisArg = BindConversion(syntax.IdentifierToken.Location, boundTarget, property.Getter.Parameters[0].Type);
                         return new BoundCallExpression(syntax, property.Getter, ImmutableArray.Create(thisArg));
                     }
@@ -903,7 +906,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             if (boundExpression.Type is NamedTypeSymbol classType && classType != TypeSymbol.String && !classType.IsPrimitiveValueType)
             {
-                if (classType.IsFacadeClass)
+                var facadeStaticContainerLike = classType.FacadeThisType != null ||
+                                       !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                    if (classType.IsFacadeClass && facadeStaticContainerLike)
                 {
                     var facadeMemberCall = TryBindFacadeMemberCall(syntax, identifier, boundExpression, boundArguments.ToImmutable());
                     if (facadeMemberCall != null) return facadeMemberCall;

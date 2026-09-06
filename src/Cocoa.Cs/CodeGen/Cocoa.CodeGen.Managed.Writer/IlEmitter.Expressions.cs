@@ -136,6 +136,17 @@ namespace Cocoa.CodeGen.Managed.Writer
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
+                case BuiltinKind.FileOpen:
+                case BuiltinKind.FileSize:
+                case BuiltinKind.FileSeek:
+                case BuiltinKind.FileTell:
+                case BuiltinKind.FileRead:
+                case BuiltinKind.FileWrite:
+                case BuiltinKind.FileClose:
+                {
+                    // 低层句柄原语仅供 native / Evaluator SDK body；IL 走 System.IO.FileStream facade 直连 BCL。
+                    throw new Exception("Runtime file-handle primitive should not reach IL: use System.IO.FileStream facade.");
+                }
                 case BuiltinKind.FileExists:
                 {
                     var m = _framework.ResolveMethod("System.IO.File", "Exists", new[] { "System.String" });
@@ -908,6 +919,35 @@ namespace Cocoa.CodeGen.Managed.Writer
                     return;
                 }
 
+                // 6f：同类 facade（FileStream 等）成员 — 直链 BCL 同全名类型实例成员（Callvirt）
+                if (node.Method.ContainingClass is NamedTypeSymbol { IsFacadeClass: true, FacadeThisType: null } facadeOwner)
+                {
+                    var facadeParamNames = new string[node.Arguments.Length];
+                    for (var i = 0; i < node.Arguments.Length; i++)
+                    {
+                        facadeParamNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                    }
+
+                    var facadeMethodRef = _framework.FindMethod(facadeOwner.FullName, node.Identifier, facadeParamNames);
+                    if (facadeMethodRef == null && facadeOwner.FullName == "System.IO.FileStream")
+                    {
+                        // Close/Dispose 未在 FileStream 就地声明（归属基类 System.IO.Stream / IDisposable）
+                        facadeMethodRef = _framework.FindMethod("System.IO.Stream", node.Identifier, facadeParamNames);
+                        if (facadeMethodRef == null && node.Identifier == "Dispose")
+                        {
+                            facadeMethodRef = _framework.FindMethod("System.IO.Stream", "Close", facadeParamNames);
+                        }
+                    }
+
+                    if (facadeMethodRef == null)
+                    {
+                        throw new System.Exception($"facade 成员 {facadeOwner.FullName}.{node.Identifier} 未在 BCL 找到。");
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), facadeMethodRef);
+                    return;
+                }
+
                 if (node.Method.ContainingClass!.IsExternal)
                 {
                     var parameterNames = new string[node.Arguments.Length];
@@ -1031,6 +1071,32 @@ namespace Cocoa.CodeGen.Managed.Writer
                 }
 
                 il.Emit(IlOpCodeTable.Get("Newobj"), CodMethodRef(codCtor, codObjectAssembly));
+                return;
+            }
+
+            if (classType.IsFacadeClass && classType.FacadeThisType == null)
+            {
+                // 6f：同类 facade（FileStream 等）：IL newobj 直链 BCL 同全名类型的实例构造器
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                // 6f：SDK `FileStream(path)` 无 BCL 单参重载 → 映射 FileStream(path, FileMode.Open)
+                if (classType.FullName == "System.IO.FileStream" && node.Arguments.Length == 1)
+                {
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4"), 3); // FileMode.Open == 3
+                    parameterNames = new[] { "System.String", "System.IO.FileMode" };
+                }
+
+                var facadeCtor = _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+                if (facadeCtor == null)
+                {
+                    throw new System.Exception($"facade 类型 {classType.FullName} 的构造函数 (.ctor) 未在 BCL 找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), facadeCtor);
                 return;
             }
 

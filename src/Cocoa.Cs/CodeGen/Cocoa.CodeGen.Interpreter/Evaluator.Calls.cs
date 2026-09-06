@@ -4,6 +4,7 @@ using Symbols = Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Symbols;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace Cocoa.CodeGen.Interpreter
@@ -14,6 +15,9 @@ namespace Cocoa.CodeGen.Interpreter
     /// </summary>
     internal sealed partial class Evaluator
     {
+        // File 句柄原语（Evaluator 腿）：i64 句柄 ↔ BCL FileStream
+        private static readonly Dictionary<long, FileStream> _fileHandles = new Dictionary<long, FileStream>();
+        private static long _fileHandleCounter;
         private object? EvaluateCallExpression(BoundCallExpression node)
         {
             if (node.Function.BuiltinKind != null)
@@ -294,6 +298,68 @@ namespace Cocoa.CodeGen.Interpreter
                     var data = EvaluateExpression(arguments[1]);
                     var bytes = ToByteArray(data);
                     System.IO.File.WriteAllBytes((string)EvaluateExpression(arguments[0])!, bytes);
+                    return null;
+                }
+                case BuiltinKind.FileOpen:
+                {
+                    var path = (string)EvaluateExpression(arguments[0])!;
+                    var mode = (int)EvaluateExpression(arguments[1])!;
+                    var fs = new FileStream(path, mode switch { 1 => FileMode.Create, 2 => FileMode.OpenOrCreate, _ => FileMode.Open });
+                    var handle = ++_fileHandleCounter;
+                    _fileHandles[handle] = fs;
+                    return (long)handle;
+                }
+                case BuiltinKind.FileSize:
+                {
+                    var fs = _fileHandles[(long)EvaluateExpression(arguments[0])!];
+                    return fs.Length;
+                }
+                case BuiltinKind.FileSeek:
+                {
+                    var fs = _fileHandles[(long)EvaluateExpression(arguments[0])!];
+                    var off = (long)EvaluateExpression(arguments[1])!;
+                    var origin = (int)EvaluateExpression(arguments[2])!;
+                    fs.Seek(off, origin == 1 ? SeekOrigin.Current : origin == 2 ? SeekOrigin.End : SeekOrigin.Begin);
+                    return null;
+                }
+                case BuiltinKind.FileTell:
+                {
+                    var fs = _fileHandles[(long)EvaluateExpression(arguments[0])!];
+                    return fs.Position;
+                }
+                case BuiltinKind.FileRead:
+                {
+                    var fs = _fileHandles[(long)EvaluateExpression(arguments[0])!];
+                    var dataArr = (object[])EvaluateExpression(arguments[1])!;
+                    var start = (int)EvaluateExpression(arguments[2])!;
+                    var total = (int)EvaluateExpression(arguments[3])!;
+                    var tmp = new byte[total];
+                    var read = fs.Read(tmp, 0, total);
+                    for (var bi = 0; bi < read; bi++)
+                    {
+                        dataArr[start + bi] = tmp[bi];
+                    }
+
+                    return read;
+                }
+                case BuiltinKind.FileWrite:
+                {
+                    var fs = _fileHandles[(long)EvaluateExpression(arguments[0])!];
+                    var bytes = ToByteArray(EvaluateExpression(arguments[1]));
+                    var start = (int)EvaluateExpression(arguments[2])!;
+                    var total = (int)EvaluateExpression(arguments[3])!;
+                    fs.Write(bytes, start, total);
+                    return null;
+                }
+                case BuiltinKind.FileClose:
+                {
+                    var key = (long)EvaluateExpression(arguments[0])!;
+                    if (_fileHandles.TryGetValue(key, out var fs))
+                    {
+                        fs.Dispose();
+                        _fileHandles.Remove(key);
+                    }
+
                     return null;
                 }
                 case BuiltinKind.FileExists:

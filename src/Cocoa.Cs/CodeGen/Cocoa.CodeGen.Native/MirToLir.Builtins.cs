@@ -152,6 +152,77 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileWriteAllBytes"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
+                case BuiltinKind.FileOpen:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var mode = EmitExpression(arguments[1]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(mode)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileOpenHandle"), LirOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.FileSize:
+                {
+                    var h = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(h)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileSizeHandle"), LirOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.FileSeek:
+                {
+                    var h = EmitExpression(arguments[0]);
+                    var off = EmitExpression(arguments[1]);
+                    var origin = EmitExpression(arguments[2]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(h)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(off)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(origin)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileSeekHandle"), LirOperand.Constant(0)));
+                    return VoidResult();
+                }
+                case BuiltinKind.FileTell:
+                {
+                    var h = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(8);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(h)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileTellHandle"), LirOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.FileRead:
+                {
+                    var h = EmitExpression(arguments[0]);
+                    var data = EmitExpression(arguments[1]);
+                    var start = EmitExpression(arguments[2]);
+                    var count = EmitExpression(arguments[3]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(h)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(data)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(start)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(3), LirOperand.Reg(count)));
+                    var result = AllocateRegister(4);
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileReadHandle"), LirOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.FileWrite:
+                {
+                    var h = EmitExpression(arguments[0]);
+                    var data = EmitExpression(arguments[1]);
+                    var start = EmitExpression(arguments[2]);
+                    var count = EmitExpression(arguments[3]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(h)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(data)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(start)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(3), LirOperand.Reg(count)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileWriteHandle"), LirOperand.Constant(0)));
+                    return VoidResult();
+                }
+                case BuiltinKind.FileClose:
+                {
+                    var h = EmitExpression(arguments[0]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(h)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileCloseHandle"), LirOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.FileExists:
                 {
                     var path = EmitExpression(arguments[0]);

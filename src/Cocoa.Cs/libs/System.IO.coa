@@ -46,6 +46,7 @@
     )
     (fn System.IO!System.IO.MemoryStream.Flush[] name:Flush ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.IO!System.IO.MemoryStream.Close[] name:Close ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.IO!System.IO.MemoryStream.Dispose[] name:Dispose ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.IO!System.IO.MemoryStream.ToArray[] name:ToArray ret:@u8[] ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.IO!System.IO.Path.IsSeparator[@char] name:IsSeparator ret:@bool ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.IO!System.IO.Path.IsSeparator[@char]/c c @char 0 - -)
@@ -541,6 +542,9 @@
     (body System.IO!System.IO.MemoryStream.Close[]
       (block 0)
     )
+    (body System.IO!System.IO.MemoryStream.Dispose[]
+      (block 0)
+    )
     (body System.IO!System.IO.MemoryStream.ToArray[]
       (block 3
         (vardecl System.IO!System.IO.MemoryStream.ToArray[]/result
@@ -937,4 +941,4 @@
     (ns System.IO)
   )
 )
-(checksum sha256:da9912522fb0e3bbae174e151f9b952ce908ea3298f732b4883d7b8b48a1b92a)
+(checksum sha256:0f62164d68137b10b3e7ce86a29c667c20abe5622cd294cd5a6b5d742614770a)

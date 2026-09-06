@@ -526,6 +526,118 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 0);
             }
 
+            // FileOpenHandle(path:8, mode:8) → i64：mode 0=rb 1=wb 2=r+b；失败 → 0
+            private void EmitFileOpenHandle()
+            {
+                var fail = NewLabel();
+                var done = NewLabel();
+                var result = NewReg(8);
+                Const(result, 0);
+
+                var mode = _args[1];
+                var mw = NewPtr();
+                var useRb = NewLabel();
+                var useWb = NewLabel();
+                var useRw = NewLabel();
+                var modeReady = NewLabel();
+                Cmp(mode, 0);
+                Jcc(LirCond.Equal, useRb);
+                Cmp(mode, 1);
+                Jcc(LirCond.Equal, useWb);
+                Jmp(useRw);
+                Mark(useRb);
+                LeaData(mw, _rbMode);
+                Jmp(modeReady);
+                Mark(useWb);
+                LeaData(mw, _wbMode);
+                Jmp(modeReady);
+                Mark(useRw);
+                LeaData(mw, _rwMode);
+                Mark(modeReady);
+
+                var pw = WidePtrZ(_args[0]);
+                var fp = NewPtr();
+                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pw, mw);
+                Cmp(fp, 0);
+                Jcc(LirCond.Equal, fail);
+                Mov(result, fp);
+                Jmp(done);
+
+                Mark(fail);
+                Const(result, 0);
+                Mark(done);
+                StoreRet(result);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // FileSizeHandle(h) → 文件字节数（seek END 再恢复）
+            private void EmitFileSizeHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, C(8, 0), C(4, 2));
+                var sz = NewReg(8);
+                SysCallDll(sz, "ucrtbase.dll", "_ftelli64", 1, true, fp);
+                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 2, true, fp, C(8, 0), C(4, 0));
+                StoreRet(sz);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // FileSeekHandle(h, offset:i64, origin)
+            private void EmitFileSeekHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, _args[1], _args[2]);
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // FileTellHandle(h) → 当前位置
+            private void EmitFileTellHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                var pos = NewReg(8);
+                SysCallDll(pos, "ucrtbase.dll", "_ftelli64", 1, true, fp);
+                StoreRet(pos);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // FileReadHandle(h, data:u8[], start, count) → 实际读入字节
+            private void EmitFileReadHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                var dst = NewPtr();
+                Lea(dst, _args[1], 8);
+                Add(dst, dst, _args[2]);
+                var n = NewReg(4);
+                SysCallDll(n, "ucrtbase.dll", "fread", 4, true, dst, C(4, 1), _args[3], fp);
+                StoreRet(n);
+                EndFunction(_currentFunction!, 4);
+            }
+
+            // FileWriteHandle(h, data:u8[], start, count)
+            private void EmitFileWriteHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                var src = NewPtr();
+                Lea(src, _args[1], 8);
+                Add(src, src, _args[2]);
+                SysCallDll(null, "ucrtbase.dll", "fwrite", 4, true, src, C(4, 1), _args[3], fp);
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // FileCloseHandle(h)
+            private void EmitFileCloseHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+                EndFunction(_currentFunction!, 0);
+            }
+
         }
     }
 }

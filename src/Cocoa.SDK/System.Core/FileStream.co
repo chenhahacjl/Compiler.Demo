@@ -1,0 +1,87 @@
+// System.IO 模块实现（本文件归属 System.Core）
+// FileStream：真 seek 句柄（native/Evaluator 走本体；Runtime.File* 原语三端可用）。
+// 6f 期：BCL 直连（facade）与实例字段（_h）当前编译器不能兼得（facade 类实例方法静态化）；
+// 若 IL 端需直链 BCL 可改用全缓冲实现或等待 facade+body 支持，见 docs-dev 记录。
+
+using System
+
+namespace System.IO
+{
+    public facade class FileStream
+    {
+        private _h: i64
+
+        public constructor(path: string)
+        {
+            _h = Runtime.FileOpen(path, 0)
+        }
+
+        public property CanRead: bool
+        {
+            get
+            {
+                return true
+            }
+        }
+
+        public property CanWrite: bool
+        {
+            get
+            {
+                return true
+            }
+        }
+
+        public property CanSeek: bool
+        {
+            get
+            {
+                return true
+            }
+        }
+
+        public property Length: i64
+        {
+            get
+            {
+                return Runtime.FileSize(_h)
+            }
+        }
+
+        public property Position: i64
+        {
+            get
+            {
+                return Runtime.FileTell(_h)
+            }
+            set
+            {
+                Runtime.FileSeek(_h, value, 0)
+            }
+        }
+
+        public function Read(data: u8[], offset: i32, count: i32): i32
+        {
+            return Runtime.FileRead(_h, data, offset, count)
+        }
+
+        public function Write(data: u8[], offset: i32, count: i32): void
+        {
+            Runtime.FileWrite(_h, data, offset, count)
+        }
+
+        public function Flush(): void
+        {
+        }
+
+        public function Close(): void
+        {
+            Runtime.FileClose(_h)
+        }
+
+        public function Dispose(): void
+        {
+            Runtime.FileClose(_h)
+        }
+    }
+}

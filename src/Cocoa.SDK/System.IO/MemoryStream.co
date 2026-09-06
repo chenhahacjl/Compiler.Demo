@@ -1,6 +1,5 @@
-// Cocoa 系统标准库 · System.IO 模块
-// MemoryStream：纯内存缓冲 + 游标（Evaluator/IL/native 三端可跑本体，不依赖 BCL）。
-
+﻿// Cocoa 绯荤粺鏍囧噯搴?路 System.IO 妯″潡
+// MemoryStream锛氱函鍐呭瓨缂撳啿 + 娓告爣锛圗valuator/IL/native 涓夌鍙窇鏈綋锛屼笉渚濊禆 BCL锛夈€?
 using System
 
 namespace System.IO
@@ -144,7 +143,11 @@ namespace System.IO
         {
         }
 
-        public function Close(): void
+public function Close(): void
+        {
+        }
+
+        public function Dispose(): void
         {
         }
 

@@ -33,7 +33,14 @@ namespace Cocoa.CodeAnalysis.Symbols
         FileReadAllText,
         FileWriteAllText,
         FileReadAllBytes,
-        FileWriteAllBytes,
+FileWriteAllBytes,
+        FileOpen,
+        FileSize,
+        FileSeek,
+        FileTell,
+        FileRead,
+        FileWrite,
+        FileClose,
         FileExists,
         FileDelete,
         FileCopy,
@@ -90,6 +97,13 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.FileWriteAllText, "WriteAllText", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("text", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileReadAllBytes, "ReadAllBytes", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileWriteAllBytes, "WriteAllBytes", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
+            new BuiltinSpec(BuiltinKind.FileOpen, "FileOpen", TypeSymbol.Int64, new[] { ("path", TypeSymbol.String), ("mode", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.FileSize, "FileSize", TypeSymbol.Int64, new[] { ("h", TypeSymbol.Int64) }),
+            new BuiltinSpec(BuiltinKind.FileSeek, "FileSeek", TypeSymbol.Void, new[] { ("h", TypeSymbol.Int64), ("offset", TypeSymbol.Int64), ("origin", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.FileTell, "FileTell", TypeSymbol.Int64, new[] { ("h", TypeSymbol.Int64) }),
+            new BuiltinSpec(BuiltinKind.FileRead, "FileRead", TypeSymbol.Int32, new[] { ("h", TypeSymbol.Int64), ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)), ("start", TypeSymbol.Int32), ("count", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.FileWrite, "FileWrite", TypeSymbol.Void, new[] { ("h", TypeSymbol.Int64), ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)), ("start", TypeSymbol.Int32), ("count", TypeSymbol.Int32) }),
+            new BuiltinSpec(BuiltinKind.FileClose, "FileClose", TypeSymbol.Void, new[] { ("h", TypeSymbol.Int64) }),
             new BuiltinSpec(BuiltinKind.FileExists, "Exists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.GetEnvironmentVariable, "GetEnvironmentVariable", TypeSymbol.String, new[] { ("name", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.GetCurrentDirectory, "GetCurrentDirectory", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
@@ -164,6 +178,13 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly FunctionSymbol FileWriteAllText = Create(BuiltinKind.FileWriteAllText);
         public static readonly FunctionSymbol FileReadAllBytes = Create(BuiltinKind.FileReadAllBytes);
         public static readonly FunctionSymbol FileWriteAllBytes = Create(BuiltinKind.FileWriteAllBytes);
+        public static readonly FunctionSymbol FileOpenFn = Create(BuiltinKind.FileOpen);
+        public static readonly FunctionSymbol FileSizeFn = Create(BuiltinKind.FileSize);
+        public static readonly FunctionSymbol FileSeekFn = Create(BuiltinKind.FileSeek);
+        public static readonly FunctionSymbol FileTellFn = Create(BuiltinKind.FileTell);
+        public static readonly FunctionSymbol FileReadFn = Create(BuiltinKind.FileRead);
+        public static readonly FunctionSymbol FileWriteFn = Create(BuiltinKind.FileWrite);
+        public static readonly FunctionSymbol FileCloseFn = Create(BuiltinKind.FileClose);
         public static readonly FunctionSymbol FileExists = Create(BuiltinKind.FileExists);
         public static readonly FunctionSymbol GetEnvironmentVariable = Create(BuiltinKind.GetEnvironmentVariable);
         public static readonly FunctionSymbol GetCurrentDirectory = Create(BuiltinKind.GetCurrentDirectory);
@@ -212,6 +233,13 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.FileWriteAllText => FileWriteAllText,
                 BuiltinKind.FileReadAllBytes => FileReadAllBytes,
                 BuiltinKind.FileWriteAllBytes => FileWriteAllBytes,
+                BuiltinKind.FileOpen => FileOpenFn,
+                BuiltinKind.FileSize => FileSizeFn,
+                BuiltinKind.FileSeek => FileSeekFn,
+                BuiltinKind.FileTell => FileTellFn,
+                BuiltinKind.FileRead => FileReadFn,
+                BuiltinKind.FileWrite => FileWriteFn,
+                BuiltinKind.FileClose => FileCloseFn,
                 BuiltinKind.FileExists => FileExists,
                 BuiltinKind.GetEnvironmentVariable => GetEnvironmentVariable,
                 BuiltinKind.GetCurrentDirectory => GetCurrentDirectory,

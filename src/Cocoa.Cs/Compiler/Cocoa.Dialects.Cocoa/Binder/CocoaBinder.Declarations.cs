@@ -2049,8 +2049,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 indexParams = BindIndexerParameters(syntax.Parameters);
             }
 
-            // facade 实例方法降级（隐藏首参 this + 强制静态）；索引器亦遵循
-            var lower = !isStatic && classType.IsFacadeClass;
+            // facade 实例方法降级（隐藏首参 this + 强制静态）；索引器亦遵循。
+            // 6f：规则同 BindFunctionDeclaration——基元别名必降；同类 facade 无实例字段（纯成员面）亦降。
+            var staticContainerLike = classType.FacadeThisType != null ||
+                                      !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+            var lower = !isStatic && classType.IsFacadeClass && staticContainerLike;
 
             // getter：get_Name / get_Item
             FunctionSymbol? getter = null;
@@ -2343,10 +2346,13 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword);
 
-            // 6e-M19 M2-b：facade 类实例方法编译期降级——隐藏首参 this（类型 = 承载类型）+ 强制静态，
-            // 三后端按普通静态容器方法发射（对齐 C# 基元别名模型：Int32.ToString 等成员面载体）。
-            // 声明参数 ordinal 整体 +1（真静态无 instance offset，this 占据 arg0）
-            if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass)
+// 6e-M19 M2-b → 6f：facade 实例方法降级条件——
+            //   · FacadeThisType 指向异型（Int32/Type 等基元别名）→ 必须降级；
+            //   · 同类 facade（FacadeThisType==null）无实例字段（纯成员面载体，如 Exception/上下文字）→ 维持旧降级；
+            //   · 同类 facade 携带实例状态（FileStream._h）→ 保留真实例（成员可用字段/body，IL 端仍直链 BCL）。
+            var staticContainerLike = classType.FacadeThisType != null ||
+                                      !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+            if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass && staticContainerLike)
             {
                 isStatic = true;
                 var thisParameter = new ParameterSymbol("this", classType.FacadeThisType ?? classType, 0, isThis: true);

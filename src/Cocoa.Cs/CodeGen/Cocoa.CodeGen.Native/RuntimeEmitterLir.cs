@@ -65,7 +65,7 @@ namespace Cocoa.CodeGen.Native
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _fileBuffer = "", _fileBuffer2 = "", _fileBuffer3 = "", _rbMode = "", _wbMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
+                _fileBuffer = "", _fileBuffer2 = "", _fileBuffer3 = "", _rbMode = "", _wbMode = "", _rwMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "",
@@ -272,6 +272,20 @@ namespace Cocoa.CodeGen.Native
                 EmitFileReadAllBytes();
                 _ = BeginFunctionTyped("FileWriteAllBytes", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitFileWriteAllBytes();
+                _ = BeginFunctionTyped("FileOpenHandle", new[] { 8, 8 }, LirType.Addr);
+                EmitFileOpenHandle();
+                _ = BeginFunctionTyped("FileSizeHandle", new[] { 8 }, LirType.Addr);
+                EmitFileSizeHandle();
+                _ = BeginFunctionTyped("FileSeekHandle", new[] { 8, 8, 8 }, LirType.Addr);
+                EmitFileSeekHandle();
+                _ = BeginFunctionTyped("FileTellHandle", new[] { 8 }, LirType.Addr);
+                EmitFileTellHandle();
+                _ = BeginFunctionTyped("FileReadHandle", new[] { 8, 8, 8, 8 }, LirType.Addr);
+                EmitFileReadHandle();
+                _ = BeginFunctionTyped("FileWriteHandle", new[] { 8, 8, 8, 8 }, LirType.Addr);
+                EmitFileWriteHandle();
+                _ = BeginFunctionTyped("FileCloseHandle", new[] { 8 }, LirType.Addr);
+                EmitFileCloseHandle();
                 _ = BeginFunctionTyped("StringFromBytes", new[] { 8 }, LirType.Addr);
                 EmitStringFromBytes();
                 _ = BeginFunctionTyped("StringToBytes", new[] { 8 }, LirType.Addr);
@@ -308,6 +322,7 @@ namespace Cocoa.CodeGen.Native
                 // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀式 COM 串，不能直接当 LPCWSTR 用）
                 _rbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
                 _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
+                _rwMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RwMode", new byte[] { (byte)'r', 0, (byte)'+', 0, (byte)'b', 0, 0, 0 }));
                 _emptyString = _program.AddData(LirDataItem.Utf16(Prefix + "EmptyString", ""));
                 _divZeroMessage = _program.AddData(LirDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
                 _stackOverflowMessage = _program.AddData(LirDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
