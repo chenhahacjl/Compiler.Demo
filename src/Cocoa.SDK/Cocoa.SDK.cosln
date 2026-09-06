@@ -1,4 +1,5 @@
 <Solution Version="1">
   <Project Include="System.Core/System.Core.coproj" />
   <Project Include="System.Collections/System.Collections.coproj" />
+  <Project Include="System.IO/System.IO.coproj" />
 </Solution>

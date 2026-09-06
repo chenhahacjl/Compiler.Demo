@@ -20,5 +20,6 @@ if not exist "%LIBS%" mkdir "%LIBS%"
 REM Collect all modules (System.Core + System.Collections; collections serializable since 6b/M0-1c)
 copy /y "%OUT%\System.Core.coa" "%LIBS%\System.Core.coa" >nul
 if exist "%OUT%\System.Collections.coa" copy /y "%OUT%\System.Collections.coa" "%LIBS%\System.Collections.coa" >nul
+if exist "%OUT%\System.IO.coa" copy /y "%OUT%\System.IO.coa" "%LIBS%\System.IO.coa" >nul
 REM Managed dll not prebuilt: consumers regenerate lazily from coa (ProjectBuilder.EnsureManagedDlls)
 endlocal

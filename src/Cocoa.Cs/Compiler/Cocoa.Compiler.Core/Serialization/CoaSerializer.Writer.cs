@@ -299,11 +299,6 @@ namespace Cocoa.CodeAnalysis.Serialization
                     return false;
                 }
 
-                if (classType.Properties.Length > 0)
-                {
-                    return false;
-                }
-
                 return classType.Fields.Any(f => !f.IsStatic) ||
                        classType.Events.Length > 0 ||
                        classType.Methods.Any(m => !m.IsStatic && !m.IsConstructor);

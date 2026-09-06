@@ -1,0 +1,96 @@
+// Cocoa 系统标准库 · System.IO 模块
+// Path：纯 Cocoa 字符串辅助（不依赖 BCL），正斜杠统一分隔。
+
+using System
+
+namespace System.IO
+{
+    public class Path
+    {
+        private static function IsSeparator(c: char): bool
+        {
+            return c == '/' || c == '\\'
+        }
+
+        public static function Combine(a: string, b: string): string
+        {
+            if String.IsNullOrEmpty(a)
+            {
+                return b
+            }
+            if String.IsNullOrEmpty(b)
+            {
+                return a
+            }
+            var chars = a.ToCharArray()
+            var last = chars[a.Length - 1]
+            if IsSeparator(last)
+            {
+                return a + b
+            }
+            return a + "/" + b
+        }
+
+        public static function GetFileName(path: string): string
+        {
+            var chars = path.ToCharArray()
+            var sep = path.Length - 1
+            while sep >= 0
+            {
+                if IsSeparator(chars[sep])
+                {
+                    return path.substring(sep + 1, path.Length - sep - 1)
+                }
+                sep = sep - 1
+            }
+            return path
+        }
+
+        public static function GetDirectoryName(path: string): string
+        {
+            var chars = path.ToCharArray()
+            var sep = path.Length - 1
+            while sep >= 0
+            {
+                if IsSeparator(chars[sep])
+                {
+                    return path.substring(0, sep)
+                }
+                sep = sep - 1
+            }
+            return ""
+        }
+
+        public static function GetExtension(path: string): string
+        {
+            var name = GetFileName(path)
+            var chars = name.ToCharArray()
+            var dot = name.Length - 1
+            while dot >= 0
+            {
+                if chars[dot] == '.'
+                {
+                    return name.substring(dot, name.Length - dot)
+                }
+                dot = dot - 1
+            }
+            return ""
+        }
+
+        public static function GetFileNameWithoutExtension(path: string): string
+        {
+            var name = GetFileName(path)
+            var chars = name.ToCharArray()
+            var dot = name.Length - 1
+            while dot >= 0
+            {
+                if chars[dot] == '.'
+                {
+                    return name.substring(0, dot)
+                }
+                dot = dot - 1
+            }
+            return name
+        }
+    }
+}

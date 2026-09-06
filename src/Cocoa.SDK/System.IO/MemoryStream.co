@@ -1,0 +1,161 @@
+// Cocoa 系统标准库 · System.IO 模块
+// MemoryStream：纯内存缓冲 + 游标（Evaluator/IL/native 三端可跑本体，不依赖 BCL）。
+
+using System
+
+namespace System.IO
+{
+    public class MemoryStream extends Stream
+    {
+        private _buffer: u8[]
+        private _pos: i32
+        private _length: i32
+
+        public constructor()
+        {
+            _buffer = new u8[0]
+            _pos = 0
+            _length = 0
+        }
+
+        public property CanRead: bool
+        {
+            get
+            {
+                return true
+            }
+        }
+
+        public property CanWrite: bool
+        {
+            get
+            {
+                return true
+            }
+        }
+
+        public property CanSeek: bool
+        {
+            get
+            {
+                return true
+            }
+        }
+
+        public property Length: i64
+        {
+            get
+            {
+                return _length
+            }
+        }
+
+        public property Position: i64
+        {
+            get
+            {
+                return _pos
+            }
+            set
+            {
+                _pos = (i32)value
+            }
+        }
+
+        private function EnsureCapacity(needed: i32): void
+        {
+            if needed <= _buffer.Length
+            {
+                return
+            }
+            var capacity = _buffer.Length * 2
+            if capacity < needed
+            {
+                capacity = needed
+            }
+            var grown = new u8[capacity]
+            for var i = 0 to _buffer.Length - 1
+            {
+                grown[i] = _buffer[i]
+            }
+            _buffer = grown
+        }
+
+        public function Read(data: u8[], offset: i32, count: i32): i32
+        {
+            var available = _length - _pos
+            var take = count
+            if take > available
+            {
+                take = available
+            }
+            if take < 0
+            {
+                take = 0
+            }
+            for var i = 0 to take - 1
+            {
+                data[offset + i] = _buffer[_pos + i]
+            }
+            _pos = _pos + take
+            return take
+        }
+
+        public function Write(data: u8[], offset: i32, count: i32): void
+        {
+            EnsureCapacity(_pos + count)
+            for var i = 0 to count - 1
+            {
+                _buffer[_pos + i] = data[offset + i]
+            }
+            _pos = _pos + count
+            if _pos > _length
+            {
+                _length = _pos
+            }
+        }
+
+        public function Seek(offset: i64, origin: i32): i64
+        {
+            var basePos = 0
+            if origin == 1  // Current
+            {
+                basePos = _pos
+            }
+            else if origin == 2  // End
+            {
+                basePos = _length
+            }
+            var pos: i64 = basePos
+            pos = pos + offset
+            if pos < 0
+            {
+                pos = 0
+            }
+            if pos > _length
+            {
+                pos = _length
+            }
+            _pos = (i32)pos
+            return pos
+        }
+
+        public function Flush(): void
+        {
+        }
+
+        public function Close(): void
+        {
+        }
+
+        public function ToArray(): u8[]
+        {
+            var result = new u8[_length]
+            for var i = 0 to _length - 1
+            {
+                result[i] = _buffer[i]
+            }
+            return result
+        }
+    }
+}

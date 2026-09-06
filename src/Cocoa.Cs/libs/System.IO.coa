@@ -1,0 +1,940 @@
+(cod COCOA 1
+  (symbols
+    (cls System.IO.Stream public iface:true ifaces:0 methods:0 fields:0 events:0 props:5
+      (prop CanRead @bool true false public false)
+      (prop CanWrite @bool true false public false)
+      (prop CanSeek @bool true false public false)
+      (prop Length @i64 true false public false)
+      (prop Position @i64 true true public false)
+    )
+    (cls System.IO.MemoryStream public iface:false ifaces:1 System.IO.Stream methods:0 fields:3
+      (fld _buffer @u8[] private false false)
+      (fld _pos @i32 private false false)
+      (fld _length @i32 private false false) events:0 props:5
+      (prop CanRead @bool true false public false)
+      (prop CanWrite @bool true false public false)
+      (prop CanSeek @bool true false public false)
+      (prop Length @i64 true false public false)
+      (prop Position @i64 true true public false)
+    )
+    (cls System.IO.Path public iface:false ifaces:0 methods:6 IsSeparator[@char] Combine[@string,@string] GetFileName[@string] GetDirectoryName[@string] GetExtension[@string] GetFileNameWithoutExtension[@string] fields:0 events:0)
+    (fn System.IO!System.IO.MemoryStream.MemoryStream[] name:MemoryStream ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.IO!System.IO.MemoryStream.get_CanRead[] name:get_CanRead ret:@bool ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.IO!System.IO.MemoryStream.get_CanWrite[] name:get_CanWrite ret:@bool ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.IO!System.IO.MemoryStream.get_CanSeek[] name:get_CanSeek ret:@bool ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.IO!System.IO.MemoryStream.get_Length[] name:get_Length ret:@i64 ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.IO!System.IO.MemoryStream.get_Position[] name:get_Position ret:@i64 ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.IO!System.IO.MemoryStream.set_Position[@i64] name:set_Position ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.IO!System.IO.MemoryStream.set_Position[@i64]/value value @i64 0 - -)
+    )
+    (fn System.IO!System.IO.MemoryStream.EnsureCapacity[@i32] name:EnsureCapacity ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/needed needed @i32 0 - -)
+    )
+    (fn System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32] name:Read ret:@i32 ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:3
+      (par System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/data data @u8[] 0 - -)
+      (par System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/offset offset @i32 1 - -)
+      (par System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/count count @i32 2 - -)
+    )
+    (fn System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32] name:Write ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:3
+      (par System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/data data @u8[] 0 - -)
+      (par System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/offset offset @i32 1 - -)
+      (par System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/count count @i32 2 - -)
+    )
+    (fn System.IO!System.IO.MemoryStream.Seek[@i64,@i32] name:Seek ret:@i64 ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:2
+      (par System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/offset offset @i64 0 - -)
+      (par System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/origin origin @i32 1 - -)
+    )
+    (fn System.IO!System.IO.MemoryStream.Flush[] name:Flush ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.IO!System.IO.MemoryStream.Close[] name:Close ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.IO!System.IO.MemoryStream.ToArray[] name:ToArray ret:@u8[] ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.IO!System.IO.Path.IsSeparator[@char] name:IsSeparator ret:@bool ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.IO!System.IO.Path.IsSeparator[@char]/c c @char 0 - -)
+    )
+    (fn System.IO!System.IO.Path.Combine[@string,@string] name:Combine ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.IO!System.IO.Path.Combine[@string,@string]/a a @string 0 - -)
+      (par System.IO!System.IO.Path.Combine[@string,@string]/b b @string 1 - -)
+    )
+    (fn System.IO!System.IO.Path.GetFileName[@string] name:GetFileName ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.IO!System.IO.Path.GetFileName[@string]/path path @string 0 - -)
+    )
+    (fn System.IO!System.IO.Path.GetDirectoryName[@string] name:GetDirectoryName ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.IO!System.IO.Path.GetDirectoryName[@string]/path path @string 0 - -)
+    )
+    (fn System.IO!System.IO.Path.GetExtension[@string] name:GetExtension ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.IO!System.IO.Path.GetExtension[@string]/path path @string 0 - -)
+    )
+    (fn System.IO!System.IO.Path.GetFileNameWithoutExtension[@string] name:GetFileNameWithoutExtension ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/path path @string 0 - -)
+    )
+    (loc System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/capacity false @i32)
+    (loc System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/grown false @u8[])
+    (loc System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/i false @i32)
+    (loc System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/available false @i32)
+    (loc System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take false @i32)
+    (loc System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/i false @i32)
+    (loc System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/i false @i32)
+    (loc System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/basePos false @i32)
+    (loc System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos false @i64)
+    (loc System.IO!System.IO.MemoryStream.ToArray[]/result false @u8[])
+    (loc System.IO!System.IO.MemoryStream.ToArray[]/i false @i32)
+    (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]] fields:0 events:0)
+    (loc System.IO!System.IO.Path.Combine[@string,@string]/chars false @char[])
+    (loc System.IO!System.IO.Path.Combine[@string,@string]/last false @char)
+    (loc System.IO!System.IO.Path.GetFileName[@string]/chars false @char[])
+    (loc System.IO!System.IO.Path.GetFileName[@string]/sep false @i32)
+    (loc System.IO!System.IO.Path.GetDirectoryName[@string]/chars false @char[])
+    (loc System.IO!System.IO.Path.GetDirectoryName[@string]/sep false @i32)
+    (loc System.IO!System.IO.Path.GetExtension[@string]/name false @string)
+    (loc System.IO!System.IO.Path.GetExtension[@string]/chars false @char[])
+    (loc System.IO!System.IO.Path.GetExtension[@string]/dot false @i32)
+    (loc System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/name false @string)
+    (loc System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/chars false @char[])
+    (loc System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot false @i32)
+  )
+  (bodies
+    (body System.IO!System.IO.MemoryStream.MemoryStream[]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_buffer @u8[] false
+            (arrnew @u8[]
+              (lit @i32 i:0) 0
+            )
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_pos @i32 false
+            (lit @i32 i:0)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_length @i32 false
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.get_CanRead[]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.get_CanWrite[]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.get_CanSeek[]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.get_Length[]
+      (block 1
+        (return
+          (conv @i64
+            (memberacc @i32 _length owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.get_Position[]
+      (block 1
+        (return
+          (conv @i64
+            (memberacc @i32 _pos owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.set_Position[@i64]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_pos @i32 false
+            (conv @i32
+              (var System.IO!System.IO.MemoryStream.set_Position[@i64]/value)
+            )
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]
+      (block 6
+        (if
+          (binary
+            (bop <= @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/needed)
+            (memberacc @i32 Length
+              (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+            )
+          )
+          (block 1
+            (return -)
+          ) -
+        )
+        (vardecl System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/capacity
+          (binary
+            (bop * @i32 @i32)
+            (memberacc @i32 Length
+              (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+            )
+            (lit @i32 i:2)
+          )
+        )
+        (if
+          (binary
+            (bop < @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/capacity)
+            (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/needed)
+          )
+          (block 1
+            (exprstmt
+              (assign System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/capacity
+                (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/needed)
+              )
+            )
+          ) -
+        )
+        (vardecl System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/grown
+          (arrnew @u8[]
+            (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/capacity) 0
+          )
+        )
+        (for System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/i
+          (lit @i32 i:0)
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+            )
+            (lit @i32 i:1)
+          ) -
+          (block 1
+            (exprstmt
+              (elemassign @u8
+                (elem @u8
+                  (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/grown)
+                  (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/i)
+                )
+                (elem @u8
+                  (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                    (this System.IO.MemoryStream)
+                  )
+                  (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/i)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_buffer @u8[] false
+            (var System.IO!System.IO.MemoryStream.EnsureCapacity[@i32]/grown)
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]
+      (block 7
+        (vardecl System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/available
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 _length owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+            (memberacc @i32 _pos owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+          )
+        )
+        (vardecl System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take
+          (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/count)
+        )
+        (if
+          (binary
+            (bop > @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take)
+            (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/available)
+          )
+          (block 1
+            (exprstmt
+              (assign System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take
+                (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/available)
+              )
+            )
+          ) -
+        )
+        (if
+          (binary
+            (bop < @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take)
+            (lit @i32 i:0)
+          )
+          (block 1
+            (exprstmt
+              (assign System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take
+                (lit @i32 i:0)
+              )
+            )
+          ) -
+        )
+        (for System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/i
+          (lit @i32 i:0)
+          (binary
+            (bop - @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take)
+            (lit @i32 i:1)
+          ) -
+          (block 1
+            (exprstmt
+              (elemassign @u8
+                (elem @u8
+                  (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/data)
+                  (binary
+                    (bop + @i32 @i32)
+                    (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/offset)
+                    (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/i)
+                  )
+                )
+                (elem @u8
+                  (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                    (this System.IO.MemoryStream)
+                  )
+                  (binary
+                    (bop + @i32 @i32)
+                    (memberacc @i32 _pos owner:System.IO.MemoryStream
+                      (this System.IO.MemoryStream)
+                    )
+                    (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/i)
+                  )
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_pos @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _pos owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+              (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take)
+            )
+          )
+        )
+        (return
+          (var System.IO!System.IO.MemoryStream.Read[@u8[],@i32,@i32]/take)
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]
+      (block 4
+        (exprstmt
+          (membercall @void EnsureCapacity System.IO!System.IO.MemoryStream.EnsureCapacity[@i32] 1
+            (this System.IO.MemoryStream)
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _pos owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+              (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/count)
+            )
+          )
+        )
+        (for System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/i
+          (lit @i32 i:0)
+          (binary
+            (bop - @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/count)
+            (lit @i32 i:1)
+          ) -
+          (block 1
+            (exprstmt
+              (elemassign @u8
+                (elem @u8
+                  (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                    (this System.IO.MemoryStream)
+                  )
+                  (binary
+                    (bop + @i32 @i32)
+                    (memberacc @i32 _pos owner:System.IO.MemoryStream
+                      (this System.IO.MemoryStream)
+                    )
+                    (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/i)
+                  )
+                )
+                (elem @u8
+                  (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/data)
+                  (binary
+                    (bop + @i32 @i32)
+                    (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/offset)
+                    (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/i)
+                  )
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_pos @i32 false
+            (binary
+              (bop + @i32 @i32)
+              (memberacc @i32 _pos owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+              (var System.IO!System.IO.MemoryStream.Write[@u8[],@i32,@i32]/count)
+            )
+          )
+        )
+        (if
+          (binary
+            (bop > @i32 @i32)
+            (memberacc @i32 _pos owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+            (memberacc @i32 _length owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+          )
+          (block 1
+            (exprstmt
+              (memberassign
+                (this System.IO.MemoryStream) name:_length @i32 false
+                (memberacc @i32 _pos owner:System.IO.MemoryStream
+                  (this System.IO.MemoryStream)
+                )
+              )
+            )
+          ) -
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.Seek[@i64,@i32]
+      (block 8
+        (vardecl System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/basePos
+          (lit @i32 i:0)
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/origin)
+            (lit @i32 i:1)
+          )
+          (block 1
+            (exprstmt
+              (assign System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/basePos
+                (memberacc @i32 _pos owner:System.IO.MemoryStream
+                  (this System.IO.MemoryStream)
+                )
+              )
+            )
+          )
+          (if
+            (binary
+              (bop == @i32 @i32)
+              (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/origin)
+              (lit @i32 i:2)
+            )
+            (block 1
+              (exprstmt
+                (assign System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/basePos
+                  (memberacc @i32 _length owner:System.IO.MemoryStream
+                    (this System.IO.MemoryStream)
+                  )
+                )
+              )
+            ) -
+          )
+        )
+        (vardecl System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos
+          (conv @i64
+            (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/basePos)
+          )
+        )
+        (exprstmt
+          (assign System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos
+            (binary
+              (bop + @i64 @i64)
+              (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos)
+              (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/offset)
+            )
+          )
+        )
+        (if
+          (binary
+            (bop < @i64 @i64)
+            (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos)
+            (conv @i64
+              (lit @i32 i:0)
+            )
+          )
+          (block 1
+            (exprstmt
+              (assign System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos
+                (conv @i64
+                  (lit @i32 i:0)
+                )
+              )
+            )
+          ) -
+        )
+        (if
+          (binary
+            (bop > @i64 @i64)
+            (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos)
+            (conv @i64
+              (memberacc @i32 _length owner:System.IO.MemoryStream
+                (this System.IO.MemoryStream)
+              )
+            )
+          )
+          (block 1
+            (exprstmt
+              (assign System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos
+                (conv @i64
+                  (memberacc @i32 _length owner:System.IO.MemoryStream
+                    (this System.IO.MemoryStream)
+                  )
+                )
+              )
+            )
+          ) -
+        )
+        (exprstmt
+          (memberassign
+            (this System.IO.MemoryStream) name:_pos @i32 false
+            (conv @i32
+              (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos)
+            )
+          )
+        )
+        (return
+          (var System.IO!System.IO.MemoryStream.Seek[@i64,@i32]/pos)
+        )
+      )
+    )
+    (body System.IO!System.IO.MemoryStream.Flush[]
+      (block 0)
+    )
+    (body System.IO!System.IO.MemoryStream.Close[]
+      (block 0)
+    )
+    (body System.IO!System.IO.MemoryStream.ToArray[]
+      (block 3
+        (vardecl System.IO!System.IO.MemoryStream.ToArray[]/result
+          (arrnew @u8[]
+            (memberacc @i32 _length owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            ) 0
+          )
+        )
+        (for System.IO!System.IO.MemoryStream.ToArray[]/i
+          (lit @i32 i:0)
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 _length owner:System.IO.MemoryStream
+              (this System.IO.MemoryStream)
+            )
+            (lit @i32 i:1)
+          ) -
+          (block 1
+            (exprstmt
+              (elemassign @u8
+                (elem @u8
+                  (var System.IO!System.IO.MemoryStream.ToArray[]/result)
+                  (var System.IO!System.IO.MemoryStream.ToArray[]/i)
+                )
+                (elem @u8
+                  (memberacc @u8[] _buffer owner:System.IO.MemoryStream
+                    (this System.IO.MemoryStream)
+                  )
+                  (var System.IO!System.IO.MemoryStream.ToArray[]/i)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (var System.IO!System.IO.MemoryStream.ToArray[]/result)
+        )
+      )
+    )
+    (body System.IO!System.IO.Path.IsSeparator[@char]
+      (block 1
+        (return
+          (binary
+            (bop || @bool @bool)
+            (binary
+              (bop == @char @char)
+              (var System.IO!System.IO.Path.IsSeparator[@char]/c)
+              (lit @char c:47)
+            )
+            (binary
+              (bop == @char @char)
+              (var System.IO!System.IO.Path.IsSeparator[@char]/c)
+              (lit @char c:92)
+            )
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.Path.Combine[@string,@string]
+      (block 6
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.Core!System.String)
+            (var System.IO!System.IO.Path.Combine[@string,@string]/a)
+          )
+          (block 1
+            (return
+              (var System.IO!System.IO.Path.Combine[@string,@string]/b)
+            )
+          ) -
+        )
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.Core!System.String)
+            (var System.IO!System.IO.Path.Combine[@string,@string]/b)
+          )
+          (block 1
+            (return
+              (var System.IO!System.IO.Path.Combine[@string,@string]/a)
+            )
+          ) -
+        )
+        (vardecl System.IO!System.IO.Path.Combine[@string,@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.IO!System.IO.Path.Combine[@string,@string]/a)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.Combine[@string,@string]/last
+          (elem @char
+            (var System.IO!System.IO.Path.Combine[@string,@string]/chars)
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 Length
+                (var System.IO!System.IO.Path.Combine[@string,@string]/a)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (if
+          (membercall @bool IsSeparator System.IO!System.IO.Path.IsSeparator[@char] 1
+            (this System.IO.Path)
+            (var System.IO!System.IO.Path.Combine[@string,@string]/last)
+          )
+          (block 1
+            (return
+              (binary
+                (bop + @string @string)
+                (var System.IO!System.IO.Path.Combine[@string,@string]/a)
+                (var System.IO!System.IO.Path.Combine[@string,@string]/b)
+              )
+            )
+          ) -
+        )
+        (return
+          (binary
+            (bop + @string @string)
+            (binary
+              (bop + @string @string)
+              (var System.IO!System.IO.Path.Combine[@string,@string]/a)
+              (lit @string s:/)
+            )
+            (var System.IO!System.IO.Path.Combine[@string,@string]/b)
+          )
+        )
+      )
+    )
+    (body System.IO!System.IO.Path.GetFileName[@string]
+      (block 4
+        (vardecl System.IO!System.IO.Path.GetFileName[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.IO!System.IO.Path.GetFileName[@string]/path)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.GetFileName[@string]/sep
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.IO!System.IO.Path.GetFileName[@string]/path)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.IO!System.IO.Path.GetFileName[@string]/sep)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (membercall @bool IsSeparator System.IO!System.IO.Path.IsSeparator[@char] 1
+                (this System.IO.Path)
+                (elem @char
+                  (var System.IO!System.IO.Path.GetFileName[@string]/chars)
+                  (var System.IO!System.IO.Path.GetFileName[@string]/sep)
+                )
+              )
+              (block 1
+                (return
+                  (membercall @string substring - 2
+                    (var System.IO!System.IO.Path.GetFileName[@string]/path)
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.IO!System.IO.Path.GetFileName[@string]/sep)
+                      (lit @i32 i:1)
+                    )
+                    (binary
+                      (bop - @i32 @i32)
+                      (binary
+                        (bop - @i32 @i32)
+                        (memberacc @i32 Length
+                          (var System.IO!System.IO.Path.GetFileName[@string]/path)
+                        )
+                        (var System.IO!System.IO.Path.GetFileName[@string]/sep)
+                      )
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.IO!System.IO.Path.GetFileName[@string]/sep
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.IO!System.IO.Path.GetFileName[@string]/sep)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (var System.IO!System.IO.Path.GetFileName[@string]/path)
+        )
+      )
+    )
+    (body System.IO!System.IO.Path.GetDirectoryName[@string]
+      (block 4
+        (vardecl System.IO!System.IO.Path.GetDirectoryName[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.IO!System.IO.Path.GetDirectoryName[@string]/path)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.GetDirectoryName[@string]/sep
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.IO!System.IO.Path.GetDirectoryName[@string]/path)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.IO!System.IO.Path.GetDirectoryName[@string]/sep)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (membercall @bool IsSeparator System.IO!System.IO.Path.IsSeparator[@char] 1
+                (this System.IO.Path)
+                (elem @char
+                  (var System.IO!System.IO.Path.GetDirectoryName[@string]/chars)
+                  (var System.IO!System.IO.Path.GetDirectoryName[@string]/sep)
+                )
+              )
+              (block 1
+                (return
+                  (membercall @string substring - 2
+                    (var System.IO!System.IO.Path.GetDirectoryName[@string]/path)
+                    (lit @i32 i:0)
+                    (var System.IO!System.IO.Path.GetDirectoryName[@string]/sep)
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.IO!System.IO.Path.GetDirectoryName[@string]/sep
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.IO!System.IO.Path.GetDirectoryName[@string]/sep)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (lit @string s:)
+        )
+      )
+    )
+    (body System.IO!System.IO.Path.GetExtension[@string]
+      (block 5
+        (vardecl System.IO!System.IO.Path.GetExtension[@string]/name
+          (membercall @string GetFileName System.IO!System.IO.Path.GetFileName[@string] 1
+            (this System.IO.Path)
+            (var System.IO!System.IO.Path.GetExtension[@string]/path)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.GetExtension[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.IO!System.IO.Path.GetExtension[@string]/name)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.GetExtension[@string]/dot
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.IO!System.IO.Path.GetExtension[@string]/name)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.IO!System.IO.Path.GetExtension[@string]/dot)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (binary
+                (bop == @char @char)
+                (elem @char
+                  (var System.IO!System.IO.Path.GetExtension[@string]/chars)
+                  (var System.IO!System.IO.Path.GetExtension[@string]/dot)
+                )
+                (lit @char c:46)
+              )
+              (block 1
+                (return
+                  (membercall @string substring - 2
+                    (var System.IO!System.IO.Path.GetExtension[@string]/name)
+                    (var System.IO!System.IO.Path.GetExtension[@string]/dot)
+                    (binary
+                      (bop - @i32 @i32)
+                      (memberacc @i32 Length
+                        (var System.IO!System.IO.Path.GetExtension[@string]/name)
+                      )
+                      (var System.IO!System.IO.Path.GetExtension[@string]/dot)
+                    )
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.IO!System.IO.Path.GetExtension[@string]/dot
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.IO!System.IO.Path.GetExtension[@string]/dot)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (lit @string s:)
+        )
+      )
+    )
+    (body System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]
+      (block 5
+        (vardecl System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/name
+          (membercall @string GetFileName System.IO!System.IO.Path.GetFileName[@string] 1
+            (this System.IO.Path)
+            (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+          )
+        )
+        (vardecl System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (binary
+                (bop == @char @char)
+                (elem @char
+                  (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/chars)
+                  (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                )
+                (lit @char c:46)
+              )
+              (block 1
+                (return
+                  (membercall @string substring - 2
+                    (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+                    (lit @i32 i:0)
+                    (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (var System.IO!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+        )
+      )
+    )
+  )
+  (manifest
+    (requires any)
+    (ns System.IO)
+  )
+)
+(checksum sha256:da9912522fb0e3bbae174e151f9b952ce908ea3298f732b4883d7b8b48a1b92a)
