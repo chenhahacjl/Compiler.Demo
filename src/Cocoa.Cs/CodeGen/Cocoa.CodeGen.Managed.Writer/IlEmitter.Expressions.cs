@@ -100,6 +100,20 @@ namespace Cocoa.CodeGen.Managed.Writer
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
+                case BuiltinKind.FileReadAllBytes:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "ReadAllBytes", new[] { "System.String" });
+                    if (m == null) throw new Exception("System.IO.File.ReadAllBytes not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
+                case BuiltinKind.FileWriteAllBytes:
+                {
+                    var m = _framework.ResolveMethod("System.IO.File", "WriteAllBytes", new[] { "System.String", "System.Byte[]" });
+                    if (m == null) throw new Exception("System.IO.File.WriteAllBytes not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), m);
+                    break;
+                }
                 case BuiltinKind.FileExists:
                 {
                     var m = _framework.ResolveMethod("System.IO.File", "Exists", new[] { "System.String" });
@@ -172,6 +186,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                     var setArgs = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_Arguments", new[] { "System.String" });
                     if (setArgs == null) throw new Exception("ProcessStartInfo.set_Arguments not found");
                     il.Emit(IlOpCodeTable.Get("Call"), setArgs);
+                    // stack: [..., psi]
+
+                    // dup → set_WorkingDirectory(workdir)
+                    il.Emit(IlOpCodeTable.Get("Dup"));
+                    var setWorkdir = _framework.ResolveMethod("System.Diagnostics.ProcessStartInfo", "set_WorkingDirectory", new[] { "System.String" });
+                    if (setWorkdir == null) throw new Exception("ProcessStartInfo.set_WorkingDirectory not found");
+                    il.Emit(IlOpCodeTable.Get("Call"), setWorkdir);
                     // stack: [..., psi]
 
                     // dup → set_UseShellExecute(false)

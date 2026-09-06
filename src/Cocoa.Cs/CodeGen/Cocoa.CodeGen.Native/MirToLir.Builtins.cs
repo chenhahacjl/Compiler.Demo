@@ -118,6 +118,24 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileWriteAllText"), LirOperand.Constant(0)));
                     return VoidResult();
                 }
+                case BuiltinKind.FileReadAllBytes:
+                {
+                    // 读二进制 → u8[] 数组指针（运行时 NewArray + 逐字节拷贝）
+                    var path = EmitExpression(arguments[0]);
+                    var result = AllocateRegister(LirType.Addr);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileReadAllBytes"), LirOperand.Constant(0)));
+                    return result;
+                }
+                case BuiltinKind.FileWriteAllBytes:
+                {
+                    var path = EmitExpression(arguments[0]);
+                    var data = EmitExpression(arguments[1]);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(data)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, null, LirOperand.Runtime("FileWriteAllBytes"), LirOperand.Constant(0)));
+                    return VoidResult();
+                }
                 case BuiltinKind.FileExists:
                 {
                     var path = EmitExpression(arguments[0]);
@@ -215,9 +233,11 @@ namespace Cocoa.CodeGen.Native
                 {
                     var path = EmitExpression(arguments[0]);
                     var args = EmitExpression(arguments[1]);
+                    var workdir = EmitExpression(arguments[2]);
                     var result = AllocateRegister(4);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(args)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(workdir)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("LaunchProcess"), LirOperand.Constant(0)));
                     return result;
                 }

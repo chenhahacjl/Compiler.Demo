@@ -410,6 +410,123 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 0);
             }
 
+            // FileReadAllBytes(path:8) → u8[]：_wfopen(rb) → 计长读（fread 块循环累加）→ 文件回零 →
+            // NewArray(len, elementSize=1) → 再读并逐字节拷入 arr+8。失败/缺文件 → 0 长度数组。
+            // 免 _ftelli64（x86 返回 i64 不便）；二次读与计长读同序（rb 文件可重复读）。
+            private void EmitFileReadAllBytes()
+            {
+                var fail = NewLabel();
+                var done = NewLabel();
+                var result = NewPtr();
+
+                var pb = WidePtrZ(_args[0]);
+                var rb = NewPtr();
+                LeaData(rb, _rbMode);
+                var fp = NewPtr();
+                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pb, rb);
+                Cmp(fp, 0);
+                Jcc(LirCond.Equal, fail);
+
+                var chunk = C(4, 0x2000);
+                var buf = NewPtr();
+                CallRuntime(buf, "Alloc", chunk);
+                Cmp(buf, 0);
+                Jcc(LirCond.Equal, fail);
+
+                // 计长：循环读 fread(buf,1,chunk,fp)，n>0 累加；读到不足 chunk 即 EOF
+                var total = NewReg(4);
+                Const(total, 0);
+                var countLoop = NewLabel();
+                var countDone = NewLabel();
+                Mark(countLoop);
+                var n1 = NewReg(4);
+                SysCallDll(n1, "ucrtbase.dll", "fread", 4, true, buf, C(4, 1), chunk, fp);
+                Cmp(n1, 0);
+                Jcc(LirCond.LessOrEqual, countDone);
+                Add(total, total, n1);
+                Cmp(n1, chunk);
+                Jcc(LirCond.Equal, countLoop);
+                Mark(countDone);
+                // 若到 EOF（不回零）直接按末次读结束；这里统一回零重读
+                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, C(8, 0), C(4, 0));
+
+                var arr = NewPtr();
+                CallRuntime(arr, "NewArray", total, C(4, 1));
+                Cmp(arr, 0);
+                Jcc(LirCond.Equal, fail);
+
+                // 拷贝重读
+                var arrBase = NewPtr();
+                Lea(arrBase, arr, 8);
+                var off = NewReg(4);
+                Const(off, 0);
+                var copyLoop = NewLabel();
+                var copyDone = NewLabel();
+                Mark(copyLoop);
+                var n2 = NewReg(4);
+                SysCallDll(n2, "ucrtbase.dll", "fread", 4, true, buf, C(4, 1), chunk, fp);
+                Cmp(n2, 0);
+                Jcc(LirCond.LessOrEqual, copyDone);
+                var sIdx = NewReg(4);
+                Const(sIdx, 0);
+                var innerLoop = NewLabel();
+                var innerDone = NewLabel();
+                Mark(innerLoop);
+                Cmp(sIdx, n2);
+                Jcc(LirCond.GreaterOrEqual, innerDone);
+                var srcPtr = NewPtr();
+                Mov(srcPtr, buf);
+                Add(srcPtr, srcPtr, sIdx);
+                var dstPtr = NewPtr();
+                Mov(dstPtr, arrBase);
+                Add(dstPtr, dstPtr, off);
+                var bv = NewReg(4);
+                Load(bv, srcPtr, 0, 1);
+                Store(dstPtr, 0, bv, 1);
+                AddI(off, off, 1);
+                AddI(sIdx, sIdx, 1);
+                Jmp(innerLoop);
+                Mark(innerDone);
+                AddI(off = off); // no-op
+                Jmp(copyLoop);
+                Mark(copyDone);
+
+                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+                Jmp(done);
+
+                Mark(fail);
+                CallRuntime(result, "NewArray", C(4, 0), C(4, 1));
+                Jmp(done);
+
+                Mark(done);
+                StoreRet(result);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // FileWriteAllBytes(path:8, data:8) → void：_wfopen(wb) → fwrite(data+8,1,len,fp) → fclose
+            private void EmitFileWriteAllBytes()
+            {
+                var fail = NewLabel();
+                var data = _args[1];
+                var pb = WidePtrZ(_args[0]);
+                var wb = NewPtr();
+                LeaData(wb, _wbMode);
+                var fp = NewPtr();
+                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pb, wb);
+                Cmp(fp, 0);
+                Jcc(LirCond.Equal, fail);
+
+                var len = NewReg(4);
+                Load(len, data, 0, 4);
+                var src = NewPtr();
+                Lea(src, data, 8);
+                SysCallDll(null, "ucrtbase.dll", "fwrite", 4, true, src, C(4, 1), len, fp);
+                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+
+                Mark(fail);
+                EndFunction(_currentFunction!, 0);
+            }
+
         }
     }
 }

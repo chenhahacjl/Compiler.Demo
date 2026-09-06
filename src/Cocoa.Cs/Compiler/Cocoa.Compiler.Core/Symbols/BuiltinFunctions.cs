@@ -28,6 +28,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         // ---- 文件 IO（6e-G7 ④）----
         FileReadAllText,
         FileWriteAllText,
+        FileReadAllBytes,
+        FileWriteAllBytes,
         FileExists,
         FileDelete,
         FileCopy,
@@ -80,6 +82,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.StringFromChars, "StringFromChars", TypeSymbol.String, new[] { ("chars", TypeSymbol.ArrayOf(TypeSymbol.Char)) }),
             new BuiltinSpec(BuiltinKind.FileReadAllText, "ReadAllText", TypeSymbol.String, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.FileWriteAllText, "WriteAllText", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("text", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.FileReadAllBytes, "ReadAllBytes", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("path", TypeSymbol.String) }),
+            new BuiltinSpec(BuiltinKind.FileWriteAllBytes, "WriteAllBytes", TypeSymbol.Void, new[] { ("path", TypeSymbol.String), ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
             new BuiltinSpec(BuiltinKind.FileExists, "Exists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.GetEnvironmentVariable, "GetEnvironmentVariable", TypeSymbol.String, new[] { ("name", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.GetCurrentDirectory, "GetCurrentDirectory", TypeSymbol.String, System.Array.Empty<(string, TypeSymbol)>()),
@@ -89,7 +93,7 @@ namespace Cocoa.CodeAnalysis.Symbols
             new BuiltinSpec(BuiltinKind.DirectoryExists, "DirectoryExists", TypeSymbol.Boolean, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.SetCurrentDirectory, "SetCurrentDirectory", TypeSymbol.Void, new[] { ("path", TypeSymbol.String) }),
             new BuiltinSpec(BuiltinKind.Sha256Hash, "Sha256Hash", TypeSymbol.ArrayOf(TypeSymbol.UInt8), new[] { ("data", TypeSymbol.ArrayOf(TypeSymbol.UInt8)) }),
-            new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String) }));
+            new BuiltinSpec(BuiltinKind.LaunchProcess, "LaunchProcess", TypeSymbol.Int32, new[] { ("path", TypeSymbol.String), ("args", TypeSymbol.String), ("workdir", TypeSymbol.String) }));
 
         /// <summary>
         /// 输出字符串并换行: void WriteLine(any text)（Console.WriteLine）
@@ -150,6 +154,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         // ---- 文件 IO / 环境（6e-G7 ④）----
         public static readonly FunctionSymbol FileReadAllText = Create(BuiltinKind.FileReadAllText);
         public static readonly FunctionSymbol FileWriteAllText = Create(BuiltinKind.FileWriteAllText);
+        public static readonly FunctionSymbol FileReadAllBytes = Create(BuiltinKind.FileReadAllBytes);
+        public static readonly FunctionSymbol FileWriteAllBytes = Create(BuiltinKind.FileWriteAllBytes);
         public static readonly FunctionSymbol FileExists = Create(BuiltinKind.FileExists);
         public static readonly FunctionSymbol GetEnvironmentVariable = Create(BuiltinKind.GetEnvironmentVariable);
         public static readonly FunctionSymbol GetCurrentDirectory = Create(BuiltinKind.GetCurrentDirectory);
@@ -194,6 +200,8 @@ namespace Cocoa.CodeAnalysis.Symbols
                 BuiltinKind.StringFromChars => StringFromChars,
                 BuiltinKind.FileReadAllText => FileReadAllText,
                 BuiltinKind.FileWriteAllText => FileWriteAllText,
+                BuiltinKind.FileReadAllBytes => FileReadAllBytes,
+                BuiltinKind.FileWriteAllBytes => FileWriteAllBytes,
                 BuiltinKind.FileExists => FileExists,
                 BuiltinKind.GetEnvironmentVariable => GetEnvironmentVariable,
                 BuiltinKind.GetCurrentDirectory => GetCurrentDirectory,

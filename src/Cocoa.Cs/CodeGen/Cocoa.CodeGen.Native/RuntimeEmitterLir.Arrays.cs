@@ -424,8 +424,8 @@ Store(obj, 0, lenChars, 4);
                 EndFunction(_currentFunction!, 8);
             }
 
-            // LaunchProcess(path:8, args:8) → i32 exit code
-            // Uses _wsystem(path + " " + args) from ucrtbase.dll
+            // LaunchProcess(path:8, args:8, workdir:8) → i32 exit code
+            // Uses _wsystem(path + " " + args) from ucrtbase.dll；workdir 非空时临时 SetCurrentDirectoryW，等后恢复。
             private void EmitLaunchProcess()
             {
                 var errLabel = NewLabel();
@@ -433,6 +433,7 @@ Store(obj, 0, lenChars, 4);
 
                 var path = _args[0];
                 var args = _args[1];
+                var workdir = _args[2];
 
                 // Build command line: path + " " + args
                 var space = NewPtr();
@@ -485,9 +486,26 @@ Store(obj, 0, lenChars, 4);
                 Add(termAddr, termAddr, termBytes);
                 Store(termAddr, 0, nullCh, 2);
 
+                // workdir 支持：非空时临时切换当前目录（SetCurrentDirectoryW），_wsystem 后恢复原 cwd。
+                // 缓冲分配：cmdWbuf=_fileBuffer2；workdir wide=_fileBuffer（WidePtrZ 主缓冲）；原 cwd＝_fileBuffer3。
+                var runPrompt = NewLabel();
+                var oldWbuf = NewPtr();
+                LeaData(oldWbuf, _fileBuffer3);
+                SysCallDll(null, "kernel32.dll", "GetCurrentDirectoryW", 2, false, C(4, 0x8000), oldWbuf);
+                var wdLen = NewReg(4);
+                Load(wdLen, workdir, 0, 4);
+                Cmp(wdLen, 0);
+                Jcc(LirCond.Equal, runPrompt);
+                var wdWide = WidePtrZ(workdir);
+                SysCallDll(null, "kernel32.dll", "SetCurrentDirectoryW", 1, false, wdWide);
+                Mark(runPrompt);
+
                 // _wsystem(cmdWbuf) → synchronous, returns exit code
                 var exitCode = NewReg(4);
                 SysCallDll(exitCode, "ucrtbase.dll", "_wsystem", 1, true, cmdWbuf);
+
+                // 恢复原 cwd
+                SysCallDll(null, "kernel32.dll", "SetCurrentDirectoryW", 1, false, oldWbuf);
 
                 StoreRet(exitCode);
                 Jmp(doneLabel);

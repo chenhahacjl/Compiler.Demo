@@ -65,7 +65,7 @@ namespace Cocoa.CodeGen.Native
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _fileBuffer = "", _fileBuffer2 = "", _rbMode = "", _wbMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
+                _fileBuffer = "", _fileBuffer2 = "", _fileBuffer3 = "", _rbMode = "", _wbMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "",
@@ -268,13 +268,17 @@ namespace Cocoa.CodeGen.Native
                 EmitFileReadAllText();
                 _ = BeginFunctionTyped("FileWriteAllText", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitFileWriteAllText();
+                _ = BeginFunctionTyped("FileReadAllBytes", new[] { 8 }, LirType.Addr);
+                EmitFileReadAllBytes();
+                _ = BeginFunctionTyped("FileWriteAllBytes", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
+                EmitFileWriteAllBytes();
                 _ = BeginFunctionTyped("StringFromChars", new[] { 8 }, LirType.Addr);
                 EmitStringFromChars();
 
                 _ = BeginFunctionTyped("Sha256Hash", new[] { 8 }, LirType.Addr);
                 EmitSha256Hash();
 
-                _ = BeginFunctionTyped("LaunchProcess", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
+                _ = BeginFunctionTyped("LaunchProcess", new[] { 8, 8, 8 }, LirType.Addr, LirType.Addr, LirType.Addr);
                 EmitLaunchProcess();
 
                 var divByZero = BeginFunction("DivByZero");
@@ -296,6 +300,7 @@ namespace Cocoa.CodeGen.Native
                 _inputBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "InputBuffer", new byte[0x2000]));
                 _fileBuffer = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer", new byte[0x8000]));
                 _fileBuffer2 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer2", new byte[0x8000]));
+                _fileBuffer3 = _program.AddData(LirDataItem.ByteArray(Prefix + "FileBuffer3", new byte[0x8000]));
                 // C 风格 null 结尾宽串（LirDataItem.Utf16 是长度前缀式 COM 串，不能直接当 LPCWSTR 用）
                 _rbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RbMode", new byte[] { (byte)'r', 0, (byte)'b', 0, 0, 0 }));
                 _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));

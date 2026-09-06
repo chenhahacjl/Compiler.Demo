@@ -225,6 +225,6 @@ namespace System
         }
         syscall function StringFromChars(chars: char[]): string
         syscall function Sha256Hash(data: u8[]): u8[]
-        syscall function LaunchProcess(path: string, args: string): i32
+        syscall function LaunchProcess(path: string, args: string, workdir: string): i32
     }
 }

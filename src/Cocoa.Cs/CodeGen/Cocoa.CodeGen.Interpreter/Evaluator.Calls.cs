@@ -265,6 +265,24 @@ namespace Cocoa.CodeGen.Interpreter
                 case BuiltinKind.FileWriteAllText:
                     System.IO.File.WriteAllText((string)EvaluateExpression(arguments[0])!, (string)EvaluateExpression(arguments[1])!);
                     return null;
+                case BuiltinKind.FileReadAllBytes:
+                {
+                    var blob = System.IO.File.ReadAllBytes((string)EvaluateExpression(arguments[0])!);
+                    var boxedBlob = new object[blob.Length];
+                    for (var bi = 0; bi < blob.Length; bi++)
+                    {
+                        boxedBlob[bi] = blob[bi];
+                    }
+
+                    return boxedBlob;
+                }
+                case BuiltinKind.FileWriteAllBytes:
+                {
+                    var data = EvaluateExpression(arguments[1]);
+                    var bytes = ToByteArray(data);
+                    System.IO.File.WriteAllBytes((string)EvaluateExpression(arguments[0])!, bytes);
+                    return null;
+                }
                 case BuiltinKind.FileExists:
                     return System.IO.File.Exists((string)EvaluateExpression(arguments[0])!);
                 case BuiltinKind.GetEnvironmentVariable:
@@ -320,11 +338,13 @@ namespace Cocoa.CodeGen.Interpreter
                 {
                     var path = (string)EvaluateExpression(arguments[0])!;
                     var args = (string)EvaluateExpression(arguments[1])!;
+                    var workdir = (string)EvaluateExpression(arguments[2])!;
                     var psi = new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = path,
                         Arguments = args,
                         UseShellExecute = false,
+                        WorkingDirectory = workdir.Length == 0 ? null : workdir,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                     };
@@ -550,6 +570,28 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 throw new Exception($"Unexpected type {node.Type}");
             }
+        }
+
+        /// <summary>u8[] 实参归一：Evaluator 中可为 .NET byte[] 或装箱 object[]（元素为 byte）。</summary>
+        private static byte[] ToByteArray(object? data)
+        {
+            if (data is byte[] bytes)
+            {
+                return bytes;
+            }
+
+            if (data is object[] boxed)
+            {
+                var result = new byte[boxed.Length];
+                for (var i = 0; i < boxed.Length; i++)
+                {
+                    result[i] = (byte)boxed[i]!;
+                }
+
+                return result;
+            }
+
+            throw new InvalidOperationException($"expected byte[] or object[] input, got {data?.GetType().Name}");
         }
 
     }
