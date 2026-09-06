@@ -1,4 +1,6 @@
 // System.IO 文本层 · StringWriter（纯字符串累积；BCL StreamWriter 语义对齐）
+using System.Syscall
+
 namespace System.IO
 {
     public class StringWriter
@@ -8,7 +10,7 @@ namespace System.IO
             var b = new u8[2]
             b[0] = 13
             b[1] = 10
-            return Runtime.StringFromBytes(b)
+            return StringSyscall.StringFromBytes(b)
         }
 
         private _value: string
@@ -27,7 +29,7 @@ namespace System.IO
         {
             var chars = new char[1]
             chars[0] = c
-            _value = _value + Runtime.StringFromChars(chars)
+            _value = _value + StringSyscall.StringFromChars(chars)
         }
 
         public function WriteLine(text: string): void

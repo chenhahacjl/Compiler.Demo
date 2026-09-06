@@ -1,4 +1,6 @@
-﻿// System.IO 文本层 · StreamWriter（纯 Cocoa，三后端；编码 = Runtime.StringToBytes→UTF-8）
+// System.IO 文本层 · StreamWriter（纯 Cocoa，三后端；编码 = StringSyscall.StringToBytes→UTF-8）
+using System.Syscall
+
 namespace System.IO
 {
     public class StreamWriter
@@ -8,7 +10,7 @@ namespace System.IO
             var b = new u8[2]
             b[0] = 13
             b[1] = 10
-            return Runtime.StringFromBytes(b)
+            return StringSyscall.StringFromBytes(b)
         }
 
         private _stream: MemoryStream
@@ -23,7 +25,7 @@ public constructor(stream: MemoryStream)
             {
                 return
             }
-            var bytes = Runtime.StringToBytes(text)
+            var bytes = StringSyscall.StringToBytes(text)
             if bytes.Length > 0
             {
                 _stream.Write(bytes, 0, bytes.Length)
@@ -34,7 +36,7 @@ public constructor(stream: MemoryStream)
         {
             var chars = new char[1]
             chars[0] = c
-            var text = Runtime.StringFromChars(chars)
+            var text = StringSyscall.StringFromChars(chars)
             Write(text)
         }
 

@@ -1,0 +1,10 @@
+// Cocoa 系统标准库 · Syscall 收口（namespace System.Syscall）——字符串编码底座
+namespace System.Syscall
+{
+    class StringSyscall
+    {
+        syscall function StringFromBytes(data: u8[]): string
+        syscall function StringToBytes(text: string): u8[]
+        syscall function StringFromChars(chars: char[]): string
+    }
+}

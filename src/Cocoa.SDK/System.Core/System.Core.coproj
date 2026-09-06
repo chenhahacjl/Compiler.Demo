@@ -15,5 +15,6 @@
     <Source Include="*.co" />
     <Source Include="IO/*.co" />
     <Source Include="Collections/*.co" />
+    <Source Include="Syscall/*.co" />
   </ItemGroup>
 </Project>

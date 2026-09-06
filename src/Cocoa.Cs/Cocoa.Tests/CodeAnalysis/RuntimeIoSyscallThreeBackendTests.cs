@@ -15,8 +15,8 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// P1（底层原语）三后端锁定：File.WriteAllBytes/ReadAllBytes 往返、Runtime.StringToBytes/StringFromBytes
-    /// （UTF-16↔UTF-8 带非 ASCII）与 Runtime.LaunchProcess 三参（workdir 切换写锁文件）。
+    /// P1（底层原语）三后端锁定：File.WriteAllBytes/ReadAllBytes 往返、System.Syscall.StringSyscall.StringToBytes/StringFromBytes
+    /// （UTF-16↔UTF-8 带非 ASCII）与 System.Syscall.ProcessSyscall.LaunchProcess 三参（workdir 切换写锁文件）。
     /// 消费 build-sdk 重建的 System.Core.coa（FileIO.co / Runtime.co syscall 声明背书的低层原语）。
     /// </summary>
     public class RuntimeIoSyscallThreeBackendTests
@@ -32,12 +32,12 @@ function Main(): i32
 {
     let p = """ + path + @"""
     File.Delete(p)
-    let t = Runtime.StringToBytes(""a小éß木𝕏"")
+    let t = System.Syscall.StringSyscall.StringToBytes(""a小éß木𝕏"")
     File.WriteAllBytes(p, t)
     let back = File.ReadAllBytes(p)
     System.Console.WriteLine(back.Length == t.Length)
     System.Console.WriteLine(back.Length > 0)
-    let dec = Runtime.StringFromBytes(back)
+    let dec = System.Syscall.StringSyscall.StringFromBytes(back)
     System.Console.WriteLine(dec == ""a小éß木𝕏"")
     File.Delete(p)
     return 0
@@ -54,7 +54,7 @@ using System.IO
 function Main(): i32
 {
     let wd = """ + markerDir.Replace("\\", "/") + @"""
-    let code = Runtime.LaunchProcess(""cmd.exe"", ""/c echo hit > marker.txt"", wd)
+    let code = System.Syscall.ProcessSyscall.LaunchProcess(""cmd.exe"", ""/c echo hit > marker.txt"", wd)
     System.Console.WriteLine(code == 0)
     System.Console.WriteLine(File.Exists(wd + ""/marker.txt""))
     File.Delete(wd + ""/marker.txt"")

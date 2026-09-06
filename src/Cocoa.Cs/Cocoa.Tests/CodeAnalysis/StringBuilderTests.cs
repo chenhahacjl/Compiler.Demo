@@ -9,7 +9,7 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
     /// StringBuilder 源码集成冒烟（6e-G7 ③a）：
-    /// Runtime.StringFromChars syscall + O(n) ToString + 扩容。
+    /// System.Syscall.StringSyscall.StringFromChars syscall + O(n) ToString + 扩容。
     /// </summary>
     public class StringBuilderTests
     {
@@ -61,7 +61,7 @@ namespace System.Text
                 i = i + 1
             }
 
-            return Runtime.StringFromChars(chars)
+            return System.Syscall.StringSyscall.StringFromChars(chars)
         }
 
         private function EnsureCapacity(required: i32): void

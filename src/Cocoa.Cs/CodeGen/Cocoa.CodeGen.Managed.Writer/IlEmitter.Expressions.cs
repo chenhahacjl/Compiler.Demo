@@ -162,14 +162,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BuiltinKind.GetEnvironmentVariable:
                 {
                     var m = _framework.ResolveMethod("System.Environment", "GetEnvironmentVariable", new[] { "System.String" });
-                    if (m == null) throw new Exception("System.Environment.GetEnvironmentVariable not found in framework references");
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
                 case BuiltinKind.GetCurrentDirectory:
                 {
                     var m = _framework.ResolveMethod("System.Environment", "get_CurrentDirectory", Array.Empty<string>());
-                    if (m == null) throw new Exception("System.Environment.CurrentDirectory not found in framework references");
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
@@ -199,15 +199,15 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BuiltinKind.SetCurrentDirectory:
                 {
                     var m = _framework.ResolveMethod("System.Environment", "SetCurrentDirectory", new[] { "System.String" });
-                    if (m == null) throw new Exception("System.Environment.SetCurrentDirectory not found in framework references");
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
                 case BuiltinKind.GetExecutablePath:
                 {
                     // AppContext.BaseDirectory 作为可执行文件路径的近似
-                    var m = _framework.ResolveMethod("AppContext", "get_BaseDirectory", Array.Empty<string>());
-                    if (m == null) throw new Exception("AppContext.BaseDirectory not found in framework references");
+                    var m = _framework.ResolveMethod("System.AppContext", "get_BaseDirectory", Array.Empty<string>());
+                    if (m == null) { var stub = _framework.ResolveMethod("System.NotSupportedException", ".ctor", Array.Empty<string>()); il.Emit(IlOpCodeTable.Get("Newobj"), stub); il.Emit(IlOpCodeTable.Get("Throw")); break; }
                     il.Emit(IlOpCodeTable.Get("Call"), m);
                     break;
                 }
@@ -941,6 +941,32 @@ namespace Cocoa.CodeGen.Managed.Writer
                         if (facadeMethodRef == null && node.Identifier == "Dispose")
                         {
                             facadeMethodRef = _framework.FindMethod("System.IO.Stream", "Close", facadeParamNames);
+                        }
+                    }
+
+                    if (facadeMethodRef == null && facadeOwner.FullName == "System.Console")
+                    {
+                        facadeMethodRef = node.Identifier switch
+                        {
+                            "WriteLine" => _framework.ConsoleWriteLine,
+                            "Write" => _framework.ConsoleWrite,
+                            "ReadLine" => _framework.ConsoleReadLine,
+                            "ReadKey" => _framework.ConsoleReadKey,
+                            "Beep" => _framework.ConsoleBeep,
+                            _ => null
+                        };
+                        if (facadeMethodRef != null)
+                        {
+                            foreach (var boxArg in node.Arguments)
+                            {
+                                if (IsValueTypeSymbol(boxArg.Type))
+                                {
+                                    il.Emit(IlOpCodeTable.Get("Box"), _framework.RequireType(ToIlType(boxArg.Type).FullName!));
+                                }
+                            }
+
+                            il.Emit(IlOpCodeTable.Get("Call"), facadeMethodRef);
+                            return;
                         }
                     }
 

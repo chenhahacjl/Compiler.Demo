@@ -1,0 +1,14 @@
+// Cocoa 系统标准库 · Syscall 收口（namespace System.Syscall）——文件级用户 API 底座
+namespace System.Syscall
+{
+    class FileSyscall
+    {
+        syscall function ReadAllText(path: string): string
+        syscall function WriteAllText(path: string, text: string): void
+        syscall function Exists(path: string): bool
+        syscall function Copy(src: string, dst: string): void
+        syscall function Delete(path: string): void
+        syscall function ReadAllBytes(path: string): u8[]
+        syscall function WriteAllBytes(path: string, data: u8[]): void
+    }
+}

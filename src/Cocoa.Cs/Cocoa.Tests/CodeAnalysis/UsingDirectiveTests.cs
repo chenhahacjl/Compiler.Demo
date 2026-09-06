@@ -114,9 +114,9 @@ function Main(): i32
         [Fact]
         public void UsingStaticRuntime_BareRandom_Resolves()
         {
-            // Runtime 为 syscall 容器类：using static 导入其静态原语为裸名
+            // Syscall 收口后随容器迁移：MathSyscall 为 syscall 容器类，using static 导入随机原语为裸名
             var result = Evaluate(@"
-using static System.Runtime
+using static System.Syscall.MathSyscall
 
 function Main(): i32
 {
@@ -163,7 +163,7 @@ function Main()
         public void UsingAliasToRuntime_WriteLine_Resolves()
         {
             var result = Evaluate(@"
-using R = System.Runtime
+using R = System.Syscall.ConsoleSyscall
 
 function Main()
 {

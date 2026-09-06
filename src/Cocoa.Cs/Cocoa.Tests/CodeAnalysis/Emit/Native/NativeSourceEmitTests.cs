@@ -648,7 +648,7 @@ function Main()
 
 function Main()
 {
-    Console.WriteLine(Runtime.Random(100) < 100)
+    Console.WriteLine(System.Syscall.MathSyscall.Random(100) < 100)
 }", "src-random", target);
 
                 Assert.Equal("True\r\n", output);
@@ -669,7 +669,7 @@ class Runtime
 
 function Main()
 {
-    Runtime.WriteLine(""hello syscall"")
+    System.Syscall.ConsoleSyscall.WriteLine(""hello syscall"")
 }", "src-syscall-print", target);
 
             Assert.Equal("hello syscall\r\n", output);
@@ -689,7 +689,7 @@ class Runtime
 
 function Main()
 {
-    var r = Runtime.Random(100)
+    var r = System.Syscall.MathSyscall.Random(100)
     Console.WriteLine(r < 100)
 }", "src-syscall-random", target);
 
@@ -705,9 +705,9 @@ function Main()
 
 function Main()
 {
-    var t0 = Runtime.TickCount()
-    Runtime.Sleep(1)
-    var t1 = Runtime.TickCount()
+    var t0 = System.Syscall.ConsoleSyscall.TickCount()
+    System.Syscall.ConsoleSyscall.Sleep(1)
+    var t1 = System.Syscall.ConsoleSyscall.TickCount()
     Console.WriteLine(t1 >= t0)
 }", "src-sleep-now", target);
 

@@ -1442,7 +1442,7 @@ public class Point
 function Main()
 {
     var p = new Point(3)
-    Runtime.WriteLine(p._x)
+    System.Syscall.ConsoleSyscall.WriteLine(p._x)
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);
@@ -1467,7 +1467,7 @@ public class Point
 function Main()
 {
     var p = new Point()
-    Runtime.WriteLine(p.Secret())
+    System.Syscall.ConsoleSyscall.WriteLine(p.Secret())
 }";
             var diagnostics = GetDiagnostics(code);
             var error = Assert.Single(diagnostics);

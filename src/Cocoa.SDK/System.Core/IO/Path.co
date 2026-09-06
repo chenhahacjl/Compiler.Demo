@@ -4,6 +4,8 @@
 
 using System
 
+using System.Syscall
+
 namespace System.IO
 {
     public facade class Path
@@ -85,7 +87,7 @@ namespace System.IO
                 }
                 i = i + 1
             }
-            return Runtime.StringFromChars(chars)
+            return StringSyscall.StringFromChars(chars)
         }
 
         public static function GetFileName(path: string): string

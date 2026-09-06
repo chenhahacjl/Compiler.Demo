@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis.Lowering;
+using Cocoa.CodeAnalysis.Lowering;
 using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
@@ -234,6 +234,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             ["System.IO.Path"] = null,
             ["System.IO.FileStream"] = null,
             // StreamReader/StreamWriter 现已提供真实体（MemoryStream 同类带实例状态），不作为 facade 直链
+            ["System.Math"] = null,
+            ["System.Console"] = null,
             ["System.Diagnostics.Process"] = null,
             ["System.Diagnostics.ProcessStartInfo"] = null,
         };

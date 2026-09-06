@@ -1,10 +1,10 @@
-// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
-// class Math —— 纯 Cocoa 源码静态类，只依赖语言核心（算术/控制流）
-// 详细分层设计见 docs-dev/标准库设计.md
+// Cocoa 系统标准库 · System.Core（namespace System）——BCL 存在类型即 facade
+// class Math —— facade：IL 直连 System.Math.*；native/Evaluator 走纯体，Sqrt 走 System.Syscall.MathSyscall
+using System.Syscall
 
 namespace System
 {
-    class Math
+    facade class Math
     {
         static function Max(a: i32, b: i32): i32
         {
@@ -80,7 +80,7 @@ namespace System
             return n % 2 == 1
         }
 
-        static function Pow(x: i32, exp: i32): i32
+static function Pow(x: i32, exp: i32): i32
         {
             var result = 1
             var i = 0
@@ -128,7 +128,7 @@ namespace System
 
         static function Sqrt(x: f64): f64
         {
-            return Runtime.Sqrt(x)
+            return MathSyscall.Sqrt(x)
         }
 
         static function Floor(x: f64): f64

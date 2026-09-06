@@ -33,7 +33,7 @@ function Main(): i32
     data[0] = 97
     data[1] = 98
     data[2] = 99
-    var hash = Runtime.Sha256Hash(data)
+    var hash = System.Syscall.MathSyscall.Sha256Hash(data)
     var hex = Convert.ToHexString(hash)
     System.Console.WriteLine(hex)
     return 0
@@ -44,7 +44,7 @@ function Main(): i32
 function Main(): i32
 {
     var data: u8[] = new u8[0]
-    var hash = Runtime.Sha256Hash(data)
+    var hash = System.Syscall.MathSyscall.Sha256Hash(data)
     var hex = Convert.ToHexString(hash)
     System.Console.WriteLine(hex)
     return 0
@@ -175,7 +175,7 @@ function Main(): i32
     data[0] = 97
     data[1] = 98
     data[2] = 99
-    var hash = Runtime.Sha256Hash(data)
+    var hash = System.Syscall.MathSyscall.Sha256Hash(data)
     if (hash == null)
     {
         System.Console.WriteLine(""null"")

@@ -1,0 +1,11 @@
+// Cocoa 系统标准库 · Syscall 收口（namespace System.Syscall）——环境底座
+namespace System.Syscall
+{
+    class EnvironmentSyscall
+    {
+        syscall function GetEnvironmentVariable(name: string): string
+        syscall function GetCurrentDirectory(): string
+        syscall function SetCurrentDirectory(path: string): void
+        syscall function GetExecutablePath(): string
+    }
+}

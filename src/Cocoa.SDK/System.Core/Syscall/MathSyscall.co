@@ -1,0 +1,11 @@
+// Cocoa 系统标准库 · Syscall 收口（namespace System.Syscall）——数学/随机/哈希底座
+namespace System.Syscall
+{
+    class MathSyscall
+    {
+        syscall function Random(max: i32): i32
+        syscall function Sqrt(x: f64): f64
+        syscall function DoubleToString(value: f64): string
+        syscall function Sha256Hash(data: u8[]): u8[]
+    }
+}

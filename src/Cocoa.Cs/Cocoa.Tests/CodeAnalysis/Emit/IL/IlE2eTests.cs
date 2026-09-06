@@ -77,7 +77,7 @@ function Main()
     var name = Console.ReadLine()
     Console.WriteLine(""hello "" + name)
     Console.WriteLine(sum > 10)
-    var r = Runtime.Random(100)
+    var r = System.Syscall.MathSyscall.Random(100)
     if r >= 0 && r < 100
     {
         Console.WriteLine(""ok"")
@@ -100,7 +100,7 @@ class Runtime
 
 function Main()
 {
-    var r = Runtime.Random(100)
+    var r = System.Syscall.MathSyscall.Random(100)
     if r >= 0 && r < 100
     {
         Console.WriteLine(""ok"")
@@ -123,7 +123,7 @@ class Runtime
 
 function Main()
 {
-    Runtime.WriteLine(""hello syscall"")
+    System.Syscall.ConsoleSyscall.WriteLine(""hello syscall"")
 }", "e2e-syscall-print");
 
             Assert.Equal(0, exitCode);
@@ -137,9 +137,9 @@ function Main()
 
 function Main()
 {
-    var t0 = Runtime.TickCount()
-    Runtime.Sleep(1)
-    var t1 = Runtime.TickCount()
+    var t0 = System.Syscall.ConsoleSyscall.TickCount()
+    System.Syscall.ConsoleSyscall.Sleep(1)
+    var t1 = System.Syscall.ConsoleSyscall.TickCount()
     if t1 >= t0
     {
         Console.WriteLine(""ok"")
@@ -175,7 +175,7 @@ function Main()
 
 function Main()
 {
-    Runtime.Beep(800, 50)
+    System.Syscall.ConsoleSyscall.Beep(800, 50)
     Console.WriteLine(""beeped"")
 }", "e2e-beep");
 
@@ -190,7 +190,7 @@ function Main()
 
 function Main()
 {
-    Runtime.Exit(7)
+    System.Syscall.ConsoleSyscall.Exit(7)
     Console.WriteLine(""unreachable"")
 }", "e2e-exit");
 
@@ -205,7 +205,7 @@ function Main()
 
 function Main()
 {
-    Console.WriteLine(Runtime.Sqrt(2.0))
+    Console.WriteLine(System.Syscall.MathSyscall.Sqrt(2.0))
     Console.WriteLine(Runtime.Floor(2.7))
     Console.WriteLine(Runtime.Floor(-2.7))
     Console.WriteLine(Runtime.Ceiling(2.1))
@@ -215,7 +215,7 @@ function Main()
     Console.WriteLine(Runtime.Round(2.5))
     Console.WriteLine(Runtime.Round(3.5))
     Console.WriteLine(Runtime.Round(-2.5))
-    Console.WriteLine(Runtime.Sqrt(0.0))
+    Console.WriteLine(System.Syscall.MathSyscall.Sqrt(0.0))
 }", "e2e-math-primitives");
 
             // round 为 banker's rounding（最近偶数）：2.5→2、3.5→4、-2.5→-2

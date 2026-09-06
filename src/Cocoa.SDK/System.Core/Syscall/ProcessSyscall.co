@@ -1,0 +1,8 @@
+// Cocoa �p系统标准库 · Syscall 收口（namespace System.Syscall）——进程底座
+namespace System.Syscall
+{
+    class ProcessSyscall
+    {
+        syscall function LaunchProcess(path: string, args: string, workdir: string): i32
+    }
+}

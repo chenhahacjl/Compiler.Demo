@@ -1,12 +1,14 @@
 // Cocoa 系统标准库 · System.Core 基元 facade（namespace System，6e-M19 M2-b）
 
+using System.Syscall
+
 namespace System
 {
     public facade class Single
     {
         public function ToString(): string
         {
-            return Runtime.DoubleToString(f64(this))
+            return MathSyscall.DoubleToString(f64(this))
         }
         public function Equals(value: f32): bool
         {

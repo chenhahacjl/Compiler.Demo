@@ -437,7 +437,7 @@ function Main()
 
 function Main()
 {
-    Runtime.Beep(800, 50)
+    System.Syscall.ConsoleSyscall.Beep(800, 50)
     Console.WriteLine(""beeped"")
 }", "e2e-beep", (TargetPlatform)platform);
 

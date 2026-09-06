@@ -1,4 +1,6 @@
-﻿// System.IO 文本层 · StreamReader（纯 Cocoa，三后端；编码 = Runtime.StringFromBytes→UTF-8）
+// System.IO 文本层 · StreamReader（纯 Cocoa，三后端；编码 = StringSyscall.StringFromBytes→UTF-8）
+using System.Syscall
+
 namespace System.IO
 {
     public class StreamReader
@@ -27,7 +29,7 @@ namespace System.IO
                 exact[i] = bytes[i]
                 i = i + 1
             }
-            return Runtime.StringFromBytes(exact)
+            return StringSyscall.StringFromBytes(exact)
         }
 
         private function PullAll(): void

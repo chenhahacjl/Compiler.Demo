@@ -222,7 +222,7 @@ namespace Cocoa.Tests.CodeAnalysis
                 var n = 10
                 foreach (var x in [n])
                 {
-                    Runtime.WriteLine(x)
+                    System.Syscall.ConsoleSyscall.WriteLine(x)
                 }
             ";
 
@@ -1993,7 +1993,7 @@ class Runtime
 
 function Main(): i32
 {
-    return Runtime.Random(100) < 100 ? 1 : 0
+    return System.Syscall.MathSyscall.Random(100) < 100 ? 1 : 0
 }";
 
             AssertDiagnostics(text, "");
@@ -2042,9 +2042,9 @@ syscall function [Random](): i32";
 
 function Main(): i32
 {
-    var t0 = Runtime.TickCount()
-    Runtime.Sleep(1)
-    var t1 = Runtime.TickCount()
+    var t0 = System.Syscall.ConsoleSyscall.TickCount()
+    System.Syscall.ConsoleSyscall.Sleep(1)
+    var t1 = System.Syscall.ConsoleSyscall.TickCount()
     if t1 < t0
     {
         return 1
@@ -2068,7 +2068,7 @@ function Main(): i32
 
 function Main(): i32
 {
-    Runtime.Beep(800, 50)
+    System.Syscall.ConsoleSyscall.Beep(800, 50)
     return 0
 }";
 
@@ -2088,7 +2088,7 @@ function Main(): i32
 
 function Main(): i32
 {
-    if Runtime.Sqrt(4.0) != 2.0 return 1
+    if System.Syscall.MathSyscall.Sqrt(4.0) != 2.0 return 1
     if Runtime.Floor(2.7) != 2.0 return 2
     if Runtime.Floor(-2.7) != -3.0 return 3
     if Runtime.Ceiling(2.1) != 3.0 return 4

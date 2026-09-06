@@ -5,6 +5,8 @@
 
 using System
 
+using System.Syscall
+
 namespace System.IO
 {
     public facade class FileStream
@@ -13,7 +15,7 @@ namespace System.IO
 
         public constructor(path: string)
         {
-            _h = Runtime.FileOpen(path, 0)
+            _h = IOSyscall.FileOpen(path, 0)
         }
 
         public property CanRead: bool
@@ -44,7 +46,7 @@ namespace System.IO
         {
             get
             {
-                return Runtime.FileSize(_h)
+                return IOSyscall.FileSize(_h)
             }
         }
 
@@ -52,22 +54,22 @@ namespace System.IO
         {
             get
             {
-                return Runtime.FileTell(_h)
+                return IOSyscall.FileTell(_h)
             }
             set
             {
-                Runtime.FileSeek(_h, value, 0)
+                IOSyscall.FileSeek(_h, value, 0)
             }
         }
 
         public function Read(data: u8[], offset: i32, count: i32): i32
         {
-            return Runtime.FileRead(_h, data, offset, count)
+            return IOSyscall.FileRead(_h, data, offset, count)
         }
 
         public function Write(data: u8[], offset: i32, count: i32): void
         {
-            Runtime.FileWrite(_h, data, offset, count)
+            IOSyscall.FileWrite(_h, data, offset, count)
         }
 
         public function Flush(): void
@@ -76,12 +78,12 @@ namespace System.IO
 
         public function Close(): void
         {
-            Runtime.FileClose(_h)
+            IOSyscall.FileClose(_h)
         }
 
         public function Dispose(): void
         {
-            Runtime.FileClose(_h)
+            IOSyscall.FileClose(_h)
         }
     }
 }

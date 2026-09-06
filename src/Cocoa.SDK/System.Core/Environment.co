@@ -1,20 +1,29 @@
-// Cocoa 系统标准库 · System.Core 逻辑层（namespace System）
-// class Environment —— 环境访问 syscall 声明（6e-G7 ④）
+// Cocoa 系统标准库 · System.Core（namespace System）——BCL 存在类型即 facade（Console/Environment 因 IL 后端未覆盖其程序集引用层级，保持真实类+syscall 转发，见 docs-dev/标准库设计.md）
+// class Environment —— facade：IL 直连 System.Environment；native/Evaluator 走 System.Syscall.EnvironmentSyscall
+using System.Syscall
 
 namespace System
 {
     class Environment
     {
-        /// <summary>获取环境变量——未定义返回空串。</summary>
-        syscall function GetEnvironmentVariable(name: string): string
+        public static function GetEnvironmentVariable(name: string): string
+        {
+            return EnvironmentSyscall.GetEnvironmentVariable(name)
+        }
 
-        /// <summary>当前工作目录。</summary>
-        syscall function GetCurrentDirectory(): string
+        public static function GetCurrentDirectory(): string
+        {
+            return EnvironmentSyscall.GetCurrentDirectory()
+        }
 
-        /// <summary>设置当前工作目录。</summary>
-        syscall function SetCurrentDirectory(path: string): void
+        public static function SetCurrentDirectory(path: string): void
+        {
+            EnvironmentSyscall.SetCurrentDirectory(path)
+        }
 
-        /// <summary>当前可执行文件完整路径。</summary>
-        syscall function GetExecutablePath(): string
+        public static function GetExecutablePath(): string
+        {
+            return EnvironmentSyscall.GetExecutablePath()
+        }
     }
 }

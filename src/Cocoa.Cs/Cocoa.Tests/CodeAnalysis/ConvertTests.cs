@@ -43,7 +43,8 @@ function Main(): i32
     if backB64.Length != 3 return 3
     if i32(backB64[2]) != 255 return 4
 
-    // 边界：空输入、奇数 hex、非法 hex、base64 填充
+    // 边界：空输入、奇数 hex、非法 hex、base64 填充（Convert 保持真实体：非法输入返回空数组，
+    //   并为 BCL-facade 语义差异提供三端一致的返回语义；BCL 直链会抛异常，故不上 facade）
     var empty = Convert.ToHexString(new u8[0])
     if empty != """" return 5
     if Convert.FromHexString(""ABC"").Length != 0 return 6

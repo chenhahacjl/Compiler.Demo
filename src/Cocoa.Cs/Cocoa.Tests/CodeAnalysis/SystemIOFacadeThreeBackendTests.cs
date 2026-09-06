@@ -29,7 +29,7 @@ using System.IO
 function Main(): i32
 {
     let ms = new MemoryStream()
-    let bytes = Runtime.StringToBytes(""abc"")
+    let bytes = System.Syscall.StringSyscall.StringToBytes(""abc"")
     ms.Write(bytes, 0, bytes.Length)
     System.Console.WriteLine(ms.Length == 3)
     ms.Position = 1

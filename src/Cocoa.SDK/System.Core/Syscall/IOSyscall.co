@@ -1,0 +1,13 @@
+namespace System.Syscall
+{
+    class IOSyscall
+    {
+        syscall function FileOpen(path: string, mode: i32): i64
+        syscall function FileSize(h: i64): i64
+        syscall function FileSeek(h: i64, offset: i64, origin: i32): void
+        syscall function FileTell(h: i64): i64
+        syscall function FileRead(h: i64, data: u8[], start: i32, count: i32): i32
+        syscall function FileWrite(h: i64, data: u8[], start: i32, count: i32): void
+        syscall function FileClose(h: i64): void
+    }
+}

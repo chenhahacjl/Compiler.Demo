@@ -690,7 +690,11 @@ function Main(): i32
             var core = Assert.Single(libraries, lib => lib.Classes.Any(c => c.Name == "Runtime"));
             var runtime = Assert.Single(core.Classes, c => c.Name == "Runtime");
             Assert.Equal("System.Runtime", runtime.FullName);
-            Assert.Contains(runtime.Methods, m => m.Name == "WriteLine" && m.BuiltinKind == BuiltinKind.WriteLine);
+
+            // Syscall 收口：Console 输出原语迁至 System.Syscall.ConsoleSyscall（方法/内建绑定随容器）
+            var consoleSyscall = Assert.Single(core.Classes, c => c.Name == "ConsoleSyscall");
+            Assert.Equal("System.Syscall.ConsoleSyscall", consoleSyscall.FullName);
+            Assert.Contains(consoleSyscall.Methods, m => m.Name == "WriteLine" && m.BuiltinKind == BuiltinKind.WriteLine);
 
             // 6e-M18：Math 为静态容器类（方法含类归属）
             var math = Assert.Single(core.Classes, c => c.Name == "Math");

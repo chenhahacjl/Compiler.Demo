@@ -46,7 +46,7 @@ function Main(): i32
     c[3] = '\n'
     c[4] = 'l'
     c[5] = '2'
-    let text = Runtime.StringFromChars(c)
+    let text = System.Syscall.StringSyscall.StringFromChars(c)
     let sr = new StringReader(text)
     System.Console.WriteLine(sr.ReadLine() == ""l1"")
     System.Console.WriteLine(sr.ReadLine() == ""l2"")

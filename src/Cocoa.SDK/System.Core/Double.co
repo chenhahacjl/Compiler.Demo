@@ -1,13 +1,15 @@
 // Cocoa 系统标准库 · System.Core 基元 facade（namespace System）
 // class Double —— f64 的成员面载体（6e-M19 M2-b，对齐 C# System.Double）。
 
+using System.Syscall
+
 namespace System
 {
     public facade class Double
     {
         public function ToString(): string
         {
-            return Runtime.DoubleToString(this)
+            return MathSyscall.DoubleToString(this)
         }
 
         public function CompareTo(value: f64): i32
@@ -216,7 +218,7 @@ namespace System
             var r: f64 = 0
             if !Double.TryParse(s, out r)
             {
-                Runtime.Exit(1)
+                ConsoleSyscall.Exit(1)
             }
 
             return r

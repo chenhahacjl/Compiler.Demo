@@ -1,21 +1,13 @@
 // Cocoa 系统标准库 · System.Core 内部调用层（namespace System）
-// class Runtime —— syscall 声明（编译器内部原语，三后端按 BuiltinKind 分发；完整名 System.Runtime）
-// 可下沉的原语改为带体 static 方法（纯 Cocoa，6e-M18 带体静态方法已放行 .coa），调用点签名不变。
+// class Runtime —— 仅剩带体 static 工具（数值/文本格式化，纯 Cocoa）。
+// syscall 声明已收口至 System.Syscall（Syscall\*.co，方法名不变→三端 BuiltinKind 零改）。
 // 详细分层设计见 docs-dev/标准库设计.md
+using System.Syscall
 
 namespace System
 {
     class Runtime
     {
-        syscall function WriteLine(text: any): void
-        syscall function Write(text: any): void
-        syscall function ReadLine(): string
-        syscall function ReadKey(intercept: bool): char
-        syscall function Random(max: i32): i32
-        syscall function Sleep(ms: i32): void
-        syscall function TickCount(): i32
-        syscall function Exit(code: i32): void
-        syscall function Sqrt(x: f64): f64
         public static function Floor(x: f64): f64
         {
             var t = i64(x)
@@ -57,7 +49,7 @@ namespace System
             if f > 0 return f64(t + 1)
             return f64(t - 1)
         }
-        syscall function Beep(frequency: i32, duration: i32): void
+
         public static function Int32ToString(value: i32): string
         {
             if value == 0 return "0"
@@ -95,7 +87,7 @@ namespace System
                 j = j + 1
             }
 
-            return StringFromChars(chars)
+            return StringSyscall.StringFromChars(chars)
         }
 
         public static function Int64ToString(value: i64): string
@@ -136,10 +128,9 @@ namespace System
                 j = j + 1
             }
 
-            return StringFromChars(chars)
+            return StringSyscall.StringFromChars(chars)
         }
 
-        syscall function DoubleToString(value: f64): string
         public static function BooleanToString(value: bool): string
         {
             if value return "True"
@@ -150,12 +141,12 @@ namespace System
         {
             var chars = new char[1]
             chars[0] = value
-            return StringFromChars(chars)
+            return StringSyscall.StringFromChars(chars)
         }
 
         // 数字判断走 i32 字符码（'0'=48, '9'=57）而非 u64 数字值 < / <=：
         // native windows-x86 上 u64 的 < / <= 比较恒为假（预先存在的后端缺陷，
-        // 见 Cocoa.Tests/CodeAnalysis/NativeX86U64CompareKnownIssueTests.cs）。
+        // 见 Cocoa.Tests/CodeAnalysis/NativeX86U64CompareKnownIssueTests).
         public static function ParseInt64(s: string): i64
         {
             let len = s.Length
@@ -221,19 +212,7 @@ namespace System
                 j = j + 1
             }
 
-            return StringFromChars(chars)
+            return StringSyscall.StringFromChars(chars)
         }
-        syscall function StringFromChars(chars: char[]): string
-        syscall function Sha256Hash(data: u8[]): u8[]
-        syscall function LaunchProcess(path: string, args: string, workdir: string): i32
-        syscall function StringFromBytes(data: u8[]): string
-        syscall function StringToBytes(text: string): u8[]
-        syscall function FileOpen(path: string, mode: i32): i64
-        syscall function FileSize(h: i64): i64
-        syscall function FileSeek(h: i64, offset: i64, origin: i32): void
-        syscall function FileTell(h: i64): i64
-        syscall function FileRead(h: i64, data: u8[], start: i32, count: i32): i32
-        syscall function FileWrite(h: i64, data: u8[], start: i32, count: i32): void
-        syscall function FileClose(h: i64): void
     }
 }

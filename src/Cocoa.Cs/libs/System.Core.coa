@@ -11,7 +11,18 @@
     (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception] fields:0 events:0 props:1
       (prop Message @string true false public false)
     )
-    (cls System.IO.File internal iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
+    (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[@i16] CompareTo[@i16,@i16] Parse[@string] Equals[@i16,@i16] GetHashCode[@i16] ToString[@i16,@string] TryParse[@string,out:@i16] fields:0 events:0)
+    (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
+    (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
+    (cls System.Math internal iface:false ifaces:0 methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
+    (cls System.Runtime internal iface:false ifaces:0 methods:10 Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Int32ToString[@i32] Int64ToString[@i64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] fields:0 events:0)
+    (cls System.SByte public iface:false ifaces:0 methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8] fields:0 events:0)
+    (cls System.Single public iface:false ifaces:0 methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32] fields:0 events:0)
+    (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]] fields:0 events:0)
+    (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
+    (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
+    (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
+    (cls System.IO.File public iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
     (cls System.IO.FileStream public iface:false ifaces:0 methods:0 fields:1
       (fld _h @i64 private false false) events:0 props:5
       (prop CanRead @bool true false public false)
@@ -20,18 +31,6 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
-    (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[@i16] CompareTo[@i16,@i16] Parse[@string] Equals[@i16,@i16] GetHashCode[@i16] ToString[@i16,@string] TryParse[@string,out:@i16] fields:0 events:0)
-    (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
-    (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
-    (cls System.Math internal iface:false ifaces:0 methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
-    (cls System.IO.Path public iface:false ifaces:0 methods:10 IsSeparator[@char] Combine[@string,@string] TrimTrailingSeparators[@string] LastIndexOfSeparator[@string] NormalizeSeps[@string] GetFileName[@string] GetFileNameOrNull[@string] GetExtension[@string] GetFileNameWithoutExtension[@string] GetDirectoryName[@string] fields:0 events:0)
-    (cls System.Runtime internal iface:false ifaces:0 methods:33 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Random[@i32] Sleep[@i32] TickCount Exit[@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Beep[@i32,@i32] Int32ToString[@i32] Int64ToString[@i64] DoubleToString[@f64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] StringFromChars[@char[]] Sha256Hash[@u8[]] LaunchProcess[@string,@string,@string] StringFromBytes[@u8[]] StringToBytes[@string] FileOpen[@string,@i32] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] fields:0 events:0)
-    (cls System.SByte public iface:false ifaces:0 methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8] fields:0 events:0)
-    (cls System.Single public iface:false ifaces:0 methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32] fields:0 events:0)
-    (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]] fields:0 events:0)
-    (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
-    (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
-    (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
     (cls System.IO.Stream public iface:true ifaces:0 methods:0 fields:0 events:0 props:5
       (prop CanRead @bool true false public false)
       (prop CanWrite @bool true false public false)
@@ -49,6 +48,7 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
+    (cls System.IO.Path public iface:false ifaces:0 methods:10 IsSeparator[@char] Combine[@string,@string] TrimTrailingSeparators[@string] LastIndexOfSeparator[@string] NormalizeSeps[@string] GetFileName[@string] GetFileNameOrNull[@string] GetExtension[@string] GetFileNameWithoutExtension[@string] GetDirectoryName[@string] fields:0 events:0)
     (cls System.IO.StreamReader public iface:false ifaces:0 methods:2 DecodeSlice[@u8[],@i32] TrimTrailingCR[@string] fields:3
       (fld _stream System.IO.MemoryStream private false false)
       (fld _cache @string private false false)
@@ -177,6 +177,13 @@
       (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.StackEnumerator.T true false public false)
     )
+    (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 methods:8 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Sleep[@i32] TickCount Exit[@i32] Beep[@i32,@i32] fields:0 events:0)
+    (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
+    (cls System.Syscall.FileSyscall internal iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
+    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:7 FileOpen[@string,@i32] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] fields:0 events:0)
+    (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
+    (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
+    (cls System.Syscall.StringSyscall internal iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
     )
@@ -589,65 +596,17 @@
     (fn System.Core!System.Double.IsFinite[@f64] name:IsFinite ret:@bool ns:- owner:System.Double extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Double.IsFinite[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.Environment.GetEnvironmentVariable[@string] name:GetEnvironmentVariable ret:@string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Environment.GetEnvironmentVariable[@string] name:GetEnvironmentVariable ret:@string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Environment.GetEnvironmentVariable[@string]/name name @string 0 - -)
     )
-    (fn System.Core!System.Environment.GetCurrentDirectory[] name:GetCurrentDirectory ret:@string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetCurrentDirectory entry:- charset:- static:true ctor:false acc:false params:0)
-    (fn System.Core!System.Environment.SetCurrentDirectory[@string] name:SetCurrentDirectory ret:@void ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:SetCurrentDirectory entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Environment.GetCurrentDirectory[] name:GetCurrentDirectory ret:@string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.Environment.SetCurrentDirectory[@string] name:SetCurrentDirectory ret:@void ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Environment.SetCurrentDirectory[@string]/path path @string 0 - -)
     )
-    (fn System.Core!System.Environment.GetExecutablePath[] name:GetExecutablePath ret:@string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.Environment.GetExecutablePath[] name:GetExecutablePath ret:@string ns:- owner:System.Environment extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:0)
     (fn System.Core!System.Exception.get_Message[System.Exception] name:get_Message ret:@string ns:- owner:System.Exception extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:1
       (par System.Core!System.Exception.get_Message[System.Exception]/this this System.Exception 0 - this)
     )
-    (fn System.Core!System.IO.File.ReadAllText[@string] name:ReadAllText ret:@string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.File.ReadAllText[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.File.WriteAllText[@string,@string] name:WriteAllText ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.IO.File.WriteAllText[@string,@string]/path path @string 0 - -)
-      (par System.Core!System.IO.File.WriteAllText[@string,@string]/text text @string 1 - -)
-    )
-    (fn System.Core!System.IO.File.Exists[@string] name:Exists ret:@bool ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.File.Exists[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.File.Copy[@string,@string] name:Copy ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileCopy entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.IO.File.Copy[@string,@string]/src src @string 0 - -)
-      (par System.Core!System.IO.File.Copy[@string,@string]/dst dst @string 1 - -)
-    )
-    (fn System.Core!System.IO.File.Delete[@string] name:Delete ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.File.Delete[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.File.ReadAllBytes[@string] name:ReadAllBytes ret:@u8[] ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileReadAllBytes entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.File.ReadAllBytes[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.File.WriteAllBytes[@string,@u8[]] name:WriteAllBytes ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:FileWriteAllBytes entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/path path @string 0 - -)
-      (par System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/data data @u8[] 1 - -)
-    )
-    (fn System.Core!System.IO.FileStream.FileStream[@string] name:FileStream ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
-      (par System.Core!System.IO.FileStream.FileStream[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.FileStream.get_CanRead[] name:get_CanRead ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
-    (fn System.Core!System.IO.FileStream.get_CanWrite[] name:get_CanWrite ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
-    (fn System.Core!System.IO.FileStream.get_CanSeek[] name:get_CanSeek ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
-    (fn System.Core!System.IO.FileStream.get_Length[] name:get_Length ret:@i64 ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
-    (fn System.Core!System.IO.FileStream.get_Position[] name:get_Position ret:@i64 ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
-    (fn System.Core!System.IO.FileStream.set_Position[@i64] name:set_Position ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
-      (par System.Core!System.IO.FileStream.set_Position[@i64]/value value @i64 0 - -)
-    )
-    (fn System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32] name:Read ret:@i32 ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:3
-      (par System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/data data @u8[] 0 - -)
-      (par System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/offset offset @i32 1 - -)
-      (par System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/count count @i32 2 - -)
-    )
-    (fn System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32] name:Write ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:3
-      (par System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/data data @u8[] 0 - -)
-      (par System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/offset offset @i32 1 - -)
-      (par System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/count count @i32 2 - -)
-    )
-    (fn System.Core!System.IO.FileStream.Flush[] name:Flush ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
-    (fn System.Core!System.IO.FileStream.Close[] name:Close ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
-    (fn System.Core!System.IO.FileStream.Dispose[] name:Dispose ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.Int16.ToString[@i16] name:ToString ret:@string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Int16.ToString[@i16]/this this @i16 0 - this)
     )
@@ -797,60 +756,6 @@
     (fn System.Core!System.Math.Round[@f64] name:Round ret:@f64 ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Math.Round[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.IO.Path.IsSeparator[@char] name:IsSeparator ret:@bool ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.IsSeparator[@char]/c c @char 0 - -)
-    )
-    (fn System.Core!System.IO.Path.Combine[@string,@string] name:Combine ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.IO.Path.Combine[@string,@string]/a a @string 0 - -)
-      (par System.Core!System.IO.Path.Combine[@string,@string]/b b @string 1 - -)
-    )
-    (fn System.Core!System.IO.Path.TrimTrailingSeparators[@string] name:TrimTrailingSeparators ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text text @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.LastIndexOfSeparator[@string] name:LastIndexOfSeparator ret:@i32 ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.LastIndexOfSeparator[@string]/text text @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.NormalizeSeps[@string] name:NormalizeSeps ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.NormalizeSeps[@string]/text text @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.GetFileName[@string] name:GetFileName ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.GetFileName[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.GetFileNameOrNull[@string] name:GetFileNameOrNull ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.GetFileNameOrNull[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.GetExtension[@string] name:GetExtension ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.GetExtension[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.GetFileNameWithoutExtension[@string] name:GetFileNameWithoutExtension ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.IO.Path.GetDirectoryName[@string] name:GetDirectoryName ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.IO.Path.GetDirectoryName[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.Runtime.WriteLine[@any] name:WriteLine ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:WriteLine entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.WriteLine[@any]/text text @any 0 - -)
-    )
-    (fn System.Core!System.Runtime.Write[@any] name:Write ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Write entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.Write[@any]/text text @any 0 - -)
-    )
-    (fn System.Core!System.Runtime.ReadLine[] name:ReadLine ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadLine entry:- charset:- static:true ctor:false acc:false params:0)
-    (fn System.Core!System.Runtime.ReadKey[@bool] name:ReadKey ret:@char ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:ReadKey entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.ReadKey[@bool]/intercept intercept @bool 0 - -)
-    )
-    (fn System.Core!System.Runtime.Random[@i32] name:Random ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Random entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.Random[@i32]/max max @i32 0 - -)
-    )
-    (fn System.Core!System.Runtime.Sleep[@i32] name:Sleep ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sleep entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.Sleep[@i32]/ms ms @i32 0 - -)
-    )
-    (fn System.Core!System.Runtime.TickCount[] name:TickCount ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:TickCount entry:- charset:- static:true ctor:false acc:false params:0)
-    (fn System.Core!System.Runtime.Exit[@i32] name:Exit ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Exit entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.Exit[@i32]/code code @i32 0 - -)
-    )
-    (fn System.Core!System.Runtime.Sqrt[@f64] name:Sqrt ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.Sqrt[@f64]/x x @f64 0 - -)
-    )
     (fn System.Core!System.Runtime.Floor[@f64] name:Floor ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Floor[@f64]/x x @f64 0 - -)
     )
@@ -863,18 +768,11 @@
     (fn System.Core!System.Runtime.Round[@f64] name:Round ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Round[@f64]/x x @f64 0 - -)
     )
-    (fn System.Core!System.Runtime.Beep[@i32,@i32] name:Beep ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Beep entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.Runtime.Beep[@i32,@i32]/frequency frequency @i32 0 - -)
-      (par System.Core!System.Runtime.Beep[@i32,@i32]/duration duration @i32 1 - -)
-    )
     (fn System.Core!System.Runtime.Int32ToString[@i32] name:Int32ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Int32ToString[@i32]/value value @i32 0 - -)
     )
     (fn System.Core!System.Runtime.Int64ToString[@i64] name:Int64ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Int64ToString[@i64]/value value @i64 0 - -)
-    )
-    (fn System.Core!System.Runtime.DoubleToString[@f64] name:DoubleToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.DoubleToString[@f64]/value value @f64 0 - -)
     )
     (fn System.Core!System.Runtime.BooleanToString[@bool] name:BooleanToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.BooleanToString[@bool]/value value @bool 0 - -)
@@ -887,53 +785,6 @@
     )
     (fn System.Core!System.Runtime.UInt64ToString[@u64] name:UInt64ToString ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.UInt64ToString[@u64]/value value @u64 0 - -)
-    )
-    (fn System.Core!System.Runtime.StringFromChars[@char[]] name:StringFromChars ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.StringFromChars[@char[]]/chars chars @char[] 0 - -)
-    )
-    (fn System.Core!System.Runtime.Sha256Hash[@u8[]] name:Sha256Hash ret:@u8[] ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:Sha256Hash entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.Sha256Hash[@u8[]]/data data @u8[] 0 - -)
-    )
-    (fn System.Core!System.Runtime.LaunchProcess[@string,@string,@string] name:LaunchProcess ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:LaunchProcess entry:- charset:- static:true ctor:false acc:false params:3
-      (par System.Core!System.Runtime.LaunchProcess[@string,@string,@string]/path path @string 0 - -)
-      (par System.Core!System.Runtime.LaunchProcess[@string,@string,@string]/args args @string 1 - -)
-      (par System.Core!System.Runtime.LaunchProcess[@string,@string,@string]/workdir workdir @string 2 - -)
-    )
-    (fn System.Core!System.Runtime.StringFromBytes[@u8[]] name:StringFromBytes ret:@string ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringFromBytes entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.StringFromBytes[@u8[]]/data data @u8[] 0 - -)
-    )
-    (fn System.Core!System.Runtime.StringToBytes[@string] name:StringToBytes ret:@u8[] ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:StringToBytes entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.StringToBytes[@string]/text text @string 0 - -)
-    )
-    (fn System.Core!System.Runtime.FileOpen[@string,@i32] name:FileOpen ret:@i64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileOpen entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.Runtime.FileOpen[@string,@i32]/path path @string 0 - -)
-      (par System.Core!System.Runtime.FileOpen[@string,@i32]/mode mode @i32 1 - -)
-    )
-    (fn System.Core!System.Runtime.FileSize[@i64] name:FileSize ret:@i64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileSize entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.FileSize[@i64]/h h @i64 0 - -)
-    )
-    (fn System.Core!System.Runtime.FileSeek[@i64,@i64,@i32] name:FileSeek ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileSeek entry:- charset:- static:true ctor:false acc:false params:3
-      (par System.Core!System.Runtime.FileSeek[@i64,@i64,@i32]/h h @i64 0 - -)
-      (par System.Core!System.Runtime.FileSeek[@i64,@i64,@i32]/offset offset @i64 1 - -)
-      (par System.Core!System.Runtime.FileSeek[@i64,@i64,@i32]/origin origin @i32 2 - -)
-    )
-    (fn System.Core!System.Runtime.FileTell[@i64] name:FileTell ret:@i64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileTell entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.FileTell[@i64]/h h @i64 0 - -)
-    )
-    (fn System.Core!System.Runtime.FileRead[@i64,@u8[],@i32,@i32] name:FileRead ret:@i32 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileRead entry:- charset:- static:true ctor:false acc:false params:4
-      (par System.Core!System.Runtime.FileRead[@i64,@u8[],@i32,@i32]/h h @i64 0 - -)
-      (par System.Core!System.Runtime.FileRead[@i64,@u8[],@i32,@i32]/data data @u8[] 1 - -)
-      (par System.Core!System.Runtime.FileRead[@i64,@u8[],@i32,@i32]/start start @i32 2 - -)
-      (par System.Core!System.Runtime.FileRead[@i64,@u8[],@i32,@i32]/count count @i32 3 - -)
-    )
-    (fn System.Core!System.Runtime.FileWrite[@i64,@u8[],@i32,@i32] name:FileWrite ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileWrite entry:- charset:- static:true ctor:false acc:false params:4
-      (par System.Core!System.Runtime.FileWrite[@i64,@u8[],@i32,@i32]/h h @i64 0 - -)
-      (par System.Core!System.Runtime.FileWrite[@i64,@u8[],@i32,@i32]/data data @u8[] 1 - -)
-      (par System.Core!System.Runtime.FileWrite[@i64,@u8[],@i32,@i32]/start start @i32 2 - -)
-      (par System.Core!System.Runtime.FileWrite[@i64,@u8[],@i32,@i32]/count count @i32 3 - -)
-    )
-    (fn System.Core!System.Runtime.FileClose[@i64] name:FileClose ret:@void ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:FileClose entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Runtime.FileClose[@i64]/h h @i64 0 - -)
     )
     (fn System.Core!System.SByte.ToString[@i8] name:ToString ret:@string ns:- owner:System.SByte extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.SByte.ToString[@i8]/this this @i8 0 - this)
@@ -1154,6 +1005,54 @@
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/s s @string 0 - -)
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/result result @u64 1 out -)
     )
+    (fn System.Core!System.IO.File.ReadAllText[@string] name:ReadAllText ret:@string ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.File.ReadAllText[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.File.WriteAllText[@string,@string] name:WriteAllText ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.IO.File.WriteAllText[@string,@string]/path path @string 0 - -)
+      (par System.Core!System.IO.File.WriteAllText[@string,@string]/text text @string 1 - -)
+    )
+    (fn System.Core!System.IO.File.Exists[@string] name:Exists ret:@bool ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.File.Exists[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.File.Copy[@string,@string] name:Copy ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.IO.File.Copy[@string,@string]/src src @string 0 - -)
+      (par System.Core!System.IO.File.Copy[@string,@string]/dst dst @string 1 - -)
+    )
+    (fn System.Core!System.IO.File.Delete[@string] name:Delete ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.File.Delete[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.File.ReadAllBytes[@string] name:ReadAllBytes ret:@u8[] ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.File.ReadAllBytes[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.File.WriteAllBytes[@string,@u8[]] name:WriteAllBytes ret:@void ns:- owner:System.IO.File extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/path path @string 0 - -)
+      (par System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/data data @u8[] 1 - -)
+    )
+    (fn System.Core!System.IO.FileStream.FileStream[@string] name:FileStream ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.IO.FileStream.FileStream[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.FileStream.get_CanRead[] name:get_CanRead ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.IO.FileStream.get_CanWrite[] name:get_CanWrite ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.IO.FileStream.get_CanSeek[] name:get_CanSeek ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.IO.FileStream.get_Length[] name:get_Length ret:@i64 ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.IO.FileStream.get_Position[] name:get_Position ret:@i64 ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.IO.FileStream.set_Position[@i64] name:set_Position ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:1
+      (par System.Core!System.IO.FileStream.set_Position[@i64]/value value @i64 0 - -)
+    )
+    (fn System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32] name:Read ret:@i32 ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:3
+      (par System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/data data @u8[] 0 - -)
+      (par System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/offset offset @i32 1 - -)
+      (par System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/count count @i32 2 - -)
+    )
+    (fn System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32] name:Write ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:3
+      (par System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/data data @u8[] 0 - -)
+      (par System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/offset offset @i32 1 - -)
+      (par System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/count count @i32 2 - -)
+    )
+    (fn System.Core!System.IO.FileStream.Flush[] name:Flush ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.FileStream.Close[] name:Close ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.FileStream.Dispose[] name:Dispose ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.IO.MemoryStream.MemoryStream[] name:MemoryStream ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
     (fn System.Core!System.IO.MemoryStream.get_CanRead[] name:get_CanRead ret:@bool ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Core!System.IO.MemoryStream.get_CanWrite[] name:get_CanWrite ret:@bool ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
@@ -1184,6 +1083,37 @@
     (fn System.Core!System.IO.MemoryStream.Close[] name:Close ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.IO.MemoryStream.Dispose[] name:Dispose ret:@void ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.IO.MemoryStream.ToArray[] name:ToArray ret:@u8[] ns:- owner:System.IO.MemoryStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.IO.Path.IsSeparator[@char] name:IsSeparator ret:@bool ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.IsSeparator[@char]/c c @char 0 - -)
+    )
+    (fn System.Core!System.IO.Path.Combine[@string,@string] name:Combine ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.IO.Path.Combine[@string,@string]/a a @string 0 - -)
+      (par System.Core!System.IO.Path.Combine[@string,@string]/b b @string 1 - -)
+    )
+    (fn System.Core!System.IO.Path.TrimTrailingSeparators[@string] name:TrimTrailingSeparators ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.LastIndexOfSeparator[@string] name:LastIndexOfSeparator ret:@i32 ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.LastIndexOfSeparator[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.NormalizeSeps[@string] name:NormalizeSeps ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.NormalizeSeps[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.GetFileName[@string] name:GetFileName ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.GetFileName[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.GetFileNameOrNull[@string] name:GetFileNameOrNull ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.GetFileNameOrNull[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.GetExtension[@string] name:GetExtension ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.GetExtension[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.GetFileNameWithoutExtension[@string] name:GetFileNameWithoutExtension ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.IO.Path.GetDirectoryName[@string] name:GetDirectoryName ret:@string ns:- owner:System.IO.Path extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.IO.Path.GetDirectoryName[@string]/path path @string 0 - -)
+    )
     (fn System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream] name:StreamReader ret:@void ns:- owner:System.IO.StreamReader extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
       (par System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream]/stream stream System.IO.MemoryStream 0 - -)
     )
@@ -1408,6 +1338,115 @@
     (fn System.Core!System.Collections.Generic.StackEnumerator.get_Current[] name:get_Current ret:!System.Collections.Generic.StackEnumerator.T ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Core!System.Collections.Generic.StackEnumerator.MoveNext[] name:MoveNext ret:@bool ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.Collections.Generic.StackEnumerator.Reset[] name:Reset ret:@void ns:- owner:System.Collections.Generic.StackEnumerator extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] name:WriteLine ret:@void ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:WriteLine entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any]/text text @any 0 - -)
+    )
+    (fn System.Core!System.Syscall.ConsoleSyscall.Write[@any] name:Write ret:@void ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:Write entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.ConsoleSyscall.Write[@any]/text text @any 0 - -)
+    )
+    (fn System.Core!System.Syscall.ConsoleSyscall.ReadLine[] name:ReadLine ret:@string ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:ReadLine entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.Syscall.ConsoleSyscall.ReadKey[@bool] name:ReadKey ret:@char ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:ReadKey entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.ConsoleSyscall.ReadKey[@bool]/intercept intercept @bool 0 - -)
+    )
+    (fn System.Core!System.Syscall.ConsoleSyscall.Sleep[@i32] name:Sleep ret:@void ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:Sleep entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.ConsoleSyscall.Sleep[@i32]/ms ms @i32 0 - -)
+    )
+    (fn System.Core!System.Syscall.ConsoleSyscall.TickCount[] name:TickCount ret:@i32 ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:TickCount entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.Syscall.ConsoleSyscall.Exit[@i32] name:Exit ret:@void ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:Exit entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.ConsoleSyscall.Exit[@i32]/code code @i32 0 - -)
+    )
+    (fn System.Core!System.Syscall.ConsoleSyscall.Beep[@i32,@i32] name:Beep ret:@void ns:- owner:System.Syscall.ConsoleSyscall extern:false dll:- cc:winapi builtin:Beep entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Syscall.ConsoleSyscall.Beep[@i32,@i32]/frequency frequency @i32 0 - -)
+      (par System.Core!System.Syscall.ConsoleSyscall.Beep[@i32,@i32]/duration duration @i32 1 - -)
+    )
+    (fn System.Core!System.Syscall.EnvironmentSyscall.GetEnvironmentVariable[@string] name:GetEnvironmentVariable ret:@string ns:- owner:System.Syscall.EnvironmentSyscall extern:false dll:- cc:winapi builtin:GetEnvironmentVariable entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.EnvironmentSyscall.GetEnvironmentVariable[@string]/name name @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.EnvironmentSyscall.GetCurrentDirectory[] name:GetCurrentDirectory ret:@string ns:- owner:System.Syscall.EnvironmentSyscall extern:false dll:- cc:winapi builtin:GetCurrentDirectory entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.Syscall.EnvironmentSyscall.SetCurrentDirectory[@string] name:SetCurrentDirectory ret:@void ns:- owner:System.Syscall.EnvironmentSyscall extern:false dll:- cc:winapi builtin:SetCurrentDirectory entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.EnvironmentSyscall.SetCurrentDirectory[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.EnvironmentSyscall.GetExecutablePath[] name:GetExecutablePath ret:@string ns:- owner:System.Syscall.EnvironmentSyscall extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- static:true ctor:false acc:false params:0)
+    (fn System.Core!System.Syscall.FileSyscall.ReadAllText[@string] name:ReadAllText ret:@string ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.FileSyscall.ReadAllText[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string] name:WriteAllText ret:@void ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string]/path path @string 0 - -)
+      (par System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string]/text text @string 1 - -)
+    )
+    (fn System.Core!System.Syscall.FileSyscall.Exists[@string] name:Exists ret:@bool ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.FileSyscall.Exists[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.FileSyscall.Copy[@string,@string] name:Copy ret:@void ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileCopy entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Syscall.FileSyscall.Copy[@string,@string]/src src @string 0 - -)
+      (par System.Core!System.Syscall.FileSyscall.Copy[@string,@string]/dst dst @string 1 - -)
+    )
+    (fn System.Core!System.Syscall.FileSyscall.Delete[@string] name:Delete ret:@void ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileDelete entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.FileSyscall.Delete[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.FileSyscall.ReadAllBytes[@string] name:ReadAllBytes ret:@u8[] ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileReadAllBytes entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.FileSyscall.ReadAllBytes[@string]/path path @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]] name:WriteAllBytes ret:@void ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileWriteAllBytes entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]]/path path @string 0 - -)
+      (par System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]]/data data @u8[] 1 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32] name:FileOpen ret:@i64 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileOpen entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32]/path path @string 0 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32]/mode mode @i32 1 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileSize[@i64] name:FileSize ret:@i64 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileSize entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.IOSyscall.FileSize[@i64]/h h @i64 0 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileSeek[@i64,@i64,@i32] name:FileSeek ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileSeek entry:- charset:- static:true ctor:false acc:false params:3
+      (par System.Core!System.Syscall.IOSyscall.FileSeek[@i64,@i64,@i32]/h h @i64 0 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileSeek[@i64,@i64,@i32]/offset offset @i64 1 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileSeek[@i64,@i64,@i32]/origin origin @i32 2 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileTell[@i64] name:FileTell ret:@i64 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileTell entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.IOSyscall.FileTell[@i64]/h h @i64 0 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileRead[@i64,@u8[],@i32,@i32] name:FileRead ret:@i32 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileRead entry:- charset:- static:true ctor:false acc:false params:4
+      (par System.Core!System.Syscall.IOSyscall.FileRead[@i64,@u8[],@i32,@i32]/h h @i64 0 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileRead[@i64,@u8[],@i32,@i32]/data data @u8[] 1 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileRead[@i64,@u8[],@i32,@i32]/start start @i32 2 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileRead[@i64,@u8[],@i32,@i32]/count count @i32 3 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileWrite[@i64,@u8[],@i32,@i32] name:FileWrite ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileWrite entry:- charset:- static:true ctor:false acc:false params:4
+      (par System.Core!System.Syscall.IOSyscall.FileWrite[@i64,@u8[],@i32,@i32]/h h @i64 0 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileWrite[@i64,@u8[],@i32,@i32]/data data @u8[] 1 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileWrite[@i64,@u8[],@i32,@i32]/start start @i32 2 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileWrite[@i64,@u8[],@i32,@i32]/count count @i32 3 - -)
+    )
+    (fn System.Core!System.Syscall.IOSyscall.FileClose[@i64] name:FileClose ret:@void ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileClose entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.IOSyscall.FileClose[@i64]/h h @i64 0 - -)
+    )
+    (fn System.Core!System.Syscall.MathSyscall.Random[@i32] name:Random ret:@i32 ns:- owner:System.Syscall.MathSyscall extern:false dll:- cc:winapi builtin:Random entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.MathSyscall.Random[@i32]/max max @i32 0 - -)
+    )
+    (fn System.Core!System.Syscall.MathSyscall.Sqrt[@f64] name:Sqrt ret:@f64 ns:- owner:System.Syscall.MathSyscall extern:false dll:- cc:winapi builtin:Sqrt entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.MathSyscall.Sqrt[@f64]/x x @f64 0 - -)
+    )
+    (fn System.Core!System.Syscall.MathSyscall.DoubleToString[@f64] name:DoubleToString ret:@string ns:- owner:System.Syscall.MathSyscall extern:false dll:- cc:winapi builtin:DoubleToString entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.MathSyscall.DoubleToString[@f64]/value value @f64 0 - -)
+    )
+    (fn System.Core!System.Syscall.MathSyscall.Sha256Hash[@u8[]] name:Sha256Hash ret:@u8[] ns:- owner:System.Syscall.MathSyscall extern:false dll:- cc:winapi builtin:Sha256Hash entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.MathSyscall.Sha256Hash[@u8[]]/data data @u8[] 0 - -)
+    )
+    (fn System.Core!System.Syscall.ProcessSyscall.LaunchProcess[@string,@string,@string] name:LaunchProcess ret:@i32 ns:- owner:System.Syscall.ProcessSyscall extern:false dll:- cc:winapi builtin:LaunchProcess entry:- charset:- static:true ctor:false acc:false params:3
+      (par System.Core!System.Syscall.ProcessSyscall.LaunchProcess[@string,@string,@string]/path path @string 0 - -)
+      (par System.Core!System.Syscall.ProcessSyscall.LaunchProcess[@string,@string,@string]/args args @string 1 - -)
+      (par System.Core!System.Syscall.ProcessSyscall.LaunchProcess[@string,@string,@string]/workdir workdir @string 2 - -)
+    )
+    (fn System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] name:StringFromBytes ret:@string ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringFromBytes entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data data @u8[] 0 - -)
+    )
+    (fn System.Core!System.Syscall.StringSyscall.StringToBytes[@string] name:StringToBytes ret:@u8[] ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringToBytes entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/text text @string 0 - -)
+    )
+    (fn System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] name:StringFromChars ret:@string ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]]/chars chars @char[] 0 - -)
+    )
     (loc System.Core!System.Array.Sum[@i32[]]/sum false @i32)
     (loc System.Core!System.Array.Sum[@i32[]]/i false @i32)
     (loc System.Core!System.Array.Sum[@f64[]]/sum false @f64)
@@ -1540,25 +1579,6 @@
     (loc System.Core!System.Math.Gcd[@i32,@i32]/x false @i32)
     (loc System.Core!System.Math.Gcd[@i32,@i32]/y false @i32)
     (loc System.Core!System.Math.Gcd[@i32,@i32]/t false @i32)
-    (loc System.Core!System.IO.Path.Combine[@string,@string]/bchars false @char[])
-    (loc System.Core!System.IO.Path.Combine[@string,@string]/achars false @char[])
-    (loc System.Core!System.IO.Path.TrimTrailingSeparators[@string]/chars false @char[])
-    (loc System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end false @i32)
-    (loc System.Core!System.IO.Path.LastIndexOfSeparator[@string]/chars false @char[])
-    (loc System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i false @i32)
-    (loc System.Core!System.IO.Path.NormalizeSeps[@string]/chars false @char[])
-    (loc System.Core!System.IO.Path.NormalizeSeps[@string]/i false @i32)
-    (loc System.Core!System.IO.Path.GetFileName[@string]/last false @char)
-    (loc System.Core!System.IO.Path.GetFileName[@string]/sep false @i32)
-    (loc System.Core!System.IO.Path.GetExtension[@string]/name false @string)
-    (loc System.Core!System.IO.Path.GetExtension[@string]/chars false @char[])
-    (loc System.Core!System.IO.Path.GetExtension[@string]/dot false @i32)
-    (loc System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name false @string)
-    (loc System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/chars false @char[])
-    (loc System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot false @i32)
-    (loc System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed false @string)
-    (loc System.Core!System.IO.Path.GetDirectoryName[@string]/last false @char)
-    (loc System.Core!System.IO.Path.GetDirectoryName[@string]/sep false @i32)
     (loc System.Core!System.Runtime.Floor[@f64]/t false @i64)
     (loc System.Core!System.Runtime.Ceiling[@f64]/t false @i64)
     (loc System.Core!System.Runtime.Round[@f64]/t false @i64)
@@ -1652,6 +1672,25 @@
     (loc System.Core!System.IO.MemoryStream.Seek[@i64,@i32]/pos false @i64)
     (loc System.Core!System.IO.MemoryStream.ToArray[]/result false @u8[])
     (loc System.Core!System.IO.MemoryStream.ToArray[]/i false @i32)
+    (loc System.Core!System.IO.Path.Combine[@string,@string]/bchars false @char[])
+    (loc System.Core!System.IO.Path.Combine[@string,@string]/achars false @char[])
+    (loc System.Core!System.IO.Path.TrimTrailingSeparators[@string]/chars false @char[])
+    (loc System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end false @i32)
+    (loc System.Core!System.IO.Path.LastIndexOfSeparator[@string]/chars false @char[])
+    (loc System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i false @i32)
+    (loc System.Core!System.IO.Path.NormalizeSeps[@string]/chars false @char[])
+    (loc System.Core!System.IO.Path.NormalizeSeps[@string]/i false @i32)
+    (loc System.Core!System.IO.Path.GetFileName[@string]/last false @char)
+    (loc System.Core!System.IO.Path.GetFileName[@string]/sep false @i32)
+    (loc System.Core!System.IO.Path.GetExtension[@string]/name false @string)
+    (loc System.Core!System.IO.Path.GetExtension[@string]/chars false @char[])
+    (loc System.Core!System.IO.Path.GetExtension[@string]/dot false @i32)
+    (loc System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name false @string)
+    (loc System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/chars false @char[])
+    (loc System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot false @i32)
+    (loc System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed false @string)
+    (loc System.Core!System.IO.Path.GetDirectoryName[@string]/last false @char)
+    (loc System.Core!System.IO.Path.GetDirectoryName[@string]/sep false @i32)
     (loc System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/exact false @u8[])
     (loc System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/i false @i32)
     (loc System.Core!System.IO.StreamReader.PullAll[]/acc false @string)
@@ -3404,8 +3443,8 @@
     (body System.Core!System.Console.WriteLine[]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (lit @string s:)
             )
@@ -3416,8 +3455,8 @@
     (body System.Core!System.Console.WriteLine[@string]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@string]/text)
             )
@@ -3428,8 +3467,8 @@
     (body System.Core!System.Console.WriteLine[@i32]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@i32]/text)
             )
@@ -3440,8 +3479,8 @@
     (body System.Core!System.Console.WriteLine[@f64]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@f64]/text)
             )
@@ -3452,8 +3491,8 @@
     (body System.Core!System.Console.WriteLine[@bool]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@bool]/text)
             )
@@ -3464,8 +3503,8 @@
     (body System.Core!System.Console.WriteLine[@char]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@char]/text)
             )
@@ -3476,8 +3515,8 @@
     (body System.Core!System.Console.WriteLine[@u8]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@u8]/text)
             )
@@ -3488,8 +3527,8 @@
     (body System.Core!System.Console.WriteLine[@i64]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@i64]/text)
             )
@@ -3500,8 +3539,8 @@
     (body System.Core!System.Console.WriteLine[@i8]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@i8]/text)
             )
@@ -3512,8 +3551,8 @@
     (body System.Core!System.Console.WriteLine[@i16]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@i16]/text)
             )
@@ -3524,8 +3563,8 @@
     (body System.Core!System.Console.WriteLine[@u16]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@u16]/text)
             )
@@ -3536,8 +3575,8 @@
     (body System.Core!System.Console.WriteLine[@u32]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@u32]/text)
             )
@@ -3548,8 +3587,8 @@
     (body System.Core!System.Console.WriteLine[@u64]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@u64]/text)
             )
@@ -3560,8 +3599,8 @@
     (body System.Core!System.Console.WriteLine[@f32]
       (block 1
         (exprstmt
-          (membercall @void WriteLine System.Core!System.Runtime.WriteLine[@any] 1
-            (statictype System.Runtime)
+          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@f32]/text)
             )
@@ -3572,8 +3611,8 @@
     (body System.Core!System.Console.Write[@string]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@string]/text)
             )
@@ -3584,8 +3623,8 @@
     (body System.Core!System.Console.Write[@i32]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@i32]/text)
             )
@@ -3596,8 +3635,8 @@
     (body System.Core!System.Console.Write[@f64]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@f64]/text)
             )
@@ -3608,8 +3647,8 @@
     (body System.Core!System.Console.Write[@bool]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@bool]/text)
             )
@@ -3620,8 +3659,8 @@
     (body System.Core!System.Console.Write[@char]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@char]/text)
             )
@@ -3632,8 +3671,8 @@
     (body System.Core!System.Console.Write[@u8]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@u8]/text)
             )
@@ -3644,8 +3683,8 @@
     (body System.Core!System.Console.Write[@i64]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@i64]/text)
             )
@@ -3656,8 +3695,8 @@
     (body System.Core!System.Console.Write[@i8]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@i8]/text)
             )
@@ -3668,8 +3707,8 @@
     (body System.Core!System.Console.Write[@i16]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@i16]/text)
             )
@@ -3680,8 +3719,8 @@
     (body System.Core!System.Console.Write[@u16]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@u16]/text)
             )
@@ -3692,8 +3731,8 @@
     (body System.Core!System.Console.Write[@u32]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@u32]/text)
             )
@@ -3704,8 +3743,8 @@
     (body System.Core!System.Console.Write[@u64]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@u64]/text)
             )
@@ -3716,8 +3755,8 @@
     (body System.Core!System.Console.Write[@f32]
       (block 1
         (exprstmt
-          (membercall @void Write System.Core!System.Runtime.Write[@any] 1
-            (statictype System.Runtime)
+          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@f32]/text)
             )
@@ -3728,8 +3767,8 @@
     (body System.Core!System.Console.ReadLine[]
       (block 1
         (return
-          (membercall @string ReadLine System.Core!System.Runtime.ReadLine[] 0
-            (statictype System.Runtime)
+          (membercall @string ReadLine System.Core!System.Syscall.ConsoleSyscall.ReadLine[] 0
+            (statictype System.Syscall.ConsoleSyscall)
           )
         )
       )
@@ -3737,8 +3776,8 @@
     (body System.Core!System.Console.ReadKey[@bool]
       (block 1
         (return
-          (membercall @char ReadKey System.Core!System.Runtime.ReadKey[@bool] 1
-            (statictype System.Runtime)
+          (membercall @char ReadKey System.Core!System.Syscall.ConsoleSyscall.ReadKey[@bool] 1
+            (statictype System.Syscall.ConsoleSyscall)
             (var System.Core!System.Console.ReadKey[@bool]/intercept)
           )
         )
@@ -3747,8 +3786,8 @@
     (body System.Core!System.Console.Beep[@i32,@i32]
       (block 1
         (exprstmt
-          (membercall @void Beep System.Core!System.Runtime.Beep[@i32,@i32] 2
-            (statictype System.Runtime)
+          (membercall @void Beep System.Core!System.Syscall.ConsoleSyscall.Beep[@i32,@i32] 2
+            (statictype System.Syscall.ConsoleSyscall)
             (var System.Core!System.Console.Beep[@i32,@i32]/frequency)
             (var System.Core!System.Console.Beep[@i32,@i32]/duration)
           )
@@ -3859,8 +3898,8 @@
           ) break1 continue1
         )
         (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (statictype System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.Convert.ToHexString[@u8[]]/chars)
           )
         )
@@ -4557,8 +4596,8 @@
           )
         )
         (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (statictype System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.Convert.ToBase64String[@u8[]]/chars)
           )
         )
@@ -5257,8 +5296,8 @@
     (body System.Core!System.Double.ToString[@f64]
       (block 1
         (return
-          (membercall @string DoubleToString System.Core!System.Runtime.DoubleToString[@f64] 1
-            (statictype System.Runtime)
+          (membercall @string DoubleToString System.Core!System.Syscall.MathSyscall.DoubleToString[@f64] 1
+            (statictype System.Syscall.MathSyscall)
             (var System.Core!System.Double.ToString[@f64]/this)
           )
         )
@@ -5980,8 +6019,8 @@
           )
           (block 1
             (exprstmt
-              (membercall @void Exit System.Core!System.Runtime.Exit[@i32] 1
-                (statictype System.Runtime)
+              (membercall @void Exit System.Core!System.Syscall.ConsoleSyscall.Exit[@i32] 1
+                (statictype System.Syscall.ConsoleSyscall)
                 (lit @i32 i:1)
               )
             )
@@ -6047,140 +6086,48 @@
         )
       )
     )
+    (body System.Core!System.Environment.GetEnvironmentVariable[@string]
+      (block 1
+        (return
+          (membercall @string GetEnvironmentVariable System.Core!System.Syscall.EnvironmentSyscall.GetEnvironmentVariable[@string] 1
+            (statictype System.Syscall.EnvironmentSyscall)
+            (var System.Core!System.Environment.GetEnvironmentVariable[@string]/name)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Environment.GetCurrentDirectory[]
+      (block 1
+        (return
+          (membercall @string GetCurrentDirectory System.Core!System.Syscall.EnvironmentSyscall.GetCurrentDirectory[] 0
+            (statictype System.Syscall.EnvironmentSyscall)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Environment.SetCurrentDirectory[@string]
+      (block 1
+        (exprstmt
+          (membercall @void SetCurrentDirectory System.Core!System.Syscall.EnvironmentSyscall.SetCurrentDirectory[@string] 1
+            (statictype System.Syscall.EnvironmentSyscall)
+            (var System.Core!System.Environment.SetCurrentDirectory[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Environment.GetExecutablePath[]
+      (block 1
+        (return
+          (membercall @string GetExecutablePath System.Core!System.Syscall.EnvironmentSyscall.GetExecutablePath[] 0
+            (statictype System.Syscall.EnvironmentSyscall)
+          )
+        )
+      )
+    )
     (body System.Core!System.Exception.get_Message[System.Exception]
       (block 1
         (return
           (lit @string s:)
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.FileStream[@string]
-      (block 1
-        (exprstmt
-          (memberassign
-            (this System.IO.FileStream) name:_h @i64 false
-            (membercall @i64 FileOpen System.Core!System.Runtime.FileOpen[@string,@i32] 2
-              (statictype System.Runtime)
-              (var System.Core!System.IO.FileStream.FileStream[@string]/path)
-              (lit @i32 i:0)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.get_CanRead[]
-      (block 1
-        (return
-          (lit @bool b:1)
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.get_CanWrite[]
-      (block 1
-        (return
-          (lit @bool b:1)
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.get_CanSeek[]
-      (block 1
-        (return
-          (lit @bool b:1)
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.get_Length[]
-      (block 1
-        (return
-          (membercall @i64 FileSize System.Core!System.Runtime.FileSize[@i64] 1
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.get_Position[]
-      (block 1
-        (return
-          (membercall @i64 FileTell System.Core!System.Runtime.FileTell[@i64] 1
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.set_Position[@i64]
-      (block 1
-        (exprstmt
-          (membercall @void FileSeek System.Core!System.Runtime.FileSeek[@i64,@i64,@i32] 3
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-            (var System.Core!System.IO.FileStream.set_Position[@i64]/value)
-            (lit @i32 i:0)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]
-      (block 1
-        (return
-          (membercall @i32 FileRead System.Core!System.Runtime.FileRead[@i64,@u8[],@i32,@i32] 4
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-            (var System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/data)
-            (var System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/offset)
-            (var System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/count)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]
-      (block 1
-        (exprstmt
-          (membercall @void FileWrite System.Core!System.Runtime.FileWrite[@i64,@u8[],@i32,@i32] 4
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-            (var System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/data)
-            (var System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/offset)
-            (var System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/count)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.Flush[]
-      (block 0)
-    )
-    (body System.Core!System.IO.FileStream.Close[]
-      (block 1
-        (exprstmt
-          (membercall @void FileClose System.Core!System.Runtime.FileClose[@i64] 1
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.FileStream.Dispose[]
-      (block 1
-        (exprstmt
-          (membercall @void FileClose System.Core!System.Runtime.FileClose[@i64] 1
-            (statictype System.Runtime)
-            (memberacc @i64 _h owner:System.IO.FileStream
-              (this System.IO.FileStream)
-            )
-          )
         )
       )
     )
@@ -6356,8 +6303,8 @@
           )
           (block 1
             (exprstmt
-              (membercall @void Exit System.Core!System.Runtime.Exit[@i32] 1
-                (statictype System.Runtime)
+              (membercall @void Exit System.Core!System.Syscall.ConsoleSyscall.Exit[@i32] 1
+                (statictype System.Syscall.ConsoleSyscall)
                 (lit @i32 i:1)
               )
             )
@@ -7366,8 +7313,8 @@
     (body System.Core!System.Math.Sqrt[@f64]
       (block 1
         (return
-          (membercall @f64 Sqrt System.Core!System.Runtime.Sqrt[@f64] 1
-            (statictype System.Runtime)
+          (membercall @f64 Sqrt System.Core!System.Syscall.MathSyscall.Sqrt[@f64] 1
+            (statictype System.Syscall.MathSyscall)
             (var System.Core!System.Math.Sqrt[@f64]/x)
           )
         )
@@ -7409,766 +7356,6 @@
           (membercall @f64 Round System.Core!System.Runtime.Round[@f64] 1
             (statictype System.Runtime)
             (var System.Core!System.Math.Round[@f64]/x)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.IsSeparator[@char]
-      (block 1
-        (return
-          (binary
-            (bop || @bool @bool)
-            (binary
-              (bop == @char @char)
-              (var System.Core!System.IO.Path.IsSeparator[@char]/c)
-              (lit @char c:47)
-            )
-            (binary
-              (bop == @char @char)
-              (var System.Core!System.IO.Path.IsSeparator[@char]/c)
-              (lit @char c:92)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.Combine[@string,@string]
-      (block 7
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.Combine[@string,@string]/a)
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.Combine[@string,@string]/b)
-            )
-          ) -
-        )
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.Combine[@string,@string]/b)
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.Combine[@string,@string]/a)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.Combine[@string,@string]/bchars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.Combine[@string,@string]/b)
-          )
-        )
-        (if
-          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-            (this System.IO.Path)
-            (elem @char
-              (var System.Core!System.IO.Path.Combine[@string,@string]/bchars)
-              (lit @i32 i:0)
-            )
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.Combine[@string,@string]/b)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.Combine[@string,@string]/achars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.Combine[@string,@string]/a)
-          )
-        )
-        (if
-          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-            (this System.IO.Path)
-            (elem @char
-              (var System.Core!System.IO.Path.Combine[@string,@string]/achars)
-              (binary
-                (bop - @i32 @i32)
-                (memberacc @i32 Length
-                  (var System.Core!System.IO.Path.Combine[@string,@string]/a)
-                )
-                (lit @i32 i:1)
-              )
-            )
-          )
-          (block 1
-            (return
-              (binary
-                (bop + @string @string)
-                (var System.Core!System.IO.Path.Combine[@string,@string]/a)
-                (var System.Core!System.IO.Path.Combine[@string,@string]/b)
-              )
-            )
-          ) -
-        )
-        (return
-          (binary
-            (bop + @string @string)
-            (binary
-              (bop + @string @string)
-              (var System.Core!System.IO.Path.Combine[@string,@string]/a)
-              (lit @string s:\\)
-            )
-            (var System.Core!System.IO.Path.Combine[@string,@string]/b)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.TrimTrailingSeparators[@string]
-      (block 5
-        (vardecl System.Core!System.IO.Path.TrimTrailingSeparators[@string]/chars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text)
-          )
-        )
-        (vardecl System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end
-          (binary
-            (bop - @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text)
-            )
-            (lit @i32 i:1)
-          )
-        )
-        (while
-          (binary
-            (bop >= @i32 @i32)
-            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
-            (lit @i32 i:0)
-          )
-          (block 2
-            (if
-              (unary
-                (uop ! @bool)
-                (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-                  (this System.IO.Path)
-                  (elem @char
-                    (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/chars)
-                    (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
-                  )
-                )
-              )
-              (block 1
-                (goto break1)
-              ) -
-            )
-            (exprstmt
-              (assign System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end
-                (binary
-                  (bop - @i32 @i32)
-                  (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
-                  (lit @i32 i:1)
-                )
-              )
-            )
-          ) break1 continue1
-        )
-        (if
-          (binary
-            (bop < @i32 @i32)
-            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
-            (lit @i32 i:0)
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (return
-          (membercall @string substring - 2
-            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text)
-            (lit @i32 i:0)
-            (binary
-              (bop + @i32 @i32)
-              (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
-              (lit @i32 i:1)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.LastIndexOfSeparator[@string]
-      (block 4
-        (vardecl System.Core!System.IO.Path.LastIndexOfSeparator[@string]/chars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/text)
-          )
-        )
-        (vardecl System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i
-          (binary
-            (bop - @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/text)
-            )
-            (lit @i32 i:1)
-          )
-        )
-        (while
-          (binary
-            (bop >= @i32 @i32)
-            (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
-            (lit @i32 i:0)
-          )
-          (block 2
-            (if
-              (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-                (this System.IO.Path)
-                (elem @char
-                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/chars)
-                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
-                )
-              )
-              (block 1
-                (return
-                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
-                )
-              ) -
-            )
-            (exprstmt
-              (assign System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i
-                (binary
-                  (bop - @i32 @i32)
-                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
-                  (lit @i32 i:1)
-                )
-              )
-            )
-          ) break1 continue1
-        )
-        (return
-          (unary
-            (uop - @i32)
-            (lit @i32 i:1)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.NormalizeSeps[@string]
-      (block 4
-        (vardecl System.Core!System.IO.Path.NormalizeSeps[@string]/chars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.NormalizeSeps[@string]/text)
-          )
-        )
-        (vardecl System.Core!System.IO.Path.NormalizeSeps[@string]/i
-          (lit @i32 i:0)
-        )
-        (while
-          (binary
-            (bop < @i32 @i32)
-            (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
-            )
-          )
-          (block 2
-            (if
-              (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-                (this System.IO.Path)
-                (elem @char
-                  (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
-                  (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
-                )
-              )
-              (block 1
-                (exprstmt
-                  (elemassign @char
-                    (elem @char
-                      (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
-                      (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
-                    )
-                    (lit @char c:92)
-                  )
-                )
-              ) -
-            )
-            (exprstmt
-              (assign System.Core!System.IO.Path.NormalizeSeps[@string]/i
-                (binary
-                  (bop + @i32 @i32)
-                  (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
-                  (lit @i32 i:1)
-                )
-              )
-            )
-          ) break1 continue1
-        )
-        (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (statictype System.Runtime)
-            (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.GetFileName[@string]
-      (block 6
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.GetFileName[@string]/path)
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.GetFileName[@string]/path)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetFileName[@string]/last
-          (elem @char
-            (call System.Core!System.String.ToCharArray[@string] 1
-              (var System.Core!System.IO.Path.GetFileName[@string]/path)
-            )
-            (binary
-              (bop - @i32 @i32)
-              (memberacc @i32 Length
-                (var System.Core!System.IO.Path.GetFileName[@string]/path)
-              )
-              (lit @i32 i:1)
-            )
-          )
-        )
-        (if
-          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetFileName[@string]/last)
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetFileName[@string]/sep
-          (membercall @i32 LastIndexOfSeparator System.Core!System.IO.Path.LastIndexOfSeparator[@string] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetFileName[@string]/path)
-          )
-        )
-        (if
-          (binary
-            (bop == @i32 @i32)
-            (var System.Core!System.IO.Path.GetFileName[@string]/sep)
-            (unary
-              (uop - @i32)
-              (lit @i32 i:1)
-            )
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.GetFileName[@string]/path)
-            )
-          ) -
-        )
-        (return
-          (membercall @string substring - 2
-            (var System.Core!System.IO.Path.GetFileName[@string]/path)
-            (binary
-              (bop + @i32 @i32)
-              (var System.Core!System.IO.Path.GetFileName[@string]/sep)
-              (lit @i32 i:1)
-            )
-            (binary
-              (bop - @i32 @i32)
-              (binary
-                (bop - @i32 @i32)
-                (memberacc @i32 Length
-                  (var System.Core!System.IO.Path.GetFileName[@string]/path)
-                )
-                (var System.Core!System.IO.Path.GetFileName[@string]/sep)
-              )
-              (lit @i32 i:1)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.GetFileNameOrNull[@string]
-      (block 2
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.GetFileNameOrNull[@string]/path)
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (return
-          (membercall @string GetFileName System.Core!System.IO.Path.GetFileName[@string] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetFileNameOrNull[@string]/path)
-          )
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.GetExtension[@string]
-      (block 7
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.GetExtension[@string]/path)
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.GetExtension[@string]/path)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetExtension[@string]/name
-          (membercall @string GetFileNameOrNull System.Core!System.IO.Path.GetFileNameOrNull[@string] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetExtension[@string]/path)
-          )
-        )
-        (if
-          (binary
-            (bop == @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.GetExtension[@string]/name)
-            )
-            (lit @i32 i:0)
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetExtension[@string]/chars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.GetExtension[@string]/name)
-          )
-        )
-        (vardecl System.Core!System.IO.Path.GetExtension[@string]/dot
-          (binary
-            (bop - @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.GetExtension[@string]/name)
-            )
-            (lit @i32 i:1)
-          )
-        )
-        (while
-          (binary
-            (bop >= @i32 @i32)
-            (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-            (lit @i32 i:0)
-          )
-          (block 2
-            (if
-              (binary
-                (bop == @char @char)
-                (elem @char
-                  (var System.Core!System.IO.Path.GetExtension[@string]/chars)
-                  (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-                )
-                (lit @char c:46)
-              )
-              (block 3
-                (if
-                  (binary
-                    (bop == @i32 @i32)
-                    (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-                    (lit @i32 i:0)
-                  )
-                  (block 1
-                    (return
-                      (var System.Core!System.IO.Path.GetExtension[@string]/name)
-                    )
-                  ) -
-                )
-                (if
-                  (binary
-                    (bop == @i32 @i32)
-                    (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-                    (binary
-                      (bop - @i32 @i32)
-                      (memberacc @i32 Length
-                        (var System.Core!System.IO.Path.GetExtension[@string]/name)
-                      )
-                      (lit @i32 i:1)
-                    )
-                  )
-                  (block 1
-                    (return
-                      (lit @string s:)
-                    )
-                  ) -
-                )
-                (return
-                  (membercall @string substring - 2
-                    (var System.Core!System.IO.Path.GetExtension[@string]/name)
-                    (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-                    (binary
-                      (bop - @i32 @i32)
-                      (memberacc @i32 Length
-                        (var System.Core!System.IO.Path.GetExtension[@string]/name)
-                      )
-                      (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-                    )
-                  )
-                )
-              ) -
-            )
-            (exprstmt
-              (assign System.Core!System.IO.Path.GetExtension[@string]/dot
-                (binary
-                  (bop - @i32 @i32)
-                  (var System.Core!System.IO.Path.GetExtension[@string]/dot)
-                  (lit @i32 i:1)
-                )
-              )
-            )
-          ) break1 continue1
-        )
-        (return
-          (lit @string s:)
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]
-      (block 7
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name
-          (membercall @string GetFileNameOrNull System.Core!System.IO.Path.GetFileNameOrNull[@string] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
-          )
-        )
-        (if
-          (binary
-            (bop == @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-            )
-            (lit @i32 i:0)
-          )
-          (block 1
-            (return
-              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/chars
-          (call System.Core!System.String.ToCharArray[@string] 1
-            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-          )
-        )
-        (vardecl System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot
-          (binary
-            (bop - @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-            )
-            (lit @i32 i:1)
-          )
-        )
-        (while
-          (binary
-            (bop >= @i32 @i32)
-            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
-            (lit @i32 i:0)
-          )
-          (block 2
-            (if
-              (binary
-                (bop == @char @char)
-                (elem @char
-                  (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/chars)
-                  (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
-                )
-                (lit @char c:46)
-              )
-              (block 3
-                (if
-                  (binary
-                    (bop == @i32 @i32)
-                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
-                    (lit @i32 i:0)
-                  )
-                  (block 1
-                    (return
-                      (lit @string s:)
-                    )
-                  ) -
-                )
-                (if
-                  (binary
-                    (bop == @i32 @i32)
-                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
-                    (binary
-                      (bop - @i32 @i32)
-                      (memberacc @i32 Length
-                        (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-                      )
-                      (lit @i32 i:1)
-                    )
-                  )
-                  (block 1
-                    (return
-                      (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-                    )
-                  ) -
-                )
-                (return
-                  (membercall @string substring - 2
-                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-                    (lit @i32 i:0)
-                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
-                  )
-                )
-              ) -
-            )
-            (exprstmt
-              (assign System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot
-                (binary
-                  (bop - @i32 @i32)
-                  (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
-                  (lit @i32 i:1)
-                )
-              )
-            )
-          ) break1 continue1
-        )
-        (return
-          (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
-        )
-      )
-    )
-    (body System.Core!System.IO.Path.GetDirectoryName[@string]
-      (block 9
-        (if
-          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
-            (statictype System.String)
-            (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed
-          (membercall @string TrimTrailingSeparators System.Core!System.IO.Path.TrimTrailingSeparators[@string] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
-          )
-        )
-        (if
-          (binary
-            (bop == @i32 @i32)
-            (memberacc @i32 Length
-              (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
-            )
-            (lit @i32 i:0)
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetDirectoryName[@string]/last
-          (elem @char
-            (call System.Core!System.String.ToCharArray[@string] 1
-              (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
-            )
-            (binary
-              (bop - @i32 @i32)
-              (memberacc @i32 Length
-                (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
-              )
-              (lit @i32 i:1)
-            )
-          )
-        )
-        (if
-          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetDirectoryName[@string]/last)
-          )
-          (block 2
-            (if
-              (binary
-                (bop >= @i32 @i32)
-                (membercall @i32 LastIndexOfSeparator System.Core!System.IO.Path.LastIndexOfSeparator[@string] 1
-                  (this System.IO.Path)
-                  (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
-                )
-                (lit @i32 i:0)
-              )
-              (block 1
-                (return
-                  (membercall @string NormalizeSeps System.Core!System.IO.Path.NormalizeSeps[@string] 1
-                    (this System.IO.Path)
-                    (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
-                  )
-                )
-              ) -
-            )
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (vardecl System.Core!System.IO.Path.GetDirectoryName[@string]/sep
-          (membercall @i32 LastIndexOfSeparator System.Core!System.IO.Path.LastIndexOfSeparator[@string] 1
-            (this System.IO.Path)
-            (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
-          )
-        )
-        (if
-          (binary
-            (bop == @i32 @i32)
-            (var System.Core!System.IO.Path.GetDirectoryName[@string]/sep)
-            (unary
-              (uop - @i32)
-              (lit @i32 i:1)
-            )
-          )
-          (block 1
-            (return
-              (lit @string s:)
-            )
-          ) -
-        )
-        (if
-          (binary
-            (bop == @i32 @i32)
-            (var System.Core!System.IO.Path.GetDirectoryName[@string]/sep)
-            (lit @i32 i:0)
-          )
-          (block 1
-            (return
-              (lit @string s:\\)
-            )
-          ) -
-        )
-        (return
-          (membercall @string NormalizeSeps System.Core!System.IO.Path.NormalizeSeps[@string] 1
-            (this System.IO.Path)
-            (membercall @string substring - 2
-              (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
-              (lit @i32 i:0)
-              (var System.Core!System.IO.Path.GetDirectoryName[@string]/sep)
-            )
           )
         )
       )
@@ -8585,8 +7772,8 @@
           ) break2 continue2
         )
         (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (this System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.Runtime.Int32ToString[@i32]/chars)
           )
         )
@@ -8796,8 +7983,8 @@
           ) break2 continue2
         )
         (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (this System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.Runtime.Int64ToString[@i64]/chars)
           )
         )
@@ -8833,8 +8020,8 @@
           )
         )
         (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (this System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.Runtime.CharToString[@char]/chars)
           )
         )
@@ -9137,8 +8324,8 @@
           ) break2 continue2
         )
         (return
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (this System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.Runtime.UInt64ToString[@u64]/chars)
           )
         )
@@ -9246,8 +8433,8 @@
     (body System.Core!System.Single.ToString[@f32]
       (block 1
         (return
-          (membercall @string DoubleToString System.Core!System.Runtime.DoubleToString[@f64] 1
-            (statictype System.Runtime)
+          (membercall @string DoubleToString System.Core!System.Syscall.MathSyscall.DoubleToString[@f64] 1
+            (statictype System.Syscall.MathSyscall)
             (conv @f64
               (var System.Core!System.Single.ToString[@f32]/this)
             )
@@ -11156,6 +10343,209 @@
         )
       )
     )
+    (body System.Core!System.IO.File.ReadAllText[@string]
+      (block 1
+        (return
+          (membercall @string ReadAllText System.Core!System.Syscall.FileSyscall.ReadAllText[@string] 1
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.ReadAllText[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.File.WriteAllText[@string,@string]
+      (block 1
+        (exprstmt
+          (membercall @void WriteAllText System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string] 2
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.WriteAllText[@string,@string]/path)
+            (var System.Core!System.IO.File.WriteAllText[@string,@string]/text)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.File.Exists[@string]
+      (block 1
+        (return
+          (membercall @bool Exists System.Core!System.Syscall.FileSyscall.Exists[@string] 1
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.Exists[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.File.Copy[@string,@string]
+      (block 1
+        (exprstmt
+          (membercall @void Copy System.Core!System.Syscall.FileSyscall.Copy[@string,@string] 2
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.Copy[@string,@string]/src)
+            (var System.Core!System.IO.File.Copy[@string,@string]/dst)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.File.Delete[@string]
+      (block 1
+        (exprstmt
+          (membercall @void Delete System.Core!System.Syscall.FileSyscall.Delete[@string] 1
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.Delete[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.File.ReadAllBytes[@string]
+      (block 1
+        (return
+          (membercall @u8[] ReadAllBytes System.Core!System.Syscall.FileSyscall.ReadAllBytes[@string] 1
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.ReadAllBytes[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]
+      (block 1
+        (exprstmt
+          (membercall @void WriteAllBytes System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]] 2
+            (statictype System.Syscall.FileSyscall)
+            (var System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/path)
+            (var System.Core!System.IO.File.WriteAllBytes[@string,@u8[]]/data)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.FileStream[@string]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.FileStream) name:_h @i64 false
+            (membercall @i64 FileOpen System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32] 2
+              (statictype System.Syscall.IOSyscall)
+              (var System.Core!System.IO.FileStream.FileStream[@string]/path)
+              (lit @i32 i:0)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.get_CanRead[]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.get_CanWrite[]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.get_CanSeek[]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.get_Length[]
+      (block 1
+        (return
+          (membercall @i64 FileSize System.Core!System.Syscall.IOSyscall.FileSize[@i64] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.get_Position[]
+      (block 1
+        (return
+          (membercall @i64 FileTell System.Core!System.Syscall.IOSyscall.FileTell[@i64] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.set_Position[@i64]
+      (block 1
+        (exprstmt
+          (membercall @void FileSeek System.Core!System.Syscall.IOSyscall.FileSeek[@i64,@i64,@i32] 3
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+            (var System.Core!System.IO.FileStream.set_Position[@i64]/value)
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]
+      (block 1
+        (return
+          (membercall @i32 FileRead System.Core!System.Syscall.IOSyscall.FileRead[@i64,@u8[],@i32,@i32] 4
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+            (var System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/data)
+            (var System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/offset)
+            (var System.Core!System.IO.FileStream.Read[@u8[],@i32,@i32]/count)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]
+      (block 1
+        (exprstmt
+          (membercall @void FileWrite System.Core!System.Syscall.IOSyscall.FileWrite[@i64,@u8[],@i32,@i32] 4
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+            (var System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/data)
+            (var System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/offset)
+            (var System.Core!System.IO.FileStream.Write[@u8[],@i32,@i32]/count)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.Flush[]
+      (block 0)
+    )
+    (body System.Core!System.IO.FileStream.Close[]
+      (block 1
+        (exprstmt
+          (membercall @void FileClose System.Core!System.Syscall.IOSyscall.FileClose[@i64] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.Dispose[]
+      (block 1
+        (exprstmt
+          (membercall @void FileClose System.Core!System.Syscall.IOSyscall.FileClose[@i64] 1
+            (statictype System.Syscall.IOSyscall)
+            (memberacc @i64 _h owner:System.IO.FileStream
+              (this System.IO.FileStream)
+            )
+          )
+        )
+      )
+    )
     (body System.Core!System.IO.MemoryStream.MemoryStream[]
       (block 3
         (exprstmt
@@ -11648,6 +11038,766 @@
         )
       )
     )
+    (body System.Core!System.IO.Path.IsSeparator[@char]
+      (block 1
+        (return
+          (binary
+            (bop || @bool @bool)
+            (binary
+              (bop == @char @char)
+              (var System.Core!System.IO.Path.IsSeparator[@char]/c)
+              (lit @char c:47)
+            )
+            (binary
+              (bop == @char @char)
+              (var System.Core!System.IO.Path.IsSeparator[@char]/c)
+              (lit @char c:92)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.Combine[@string,@string]
+      (block 7
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.Combine[@string,@string]/a)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.Combine[@string,@string]/b)
+            )
+          ) -
+        )
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.Combine[@string,@string]/b)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.Combine[@string,@string]/a)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.Combine[@string,@string]/bchars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.Combine[@string,@string]/b)
+          )
+        )
+        (if
+          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+            (this System.IO.Path)
+            (elem @char
+              (var System.Core!System.IO.Path.Combine[@string,@string]/bchars)
+              (lit @i32 i:0)
+            )
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.Combine[@string,@string]/b)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.Combine[@string,@string]/achars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.Combine[@string,@string]/a)
+          )
+        )
+        (if
+          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+            (this System.IO.Path)
+            (elem @char
+              (var System.Core!System.IO.Path.Combine[@string,@string]/achars)
+              (binary
+                (bop - @i32 @i32)
+                (memberacc @i32 Length
+                  (var System.Core!System.IO.Path.Combine[@string,@string]/a)
+                )
+                (lit @i32 i:1)
+              )
+            )
+          )
+          (block 1
+            (return
+              (binary
+                (bop + @string @string)
+                (var System.Core!System.IO.Path.Combine[@string,@string]/a)
+                (var System.Core!System.IO.Path.Combine[@string,@string]/b)
+              )
+            )
+          ) -
+        )
+        (return
+          (binary
+            (bop + @string @string)
+            (binary
+              (bop + @string @string)
+              (var System.Core!System.IO.Path.Combine[@string,@string]/a)
+              (lit @string s:\\)
+            )
+            (var System.Core!System.IO.Path.Combine[@string,@string]/b)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.TrimTrailingSeparators[@string]
+      (block 5
+        (vardecl System.Core!System.IO.Path.TrimTrailingSeparators[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text)
+          )
+        )
+        (vardecl System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (unary
+                (uop ! @bool)
+                (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+                  (this System.IO.Path)
+                  (elem @char
+                    (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/chars)
+                    (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
+                  )
+                )
+              )
+              (block 1
+                (goto break1)
+              ) -
+            )
+            (exprstmt
+              (assign System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (if
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (return
+          (membercall @string substring - 2
+            (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/text)
+            (lit @i32 i:0)
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.IO.Path.TrimTrailingSeparators[@string]/end)
+              (lit @i32 i:1)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.LastIndexOfSeparator[@string]
+      (block 4
+        (vardecl System.Core!System.IO.Path.LastIndexOfSeparator[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/text)
+          )
+        )
+        (vardecl System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/text)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+                (this System.IO.Path)
+                (elem @char
+                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/chars)
+                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
+                )
+              )
+              (block 1
+                (return
+                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.Core!System.IO.Path.LastIndexOfSeparator[@string]/i)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (unary
+            (uop - @i32)
+            (lit @i32 i:1)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.NormalizeSeps[@string]
+      (block 4
+        (vardecl System.Core!System.IO.Path.NormalizeSeps[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.NormalizeSeps[@string]/text)
+          )
+        )
+        (vardecl System.Core!System.IO.Path.NormalizeSeps[@string]/i
+          (lit @i32 i:0)
+        )
+        (while
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
+            )
+          )
+          (block 2
+            (if
+              (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+                (this System.IO.Path)
+                (elem @char
+                  (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
+                  (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
+                )
+              )
+              (block 1
+                (exprstmt
+                  (elemassign @char
+                    (elem @char
+                      (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
+                      (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
+                    )
+                    (lit @char c:92)
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.Core!System.IO.Path.NormalizeSeps[@string]/i
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.IO.Path.NormalizeSeps[@string]/i)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
+            (var System.Core!System.IO.Path.NormalizeSeps[@string]/chars)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.GetFileName[@string]
+      (block 6
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.GetFileName[@string]/path)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.GetFileName[@string]/path)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetFileName[@string]/last
+          (elem @char
+            (call System.Core!System.String.ToCharArray[@string] 1
+              (var System.Core!System.IO.Path.GetFileName[@string]/path)
+            )
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 Length
+                (var System.Core!System.IO.Path.GetFileName[@string]/path)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (if
+          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetFileName[@string]/last)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetFileName[@string]/sep
+          (membercall @i32 LastIndexOfSeparator System.Core!System.IO.Path.LastIndexOfSeparator[@string] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetFileName[@string]/path)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.IO.Path.GetFileName[@string]/sep)
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.GetFileName[@string]/path)
+            )
+          ) -
+        )
+        (return
+          (membercall @string substring - 2
+            (var System.Core!System.IO.Path.GetFileName[@string]/path)
+            (binary
+              (bop + @i32 @i32)
+              (var System.Core!System.IO.Path.GetFileName[@string]/sep)
+              (lit @i32 i:1)
+            )
+            (binary
+              (bop - @i32 @i32)
+              (binary
+                (bop - @i32 @i32)
+                (memberacc @i32 Length
+                  (var System.Core!System.IO.Path.GetFileName[@string]/path)
+                )
+                (var System.Core!System.IO.Path.GetFileName[@string]/sep)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.GetFileNameOrNull[@string]
+      (block 2
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.GetFileNameOrNull[@string]/path)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (return
+          (membercall @string GetFileName System.Core!System.IO.Path.GetFileName[@string] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetFileNameOrNull[@string]/path)
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.GetExtension[@string]
+      (block 7
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.GetExtension[@string]/path)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.GetExtension[@string]/path)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetExtension[@string]/name
+          (membercall @string GetFileNameOrNull System.Core!System.IO.Path.GetFileNameOrNull[@string] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetExtension[@string]/path)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.GetExtension[@string]/name)
+            )
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetExtension[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.GetExtension[@string]/name)
+          )
+        )
+        (vardecl System.Core!System.IO.Path.GetExtension[@string]/dot
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.GetExtension[@string]/name)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (binary
+                (bop == @char @char)
+                (elem @char
+                  (var System.Core!System.IO.Path.GetExtension[@string]/chars)
+                  (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+                )
+                (lit @char c:46)
+              )
+              (block 3
+                (if
+                  (binary
+                    (bop == @i32 @i32)
+                    (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+                    (lit @i32 i:0)
+                  )
+                  (block 1
+                    (return
+                      (var System.Core!System.IO.Path.GetExtension[@string]/name)
+                    )
+                  ) -
+                )
+                (if
+                  (binary
+                    (bop == @i32 @i32)
+                    (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+                    (binary
+                      (bop - @i32 @i32)
+                      (memberacc @i32 Length
+                        (var System.Core!System.IO.Path.GetExtension[@string]/name)
+                      )
+                      (lit @i32 i:1)
+                    )
+                  )
+                  (block 1
+                    (return
+                      (lit @string s:)
+                    )
+                  ) -
+                )
+                (return
+                  (membercall @string substring - 2
+                    (var System.Core!System.IO.Path.GetExtension[@string]/name)
+                    (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+                    (binary
+                      (bop - @i32 @i32)
+                      (memberacc @i32 Length
+                        (var System.Core!System.IO.Path.GetExtension[@string]/name)
+                      )
+                      (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+                    )
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.Core!System.IO.Path.GetExtension[@string]/dot
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.Core!System.IO.Path.GetExtension[@string]/dot)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (lit @string s:)
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]
+      (block 7
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name
+          (membercall @string GetFileNameOrNull System.Core!System.IO.Path.GetFileNameOrNull[@string] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/path)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+            )
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/chars
+          (call System.Core!System.String.ToCharArray[@string] 1
+            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+          )
+        )
+        (vardecl System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot
+          (binary
+            (bop - @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+            )
+            (lit @i32 i:1)
+          )
+        )
+        (while
+          (binary
+            (bop >= @i32 @i32)
+            (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+            (lit @i32 i:0)
+          )
+          (block 2
+            (if
+              (binary
+                (bop == @char @char)
+                (elem @char
+                  (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/chars)
+                  (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                )
+                (lit @char c:46)
+              )
+              (block 3
+                (if
+                  (binary
+                    (bop == @i32 @i32)
+                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                    (lit @i32 i:0)
+                  )
+                  (block 1
+                    (return
+                      (lit @string s:)
+                    )
+                  ) -
+                )
+                (if
+                  (binary
+                    (bop == @i32 @i32)
+                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                    (binary
+                      (bop - @i32 @i32)
+                      (memberacc @i32 Length
+                        (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+                      )
+                      (lit @i32 i:1)
+                    )
+                  )
+                  (block 1
+                    (return
+                      (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+                    )
+                  ) -
+                )
+                (return
+                  (membercall @string substring - 2
+                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+                    (lit @i32 i:0)
+                    (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                  )
+                )
+              ) -
+            )
+            (exprstmt
+              (assign System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot
+                (binary
+                  (bop - @i32 @i32)
+                  (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/dot)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (return
+          (var System.Core!System.IO.Path.GetFileNameWithoutExtension[@string]/name)
+        )
+      )
+    )
+    (body System.Core!System.IO.Path.GetDirectoryName[@string]
+      (block 9
+        (if
+          (membercall @bool IsNullOrEmpty System.Core!System.String.IsNullOrEmpty[@string] 1
+            (statictype System.String)
+            (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed
+          (membercall @string TrimTrailingSeparators System.Core!System.IO.Path.TrimTrailingSeparators[@string] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (memberacc @i32 Length
+              (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
+            )
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetDirectoryName[@string]/last
+          (elem @char
+            (call System.Core!System.String.ToCharArray[@string] 1
+              (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
+            )
+            (binary
+              (bop - @i32 @i32)
+              (memberacc @i32 Length
+                (var System.Core!System.IO.Path.GetDirectoryName[@string]/path)
+              )
+              (lit @i32 i:1)
+            )
+          )
+        )
+        (if
+          (membercall @bool IsSeparator System.Core!System.IO.Path.IsSeparator[@char] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetDirectoryName[@string]/last)
+          )
+          (block 2
+            (if
+              (binary
+                (bop >= @i32 @i32)
+                (membercall @i32 LastIndexOfSeparator System.Core!System.IO.Path.LastIndexOfSeparator[@string] 1
+                  (this System.IO.Path)
+                  (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
+                )
+                (lit @i32 i:0)
+              )
+              (block 1
+                (return
+                  (membercall @string NormalizeSeps System.Core!System.IO.Path.NormalizeSeps[@string] 1
+                    (this System.IO.Path)
+                    (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
+                  )
+                )
+              ) -
+            )
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (vardecl System.Core!System.IO.Path.GetDirectoryName[@string]/sep
+          (membercall @i32 LastIndexOfSeparator System.Core!System.IO.Path.LastIndexOfSeparator[@string] 1
+            (this System.IO.Path)
+            (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
+          )
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.IO.Path.GetDirectoryName[@string]/sep)
+            (unary
+              (uop - @i32)
+              (lit @i32 i:1)
+            )
+          )
+          (block 1
+            (return
+              (lit @string s:)
+            )
+          ) -
+        )
+        (if
+          (binary
+            (bop == @i32 @i32)
+            (var System.Core!System.IO.Path.GetDirectoryName[@string]/sep)
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (lit @string s:\\)
+            )
+          ) -
+        )
+        (return
+          (membercall @string NormalizeSeps System.Core!System.IO.Path.NormalizeSeps[@string] 1
+            (this System.IO.Path)
+            (membercall @string substring - 2
+              (var System.Core!System.IO.Path.GetDirectoryName[@string]/trimmed)
+              (lit @i32 i:0)
+              (var System.Core!System.IO.Path.GetDirectoryName[@string]/sep)
+            )
+          )
+        )
+      )
+    )
     (body System.Core!System.IO.StreamReader.StreamReader[System.IO.MemoryStream]
       (block 3
         (exprstmt
@@ -11723,8 +11873,8 @@
           ) break1 continue1
         )
         (return
-          (membercall @string StringFromBytes System.Core!System.Runtime.StringFromBytes[@u8[]] 1
-            (statictype System.Runtime)
+          (membercall @string StringFromBytes System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.IO.StreamReader.DecodeSlice[@u8[],@i32]/exact)
           )
         )
@@ -12013,8 +12163,8 @@
           )
         )
         (return
-          (membercall @string StringFromBytes System.Core!System.Runtime.StringFromBytes[@u8[]] 1
-            (statictype System.Runtime)
+          (membercall @string StringFromBytes System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.IO.StreamWriter.NewLine[]/b)
           )
         )
@@ -12042,8 +12192,8 @@
           ) -
         )
         (vardecl System.Core!System.IO.StreamWriter.Write[@string]/bytes
-          (membercall @u8[] StringToBytes System.Core!System.Runtime.StringToBytes[@string] 1
-            (statictype System.Runtime)
+          (membercall @u8[] StringToBytes System.Core!System.Syscall.StringSyscall.StringToBytes[@string] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.IO.StreamWriter.Write[@string]/text)
           )
         )
@@ -12089,8 +12239,8 @@
           )
         )
         (vardecl System.Core!System.IO.StreamWriter.WriteChar[@char]/text
-          (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-            (statictype System.Runtime)
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.IO.StreamWriter.WriteChar[@char]/chars)
           )
         )
@@ -12361,8 +12511,8 @@
           )
         )
         (return
-          (membercall @string StringFromBytes System.Core!System.Runtime.StringFromBytes[@u8[]] 1
-            (statictype System.Runtime)
+          (membercall @string StringFromBytes System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] 1
+            (statictype System.Syscall.StringSyscall)
             (var System.Core!System.IO.StringWriter.NewLine[]/b)
           )
         )
@@ -12418,8 +12568,8 @@
               (memberacc @string _value owner:System.IO.StringWriter
                 (this System.IO.StringWriter)
               )
-              (membercall @string StringFromChars System.Core!System.Runtime.StringFromChars[@char[]] 1
-                (statictype System.Runtime)
+              (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+                (statictype System.Syscall.StringSyscall)
                 (var System.Core!System.IO.StringWriter.WriteChar[@char]/chars)
               )
             )
@@ -15568,6 +15718,7 @@
     (ns System)
     (ns System.Collections.Generic)
     (ns System.IO)
+    (ns System.Syscall)
   )
 )
-(checksum sha256:1959a1bcc916ef95d391af604dce7137c3ce904dc36ad568a601329d7ba14605)
+(checksum sha256:36eaf539ebf8f8bd5918ccb44917ac0f2b226b5f73b48853229d4bf45a12e73b)

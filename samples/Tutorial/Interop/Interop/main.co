@@ -1,8 +1,9 @@
 using System
+using System.Syscall
 function Main()
 {
     Console.WriteLine(IsRunning())
 
-    var r = Runtime.Random(100)
+    var r = MathSyscall.Random(100)
     Console.WriteLine(InRange(r, 100))
 }

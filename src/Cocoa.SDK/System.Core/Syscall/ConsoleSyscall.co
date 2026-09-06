@@ -1,0 +1,15 @@
+// Cocoa 系统标准库 · Syscall 收口（namespace System.Syscall）——控制台/进程/时间底座
+namespace System.Syscall
+{
+    class ConsoleSyscall
+    {
+        syscall function WriteLine(text: any): void
+        syscall function Write(text: any): void
+        syscall function ReadLine(): string
+        syscall function ReadKey(intercept: bool): char
+        syscall function Sleep(ms: i32): void
+        syscall function TickCount(): i32
+        syscall function Exit(code: i32): void
+        syscall function Beep(frequency: i32, duration: i32): void
+    }
+}
