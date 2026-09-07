@@ -35,5 +35,8 @@ namespace Cocoa.CodeAnalysis.Binding
         public ImmutableArray<string> UsingStatics { get; }
         public ImmutableDictionary<string, string> UsingAliases { get; }
         public ImmutableArray<string> References { get; }
+
+        /// <summary>合成构造器体（元组 `__Tuple_N`）：源内无 Declaration，携入 BindProgram 并入函数体清单。</summary>
+        public ImmutableDictionary<FunctionSymbol, BoundBlockStatement> TupleCtorBodies { get; init; } = ImmutableDictionary<FunctionSymbol, BoundBlockStatement>.Empty;
     }
 }

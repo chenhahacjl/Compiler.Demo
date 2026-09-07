@@ -609,8 +609,25 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         {
             var left = MatchToken(SyntaxKind.OpenParenthesisToken);
             var expression = ParseExpression();
-            var right = MatchToken(SyntaxKind.CloseParenthesisToken);
+            if (Current.Kind == SyntaxKind.CommaToken)
+            {
+                // 元组（语言后置件）：`(a, b, ...)` —— 括号内首个表达式后紧跟逗号即元组。
+                var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+                nodesAndSeparators.Add(expression);
+                while (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    var comma = MatchToken(SyntaxKind.CommaToken);
+                    nodesAndSeparators.Add(comma);
+                    var element = ParseExpression();
+                    nodesAndSeparators.Add(element);
+                }
 
+                var tupleRight = MatchToken(SyntaxKind.CloseParenthesisToken);
+                var elements = new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+                return new TupleExpressionSyntax(_syntaxTree, left, elements, tupleRight);
+            }
+
+            var right = MatchToken(SyntaxKind.CloseParenthesisToken);
             return new ParenthesizedExpressionSyntax(_syntaxTree, left, expression, right);
         }
 

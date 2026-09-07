@@ -696,6 +696,61 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundArrayCreationExpression(syntax, arrayType, length, initializers.ToImmutable());
         }
 
+        /// <summary>元组（语言后置件）：合成 `__Tuple_N` 类型（Item1..ItemN 公共字段 + 参数构造器），复用对象创建。
+        /// 合成构造器体：p1→Item1、p2→Item2、…（无源码 Declaration，经 _tupleCtorBodies 注入 BoundProgram）。</summary>
+        private NamedTypeSymbol GetOrCreateTupleType(ImmutableArray<TypeSymbol> elementTypes, SSyntax.SyntaxNode syntax)
+        {
+            var key = string.Join(",", elementTypes.Select(t => t.Name));
+            if (_tupleTypes.TryGetValue(key, out var existing))
+            {
+                return existing;
+            }
+
+            var tupleType = new NamedTypeSymbol($"__Tuple_{string.Join("_", elementTypes.Select(t => t.Name))}", string.Empty, Visibility.Public, declaration: null);
+            for (var i = 0; i < elementTypes.Length; i++)
+            {
+                tupleType.AddField(new FieldSymbol($"Item{i + 1}", elementTypes[i], Visibility.Public, tupleType));
+            }
+
+            var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
+            for (var i = 0; i < elementTypes.Length; i++)
+            {
+                parameters.Add(new ParameterSymbol($"p{i + 1}", elementTypes[i], i));
+            }
+
+            var ctor = new FunctionSymbol(tupleType.Name, parameters.ToImmutable(), TypeSymbol.Void, containingClass: tupleType);
+            ctor.IsConstructor = true;
+            tupleType.AddMethod(ctor);
+
+            var bodyStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+            var thisRef = new BoundThisExpression(syntax, tupleType);
+            for (var i = 0; i < elementTypes.Length; i++)
+            {
+                var field = tupleType.GetField($"Item{i + 1}")!;
+                var paramRef = new BoundVariableExpression(syntax, parameters[i]);
+                var assignment = new BoundExpressionStatement(syntax, new BoundMemberAssignmentExpression(syntax, thisRef, field, paramRef));
+                bodyStatements.Add(assignment);
+            }
+
+            var rawCtorBody = new BoundBlockStatement(syntax, bodyStatements.ToImmutable());
+            _tupleCtorBodies[ctor] = LoweringPipeline.Lower(ctor, rawCtorBody, _diagnostics, returnCheckLocation: null);
+            _tupleTypes[key] = tupleType;
+            return tupleType;
+        }
+
+        private BoundExpression BindTupleExpression(TupleExpressionSyntax syntax)
+        {
+            var elements = ImmutableArray.CreateBuilder<BoundExpression>();
+            foreach (var elementSyntax in syntax.Elements)
+            {
+                elements.Add(BindExpression(elementSyntax));
+            }
+
+            var tupleType = GetOrCreateTupleType(elements.Select(e => e.Type).ToImmutableArray(), syntax);
+            var ctor = tupleType.GetMethods(tupleType.Name).FirstOrDefault();
+            return new BoundObjectCreationExpression(syntax, tupleType, elements.ToImmutable(), ctor);
+        }
+
         private BoundExpression BindObjectCreationExpression(ObjectCreationExpressionSyntax syntax)
         {
             // 泛型对象创建（6e-M20）：`new Box<int>(…)` → 实例化类

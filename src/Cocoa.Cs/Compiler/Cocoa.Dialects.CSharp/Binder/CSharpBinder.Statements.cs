@@ -1667,6 +1667,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 case SSyntax.CSharpSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case SSyntax.CSharpSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
+                case SSyntax.CSharpSyntaxKind.TupleExpression: return BindTupleExpression((TupleExpressionSyntax)syntax);
 
                 default:
                     // 1b/B8：意外的表达式语法报诊断 + ErrorExpression 降级，而非编译器崩溃

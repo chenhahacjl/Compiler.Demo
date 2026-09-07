@@ -372,7 +372,7 @@ namespace Cocoa.CodeGen.Interpreter
                     argumentValues[i] = EvaluateExpression(node.Arguments[i]);
                 }
 
-                InvokeFunction(node.Constructor, _thisStack.Peek(), argumentValues, byRefMarker: byRefMarker);
+                InvokeFunction(node.Constructor!, _thisStack.Peek(), argumentValues, byRefMarker: byRefMarker);
             }
             finally
             {

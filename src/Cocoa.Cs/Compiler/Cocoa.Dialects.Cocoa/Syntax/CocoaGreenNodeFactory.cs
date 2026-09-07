@@ -40,6 +40,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 SyntaxKind.VariableDeclaration => BuildVariableDeclaration(syntaxTree, position),
                 SyntaxKind.TypeClause => BuildTypeClause(syntaxTree, position),
                 SyntaxKind.CallExpression => BuildCallExpression(syntaxTree, position),
+                SyntaxKind.TupleExpression => BuildTupleExpression(syntaxTree, position),
                 SyntaxKind.MemberCallExpression => BuildMemberCallExpression(syntaxTree, position),
                 SyntaxKind.ObjectCreationExpression => BuildObjectCreationExpression(syntaxTree, position),
                 SyntaxKind.ElementAccessExpression => BuildElementAccessExpression(syntaxTree, position),
@@ -316,6 +317,23 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             var closeParenthesis = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
             var arguments = new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
             return new CallExpressionSyntax(syntaxTree, identifier, typeArguments, openParenthesis, arguments, closeParenthesis);
+        }
+
+        private SyntaxNode BuildTupleExpression(SyntaxTree syntaxTree, int position)
+        {
+            var openParenthesis = (SyntaxToken)_green.GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(0)!.Width;
+
+            var nodesAndSeparators = ImmutableArray.CreateBuilder<SyntaxNode>();
+            for (var i = 1; i < _green.SlotCount - 1; i++)
+            {
+                nodesAndSeparators.Add(_green.GetSlot(i)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(i)!.Width;
+            }
+
+            var closeParenthesis = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, position);
+            var elements = new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+            return new TupleExpressionSyntax(syntaxTree, openParenthesis, elements, closeParenthesis);
         }
 
         private SyntaxNode BuildTypeArgumentList(SyntaxTree syntaxTree, int position)

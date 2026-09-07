@@ -60,6 +60,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         /// <summary>环境类缓存（6e-M22 C5）：每宿主函数一个合成 `__Env_&lt;fn&gt;` 类。</summary>
         private readonly Dictionary<FunctionSymbol, NamedTypeSymbol> _environmentClasses = new();
+        private readonly Dictionary<string, NamedTypeSymbol> _tupleTypes = new();
+        private readonly Dictionary<FunctionSymbol, BoundBlockStatement> _tupleCtorBodies = new();
 
         /// <summary>lambda 体绑定深度（6e-M22 C5）：>0 时返回语句按推断语义处理（不套外层签名转换）。</summary>
         private int _lambdaBodyDepth;
@@ -448,7 +450,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 diagnostics = diagnostics.InsertRange(0, previous.Diagnostics);
             }
 
-            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, usingStatics, usingAliases, (references ?? Array.Empty<string>()).ToImmutableArray());
+            return new BoundGlobalScope(previous, diagnostics, mainFunction, scriptFunction, functions, enums, classes, variables, statements.ToImmutable(), usingNamespaces, usingStatics, usingAliases, (references ?? Array.Empty<string>()).ToImmutableArray())
+            {
+                TupleCtorBodies = binder._tupleCtorBodies.ToImmutableDictionary(),
+            };
         }
 
         public static BoundProgram BindProgram(bool isScript, BoundProgram? previous, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries = default, Language? dialect = null, bool linkCodDynamically = false, NamespaceSymbol? globalNamespace = null)
@@ -466,6 +471,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var functionBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var rawBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
             var genericOpenBodies = ImmutableDictionary.CreateBuilder<FunctionSymbol, BoundBlockStatement>();
+            var allTupleCtorBodies = globalScope.TupleCtorBodies.ToBuilder();
             var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
 
             foreach (var function in globalScope.Functions)
@@ -481,7 +487,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     {
                         // S-7：泛型开放体随库携带为 raw（结构化 HIR）——读侧并入 cod.Bodies，
                         // 消费方 Monomorphizer 替换展开后由其捷径补 Lower（见 Monomorphizer 三个替换点）。
-                        var (rawOpenBody, _, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
+                        var (rawOpenBody, _, _, _) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
                         genericOpenBodies.Add(function, rawOpenBody);
                     }
 
@@ -506,9 +512,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     continue;
                 }
 
-                var (rawBody, loweredBody, bodyDiagnostics) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
+                var (rawBody, loweredBody, bodyDiagnostics, functionTupleCtors) = BuildFunctionBody(isScript, parentScope, function, globalScope, codLibraries, dialect, globalNamespace);
                 functionBodies.Add(function, loweredBody);
                 rawBodies.Add(function, rawBody);
+                foreach (var tupleCtorBody in functionTupleCtors)
+                {
+                    allTupleCtorBodies[tupleCtorBody.Key] = tupleCtorBody.Value;
+                }
+
                 diagnostics.AddRange(bodyDiagnostics);
             }
 
@@ -655,6 +666,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 }
             }
 
+            foreach (var tupleBody in allTupleCtorBodies)
+            {
+                if (!functionBodies.ContainsKey(tupleBody.Key))
+                {
+                    functionBodies.Add(tupleBody.Key, tupleBody.Value);
+                }
+            }
+
+            // 元组合成类型入发射清单（IL/native 输出 TypeDef）；Evaluator 直接消费 symbols 无需。
+            var tupleClasses = allTupleCtorBodies
+                .Select(kv => kv.Key.ContainingClass)
+                .Where(c => c != null)
+                .Select(c => c!)
+                .ToImmutableArray();
+            emittedClasses = emittedClasses.Concat(tupleClasses).ToImmutableArray();
+
             return new BoundProgram(previous, diagnostics.ToImmutable(), globalScope.MainFunction, globalScope.ScriptFunction, functionBodies.ToImmutable(), emittedClasses, codAssemblies, genericDefinitions, genericOpenBodies.ToImmutable(), rawBodies.ToImmutable());
         }
 
@@ -676,7 +703,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// 单函数体构建（6e-M20 自 BindProgram 抽取复用）：方法体绑定 + 构造链/字段初始化器前缀 + 降级 + AllPathsReturn 检查。
         /// 返回 <c>(raw, lowered, diagnostics)</c>：raw 为 S-7 HIR（.coa 持久化用，未 Lower）；lowered 为 MIR（三后端/求值器消费）。
         /// </summary>
-        private static (BoundBlockStatement Raw, BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, NamespaceSymbol? globalNamespace)
+        private static (BoundBlockStatement Raw, BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> TupleCtors) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, NamespaceSymbol? globalNamespace)
         {
             var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
             var bodyLocation = (SSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
@@ -730,7 +757,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 function.Parameters.Where(p => p.IsOut).ToImmutableArray(),
                 binder._diagnostics);
 
-            return (rawBody, loweredBody, binder.Diagnostics.ToImmutableArray());
+            return (rawBody, loweredBody, binder.Diagnostics.ToImmutableArray(), binder._tupleCtorBodies.ToImmutableDictionary());
         }
 
         /// <summary>

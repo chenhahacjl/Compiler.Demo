@@ -209,6 +209,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         AsExpression = 197,
         TypeParameter = 198,
         NamedArgument = 201,
-        ParamsKeyword = 202
+        ParamsKeyword = 202,
+        TupleExpression = 203
     }
 }
