@@ -508,7 +508,7 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 0);
             }
 
-            // FileOpenHandle(path:8, mode:8) → i64：mode 0=Open(可读写) 1=Create(覆盖) 2=OpenOrCreate；失败 → 0
+            // FileOpenHandle(path:8, mode:4, access:4, share:4) → i64：mode 1..6 对齐 .NET FileMode；失败 → 0
             // Win32 CreateFileW（对齐 .NET FileStream 底层）；GENERIC_READ|WRITE=0xC0000000, GENERIC_WRITE=0x40000000,
             // FILE_SHARE_READ|WRITE=3, OPEN_EXISTING=3, CREATE_ALWAYS=2, OPEN_ALWAYS=4, FILE_ATTRIBUTE_NORMAL=0x80
             private void EmitFileOpenHandle()
@@ -518,36 +518,67 @@ namespace Cocoa.CodeGen.Native
                 var result = NewReg(8);
                 Const(result, 0);
 
-                var mode = _args[1];
-                var access = NewReg(4);
+                // mode(1-6) → disposition(1,2,3,4,5,4)；仅 Append(6) → OPEN_ALWAYS(4)，对齐 .NET FileMode
+                var mode = NewReg(4);
+                Mov(mode, _args[1]);
                 var disposition = NewReg(4);
-                var useOpen = NewLabel();
-                var useCreate = NewLabel();
-                var modeReady = NewLabel();
-                Cmp(mode, 0);
-                Jcc(LirCond.Equal, useOpen);
-                Cmp(mode, 1);
-                Jcc(LirCond.Equal, useCreate);
-                // mode 2: OpenOrCreate → GENERIC_READ|WRITE, OPEN_ALWAYS
-                Const(access, 0xC0000000);
+                Mov(disposition, mode);
+                var setAppend = NewLabel();
+                var appendReady = NewLabel();
+                Cmp(mode, 6);
+                Jcc(LirCond.Equal, setAppend);
+                Jmp(appendReady);
+                Mark(setAppend);
                 Const(disposition, 4);
-                Jmp(modeReady);
-                Mark(useOpen);
-                Const(access, 0xC0000000);
-                Const(disposition, 3);
-                Jmp(modeReady);
-                Mark(useCreate);
-                Const(access, 0x40000000);
-                Const(disposition, 2);
-                Mark(modeReady);
+                Mark(appendReady);
+
+                // access(1-3) → fAccess：GENERIC_READ=0x80000000 | GENERIC_WRITE=0x40000000（对齐 .NET FileAccess）
+                var access = NewReg(4);
+                Mov(access, _args[2]);
+                var fAccess = NewReg(4);
+                Const(fAccess, 0);
+                var readBit = NewReg(4);
+                And(readBit, access, C(4, 1));
+                var skipRead = NewLabel();
+                Cmp(readBit, 1);
+                Jcc(LirCond.NotEqual, skipRead);
+                var gRead = NewReg(4);
+                Const(gRead, 0x80000000);
+                Or(fAccess, fAccess, gRead);
+                Mark(skipRead);
+                var writeBit = NewReg(4);
+                And(writeBit, access, C(4, 2));
+                var skipWrite = NewLabel();
+                Cmp(writeBit, 2);
+                Jcc(LirCond.NotEqual, skipWrite);
+                var gWrite = NewReg(4);
+                Const(gWrite, 0x40000000);
+                Or(fAccess, fAccess, gWrite);
+                Mark(skipWrite);
 
                 var pw = WidePtrZ(_args[0]);
+                var shareMode = NewReg(4);
+                Mov(shareMode, _args[3]);
                 var fp = NewPtr();
-                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pw, access, C(4, 3), NullPtr(), disposition, C(4, 0x80), NullPtr());
+                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pw, fAccess, shareMode, NullPtr(), disposition, C(4, 0x80), NullPtr());
                 EmitCheckInvalidHandle(fp, fail); // INVALID_HANDLE_VALUE
                 Mov(result, fp);
-                Jmp(done);
 
+                // Append(6)：打开后定位到文件尾（对齐 .NET FileStream）
+                var seekEnd = NewLabel();
+                var skipSeek = NewLabel();
+                Cmp(mode, 6);
+                Jcc(LirCond.Equal, seekEnd);
+                Jmp(skipSeek);
+                Mark(seekEnd);
+                var zero = NewReg(8);
+                Const(zero, 0);
+                var origin2 = NewReg(4);
+                Const(origin2, 2);
+                SysCallDll(null, "kernel32.dll", "SetFilePointerEx", 4, false, fp, zero, NullPtr(), origin2);
+                Mark(skipSeek);
+
+                Jmp(done);
                 Mark(fail);
                 Const(result, 0);
                 Mark(done);

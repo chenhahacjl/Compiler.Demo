@@ -304,7 +304,17 @@ namespace Cocoa.CodeGen.Interpreter
                 {
                     var path = (string)EvaluateExpression(arguments[0])!;
                     var mode = (int)EvaluateExpression(arguments[1])!;
-                    var fs = new FileStream(path, mode switch { 1 => FileMode.Create, 2 => FileMode.OpenOrCreate, _ => FileMode.Open });
+                    var access = (int)EvaluateExpression(arguments[2])!;
+                    var share = (int)EvaluateExpression(arguments[3])!;
+                    var fs = new FileStream(path, mode switch
+                    {
+                        1 => FileMode.CreateNew,
+                        2 => FileMode.Create,
+                        4 => FileMode.OpenOrCreate,
+                        5 => FileMode.Truncate,
+                        6 => FileMode.Append,
+                        _ => FileMode.Open,
+                    }, (FileAccess)access, (FileShare)share);
                     var handle = ++_fileHandleCounter;
                     _fileHandles[handle] = fs;
                     return (long)handle;

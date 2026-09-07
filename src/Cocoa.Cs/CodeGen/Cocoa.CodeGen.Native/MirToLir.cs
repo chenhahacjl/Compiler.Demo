@@ -60,6 +60,7 @@ namespace Cocoa.CodeGen.Native
         private LirFunction _currentFunction = null!;
         private LirVirtualRegister? _thisRegister;
         private int _nextLabelId;
+        private readonly HashSet<string> _topLevelOverloadKeys = new(StringComparer.Ordinal);
 
         private static readonly FunctionSymbol[] ObjectBuiltinVirtualRoots =
         {
@@ -78,9 +79,54 @@ namespace Cocoa.CodeGen.Native
         public static LirProgram Generate(BoundProgram program, TargetPlatform platform)
         {
             var generator = new MirToLir(program, platform);
+            generator.ComputeTopLevelOverloads();
             generator.EmitProgram();
             generator.EmitVTableData();
             return generator._irProgram;
+        }
+
+        /// <summary>程序内同名顶层函数（同命名空间）超过一个 → 该名进入重载组，native 名字 mangle。</summary>
+        private void ComputeTopLevelOverloads()
+        {
+            var groups = new Dictionary<string, List<FunctionSymbol>>();
+            foreach (var function in _program.Functions.Keys)
+            {
+                if (function.ContainingClass != null)
+                {
+                    continue;
+                }
+
+                var key = (function.Namespace.Length == 0 ? "" : function.Namespace + ".") + function.Name;
+                if (!groups.TryGetValue(key, out var list))
+                {
+                    groups[key] = list = new List<FunctionSymbol>();
+                }
+
+                list.Add(function);
+            }
+
+            foreach (var pair in groups)
+            {
+                if (pair.Value.Count > 1)
+                {
+                    _topLevelOverloadKeys.Add(pair.Key);
+                }
+            }
+        }
+
+        /// <summary>顶层重载感知的 Lir 函数名（入口裸名特判由调用方保留）。</summary>
+        private string FunctionIrName(FunctionSymbol function)
+        {
+            if (function.ContainingClass == null)
+            {
+                var key = (function.Namespace.Length == 0 ? "" : function.Namespace + ".") + function.Name;
+                if (_topLevelOverloadKeys.Contains(key))
+                {
+                    return NativeObjectModel.FunctionIrName(function, topLevelOverloaded: true);
+                }
+            }
+
+            return NativeObjectModel.FunctionIrName(function);
         }
 
         /// <summary>
@@ -154,7 +200,7 @@ namespace Cocoa.CodeGen.Native
         {
             var implementation = NativeObjectModel.FindImplementation(classType, root);
             return implementation != null
-                ? NativeObjectModel.FunctionIrName(implementation)
+                ? FunctionIrName(implementation)
                 : runtimeFallback;
         }
 
@@ -168,7 +214,7 @@ namespace Cocoa.CodeGen.Native
                 throw new Exception($"vtable implementation '{implementation.Name}' of '{classType.FullName}' was not emitted (unreachable)");
             }
 
-            return NativeObjectModel.FunctionIrName(implementation);
+            return FunctionIrName(implementation);
         }
 
         private void EmitProgram()
@@ -187,7 +233,7 @@ namespace Cocoa.CodeGen.Native
             {
                 // 入口函数保持裸名（LirToAssembler 以 Name==EntryFunctionName 标记入口标签；
                 // 入口可为命名空间/类静态方法，mangle 名会破坏匹配）
-                var irName = function == _program.MainFunction ? function.Name : NativeObjectModel.FunctionIrName(function);
+                var irName = function == _program.MainFunction ? function.Name : FunctionIrName(function);
 
                 // 6e-M22 C4-c：提升 lambda 统一 env-first 形态（前置 8 字节环境槽）——
                 // 函数值对象调用约定恒为 (env, args...)；lambda 体不读该槽

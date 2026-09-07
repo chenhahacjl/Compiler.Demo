@@ -276,7 +276,7 @@ namespace Cocoa.CodeGen.Native
                 EmitFileReadAllBytes();
                 _ = BeginFunctionTyped("FileWriteAllBytes", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
                 EmitFileWriteAllBytes();
-                _ = BeginFunctionTyped("FileOpenHandle", new[] { 8, 8 }, LirType.Addr);
+                _ = BeginFunctionTyped("FileOpenHandle", new[] { 8, 4, 4, 4 }, LirType.Addr);
                 EmitFileOpenHandle();
                 _ = BeginFunctionTyped("FileSizeHandle", new[] { 8 }, LirType.Addr);
                 EmitFileSizeHandle();

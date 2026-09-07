@@ -156,9 +156,13 @@ namespace Cocoa.CodeGen.Native
                 {
                     var path = EmitExpression(arguments[0]);
                     var mode = EmitExpression(arguments[1]);
+                    var access = EmitExpression(arguments[2]);
+                    var share = EmitExpression(arguments[3]);
                     var result = AllocateRegister(8);
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(path)));
                     Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(mode)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(access)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(3), LirOperand.Reg(share)));
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("FileOpenHandle"), LirOperand.Constant(0)));
                     return result;
                 }

@@ -1,8 +1,10 @@
-﻿namespace System.Syscall
+﻿using System.IO
+
+namespace System.Syscall
 {
     class IOSyscall
     {
-        syscall function FileOpen(path: string, mode: i32): i64
+        syscall function FileOpen(path: string, mode: FileMode, access: FileAccess, share: FileShare): i64
         syscall function FileSize(h: i64): i64
         syscall function FileSeek(h: i64, offset: i64, origin: i32): void
         syscall function FileTell(h: i64): i64

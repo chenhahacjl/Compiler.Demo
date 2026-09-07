@@ -233,6 +233,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             ["System.IO.DirectoryInfo"] = null,
             ["System.IO.Path"] = null,
             ["System.IO.FileStream"] = null,
+            // facade enum：映射 BCL 同名枚举（IL 直链参数签名用）
+            ["System.IO.FileMode"] = null,
+            ["System.IO.FileAccess"] = null,
+            ["System.IO.FileShare"] = null,
             // StreamReader/StreamWriter 现已提供真实体（MemoryStream 同类带实例状态），不作为 facade 直链
             ["System.Math"] = null,
             ["System.Console"] = null,
@@ -614,7 +618,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             };
             enumType.SetEnumMembers(members);
 
-if (!_scope.TryDeclareEnum(enumType))
+            // facade enum：`facade` 修饰符 + FacadeTargets 命中 → 整型映射到 BCL 同名枚举（IL 直链签名用）
+            if (syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword) &&
+                FacadeTargets.ContainsKey(enumType.FullName))
+            {
+                enumType.IsFacadeClass = true;
+            }
+
+            if (!_scope.TryDeclareEnum(enumType))
             {
                 _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, syntax.Identifier.Text);
             }

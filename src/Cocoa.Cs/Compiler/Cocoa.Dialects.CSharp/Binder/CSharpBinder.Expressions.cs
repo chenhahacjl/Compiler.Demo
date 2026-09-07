@@ -637,16 +637,30 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             ctors = ctors.Distinct().ToImmutableArray();
-            var ctor = ctors.FirstOrDefault(c => c.Parameters.Length == arguments.Count);
-            if (ctor == null && (ctors.Length > 0 || arguments.Count > 0))
+            var arityMatched = ctors.Where(c => c.Parameters.Length == arguments.Count).ToImmutableArray();
+            FunctionSymbol? ctor;
+            if (arityMatched.Length == 1)
             {
-                var arities = string.Join("/", ctors.Select(c => c.Parameters.Length).Distinct().OrderBy(x => x));
-                _diagnostics.ReportError(
-                    syntax.Identifier.Location,
-                    arities.Length == 0
-                        ? $"类 '{classType.Name}' 没有声明构造函数。"
-                        : $"类 '{classType.Name}' 没有接受 {arguments.Count} 个参数的构造函数（可用元数：{arities}）。");
-                return new BoundErrorExpression(syntax);
+                ctor = arityMatched[0];
+            }
+            else if (arityMatched.Length > 1)
+            {
+                // Constructor overload resolution by argument types (same scoring as call overloads)
+                ctor = ResolveOverloadByScore(syntax.Identifier.Location, classType.Name, arityMatched, arguments.ToImmutable());
+            }
+            else
+            {
+                ctor = null;
+                if (ctors.Length > 0 || arguments.Count > 0)
+                {
+                    var arities = string.Join("/", ctors.Select(c => c.Parameters.Length).Distinct().OrderBy(x => x));
+                    _diagnostics.ReportError(
+                        syntax.Identifier.Location,
+                        arities.Length == 0
+                            ? $"类 '{classType.Name}' 没有声明构造函数。"
+                            : $"类 '{classType.Name}' 没有接受 {arguments.Count} 个参数的构造函数（可用元数：{arities}）。");
+                    return new BoundErrorExpression(syntax);
+                }
             }
 
             if (ctor != null)
@@ -672,7 +686,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
             }
 
-            return new BoundObjectCreationExpression(syntax, classType, arguments.ToImmutable());
+            return new BoundObjectCreationExpression(syntax, classType, arguments.ToImmutable(), ctor);
         }
 
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)

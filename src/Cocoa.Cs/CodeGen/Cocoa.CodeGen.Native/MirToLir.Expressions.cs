@@ -283,7 +283,7 @@ namespace Cocoa.CodeGen.Native
                 Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(obj), LirOperand.Reg(zero), offsets[field], fieldSize));
             }
 
-            var ctor = FindInstanceConstructor(classType);
+            var ctor = node.Constructor ?? FindInstanceConstructor(classType, node.Arguments);
             EmitInvoke(ctor, obj, node.Arguments);
             return obj;
         }
@@ -305,17 +305,50 @@ namespace Cocoa.CodeGen.Native
             return VoidResult();
         }
 
-        private static FunctionSymbol FindInstanceConstructor(NamedTypeSymbol classType)
+        private static FunctionSymbol FindInstanceConstructor(NamedTypeSymbol classType, ImmutableArray<BoundExpression> arguments)
         {
+            // 无节点携带（序列化/重写路径）时按实参个数+类型回退匹配；仅一个候选直接返回
+            FunctionSymbol? arityMatch = null;
             foreach (var method in classType.Methods)
             {
-                if (method.IsConstructor && !method.IsStatic)
+                if (!method.IsConstructor || method.IsStatic)
+                {
+                    continue;
+                }
+
+                if (method.Parameters.Length != arguments.Length)
+                {
+                    continue;
+                }
+
+                if (arityMatch == null && arguments.Length == 0)
+                {
+                    arityMatch = method;
+                    continue;
+                }
+
+                var same = true;
+                for (var i = 0; i < arguments.Length; i++)
+                {
+                    if (arguments[i].Type != method.Parameters[i].Type)
+                    {
+                        same = false;
+                        break;
+                    }
+                }
+
+                if (same)
                 {
                     return method;
                 }
             }
 
-            throw new Exception($"Class {classType.FullName} has no constructor.");
+            if (arityMatch != null)
+            {
+                return arityMatch;
+            }
+
+            throw new Exception($"Class {classType.FullName} has no matching constructor for {arguments.Length} argument(s).");
         }
 
         /// <summary>类实例布局缓存（偏移按继承链基类在前计算）。</summary>
@@ -407,7 +440,7 @@ namespace Cocoa.CodeGen.Native
             }
 
             var realIr = _functionMap[function];
-            var thunk = new LirFunction("__thunk_" + NativeObjectModel.FunctionIrName(function), new List<LirParameter>())
+            var thunk = new LirFunction("__thunk_" + FunctionIrName(function), new List<LirParameter>())
             {
                 ReturnSize = ReturnSize(function.ReturnType),
             };

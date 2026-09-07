@@ -1,0 +1,30 @@
+// System.IO facade 枚举：整型语义对齐 .NET 同名字段值，映射 BCL 同名枚举
+// （IL 端直链参数签名匹配用；Evaluator/native 按 int 值工作）。
+
+namespace System.IO
+{
+    public facade enum FileMode
+    {
+        CreateNew = 1,
+        Create = 2,
+        Open = 3,
+        OpenOrCreate = 4,
+        Truncate = 5,
+        Append = 6,
+    }
+
+    public facade enum FileAccess
+    {
+        Read = 1,
+        Write = 2,
+        ReadWrite = 3,
+    }
+
+    public facade enum FileShare
+    {
+        None = 0,
+        Read = 1,
+        Write = 2,
+        ReadWrite = 3,
+    }
+}

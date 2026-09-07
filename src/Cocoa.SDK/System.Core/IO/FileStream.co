@@ -16,7 +16,12 @@ namespace System.IO
 
         public constructor(path: string)
         {
-            _h = IOSyscall.FileOpen(path, 0)
+            _h = IOSyscall.FileOpen(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite)
+        }
+
+        public constructor(path: string, mode: FileMode, access: FileAccess, share: FileShare)
+        {
+            _h = IOSyscall.FileOpen(path, mode, access, share)
         }
 
         public property CanRead: bool

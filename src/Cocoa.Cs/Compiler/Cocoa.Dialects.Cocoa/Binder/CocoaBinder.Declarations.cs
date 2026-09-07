@@ -726,10 +726,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     {
                         var parameters = BindParameters(constructorDeclaration.Parameters);
                         var ctorVisibility = GetVisibility(constructorDeclaration.Modifiers, Visibility.Private);
+                        var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, visibility: ctorVisibility) { IsConstructor = true };
 
-                        if (classType.GetDeclaredMethod(classType.Name) == null)
+                        if (!classType.HasDeclaredMethodSignature(classType.Name, ctor))
                         {
-                            var ctor = new FunctionSymbol(classType.Name, parameters, TypeSymbol.Void, null, syntax: constructorDeclaration, containingClass: classType, visibility: ctorVisibility) { IsConstructor = true };
                             classType.AddMethod(ctor);
                             classFunctions.Add(ctor);
                         }
@@ -1584,7 +1584,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// <summary>隐式默认构造：类所有部分均未声明构造时生成无参构造。</summary>
         private void DeclareImplicitConstructor(NamedTypeSymbol classType, List<FunctionSymbol> classFunctions, ClassDeclarationSyntax syntax)
         {
-            if (classType.GetDeclaredMethod(classType.Name) == null)
+            if (classType.GetDeclaredMethods(classType.Name).IsEmpty)
             {                var ctor = new FunctionSymbol(classType.Name, ImmutableArray<ParameterSymbol>.Empty, TypeSymbol.Void, null, syntax: syntax, containingClass: classType, visibility: Visibility.Public) { IsConstructor = true };
                 classType.AddMethod(ctor);
                 classFunctions.Add(ctor);

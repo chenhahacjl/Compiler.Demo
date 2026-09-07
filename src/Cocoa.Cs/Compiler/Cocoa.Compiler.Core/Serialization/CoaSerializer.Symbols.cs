@@ -15,6 +15,8 @@ namespace Cocoa.CodeAnalysis.Serialization
         {
             w.Open("enum");
             w.Field(e.FullName);
+            // facade enum 标记：整型映射到 BCL 同名枚举（IL 直链签名匹配用），跨库消费方据此重定向
+            w.Field("facade:" + (e.IsFacadeClass ? 1 : 0));
             var members = e.MemberNames.OrderBy(x => x, StringComparer.Ordinal).ToArray();
             w.Field("members:" + members.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var name in members)

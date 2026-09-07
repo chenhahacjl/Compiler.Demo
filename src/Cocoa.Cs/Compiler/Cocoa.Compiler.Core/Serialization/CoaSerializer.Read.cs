@@ -337,6 +337,7 @@ namespace Cocoa.CodeAnalysis.Serialization
         {
             var fullName = reader.ExpectString();
             var (ns, name) = SplitFullName(fullName);
+            var facade = ReadCountField(reader, "facade:");
             var count = ReadCountField(reader, "members:");
             var members = new Dictionary<string, int>();
             for (var i = 0; i < count; i++)
@@ -351,6 +352,7 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 TypeKind = TypeKind.Enum,
                 IsSealed = true,
+                IsFacadeClass = facade != 0,
             };
             enumType.ContainingLibrary = context.ModuleName;
             enumType.SetEnumMembers(members);

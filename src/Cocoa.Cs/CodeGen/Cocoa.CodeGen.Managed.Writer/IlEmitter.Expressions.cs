@@ -1092,7 +1092,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                     EmitExpression(il, argument);
                 }
 
-                var vtCtor = classType.GetMethod(classType.Name);
+                var vtCtor = node.Constructor ?? classType.GetMethod(classType.Name);
                 if (vtCtor == null)
                 {
                     throw new System.Exception($"struct {classType.Name} has no constructor.");
@@ -1111,7 +1111,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             if (_codAssemblies.TryGetValue(classType, out var codObjectAssembly))
             {
                 // 6e-Step D-b：动态链接 + cod 普通实例类 → Newobj MemberRef（库托管 dll 宿主 TypeRef）
-                var codCtor = classType.GetMethod(classType.Name);
+                var codCtor = node.Constructor ?? classType.GetMethod(classType.Name);
                 if (codCtor == null)
                 {
                     throw new System.Exception($"cod 类型 {classType.Name} 无构造函数。");
@@ -1165,7 +1165,7 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
-            var ctor = classType.GetMethod(classType.Name);
+            var ctor = node.Constructor ?? classType.GetMethod(classType.Name);
             if (ctor == null)
             {
                 throw new System.Exception($"Class {classType.Name} has no constructor.");

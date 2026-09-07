@@ -303,7 +303,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 arguments.Add(RewriteExpression(argument));
             }
 
-            return new BoundObjectCreationExpression(node.Syntax, (NamedTypeSymbol)SubstituteType(node.Type), arguments.ToImmutable());
+            return new BoundObjectCreationExpression(node.Syntax, (NamedTypeSymbol)SubstituteType(node.Type), arguments.ToImmutable(), node.Constructor);
         }
 
         protected override BoundExpression RewriteConversionExpression(BoundConversionExpression node)

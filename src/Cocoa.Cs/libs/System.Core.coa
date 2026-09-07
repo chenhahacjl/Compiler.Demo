@@ -1,5 +1,24 @@
 (cod COCOA 1
   (symbols
+    (enum System.IO.FileMode facade:1 members:6
+      (Append 6)
+      (Create 2)
+      (CreateNew 1)
+      (Open 3)
+      (OpenOrCreate 4)
+      (Truncate 5)
+    )
+    (enum System.IO.FileAccess facade:1 members:3
+      (Read 1)
+      (ReadWrite 3)
+      (Write 2)
+    )
+    (enum System.IO.FileShare facade:1 members:4
+      (None 0)
+      (Read 1)
+      (ReadWrite 3)
+      (Write 2)
+    )
     (cls System.Array internal iface:false ifaces:0 methods:16 Sum[@i32[]] Sum[@f64[]] Min[@i32[]] Min[@f64[]] Max[@i32[]] Max[@f64[]] Average[@i32[]] Average[@f64[]] Contains[@i32[],@i32] Contains[@f64[],@f64] IndexOf[@i32[],@i32] IndexOf[@f64[],@f64] Reverse[@i32[]] Reverse[@f64[]] Sort[@i32[]] Sort[@f64[]] fields:0 events:0)
     (cls System.Boolean public iface:false ifaces:0 methods:7 ToString[@bool] Parse[@string] Parse[@string,@bool] Equals[@bool,@bool] GetHashCode[@bool] ToString[@bool,@string] TryParse[@string,out:@bool] fields:0 events:0)
     (cls System.Byte public iface:false ifaces:0 methods:7 ToString[@u8] CompareTo[@u8,@u8] Parse[@string] Equals[@u8,@u8] GetHashCode[@u8] ToString[@u8,@string] TryParse[@string,out:@u8] fields:0 events:0)
@@ -181,7 +200,7 @@
     (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 methods:8 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Sleep[@i32] TickCount Exit[@i32] Beep[@i32,@i32] fields:0 events:0)
     (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
     (cls System.Syscall.FileSyscall internal iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
-    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:9 FileOpen[@string,@i32] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
+    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:9 FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
     (cls System.Syscall.StringSyscall internal iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
@@ -1040,6 +1059,12 @@
     (fn System.Core!System.IO.FileStream.FileStream[@string] name:FileStream ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
       (par System.Core!System.IO.FileStream.FileStream[@string]/path path @string 0 - -)
     )
+    (fn System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] name:FileStream ret:@void ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:4
+      (par System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/path path @string 0 - -)
+      (par System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/mode mode System.IO.FileMode 1 - -)
+      (par System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/access access System.IO.FileAccess 2 - -)
+      (par System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/share share System.IO.FileShare 3 - -)
+    )
     (fn System.Core!System.IO.FileStream.get_CanRead[] name:get_CanRead ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Core!System.IO.FileStream.get_CanWrite[] name:get_CanWrite ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
     (fn System.Core!System.IO.FileStream.get_CanSeek[] name:get_CanSeek ret:@bool ns:- owner:System.IO.FileStream extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
@@ -1399,9 +1424,11 @@
       (par System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]]/path path @string 0 - -)
       (par System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]]/data data @u8[] 1 - -)
     )
-    (fn System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32] name:FileOpen ret:@i64 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileOpen entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32]/path path @string 0 - -)
-      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32]/mode mode @i32 1 - -)
+    (fn System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] name:FileOpen ret:@i64 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileOpen entry:- charset:- static:true ctor:false acc:false params:4
+      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/path path @string 0 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/mode mode System.IO.FileMode 1 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/access access System.IO.FileAccess 2 - -)
+      (par System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/share share System.IO.FileShare 3 - -)
     )
     (fn System.Core!System.Syscall.IOSyscall.FileSize[@i64] name:FileSize ret:@i64 ns:- owner:System.Syscall.IOSyscall extern:false dll:- cc:winapi builtin:FileSize entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.IOSyscall.FileSize[@i64]/h h @i64 0 - -)
@@ -10464,10 +10491,28 @@
         (exprstmt
           (memberassign
             (this System.IO.FileStream) name:_h @i64 false
-            (membercall @i64 FileOpen System.Core!System.Syscall.IOSyscall.FileOpen[@string,@i32] 2
+            (membercall @i64 FileOpen System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] 4
               (statictype System.Syscall.IOSyscall)
               (var System.Core!System.IO.FileStream.FileStream[@string]/path)
-              (lit @i32 i:0)
+              (lit System.IO.FileMode i:3)
+              (lit System.IO.FileAccess i:3)
+              (lit System.IO.FileShare i:3)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.IO.FileStream) name:_h @i64 false
+            (membercall @i64 FileOpen System.Core!System.Syscall.IOSyscall.FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] 4
+              (statictype System.Syscall.IOSyscall)
+              (var System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/path)
+              (var System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/mode)
+              (var System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/access)
+              (var System.Core!System.IO.FileStream.FileStream[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare]/share)
             )
           )
         )
@@ -15764,4 +15809,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:c316850f07e57e2216e5bfb0e5d232b879239b37f7ef4ae319d56624ab91545b)
+(checksum sha256:dd60be3d7db51caa1d54cf154a673468108c2380f3294d5d33301cdb76adad05)

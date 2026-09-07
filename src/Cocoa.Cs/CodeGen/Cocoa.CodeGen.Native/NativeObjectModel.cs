@@ -272,6 +272,17 @@ namespace Cocoa.CodeGen.Native
             return name;
         }
 
+        /// <summary>顶层函数重载的 Lir 名字：同名不同签名 mangle 为 `Name$参数类型`（入口 Main 保持裸名）。</summary>
+        public static string FunctionIrName(FunctionSymbol function, bool topLevelOverloaded)
+        {
+            if (topLevelOverloaded && function.ContainingClass == null)
+            {
+                return function.Name + "$" + string.Join("$", function.Parameters.Select(p => EncodeTypeName(p.Type)));
+            }
+
+            return FunctionIrName(function);
+        }
+
         private static string EncodeTypeName(TypeSymbol type)
         {
             if (type.ElementType != null)

@@ -787,8 +787,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return IlType.Void;
             }
 
-            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum })
+            if (type is NamedTypeSymbol { TypeKind: TypeKind.Enum } enumType)
             {
+                // facade enum：整型映射到 BCL 同名枚举（FileMode/FileAccess/FileShare 等，facade 直链签名匹配用）
+                if (enumType.IsFacadeClass)
+                {
+                    return IlType.Class(_framework.RequireType(enumType.FullName), isValueType: true);
+                }
+
                 return IlType.Int32;
             }
 
