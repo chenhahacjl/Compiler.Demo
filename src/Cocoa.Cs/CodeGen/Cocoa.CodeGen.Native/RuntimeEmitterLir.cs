@@ -285,10 +285,6 @@ namespace Cocoa.CodeGen.Native
                 EmitFileReadHandle();
                 _ = BeginFunctionTyped("FileWriteHandle", new[] { 8, 8, 4, 4 }, LirType.Addr, LirType.Addr, LirType.I32, LirType.I32);
                 EmitFileWriteHandle();
-                _ = BeginFunctionTyped("StringFromBytes", new[] { 8 }, LirType.Addr);
-                EmitStringFromBytes();
-                _ = BeginFunctionTyped("StringToBytes", new[] { 8 }, LirType.Addr);
-                EmitStringToBytes();
                 _ = BeginFunctionTyped("StringFromChars", new[] { 8 }, LirType.Addr);
                 EmitStringFromChars();
 

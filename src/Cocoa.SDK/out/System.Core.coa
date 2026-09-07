@@ -203,7 +203,7 @@
     (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:9 FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
-    (cls System.Syscall.StringSyscall internal iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
+    (cls System.Syscall.StringSyscall public iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
     )
@@ -1479,10 +1479,10 @@
       (par System.Core!System.Syscall.ProcessSyscall.LaunchProcess[@string,@string,@string]/args args @string 1 - -)
       (par System.Core!System.Syscall.ProcessSyscall.LaunchProcess[@string,@string,@string]/workdir workdir @string 2 - -)
     )
-    (fn System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] name:StringFromBytes ret:@string ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringFromBytes entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] name:StringFromBytes ret:@string ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data data @u8[] 0 - -)
     )
-    (fn System.Core!System.Syscall.StringSyscall.StringToBytes[@string] name:StringToBytes ret:@u8[] ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringToBytes entry:- charset:- static:true ctor:false acc:false params:1
+    (fn System.Core!System.Syscall.StringSyscall.StringToBytes[@string] name:StringToBytes ret:@u8[] ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/text text @string 0 - -)
     )
     (fn System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] name:StringFromChars ret:@string ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
@@ -1755,6 +1755,30 @@
     (loc System.Core!System.IO.StringReader.ReadToEnd[]/rest false @string)
     (loc System.Core!System.IO.StringWriter.NewLine[]/b false @u8[])
     (loc System.Core!System.IO.StringWriter.WriteChar[@char]/chars false @char[])
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars false @char[])
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1#2 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b2 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1#3 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b2#2 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b3 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/cp false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/t false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/result false @char[])
+    (loc System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/len false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes false @u8[])
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2 false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/lo false @i32)
+    (loc System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/c false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.BucketOf[!System.Collections.Generic.Dictionary.K]/b false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.Clear[]/i false @i32)
     (loc System.Core!System.Collections.Generic.Dictionary.Dictionary[]/i false @i32)
@@ -12714,6 +12738,970 @@
         )
       )
     )
+    (body System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]
+      (block 8
+        (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars
+          (arrnew @char[]
+            (memberacc @i32 Length
+              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+            ) 0
+          )
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o
+          (lit @i32 i:0)
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i
+          (lit @i32 i:0)
+        )
+        (while
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+            (memberacc @i32 Length
+              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+            )
+          )
+          (block 2
+            (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0
+              (conv @i32
+                (elem @u8
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                )
+              )
+            )
+            (if
+              (binary
+                (bop < @i32 @i32)
+                (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                (lit @i32 i:128)
+              )
+              (block 3
+                (exprstmt
+                  (elemassign @char
+                    (elem @char
+                      (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars)
+                      (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                    )
+                    (conv @char
+                      (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                    )
+                  )
+                )
+                (exprstmt
+                  (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+                (exprstmt
+                  (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+              )
+              (if
+                (binary
+                  (bop == @i32 @i32)
+                  (binary
+                    (bop & @i32 @i32)
+                    (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                    (lit @i32 i:224)
+                  )
+                  (lit @i32 i:192)
+                )
+                (block 4
+                  (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1
+                    (conv @i32
+                      (elem @u8
+                        (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                          (lit @i32 i:1)
+                        )
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (elemassign @char
+                      (elem @char
+                        (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars)
+                        (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                      )
+                      (conv @char
+                        (binary
+                          (bop | @i32 @i32)
+                          (binary
+                            (bop << @i32 @i32)
+                            (binary
+                              (bop & @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                              (lit @i32 i:31)
+                            )
+                            (lit @i32 i:6)
+                          )
+                          (binary
+                            (bop & @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1)
+                            (lit @i32 i:63)
+                          )
+                        )
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o
+                      (binary
+                        (bop + @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                        (lit @i32 i:1)
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i
+                      (binary
+                        (bop + @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                        (lit @i32 i:2)
+                      )
+                    )
+                  )
+                )
+                (if
+                  (binary
+                    (bop == @i32 @i32)
+                    (binary
+                      (bop & @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                      (lit @i32 i:240)
+                    )
+                    (lit @i32 i:224)
+                  )
+                  (block 5
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1#2
+                      (conv @i32
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                            (lit @i32 i:1)
+                          )
+                        )
+                      )
+                    )
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b2
+                      (conv @i32
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                            (lit @i32 i:2)
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @char
+                        (elem @char
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                        )
+                        (conv @char
+                          (binary
+                            (bop | @i32 @i32)
+                            (binary
+                              (bop | @i32 @i32)
+                              (binary
+                                (bop << @i32 @i32)
+                                (binary
+                                  (bop & @i32 @i32)
+                                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                                  (lit @i32 i:15)
+                                )
+                                (lit @i32 i:12)
+                              )
+                              (binary
+                                (bop << @i32 @i32)
+                                (binary
+                                  (bop & @i32 @i32)
+                                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1#2)
+                                  (lit @i32 i:63)
+                                )
+                                (lit @i32 i:6)
+                              )
+                            )
+                            (binary
+                              (bop & @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b2)
+                              (lit @i32 i:63)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                          (lit @i32 i:1)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                          (lit @i32 i:3)
+                        )
+                      )
+                    )
+                  )
+                  (block 9
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1#3
+                      (conv @i32
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                            (lit @i32 i:1)
+                          )
+                        )
+                      )
+                    )
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b2#2
+                      (conv @i32
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                            (lit @i32 i:2)
+                          )
+                        )
+                      )
+                    )
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b3
+                      (conv @i32
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/data)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                            (lit @i32 i:3)
+                          )
+                        )
+                      )
+                    )
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/cp
+                      (binary
+                        (bop | @i32 @i32)
+                        (binary
+                          (bop | @i32 @i32)
+                          (binary
+                            (bop | @i32 @i32)
+                            (binary
+                              (bop << @i32 @i32)
+                              (binary
+                                (bop & @i32 @i32)
+                                (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b0)
+                                (lit @i32 i:7)
+                              )
+                              (lit @i32 i:18)
+                            )
+                            (binary
+                              (bop << @i32 @i32)
+                              (binary
+                                (bop & @i32 @i32)
+                                (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b1#3)
+                                (lit @i32 i:63)
+                              )
+                              (lit @i32 i:12)
+                            )
+                          )
+                          (binary
+                            (bop << @i32 @i32)
+                            (binary
+                              (bop & @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b2#2)
+                              (lit @i32 i:63)
+                            )
+                            (lit @i32 i:6)
+                          )
+                        )
+                        (binary
+                          (bop & @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/b3)
+                          (lit @i32 i:63)
+                        )
+                      )
+                    )
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/t
+                      (binary
+                        (bop - @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/cp)
+                        (lit @i32 i:65536)
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @char
+                        (elem @char
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                        )
+                        (conv @char
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:55296)
+                            (binary
+                              (bop >> @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/t)
+                              (lit @i32 i:10)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @char
+                        (elem @char
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                            (lit @i32 i:1)
+                          )
+                        )
+                        (conv @char
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:56320)
+                            (binary
+                              (bop & @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/t)
+                              (lit @i32 i:1023)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+                          (lit @i32 i:2)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/i)
+                          (lit @i32 i:4)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/result
+          (arrnew @char[]
+            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o) 0
+          )
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k
+          (lit @i32 i:0)
+        )
+        (while
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k)
+            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/o)
+          )
+          (block 2
+            (exprstmt
+              (elemassign @char
+                (elem @char
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/result)
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k)
+                )
+                (elem @char
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/chars)
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k)
+                )
+              )
+            )
+            (exprstmt
+              (assign System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/k)
+                  (lit @i32 i:1)
+                )
+              )
+            )
+          ) break2 continue2
+        )
+        (return
+          (membercall @string StringFromChars System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] 1
+            (this System.Syscall.StringSyscall)
+            (var System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]]/result)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Syscall.StringSyscall.StringToBytes[@string]
+      (block 9
+        (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/len
+          (memberacc @i32 Length
+            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/text)
+          )
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n
+          (lit @i32 i:0)
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i
+          (lit @i32 i:0)
+        )
+        (while
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i)
+            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/len)
+          )
+          (block 2
+            (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp
+              (conv @i32
+                (elem @char
+                  (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/text)
+                  (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i)
+                )
+              )
+            )
+            (if
+              (binary
+                (bop < @i32 @i32)
+                (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp)
+                (lit @i32 i:128)
+              )
+              (block 2
+                (exprstmt
+                  (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n)
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+                (exprstmt
+                  (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i)
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+              )
+              (if
+                (binary
+                  (bop < @i32 @i32)
+                  (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp)
+                  (lit @i32 i:2048)
+                )
+                (block 2
+                  (exprstmt
+                    (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n
+                      (binary
+                        (bop + @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n)
+                        (lit @i32 i:2)
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i
+                      (binary
+                        (bop + @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i)
+                        (lit @i32 i:1)
+                      )
+                    )
+                  )
+                )
+                (if
+                  (binary
+                    (bop && @bool @bool)
+                    (binary
+                      (bop >= @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp)
+                      (lit @i32 i:55296)
+                    )
+                    (binary
+                      (bop < @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp)
+                      (lit @i32 i:56320)
+                    )
+                  )
+                  (block 2
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n)
+                          (lit @i32 i:4)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i)
+                          (lit @i32 i:2)
+                        )
+                      )
+                    )
+                  )
+                  (block 2
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n)
+                          (lit @i32 i:3)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/i)
+                          (lit @i32 i:1)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          ) break1 continue1
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes
+          (arrnew @u8[]
+            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/n) 0
+          )
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o
+          (lit @i32 i:0)
+        )
+        (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j
+          (lit @i32 i:0)
+        )
+        (while
+          (binary
+            (bop < @i32 @i32)
+            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/len)
+          )
+          (block 2
+            (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2
+              (conv @i32
+                (elem @char
+                  (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/text)
+                  (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+                )
+              )
+            )
+            (if
+              (binary
+                (bop < @i32 @i32)
+                (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                (lit @i32 i:128)
+              )
+              (block 3
+                (exprstmt
+                  (elemassign @u8
+                    (elem @u8
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                    )
+                    (conv @u8
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                    )
+                  )
+                )
+                (exprstmt
+                  (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+                (exprstmt
+                  (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j
+                    (binary
+                      (bop + @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+                      (lit @i32 i:1)
+                    )
+                  )
+                )
+              )
+              (if
+                (binary
+                  (bop < @i32 @i32)
+                  (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                  (lit @i32 i:2048)
+                )
+                (block 4
+                  (exprstmt
+                    (elemassign @u8
+                      (elem @u8
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                      )
+                      (conv @u8
+                        (binary
+                          (bop | @i32 @i32)
+                          (lit @i32 i:192)
+                          (binary
+                            (bop >> @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                            (lit @i32 i:6)
+                          )
+                        )
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (elemassign @u8
+                      (elem @u8
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                          (lit @i32 i:1)
+                        )
+                      )
+                      (conv @u8
+                        (binary
+                          (bop | @i32 @i32)
+                          (lit @i32 i:128)
+                          (binary
+                            (bop & @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                            (lit @i32 i:63)
+                          )
+                        )
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o
+                      (binary
+                        (bop + @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                        (lit @i32 i:2)
+                      )
+                    )
+                  )
+                  (exprstmt
+                    (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j
+                      (binary
+                        (bop + @i32 @i32)
+                        (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+                        (lit @i32 i:1)
+                      )
+                    )
+                  )
+                )
+                (if
+                  (binary
+                    (bop && @bool @bool)
+                    (binary
+                      (bop >= @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                      (lit @i32 i:55296)
+                    )
+                    (binary
+                      (bop < @i32 @i32)
+                      (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                      (lit @i32 i:56320)
+                    )
+                  )
+                  (block 8
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/lo
+                      (conv @i32
+                        (elem @char
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/text)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+                            (lit @i32 i:1)
+                          )
+                        )
+                      )
+                    )
+                    (vardecl System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/c
+                      (binary
+                        (bop | @i32 @i32)
+                        (binary
+                          (bop | @i32 @i32)
+                          (lit @i32 i:65536)
+                          (binary
+                            (bop << @i32 @i32)
+                            (binary
+                              (bop - @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                              (lit @i32 i:55296)
+                            )
+                            (lit @i32 i:10)
+                          )
+                        )
+                        (binary
+                          (bop - @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/lo)
+                          (lit @i32 i:56320)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:240)
+                            (binary
+                              (bop >> @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/c)
+                              (lit @i32 i:18)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                            (lit @i32 i:1)
+                          )
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:128)
+                            (binary
+                              (bop & @i32 @i32)
+                              (binary
+                                (bop >> @i32 @i32)
+                                (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/c)
+                                (lit @i32 i:12)
+                              )
+                              (lit @i32 i:63)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                            (lit @i32 i:2)
+                          )
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:128)
+                            (binary
+                              (bop & @i32 @i32)
+                              (binary
+                                (bop >> @i32 @i32)
+                                (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/c)
+                                (lit @i32 i:6)
+                              )
+                              (lit @i32 i:63)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                            (lit @i32 i:3)
+                          )
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:128)
+                            (binary
+                              (bop & @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/c)
+                              (lit @i32 i:63)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                          (lit @i32 i:4)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+                          (lit @i32 i:2)
+                        )
+                      )
+                    )
+                  )
+                  (block 5
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:224)
+                            (binary
+                              (bop >> @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                              (lit @i32 i:12)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                            (lit @i32 i:1)
+                          )
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:128)
+                            (binary
+                              (bop & @i32 @i32)
+                              (binary
+                                (bop >> @i32 @i32)
+                                (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                                (lit @i32 i:6)
+                              )
+                              (lit @i32 i:63)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (elemassign @u8
+                        (elem @u8
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+                          (binary
+                            (bop + @i32 @i32)
+                            (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                            (lit @i32 i:2)
+                          )
+                        )
+                        (conv @u8
+                          (binary
+                            (bop | @i32 @i32)
+                            (lit @i32 i:128)
+                            (binary
+                              (bop & @i32 @i32)
+                              (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/cp#2)
+                              (lit @i32 i:63)
+                            )
+                          )
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/o)
+                          (lit @i32 i:3)
+                        )
+                      )
+                    )
+                    (exprstmt
+                      (assign System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j
+                        (binary
+                          (bop + @i32 @i32)
+                          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/j)
+                          (lit @i32 i:1)
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          ) break2 continue2
+        )
+        (return
+          (var System.Core!System.Syscall.StringSyscall.StringToBytes[@string]/bytes)
+        )
+      )
+    )
     (body System.Core!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]
       (block 4
         (exprstmt
@@ -15809,4 +16797,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:dd60be3d7db51caa1d54cf154a673468108c2380f3294d5d33301cdb76adad05)
+(checksum sha256:cd13bea67ca13dffc5345e6df75879d41c05e8350252550ffa30fbb68b7bd369)
