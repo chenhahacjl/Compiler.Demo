@@ -3,8 +3,6 @@ namespace System.Syscall
 {
     class FileSyscall
     {
-        syscall function ReadAllText(path: string): string
-        syscall function WriteAllText(path: string, text: string): void
         syscall function Exists(path: string): bool
         syscall function Copy(src: string, dst: string): void
         syscall function Delete(path: string): void

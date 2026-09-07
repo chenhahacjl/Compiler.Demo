@@ -412,7 +412,7 @@ namespace Cocoa.CodeGen.Native
             // ------------------------------------------------------------------
             // Y-P0-1：文件 IO / 环境 syscall（G7-③补齐）
             // 字符串对象 = 堆指针 [len:4][chars:2×len]（无 null 结尾），Win32 宽字符串 API 需 LPCWSTR 经 WidePtrZ 复制补 null。
-            // SysCall 上限 6 参：文件 IO 用 ucrtbase 低参 API + 6 参 MultiByteToWideChar；WideCharToMultiByte(8 参) 用手动编码替代。
+            // UTF-8 编解码已 .co 化（StringSyscall StringToBytes/StringFromBytes，三端一致）；文件读写走字节级 Win32。
             // ------------------------------------------------------------------
 
             /// <summary>取 CO 字符串对象的宽字符区指针（chars@4）。</summary>

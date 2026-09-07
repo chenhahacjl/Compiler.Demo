@@ -199,7 +199,7 @@
     )
     (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 methods:8 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Sleep[@i32] TickCount Exit[@i32] Beep[@i32,@i32] fields:0 events:0)
     (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
-    (cls System.Syscall.FileSyscall internal iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
+    (cls System.Syscall.FileSyscall internal iface:false ifaces:0 methods:5 Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
     (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:9 FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
@@ -1400,13 +1400,6 @@
       (par System.Core!System.Syscall.EnvironmentSyscall.SetCurrentDirectory[@string]/path path @string 0 - -)
     )
     (fn System.Core!System.Syscall.EnvironmentSyscall.GetExecutablePath[] name:GetExecutablePath ret:@string ns:- owner:System.Syscall.EnvironmentSyscall extern:false dll:- cc:winapi builtin:GetExecutablePath entry:- charset:- static:true ctor:false acc:false params:0)
-    (fn System.Core!System.Syscall.FileSyscall.ReadAllText[@string] name:ReadAllText ret:@string ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileReadAllText entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Syscall.FileSyscall.ReadAllText[@string]/path path @string 0 - -)
-    )
-    (fn System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string] name:WriteAllText ret:@void ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileWriteAllText entry:- charset:- static:true ctor:false acc:false params:2
-      (par System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string]/path path @string 0 - -)
-      (par System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string]/text text @string 1 - -)
-    )
     (fn System.Core!System.Syscall.FileSyscall.Exists[@string] name:Exists ret:@bool ns:- owner:System.Syscall.FileSyscall extern:false dll:- cc:winapi builtin:FileExists entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.FileSyscall.Exists[@string]/path path @string 0 - -)
     )
@@ -10440,9 +10433,12 @@
     (body System.Core!System.IO.File.ReadAllText[@string]
       (block 1
         (return
-          (membercall @string ReadAllText System.Core!System.Syscall.FileSyscall.ReadAllText[@string] 1
-            (statictype System.Syscall.FileSyscall)
-            (var System.Core!System.IO.File.ReadAllText[@string]/path)
+          (membercall @string StringFromBytes System.Core!System.Syscall.StringSyscall.StringFromBytes[@u8[]] 1
+            (statictype System.Syscall.StringSyscall)
+            (membercall @u8[] ReadAllBytes System.Core!System.Syscall.FileSyscall.ReadAllBytes[@string] 1
+              (statictype System.Syscall.FileSyscall)
+              (var System.Core!System.IO.File.ReadAllText[@string]/path)
+            )
           )
         )
       )
@@ -10450,10 +10446,13 @@
     (body System.Core!System.IO.File.WriteAllText[@string,@string]
       (block 1
         (exprstmt
-          (membercall @void WriteAllText System.Core!System.Syscall.FileSyscall.WriteAllText[@string,@string] 2
+          (membercall @void WriteAllBytes System.Core!System.Syscall.FileSyscall.WriteAllBytes[@string,@u8[]] 2
             (statictype System.Syscall.FileSyscall)
             (var System.Core!System.IO.File.WriteAllText[@string,@string]/path)
-            (var System.Core!System.IO.File.WriteAllText[@string,@string]/text)
+            (membercall @u8[] StringToBytes System.Core!System.Syscall.StringSyscall.StringToBytes[@string] 1
+              (statictype System.Syscall.StringSyscall)
+              (var System.Core!System.IO.File.WriteAllText[@string,@string]/text)
+            )
           )
         )
       )
@@ -16797,4 +16796,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:cd13bea67ca13dffc5345e6df75879d41c05e8350252550ffa30fbb68b7bd369)
+(checksum sha256:7631b78938d5311a7513408cb7c4be15b30ed8d153beab4f4a00e3690d2a072b)

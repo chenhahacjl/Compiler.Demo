@@ -8,12 +8,12 @@ namespace System.IO
     {
         public static function ReadAllText(path: string): string
         {
-            return FileSyscall.ReadAllText(path)
+            return StringSyscall.StringFromBytes(FileSyscall.ReadAllBytes(path))
         }
 
         public static function WriteAllText(path: string, text: string): void
         {
-            FileSyscall.WriteAllText(path, text)
+            FileSyscall.WriteAllBytes(path, StringSyscall.StringToBytes(text))
         }
 
         public static function Exists(path: string): bool

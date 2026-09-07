@@ -25,7 +25,6 @@ namespace Cocoa.CodeGen.Native
             // Y-P0-1：文件 IO / 环境 syscall（G7-部分补齐；文件读写经 Win32 kernel32 低参 API，对标 .NET FileStream 底层）。
             "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
-            "MultiByteToWideChar", "WideCharToMultiByte",
             // M2：ucrtbase → Win32（对标 .NET FileStream）
             "CreateFileW", "GetFileSizeEx", "SetFilePointerEx", "SetFilePointer", "CloseHandle", "CreateDirectoryW",
             // M5：LaunchProcess 迁 CreateProcessW（同步等待 + 取退出码）
@@ -264,10 +263,6 @@ namespace Cocoa.CodeGen.Native
                 EmitGetExecutablePath();
                 _ = BeginFunctionTyped("SetCurrentDirectory", new[] { 8 }, LirType.Addr);
                 EmitSetCurrentDirectory();
-                _ = BeginFunctionTyped("FileReadAllText", new[] { 8 }, LirType.Addr);
-                EmitFileReadAllText();
-                _ = BeginFunctionTyped("FileWriteAllText", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
-                EmitFileWriteAllText();
                 _ = BeginFunctionTyped("FileReadAllBytes", new[] { 8 }, LirType.Addr);
                 EmitFileReadAllBytes();
                 _ = BeginFunctionTyped("FileWriteAllBytes", new[] { 8, 8 }, LirType.Addr, LirType.Addr);
