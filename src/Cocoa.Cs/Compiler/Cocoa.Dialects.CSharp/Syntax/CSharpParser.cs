@@ -281,6 +281,18 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         private ExpressionSyntax ParseByRefArgumentExpression()
         {
             var keyword = NextToken();
+
+            // out var <id>：内联声明实参（6e-M23 后续切片）
+            if (keyword.Kind == SyntaxKind.OutKeyword &&
+                Current.Kind == SyntaxKind.VarKeyword &&
+                Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                var varToken = NextToken();
+                var identifier = NextToken();
+                return new ByRefArgumentExpressionSyntax(_syntaxTree, keyword,
+                    new DeclarationExpressionSyntax(_syntaxTree, varToken, identifier));
+            }
+
             var expression = ParseBinaryExpression(6);
             return new ByRefArgumentExpressionSyntax(_syntaxTree, keyword, expression);
         }

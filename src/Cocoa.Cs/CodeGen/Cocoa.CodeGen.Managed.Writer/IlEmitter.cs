@@ -668,6 +668,23 @@ namespace Cocoa.CodeGen.Managed.Writer
                     _locals.Add(variableDeclaration.Variable, localTypes.Count);
                     localTypes.Add(ToIlType(variableDeclaration.Variable.Type));
                     break;
+                case BoundExpressionStatement expressionStatement:
+                    // out var 内联声明变量（无显式声明语句）：从调用实参的 byref 变量收集局部
+                    if (expressionStatement.Expression is BoundCallExpression call)
+                    {
+                        foreach (var argument in call.Arguments)
+                        {
+                            if (argument is BoundByRefArgument byRefArgument &&
+                                byRefArgument.Expression is BoundVariableExpression byRefVariable &&
+                                !_locals.ContainsKey(byRefVariable.Variable))
+                            {
+                                _locals.Add(byRefVariable.Variable, localTypes.Count);
+                                localTypes.Add(ToIlType(byRefVariable.Variable.Type));
+                            }
+                        }
+                    }
+
+                    break;
                 case BoundSequencePointStatement sequencePoint:
                     CollectLocals(sequencePoint.Statement, localTypes);
                     break;

@@ -1676,6 +1676,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// <summary>byref 实参绑定（6e-M23 R3）：实参须为可赋值 lvalue——变量/实例或静态字段（非只读）/数组元素。</summary>
         private BoundExpression BindByRefArgument(ByRefArgumentExpressionSyntax syntax)
         {
+            if (syntax.Expression is DeclarationExpressionSyntax)
+            {
+                return new BoundByRefArgument(syntax, new BoundErrorExpression(syntax.Expression), syntax.IsRef);
+            }
+
             var inner = BindExpression(syntax.Expression);
 
             var isLValue = inner switch
@@ -1722,6 +1727,14 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             {
                 _diagnostics.ReportMissingByRefModifier(location, expectedModifier);
                 return new BoundErrorExpression(argument.Syntax);
+            }
+
+            // out var v：声明式实参——用形参类型声明局部变量（类型推断），再作 out 实参
+            if (wrapped.Syntax is ByRefArgumentExpressionSyntax byRefSyntax &&
+                byRefSyntax.Expression is DeclarationExpressionSyntax decl)
+            {
+                var variable = BindVariableDeclaration(decl.Identifier, isReadOnly: false, parameter.Type);
+                return new BoundByRefArgument(wrapped.Syntax, new BoundVariableExpression(decl.Identifier, variable), wrapped.IsRef);
             }
 
             if (wrapped.IsRef != parameter.IsRef)

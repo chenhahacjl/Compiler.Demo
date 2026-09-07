@@ -348,6 +348,18 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         private ExpressionSyntax ParseByRefArgumentExpression()
         {
             var keyword = NextToken();
+
+            // out var <id>：内联声明实参（6e-M23 后续切片）——`out` + 声明表达式 `var v`，类型由绑定层按形参推断
+            if (keyword.Kind == SyntaxKind.OutKeyword &&
+                Current.Kind == SyntaxKind.VarKeyword &&
+                Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                var varToken = NextToken();
+                var identifier = NextToken();
+                return new ByRefArgumentExpressionSyntax(_syntaxTree, keyword,
+                    new DeclarationExpressionSyntax(_syntaxTree, varToken, identifier));
+            }
+
             var expression = ParseBinaryExpression(6);
 
             return new ByRefArgumentExpressionSyntax(_syntaxTree, keyword, expression);

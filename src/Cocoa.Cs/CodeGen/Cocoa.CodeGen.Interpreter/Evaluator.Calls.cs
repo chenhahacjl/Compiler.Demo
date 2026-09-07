@@ -109,7 +109,14 @@ namespace Cocoa.CodeGen.Interpreter
                         return sharedVariableBox;
                     }
 
-                    var current = EvaluateVariableExpression(variable);
+                    // out var 内联声明变量无显式声明语句：copy-in 按默认值初始化（copy-out 由回写动作写入）
+                    var locals = _locals.Peek();
+                    if (!locals.TryGetValue(variable.Variable, out var current))
+                    {
+                        current = variable.Variable.Type.IsValueType ? (object)0 : null;
+                        locals[variable.Variable] = current!;
+                    }
+
                     var box = new ByRefBox(current);
                     dedupe[variable.Variable] = box;
                     _byRefWriteBacks.Add(() => Assign(variable.Variable, box.Value));

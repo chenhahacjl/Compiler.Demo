@@ -58,6 +58,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 SyntaxKind.IsExpression => BuildAsIsExpression(syntaxTree, position, isAs: false),
                 SyntaxKind.PostfixIncrementExpression => BuildPostfixIncrementExpression(syntaxTree, position),
                 SyntaxKind.ByRefArgument => BuildByRefArgumentExpression(syntaxTree, position),
+                SyntaxKind.DeclarationExpression => BuildDeclarationExpression(syntaxTree, position),
                 SyntaxKind.EnumDeclaration => BuildEnumDeclaration(syntaxTree, position),
                 SyntaxKind.EnumMember => BuildEnumMember(syntaxTree, position),
                 SyntaxKind.GlobalStatement => BuildGlobalStatement(syntaxTree, position),
@@ -596,6 +597,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             var expressionPosition = position + _green.GetSlot(0)!.Width;
             var expression = (ExpressionSyntax)_green.GetSlot(1)!.CreateTypedRed(syntaxTree, expressionPosition);
             return new ByRefArgumentExpressionSyntax(syntaxTree, keyword, expression);
+        }
+
+        private SyntaxNode BuildDeclarationExpression(SyntaxTree syntaxTree, int position)
+        {
+            var keyword = (SyntaxToken)_green.GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            var identifierPosition = position + _green.GetSlot(0)!.Width;
+            var identifier = (SyntaxToken)_green.GetSlot(1)!.CreateTypedRed(syntaxTree, identifierPosition);
+            return new DeclarationExpressionSyntax(syntaxTree, keyword, identifier);
         }
 
         private SyntaxNode BuildEnumDeclaration(SyntaxTree syntaxTree, int position)

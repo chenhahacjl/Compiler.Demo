@@ -188,6 +188,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         ParenthesizedExpression = 178,
         LambdaExpression = 179,
         ByRefArgument = 180,
+        DeclarationExpression = 199,
         CastExpression = 181,
         AssignmentExpression = 182,
         PostfixIncrementExpression = 183,
