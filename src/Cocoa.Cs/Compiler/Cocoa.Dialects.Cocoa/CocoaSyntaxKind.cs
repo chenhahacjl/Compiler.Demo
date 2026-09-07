@@ -207,6 +207,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         Interpolation = 195,
         IsExpression = 196,
         AsExpression = 197,
-        TypeParameter = 198
+        TypeParameter = 198,
+        NamedArgument = 201
     }
 }

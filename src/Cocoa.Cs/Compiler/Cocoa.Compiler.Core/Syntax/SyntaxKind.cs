@@ -218,5 +218,6 @@ ColonToken,               // :
         TypeParameter,            // 泛型类型参数个体 T / in T / out T（6e-M22 delegate 真实类型化）
         DeclarationExpression = 199, // 声明表达式 var v（out var 内联声明用）——末尾追加且显式定值，避免中间值偏移（green RawKind 持久化）与方言枚举漂移
         LocalFunctionDeclaration = 200, // 局部函数声明（函数体内 function Helper(...)，降级为具名函数值/闭包）
+        NamedArgument = 201, // 命名实参（实参位 `名: 值`，绑定按形参名重排，语言后置件）
     }
 }

@@ -1724,22 +1724,43 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            for (var i = 0; i < function.Parameters.Length; i++)
+            var namedValues = new Dictionary<string, BoundExpression>();
+            var positionalValues = new List<BoundExpression>();
+            var hasNamedArgument = false;
+            for (var k = 0; k < syntax.Arguments.Count; k++)
             {
-                var parameter = function.Parameters[i];
-                if (i < boundArguments.Count)
+                if (syntax.Arguments[k] is NamedArgumentExpressionSyntax namedArgument)
                 {
-                    var argumentLocation = syntax.Arguments[i].Location;
-                    var argument = boundArguments[i];
-                    boundArguments[i] = BindArgumentConversion(argumentLocation, argument, parameter);
+                    hasNamedArgument = true;
+                    namedValues[namedArgument.Identifier.Text] = boundArguments[k];
                 }
-                else if (parameter.HasDefaultValue)
+                else
                 {
-                    boundArguments.Add(new BoundLiteralExpression(syntax, parameter.DefaultValue!, parameter.Type));
+                    positionalValues.Add(boundArguments[k]);
                 }
             }
 
-            return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
+            var reordered = ImmutableArray.CreateBuilder<BoundExpression>(function.Parameters.Length);
+            var positionalIndex = 0;
+            for (var i = 0; i < function.Parameters.Length; i++)
+            {
+                var parameter = function.Parameters[i];
+                if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var namedValue))
+                {
+                    reordered.Add(BindArgumentConversion(syntax.Location, namedValue, parameter));
+                }
+                else if (positionalIndex < positionalValues.Count)
+                {
+                    reordered.Add(BindArgumentConversion(syntax.Location, positionalValues[positionalIndex], parameter));
+                    positionalIndex++;
+                }
+                else if (parameter.HasDefaultValue)
+                {
+                    reordered.Add(new BoundLiteralExpression(syntax, parameter.DefaultValue!, parameter.Type));
+                }
+            }
+
+            return new BoundCallExpression(syntax, function, reordered.ToImmutable());
         }
 
         /// <summary>判断标识符是否为可调用函数/方法名（裸调用 `Foo(args)` 应走调用而非转换简写；避免与类型名同名冲突）。</summary>

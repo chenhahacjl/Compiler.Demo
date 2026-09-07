@@ -1666,6 +1666,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 case SSyntax.CSharpSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case SSyntax.CSharpSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
+                case SSyntax.CSharpSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
 
                 default:
                     // 1b/B8：意外的表达式语法报诊断 + ErrorExpression 降级，而非编译器崩溃
@@ -1673,6 +1674,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     return new BoundErrorExpression(syntax);
             }
         }
+
+        private BoundExpression BindNamedArgument(NamedArgumentExpressionSyntax syntax) => BindExpression(syntax.Expression);
 
         /// <summary>byref 实参绑定（6e-M23 R3）：实参须为可赋值 lvalue——变量/实例或静态字段（非只读）/数组元素。</summary>
         private BoundExpression BindByRefArgument(ByRefArgumentExpressionSyntax syntax)

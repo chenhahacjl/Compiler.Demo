@@ -59,6 +59,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 SyntaxKind.PostfixIncrementExpression => BuildPostfixIncrementExpression(syntaxTree, position),
                 SyntaxKind.ByRefArgument => BuildByRefArgumentExpression(syntaxTree, position),
                 SyntaxKind.DeclarationExpression => BuildDeclarationExpression(syntaxTree, position),
+                SyntaxKind.NamedArgument => BuildNamedArgument(syntaxTree, position),
                 SyntaxKind.LocalFunctionDeclaration => BuildLocalFunctionDeclarationStatement(syntaxTree, position),
                 SyntaxKind.EnumDeclaration => BuildEnumDeclaration(syntaxTree, position),
                 SyntaxKind.EnumMember => BuildEnumMember(syntaxTree, position),
@@ -615,6 +616,16 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             var identifierPosition = position + _green.GetSlot(0)!.Width;
             var identifier = (SyntaxToken)_green.GetSlot(1)!.CreateTypedRed(syntaxTree, identifierPosition);
             return new DeclarationExpressionSyntax(syntaxTree, keyword, identifier);
+        }
+
+        private SyntaxNode BuildNamedArgument(SyntaxTree syntaxTree, int position)
+        {
+            var identifier = (SyntaxToken)_green.GetSlot(0)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(0)!.Width;
+            var colonToken = (SyntaxToken)_green.GetSlot(1)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(1)!.Width;
+            var expression = (ExpressionSyntax)_green.GetSlot(2)!.CreateTypedRed(syntaxTree, position);
+            return new NamedArgumentExpressionSyntax(syntaxTree, identifier, colonToken, expression);
         }
 
         private SyntaxNode BuildLocalFunctionDeclarationStatement(SyntaxTree syntaxTree, int position)

@@ -1746,6 +1746,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case SSyntax.CocoaSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case SSyntax.CocoaSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
+                case SSyntax.CocoaSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
 
                 default:
                     // 1b/B8：意外的表达式语法报诊断 + ErrorExpression 降级，而非编译器崩溃
@@ -1756,6 +1757,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         /// <summary>byref 实参绑定（6e-M23 R3）：实参须为可赋值 lvalue——变量/实例或静态字段（非只读）/数组元素。
         /// `out var v` 声明式实参返回占位，类型由 CheckByRefArgument 按形参推断（对齐 C# out var）。</summary>
+        private BoundExpression BindNamedArgument(NamedArgumentExpressionSyntax syntax) => BindExpression(syntax.Expression);
+
         private BoundExpression BindByRefArgument(ByRefArgumentExpressionSyntax syntax)
         {
             if (syntax.Expression is DeclarationExpressionSyntax)
