@@ -907,7 +907,7 @@ namespace Cocoa.CodeGen.Native
                 case BoundBinaryOperatorKind.GreaterOrEquals:
                     {
                         var boolResult = AllocateRegister(4);
-                        Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
+                        Add(instructions, new LirInstruction(isUnsigned ? LirOpCode.CmpU : LirOpCode.Cmp, LirOperand.Reg(left), LirOperand.Reg(right)));
 
                         LirCond cond = op switch
                         {

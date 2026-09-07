@@ -89,6 +89,7 @@ namespace Cocoa.CodeGen.Native
                     EmitShift(instruction);
                     break;
                 case LirOpCode.Cmp:
+                case LirOpCode.CmpU:
                     EmitCmp(instruction);
                     break;
                 case LirOpCode.Setcc:
@@ -1001,11 +1002,12 @@ namespace Cocoa.CodeGen.Native
 
         private void EmitCmp(LirInstruction instruction)
         {
-            // Phase 2 归并：Cmp 携带 LirType 驱动。x86 8 字节整型（I64）走三路结果（_pendingCmp64Trichotomy）。
+            // Phase 2 归并：Cmp 携带 LirType 驱动。x86 8 字节整型（I64）走三路结果（_pendingCmp64Trichotomy）；
+            // CmpU 为该比较的无符号变体（u64 语义，高 32 位按无符号排序）。
             if (!_isX64 && instruction.A.Kind == LirOperandKind.Register && instruction.A.Register!.Type == LirType.I64
                 && instruction.B.Kind == LirOperandKind.Register)
             {
-                EmitCmp64X86(instruction);
+                EmitCmp64X86(instruction, unsigned: instruction.OpCode == LirOpCode.CmpU);
                 return;
             }
 
@@ -1026,8 +1028,10 @@ namespace Cocoa.CodeGen.Native
         }
 
         /// <summary>x86 64 位比较（与归并前 EmitCmp64 的 x86 分支同语义）：计算三路结果（-1/0/+1）入 EAX。
-        /// 紧随其后的 Setcc/Jcc 先 cmp eax,0 再按条件分支（_pendingCmp64Trichotomy 标记）。</summary>
-        private void EmitCmp64X86(LirInstruction instruction)
+        /// 紧随其后的 Setcc/Jcc 先 cmp eax,0 再按条件分支（_pendingCmp64Trichotomy 标记）。
+        /// unsigned=true（CmpU，u64 语义）：高 32 位按无符号排序（Below/Above）——修复 u64 `<`/`<=` 恒假
+        /// （原恒用有符号 Less/Greater，高 32 ≥ 0x80000000 的值被视负）。</summary>
+        private void EmitCmp64X86(LirInstruction instruction, bool unsigned)
         {
             var aSlot = GetSlotOffset(instruction.A.Register!);
             var bSlot = GetSlotOffset(instruction.B.Register!);
@@ -1035,14 +1039,14 @@ namespace Cocoa.CodeGen.Native
             var greaterLabel = _a.CreateLabel();
             var doneLabel = _a.CreateLabel();
 
-            // 先比较高 32 位（有符号）
+            // 先比较高 32 位（按比较符号性排序）
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, aSlot - 4));
             _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, bSlot - 4));
             _a.Cmp(X64Size.Dword, X64Register.EAX, X64Register.ECX);
-            _a.Jcc(X64CondCode.Less, lessLabel);
-            _a.Jcc(X64CondCode.Greater, greaterLabel);
+            _a.Jcc(unsigned ? X64CondCode.Below : X64CondCode.Less, lessLabel);
+            _a.Jcc(unsigned ? X64CondCode.Above : X64CondCode.Greater, greaterLabel);
 
-            // 先比较高 32 位（有符号）
+            // 再比较低 32 位（无符号——相等时高位已一致，低位按位宽无符号即可）
             _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, aSlot));
             _a.Mov(X64Size.Dword, X64Register.ECX, new X64MemoryOperand(X64Register.RBP, bSlot));
             _a.Cmp(X64Size.Dword, X64Register.EAX, X64Register.ECX);
@@ -1064,17 +1068,31 @@ namespace Cocoa.CodeGen.Native
 
         private void EmitSetcc(LirInstruction instruction)
         {
+            var cond = (LirCond)instruction.A.Imm;
             if (_pendingCmp64Trichotomy)
             {
-                // x86 Cmp64 三路结果在 EAX（-1/0/+1）：cmp eax,0 后按条件 setcc
+                // x86 Cmp64 三路结果在 EAX（-1/0/+1）：cmp eax,0 后按条件 setcc——
+                // 哨兵已规范化，无符号条件按有符号哨兵解释（Below→Less、BelowOrEqual→LessOrEqual、
+                // Above→Greater、AboveOrEqual→GreaterOrEqual），否则 setb/setbe 对哨兵 eax 判 CF 错。
                 _a.Cmp(X64Size.Dword, X64Register.EAX, 0);
                 _pendingCmp64Trichotomy = false;
+                cond = SentinelCond(cond);
             }
 
-            _a.Setcc(MapCond((LirCond)instruction.A.Imm), X64Register.RAX);
+            _a.Setcc(MapCond(cond), X64Register.RAX);
             _a.Movzx(X64Size.Dword, X64Register.RAX, X64Register.RAX);
             StoreSlot(instruction.Dst!, X64Register.EAX);
         }
+
+        /// <summary>三路哨兵（-1/0/+1）的有符号条件映射：无符号条件按哨兵解释（哨兵符号即比较方向）。</summary>
+        private static LirCond SentinelCond(LirCond cond) => cond switch
+        {
+            LirCond.Below => LirCond.Less,
+            LirCond.BelowOrEqual => LirCond.LessOrEqual,
+            LirCond.Above => LirCond.Greater,
+            LirCond.AboveOrEqual => LirCond.GreaterOrEqual,
+            _ => cond,
+        };
 
         // ------------------------------------------------------------------
         // 调用/返回

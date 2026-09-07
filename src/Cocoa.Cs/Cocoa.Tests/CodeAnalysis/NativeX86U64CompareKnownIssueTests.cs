@@ -11,19 +11,13 @@ using Xunit;
 namespace Cocoa.Tests.CodeAnalysis
 {
     /// <summary>
-    /// 已知缺陷锁定（不在本批修复范围）：native windows-x86 上 u64 的 &lt; / &lt;= 比较恒为假。
+    /// u64 有序比较三后端回归（x86 修复后解锁，原 NativeX86U64CompareKnownIssueTests）。
     ///
-    /// 定位经过：P1c 下沉 Runtime.ParseInt64 后 x86 解析结果归 0 → 逐行打印得字符码与
-    /// 数字 d 均正确、u64 acc 却不累加 → 探针二分得 u64 `&lt;=` 与 u64 `&lt;` 恒假，
-    /// 而 u64 `&gt;`、i64 `&lt;=`、i32 `&lt;`/`&lt;=` 均正常。
-    ///
-    /// 预先存在：git stash 回 HEAD 后，纯 Cocoa 的 Int64.TryParse("12345") 在 x86 仍返回 false。
-    /// 影响面：标准库中凡以 u64 做 &lt; / &lt;= 判断的逻辑在 x86 静默失效（Int64.TryParse 已是受害者；
-    ///        Char.IsDigit 走 i32 字符码，不受影响）。
-    /// 规避：Runtime.ParseInt64 改用 i32 字符码 48..57 判定，见 NumericSinkThreeBackendTests。
-    /// 后续：native x86 修复 u64 有序比较后，把 RunX86 的期望串翻转为 x64 的并删去本类注释。
+    /// 修复定位：x86 64 位比较（EmitCmp64X86）高 32 位恒用有符号 Less/Greater，u64 无符号大值
+    /// （高 32 ≥ 0x80000000 被视负）→ `u64 <`/`<=` 恒假。新增 LirOpCode.CmpU（u64 比较）承载
+    /// 符号性，x86 高 32 位按无符号排序（Below/Above）。边界覆盖 0x8000000000000000 与全 1。
     /// </summary>
-    public class NativeX86U64CompareKnownIssueTests
+    public class X86U64OrderedCompareTests
     {
         private static string[] References() => new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location };
 
@@ -63,6 +57,24 @@ function I32Lt(x: i32): i32
     return 2
 }
 
+function U64LeMax(x: u64): i32
+{
+    if x <= 0xFFFFFFFFFFFFFFFFul return 1
+    return 2
+}
+
+function U64GtHalf(x: u64): i32
+{
+    if x > 0x7FFFFFFFFFFFFFFFul return 1
+    return 2
+}
+
+function U64LtHalf(x: u64): i32
+{
+    if x < 0x8000000000000000ul return 1
+    return 2
+}
+
 function Main()
 {
     Console.WriteLine(U64Le(1ul).ToString())
@@ -70,7 +82,13 @@ function Main()
     Console.WriteLine(U64Gt(1ul).ToString())
     Console.WriteLine(I64Le(1).ToString())
     Console.WriteLine(I32Lt(45).ToString())
+    Console.WriteLine(U64LeMax(0xFFFFFFFFFFFFFFFFul).ToString())
+    Console.WriteLine(U64GtHalf(0x8000000000000000ul).ToString())
+    Console.WriteLine(U64LtHalf(0x7FFFFFFFFFFFFFFFul).ToString())
+    Console.WriteLine(U64GtHalf(1ul).ToString())
 }";
+
+        private const string Expected = "1\n1\n1\n5\n1\n1\n1\n1\n2\n";
 
         private static string RunNative(string target)
         {
@@ -83,13 +101,10 @@ function Main()
             return NativeEmitTests.Run(exePath).Replace("\r\n", "\n");
         }
 
-        /// <summary>正确语义：u64 `&lt;=` 真、u64 `&lt;` 真、u64 `&gt;` 真、i64 `&lt;=` 与 i32 `&lt;` 正常。</summary>
         [Fact]
-        public void X64_U64OrderedCompare_IsCorrect() => Assert.Equal("1\n1\n1\n5\n1\n", RunNative("windows-x64"));
+        public void X64_U64OrderedCompare_IsCorrect() => Assert.Equal(Expected, RunNative("windows-x64"));
 
-        /// <summary>x86 现状：前两行 u64 `&lt;`/`&lt;=` 恒假（返回 2），`&gt;` 与 i64/i32 比较正常。</summary>
         [Fact]
-        [Trait("Category", "KnownIssue")]
-        public void X86_U64OrderedCompare_CurrentlyBroken() => Assert.Equal("2\n2\n1\n5\n1\n", RunNative("windows-x86"));
+        public void X86_U64OrderedCompare_IsCorrect() => Assert.Equal(Expected, RunNative("windows-x86"));
     }
 }

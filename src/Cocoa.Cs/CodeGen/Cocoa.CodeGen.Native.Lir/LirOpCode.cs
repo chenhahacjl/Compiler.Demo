@@ -49,6 +49,7 @@ namespace Cocoa.CodeGen.Native.Lir
 
         // 比较（Cmp 设标志，Setcc 紧随使用；Jcc 配最近一次 Cmp 的标志）
         Cmp,         // Cmp <srcA> <srcB>
+        CmpU,        // CmpU <srcA> <srcB> 无符号比较（x86 64 位三路高 32 位按无符号排序，修复 u64 </<= 恒假）
         Setcc,       // Setcc <dst> <cond>
 
         // 分支
