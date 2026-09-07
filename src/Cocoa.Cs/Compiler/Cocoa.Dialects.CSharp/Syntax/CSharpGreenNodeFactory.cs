@@ -526,7 +526,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         private static bool IsModifierToken(SyntaxKind kind) => kind is
             SyntaxKind.PublicKeyword or SyntaxKind.PrivateKeyword or SyntaxKind.InternalKeyword or SyntaxKind.ProtectedKeyword
             or SyntaxKind.StaticKeyword or SyntaxKind.AbstractKeyword or SyntaxKind.SealedKeyword
-            or SyntaxKind.ExternKeyword or SyntaxKind.ReadonlyKeyword;
+            or SyntaxKind.ExternKeyword or SyntaxKind.ReadonlyKeyword or SyntaxKind.ParamsKeyword;
 
         private static bool IsByRefModifierToken(SyntaxKind kind) => kind is
             SyntaxKind.RefKeyword or SyntaxKind.OutKeyword;

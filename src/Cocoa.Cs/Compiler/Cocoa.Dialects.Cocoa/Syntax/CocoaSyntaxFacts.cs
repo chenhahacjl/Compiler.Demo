@@ -154,6 +154,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     return SyntaxKind.OverrideKeyword;
                 case "partial":
                     return SyntaxKind.PartialKeyword;
+                case "params":
+                    return SyntaxKind.ParamsKeyword;
                 case "protected":
                     return SyntaxKind.ProtectedKeyword;
                 case "readonly":
@@ -387,6 +389,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     return "override";
                 case SyntaxKind.PartialKeyword:
                     return "partial";
+                case SyntaxKind.ParamsKeyword:
+                    return "params";
                 case SyntaxKind.ProtectedKeyword:
                     return "protected";
                 case SyntaxKind.ReadonlyKeyword:

@@ -24,7 +24,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public override CocoaSyntaxKind Kind => CocoaSyntaxKind.Parameter;
 
         public SyntaxToken? Modifier { get; }
-        public bool IsByRef => Modifier != null;
+        public bool IsByRef => Modifier?.Kind is SyntaxKind.OutKeyword or SyntaxKind.RefKeyword;
+        public bool IsParams => Modifier?.Kind == SyntaxKind.ParamsKeyword;
 
         public SyntaxToken Identifier { get; }
         public TypeClauseSyntax Type { get; }

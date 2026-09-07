@@ -129,6 +129,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             var isOut = syntax.Modifier?.Kind == SSyntax.SyntaxKind.OutKeyword;
             var isRef = syntax.Modifier?.Kind == SSyntax.SyntaxKind.RefKeyword;
+            var isParams = syntax.Modifier?.Kind == SSyntax.SyntaxKind.ParamsKeyword;
 
             object? defaultValue = null;
             var hasDefault = false;
@@ -142,7 +143,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
             }
 
-            return new ParameterSymbol(name, type, ordinal, isOut, isRef, defaultValue: defaultValue, hasDefault: hasDefault);
+            return new ParameterSymbol(name, type, ordinal, isOut, isRef, defaultValue: defaultValue, hasDefault: hasDefault, isParams: isParams);
         }
 
         /// <summary>可选参数（语言后置件）：必需形参个数 = 末尾可选形参之前的数量；调用实参数不得少于该值。</summary>
@@ -155,6 +156,55 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             return count;
+        }
+
+        /// <summary>params + 可选：调用实参下限 = 末尾可选/params 之前的必需形参数。</summary>
+        private static int MinArgumentCount(ImmutableArray<ParameterSymbol> parameters)
+        {
+            var count = parameters.Length;
+            for (var i = count - 1; i >= 0; i--)
+            {
+                if (parameters[i].IsParams || parameters[i].HasDefaultValue)
+                {
+                    count--;
+                    continue;
+                }
+
+                break;
+            }
+
+            return count;
+        }
+
+        private static bool HasParamsTail(ImmutableArray<ParameterSymbol> parameters) => ParamArrayIndex(parameters) >= 0;
+
+        private static int ParamArrayIndex(ImmutableArray<ParameterSymbol> parameters)
+        {
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                if (parameters[i].IsParams)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>params 可变参数（语言后置件）：实参数需 ≥ 必需（MinArgumentCount），无 params 时不得超过形参数。</summary>
+        private static bool ArgumentCountFits(ImmutableArray<ParameterSymbol> parameters, int count)
+        {
+            if (count < MinArgumentCount(parameters))
+            {
+                return false;
+            }
+
+            if (!HasParamsTail(parameters) && count > parameters.Length)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>泛型方法类型参数绑定（6e-M20）：建 TypeParameterSymbol 列表（重名/与类类型参数同名诊断）。</summary>

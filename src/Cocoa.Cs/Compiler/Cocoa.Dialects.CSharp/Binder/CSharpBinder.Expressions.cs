@@ -1745,6 +1745,30 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             for (var i = 0; i < function.Parameters.Length; i++)
             {
                 var parameter = function.Parameters[i];
+                if (parameter.IsParams)
+                {
+                    // params 尾参（语言后置件）：收集命名值 + 余下全部位置实参 → 打包成元素数组。
+                    var elementType = parameter.Type.ElementType ?? TypeSymbol.Int32;
+                    var items = ImmutableArray.CreateBuilder<BoundExpression>();
+                    if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var paramsNamedValue))
+                    {
+                        items.Add(BindConversion(syntax.Location, paramsNamedValue, elementType));
+                    }
+
+                    while (positionalIndex < positionalValues.Count)
+                    {
+                        items.Add(BindConversion(syntax.Location, positionalValues[positionalIndex], elementType));
+                        positionalIndex++;
+                    }
+
+                    reordered.Add(new BoundArrayCreationExpression(
+                        syntax,
+                        parameter.Type,
+                        new BoundLiteralExpression(syntax, items.Count, TypeSymbol.Int32),
+                        items.ToImmutable()));
+                    continue;
+                }
+
                 if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var namedValue))
                 {
                     reordered.Add(BindArgumentConversion(syntax.Location, namedValue, parameter));
@@ -1788,8 +1812,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             if (candidates.Length == 1)
             {
                 var only = candidates[0];
-                if (arguments.Length != only.Parameters.Length &&
-                    (arguments.Length < RequiredParameterCount(only.Parameters) || arguments.Length > only.Parameters.Length))
+                if (!ArgumentCountFits(only.Parameters, arguments.Length))
                 {
                     ReportArgumentCountMismatch(syntax, only);
                     return null;
@@ -1806,8 +1829,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             if (candidates.Length == 1)
             {
                 var only = candidates[0];
-                if (arguments.Length != only.Parameters.Length &&
-                    (arguments.Length < RequiredParameterCount(only.Parameters) || arguments.Length > only.Parameters.Length))
+                if (!ArgumentCountFits(only.Parameters, arguments.Length))
                 {
                     _diagnostics.ReportWrongArgumentCount(location, name, only.Parameters.Length, arguments.Length);
                     return null;
@@ -1824,31 +1846,32 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var viable = new List<(FunctionSymbol Function, int Score)>();
             foreach (var candidate in candidates)
             {
-                if (candidate.Parameters.Length != arguments.Length &&
-                    (arguments.Length < RequiredParameterCount(candidate.Parameters) || arguments.Length > candidate.Parameters.Length))
+                if (!ArgumentCountFits(candidate.Parameters, arguments.Length))
                 {
                     continue;
                 }
 
+                var paramsIndex = ParamArrayIndex(candidate.Parameters);
                 var score = 0;
                 var ok = true;
                 for (var i = 0; i < arguments.Length; i++)
                 {
+                    var effectiveIndex = i < candidate.Parameters.Length ? i : paramsIndex;
                     // byref 对应过滤（6e-M23 R3）：修饰符不匹配的候选直接出局（f(i32) 与 f(out i32) 不构成歧义）
-                    if (candidate.Parameters[i].IsByRef != arguments[i] is BoundByRefArgument)
+                    if (candidate.Parameters[effectiveIndex].IsByRef != arguments[i] is BoundByRefArgument)
                     {
                         ok = false;
                         break;
                     }
 
                     if (arguments[i] is BoundByRefArgument wrapped &&
-                        wrapped.IsRef != candidate.Parameters[i].IsRef)
+                        wrapped.IsRef != candidate.Parameters[effectiveIndex].IsRef)
                     {
                         ok = false;
                         break;
                     }
 
-                    var conversion = Conversion.Classify(arguments[i].Type, candidate.Parameters[i].Type);
+                    var conversion = Conversion.Classify(arguments[i].Type, candidate.Parameters[effectiveIndex].Type);
                     if (!conversion.Exists || !conversion.IsImplicit)
                     {
                         ok = false;
