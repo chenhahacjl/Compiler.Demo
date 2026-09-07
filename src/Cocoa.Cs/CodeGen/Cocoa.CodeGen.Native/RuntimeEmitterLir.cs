@@ -28,12 +28,8 @@ namespace Cocoa.CodeGen.Native
             "MultiByteToWideChar", "WideCharToMultiByte",
             // M2：ucrtbase → Win32（对标 .NET FileStream）
             "CreateFileW", "GetFileSizeEx", "SetFilePointerEx", "SetFilePointer", "CloseHandle", "CreateDirectoryW",
-        };
-
-        /// <summary>ucrtbase.dll 残留（M5 LaunchProcess 迁 CreateProcessW 后移除）。</summary>
-        private static readonly string[] UcrtImports =
-        {
-            "_wsystem",
+            // M5：LaunchProcess 迁 CreateProcessW（同步等待 + 取退出码）
+            "CreateProcessW", "WaitForSingleObject", "GetExitCodeProcess", "GetLastError",
         };
 
         private static readonly string[] BcryptImports =
@@ -67,7 +63,7 @@ namespace Cocoa.CodeGen.Native
 
             // 数据 key
             private string _heapBase = "", _heapPtr = "", _heapEnd = "", _rngState = "", _inputBuffer = "",
-                _fileBuffer = "", _fileBuffer2 = "", _fileBuffer3 = "", _rbMode = "", _wbMode = "", _rwMode = "", _emptyString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
+                _fileBuffer = "", _fileBuffer2 = "", _fileBuffer3 = "", _rbMode = "", _wbMode = "", _rwMode = "", _emptyString = "", _spaceString = "", _divZeroMessage = "", _stackOverflowMessage = "", _arrayBoundsMessage = "", _substringMessage = "", _newLine = "",
                 _zeroString = "", _negZeroString = "", _infinityString = "", _negInfinityString = "", _nanString = "",
                 _formatBuffer = "", _fmtBigBuf = "", _formatOne = "", _formatTen = "", _formatTrue = "", _formatFalse = "",
                 _formatZero = "", _formatHalf = "",
@@ -327,6 +323,7 @@ namespace Cocoa.CodeGen.Native
                 _wbMode = _program.AddData(LirDataItem.ByteArray(Prefix + "WbMode", new byte[] { (byte)'w', 0, (byte)'b', 0, 0, 0 }));
                 _rwMode = _program.AddData(LirDataItem.ByteArray(Prefix + "RwMode", new byte[] { (byte)'r', 0, (byte)'+', 0, (byte)'b', 0, 0, 0 }));
                 _emptyString = _program.AddData(LirDataItem.Utf16(Prefix + "EmptyString", ""));
+                _spaceString = _program.AddData(LirDataItem.Utf16(Prefix + "SpaceString", " "));
                 _divZeroMessage = _program.AddData(LirDataItem.Utf16(Prefix + "DivZeroMessage", "error: division by zero"));
                 _stackOverflowMessage = _program.AddData(LirDataItem.Utf16(Prefix + "StackOverflowMessage", "error: stack overflow"));
                 _arrayBoundsMessage = _program.AddData(LirDataItem.Utf16(Prefix + "ArrayBoundsMessage", "error: array index out of range"));
@@ -350,7 +347,6 @@ namespace Cocoa.CodeGen.Native
 
                 _program.Imports.AddRange(Kernel32Imports.Select(n => new LirImport("kernel32.dll", n, false)));
                 _program.Imports.Add(new LirImport("kernel32.dll", _tickCountImport, false));
-                _program.Imports.AddRange(UcrtImports.Select(n => new LirImport("ucrtbase.dll", n, true)));
                 _program.Imports.AddRange(BcryptImports.Select(n => new LirImport("bcrypt.dll", n, false)));
             }
 

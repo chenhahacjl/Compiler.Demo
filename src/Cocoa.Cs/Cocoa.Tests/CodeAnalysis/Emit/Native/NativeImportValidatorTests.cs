@@ -29,7 +29,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 {
     import kernel32.dll
     {
-        static stdcall function Six(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32): i32
+        static stdcall function Eight(a: i32, b: i32, c: i32, d: i32, e: i32, f: i32, g: i32, h: i32): i32
     }
 }
 
@@ -37,7 +37,7 @@ function Main(): i32
 {
     return 0
 }");
-            Assert.True(messages.Any(m => m.Contains("最多 5 个")), "got: " + string.Join(" | ", messages));
+            Assert.True(messages.Any(m => m.Contains("最多 7 个")), "got: " + string.Join(" | ", messages));
         }
 
         [Fact]

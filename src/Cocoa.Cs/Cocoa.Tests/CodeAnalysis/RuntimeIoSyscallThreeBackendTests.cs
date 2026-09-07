@@ -178,7 +178,7 @@ function Main(): i32
             }
         }
 
-        [Fact(Skip = "native _wsystem 子进程 cwd 继承语义待核（Y-P1 遗留：SetCurrentDirectoryW 后相对路径落盘位置与 runtime cwd 与预期不符）")]
+        [Fact]
         public void NativeE2e_LaunchProcessWorkingDir()
         {
             var dir = NewDir();

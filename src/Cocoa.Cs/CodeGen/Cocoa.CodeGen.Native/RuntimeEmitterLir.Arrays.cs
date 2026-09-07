@@ -425,7 +425,7 @@ Store(obj, 0, lenChars, 4);
             }
 
             // LaunchProcess(path:8, args:8, workdir:8) → i32 exit code
-            // Uses _wsystem(path + " " + args) from ucrtbase.dll；workdir 非空时临时 SetCurrentDirectoryW，等后恢复。
+            // CreateProcessW（kernel32，10 参）+ WaitForSingleObject + GetExitCodeProcess；workdir 经 lpCurrentDirectory。
             private void EmitLaunchProcess()
             {
                 var errLabel = NewLabel();
@@ -437,7 +437,7 @@ Store(obj, 0, lenChars, 4);
 
                 // Build command line: path + " " + args
                 var space = NewPtr();
-                LeaData(space, _emptyString);
+                LeaData(space, _spaceString);
                 var cmdConcat1 = NewPtr();
                 CallRuntime(cmdConcat1, "Concat", path, space);
                 var cmdLine = NewPtr();
@@ -460,7 +460,7 @@ Store(obj, 0, lenChars, 4);
                 var ch = NewReg(4);
                 var srcOff = NewPtr();
                 Mov(srcOff, di);
-                AddI(srcOff, srcOff, 2);
+                Shl(srcOff, srcOff, 1);
                 var srcAddr = NewPtr();
                 Lea(srcAddr, cmdLine, 4);
                 Add(srcAddr, srcAddr, srcOff);
@@ -470,7 +470,7 @@ Store(obj, 0, lenChars, 4);
                 Lea(dstAddr, cmdWbuf, 0);
                 var diBytes = NewPtr();
                 Mov(diBytes, di);
-                AddI(diBytes, diBytes, 2);
+                Shl(diBytes, diBytes, 1);
                 Add(dstAddr, dstAddr, diBytes);
                 Store(dstAddr, 0, ch, 2);
                 AddI(di, di, 1);
@@ -486,35 +486,82 @@ Store(obj, 0, lenChars, 4);
                 Add(termAddr, termAddr, termBytes);
                 Store(termAddr, 0, nullCh, 2);
 
-                // workdir 支持：非空时临时切换当前目录（SetCurrentDirectoryW），_wsystem 后恢复原 cwd。
-                // 缓冲分配：cmdWbuf=_fileBuffer2；workdir wide=_fileBuffer（WidePtrZ 主缓冲）；原 cwd＝_fileBuffer3。
-                var runPrompt = NewLabel();
-                var oldWbuf = NewPtr();
-                LeaData(oldWbuf, _fileBuffer3);
-                SysCallDll(null, "kernel32.dll", "GetCurrentDirectoryW", 2, false, C(4, 0x8000), oldWbuf);
+                // CreateProcessW：lpCurrentDirectory 直接给 workdir（非空→WidePtrZ；空→NULL）
+                var wdWide = NewPtr();
                 var wdLen = NewReg(4);
                 Load(wdLen, workdir, 0, 4);
+                var wdNull = NewLabel();
+                var wdReady = NewLabel();
                 Cmp(wdLen, 0);
-                Jcc(LirCond.Equal, runPrompt);
-                var wdWide = WidePtrZ(workdir);
-                SysCallDll(null, "kernel32.dll", "SetCurrentDirectoryW", 1, false, wdWide);
-                Mark(runPrompt);
+                Jcc(LirCond.Equal, wdNull);
+                Mov(wdWide, WidePtrZ(workdir));
+                Jmp(wdReady);
+                Mark(wdNull);
+                Mov(wdWide, NullPtr());
+                Mark(wdReady);
 
-                // _wsystem(cmdWbuf) → synchronous, returns exit code
+                // STARTUPINFOW（_fileBuffer3 基址）：清零再设 dwcbSize（x64=0x68、x86=0x44；缓冲零初始化不作假设）
+                var siPtr = NewPtr();
+                LeaData(siPtr, _fileBuffer3);
+                var siDwords = _isX64 ? 26 : 17;
+                var clearI = NewReg(4);
+                Const(clearI, 0);
+                var clearLoop = NewLabel();
+                var clearDone = NewLabel();
+                Mark(clearLoop);
+                Cmp(clearI, siDwords);
+                Jcc(LirCond.GreaterOrEqual, clearDone);
+                var clearOff = NewReg(4);
+                Mov(clearOff, clearI);
+                Shl(clearOff, clearOff, 2);
+                var siDst = NewPtr();
+                Mov(siDst, siPtr);
+                Add(siDst, siDst, clearOff);
+                Store(siDst, 0, C(4, 0), 4);
+                AddI(clearI, clearI, 1);
+                Jmp(clearLoop);
+                Mark(clearDone);
+                Store(siPtr, 0, C(4, _isX64 ? 0x68 : 0x44), 4);
+                // PROCESS_INFORMATION（紧随 si；退出码槽再 + 0x10）
+                var piPtr = NewPtr();
+                LeaData(piPtr, _fileBuffer3);
+                AddI(piPtr, piPtr, _isX64 ? 0x68 : 0x44);
+
+                // CreateProcessW(NULL, cmdWbuf, NULL, NULL, FALSE, 0, NULL, wdWide, &si, &pi) → 同步等待 + 取退出码
+                var ok = NewReg(4);
+                SysCallDll(ok, "kernel32.dll", "CreateProcessW", 10, false,
+                    NullPtr(), cmdWbuf, NullPtr(), NullPtr(), C(4, 0), C(4, 0), NullPtr(), wdWide, siPtr, piPtr);
+
+                Cmp(ok, 0);
+                Jcc(LirCond.Equal, errLabel);
+
+                var ps = _isX64 ? 8 : 4;
+                var hThread = NewPtr();
+                Load(hThread, piPtr, ps, ps);
+                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, hThread);
+
+                var hProcess = NewPtr();
+                Load(hProcess, piPtr, 0, ps);
+                SysCallDll(null, "kernel32.dll", "WaitForSingleObject", 2, false, hProcess, C(4, 0xFFFFFFFF));
+
+                var exitPtr = NewPtr();
+                LeaData(exitPtr, _fileBuffer3);
+                AddI(exitPtr, exitPtr, _isX64 ? 0x78 : 0x54);
+                SysCallDll(null, "kernel32.dll", "GetExitCodeProcess", 2, false, hProcess, exitPtr);
                 var exitCode = NewReg(4);
-                SysCallDll(exitCode, "ucrtbase.dll", "_wsystem", 1, true, cmdWbuf);
-
-                // 恢复原 cwd
-                SysCallDll(null, "kernel32.dll", "SetCurrentDirectoryW", 1, false, oldWbuf);
+                Load(exitCode, exitPtr, 0, 4);
+                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, hProcess);
 
                 StoreRet(exitCode);
                 Jmp(doneLabel);
 
                 Mark(errLabel);
-                StoreRet(C(4, -1));
+                var lastError = NewReg(4);
+                SysCallDll(lastError, "kernel32.dll", "GetLastError", 0, false);
+                StoreRet(lastError);
 
                 Mark(doneLabel);
-                EndFunction(_currentFunction!, 8);
+                EndFunction(_currentFunction!, 4);
             }
 
         }

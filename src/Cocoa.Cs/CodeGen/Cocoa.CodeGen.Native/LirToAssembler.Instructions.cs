@@ -1807,43 +1807,18 @@ namespace Cocoa.CodeGen.Native
                     _a.Mov(ToSize(RegisterSize(_sysArgs[i])), target, X64Register.RAX);
                 }
 
-                if (argCount >= 5)
+                // 栈参（第 5 参起，[RSP+0x20 + (i-4)*8]）——循环装载，任意参数量
+                for (var i = 4; i < argCount; i++)
                 {
-                    if (_sysArgs.Count > 4)
+                    var stackOffset = 0x20 + (i - 4) * 8;
+                    if (_sysArgs.Count > i)
                     {
-                        LoadSlot(X64Register.EAX, _sysArgs[4], RegisterSize(_sysArgs[4]));
-                        _a.Mov(ToSize(RegisterSize(_sysArgs[4])), new X64MemoryOperand(X64Register.RSP, 0x20), X64Register.RAX);
+                        LoadSlot(X64Register.EAX, _sysArgs[i], RegisterSize(_sysArgs[i]));
+                        _a.Mov(ToSize(RegisterSize(_sysArgs[i])), new X64MemoryOperand(X64Register.RSP, stackOffset), X64Register.RAX);
                     }
                     else
                     {
-                        _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RSP, 0x20), 0);
-                    }
-                }
-
-                if (argCount >= 6)
-                {
-                    // 第 6 参落在 shadow 尾（[RSP+0x28]），0x30 帧恰好容纳（48字节 mod 16）
-                    if (_sysArgs.Count > 5)
-                    {
-                        LoadSlot(X64Register.EAX, _sysArgs[5], RegisterSize(_sysArgs[5]));
-                        _a.Mov(ToSize(RegisterSize(_sysArgs[5])), new X64MemoryOperand(X64Register.RSP, 0x28), X64Register.RAX);
-                    }
-                    else
-                    {
-                        _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RSP, 0x28), 0);
-                    }
-                }
-
-                if (argCount >= 7)
-                {
-                    if (_sysArgs.Count > 6)
-                    {
-                        LoadSlot(X64Register.EAX, _sysArgs[6], RegisterSize(_sysArgs[6]));
-                        _a.Mov(ToSize(RegisterSize(_sysArgs[6])), new X64MemoryOperand(X64Register.RSP, 0x30), X64Register.RAX);
-                    }
-                    else
-                    {
-                        _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RSP, 0x30), 0);
+                        _a.Mov(X64Size.Qword, new X64MemoryOperand(X64Register.RSP, stackOffset), 0);
                     }
                 }
 
@@ -1861,17 +1836,7 @@ namespace Cocoa.CodeGen.Native
             {
         // 数据移动
                 var pushed = 0;
-                if (argCount >= 6)
-                {
-                    pushed += PushSysCallArg(5);
-                }
-
-                if (argCount >= 5)
-                {
-                    pushed += PushSysCallArg(4);
-                }
-
-                for (var i = Math.Min(argCount, 4) - 1; i >= 0; i--)
+                for (var i = argCount - 1; i >= 0; i--)
                 {
                     pushed += PushSysCallArg(i);
                 }

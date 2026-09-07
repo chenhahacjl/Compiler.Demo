@@ -25,7 +25,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 function Main(): i32
 {
-    var exitCode = System.Syscall.ProcessSyscall.LaunchProcess(""cmd.exe"", ""/c echo hello"", """")
+    var exitCode = System.Syscall.ProcessSyscall.LaunchProcess(""cmd.exe"", ""/c exit 0"", """")
     System.Syscall.ConsoleSyscall.WriteLine(exitCode)
     return 0
 }";
@@ -42,14 +42,14 @@ function Main(): i32
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
         }
 
-        private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name)
+        private static (int ExitCode, string Stdout) EmitNativeAndRun(string source, string name, string target)
         {
             var syntaxTree = SyntaxTree.Parse(source);
             var compilation = Compilation.Create("Main", References(), syntaxTree);
-            var platform = new TargetPlatform(TargetOS.Windows, Architecture.X64);
+            TargetPlatform.TryParse(target, out var platform);
             var directory = Path.Combine(Path.GetTempPath(), "cocoa-launchprocess-native");
             Directory.CreateDirectory(directory);
-            var exePath = Path.Combine(directory, name + ".exe");
+            var exePath = Path.Combine(directory, name + "-" + platform.Arch + ".exe");
             var diagnostics = compilation.EmitNative(name, exePath, platform);
             Assert.True(diagnostics.IsEmpty, string.Join("\n", diagnostics.Select(d => d.Message)));
             Assert.True(File.Exists(exePath));
@@ -79,10 +79,12 @@ function Main(): i32
             return (process.ExitCode, stdout);
         }
 
-        [Fact]
-        public void Native_LaunchProcess_Simple()
+        [Theory]
+        [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
+        public void Native_LaunchProcess_Simple(string target)
         {
-            var (exitCode, stdout) = EmitNativeAndRun(SimpleProgram, "lp-simple");
+            var (exitCode, stdout) = EmitNativeAndRun(SimpleProgram, "lp-simple", target);
             Assert.Equal(0, exitCode);
             Assert.Contains("0", stdout);
         }
