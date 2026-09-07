@@ -253,6 +253,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             {
                 left = ParsePrimaryExpression();
                 left = ParsePostfixExpressions(left);
+
+                // switch 表达式（语言后置件）：`x switch { 1 => a, _ => b }` 降级为嵌套条件表达式
+                if (Current.Kind == SyntaxKind.SwitchKeyword)
+                {
+                    left = ParseSwitchExpression(left);
+                }
             }
 
             while (true)
@@ -363,6 +369,61 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             var expression = ParseBinaryExpression(6);
 
             return new ByRefArgumentExpressionSyntax(_syntaxTree, keyword, expression);
+        }
+
+        /// <summary>switch 表达式（语言后置件）：`x switch { 1 => a, _ => b }` 降级为嵌套条件表达式（零 binder/发射改动）。</summary>
+        private ExpressionSyntax ParseSwitchExpression(ExpressionSyntax operand)
+        {
+            MatchToken(SyntaxKind.SwitchKeyword);
+            MatchToken(SyntaxKind.OpenBraceToken);
+
+            var arms = new List<(ExpressionSyntax? CaseValue, ExpressionSyntax Result)>();
+            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                ExpressionSyntax? caseValue = null;
+                if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text == "_")
+                {
+                    NextToken(); // default arm `_`
+                }
+                else
+                {
+                    caseValue = ParseExpression();
+                }
+
+                MatchToken(SyntaxKind.FatArrowToken);
+                var result = ParseExpression();
+                arms.Add((caseValue, result));
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                }
+            }
+
+            MatchToken(SyntaxKind.CloseBraceToken);
+
+            // 降级：自后向前构造 `operand == case ? result : rest` 链；default(`_`) 为最终兜底
+            ExpressionSyntax? resultExpr = null;
+            for (var i = arms.Count - 1; i >= 0; i--)
+            {
+                var (caseValue, armResult) = arms[i];
+                if (caseValue == null)
+                {
+                    resultExpr = armResult;
+                    continue;
+                }
+
+                var equals = new SyntaxToken(_syntaxTree, SyntaxKind.EqualsEqualsToken, caseValue.Span.Start, "==", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                var condition = new BinaryExpressionSyntax(_syntaxTree, operand, equals, caseValue);
+                var question = new SyntaxToken(_syntaxTree, SyntaxKind.QuestionToken, armResult.Span.Start, "?", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                var colon = new SyntaxToken(_syntaxTree, SyntaxKind.ColonToken, armResult.Span.Start, ":", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                resultExpr = new ConditionalExpressionSyntax(_syntaxTree, condition, question, armResult, colon, resultExpr ?? armResult);
+            }
+
+            return resultExpr ?? new LiteralExpressionSyntax(_syntaxTree, new SyntaxToken(_syntaxTree, SyntaxKind.NumberToken, operand.Span.Start, "0", 0, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
         }
 
         private bool IsLambdaParenStart()
