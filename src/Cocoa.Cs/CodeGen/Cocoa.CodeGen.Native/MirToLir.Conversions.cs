@@ -207,9 +207,9 @@ namespace Cocoa.CodeGen.Native
             var count = arguments.Length;
 
         // 函数调用
-            if (count > 5)
+            if (count > 7)
             {
-                throw new Exception($"Extern function '{function.Name}' has {count} parameters; native backend supports at most 5");
+                throw new Exception($"Extern function '{function.Name}' has {count} parameters; native backend supports at most 7 (Win32 8+ 参需 shim)");
             }
 
             for (var i = 0; i < count; i++)

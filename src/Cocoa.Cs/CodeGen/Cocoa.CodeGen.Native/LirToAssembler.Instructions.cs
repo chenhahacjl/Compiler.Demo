@@ -1782,9 +1782,14 @@ namespace Cocoa.CodeGen.Native
 
             if (_isX64)
             {
-                // fastcall + shadow space：0x20 shadow + argCount-4 栈槽；向上取整到 0x20 对齐
+                // fastcall + shadow space：0x20 shadow + argCount-4 栈槽；调用时 RSP 须 16 对齐——
+                // frameSize 向上取整到 16（5 参 0x30、6 参 0x30、7 参 0x38→0x40），否则被调函数内部 SSE（movaps）崩 0xC0000005
                 var stackSlots = argCount > 4 ? Math.Max(2, argCount - 4) : 2;
                 var frameSize = 0x20 + stackSlots * 8;
+                if ((frameSize & 0xF) != 0)
+                {
+                    frameSize += 8;
+                }
                 var aligned = EmitAlign(0);
                 _a.Sub(X64Size.Qword, X64Register.RSP, frameSize);
                 _stackDepth += frameSize / 8;
@@ -1858,39 +1863,19 @@ namespace Cocoa.CodeGen.Native
                 var pushed = 0;
                 if (argCount >= 6)
                 {
-                    if (_sysArgs.Count > 5)
-                    {
-                        LoadSlot(X64Register.EAX, _sysArgs[5], RegisterSize(_sysArgs[5]));
-                        _a.Push(X64Register.EAX);
-                    }
-                    else
-                    {
-                        _a.Push(0);
-                    }
-                    pushed++;
+                    pushed += PushSysCallArg(5);
                 }
 
                 if (argCount >= 5)
                 {
-                    if (_sysArgs.Count > 4)
-                    {
-                        LoadSlot(X64Register.EAX, _sysArgs[4], RegisterSize(_sysArgs[4]));
-                        _a.Push(X64Register.EAX);
-                    }
-                    else
-                    {
-                        _a.Push(0);
-                    }
-                    pushed++;
+                    pushed += PushSysCallArg(4);
                 }
 
                 for (var i = Math.Min(argCount, 4) - 1; i >= 0; i--)
                 {
-                    LoadSlot(X64Register.EAX, _sysArgs[i], RegisterSize(_sysArgs[i]));
-                    _a.Push(X64Register.EAX);
-                    pushed++;
-                    _stackDepth++;
+                    pushed += PushSysCallArg(i);
                 }
+                _stackDepth += pushed;
 
                 _a.CallRip(importSlot);
                 _stackDepth -= pushed;
@@ -1905,10 +1890,16 @@ namespace Cocoa.CodeGen.Native
             {
                 if (!_isX64 && RegisterSize(dst) == 8)
                 {
-                    // x86 8 字节返回值约定：EDX:EAX → 双槽（低 dword 在 slot，高 dword 在 slot-4，对齐 EmitStoreRet）
+                    // x86 8 字节返回值：I64 用 EDX:EAX 双槽；Addr（32 位指针）只 EAX 低 dword，高 4 字节清零
+                    // （EDX 对 32 位返回是垃圾，写高槽会把指针高 32 位污染 → 0xC0000005）。
                     var slot = GetSlotOffset(dst);
                     _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot), X64Register.EAX);
-                    _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), X64Register.EDX);
+                    _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4),
+                        dst.Type == LirType.I64 ? X64Register.EDX : X64Register.EAX);
+                    if (dst.Type != LirType.I64)
+                    {
+                        _a.Mov(X64Size.Dword, new X64MemoryOperand(X64Register.RBP, slot - 4), 0);
+                    }
                 }
                 else
                 {
@@ -1917,6 +1908,36 @@ namespace Cocoa.CodeGen.Native
             }
 
             _sysArgs.Clear();
+        }
+
+        /// <summary>
+        /// x86（cdecl/stdcall）SysCall 参数压栈：真 8 字节值（I64）压两个 dword（高 dword 先压、低 dword 后压，
+        /// 对齐 cdecl 8 字节参数布局）；Addr/I32/F32 压单 dword（x86 32 位指针/窄值只低 4 字节有意义）。
+        /// 此前一律只 Push EAX 或一律双 push 都会导致参数错位/栈不平衡。返回压入的 dword 数。
+        /// </summary>
+        private int PushSysCallArg(int index)
+        {
+            if (index < _sysArgs.Count)
+            {
+                var reg = _sysArgs[index];
+                var slot = GetSlotOffset(reg);
+                if (reg.Type == LirType.I64)
+                {
+                    _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot - 4)); // 高 dword
+                    _a.Push(X64Register.EAX);
+                    _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot)); // 低 dword
+                    _a.Push(X64Register.EAX);
+                    return 2;
+                }
+
+                // Addr（x86 32 位指针）/ I32 / F32：单 dword（读低槽）
+                _a.Mov(X64Size.Dword, X64Register.EAX, new X64MemoryOperand(X64Register.RBP, slot));
+                _a.Push(X64Register.EAX);
+                return 1;
+            }
+
+            _a.Push(0);
+            return 1;
         }
 
         // ------------------------------------------------------------------

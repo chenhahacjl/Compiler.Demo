@@ -22,16 +22,18 @@ namespace Cocoa.CodeGen.Native
             "GetStdHandle", "WriteFile", "ReadFile", "ExitProcess", "VirtualAlloc", "VirtualFree",
             "GetFileType", "ReadConsoleW", "WriteConsoleW", "GetCommandLineW", "Sleep",
             "ReadConsoleInputW", "GetNumberOfConsoleInputEvents", "Beep",
-            // Y-P0-1：文件 IO / 环境 syscall（G7-部分补齐；文件读写经 msvcrt 低参 API，避开 6-7 参 ABI 上限。
+            // Y-P0-1：文件 IO / 环境 syscall（G7-部分补齐；文件读写经 Win32 kernel32 低参 API，对标 .NET FileStream 底层）。
             "GetFileAttributesW", "DeleteFileW", "CopyFileW", "GetCurrentDirectoryW",
             "SetCurrentDirectoryW", "GetEnvironmentVariableW", "GetModuleFileNameW",
             "MultiByteToWideChar", "WideCharToMultiByte",
+            // M2：ucrtbase → Win32（对标 .NET FileStream）
+            "CreateFileW", "GetFileSizeEx", "SetFilePointerEx", "SetFilePointer", "CloseHandle", "CreateDirectoryW",
         };
 
-        /// <summary>ucrtbase.dll 文件 IO（cdecl；`fread`/`fwrite`/`fclose` 无下划线导出，`_wfopen`/`_fseeki64`/`_ftelli64` 保留下划线）。</summary>
+        /// <summary>ucrtbase.dll 残留（M5 LaunchProcess 迁 CreateProcessW 后移除）。</summary>
         private static readonly string[] UcrtImports =
         {
-            "_wfopen", "fread", "fwrite", "fclose", "_fseeki64", "_ftelli64", "_wsystem", "_wmkdir",
+            "_wsystem",
         };
 
         private static readonly string[] BcryptImports =
@@ -278,10 +280,14 @@ namespace Cocoa.CodeGen.Native
                 EmitFileOpenHandle();
                 _ = BeginFunctionTyped("FileSizeHandle", new[] { 8 }, LirType.Addr);
                 EmitFileSizeHandle();
-                EmitSimpleImports(); // FileSeekHandle/FileTellHandle/FileCloseHandle（声明式）
-                _ = BeginFunctionTyped("FileReadHandle", new[] { 8, 8, 8, 8 }, LirType.Addr);
+                _ = BeginFunctionTyped("FileSeekHandle", new[] { 8, 8, 4 }, LirType.Addr, LirType.I64, LirType.I32);
+                EmitFileSeekHandle();
+                _ = BeginFunctionTyped("FileTellHandle", new[] { 8 }, LirType.Addr);
+                EmitFileTellHandle();
+                EmitSimpleImports(); // FileCloseHandle（声明式）
+                _ = BeginFunctionTyped("FileReadHandle", new[] { 8, 8, 4, 4 }, LirType.Addr, LirType.Addr, LirType.I32, LirType.I32);
                 EmitFileReadHandle();
-                _ = BeginFunctionTyped("FileWriteHandle", new[] { 8, 8, 8, 8 }, LirType.Addr);
+                _ = BeginFunctionTyped("FileWriteHandle", new[] { 8, 8, 4, 4 }, LirType.Addr, LirType.Addr, LirType.I32, LirType.I32);
                 EmitFileWriteHandle();
                 _ = BeginFunctionTyped("StringFromBytes", new[] { 8 }, LirType.Addr);
                 EmitStringFromBytes();
@@ -435,10 +441,8 @@ namespace Cocoa.CodeGen.Native
 
             private static readonly SimpleImportDef[] SimpleImports =
             {
-                // FileStream 句柄原语（cdecl；x64 参数寄存器 + 返回约定统一）
-                new("FileTellHandle", "ucrtbase.dll", "_ftelli64", 8, new[] { 8 }, true, LirType.Addr),
-                new("FileSeekHandle", "ucrtbase.dll", "_fseeki64", 0, new[] { 8, 8, 8 }, true, LirType.Addr),
-                new("FileCloseHandle", "ucrtbase.dll", "fclose", 0, new[] { 8 }, true, LirType.Addr),
+                // FileStream 句柄原语（Win32 kernel32；x64 参数寄存器 + 返回约定统一）
+                new("FileCloseHandle", "kernel32.dll", "CloseHandle", 0, new[] { 8 }, false, LirType.Addr),
             };
 
             private void EmitSimpleImports()

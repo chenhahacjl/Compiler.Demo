@@ -64,11 +64,11 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 4);
             }
 
-            // CreateDirectory(path:8) → void：ucrt _wmkdir（成功 0；已存在/失败均忽略——BCL 幂等）
+            // CreateDirectory(path:8) → void：Win32 CreateDirectoryW（成功/已存在均忽略——BCL 幂等）
             private void EmitCreateDirectory()
             {
                 var p = WidePtrZ(_args[0]);
-                SysCallDll(null, "ucrtbase.dll", "_wmkdir", 1, true, p);
+                SysCallDll(null, "kernel32.dll", "CreateDirectoryW", 2, false, p, NullPtr());
                 EndFunction(_currentFunction!, 0);
             }
 
@@ -96,7 +96,7 @@ namespace Cocoa.CodeGen.Native
                 var missing = NewLabel();
                 var done = NewLabel();
                 var need = NewReg(4);
-                SysCall(need, "GetEnvironmentVariableW", 3, p, C(8, 0), C(4, 0));
+                SysCall(need, "GetEnvironmentVariableW", 3, p, NullPtr(), C(4, 0));
                 Cmp(need, 0);
                 Jcc(LirCond.Equal, missing);
                 var needBytes = NewReg(4);
@@ -129,7 +129,7 @@ namespace Cocoa.CodeGen.Native
                 var empty = NewLabel();
                 var done = NewLabel();
                 var need = NewReg(4);
-                SysCall(need, "GetCurrentDirectoryW", 2, C(4, 0), C(8, 0));
+                SysCall(need, "GetCurrentDirectoryW", 2, C(4, 0), NullPtr());
                 Cmp(need, 0);
                 Jcc(LirCond.Equal, empty);
                 var buf = NewPtr();
@@ -161,7 +161,7 @@ namespace Cocoa.CodeGen.Native
                 LeaData(buf, _fileBuffer);
                 var cap = C(4, 0x4000);
                 var actual = NewReg(4);
-                SysCall(actual, "GetModuleFileNameW", 3, C(8, 0), buf, cap);
+                SysCall(actual, "GetModuleFileNameW", 3, NullPtr(), buf, cap);
                 Cmp(actual, 0);
                 Jcc(LirCond.Equal, empty);
                 Cmp(actual, cap);
@@ -196,25 +196,26 @@ namespace Cocoa.CodeGen.Native
                 var fail = NewLabel();
                 var done = NewLabel();
                 var pb = WidePtrZ(_args[0]);
-                var rb = NewPtr();
-                LeaData(rb, _rbMode);
                 var fp = NewPtr();
                 var obj = NewPtr();
                 Const(obj, 0);
-                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pb, rb);
-                Cmp(fp, 0);
-                Jcc(LirCond.Equal, fail);
+                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pb, C(4, 0x80000000), C(4, 3), NullPtr(), C(4, 3), C(4, 0x80), NullPtr());
+                EmitCheckInvalidHandle(fp, fail);
                 var buf = NewPtr();
                 CallRuntime(buf, "Alloc", C(4, 0x8000));
                 Cmp(buf, 0);
                 Jcc(LirCond.Equal, fail);
                 var read = NewReg(4);
-                SysCallDll(read, "ucrtbase.dll", "fread", 4, true, buf, C(4, 1), C(4, 0x8000), fp);
-                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+                Const(read, 0);
+                var readPtr = NewPtr();
+                LeaSlot(readPtr, read);
+                SysCallDll(null, "kernel32.dll", "ReadFile", 5, false, fp, buf, C(4, 0x8000), readPtr, NullPtr());
+                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, fp);
+                Load(read, readPtr, 0, 4); // 共享缓冲 → read 寄存器槽
                 Cmp(read, 0);
-                Jcc(LirCond.Equal, fail);
+                Jcc(LirCond.LessOrEqual, fail);
                 var wc = NewReg(4);
-                SysCall(wc, "MultiByteToWideChar", 6, C(4, 65001), C(4, 0), buf, read, C(8, 0), C(4, 0));
+                SysCall(wc, "MultiByteToWideChar", 6, C(4, 65001), C(4, 0), buf, read, NullPtr(), C(4, 0));
                 Cmp(wc, 0);
                 Jcc(LirCond.Equal, fail);
                 var objSize = NewReg(4);
@@ -403,24 +404,23 @@ namespace Cocoa.CodeGen.Native
                 Mark(encodeDone);
                 // 复制路径到 _fileBuffer 并补 null（CO 串无 null 结尾；2KB 缓冲足够，超长路径截断属文档限制）。
                 var pb = WidePtrZ(_args[0]);
-                var wb = NewPtr();
-                LeaData(wb, _wbMode);
                 var fp = NewPtr();
-                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pb, wb);
-                Cmp(fp, 0);
-                Jcc(LirCond.Equal, fail);
+                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pb, C(4, 0x40000000), C(4, 3), NullPtr(), C(4, 2), C(4, 0x80), NullPtr());
+                EmitCheckInvalidHandle(fp, fail);
                 var written = NewReg(4);
-                SysCallDll(written, "ucrtbase.dll", "fwrite", 4, true, buf, C(4, 1), count, fp);
-                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+                Const(written, 0);
+                var writtenPtr = NewPtr();
+                LeaSlot(writtenPtr, written);
+                SysCallDll(null, "kernel32.dll", "WriteFile", 5, false, fp, buf, count, writtenPtr, NullPtr());
+                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, fp);
                 Cmp(written, count);
                 Jcc(LirCond.NotEqual, fail);
                 Mark(fail);
                 EndFunction(_currentFunction!, 0);
             }
 
-            // FileReadAllBytes(path:8) → u8[]：_wfopen(rb) → 计长读（fread 块循环累加）→ 文件回零 →
-            // NewArray(len, elementSize=1) → 再读并逐字节拷入 arr+8。失败/缺文件 → 0 长度数组。
-            // 免 _ftelli64（x86 返回 i64 不便）；二次读与计长读同序（rb 文件可重复读）。
+            // FileReadAllBytes(path:8) → u8[]：CreateFile(GENERIC_READ, OPEN_EXISTING) → GetFileSizeEx →
+            // NewArray(size, 1) → ReadFile 循环拷入 arr+8 → CloseHandle。失败/缺文件 → 0 长度数组。
             private void EmitFileReadAllBytes()
             {
                 var fail = NewLabel();
@@ -428,77 +428,50 @@ namespace Cocoa.CodeGen.Native
                 var result = NewPtr();
 
                 var pb = WidePtrZ(_args[0]);
-                var rb = NewPtr();
-                LeaData(rb, _rbMode);
                 var fp = NewPtr();
-                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pb, rb);
-                Cmp(fp, 0);
-                Jcc(LirCond.Equal, fail);
+                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pb, C(4, 0x80000000), C(4, 3), NullPtr(), C(4, 3), C(4, 0x80), NullPtr());
+                EmitCheckInvalidHandle(fp, fail);
 
-                var chunk = C(4, 0x2000);
-                var buf = NewPtr();
-                CallRuntime(buf, "Alloc", chunk);
-                Cmp(buf, 0);
-                Jcc(LirCond.Equal, fail);
-
-                // 计长：循环读 fread(buf,1,chunk,fp)，n>0 累加；读到不足 chunk 即 EOF
+                var size = NewReg(8);
+                Const(size, 0);
+                var sizePtr = NewPtr();
+                LeaSlot(sizePtr, size);
+                SysCallDll(null, "kernel32.dll", "GetFileSizeEx", 2, false, fp, sizePtr);
                 var total = NewReg(4);
-                Const(total, 0);
-                var countLoop = NewLabel();
-                var countDone = NewLabel();
-                Mark(countLoop);
-                var n1 = NewReg(4);
-                SysCallDll(n1, "ucrtbase.dll", "fread", 4, true, buf, C(4, 1), chunk, fp);
-                Cmp(n1, 0);
-                Jcc(LirCond.LessOrEqual, countDone);
-                Add(total, total, n1);
-                Cmp(n1, chunk);
-                Jcc(LirCond.Equal, countLoop);
-                Mark(countDone);
-                // 若到 EOF（不回零）直接按末次读结束；这里统一回零重读
-                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, C(8, 0), C(4, 0));
+                Load(total, sizePtr, 0, 4); // 低 32 位即文件大小（<4GB）
 
                 var arr = NewPtr();
                 CallRuntime(arr, "NewArray", total, C(4, 1));
                 Cmp(arr, 0);
                 Jcc(LirCond.Equal, fail);
 
-                // 拷贝重读
                 var arrBase = NewPtr();
                 Lea(arrBase, arr, 8);
                 var off = NewReg(4);
                 Const(off, 0);
-                var copyLoop = NewLabel();
-                var copyDone = NewLabel();
-                Mark(copyLoop);
-                var n2 = NewReg(4);
-                SysCallDll(n2, "ucrtbase.dll", "fread", 4, true, buf, C(4, 1), chunk, fp);
-                Cmp(n2, 0);
-                Jcc(LirCond.LessOrEqual, copyDone);
-                var sIdx = NewReg(4);
-                Const(sIdx, 0);
-                var innerLoop = NewLabel();
-                var innerDone = NewLabel();
-                Mark(innerLoop);
-                Cmp(sIdx, n2);
-                Jcc(LirCond.GreaterOrEqual, innerDone);
-                var srcPtr = NewPtr();
-                Mov(srcPtr, buf);
-                Add(srcPtr, srcPtr, sIdx);
-                var dstPtr = NewPtr();
-                Mov(dstPtr, arrBase);
-                Add(dstPtr, dstPtr, off);
-                var bv = NewReg(4);
-                Load(bv, srcPtr, 0, 1);
-                Store(dstPtr, 0, bv, 1);
-                AddI(off, off, 1);
-                AddI(sIdx, sIdx, 1);
-                Jmp(innerLoop);
-                Mark(innerDone);
-                Jmp(copyLoop);
-                Mark(copyDone);
-
-                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+                var read = NewReg(4);
+                Const(read, 0);
+                var readPtr = NewPtr();
+                LeaSlot(readPtr, read);
+                var readLoop = NewLabel();
+                var readDone = NewLabel();
+                Mark(readLoop);
+                Cmp(off, total);
+                Jcc(LirCond.GreaterOrEqual, readDone);
+                var remain = NewReg(4);
+                Mov(remain, total);
+                Sub(remain, remain, off);
+                var dst = NewPtr();
+                Mov(dst, arrBase);
+                Add(dst, dst, off);
+                SysCallDll(null, "kernel32.dll", "ReadFile", 5, false, fp, dst, remain, readPtr, NullPtr());
+                Load(read, readPtr, 0, 4); // 共享缓冲 → read 寄存器槽
+                Cmp(read, 0);
+                Jcc(LirCond.LessOrEqual, readDone);
+                Add(off, off, read);
+                Jmp(readLoop);
+                Mark(readDone);
+                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, fp);
                 Jmp(done);
 
                 Mark(fail);
@@ -510,31 +483,34 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileWriteAllBytes(path:8, data:8) → void：_wfopen(wb) → fwrite(data+8,1,len,fp) → fclose
+            // FileWriteAllBytes(path:8, data:8) → void：CreateFile(GENERIC_WRITE, CREATE_ALWAYS) → WriteFile(data+8) → CloseHandle
             private void EmitFileWriteAllBytes()
             {
                 var fail = NewLabel();
                 var data = _args[1];
                 var pb = WidePtrZ(_args[0]);
-                var wb = NewPtr();
-                LeaData(wb, _wbMode);
                 var fp = NewPtr();
-                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pb, wb);
-                Cmp(fp, 0);
-                Jcc(LirCond.Equal, fail);
+                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pb, C(4, 0x40000000), C(4, 3), NullPtr(), C(4, 2), C(4, 0x80), NullPtr());
+                EmitCheckInvalidHandle(fp, fail);
 
                 var len = NewReg(4);
                 Load(len, data, 0, 4);
                 var src = NewPtr();
                 Lea(src, data, 8);
-                SysCallDll(null, "ucrtbase.dll", "fwrite", 4, true, src, C(4, 1), len, fp);
-                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
+                var written = NewReg(4);
+                Const(written, 0);
+                var writtenPtr = NewPtr();
+                LeaSlot(writtenPtr, written);
+                SysCallDll(null, "kernel32.dll", "WriteFile", 5, false, fp, src, len, writtenPtr, NullPtr());
+                SysCallDll(null, "kernel32.dll", "CloseHandle", 1, false, fp);
 
                 Mark(fail);
                 EndFunction(_currentFunction!, 0);
             }
 
-            // FileOpenHandle(path:8, mode:8) → i64：mode 0=r+b(Open 可读写) 1=wb(Create) 2=r+b(OpenOrCreate)；失败 → 0
+            // FileOpenHandle(path:8, mode:8) → i64：mode 0=Open(可读写) 1=Create(覆盖) 2=OpenOrCreate；失败 → 0
+            // Win32 CreateFileW（对齐 .NET FileStream 底层）；GENERIC_READ|WRITE=0xC0000000, GENERIC_WRITE=0x40000000,
+            // FILE_SHARE_READ|WRITE=3, OPEN_EXISTING=3, CREATE_ALWAYS=2, OPEN_ALWAYS=4, FILE_ATTRIBUTE_NORMAL=0x80
             private void EmitFileOpenHandle()
             {
                 var fail = NewLabel();
@@ -543,31 +519,32 @@ namespace Cocoa.CodeGen.Native
                 Const(result, 0);
 
                 var mode = _args[1];
-                var mw = NewPtr();
-                var useRb = NewLabel();
-                var useWb = NewLabel();
-                var useRw = NewLabel();
+                var access = NewReg(4);
+                var disposition = NewReg(4);
+                var useOpen = NewLabel();
+                var useCreate = NewLabel();
                 var modeReady = NewLabel();
                 Cmp(mode, 0);
-                Jcc(LirCond.Equal, useRb);
+                Jcc(LirCond.Equal, useOpen);
                 Cmp(mode, 1);
-                Jcc(LirCond.Equal, useWb);
-                Jmp(useRw);
-                Mark(useRb);
-                LeaData(mw, _rwMode);
+                Jcc(LirCond.Equal, useCreate);
+                // mode 2: OpenOrCreate → GENERIC_READ|WRITE, OPEN_ALWAYS
+                Const(access, 0xC0000000);
+                Const(disposition, 4);
                 Jmp(modeReady);
-                Mark(useWb);
-                LeaData(mw, _wbMode);
+                Mark(useOpen);
+                Const(access, 0xC0000000);
+                Const(disposition, 3);
                 Jmp(modeReady);
-                Mark(useRw);
-                LeaData(mw, _rwMode);
+                Mark(useCreate);
+                Const(access, 0x40000000);
+                Const(disposition, 2);
                 Mark(modeReady);
 
                 var pw = WidePtrZ(_args[0]);
                 var fp = NewPtr();
-                SysCallDll(fp, "ucrtbase.dll", "_wfopen", 2, true, pw, mw);
-                Cmp(fp, 0);
-                Jcc(LirCond.Equal, fail);
+                SysCallDll(fp, "kernel32.dll", "CreateFileW", 7, false, pw, access, C(4, 3), NullPtr(), disposition, C(4, 0x80), NullPtr());
+                EmitCheckInvalidHandle(fp, fail); // INVALID_HANDLE_VALUE
                 Mov(result, fp);
                 Jmp(done);
 
@@ -578,22 +555,67 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileSizeHandle(h) → 文件字节数（seek END 再恢复原位置——不得复位到 0，否则破坏调用方流的当前位置）
+            // FileSizeHandle(h) → 文件字节数（GetFileSizeEx；不改动文件位置——对齐 .NET FileStream.Length）
             private void EmitFileSizeHandle()
             {
                 var fp = NewPtr();
                 Mov(fp, _args[0]);
-                var start = NewReg(8);
-                SysCallDll(start, "ucrtbase.dll", "_ftelli64", 1, true, fp);
-                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, C(8, 0), C(4, 2));
-                var sz = NewReg(8);
-                SysCallDll(sz, "ucrtbase.dll", "_ftelli64", 1, true, fp);
-                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, start, C(4, 0));
-                StoreRet(sz);
+                var size = NewReg(8);
+                Const(size, 0);
+                var sizePtr = NewPtr();
+                LeaSlot(sizePtr, size);
+                SysCallDll(null, "kernel32.dll", "GetFileSizeEx", 2, false, fp, sizePtr);
+                Load(size, sizePtr, 0, 8); // 共享缓冲 → size 寄存器槽
+                StoreRet(size);
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileReadHandle(h, data:u8[], start, count) → 实际读入字节
+            // FileSeekHandle(h, offset:i64, origin) → 定位；origin 0=Begin 1=Current 2=End
+            // x86：I64 参数只传 32 位（EDX），取低 32 位用 SetFilePointer（32 位 dist，4GB 内）；x64 用 SetFilePointerEx（完整 64 位）
+            private void EmitFileSeekHandle()
+            {
+                if (_isX64)
+                {
+                    SysCallDll(null, "kernel32.dll", "SetFilePointerEx", 4, false, _args[0], _args[1], NullPtr(), _args[2]);
+                }
+                else
+                {
+                    var offLo = NewReg(4);
+                    Mov(offLo, _args[1]); // offset 低 32 位（x86 只传低 32）
+                    SysCallDll(null, "kernel32.dll", "SetFilePointer", 4, false, _args[0], offLo, NullPtr(), _args[2]);
+                }
+                EndFunction(_currentFunction!, 0);
+            }
+
+            // FileTellHandle(h) → 当前位置；x86 用 SetFilePointer（32 位 pos）+ 高 4 清 0 构造 i64 返回
+            private void EmitFileTellHandle()
+            {
+                var fp = NewPtr();
+                Mov(fp, _args[0]);
+                if (_isX64)
+                {
+                    var pos = NewReg(8);
+                    Const(pos, 0);
+                    var posPtr = NewPtr();
+                    LeaSlot(posPtr, pos);
+                    SysCallDll(null, "kernel32.dll", "SetFilePointerEx", 4, false, fp, C(8, 0), posPtr, C(4, 1));
+                    Load(pos, posPtr, 0, 8); // 共享缓冲 → pos 寄存器槽
+                    StoreRet(pos);
+                }
+                else
+                {
+                    // x86：SetFilePointer 返回 DWORD 新位置（规避共享缓冲输出槽）
+                    var pos = NewReg(4);
+                    SysCallDll(pos, "kernel32.dll", "SetFilePointer", 4, false, fp, C(4, 0), NullPtr(), C(4, 1));
+                    var res = NewReg(8);
+                    Const(res, 0); // 双槽清 0（x86）
+                    Mov(res, pos); // 低 4 = pos，高 4 = 0
+                    StoreRet(res);
+                }
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // FileReadHandle(h, data:u8[], start, count) → 实际读入字节（ReadFile；&read 输出槽）
             private void EmitFileReadHandle()
             {
                 var fp = NewPtr();
@@ -601,13 +623,17 @@ namespace Cocoa.CodeGen.Native
                 var dst = NewPtr();
                 Lea(dst, _args[1], 8);
                 Add(dst, dst, _args[2]);
-                var n = NewReg(4);
-                SysCallDll(n, "ucrtbase.dll", "fread", 4, true, dst, C(4, 1), _args[3], fp);
-                StoreRet(n);
+                var read = NewReg(4);
+                Const(read, 0);
+                var readPtr = NewPtr();
+                LeaSlot(readPtr, read);
+                SysCallDll(null, "kernel32.dll", "ReadFile", 5, false, fp, dst, _args[3], readPtr, NullPtr());
+                Load(read, readPtr, 0, 4); // 共享缓冲 → read 寄存器槽
+                StoreRet(read);
                 EndFunction(_currentFunction!, 4);
             }
 
-            // FileWriteHandle(h, data:u8[], start, count)
+            // FileWriteHandle(h, data:u8[], start, count)（WriteFile；&written 输出槽）
             private void EmitFileWriteHandle()
             {
                 var fp = NewPtr();
@@ -615,8 +641,30 @@ namespace Cocoa.CodeGen.Native
                 var src = NewPtr();
                 Lea(src, _args[1], 8);
                 Add(src, src, _args[2]);
-                SysCallDll(null, "ucrtbase.dll", "fwrite", 4, true, src, C(4, 1), _args[3], fp);
+                var written = NewReg(4);
+                Const(written, 0);
+                var writtenPtr = NewPtr();
+                LeaSlot(writtenPtr, written);
+                SysCallDll(null, "kernel32.dll", "WriteFile", 5, false, fp, src, _args[3], writtenPtr, NullPtr());
                 EndFunction(_currentFunction!, 0);
+            }
+
+            // Win32 INVALID_HANDLE_VALUE 判断：失败返回 -1；x86 32 位 -1（0xFFFFFFFF）存 Addr 槽后高 4 字节清 0，
+            // 8 字节比较会误判成功 → 取低 4 字节 == 0xFFFFFFFF（x64 失败 64 位 -1 的低 4 字节同样为全 1）。
+            private void EmitCheckInvalidHandle(LirVirtualRegister fp, int failLabel)
+            {
+                var lo = NewReg(4);
+                Mov(lo, fp);
+                Cmp(lo, C(4, -1));
+                Jcc(LirCond.Equal, failLabel);
+            }
+
+            // 指针类型 NULL（x86 4 字节 / x64 8 字节）——不得用 C(8,0)（I64）：x86 压 8 字节导致参数错位/栈不平衡
+            private LirVirtualRegister NullPtr()
+            {
+                var p = NewPtr();
+                Const(p, 0);
+                return p;
             }
 
         }
