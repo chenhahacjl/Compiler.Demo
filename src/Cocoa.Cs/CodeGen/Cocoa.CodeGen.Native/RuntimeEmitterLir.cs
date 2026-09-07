@@ -278,16 +278,11 @@ namespace Cocoa.CodeGen.Native
                 EmitFileOpenHandle();
                 _ = BeginFunctionTyped("FileSizeHandle", new[] { 8 }, LirType.Addr);
                 EmitFileSizeHandle();
-                _ = BeginFunctionTyped("FileSeekHandle", new[] { 8, 8, 8 }, LirType.Addr);
-                EmitFileSeekHandle();
-                _ = BeginFunctionTyped("FileTellHandle", new[] { 8 }, LirType.Addr);
-                EmitFileTellHandle();
+                EmitSimpleImports(); // FileSeekHandle/FileTellHandle/FileCloseHandle（声明式）
                 _ = BeginFunctionTyped("FileReadHandle", new[] { 8, 8, 8, 8 }, LirType.Addr);
                 EmitFileReadHandle();
                 _ = BeginFunctionTyped("FileWriteHandle", new[] { 8, 8, 8, 8 }, LirType.Addr);
                 EmitFileWriteHandle();
-                _ = BeginFunctionTyped("FileCloseHandle", new[] { 8 }, LirType.Addr);
-                EmitFileCloseHandle();
                 _ = BeginFunctionTyped("StringFromBytes", new[] { 8 }, LirType.Addr);
                 EmitStringFromBytes();
                 _ = BeginFunctionTyped("StringToBytes", new[] { 8 }, LirType.Addr);
@@ -429,6 +424,37 @@ namespace Cocoa.CodeGen.Native
                 function.ReturnSize = returnSize;
                 function.EndLabelId = NewLabel();
                 Add(LirOpCode.Ret, LirOperand.Label(function.EndLabelId));
+            }
+
+            /// <summary>
+            /// 声明式 import 派发（9d）：纯 dll 调用原语 = 一条声明，自动生成
+            /// BeginFunctionTyped → SetArg×N → SysCall → StoreRet → EndFunction，免手写 Emit 序列。
+            /// 覆盖标量/指针参数、标量/void 返回；带模式选路/循环/缓冲计算的（fopen 系、ReadAllBytes 等）保留专用 Emitter。
+            /// </summary>
+            private sealed record SimpleImportDef(string Name, string Dll, string Import, int RetSize, int[] ArgSizes, bool Cdecl, params LirType[] ArgTypes);
+
+            private static readonly SimpleImportDef[] SimpleImports =
+            {
+                // FileStream 句柄原语（cdecl；x64 参数寄存器 + 返回约定统一）
+                new("FileTellHandle", "ucrtbase.dll", "_ftelli64", 8, new[] { 8 }, true, LirType.Addr),
+                new("FileSeekHandle", "ucrtbase.dll", "_fseeki64", 0, new[] { 8, 8, 8 }, true, LirType.Addr),
+                new("FileCloseHandle", "ucrtbase.dll", "fclose", 0, new[] { 8 }, true, LirType.Addr),
+            };
+
+            private void EmitSimpleImports()
+            {
+                foreach (var def in SimpleImports)
+                {
+                    var fn = BeginFunctionTyped(def.Name, def.ArgSizes, def.ArgTypes);
+                    var dst = def.RetSize > 0 ? NewReg(def.RetSize) : null;
+                    SysCallDll(dst, def.Dll, def.Import, def.ArgSizes.Length, def.Cdecl, _args.ToArray());
+                    if (dst != null)
+                    {
+                        StoreRet(dst);
+                    }
+
+                    EndFunction(fn, def.RetSize);
+                }
             }
 
             private LirVirtualRegister NewReg(int size)

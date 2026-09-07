@@ -593,26 +593,6 @@ namespace Cocoa.CodeGen.Native
                 EndFunction(_currentFunction!, 8);
             }
 
-            // FileSeekHandle(h, offset:i64, origin)
-            private void EmitFileSeekHandle()
-            {
-                var fp = NewPtr();
-                Mov(fp, _args[0]);
-                SysCallDll(null, "ucrtbase.dll", "_fseeki64", 3, true, fp, _args[1], _args[2]);
-                EndFunction(_currentFunction!, 0);
-            }
-
-            // FileTellHandle(h) → 当前位置
-            private void EmitFileTellHandle()
-            {
-                var fp = NewPtr();
-                Mov(fp, _args[0]);
-                var pos = NewReg(8);
-                SysCallDll(pos, "ucrtbase.dll", "_ftelli64", 1, true, fp);
-                StoreRet(pos);
-                EndFunction(_currentFunction!, 8);
-            }
-
             // FileReadHandle(h, data:u8[], start, count) → 实际读入字节
             private void EmitFileReadHandle()
             {
@@ -636,15 +616,6 @@ namespace Cocoa.CodeGen.Native
                 Lea(src, _args[1], 8);
                 Add(src, src, _args[2]);
                 SysCallDll(null, "ucrtbase.dll", "fwrite", 4, true, src, C(4, 1), _args[3], fp);
-                EndFunction(_currentFunction!, 0);
-            }
-
-            // FileCloseHandle(h)
-            private void EmitFileCloseHandle()
-            {
-                var fp = NewPtr();
-                Mov(fp, _args[0]);
-                SysCallDll(null, "ucrtbase.dll", "fclose", 1, true, fp);
                 EndFunction(_currentFunction!, 0);
             }
 
