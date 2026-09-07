@@ -104,9 +104,9 @@ using var process = Process.Start(psi)!;
             Assert.Equal(Expected, stdout);
         }
 
-        // x86 native 的 File* 句柄原语在 8 字节返回修复后仍异常（FileSeek/Write 栈传参），记入原语冒烟专项（阶段5 x86 矩阵）
-        [Theory]
+                [Theory]
         [InlineData("windows-x64")]
+        [InlineData("windows-x86")]
         public void NativeE2e_FileStream(string target)
         {
             var dir = Path.Combine(Path.GetTempPath(), "cocoa-fs", Guid.NewGuid().ToString("N"));

@@ -191,7 +191,7 @@ namespace Cocoa.CodeGen.Native
                 var writtenAddr = NewPtr();
                 LeaSlot(writtenAddr, written);
 
-                var handle = C(8, 0);
+                var handle = NewPtr();
                 SysCall(handle, "GetStdHandle", 1, C(4, -11));
                 var fileType = NewReg(4);
                 SysCall(fileType, "GetFileType", 1, handle);
