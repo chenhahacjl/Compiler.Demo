@@ -14,21 +14,21 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
     {
         public void Mov(X64Size size, X64Register dst, X64Register src)
         {
-            var opcode = size == X64Size.Byte ? (byte)0x8A : (byte)0x8B;
+            var opcode = size == X64Size.Byte ? (byte)0x8A : X64EncodingTable.Mov.OpR;
             EmitRegReg(opcode, size, dst, src);
         }
 
         public void Mov(X64Size size, X64Register dst, X64MemoryOperand src)
         {
             if (size == X64Size.Word) EmitByte(0x66); // operand-size override for 16-bit
-            var opcode = size == X64Size.Byte ? (byte)0x8A : (byte)0x8B;
+            var opcode = size == X64Size.Byte ? (byte)0x8A : X64EncodingTable.Mov.OpR;
             EmitRegMem(opcode, size, dst, src);
         }
 
         public void Mov(X64Size size, X64MemoryOperand dst, X64Register src)
         {
             if (size == X64Size.Word) EmitByte(0x66); // operand-size override for 16-bit
-            var opcode = size == X64Size.Byte ? (byte)0x88 : (byte)0x89;
+            var opcode = size == X64Size.Byte ? (byte)0x88 : X64EncodingTable.Mov.OpM;
             EmitMemReg(opcode, size, dst, src);
         }
 
@@ -118,35 +118,35 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitInt32(0);
         }
 
-        public void Add(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x01, size, dst, src);
-        public void Add(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x03, size, dst, src);
-        public void Add(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(0x01, size, dst, src);
-        public void Add(X64Size size, X64Register dst, int imm) => EmitRegImm(0, size, dst, imm);
+        public void Add(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Add.OpM, size, dst, src);
+        public void Add(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Add.OpR, size, dst, src);
+        public void Add(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(X64EncodingTable.Add.OpM, size, dst, src);
+        public void Add(X64Size size, X64Register dst, int imm) => EmitRegImm(X64EncodingTable.Add.Digit, size, dst, imm);
 
-        public void Sub(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x29, size, dst, src);
-        public void Sub(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x2B, size, dst, src);
-        public void Sub(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(0x29, size, dst, src);
-        public void Sub(X64Size size, X64Register dst, int imm) => EmitRegImm(5, size, dst, imm);
+        public void Sub(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Sub.OpM, size, dst, src);
+        public void Sub(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Sub.OpR, size, dst, src);
+        public void Sub(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(X64EncodingTable.Sub.OpM, size, dst, src);
+        public void Sub(X64Size size, X64Register dst, int imm) => EmitRegImm(X64EncodingTable.Sub.Digit, size, dst, imm);
 
-        public void And(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x21, size, dst, src);
-        public void And(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x23, size, dst, src);
-        public void And(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(0x21, size, dst, src);
-        public void And(X64Size size, X64Register dst, int imm) => EmitRegImm(4, size, dst, imm);
+        public void And(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.And.OpM, size, dst, src);
+        public void And(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.And.OpR, size, dst, src);
+        public void And(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(X64EncodingTable.And.OpM, size, dst, src);
+        public void And(X64Size size, X64Register dst, int imm) => EmitRegImm(X64EncodingTable.And.Digit, size, dst, imm);
 
-        public void Or(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x09, size, dst, src);
-        public void Or(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x0B, size, dst, src);
-        public void Or(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(0x09, size, dst, src);
-        public void Or(X64Size size, X64Register dst, int imm) => EmitRegImm(1, size, dst, imm);
+        public void Or(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Or.OpM, size, dst, src);
+        public void Or(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Or.OpR, size, dst, src);
+        public void Or(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(X64EncodingTable.Or.OpM, size, dst, src);
+        public void Or(X64Size size, X64Register dst, int imm) => EmitRegImm(X64EncodingTable.Or.Digit, size, dst, imm);
 
-        public void Xor(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x31, size, dst, src);
-        public void Xor(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x33, size, dst, src);
-        public void Xor(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(0x31, size, dst, src);
-        public void Xor(X64Size size, X64Register dst, int imm) => EmitRegImm(6, size, dst, imm);
+        public void Xor(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Xor.OpM, size, dst, src);
+        public void Xor(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Xor.OpR, size, dst, src);
+        public void Xor(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(X64EncodingTable.Xor.OpM, size, dst, src);
+        public void Xor(X64Size size, X64Register dst, int imm) => EmitRegImm(X64EncodingTable.Xor.Digit, size, dst, imm);
 
-        public void Cmp(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x39, size, dst, src);
-        public void Cmp(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x3B, size, dst, src);
-        public void Cmp(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(0x39, size, dst, src);
-        public void Cmp(X64Size size, X64Register dst, int imm) => EmitRegImm(7, size, dst, imm);
+        public void Cmp(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Cmp.OpM, size, dst, src);
+        public void Cmp(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Cmp.OpR, size, dst, src);
+        public void Cmp(X64Size size, X64MemoryOperand dst, X64Register src) => EmitMemReg(X64EncodingTable.Cmp.OpM, size, dst, src);
+        public void Cmp(X64Size size, X64Register dst, int imm) => EmitRegImm(X64EncodingTable.Cmp.Digit, size, dst, imm);
 
         public void Test(X64Size size, X64Register r1, X64Register r2)
         {
@@ -248,10 +248,10 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitModRMByte(3, 4, (int)divisor & 7);
         }
 
-        public void Adc(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x11, size, dst, src);
-        public void Adc(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x13, size, dst, src);
-        public void Sbb(X64Size size, X64Register dst, X64Register src) => EmitRmReg(0x19, size, dst, src);
-        public void Sbb(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(0x1B, size, dst, src);
+        public void Adc(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Adc.OpM, size, dst, src);
+        public void Adc(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Adc.OpR, size, dst, src);
+        public void Sbb(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Sbb.OpM, size, dst, src);
+        public void Sbb(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Sbb.OpR, size, dst, src);
 
         public void AdcRegImm(X64Register dst, int imm)
         {
