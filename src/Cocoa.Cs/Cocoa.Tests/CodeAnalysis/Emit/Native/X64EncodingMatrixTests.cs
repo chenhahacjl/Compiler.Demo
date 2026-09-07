@@ -141,12 +141,12 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
         }
 
         // reg←imm8（-128..127）：0x83 /digit（非累加器，一般 83 EC xx）
-        [Theory]
-        [InlineData("ADD", 0, "83 C0 2A")]
-        [InlineData("AND", 4, "83 E0 2A")]
-        [InlineData("SUB", 5, "83 E8 2A")]
-        [InlineData("CMP", 7, "83 F8 2A")]
-        public void Alu_RegImm8_SignExt8(string name, int digit, string expected)
+[Theory]
+        [InlineData("ADD", "83 C0 2A")]
+        [InlineData("AND", "83 E0 2A")]
+        [InlineData("SUB", "83 E8 2A")]
+        [InlineData("CMP", "83 F8 2A")]
+        public void Alu_RegImm8_SignExt8(string name, string expected)
         {
             var a = new X64Assembler();
             switch (name)
@@ -158,6 +158,88 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             }
 
             Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        // P2：分组编码（F6/F7 单操作数 / C1 移位 imm8 / D3 移位 CL），digit 来自 X64GrpTable
+        [Theory]
+        [InlineData("NOT", "F7 D0")]
+        [InlineData("NEG", "F7 D8")]
+        [InlineData("MUL", "F7 E0")]
+        [InlineData("DIV", "F7 F0")]
+        [InlineData("IDIV", "F7 F8")]
+        public void Grp_F7_Unary_Dword(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "NOT": a.Not(X64Size.Dword, X64Register.EAX); break;
+                case "NEG": a.Neg(X64Size.Dword, X64Register.EAX); break;
+                case "MUL": a.Mul(X64Size.Dword, X64Register.EAX); break;
+                case "DIV": a.Div(X64Size.Dword, X64Register.EAX); break;
+                case "IDIV": a.Idiv(X64Size.Dword, X64Register.EAX); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Theory]
+        [InlineData("SHL", "C1 E0 02")]
+        [InlineData("SHR", "C1 E8 02")]
+        [InlineData("SAR", "C1 F8 02")]
+        public void Grp_ShiftImm8_Dword(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "SHL": a.Shl(X64Size.Dword, X64Register.EAX, 2); break;
+                case "SHR": a.Shr(X64Size.Dword, X64Register.EAX, 2); break;
+                case "SAR": a.Sar(X64Size.Dword, X64Register.EAX, 2); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Theory]
+        [InlineData("SHL", "D3 E0")]
+        [InlineData("SHR", "D3 E8")]
+        [InlineData("SAR", "D3 F8")]
+        public void Grp_ShiftCl_Dword(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "SHL": a.Shl(X64Size.Dword, X64Register.EAX); break;
+                case "SHR": a.Shr(X64Size.Dword, X64Register.EAX); break;
+                case "SAR": a.Sar(X64Size.Dword, X64Register.EAX); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Theory]
+        [InlineData("SHL", "48 C1 E0 05")]
+        [InlineData("SHR", "48 C1 E8 05")]
+        [InlineData("NOT", "48 F7 D0")]
+        public void Grp_Qword_RexW(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "SHL": a.Shl(X64Size.Qword, X64Register.RAX, 5); break;
+                case "SHR": a.Shr(X64Size.Qword, X64Register.RAX, 5); break;
+                case "NOT": a.Not(X64Size.Qword, X64Register.RAX); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Grp_ShiftByCl_TableExposesDigits()
+        {
+            Assert.Equal((byte)0x04, X64GrpTable.Shl.C1);
+            Assert.Equal((byte)0x04, X64GrpTable.Shl.D3);
+            Assert.Equal((byte)0x07, X64GrpTable.Idiv.F7);
+            Assert.Equal(8, X64GrpTable.All.Count);
         }
     }
 }

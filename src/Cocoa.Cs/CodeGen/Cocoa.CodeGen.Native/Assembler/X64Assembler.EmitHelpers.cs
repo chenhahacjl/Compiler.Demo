@@ -104,6 +104,29 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             }
         }
 
+        // P2：分组编码（F6/F7 单操作数 / C0+C1·D2+D3 移位），digit 由 X64GrpTable 提供
+        private void EmitF7Grp(byte digit, X64Size size, X64Register rm)
+        {
+            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)rm >= 8 ? 0x01 : 0));
+            EmitByte(0xF7);
+            EmitModRMByte(3, digit, (int)rm & 7);
+        }
+
+        private void EmitShiftImm(byte digit, X64Size size, X64Register dst, int count)
+        {
+            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
+            EmitByte(0xC1);
+            EmitModRMByte(3, digit, (int)dst & 7);
+            EmitByte((byte)count);
+        }
+
+        private void EmitShiftCl(byte digit, X64Size size, X64Register dst)
+        {
+            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
+            EmitByte(0xD3);
+            EmitModRMByte(3, digit, (int)dst & 7);
+        }
+
         private (int Mod, int Rm, int RexB) EncodeMemory(X64MemoryOperand mem)
         {
             var needsSib = mem.Base == X64Register.RSP || mem.Base == X64Register.R12;

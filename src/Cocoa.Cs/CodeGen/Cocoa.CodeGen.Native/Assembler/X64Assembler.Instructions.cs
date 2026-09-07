@@ -163,90 +163,32 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitModRMByte(3, (int)dst & 7, (int)src & 7);
         }
 
-        public void Not(X64Size size, X64Register dst)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xF7);
-            EmitModRMByte(3, 2, (int)dst & 7);
-        }
+        public void Not(X64Size size, X64Register dst) => EmitF7Grp(X64GrpTable.Not.F7, size, dst);
 
-        public void Neg(X64Size size, X64Register dst)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xF7);
-            EmitModRMByte(3, 3, (int)dst & 7);
-        }
+        public void Neg(X64Size size, X64Register dst) => EmitF7Grp(X64GrpTable.Neg.F7, size, dst);
 
-        public void Shl(X64Size size, X64Register dst, int count)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xC1);
-            EmitModRMByte(3, 4, (int)dst & 7);
-            EmitByte((byte)count);
-        }
+        public void Shl(X64Size size, X64Register dst, int count) => EmitShiftImm(X64GrpTable.Shl.C1, size, dst, count);
 
-        public void Shr(X64Size size, X64Register dst, int count)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xC1);
-            EmitModRMByte(3, 5, (int)dst & 7);
-            EmitByte((byte)count);
-        }
+        public void Shr(X64Size size, X64Register dst, int count) => EmitShiftImm(X64GrpTable.Shr.C1, size, dst, count);
 
-        public void Sar(X64Size size, X64Register dst, int count)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xC1);
-            EmitModRMByte(3, 7, (int)dst & 7);
-            EmitByte((byte)count);
-        }
+        public void Sar(X64Size size, X64Register dst, int count) => EmitShiftImm(X64GrpTable.Sar.C1, size, dst, count);
 
-        public void Shl(X64Size size, X64Register dst)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xD3);
-            EmitModRMByte(3, 4, (int)dst & 7);
-        }
+        public void Shl(X64Size size, X64Register dst) => EmitShiftCl(X64GrpTable.Shl.D3, size, dst);
 
-        public void Shr(X64Size size, X64Register dst)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xD3);
-            EmitModRMByte(3, 5, (int)dst & 7);
-        }
+        public void Shr(X64Size size, X64Register dst) => EmitShiftCl(X64GrpTable.Shr.D3, size, dst);
 
-        public void Sar(X64Size size, X64Register dst)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x01 : 0));
-            EmitByte(0xD3);
-            EmitModRMByte(3, 7, (int)dst & 7);
-        }
+        public void Sar(X64Size size, X64Register dst) => EmitShiftCl(X64GrpTable.Sar.D3, size, dst);
 
-        public void Div(X64Size size, X64Register divisor)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)divisor >= 8 ? 0x01 : 0));
-            EmitByte(0xF7);
-            EmitModRMByte(3, 6, (int)divisor & 7);
-        }
+        public void Div(X64Size size, X64Register divisor) => EmitF7Grp(X64GrpTable.Div.F7, size, divisor);
 
-        public void Idiv(X64Size size, X64Register divisor)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)divisor >= 8 ? 0x01 : 0));
-            EmitByte(0xF7);
-            EmitModRMByte(3, 7, (int)divisor & 7);
-        }
+        public void Idiv(X64Size size, X64Register divisor) => EmitF7Grp(X64GrpTable.Idiv.F7, size, divisor);
 
         // ------------------------------------------------------------------
         // 64 位整型辅助（long，6e-M19 M1）：x64 主路径为 qword 单指令，
         // 以下仅 Adc/Sbb/Shld/Shrd/Mul 备用；x87 FPU 转换在 x64 上走 SSE，不支持。
         // ------------------------------------------------------------------
 
-        public void Mul(X64Size size, X64Register divisor)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)divisor >= 8 ? 0x01 : 0));
-            EmitByte(0xF7);
-            EmitModRMByte(3, 4, (int)divisor & 7);
-        }
+        public void Mul(X64Size size, X64Register divisor) => EmitF7Grp(X64GrpTable.Mul.F7, size, divisor);
 
         public void Adc(X64Size size, X64Register dst, X64Register src) => EmitRmReg(X64EncodingTable.Adc.OpM, size, dst, src);
         public void Adc(X64Size size, X64Register dst, X64MemoryOperand src) => EmitRegMem(X64EncodingTable.Adc.OpR, size, dst, src);
