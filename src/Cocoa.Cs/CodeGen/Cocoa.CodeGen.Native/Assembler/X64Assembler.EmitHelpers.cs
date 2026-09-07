@@ -127,6 +127,38 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitModRMByte(3, digit, (int)dst & 7);
         }
 
+        // P3：扩展编码（0F 双字节 / 单字节扩展；Movsxd 强制 REX.W），opcode 由 X64ExtTable 提供
+        private void EmitExtRegReg(X64ExtEncoding enc, X64Size size, X64Register reg, X64Register rm)
+        {
+            var rex = 0x40
+                      | (size == X64Size.Qword || enc.ForceRexW ? 0x08 : 0)
+                      | ((int)reg >= 8 ? 0x04 : 0)
+                      | ((int)rm >= 8 ? 0x01 : 0);
+            EmitRex(rex);
+            if (enc.TwoByte)
+            {
+                EmitByte(0x0F);
+            }
+
+            EmitByte(enc.OpLow);
+            EmitModRMByte(3, (int)reg & 7, (int)rm & 7);
+        }
+
+        private void EmitExtRegMem(X64ExtEncoding enc, X64Size size, X64Register reg, X64MemoryOperand mem)
+        {
+            var m = EncodeMemory(mem);
+            var rex = 0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)reg >= 8 ? 0x04 : 0) | m.RexB;
+            EmitRex(rex);
+            if (enc.TwoByte)
+            {
+                EmitByte(0x0F);
+            }
+
+            EmitByte(enc.OpLow);
+            EmitModRMByte(m.Mod, (int)reg & 7, m.Rm);
+            EmitMemoryRest(mem, m);
+        }
+
         private (int Mod, int Rm, int RexB) EncodeMemory(X64MemoryOperand mem)
         {
             var needsSib = mem.Base == X64Register.RSP || mem.Base == X64Register.R12;

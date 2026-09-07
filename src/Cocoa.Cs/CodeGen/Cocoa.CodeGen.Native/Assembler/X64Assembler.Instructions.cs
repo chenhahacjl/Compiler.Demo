@@ -155,13 +155,7 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitModRMByte(3, (int)r2 & 7, (int)r1 & 7);
         }
 
-        public void Imul(X64Size size, X64Register dst, X64Register src)
-        {
-            EmitRex(0x40 | (size == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x04 : 0) | ((int)src >= 8 ? 0x01 : 0));
-            EmitByte(0x0F);
-            EmitByte(0xAF);
-            EmitModRMByte(3, (int)dst & 7, (int)src & 7);
-        }
+        public void Imul(X64Size size, X64Register dst, X64Register src) => EmitExtRegReg(X64ExtTable.Imul, size, dst, src);
 
         public void Not(X64Size size, X64Register dst) => EmitF7Grp(X64GrpTable.Not.F7, size, dst);
 
@@ -261,30 +255,11 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         public void Fmulp() => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
         public void Faddp() => throw new NotSupportedException("x87 FPU conversions are not used on x64 (SSE2 path).");
 
-        public void Movzx(X64Size dstSize, X64Register dst, X64Register src)
-        {
-            EmitRex(0x40 | (dstSize == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x04 : 0) | ((int)src >= 8 ? 0x01 : 0));
-            EmitByte(0x0F);
-            EmitByte(0xB6);
-            EmitModRMByte(3, (int)dst & 7, (int)src & 7);
-        }
+        public void Movzx(X64Size dstSize, X64Register dst, X64Register src) => EmitExtRegReg(X64ExtTable.MovzxB, dstSize, dst, src);
 
-        public void Movzx(X64Size dstSize, X64Register dst, X64MemoryOperand src)
-        {
-            var memory = EncodeMemory(src);
-            EmitRex(0x40 | (dstSize == X64Size.Qword ? 0x08 : 0) | ((int)dst >= 8 ? 0x04 : 0) | memory.RexB);
-            EmitByte(0x0F);
-            EmitByte((byte)(dstSize == X64Size.Byte ? 0xB6 : 0xB7));
-            EmitModRMByte(memory.Mod, (int)dst & 7, memory.Rm);
-            EmitMemoryRest(src, memory);
-        }
+        public void Movzx(X64Size dstSize, X64Register dst, X64MemoryOperand src) => EmitExtRegMem(dstSize == X64Size.Byte ? X64ExtTable.MovzxB : X64ExtTable.MovzxW, dstSize, dst, src);
 
-        public void Movsxd(X64Register dst, X64Register src)
-        {
-            EmitRex(0x48 | ((int)dst >= 8 ? 0x04 : 0) | ((int)src >= 8 ? 0x01 : 0));
-            EmitByte(0x63);
-            EmitModRMByte(3, (int)dst & 7, (int)src & 7);
-        }
+        public void Movsxd(X64Register dst, X64Register src) => EmitExtRegReg(X64ExtTable.Movsxd, X64Size.Dword, dst, src);
 
         /// <summary>CQO：RDX:RAX ← 符号扩展 RAX（64 位有符号除法前置）。</summary>
         public void Cqo()

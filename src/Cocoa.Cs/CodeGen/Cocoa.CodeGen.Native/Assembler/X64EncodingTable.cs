@@ -95,4 +95,38 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
 
         public static IReadOnlyList<X64GrpEncoding> All { get; } = new[] { Not, Neg, Mul, Div, Idiv, Shl, Shr, Sar };
     }
+
+    /// <summary>
+    /// 扩展编码条目（0F 双字节 / 单字节扩展指令）。对照 Intel SDM（IMUL r, r/m = 0F AF；
+    /// MOVZX r, r/m8=0F B6 / r16=0F B7；MOVSXD r64, r/m32 = 63 /r）与 LLVM X86InstrCompiler.td（IMUL64rr）
+    /// / X86InstrExtension.td（MOVZX64rr32 等）。
+    /// </summary>
+    public readonly struct X64ExtEncoding
+    {
+        public X64ExtEncoding(string name, byte opLow, bool twoByte, bool forceRexW = false)
+        {
+            Name = name;
+            OpLow = opLow;
+            TwoByte = twoByte;
+            ForceRexW = forceRexW;
+        }
+
+        public string Name { get; }
+        public byte OpLow { get; }
+        public bool TwoByte { get; }
+        public bool ForceRexW { get; }
+
+        public override string ToString() => $"{Name} {(TwoByte ? "0F " : "")}{OpLow:X2}";
+    }
+
+    /// <summary>扩展指令表（P3：IMUL / MOVZX / MOVSXD）。</summary>
+    public static class X64ExtTable
+    {
+        public static readonly X64ExtEncoding Imul = new("IMUL", 0xAF, twoByte: true);
+        public static readonly X64ExtEncoding MovzxB = new("MOVZX", 0xB6, twoByte: true);
+        public static readonly X64ExtEncoding MovzxW = new("MOVZX", 0xB7, twoByte: true);
+        public static readonly X64ExtEncoding Movsxd = new("MOVSXD", 0x63, twoByte: false, forceRexW: true);
+
+        public static IReadOnlyList<X64ExtEncoding> All { get; } = new[] { Imul, MovzxB, MovzxW, Movsxd };
+    }
 }

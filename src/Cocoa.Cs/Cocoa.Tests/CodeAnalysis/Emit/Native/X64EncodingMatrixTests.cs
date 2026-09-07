@@ -241,5 +241,58 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             Assert.Equal((byte)0x07, X64GrpTable.Idiv.F7);
             Assert.Equal(8, X64GrpTable.All.Count);
         }
+
+        // P3：扩展编码（0F 双字节 / 单字节扩展）
+        [Theory]
+        [InlineData("IMUL", "0F AF C1")]
+        [InlineData("MOVZX", "0F B6 C1")]
+        public void Ext_RegReg_Dword(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "IMUL": a.Imul(X64Size.Dword, X64Register.EAX, X64Register.ECX); break;
+                case "MOVZX": a.Movzx(X64Size.Dword, X64Register.EAX, X64Register.ECX); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Ext_Imul_Qword_RexW()
+        {
+            var a = new X64Assembler();
+            a.Imul(X64Size.Qword, X64Register.RAX, X64Register.RCX);
+            Assert.Equal("48 0F AF C1", Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Ext_Movzx_Mem_Qword()
+        {
+            // movzx rax, word [rbp-8]（size≠Byte → MOVZXW 0xB7）→ 48 0F B7 45 F8
+            var a = new X64Assembler();
+            a.Movzx(X64Size.Qword, X64Register.RAX, new X64MemoryOperand(X64Register.RBP, -8));
+            Assert.Equal("48 0F B7 45 F8", Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Ext_Movsxd_RexW_HighReg()
+        {
+            // movsxd r8, eax → 4C 63 C0（REX.W+R）
+            var a = new X64Assembler();
+            a.Movsxd(X64Register.R8, X64Register.EAX);
+            Assert.Equal("4C 63 C0", Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Ext_Table_ExposesEntries()
+        {
+            Assert.Equal((byte)0xAF, X64ExtTable.Imul.OpLow);
+            Assert.Equal((byte)0xB6, X64ExtTable.MovzxB.OpLow);
+            Assert.Equal((byte)0xB7, X64ExtTable.MovzxW.OpLow);
+            Assert.Equal((byte)0x63, X64ExtTable.Movsxd.OpLow);
+            Assert.True(X64ExtTable.Movsxd.ForceRexW);
+            Assert.Equal(4, X64ExtTable.All.Count);
+        }
     }
 }
