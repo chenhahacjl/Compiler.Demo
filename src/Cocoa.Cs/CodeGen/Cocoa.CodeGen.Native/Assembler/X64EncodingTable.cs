@@ -129,4 +129,47 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
 
         public static IReadOnlyList<X64ExtEncoding> All { get; } = new[] { Imul, MovzxB, MovzxW, Movsxd };
     }
+
+    /// <summary>
+    /// 条件码编码：Jcc（0F 8x，条件近跳 rel32）与 Setcc（0F 9x，置位 r/m8）的第二个字节（0F 后的两字节 opcode）。
+    /// 对照 Intel SDM Vol.2（Jcc 0F 8C-8F / 82-87 / 8A-8B；SETcc 0F 9C-9F / 92-97 / 9A-9B）与
+    /// LLVM X86InstrInfo.td（JCC_1/JCC_4、SETCCr 由 CondCode 表驱动）。索引与 X64CondCode 枚举序一致。
+    /// </summary>
+    public readonly struct X64CondEncoding
+    {
+        public X64CondEncoding(string name, byte jcc, byte setcc)
+        {
+            Name = name;
+            Jcc = jcc;
+            Setcc = setcc;
+        }
+
+        public string Name { get; }
+        public byte Jcc { get; }
+        public byte Setcc { get; }
+
+        public override string ToString() => $"{Name} jcc:0F {Jcc:X2} setcc:0F {Setcc:X2}";
+    }
+
+    /// <summary>条件码编码表（P4：Jcc/Setcc 收敛为数据，供 JccOpcode/SetccOpcode 查表 + 矩阵）。</summary>
+    public static class X64CondTable
+    {
+        public static readonly X64CondEncoding[] Items =
+        {
+            new("E", 0x84, 0x94),         // Equal
+            new("NE", 0x85, 0x95),        // NotEqual
+            new("L", 0x8C, 0x9C),         // Less
+            new("LE", 0x8E, 0x9E),        // LessOrEqual
+            new("G", 0x8F, 0x9F),         // Greater
+            new("GE", 0x8D, 0x9D),        // GreaterOrEqual
+            new("B", 0x82, 0x92),         // Below
+            new("BE", 0x86, 0x96),        // BelowOrEqual
+            new("A", 0x87, 0x97),         // Above
+            new("AE", 0x83, 0x93),        // AboveOrEqual
+            new("P", 0x8A, 0x9A),         // Parity
+            new("NP", 0x8B, 0x9B),        // NoParity
+        };
+
+        public static X64CondEncoding ByCond(X64CondCode cond) => Items[(int)cond];
+    }
 }

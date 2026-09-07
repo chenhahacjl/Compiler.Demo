@@ -448,39 +448,9 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
             EmitInt32(0);
         }
 
-        private static byte JccOpcode(X64CondCode cond) => cond switch
-        {
-            X64CondCode.Equal => 0x84,
-            X64CondCode.NotEqual => 0x85,
-            X64CondCode.Below => 0x82,
-            X64CondCode.BelowOrEqual => 0x86,
-            X64CondCode.Above => 0x87,
-            X64CondCode.AboveOrEqual => 0x83,
-            X64CondCode.Less => 0x8C,
-            X64CondCode.LessOrEqual => 0x8E,
-            X64CondCode.Greater => 0x8F,
-            X64CondCode.GreaterOrEqual => 0x8D,
-            X64CondCode.Parity => 0x8A,
-            X64CondCode.NoParity => 0x8B,
-            _ => throw new ArgumentOutOfRangeException(nameof(cond)),
-        };
+        private static byte JccOpcode(X64CondCode cond) => X64CondTable.ByCond(cond).Jcc;
 
-        private static byte SetccOpcode(X64CondCode cond) => cond switch
-        {
-            X64CondCode.Equal => 0x94,
-            X64CondCode.NotEqual => 0x95,
-            X64CondCode.Below => 0x92,
-            X64CondCode.BelowOrEqual => 0x96,
-            X64CondCode.Above => 0x97,
-            X64CondCode.AboveOrEqual => 0x93,
-            X64CondCode.Less => 0x9C,
-            X64CondCode.LessOrEqual => 0x9E,
-            X64CondCode.Greater => 0x9F,
-            X64CondCode.GreaterOrEqual => 0x9D,
-            X64CondCode.Parity => 0x9A,
-            X64CondCode.NoParity => 0x9B,
-            _ => throw new ArgumentOutOfRangeException(nameof(cond)),
-        };
+        private static byte SetccOpcode(X64CondCode cond) => X64CondTable.ByCond(cond).Setcc;
 
     }
 }

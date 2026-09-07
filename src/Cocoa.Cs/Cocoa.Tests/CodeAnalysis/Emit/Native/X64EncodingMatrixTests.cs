@@ -294,5 +294,44 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             Assert.True(X64ExtTable.Movsxd.ForceRexW);
             Assert.Equal(4, X64ExtTable.All.Count);
         }
+
+        // P4：条件码表（Jcc 0F 8x + rel32 fixup / Setcc 0F 9x）
+        [Theory]
+        [InlineData((int)X64CondCode.Equal, "0F 84 00 00 00 00")]
+        [InlineData((int)X64CondCode.NotEqual, "0F 85 00 00 00 00")]
+        [InlineData((int)X64CondCode.Less, "0F 8C 00 00 00 00")]
+        [InlineData((int)X64CondCode.GreaterOrEqual, "0F 8D 00 00 00 00")]
+        [InlineData((int)X64CondCode.Above, "0F 87 00 00 00 00")]
+        [InlineData((int)X64CondCode.Parity, "0F 8A 00 00 00 00")]
+        public void Cond_Jcc_Rel32(int code, string expected)
+        {
+            var a = new X64Assembler();
+            a.Jcc((X64CondCode)code, 0);
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Theory]
+        [InlineData((int)X64CondCode.Equal, "0F 94 C0")]
+        [InlineData((int)X64CondCode.NotEqual, "0F 95 C0")]
+        [InlineData((int)X64CondCode.Less, "0F 9C C0")]
+        [InlineData((int)X64CondCode.GreaterOrEqual, "0F 9D C0")]
+        [InlineData((int)X64CondCode.Above, "0F 97 C0")]
+        [InlineData((int)X64CondCode.NoParity, "0F 9B C0")]
+        public void Cond_Setcc_Al(int code, string expected)
+        {
+            var a = new X64Assembler();
+            a.Setcc((X64CondCode)code, X64Register.EAX);
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Cond_Table_CoversAllCodes()
+        {
+            Assert.Equal(12, X64CondTable.Items.Length);
+            Assert.Equal((byte)0x84, X64CondTable.ByCond(X64CondCode.Equal).Jcc);
+            Assert.Equal((byte)0x94, X64CondTable.ByCond(X64CondCode.Equal).Setcc);
+            Assert.Equal((byte)0x8F, X64CondTable.ByCond(X64CondCode.Greater).Jcc);
+            Assert.Equal((byte)0x9E, X64CondTable.ByCond(X64CondCode.LessOrEqual).Setcc);
+        }
     }
 }
