@@ -52,6 +52,35 @@ namespace Cocoa.CodeGen.Native
                     continue;
                 }
 
+                var location = DeclarationNameLocation(function) ?? default;
+
+                // 9d：签名自检（生成期失败快，不产运行期坏 exe）。
+                // 参数上限 5（MirToLir.Conversions 现有上限，validator 前置为诊断而非 throw）。
+                if (function.Parameters.Length > 5)
+                {
+                    builder.Add(Diagnostic.Error(location,
+                        $"extern function '{function.Name}' 有 {function.Parameters.Length} 个参数，native 后端支持最多 5 个（x64 寄存器 rcx/rdx/r8/r9 + 第 5 参 shadow 槽）。"));
+                }
+
+                // 返回类型：仅 void/整型/指针（SysCall 返回值经 EAX/EDX:EAX 整数路径；float/double 走 XMM0 未支持）。
+                var rt = function.ReturnType;
+                if (rt != TypeSymbol.Void &&
+                    !(rt.IsPrimitiveValueType && rt != TypeSymbol.Float && rt != TypeSymbol.Double))
+                {
+                    builder.Add(Diagnostic.Error(location,
+                        $"extern function '{function.Name}' 返回类型 '{rt.Name}' 不受 native 后端支持（仅 void/整型/指针；字符串/浮点/结构体返回需经 System.Runtime 原语封装）。"));
+                }
+
+                // 参数类型：float/double 参数经整数寄存器装载路径，native 后端不支持。
+                foreach (var parameter in function.Parameters)
+                {
+                    if (parameter.Type == TypeSymbol.Float || parameter.Type == TypeSymbol.Double)
+                    {
+                        builder.Add(Diagnostic.Error(location,
+                            $"extern function '{function.Name}' 参数 '{parameter.Name}' 为浮点类型，native 后端不支持（仅整型/指针）。"));
+                    }
+                }
+
                 if (!TryResolveExport(function.DllName, function.EntryPoint ?? function.Name, architecture))
                 {
                     builder.Add(Diagnostic.Warning(DeclarationNameLocation(function) ?? default,
