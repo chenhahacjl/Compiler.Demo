@@ -114,6 +114,45 @@ function Main(): i32
 ", 5);
         }
 
+        /// <summary>C# better conversion target（§12.6.4.7，Roslyn getNumericConversionRank 同构）：同分候选按
+        /// 数值转换 rank 更小（更靠近源）者更优——实测 C#：byte 实参选 short&gt;int、uint&gt;long；int 实参选 long&gt;double。</summary>
+        [Fact]
+        public void Evaluator_Overload_BetterTarget_PicksNearest()
+        {
+            // byte 实参：short 优于 int（rank 2 &lt; 4）
+            AssertValue(@"
+function Pick(x: i16): i32 { return 1 }
+function Pick(x: i32): i32 { return 2 }
+
+function Main(): i32
+{
+    return Pick(u8(5))
+}
+", 1);
+
+            // byte 实参：uint 优于 long（rank 5 &lt; 6）
+            AssertValue(@"
+function Pick(x: u32): i32 { return 1 }
+function Pick(x: i64): i32 { return 2 }
+
+function Main(): i32
+{
+    return Pick(u8(5))
+}
+", 1);
+
+            // int 实参：long 优于 double（rank 6 &lt; 9）
+            AssertValue(@"
+function Pick(x: i64): i32 { return 1 }
+function Pick(x: f64): i32 { return 2 }
+
+function Main(): i32
+{
+    return Pick(i32(5))
+}
+", 1);
+        }
+
         [Fact]
         public void Evaluator_Overload_DoubleChosenForDoubleArgs()
         {
@@ -177,19 +216,19 @@ function Main(): i32
         public void Evaluator_Overload_Ambiguous_ReportsDiagnostic()
         {
             var text = @"
-                function G(a: i64): i32
+                function G(a: i64, b: i16): i32
                 {
                     return i32(a)
                 }
 
-                function G(a: f64): i32
+                function G(a: i16, b: i64): i32
                 {
                     return i32(a)
                 }
 
                 function Main(): i32
                 {
-                    return [G](i32(3))
+                    return [G](u8(1), u8(2))
                 }
             ";
 

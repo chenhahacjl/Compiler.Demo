@@ -1676,7 +1676,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                     if (!conversion.IsIdentity)
                     {
-                        score += NumericPromotionWeight(arguments[i].Type, candidate.Parameters[i].Type);
+                        score++;
                     }
                 }
 
@@ -1699,24 +1699,82 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return best[0].Function;
             }
 
+            // C# better conversion target（§12.6.4.7，Roslyn Binder_Conversions.cs 同构）：目标可被对方隐式转换者更优
+            var optimal = new List<FunctionSymbol>();
+            foreach (var candidate in best)
+            {
+                var dominated = false;
+                foreach (var other in best)
+                {
+                    if (ReferenceEquals(other.Function, candidate.Function))
+                    {
+                        continue;
+                    }
+
+                    if (CompareOverloadTargets(other.Function, candidate.Function, arguments) > 0)
+                    {
+                        dominated = true;
+                        break;
+                    }
+                }
+
+                if (!dominated)
+                {
+                    optimal.Add(candidate.Function);
+                }
+            }
+
+            if (optimal.Count == 1)
+            {
+                return optimal[0];
+            }
+
             _diagnostics.ReportAmbiguousInvocation(location, name);
             return null;
         }
 
-        /// <summary>整型提升权重（对齐 C# 重载解析）：窄整型 → i32 唯一最优（权重 0，其余隐式数值 1）。</summary>
-        private static int NumericPromotionWeight(TypeSymbol from, TypeSymbol to)
+        /// <summary>同分候选"参数目标更优"和：&gt;0 表示 f1 更优。数值目标按 numeric conversion rank
+        /// （Roslyn getNumericConversionRank 同构，rank 更小更优）；非数值参数不参与。</summary>
+        private static int CompareOverloadTargets(FunctionSymbol f1, FunctionSymbol f2, ImmutableArray<BoundExpression> arguments)
         {
-            if (from.IsNumeric && to == TypeSymbol.Int32 && IsNarrowInteger(from))
+            var sum = 0;
+            for (var i = 0; i < arguments.Length; i++)
             {
-                return 0;
+                var r1 = NumericPromotionRank(f1.Parameters[i].Type);
+                var r2 = NumericPromotionRank(f2.Parameters[i].Type);
+                if (r1 < 0 || r2 < 0)
+                {
+                    continue;
+                }
+
+                if (r1 < r2)
+                {
+                    sum++;
+                }
+                else if (r1 > r2)
+                {
+                    sum--;
+                }
             }
 
-            return 1;
+            return sum;
         }
 
-        private static bool IsNarrowInteger(TypeSymbol type)
-            => type == TypeSymbol.Int8 || type == TypeSymbol.UInt8
-               || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16;
+        /// <summary>数值类型转换 rank（C# 隐式数值转换链序；越窄/越靠近源越优）。非数值返回 -1。</summary>
+        private static int NumericPromotionRank(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Int8) return 0;
+            if (type == TypeSymbol.UInt8) return 1;
+            if (type == TypeSymbol.Int16) return 2;
+            if (type == TypeSymbol.UInt16) return 3;
+            if (type == TypeSymbol.Int32) return 4;
+            if (type == TypeSymbol.UInt32) return 5;
+            if (type == TypeSymbol.Int64) return 6;
+            if (type == TypeSymbol.UInt64) return 7;
+            if (type == TypeSymbol.Float) return 8;
+            if (type == TypeSymbol.Double) return 9;
+            return -1;
+        }
 
         private void ReportArgumentCountMismatch(CallExpressionSyntax syntax, FunctionSymbol function)
         {
