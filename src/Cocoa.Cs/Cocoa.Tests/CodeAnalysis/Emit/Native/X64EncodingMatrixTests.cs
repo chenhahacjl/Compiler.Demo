@@ -333,5 +333,89 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
             Assert.Equal((byte)0x8F, X64CondTable.ByCond(X64CondCode.Greater).Jcc);
             Assert.Equal((byte)0x9E, X64CondTable.ByCond(X64CondCode.LessOrEqual).Setcc);
         }
+
+        // —— SSE 标量 ——
+        [Theory]
+        [InlineData("MOVSD", "F2 0F 10 C1")]
+        [InlineData("ADDSD", "F2 0F 58 C1")]
+        [InlineData("MULSD", "F2 0F 59 C1")]
+        [InlineData("SUBSD", "F2 0F 5C C1")]
+        [InlineData("DIVSD", "F2 0F 5E C1")]
+        [InlineData("SQRTSD", "F2 0F 51 C1")]
+        public void Sse_Sd_RegReg(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "MOVSD": a.Movsd(X64Register.XMM0, X64Register.XMM1); break;
+                case "ADDSD": a.Addsd(X64Register.XMM0, X64Register.XMM1); break;
+                case "MULSD": a.Mulsd(X64Register.XMM0, X64Register.XMM1); break;
+                case "SUBSD": a.Subsd(X64Register.XMM0, X64Register.XMM1); break;
+                case "DIVSD": a.Divsd(X64Register.XMM0, X64Register.XMM1); break;
+                case "SQRTSD": a.Sqrtsd(X64Register.XMM0, X64Register.XMM1); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Sse_Movsd_RegMem_Store()
+        {
+            var a = new X64Assembler();
+            a.Movsd(new X64MemoryOperand(X64Register.RBP, -8), X64Register.XMM0);
+            Assert.Equal("F2 0F 11 45 F8", Hex(a.ToArray()));
+        }
+
+        [Theory]
+        [InlineData("CVTSI2SD", "F2 0F 2A C0")]
+        [InlineData("CVTTSD2SI", "F2 0F 2C C0")]
+        [InlineData("CVTSI2SS", "F3 0F 2A C0")]
+        [InlineData("CVTTSS2SI", "F3 0F 2C C0")]
+        [InlineData("CVTSS2SD", "F3 0F 5A C1")]
+        [InlineData("CVTSD2SS", "F2 0F 5A C1")]
+        public void Sse_Convert_RegReg(string name, string expected)
+        {
+            var a = new X64Assembler();
+            switch (name)
+            {
+                case "CVTSI2SD": a.Cvtsi2sd(X64Register.XMM0, X64Register.EAX); break;
+                case "CVTTSD2SI": a.Cvttsd2si(X64Register.EAX, X64Register.XMM0); break;
+                case "CVTSI2SS": a.Cvtsi2ss(X64Register.XMM0, X64Register.EAX); break;
+                case "CVTTSS2SI": a.Cvttss2si(X64Register.EAX, X64Register.XMM0); break;
+                case "CVTSS2SD": a.Cvtss2sd(X64Register.XMM0, X64Register.XMM1); break;
+                case "CVTSD2SS": a.Cvtsd2ss(X64Register.XMM0, X64Register.XMM1); break;
+            }
+
+            Assert.Equal(expected, Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Sse_Cvtsi2sd64_RexW()
+        {
+            var a = new X64Assembler();
+            a.Cvtsi2sd64(X64Register.XMM0, X64Register.RAX);
+            Assert.Equal("F2 48 0F 2A C0", Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Sse_Ucomisd_66Prefix()
+        {
+            var a = new X64Assembler();
+            a.Ucomisd(X64Register.XMM0, X64Register.XMM1);
+            Assert.Equal("66 0F 2E C1", Hex(a.ToArray()));
+        }
+
+        [Fact]
+        public void Sse_Table_ExposesEntries()
+        {
+            Assert.Equal((byte)0xF2, X64SseTable.Movsd.Prefix);
+            Assert.Equal((byte)0x10, X64SseTable.Movsd.Op);
+            Assert.Equal((byte)0x11, X64SseTable.Movsd.OpStore);
+            Assert.Equal((byte)0x58, X64SseTable.Addsd.Op);
+            Assert.Equal((byte)0x2A, X64SseTable.Cvtsi2sd64.Op);
+            Assert.True(X64SseTable.Cvtsi2sd64.RexW);
+            Assert.Equal((byte)0x66, X64SseTable.Ucomisd.Prefix);
+            Assert.Equal((byte)0x7E, X64SseTable.MovdXmmToGpr.Op);
+        }
     }
 }

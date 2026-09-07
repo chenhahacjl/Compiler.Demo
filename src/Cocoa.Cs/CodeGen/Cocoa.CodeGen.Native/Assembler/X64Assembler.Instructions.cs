@@ -381,20 +381,20 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         // SSE（double，IEEE-754 binary64）
         // ------------------------------------------------------------------
 
-        public void Movsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x10, 0xF2, xmmDst, xmmSrc);
-        public void Movsd(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(0x10, 0xF2, xmmDst, src);
-        public void Movsd(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(0x11, 0xF2, dst, xmmSrc);
-        public void Addsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x58, 0xF2, xmmDst, xmmSrc);
-        public void Subsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5C, 0xF2, xmmDst, xmmSrc);
-        public void Mulsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x59, 0xF2, xmmDst, xmmSrc);
-        public void Divsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5E, 0xF2, xmmDst, xmmSrc);
-        public void Sqrtsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x51, 0xF2, xmmDst, xmmSrc);
-        public void Roundsd(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x0B, 0x66, xmmDst, xmmSrc, imm);
-        public void Cvtsi2sd(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF2, xmmDst, r32Src);
-        public void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF2, r32Dst, xmmSrc);
-        public void Cvtsi2sd64(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(0x2A, 0xF2, xmmDst, r64Src, rexW: true);
-        public void Cvttsd2si64(X64Register r64Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF2, r64Dst, xmmSrc, rexW: true);
-        public void Ucomisd(X64Register xmmA, X64Register xmmB) => EmitSseRegReg(0x2E, 0x66, xmmA, xmmB);
+        public void Movsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Movsd.Op, X64SseTable.Movsd.Prefix, xmmDst, xmmSrc);
+        public void Movsd(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(X64SseTable.Movsd.Op, X64SseTable.Movsd.Prefix, xmmDst, src);
+        public void Movsd(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(X64SseTable.Movsd.OpStore, X64SseTable.Movsd.Prefix, dst, xmmSrc);
+        public void Addsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Addsd.Op, X64SseTable.Addsd.Prefix, xmmDst, xmmSrc);
+        public void Subsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Subsd.Op, X64SseTable.Subsd.Prefix, xmmDst, xmmSrc);
+        public void Mulsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Mulsd.Op, X64SseTable.Mulsd.Prefix, xmmDst, xmmSrc);
+        public void Divsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Divsd.Op, X64SseTable.Divsd.Prefix, xmmDst, xmmSrc);
+        public void Sqrtsd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Sqrtsd.Op, X64SseTable.Sqrtsd.Prefix, xmmDst, xmmSrc);
+        public void Roundsd(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(X64SseTable.Roundsd.Op, X64SseTable.Roundsd.Prefix, xmmDst, xmmSrc, imm);
+        public void Cvtsi2sd(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(X64SseTable.Cvtsi2sd.Op, X64SseTable.Cvtsi2sd.Prefix, xmmDst, r32Src);
+        public void Cvttsd2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Cvttsd2si.Op, X64SseTable.Cvttsd2si.Prefix, r32Dst, xmmSrc);
+        public void Cvtsi2sd64(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(X64SseTable.Cvtsi2sd64.Op, X64SseTable.Cvtsi2sd64.Prefix, xmmDst, r64Src, rexW: true);
+        public void Cvttsd2si64(X64Register r64Dst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Cvttsd2si64.Op, X64SseTable.Cvttsd2si64.Prefix, r64Dst, xmmSrc, rexW: true);
+        public void Ucomisd(X64Register xmmA, X64Register xmmB) => EmitSseRegReg(X64SseTable.Ucomisd.Op, X64SseTable.Ucomisd.Prefix, xmmA, xmmB);
         public void MovdGprToXmm(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r32Src);
         public void MovdXmmToGpr(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x7E, 0x66, xmmSrc, r32Dst);
         public void MovqGprToXmm(X64Register xmmDst, X64Register r64Src) => EmitSseRegReg(0x6E, 0x66, xmmDst, r64Src, rexW: true);
@@ -406,18 +406,18 @@ namespace Cocoa.CodeGen.Native.Assembler.X64
         // SSE（float 单精度，IEEE-754 binary32，前缀 F3）
         // ------------------------------------------------------------------
 
-        public void Movss(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(0x10, 0xF3, xmmDst, src);
-        public void Movss(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(0x11, 0xF3, dst, xmmSrc);
-        public void Addss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x58, 0xF3, xmmDst, xmmSrc);
-        public void Subss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5C, 0xF3, xmmDst, xmmSrc);
-        public void Mulss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x59, 0xF3, xmmDst, xmmSrc);
-        public void Divss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5E, 0xF3, xmmDst, xmmSrc);
-        public void Sqrtss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x51, 0xF3, xmmDst, xmmSrc);
-        public void Roundss(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(0x0B, 0xF3, xmmDst, xmmSrc, imm);
-        public void Cvtsi2ss(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(0x2A, 0xF3, xmmDst, r32Src);
-        public void Cvttss2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(0x2C, 0xF3, r32Dst, xmmSrc);
-        public void Cvtss2sd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5A, 0xF3, xmmDst, xmmSrc);
-        public void Cvtsd2ss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(0x5A, 0xF2, xmmDst, xmmSrc);
+        public void Movss(X64Register xmmDst, X64MemoryOperand src) => EmitSseRegMem(X64SseTable.Movss.Op, X64SseTable.Movss.Prefix, xmmDst, src);
+        public void Movss(X64MemoryOperand dst, X64Register xmmSrc) => EmitSseMemReg(X64SseTable.Movss.OpStore, X64SseTable.Movss.Prefix, dst, xmmSrc);
+        public void Addss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Addss.Op, X64SseTable.Addss.Prefix, xmmDst, xmmSrc);
+        public void Subss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Subss.Op, X64SseTable.Subss.Prefix, xmmDst, xmmSrc);
+        public void Mulss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Mulss.Op, X64SseTable.Mulss.Prefix, xmmDst, xmmSrc);
+        public void Divss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Divss.Op, X64SseTable.Divss.Prefix, xmmDst, xmmSrc);
+        public void Sqrtss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Sqrtss.Op, X64SseTable.Sqrtss.Prefix, xmmDst, xmmSrc);
+        public void Roundss(X64Register xmmDst, X64Register xmmSrc, byte imm) => EmitSseRegImm(X64SseTable.Roundss.Op, X64SseTable.Roundss.Prefix, xmmDst, xmmSrc, imm);
+        public void Cvtsi2ss(X64Register xmmDst, X64Register r32Src) => EmitSseRegReg(X64SseTable.Cvtsi2ss.Op, X64SseTable.Cvtsi2ss.Prefix, xmmDst, r32Src);
+        public void Cvttss2si(X64Register r32Dst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Cvttss2si.Op, X64SseTable.Cvttss2si.Prefix, r32Dst, xmmSrc);
+        public void Cvtss2sd(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Cvtss2sd.Op, X64SseTable.Cvtss2sd.Prefix, xmmDst, xmmSrc);
+        public void Cvtsd2ss(X64Register xmmDst, X64Register xmmSrc) => EmitSseRegReg(X64SseTable.Cvtsd2ss.Op, X64SseTable.Cvtsd2ss.Prefix, xmmDst, xmmSrc);
 
         public void Ucomiss(X64Register xmmA, X64Register xmmB)
         {
