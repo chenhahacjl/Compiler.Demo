@@ -431,7 +431,17 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 type = (TypeClauseSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
             }
 
-            return new ParameterSyntax(syntaxTree, modifier, identifier, type);
+            SyntaxToken? equalsToken = null;
+            ExpressionSyntax? defaultValue = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.EqualsToken)
+            {
+                equalsToken = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+                defaultValue = (ExpressionSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            }
+
+            return new ParameterSyntax(syntaxTree, modifier, identifier, type, equalsToken, defaultValue);
         }
 
         private SyntaxNode BuildFunctionDeclaration(SyntaxTree syntaxTree, int position)

@@ -766,7 +766,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             ctors = ctors.Distinct().ToImmutableArray();
-            var arityMatched = ctors.Where(c => c.Parameters.Length == arguments.Count).ToImmutableArray();
+            var arityMatched = ctors.Where(c => c.Parameters.Length == arguments.Count ||
+                                                (c.Parameters.Length > arguments.Count && RequiredParameterCount(c.Parameters) <= arguments.Count))
+                                    .ToImmutableArray();
             FunctionSymbol? ctor;
             if (arityMatched.Length == 1)
             {
@@ -800,18 +802,25 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     return new BoundErrorExpression(syntax);
                 }
 
-                if (ctor.Parameters.Length != arguments.Count)
+                if (ctor.Parameters.Length != arguments.Count && arguments.Count < RequiredParameterCount(ctor.Parameters))
                 {
                     _diagnostics.ReportWrongArgumentCount(syntax.Identifier.Location, classType.Name, ctor.Parameters.Length, arguments.Count);
                     return new BoundErrorExpression(syntax);
                 }
             }
 
-            for (var i = 0; i < arguments.Count; i++)
+            if (ctor != null)
             {
-                if (ctor != null)
+                for (var i = 0; i < ctor.Parameters.Length; i++)
                 {
-                    arguments[i] = BindConversion(arguments[i].Syntax.Location, arguments[i], ctor.Parameters[i].Type);
+                    if (i < arguments.Count)
+                    {
+                        arguments[i] = BindConversion(arguments[i].Syntax.Location, arguments[i], ctor.Parameters[i].Type);
+                    }
+                    else if (ctor.Parameters[i].HasDefaultValue)
+                    {
+                        arguments.Add(new BoundLiteralExpression(syntax, ctor.Parameters[i].DefaultValue!, ctor.Parameters[i].Type));
+                    }
                 }
             }
 
@@ -1070,7 +1079,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                         return new BoundErrorExpression(syntax);
                     }
 
-                    if (method.Parameters.Length != syntax.Arguments.Count)
+                    if (method.Parameters.Length != syntax.Arguments.Count && syntax.Arguments.Count < RequiredParameterCount(method.Parameters))
                     {
                         _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, method.Parameters.Length, syntax.Arguments.Count);
                         return new BoundErrorExpression(syntax);
@@ -1079,9 +1088,16 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     var isBase = boundExpression is BoundBaseExpression;
 
                     var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                    for (var i = 0; i < boundArguments.Count; i++)
+                    for (var i = 0; i < method.Parameters.Length; i++)
                     {
-                        arguments.Add(BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type));
+                        if (i < boundArguments.Count)
+                        {
+                            arguments.Add(BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type));
+                        }
+                        else if (method.Parameters[i].HasDefaultValue)
+                        {
+                            arguments.Add(new BoundLiteralExpression(syntax, method.Parameters[i].DefaultValue!, method.Parameters[i].Type));
+                        }
                     }
 
                     return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method, isBase);
@@ -1178,17 +1194,24 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            if (method.Parameters.Length != arguments.Length)
+            if (method.Parameters.Length != arguments.Length && arguments.Length < RequiredParameterCount(method.Parameters))
             {
                 _diagnostics.ReportWrongArgumentCount(syntax.IdentifierToken.Location, identifier, method.Parameters.Length, arguments.Length);
                 return new BoundErrorExpression(syntax);
             }
 
-            var converted = ImmutableArray.CreateBuilder<BoundExpression>(arguments.Length);
-            for (var i = 0; i < arguments.Length; i++)
+            var converted = ImmutableArray.CreateBuilder<BoundExpression>(method.Parameters.Length);
+            for (var i = 0; i < method.Parameters.Length; i++)
             {
-                // 参数类型 any：非 void 值隐式装箱/引用转换（Conversion.Classify）
-                converted.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i].Type));
+                if (i < arguments.Length)
+                {
+                    // 参数类型 any：非 void 值隐式装箱/引用转换（Conversion.Classify）
+                    converted.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i].Type));
+                }
+                else if (method.Parameters[i].HasDefaultValue)
+                {
+                    converted.Add(new BoundLiteralExpression(syntax, method.Parameters[i].DefaultValue!, method.Parameters[i].Type));
+                }
             }
 
             return new BoundMemberCallExpression(syntax, receiver, identifier, converted.ToImmutable(), method.ReturnType, method);
@@ -1703,13 +1726,19 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            for (var i = 0; i < syntax.Arguments.Count; i++)
+            for (var i = 0; i < function.Parameters.Length; i++)
             {
-                var argumentLocation = syntax.Arguments[i].Location;
-                var argument = boundArguments[i];
                 var parameter = function.Parameters[i];
-
-                boundArguments[i] = BindArgumentConversion(argumentLocation, argument, parameter);
+                if (i < boundArguments.Count)
+                {
+                    var argumentLocation = syntax.Arguments[i].Location;
+                    var argument = boundArguments[i];
+                    boundArguments[i] = BindArgumentConversion(argumentLocation, argument, parameter);
+                }
+                else if (parameter.HasDefaultValue)
+                {
+                    boundArguments.Add(new BoundLiteralExpression(syntax, parameter.DefaultValue!, parameter.Type));
+                }
             }
 
             return new BoundCallExpression(syntax, function, boundArguments.ToImmutable());
@@ -1740,7 +1769,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             if (candidates.Length == 1)
             {
                 var only = candidates[0];
-                if (arguments.Length != only.Parameters.Length)
+                if (arguments.Length != only.Parameters.Length &&
+                    (arguments.Length < RequiredParameterCount(only.Parameters) || arguments.Length > only.Parameters.Length))
                 {
                     ReportArgumentCountMismatch(syntax, only);
                     return null;
@@ -1757,7 +1787,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             if (candidates.Length == 1)
             {
                 var only = candidates[0];
-                if (arguments.Length != only.Parameters.Length)
+                if (arguments.Length != only.Parameters.Length &&
+                    (arguments.Length < RequiredParameterCount(only.Parameters) || arguments.Length > only.Parameters.Length))
                 {
                     _diagnostics.ReportWrongArgumentCount(location, name, only.Parameters.Length, arguments.Length);
                     return null;
@@ -1774,7 +1805,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var viable = new List<(FunctionSymbol Function, int Score)>();
             foreach (var candidate in candidates)
             {
-                if (candidate.Parameters.Length != arguments.Length)
+                if (candidate.Parameters.Length != arguments.Length &&
+                    (arguments.Length < RequiredParameterCount(candidate.Parameters) || arguments.Length > candidate.Parameters.Length))
                 {
                     continue;
                 }

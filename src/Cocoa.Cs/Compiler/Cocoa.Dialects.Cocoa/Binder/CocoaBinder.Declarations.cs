@@ -123,13 +123,38 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return parameters.ToImmutable();
         }
 
-        /// <summary>形参符号构造（6e-M23 R2）：携带 out/ref 修饰符；普通形参可赋值（对齐 C#），this 保持只读。</summary>
+        /// <summary>形参符号构造（6e-M23 R2）：携带 out/ref 修饰符；普通形参可赋值（对齐 C#），this 保持只读。
+        /// 可选参数（语言后置件）：形参默认值 `x: i32 = 10` 求值为常量存入 ParameterSymbol。</summary>
         private ParameterSymbol CreateParameterSymbol(string name, TypeSymbol type, ParameterSyntax syntax, int ordinal)
         {
             var isOut = syntax.Modifier?.Kind == SSyntax.SyntaxKind.OutKeyword;
             var isRef = syntax.Modifier?.Kind == SSyntax.SyntaxKind.RefKeyword;
 
-            return new ParameterSymbol(name, type, ordinal, isOut, isRef);
+            object? defaultValue = null;
+            var hasDefault = false;
+            if (syntax.HasDefaultValue)
+            {
+                var boundDefault = BindExpression(syntax.DefaultValue!);
+                if (boundDefault.ConstantValue is { } cv)
+                {
+                    hasDefault = true;
+                    defaultValue = cv.Value;
+                }
+            }
+
+            return new ParameterSymbol(name, type, ordinal, isOut, isRef, defaultValue: defaultValue, hasDefault: hasDefault);
+        }
+
+        /// <summary>可选参数（语言后置件）：必需形参个数 = 末尾可选形参之前的数量；调用实参数不得少于该值。</summary>
+        private static int RequiredParameterCount(ImmutableArray<ParameterSymbol> parameters)
+        {
+            var count = parameters.Length;
+            while (count > 0 && parameters[count - 1].HasDefaultValue)
+            {
+                count--;
+            }
+
+            return count;
         }
 
         /// <summary>泛型方法类型参数绑定（6e-M20）：建 TypeParameterSymbol 列表（重名/与类类型参数同名诊断）。</summary>

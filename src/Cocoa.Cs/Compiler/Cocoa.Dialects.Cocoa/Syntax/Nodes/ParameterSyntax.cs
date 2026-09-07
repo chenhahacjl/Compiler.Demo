@@ -11,12 +11,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         {
         }
 
-        internal ParameterSyntax(SyntaxTree syntaxTree, SyntaxToken? modifier, SyntaxToken identifier, TypeClauseSyntax type)
+        internal ParameterSyntax(SyntaxTree syntaxTree, SyntaxToken? modifier, SyntaxToken identifier, TypeClauseSyntax type, SyntaxToken? equalsToken = null, ExpressionSyntax? defaultValue = null)
             : base(syntaxTree)
         {
             Modifier = modifier;
             Identifier = identifier;
             Type = type;
+            EqualsToken = equalsToken;
+            DefaultValue = defaultValue;
         }
 
         public override CocoaSyntaxKind Kind => CocoaSyntaxKind.Parameter;
@@ -26,6 +28,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
         public SyntaxToken Identifier { get; }
         public TypeClauseSyntax Type { get; }
+
+        /// <summary>可选参数默认值（语言后置件）：`x: i32 = 10` 的 `= 10` 部分。</summary>
+        public SyntaxToken? EqualsToken { get; }
+        public ExpressionSyntax? DefaultValue { get; }
+        public bool HasDefaultValue => DefaultValue != null;
 
         /// <summary>是否为 C# 方言参数形态（`类型 名称`，类型前置）；Cocoa 恒为 `名称: 类型`（名称前置）。</summary>
         private bool IsTypeFirst => SyntaxTree.Language.ParametersAreTypeFirst;
@@ -52,6 +59,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 slots.Add(Type.ToGreen());
             }
 
+            if (EqualsToken != null)
+            {
+                slots.Add(EqualsToken.ToGreen());
+                if (DefaultValue != null)
+                {
+                    slots.Add(DefaultValue.ToGreen());
+                }
+            }
+
             return new GreenNodeWithChildren((SyntaxKind)Kind, slots.ToImmutable());
         }
 
@@ -63,6 +79,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
             yield return Identifier;
             yield return Type;
+            if (EqualsToken != null)
+            {
+                yield return EqualsToken;
+            }
+            if (DefaultValue != null)
+            {
+                yield return DefaultValue;
+            }
         }
     }
 }

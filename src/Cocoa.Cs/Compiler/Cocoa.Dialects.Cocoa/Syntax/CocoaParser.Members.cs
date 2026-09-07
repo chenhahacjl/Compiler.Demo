@@ -1246,7 +1246,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 var identifier = MatchToken(SyntaxKind.IdentifierToken);
                 var type = ParseTypeClause();
 
-                return new ParameterSyntax(_syntaxTree, modifier, identifier, type);
+                SyntaxToken? equalsToken = null;
+                ExpressionSyntax? defaultValue = null;
+                if (Current.Kind == SyntaxKind.EqualsToken)
+                {
+                    equalsToken = MatchToken(SyntaxKind.EqualsToken);
+                    defaultValue = ParseExpression();
+                }
+
+                return new ParameterSyntax(_syntaxTree, modifier, identifier, type, equalsToken, defaultValue);
             }
 
             ReportError(Current.Location, "Cocoa 参数须为 `名称: 类型`（类型后置），不支持 C# 式 `类型 名称`。");
