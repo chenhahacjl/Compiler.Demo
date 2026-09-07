@@ -298,6 +298,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     }
                 }
 
+                // facade interface: facade modifier claims (FullName == BCL interface name, like facade struct; no FacadeTargets whitelist).
+                if (classType.TypeKind == TypeKind.Interface && primary.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword))
+                {
+                    classType.IsFacadeClass = true;
+                }
+
                 // 3.5b：成员绑定
                 foreach (var (syntax, ns) in parts)
                 {

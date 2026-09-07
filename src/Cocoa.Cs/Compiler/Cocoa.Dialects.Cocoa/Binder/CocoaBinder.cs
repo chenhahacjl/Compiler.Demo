@@ -299,6 +299,13 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     }
                 }
 
+                // facade interface: facade modifier claims (FullName == BCL interface name, like facade struct; no FacadeTargets whitelist).
+                // IL side redirects interface type/impl/member calls to BCL; Evaluator/native use Cocoa interface semantics (vtable to impl class).
+                if (classType.TypeKind == TypeKind.Interface && primary.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword))
+                {
+                    classType.IsFacadeClass = true;
+                }
+
                 // 3.5b：成员绑定
                 foreach (var (syntax, ns) in parts)
                 {
