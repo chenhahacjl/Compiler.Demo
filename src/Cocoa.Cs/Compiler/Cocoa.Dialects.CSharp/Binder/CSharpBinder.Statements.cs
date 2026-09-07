@@ -70,6 +70,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 case SSyntax.CSharpSyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
+                case SSyntax.CSharpSyntaxKind.LocalFunctionDeclaration: return BindLocalFunctionDeclaration((LocalFunctionDeclarationStatementSyntax)syntax);
                 default:
                     // 1b/B8：解析器 panic 恢复合成的意外节点报诊断 + Nop 降级，而非编译器崩溃
                     _diagnostics.ReportError(syntax.Location, $"意外的语句语法 {syntax.Kind}。");

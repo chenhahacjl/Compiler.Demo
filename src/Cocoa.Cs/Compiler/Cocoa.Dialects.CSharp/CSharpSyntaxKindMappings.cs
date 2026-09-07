@@ -3,24 +3,24 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis
 {
     /// <summary>
-    /// C# 渚?RawKind 鈫?<see cref="CSharpSyntaxKind"/> 鏄惧紡鏄犲皠锛圥1-E-2b 鍗曚竴鐪熺浉鐐癸級銆?
-    /// 褰撳墠鍊煎煙涓庡叡浜?<see cref="SyntaxKind"/> 瀹屽叏瀵归綈锛? 缁挎爲 <see cref="GreenNode.RawKind"/>锛夛紝
-    /// 鏁呮槧灏勫嵆寮鸿浆锛涙湭鏉ュ€煎煙鍒嗗弶锛圕# 鏂板涓撳睘 kind锛夋椂浠呴渶淇敼鏈锛岃皟鐢ㄦ柟闆舵敼鍔ㄣ€?
+    /// C# 娓?RawKind 閳?<see cref="CSharpSyntaxKind"/> 閺勬儳绱￠弰鐘茬殸閿涘湧1-E-2b 閸楁洑绔撮惇鐔烘祲閻愮櫢绱氶妴?
+    /// 瑜版挸澧犻崐鐓庣厵娑撳骸鍙℃禍?<see cref="SyntaxKind"/> 鐎瑰苯鍙忕€靛綊缍堥敍? 缂佹寧鐖?<see cref="GreenNode.RawKind"/>閿涘绱?
+    /// 閺佸懏妲х亸鍕祮瀵缚娴嗛敍娑欐弓閺夈儱鈧厧鐓欓崚鍡楀级閿涘湑# 閺傛澘顤冩稉鎾崇潣 kind閿涘妞傛禒鍛存付娣囶喗鏁奸張顒€顦╅敍宀冪殶閻劍鏌熼梿鑸垫暭閸斻劊鈧?
     /// </summary>
     public static class CSharpSyntaxKindMappings
     {
-        /// <summary>RawKind(int) 鈫?C# 璇硶绫诲瀷锛堟湭鐭ュ€艰繑鍥?BadToken 鍝ㄥ叺锛夈€?/summary>
+        /// <summary>RawKind(int) 閳?C# 鐠囶厽纭剁猾璇茬€烽敍鍫熸弓閻儱鈧壈绻戦崶?BadToken 閸濄劌鍙洪敍澶堚偓?/summary>
         public static CSharpSyntaxKind ToCSharpSyntaxKind(int rawKind)
         {
-            return rawKind >= 0 && rawKind <= (int)CSharpSyntaxKind.DeclarationExpression
+            return rawKind >= 0 && rawKind <= (int)CSharpSyntaxKind.LocalFunctionDeclaration
                 ? (CSharpSyntaxKind)rawKind
                 : CSharpSyntaxKind.BadToken;
         }
 
-        /// <summary>鍏变韩鑱斿悎鏋氫妇锛堣繃娓℃€侊級鈫?C# 璇硶绫诲瀷銆?/summary>
+        /// <summary>閸忓彉闊╅懕鏂挎値閺嬫矮濡囬敍鍫ｇ箖濞撯剝鈧緤绱氶埆?C# 鐠囶厽纭剁猾璇茬€烽妴?/summary>
         public static CSharpSyntaxKind ToCSharpSyntaxKind(SyntaxKind kind) => ToCSharpSyntaxKind((int)kind);
 
-        /// <summary>C# 璇硶绫诲瀷 鈫?RawKind(int)锛? 缁挎爲瀛樺偍鍊硷級銆?/summary>
+        /// <summary>C# 鐠囶厽纭剁猾璇茬€?閳?RawKind(int)閿? 缂佹寧鐖茬€涙ê鍋嶉崐纭风礆閵?/summary>
         public static int ToRawKind(CSharpSyntaxKind kind) => (int)kind;
     }
 }

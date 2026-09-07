@@ -188,6 +188,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         LambdaExpression = 179,
         ByRefArgument = 180,
         DeclarationExpression = 199,
+        LocalFunctionDeclaration = 200,
         CastExpression = 181,
         AssignmentExpression = 182,
         PostfixIncrementExpression = 183,

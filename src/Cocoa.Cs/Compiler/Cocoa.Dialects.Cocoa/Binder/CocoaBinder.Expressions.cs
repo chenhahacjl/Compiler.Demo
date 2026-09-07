@@ -219,6 +219,135 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return new BoundFunctionValueExpression(syntax, function, receiver: null, body, computedType, environmentClass);
         }
 
+        /// <summary>局部函数声明（语言后置件）：降级为具名函数值（闭包 lambda），可捕获外层变量；非递归（体引用本名未声明 → 诊断）。</summary>
+        private BoundStatement BindLocalFunctionDeclaration(LocalFunctionDeclarationStatementSyntax syntax)
+        {
+            var decl = syntax.Declaration;
+            var name = decl.Identifier.Text;
+
+            var parameterSymbols = ImmutableArray.CreateBuilder<ParameterSymbol>();
+            var parameterTypes = ImmutableArray.CreateBuilder<TypeSymbol>();
+            for (var i = 0; i < decl.Parameters.Count; i++)
+            {
+                var p = decl.Parameters[i];
+                var parameterType = BindTypeClause(p.Type);
+                if (parameterType == null)
+                {
+                    return new BoundNopStatement(syntax);
+                }
+
+                parameterTypes.Add(parameterType);
+                parameterSymbols.Add(new ParameterSymbol(p.Identifier.Text, parameterType, i));
+            }
+
+            var returnType = decl.Type == null ? TypeSymbol.Void : BindTypeClause(decl.Type);
+            if (returnType == null)
+            {
+                return new BoundNopStatement(syntax);
+            }
+
+            var outerScope = _scope;
+            _scope = new BoundScope(outerScope);
+            foreach (var parameter in parameterSymbols)
+            {
+                _scope.TryDeclareVariable(parameter);
+            }
+
+            _lambdaBodyDepth++;
+
+            BoundBlockStatement body;
+            try
+            {
+                body = (BoundBlockStatement)BindStatement(decl.Body!);
+            }
+            finally
+            {
+                _lambdaBodyDepth--;
+                _scope = outerScope;
+            }
+
+            // 捕获分析（同 lambda）：外层局部/参数 = 捕获；递归引用本名 → 未声明诊断（非递归支持）
+            var ownSymbols = new HashSet<VariableSymbol>(parameterSymbols);
+            var referencedVariables = new HashSet<VariableSymbol>();
+            var declaredInBody = new HashSet<VariableSymbol>();
+            CollectVariableUsage(body, referencedVariables, declaredInBody);
+
+            var captures = new List<VariableSymbol>();
+            foreach (var variable in referencedVariables)
+            {
+                if (ownSymbols.Contains(variable) || declaredInBody.Contains(variable))
+                {
+                    continue;
+                }
+
+                if (variable is GlobalVariableSymbol)
+                {
+                    continue;
+                }
+
+                captures.Add(variable);
+            }
+
+            FunctionSymbol? environmentOwner = null;
+            NamedTypeSymbol? environmentClass = null;
+            if (captures.Count > 0)
+            {
+                environmentOwner = _environmentOwner ?? _function;
+                if (environmentOwner == null || environmentOwner.IsLambda)
+                {
+                    _diagnostics.ReportError(syntax.Location, "局部函数捕获需要宿主函数上下文（顶层脚本暂不支持）。");
+                    return new BoundNopStatement(syntax);
+                }
+
+                if (!_environmentClasses.TryGetValue(environmentOwner, out environmentClass))
+                {
+                    environmentClass = new NamedTypeSymbol($"__Env_{environmentOwner.Name}", string.Empty, Visibility.Private, declaration: null)
+                    {
+                        BaseType = NamedTypeSymbol.SystemObject,
+                    };
+                    _environmentClasses[environmentOwner] = environmentClass;
+                }
+
+                foreach (var captured in captures)
+                {
+                    captured.IsCaptured = true;
+                    environmentClass.AddField(new FieldSymbol(captured.Name, captured.Type, Visibility.Public, environmentClass));
+                }
+
+                environmentOwner.CapturedVariables ??= new List<VariableSymbol>();
+                foreach (var captured in captures)
+                {
+                    if (!environmentOwner.CapturedVariables.Contains(captured))
+                    {
+                        environmentOwner.CapturedVariables.Add(captured);
+                    }
+                }
+
+                environmentOwner.EnvironmentClass = environmentClass;
+            }
+
+            var uniqueName = $"__Local_{(_function?.Name ?? "main")}_{name}";
+            var function = new FunctionSymbol(uniqueName, parameterSymbols.ToImmutable(), returnType, declaration: null, syntax: syntax, containingClass: _currentClass, visibility: Visibility.Private)
+            {
+                IsStatic = true,
+                EnvironmentOwner = environmentOwner,
+                IsLambdaWithEnvironment = environmentClass != null,
+                IsLambda = true,
+                EnvironmentClass = environmentClass,
+            };
+
+            var functionType = FunctionTypeSymbol.Get(parameterTypes.ToImmutable(), returnType);
+            var localVar = new LocalVariableSymbol(name, isReadOnly: false, functionType, constant: null);
+            if (!_scope.TryDeclareVariable(localVar))
+            {
+                _diagnostics.ReportSymbolAlreadyDeclared(decl.Identifier.Location, name);
+                return new BoundNopStatement(syntax);
+            }
+
+            var value = new BoundFunctionValueExpression(syntax, function, receiver: null, body, functionType, environmentClass);
+            return new BoundVariableDeclaration(syntax, localVar, value);
+        }
+
         /// <summary>遍历绑定树收集变量引用与体内声明（6e-M22 C5 捕获分析用）。</summary>
         private static void CollectVariableUsage(BoundNode node, HashSet<VariableSymbol> references, HashSet<VariableSymbol> declarations)
         {

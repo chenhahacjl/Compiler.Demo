@@ -25,6 +25,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 case SyntaxKind.OpenBraceToken:
                     statement = ParseBlockStatement();
                     break;
+                case SyntaxKind.FunctionKeyword:
+                    statement = ParseLocalFunctionDeclaration();
+                    break;
+
                 case SyntaxKind.VarKeyword:
                 case SyntaxKind.ConstKeyword:
                     statement = ParseVariableDeclaration();
@@ -507,7 +511,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             return ParseAssignmentExpression();
         }
 
-        private StatementSyntax ParseThrowStatement()
+        /// <summary>局部函数声明（函数体内 `function Helper(...): T { ... }`，语言后置件）：解析函数声明并包装为语句。</summary>
+        private StatementSyntax ParseLocalFunctionDeclaration()
+        {
+            var declaration = (FunctionDeclarationSyntax)ParseFunctionDeclaration(ImmutableArray<SyntaxToken>.Empty);
+            return new LocalFunctionDeclarationStatementSyntax(_syntaxTree, declaration);
+        }        private StatementSyntax ParseThrowStatement()
         {
             var keyword = MatchToken(SyntaxKind.ThrowKeyword);
             var expression = ParseExpression();
