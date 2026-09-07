@@ -23,7 +23,7 @@
     (cls System.Boolean public iface:false ifaces:0 methods:7 ToString[@bool] Parse[@string] Parse[@string,@bool] Equals[@bool,@bool] GetHashCode[@bool] ToString[@bool,@string] TryParse[@string,out:@bool] fields:0 events:0)
     (cls System.Byte public iface:false ifaces:0 methods:7 ToString[@u8] CompareTo[@u8,@u8] Parse[@string] Equals[@u8,@u8] GetHashCode[@u8] ToString[@u8,@string] TryParse[@string,out:@u8] fields:0 events:0)
     (cls System.Char public iface:false ifaces:0 methods:17 ToString[@char] Parse[@string] CompareTo[@char,@char] IsDigit[@char] IsLetter[@char] IsWhiteSpace[@char] ToUpper[@char] ToLower[@char] IsLetterOrDigit[@char] IsControl[@char] IsHexDigit[@char] IsUpper[@char] IsLower[@char] Equals[@char,@char] GetHashCode[@char] ToString[@char,@string] TryParse[@string,out:@char] fields:0 events:0)
-    (cls System.Console internal iface:false ifaces:0 methods:30 WriteLine WriteLine[@string] WriteLine[@i32] WriteLine[@f64] WriteLine[@bool] WriteLine[@char] WriteLine[@u8] WriteLine[@i64] WriteLine[@i8] WriteLine[@i16] WriteLine[@u16] WriteLine[@u32] WriteLine[@u64] WriteLine[@f32] Write[@string] Write[@i32] Write[@f64] Write[@bool] Write[@char] Write[@u8] Write[@i64] Write[@i8] Write[@i16] Write[@u16] Write[@u32] Write[@u64] Write[@f32] ReadLine ReadKey[@bool] Beep[@i32,@i32] fields:0 events:0)
+    (cls System.Console internal iface:false ifaces:0 methods:22 WriteLine WriteLine[@string] WriteLine[@i32] WriteLine[@f64] WriteLine[@bool] WriteLine[@char] WriteLine[@i64] WriteLine[@u32] WriteLine[@u64] WriteLine[@f32] Write[@string] Write[@i32] Write[@f64] Write[@bool] Write[@char] Write[@i64] Write[@u32] Write[@u64] Write[@f32] ReadLine ReadKey[@bool] Beep[@i32,@i32] fields:0 events:0)
     (cls System.Convert public iface:false ifaces:0 methods:7 ToHexString[@u8[]] FromHexString[@string] HexValue[@char] Base64Alphabet ToBase64String[@u8[]] FromBase64String[@string] Base64Value[@char] fields:0 events:0)
     (cls System.Double public iface:false ifaces:0 methods:10 ToString[@f64] CompareTo[@f64,@f64] Equals[@f64,@f64] GetHashCode[@f64] ToString[@f64,@string] TryParse[@string,out:@f64] Parse[@string] IsNaN[@f64] IsInfinity[@f64] IsFinite[@f64] fields:0 events:0)
     (cls System.Environment internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
@@ -492,20 +492,8 @@
     (fn System.Core!System.Console.WriteLine[@char] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Console.WriteLine[@char]/text text @char 0 - -)
     )
-    (fn System.Core!System.Console.WriteLine[@u8] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.WriteLine[@u8]/text text @u8 0 - -)
-    )
     (fn System.Core!System.Console.WriteLine[@i64] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Console.WriteLine[@i64]/text text @i64 0 - -)
-    )
-    (fn System.Core!System.Console.WriteLine[@i8] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.WriteLine[@i8]/text text @i8 0 - -)
-    )
-    (fn System.Core!System.Console.WriteLine[@i16] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.WriteLine[@i16]/text text @i16 0 - -)
-    )
-    (fn System.Core!System.Console.WriteLine[@u16] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.WriteLine[@u16]/text text @u16 0 - -)
     )
     (fn System.Core!System.Console.WriteLine[@u32] name:WriteLine ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Console.WriteLine[@u32]/text text @u32 0 - -)
@@ -531,20 +519,8 @@
     (fn System.Core!System.Console.Write[@char] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Console.Write[@char]/text text @char 0 - -)
     )
-    (fn System.Core!System.Console.Write[@u8] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.Write[@u8]/text text @u8 0 - -)
-    )
     (fn System.Core!System.Console.Write[@i64] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Console.Write[@i64]/text text @i64 0 - -)
-    )
-    (fn System.Core!System.Console.Write[@i8] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.Write[@i8]/text text @i8 0 - -)
-    )
-    (fn System.Core!System.Console.Write[@i16] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.Write[@i16]/text text @i16 0 - -)
-    )
-    (fn System.Core!System.Console.Write[@u16] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
-      (par System.Core!System.Console.Write[@u16]/text text @u16 0 - -)
     )
     (fn System.Core!System.Console.Write[@u32] name:Write ret:@void ns:- owner:System.Console extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Console.Write[@u32]/text text @u32 0 - -)
@@ -3570,18 +3546,6 @@
         )
       )
     )
-    (body System.Core!System.Console.WriteLine[@u8]
-      (block 1
-        (exprstmt
-          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.WriteLine[@u8]/text)
-            )
-          )
-        )
-      )
-    )
     (body System.Core!System.Console.WriteLine[@i64]
       (block 1
         (exprstmt
@@ -3589,42 +3553,6 @@
             (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.WriteLine[@i64]/text)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.Console.WriteLine[@i8]
-      (block 1
-        (exprstmt
-          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.WriteLine[@i8]/text)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.Console.WriteLine[@i16]
-      (block 1
-        (exprstmt
-          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.WriteLine[@i16]/text)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.Console.WriteLine[@u16]
-      (block 1
-        (exprstmt
-          (membercall @void WriteLine System.Core!System.Syscall.ConsoleSyscall.WriteLine[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.WriteLine[@u16]/text)
             )
           )
         )
@@ -3726,18 +3654,6 @@
         )
       )
     )
-    (body System.Core!System.Console.Write[@u8]
-      (block 1
-        (exprstmt
-          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.Write[@u8]/text)
-            )
-          )
-        )
-      )
-    )
     (body System.Core!System.Console.Write[@i64]
       (block 1
         (exprstmt
@@ -3745,42 +3661,6 @@
             (statictype System.Syscall.ConsoleSyscall)
             (conv @any
               (var System.Core!System.Console.Write[@i64]/text)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.Console.Write[@i8]
-      (block 1
-        (exprstmt
-          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.Write[@i8]/text)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.Console.Write[@i16]
-      (block 1
-        (exprstmt
-          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.Write[@i16]/text)
-            )
-          )
-        )
-      )
-    )
-    (body System.Core!System.Console.Write[@u16]
-      (block 1
-        (exprstmt
-          (membercall @void Write System.Core!System.Syscall.ConsoleSyscall.Write[@any] 1
-            (statictype System.Syscall.ConsoleSyscall)
-            (conv @any
-              (var System.Core!System.Console.Write[@u16]/text)
             )
           )
         )
@@ -16796,4 +16676,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:7631b78938d5311a7513408cb7c4be15b30ed8d153beab4f4a00e3690d2a072b)
+(checksum sha256:67d301025d0536587c8eff3b0630141397924b14fb544bd588b2bbc19f8ce3a2)

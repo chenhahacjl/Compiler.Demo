@@ -1676,7 +1676,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                     if (!conversion.IsIdentity)
                     {
-                        score++;
+                        score += NumericPromotionWeight(arguments[i].Type, candidate.Parameters[i].Type);
                     }
                 }
 
@@ -1702,6 +1702,21 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             _diagnostics.ReportAmbiguousInvocation(location, name);
             return null;
         }
+
+        /// <summary>整型提升权重（对齐 C# 重载解析）：窄整型 → i32 唯一最优（权重 0，其余隐式数值 1）。</summary>
+        private static int NumericPromotionWeight(TypeSymbol from, TypeSymbol to)
+        {
+            if (from.IsNumeric && to == TypeSymbol.Int32 && IsNarrowInteger(from))
+            {
+                return 0;
+            }
+
+            return 1;
+        }
+
+        private static bool IsNarrowInteger(TypeSymbol type)
+            => type == TypeSymbol.Int8 || type == TypeSymbol.UInt8
+               || type == TypeSymbol.Int16 || type == TypeSymbol.UInt16;
 
         private void ReportArgumentCountMismatch(CallExpressionSyntax syntax, FunctionSymbol function)
         {

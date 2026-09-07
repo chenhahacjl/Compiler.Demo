@@ -177,9 +177,9 @@ function Main(): i32
         public void Evaluator_Overload_Ambiguous_ReportsDiagnostic()
         {
             var text = @"
-                function G(a: i32): i32
+                function G(a: i64): i32
                 {
-                    return a
+                    return i32(a)
                 }
 
                 function G(a: f64): i32
@@ -189,7 +189,7 @@ function Main(): i32
 
                 function Main(): i32
                 {
-                    return [G](u8(3))
+                    return [G](i32(3))
                 }
             ";
 

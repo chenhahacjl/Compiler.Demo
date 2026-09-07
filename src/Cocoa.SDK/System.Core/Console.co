@@ -36,27 +36,7 @@ namespace System
             ConsoleSyscall.WriteLine(text)
         }
 
-        static function WriteLine(text: u8): void
-        {
-            ConsoleSyscall.WriteLine(text)
-        }
-
         static function WriteLine(text: i64): void
-        {
-            ConsoleSyscall.WriteLine(text)
-        }
-
-        static function WriteLine(text: i8): void
-        {
-            ConsoleSyscall.WriteLine(text)
-        }
-
-        static function WriteLine(text: i16): void
-        {
-            ConsoleSyscall.WriteLine(text)
-        }
-
-        static function WriteLine(text: u16): void
         {
             ConsoleSyscall.WriteLine(text)
         }
@@ -101,27 +81,7 @@ namespace System
             ConsoleSyscall.Write(text)
         }
 
-        static function Write(text: u8): void
-        {
-            ConsoleSyscall.Write(text)
-        }
-
         static function Write(text: i64): void
-        {
-            ConsoleSyscall.Write(text)
-        }
-
-        static function Write(text: i8): void
-        {
-            ConsoleSyscall.Write(text)
-        }
-
-        static function Write(text: i16): void
-        {
-            ConsoleSyscall.Write(text)
-        }
-
-        static function Write(text: u16): void
         {
             ConsoleSyscall.Write(text)
         }
