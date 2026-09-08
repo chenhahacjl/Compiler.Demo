@@ -1,0 +1,6 @@
+<Project>
+	<Import Project="..\Cocoa.Cs\Directory.Build.props" />
+	<PropertyGroup>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+	</PropertyGroup>
+</Project>

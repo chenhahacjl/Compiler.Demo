@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<LangVersion>latest</LangVersion>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+		<OutputType>Exe</OutputType>
+		<AssemblyName>Cocoa.IDE</AssemblyName>
+		<RootNamespace>Cocoa.IDE</RootNamespace>
+		<ApplicationIcon />
+		<BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Avalonia"        Version="11.2.3" />
+		<PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+		<PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+		<PackageReference Include="Avalonia.Fonts.Inter"   Version="11.2.3" />
+		<PackageReference Include="Avalonia.Diagnostics"   Version="11.2.3" />
+		<PackageReference Include="Avalonia.AvaloniaEdit"  Version="11.2.0" />
+		<PackageReference Include="CommunityToolkit.Mvvm"   Version="8.4.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="Themes\**\*.axaml" />
+		<AvaloniaResource Include="Themes\**\*.axaml" />
+		<EmbeddedResource Include="Themes\**\*.xshd" />
+	</ItemGroup>
+
+</Project>
