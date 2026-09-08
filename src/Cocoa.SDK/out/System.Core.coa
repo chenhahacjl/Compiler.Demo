@@ -41,6 +41,76 @@
     (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
     (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
     (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
+    (gcls System.ValueTuple1 public iface:false ifaces:0 tparams:1
+      (tpar T1 0 - v:- c:0) fields:1
+      (fld Item1 !System.ValueTuple1.T1 public false false) methods:0 events:0
+    )
+    (gcls System.ValueTuple2 public iface:false ifaces:0 tparams:2
+      (tpar T1 0 - v:- c:0)
+      (tpar T2 1 - v:- c:0) fields:2
+      (fld Item1 !System.ValueTuple2.T1 public false false)
+      (fld Item2 !System.ValueTuple2.T2 public false false) methods:0 events:0
+    )
+    (gcls System.ValueTuple3 public iface:false ifaces:0 tparams:3
+      (tpar T1 0 - v:- c:0)
+      (tpar T2 1 - v:- c:0)
+      (tpar T3 2 - v:- c:0) fields:3
+      (fld Item1 !System.ValueTuple3.T1 public false false)
+      (fld Item2 !System.ValueTuple3.T2 public false false)
+      (fld Item3 !System.ValueTuple3.T3 public false false) methods:0 events:0
+    )
+    (gcls System.ValueTuple4 public iface:false ifaces:0 tparams:4
+      (tpar T1 0 - v:- c:0)
+      (tpar T2 1 - v:- c:0)
+      (tpar T3 2 - v:- c:0)
+      (tpar T4 3 - v:- c:0) fields:4
+      (fld Item1 !System.ValueTuple4.T1 public false false)
+      (fld Item2 !System.ValueTuple4.T2 public false false)
+      (fld Item3 !System.ValueTuple4.T3 public false false)
+      (fld Item4 !System.ValueTuple4.T4 public false false) methods:0 events:0
+    )
+    (gcls System.ValueTuple5 public iface:false ifaces:0 tparams:5
+      (tpar T1 0 - v:- c:0)
+      (tpar T2 1 - v:- c:0)
+      (tpar T3 2 - v:- c:0)
+      (tpar T4 3 - v:- c:0)
+      (tpar T5 4 - v:- c:0) fields:5
+      (fld Item1 !System.ValueTuple5.T1 public false false)
+      (fld Item2 !System.ValueTuple5.T2 public false false)
+      (fld Item3 !System.ValueTuple5.T3 public false false)
+      (fld Item4 !System.ValueTuple5.T4 public false false)
+      (fld Item5 !System.ValueTuple5.T5 public false false) methods:0 events:0
+    )
+    (gcls System.ValueTuple6 public iface:false ifaces:0 tparams:6
+      (tpar T1 0 - v:- c:0)
+      (tpar T2 1 - v:- c:0)
+      (tpar T3 2 - v:- c:0)
+      (tpar T4 3 - v:- c:0)
+      (tpar T5 4 - v:- c:0)
+      (tpar T6 5 - v:- c:0) fields:6
+      (fld Item1 !System.ValueTuple6.T1 public false false)
+      (fld Item2 !System.ValueTuple6.T2 public false false)
+      (fld Item3 !System.ValueTuple6.T3 public false false)
+      (fld Item4 !System.ValueTuple6.T4 public false false)
+      (fld Item5 !System.ValueTuple6.T5 public false false)
+      (fld Item6 !System.ValueTuple6.T6 public false false) methods:0 events:0
+    )
+    (gcls System.ValueTuple7 public iface:false ifaces:0 tparams:7
+      (tpar T1 0 - v:- c:0)
+      (tpar T2 1 - v:- c:0)
+      (tpar T3 2 - v:- c:0)
+      (tpar T4 3 - v:- c:0)
+      (tpar T5 4 - v:- c:0)
+      (tpar T6 5 - v:- c:0)
+      (tpar T7 6 - v:- c:0) fields:7
+      (fld Item1 !System.ValueTuple7.T1 public false false)
+      (fld Item2 !System.ValueTuple7.T2 public false false)
+      (fld Item3 !System.ValueTuple7.T3 public false false)
+      (fld Item4 !System.ValueTuple7.T4 public false false)
+      (fld Item5 !System.ValueTuple7.T5 public false false)
+      (fld Item6 !System.ValueTuple7.T6 public false false)
+      (fld Item7 !System.ValueTuple7.T7 public false false) methods:0 events:0
+    )
     (cls System.IO.Directory public iface:false ifaces:0 methods:3 Exists[@string] CreateDirectory[@string] GetCurrentDirectory fields:0 events:0)
     (cls System.IO.File public iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
     (cls System.IO.FileStream public iface:false ifaces:0 methods:0 fields:1
@@ -1000,6 +1070,48 @@
     (fn System.Core!System.UInt64.TryParse[@string,out:@u64] name:TryParse ret:@bool ns:- owner:System.UInt64 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/s s @string 0 - -)
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/result result @u64 1 out -)
+    )
+    (fn System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1] name:ValueTuple1 ret:@void ns:- owner:System.ValueTuple1 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1]/p1 p1 !System.ValueTuple1.T1 0 - -)
+    )
+    (fn System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2] name:ValueTuple2 ret:@void ns:- owner:System.ValueTuple2 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p1 p1 !System.ValueTuple2.T1 0 - -)
+      (par System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p2 p2 !System.ValueTuple2.T2 1 - -)
+    )
+    (fn System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3] name:ValueTuple3 ret:@void ns:- owner:System.ValueTuple3 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:3
+      (par System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p1 p1 !System.ValueTuple3.T1 0 - -)
+      (par System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p2 p2 !System.ValueTuple3.T2 1 - -)
+      (par System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p3 p3 !System.ValueTuple3.T3 2 - -)
+    )
+    (fn System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4] name:ValueTuple4 ret:@void ns:- owner:System.ValueTuple4 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:4
+      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p1 p1 !System.ValueTuple4.T1 0 - -)
+      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p2 p2 !System.ValueTuple4.T2 1 - -)
+      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p3 p3 !System.ValueTuple4.T3 2 - -)
+      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p4 p4 !System.ValueTuple4.T4 3 - -)
+    )
+    (fn System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5] name:ValueTuple5 ret:@void ns:- owner:System.ValueTuple5 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:5
+      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p1 p1 !System.ValueTuple5.T1 0 - -)
+      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p2 p2 !System.ValueTuple5.T2 1 - -)
+      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p3 p3 !System.ValueTuple5.T3 2 - -)
+      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p4 p4 !System.ValueTuple5.T4 3 - -)
+      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p5 p5 !System.ValueTuple5.T5 4 - -)
+    )
+    (fn System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6] name:ValueTuple6 ret:@void ns:- owner:System.ValueTuple6 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:6
+      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p1 p1 !System.ValueTuple6.T1 0 - -)
+      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p2 p2 !System.ValueTuple6.T2 1 - -)
+      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p3 p3 !System.ValueTuple6.T3 2 - -)
+      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p4 p4 !System.ValueTuple6.T4 3 - -)
+      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p5 p5 !System.ValueTuple6.T5 4 - -)
+      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p6 p6 !System.ValueTuple6.T6 5 - -)
+    )
+    (fn System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7] name:ValueTuple7 ret:@void ns:- owner:System.ValueTuple7 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:7
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p1 p1 !System.ValueTuple7.T1 0 - -)
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p2 p2 !System.ValueTuple7.T2 1 - -)
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p3 p3 !System.ValueTuple7.T3 2 - -)
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p4 p4 !System.ValueTuple7.T4 3 - -)
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p5 p5 !System.ValueTuple7.T5 4 - -)
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p6 p6 !System.ValueTuple7.T6 5 - -)
+      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p7 p7 !System.ValueTuple7.T7 6 - -)
     )
     (fn System.Core!System.IO.Directory.Exists[@string] name:Exists ret:@bool ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.IO.Directory.Exists[@string]/path path @string 0 - -)
@@ -16667,6 +16779,202 @@
         )
       )
     )
+    (body System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple1) name:Item1 !System.ValueTuple1.T1 false
+            (var System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1]/p1)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple2) name:Item1 !System.ValueTuple2.T1 false
+            (var System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p1)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple2) name:Item2 !System.ValueTuple2.T2 false
+            (var System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p2)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]
+      (block 3
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple3) name:Item1 !System.ValueTuple3.T1 false
+            (var System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p1)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple3) name:Item2 !System.ValueTuple3.T2 false
+            (var System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p2)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple3) name:Item3 !System.ValueTuple3.T3 false
+            (var System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p3)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]
+      (block 4
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple4) name:Item1 !System.ValueTuple4.T1 false
+            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p1)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple4) name:Item2 !System.ValueTuple4.T2 false
+            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p2)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple4) name:Item3 !System.ValueTuple4.T3 false
+            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p3)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple4) name:Item4 !System.ValueTuple4.T4 false
+            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p4)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]
+      (block 5
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple5) name:Item1 !System.ValueTuple5.T1 false
+            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p1)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple5) name:Item2 !System.ValueTuple5.T2 false
+            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p2)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple5) name:Item3 !System.ValueTuple5.T3 false
+            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p3)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple5) name:Item4 !System.ValueTuple5.T4 false
+            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p4)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple5) name:Item5 !System.ValueTuple5.T5 false
+            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p5)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]
+      (block 6
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple6) name:Item1 !System.ValueTuple6.T1 false
+            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p1)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple6) name:Item2 !System.ValueTuple6.T2 false
+            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p2)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple6) name:Item3 !System.ValueTuple6.T3 false
+            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p3)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple6) name:Item4 !System.ValueTuple6.T4 false
+            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p4)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple6) name:Item5 !System.ValueTuple6.T5 false
+            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p5)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple6) name:Item6 !System.ValueTuple6.T6 false
+            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p6)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]
+      (block 7
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item1 !System.ValueTuple7.T1 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p1)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item2 !System.ValueTuple7.T2 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p2)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item3 !System.ValueTuple7.T3 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p3)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item4 !System.ValueTuple7.T4 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p4)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item5 !System.ValueTuple7.T5 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p5)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item6 !System.ValueTuple7.T6 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p6)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.ValueTuple7) name:Item7 !System.ValueTuple7.T7 false
+            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p7)
+          )
+        )
+      )
+    )
   )
   (manifest
     (requires any)
@@ -16676,4 +16984,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:67d301025d0536587c8eff3b0630141397924b14fb544bd588b2bbc19f8ce3a2)
+(checksum sha256:3b9481847621419ed59e4750d8507d83a964f89e8b158c55327c917fb12062d0)

@@ -706,6 +706,15 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return existing;
             }
 
+            // 阶段 3：优先 SDK System.ValueTupleN<T1..Tn>（值语义，对齐 C#）。
+            var genericDefinition = LookupType($"ValueTuple{elementTypes.Length}") as NamedTypeSymbol;
+            if (genericDefinition != null && genericDefinition.IsGenericDefinition && genericDefinition.TypeParameters.Length == elementTypes.Length)
+            {
+                var sdkTuple = GenericTypeInstantiator.Instantiate(genericDefinition, elementTypes.ToImmutableArray());
+                _tupleTypes[key] = sdkTuple;
+                return sdkTuple;
+            }
+
             var tupleType = new NamedTypeSymbol($"__Tuple_{string.Join("_", elementTypes.Select(t => t.Name))}", string.Empty, Visibility.Public, declaration: null);
             for (var i = 0; i < elementTypes.Length; i++)
             {
@@ -747,7 +756,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             var tupleType = GetOrCreateTupleType(elements.Select(e => e.Type).ToImmutableArray(), syntax);
-            var ctor = tupleType.GetMethods(tupleType.Name).FirstOrDefault();
+            var ctor = tupleType.Methods.FirstOrDefault(m => m.IsConstructor);
             return new BoundObjectCreationExpression(syntax, tupleType, elements.ToImmutable(), ctor);
         }
 
