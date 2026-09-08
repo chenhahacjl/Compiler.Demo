@@ -767,6 +767,105 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return instantiated;
         }
 
+        /// <summary>类型实参已解析为符号的实例化核心（显式实参与类型推断共用）。</summary>
+        private FunctionSymbol? InstantiateGenericMethodCore(TextLocation errorLocation, string displayName, FunctionSymbol definition, ImmutableArray<TypeSymbol> argumentSymbols, int argumentCount)
+        {
+            ValidateTypeArgumentConstraints(errorLocation, definition.TypeParameters, argumentSymbols, displayName);
+
+            var instantiated = GenericMethodInstantiator.Instantiate(definition, argumentSymbols);
+
+            if (instantiated.Parameters.Length != argumentCount)
+            {
+                _diagnostics.ReportWrongArgumentCount(errorLocation, displayName, instantiated.Parameters.Length, argumentCount);
+                return null;
+            }
+
+            return instantiated;
+        }
+
+        /// <summary>泛型方法类型推断（阶段 1，对齐 C#）：从实参类型反推类型参数，支持嵌套泛型（List&lt;T&gt;、T[]）。</summary>
+        private bool TryInferTypeArguments(FunctionSymbol definition, ImmutableArray<BoundExpression> arguments, out ImmutableArray<TypeSymbol> inferred)
+        {
+            inferred = default;
+            var map = new Dictionary<TypeParameterSymbol, TypeSymbol>();
+            var count = Math.Min(definition.Parameters.Length, arguments.Length);
+            for (var i = 0; i < count; i++)
+            {
+                if (definition.Parameters[i].IsByRef)
+                {
+                    continue; // 泛型 byref 参数不参与推断（保持显式实参）
+                }
+
+                if (!UnifyParameter(definition.Parameters[i].Type, arguments[i].Type, map))
+                {
+                    return false;
+                }
+            }
+
+            var result = ImmutableArray.CreateBuilder<TypeSymbol>(definition.TypeParameters.Length);
+            foreach (var typeParameter in definition.TypeParameters)
+            {
+                if (!map.TryGetValue(typeParameter, out var bound))
+                {
+                    return false; // 未能推断出该类型参数
+                }
+
+                result.Add(bound);
+            }
+
+            inferred = result.ToImmutable();
+            return true;
+        }
+
+        /// <summary>类型统一：形参声明类型 ↔ 实参类型 → 类型参数映射（含 T[] / X&lt;T&gt; 嵌套反推；非泛型情形不约束）。</summary>
+        private bool UnifyParameter(TypeSymbol parameterType, TypeSymbol argumentType, Dictionary<TypeParameterSymbol, TypeSymbol> map)
+        {
+            if (parameterType is TypeParameterSymbol typeParameter)
+            {
+                if (map.TryGetValue(typeParameter, out var existing))
+                {
+                    return existing == argumentType;
+                }
+
+                map[typeParameter] = argumentType;
+                return true;
+            }
+
+            if (parameterType is ArrayTypeSymbol parameterArray && argumentType is ArrayTypeSymbol argumentArray)
+            {
+                return UnifyParameter(parameterArray.ElementType!, argumentArray.ElementType!, map);
+            }
+
+            if (parameterType is NamedTypeSymbol parameterNamed && argumentType is NamedTypeSymbol argumentNamed)
+            {
+                var parameterDefinition = parameterNamed is InstantiatedTypeSymbol parameterInstantiated ? parameterInstantiated.GenericDefinition : parameterNamed;
+                var argumentDefinition = argumentNamed is InstantiatedTypeSymbol argumentInstantiated ? argumentInstantiated.GenericDefinition : argumentNamed;
+                if (parameterDefinition == argumentDefinition)
+                {
+                    var parameterArguments = parameterNamed is InstantiatedTypeSymbol parameterArgs
+                        ? parameterArgs.TypeArguments
+                        : parameterNamed.TypeParameters.Select(t => (TypeSymbol)t).ToImmutableArray();
+                    var argumentArguments = argumentNamed is InstantiatedTypeSymbol argumentArgs
+                        ? argumentArgs.TypeArguments
+                        : argumentNamed.TypeParameters.Select(t => (TypeSymbol)t).ToImmutableArray();
+                    if (parameterArguments.Length == argumentArguments.Length)
+                    {
+                        for (var i = 0; i < parameterArguments.Length; i++)
+                        {
+                            if (!UnifyParameter(parameterArguments[i], argumentArguments[i], map))
+                            {
+                                return false;
+                            }
+                        }
+
+                        return true;
+                    }
+                }
+            }
+
+            return true;
+        }
+
         /// <summary>泛型方法实参转换绑定（元数已由共享核心校验）。</summary>
         private ImmutableArray<BoundExpression> BindGenericMethodArguments(SSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, FunctionSymbol instantiated)
         {

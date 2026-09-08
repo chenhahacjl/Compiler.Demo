@@ -1759,7 +1759,31 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            var function = ResolveOverload(syntax, candidates.Value, boundArguments.ToImmutable());
+            var nonGenericCandidates = candidates.Value.Where(f => !f.IsGenericMethod).ToImmutableArray();
+            var genericCandidates = candidates.Value.Where(f => f.IsGenericMethod && f.TypeParameters.Length > 0).ToImmutableArray();
+            var function = nonGenericCandidates.Length > 0
+                ? ResolveOverload(syntax, nonGenericCandidates, boundArguments.ToImmutable())
+                : null;
+
+            // 阶段 1：泛型方法无显式类型实参——优先非泛型候选，未命中则从实参类型推断并实例化。
+            if (function == null && genericCandidates.Length > 0)
+            {
+                foreach (var genericCandidate in genericCandidates)
+                {
+                    if (TryInferTypeArguments(genericCandidate, boundArguments.ToImmutable(), out var inferred))
+                    {
+                        var instantiated = InstantiateGenericMethodCore(syntax.Identifier.Location, syntax.Identifier.Text, genericCandidate, inferred, syntax.Arguments.Count);
+                        if (instantiated != null)
+                        {
+                            return new BoundCallExpression(syntax, instantiated, BindGenericMethodArguments(syntax.Arguments, instantiated));
+                        }
+                    }
+                }
+
+                _diagnostics.ReportError(syntax.Identifier.Location, $"无法从实参推断泛型方法 '{syntax.Identifier.Text}' 的类型实参，请显式指定（如 {syntax.Identifier.Text}<类型>(...)）。");
+                return new BoundErrorExpression(syntax);
+            }
+
             if (function == null)
             {
                 return new BoundErrorExpression(syntax);
