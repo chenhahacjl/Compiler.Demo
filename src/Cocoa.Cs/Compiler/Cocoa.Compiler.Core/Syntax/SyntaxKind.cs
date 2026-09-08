@@ -227,5 +227,13 @@ ColonToken,               // :
         QuestionQuestionEqualsToken = 207, // ??= null 合并赋值
         QuestionDotToken = 208, // ?. 空条件成员访问
         NameofKeyword = 209, // nameof(X) 编译期字符串常量
+        ConstantPattern = 210, // 常量模式：expr is null / expr is 0
+        DeclarationPattern = 211, // 模式匹配声明：expr is int n
+        RelationalPattern = 212, // 模式匹配关系：expr is > 0 / expr is <= 10
+        PropertyPattern = 213, // 模式匹配属性：expr is { Length: > 0 }
+        LogicalPattern = 214, // 模式匹配逻辑组合：expr is > 0 and < 10 / expr is not null
+        AndKeyword = 215, // and 模式组合关键字
+        OrKeyword = 216, // or 模式组合关键字
+        NotKeyword = 217, // not 模式取反关键字
     }
 }

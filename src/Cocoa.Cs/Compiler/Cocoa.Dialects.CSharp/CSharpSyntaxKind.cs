@@ -215,6 +215,14 @@ namespace Cocoa.CodeAnalysis.Syntax
         QuestionQuestionToken = 206,
         QuestionQuestionEqualsToken = 207,
         QuestionDotToken = 208,
-        NameofKeyword = 209
+        NameofKeyword = 209,
+        ConstantPattern = 210,
+        DeclarationPattern = 211,
+        RelationalPattern = 212,
+        PropertyPattern = 213,
+        LogicalPattern = 214,
+        AndKeyword = 215,
+        OrKeyword = 216,
+        NotKeyword = 217
     }
 }

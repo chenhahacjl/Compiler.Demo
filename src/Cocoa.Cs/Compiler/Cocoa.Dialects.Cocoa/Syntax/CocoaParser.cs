@@ -275,19 +275,42 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 if (Current.Kind == SyntaxKind.IsKeyword)
                 {
                     var isKeyword = NextToken();
-                    // 常量模式：is null / is 0 / is "hello"
-                    if (Current.Kind == SyntaxKind.NullKeyword ||
-                        Current.Kind == SyntaxKind.NumberToken ||
-                        Current.Kind == SyntaxKind.DoubleToken ||
-                        Current.Kind == SyntaxKind.StringToken ||
-                        Current.Kind == SyntaxKind.TrueKeyword ||
-                        Current.Kind == SyntaxKind.FalseKeyword)
+
+                    // 检查是否是声明模式（类型 + 变量名）：is int n
+                    if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.IdentifierToken)
                     {
-                        var pattern = ParsePrimaryExpression();
+                        var pattern = ParsePattern();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
+                    // 检查是否是关系模式：is > 0 / is <= 10
+                    else if (Current.Kind == SyntaxKind.GreaterToken ||
+                             Current.Kind == SyntaxKind.GreaterOrEqualsToken ||
+                             Current.Kind == SyntaxKind.LessToken ||
+                             Current.Kind == SyntaxKind.LessOrEqualsToken)
+                    {
+                        var pattern = ParsePattern();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
+                    // 检查是否是 not 模式：is not null
+                    else if (Current.Kind == SyntaxKind.NotKeyword)
+                    {
+                        var pattern = ParsePattern();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
+                    // 常量模式：is null / is 0 / is "hello"
+                    else if (Current.Kind == SyntaxKind.NullKeyword ||
+                             Current.Kind == SyntaxKind.NumberToken ||
+                             Current.Kind == SyntaxKind.DoubleToken ||
+                             Current.Kind == SyntaxKind.StringToken ||
+                             Current.Kind == SyntaxKind.TrueKeyword ||
+                             Current.Kind == SyntaxKind.FalseKeyword)
+                    {
+                        var pattern = ParsePattern();
                         left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
                     }
                     else
                     {
+                        // 类型测试：is TypeName
                         var isTypeName = MatchToken(SyntaxKind.IdentifierToken);
                         left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, isTypeName);
                     }
@@ -1086,6 +1109,88 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             }
 
             return new SeparatedSyntaxList<ExpressionSyntax>(nodesAndSeparators.ToImmutable());
+        }
+
+        /// <summary>
+        /// 解析模式：声明模式 / 关系模式 / 逻辑模式 / 常量模式
+        /// </summary>
+        private PatternSyntax ParsePattern()
+        {
+            // not 模式：is not null / is not 0
+            if (Current.Kind == SyntaxKind.NotKeyword)
+            {
+                var notKeyword = NextToken();
+                var pattern = ParsePattern();
+                return new LogicalPatternSyntax(_syntaxTree, notKeyword, pattern);
+            }
+
+            // 关系模式：is > 0 / is <= 10
+            if (Current.Kind == SyntaxKind.GreaterToken ||
+                Current.Kind == SyntaxKind.GreaterOrEqualsToken ||
+                Current.Kind == SyntaxKind.LessToken ||
+                Current.Kind == SyntaxKind.LessOrEqualsToken)
+            {
+                var opToken = NextToken();
+                var value = ParsePrimaryExpression();
+                var relationalPattern = new RelationalPatternSyntax(_syntaxTree, opToken, value);
+                return ParsePatternRest(relationalPattern);
+            }
+
+            // 常量模式：null / 0 / "hello" / true / false
+            if (Current.Kind == SyntaxKind.NullKeyword ||
+                Current.Kind == SyntaxKind.NumberToken ||
+                Current.Kind == SyntaxKind.DoubleToken ||
+                Current.Kind == SyntaxKind.StringToken ||
+                Current.Kind == SyntaxKind.TrueKeyword ||
+                Current.Kind == SyntaxKind.FalseKeyword)
+            {
+                var constant = ParsePrimaryExpression();
+                var constantPattern = new ConstantPatternSyntax(_syntaxTree, (ExpressionSyntax)constant);
+                return ParsePatternRest(constantPattern);
+            }
+
+            // 声明模式：int n / string s（类型标识符 + 变量标识符）
+            if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.IdentifierToken)
+            {
+                var typeToken = NextToken();
+                var variableToken = NextToken();
+                var declPattern = new DeclarationPatternSyntax(_syntaxTree, typeToken, variableToken);
+                return ParsePatternRest(declPattern);
+            }
+
+            // 回退：单个标识符
+            if (Current.Kind == SyntaxKind.IdentifierToken)
+            {
+                var typeToken = NextToken();
+                var underscore = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, typeToken.Span.End, "_", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                return new DeclarationPatternSyntax(_syntaxTree, typeToken, underscore);
+            }
+
+            // 回退：解析为表达式常量模式
+            var fallback = ParsePrimaryExpression();
+            return new ConstantPatternSyntax(_syntaxTree, (SyntaxNode)fallback);
+        }
+
+        /// <summary>
+        /// 解析模式 rest：and/or 组合
+        /// </summary>
+        private PatternSyntax ParsePatternRest(PatternSyntax left)
+        {
+            if (Current.Kind == SyntaxKind.AndKeyword)
+            {
+                var andToken = NextToken();
+                var right = ParsePattern();
+                return new LogicalPatternSyntax(_syntaxTree, left, andToken, right);
+            }
+
+            if (Current.Kind == SyntaxKind.OrKeyword)
+            {
+                var orToken = NextToken();
+                var right = ParsePattern();
+                return new LogicalPatternSyntax(_syntaxTree, left, orToken, right);
+            }
+
+            return left;
         }
 
     }

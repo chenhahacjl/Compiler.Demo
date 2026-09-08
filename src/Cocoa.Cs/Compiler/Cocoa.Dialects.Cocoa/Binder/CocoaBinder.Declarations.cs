@@ -2894,20 +2894,29 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     }
 
                     // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐
-                    if (!classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
+                    if (FacadeTargets.ContainsKey(classType.FullName))
                     {
-                        classType.IsFacadeClass = true;
-
-                        // Phase 1-3 facade 合并：基元用类型表登记为 facade 全名（System.Int32 → TypeSymbol.Int32），
-                        // 成员面经 FacadeCompanion 委托到本类（System.Core 缓存实例，进程内共享，赋值幂等）。
-                        var target = FacadeTargets[classType.FullName];
-                        classType.FacadeThisType = target;
-                        if (target is NamedTypeSymbol primitiveTarget)
+                        // 幂等设置（仅首次）：标记 facade + 绑定 companionship
+                        if (!classType.IsFacadeClass)
                         {
-                            primitiveTarget.FacadeCompanion = classType;
-                            scope.TryDeclareClass(primitiveTarget);
-                            continue;
+                            classType.IsFacadeClass = true;
+
+                            // Phase 1-3 facade 合并：基元用类型表登记为 facade 全名（System.Int32 → TypeSymbol.Int32），
+                            // 成员面经 FacadeCompanion 委托到本类（System.Core 缓存实例，进程内共享，赋值幂等）。
+                            var target = FacadeTargets[classType.FullName];
+                            classType.FacadeThisType = target;
+                            if (target is NamedTypeSymbol primitiveTarget)
+                            {
+                                primitiveTarget.FacadeCompanion = classType;
+                            }
                         }
+
+                        // 每次编译都须向 fresh scope 注册 facade 承载类型（scope 非共享）
+                        if (classType.FacadeThisType is NamedTypeSymbol facadeTarget)
+                        {
+                            scope.TryDeclareClass(facadeTarget);
+                        }
+                        continue;
                     }
 
                     scope.TryDeclareClass(classType);

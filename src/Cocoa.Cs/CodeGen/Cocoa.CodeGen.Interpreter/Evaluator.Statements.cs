@@ -152,6 +152,14 @@ namespace Cocoa.CodeGen.Interpreter
                     return EvaluateIsExpression((BoundIsExpression)node);
                 case BoundNodeKind.AsExpression:
                     return EvaluateAsExpression((BoundAsExpression)node);
+                case BoundNodeKind.DeclarationPattern:
+                    return EvaluateDeclarationPattern((BoundDeclarationPattern)node);
+                case BoundNodeKind.RelationalPattern:
+                    return EvaluateRelationalPattern((BoundRelationalPattern)node);
+                case BoundNodeKind.LogicalPattern:
+                    return EvaluateLogicalPattern((BoundLogicalPattern)node);
+                case BoundNodeKind.ConditionalAccessExpression:
+                    return EvaluateConditionalAccessExpression((BoundConditionalAccessExpression)node);
 
                 // 6e-M22 C4：函数值与间接调用
                 case BoundNodeKind.FunctionValueExpression:

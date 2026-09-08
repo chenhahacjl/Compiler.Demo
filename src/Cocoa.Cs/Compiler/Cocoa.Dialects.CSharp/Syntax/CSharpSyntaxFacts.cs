@@ -221,6 +221,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     return SyntaxKind.CatchKeyword;
                 case "finally":
                     return SyntaxKind.FinallyKeyword;
+                case "and":
+                    return SyntaxKind.AndKeyword;
+                case "or":
+                    return SyntaxKind.OrKeyword;
+                case "not":
+                    return SyntaxKind.NotKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -494,6 +500,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     return "catch";
                 case SyntaxKind.FinallyKeyword:
                     return "finally";
+                case SyntaxKind.AndKeyword:
+                    return "and";
+                case SyntaxKind.OrKeyword:
+                    return "or";
+                case SyntaxKind.NotKeyword:
+                    return "not";
                 default:
                     return null;
             }

@@ -362,6 +362,18 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteConditionalAccessExpression((BoundConditionalAccessExpression)node);
                 }
+                case BoundNodeKind.DeclarationPattern:
+                {
+                    return RewriteDeclarationPattern((BoundDeclarationPattern)node);
+                }
+                case BoundNodeKind.RelationalPattern:
+                {
+                    return RewriteRelationalPattern((BoundRelationalPattern)node);
+                }
+                case BoundNodeKind.LogicalPattern:
+                {
+                    return RewriteLogicalPattern((BoundLogicalPattern)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -716,6 +728,54 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundConditionalAccessExpression(node.Syntax, expression, whenNotNull);
+        }
+
+        protected virtual BoundExpression RewriteDeclarationPattern(BoundDeclarationPattern node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundDeclarationPattern(node.Syntax, expression, node.Type, node.Variable);
+        }
+
+        protected virtual BoundExpression RewriteRelationalPattern(BoundRelationalPattern node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            var value = RewriteExpression(node.Value);
+            if (expression == node.Expression && value == node.Value)
+            {
+                return node;
+            }
+
+            return new BoundRelationalPattern(node.Syntax, expression, node.OperatorKind, value);
+        }
+
+        protected virtual BoundExpression RewriteLogicalPattern(BoundLogicalPattern node)
+        {
+            if (node.IsUnary)
+            {
+                var operand = RewriteExpression(node.Operand!);
+                if (operand == node.Operand)
+                {
+                    return node;
+                }
+
+                return new BoundLogicalPattern(node.Syntax, node.OperatorKind, operand);
+            }
+            else
+            {
+                var left = RewriteExpression(node.Left!);
+                var right = RewriteExpression(node.Right!);
+                if (left == node.Left && right == node.Right)
+                {
+                    return node;
+                }
+
+                return new BoundLogicalPattern(node.Syntax, left, node.OperatorKind, right);
+            }
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

@@ -52,5 +52,8 @@ AsExpression,
         InvocationExpression,      // 函数值间接调用 f(x)（6e-M22 C4）
         ByRefArgument,             // byref 实参 out x / ref a[i]（6e-M23 R3）
         ConditionalAccessExpression, // expr?.Member 空条件访问
+        DeclarationPattern,        // 声明模式：expr is int n
+        RelationalPattern,         // 关系模式：expr is > 0
+        LogicalPattern,            // 逻辑模式：expr is > 0 and < 10
     }
 }

@@ -510,6 +510,122 @@ namespace Cocoa.CodeGen.Interpreter
             return false;
         }
 
+        /// <summary>
+        /// 声明模式：expr is int n → 检查类型并绑定变量
+        /// </summary>
+        private object EvaluateDeclarationPattern(BoundDeclarationPattern node)
+        {
+            var value = EvaluateExpression(node.Expression);
+
+            if (value == null)
+            {
+                // null 不匹配值类型
+                if (node.TargetType.IsPrimitiveValueType)
+                    return false;
+                // null 匹配引用类型
+                _locals.Peek()[node.Variable] = null!;
+                return true;
+            }
+
+            // 类型检查
+            var matches = CheckTypeMatch(value, node.TargetType);
+            if (matches)
+            {
+                _locals.Peek()[node.Variable] = value;
+            }
+
+            return matches;
+        }
+
+        /// <summary>
+        /// 关系模式：expr is > 0 / expr is <= 10
+        /// </summary>
+        private object EvaluateRelationalPattern(BoundRelationalPattern node)
+        {
+            var value = EvaluateExpression(node.Expression);
+            var patternValue = EvaluateExpression(node.Value);
+
+            if (value == null || patternValue == null)
+                return false;
+
+            var comparison = CompareValues(value, patternValue);
+            return node.OperatorKind switch
+            {
+                BoundBinaryOperatorKind.Greater => comparison > 0,
+                BoundBinaryOperatorKind.GreaterOrEquals => comparison >= 0,
+                BoundBinaryOperatorKind.Less => comparison < 0,
+                BoundBinaryOperatorKind.LessOrEquals => comparison <= 0,
+                _ => false
+            };
+        }
+
+        /// <summary>
+        /// 逻辑模式：and/or/not 组合
+        /// </summary>
+        private object EvaluateLogicalPattern(BoundLogicalPattern node)
+        {
+            if (node.IsUnary)
+            {
+                // not 模式：取反
+                var result = EvaluateExpression(node.Operand!);
+                return !(result is bool b && b);
+            }
+            else
+            {
+                var left = EvaluateExpression(node.Left!);
+                var right = EvaluateExpression(node.Right!);
+
+                var leftResult = left is bool lb && lb;
+                var rightResult = right is bool rb && rb;
+
+                return node.OperatorKind switch
+                {
+                    BoundLogicalPatternKind.And => leftResult && rightResult,
+                    BoundLogicalPatternKind.Or => leftResult || rightResult,
+                    _ => false
+                };
+            }
+        }
+
+        /// <summary>
+        /// ?. 空条件成员访问
+        /// </summary>
+        private object? EvaluateConditionalAccessExpression(BoundConditionalAccessExpression node)
+        {
+            var value = EvaluateExpression(node.Expression);
+            if (value == null)
+                return null;
+            return EvaluateExpression(node.WhenNotNull);
+        }
+
+        private bool CheckTypeMatch(object value, TypeSymbol targetType)
+        {
+            if (targetType == TypeSymbol.String)
+                return value is string;
+            if (targetType == TypeSymbol.Boolean)
+                return value is bool;
+            if (targetType == TypeSymbol.Int32)
+                return value is int or long or short or byte;
+            if (targetType == TypeSymbol.Int64)
+                return value is long or int;
+            if (targetType == TypeSymbol.Float || targetType == TypeSymbol.Double)
+                return value is double or float;
+            return false;
+        }
+
+        private static int CompareValues(object left, object right)
+        {
+            if (left is int lInt && right is int rInt)
+                return lInt.CompareTo(rInt);
+            if (left is long lLong && right is long rLong)
+                return lLong.CompareTo(rLong);
+            if (left is double lDbl && right is double rDbl)
+                return lDbl.CompareTo(rDbl);
+            if (left is string lStr && right is string rStr)
+                return string.Compare(lStr, rStr, StringComparison.Ordinal);
+            return 0;
+        }
+
         /// <summary>6e-M19 M5-b：as 运行时转换——命中返回原引用，失败得 null。</summary>
         private object? EvaluateAsExpression(BoundAsExpression node)
         {

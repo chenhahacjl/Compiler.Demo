@@ -292,24 +292,132 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return BindConversion(syntax.Expression, type, allowExplicit: true);
         }
 
-        /// <summary>is 类型测试/常量模式——常量模式降级为 == 比较，类型测试走既有路径。</summary>
+        /// <summary>is 类型测试 / 模式匹配——常量模式降级为 == 比较，声明模式绑定变量，关系/逻辑模式组合。</summary>
         private BoundExpression BindIsExpression(IsExpressionSyntax syntax)
         {
-            // 常量模式：expr is null → expr == null / expr is 0 → expr == 0
-            if (syntax.IsConstantPattern && syntax.Pattern != null)
-            {
-                var operand = BindExpression(syntax.Expression);
-                if (operand.Type == TypeSymbol.Error)
-                    return new BoundErrorExpression(syntax);
+            var operand = BindExpression(syntax.Expression);
+            if (operand.Type == TypeSymbol.Error)
+                return new BoundErrorExpression(syntax);
 
-                var patternValue = BindExpression(syntax.Pattern);
+            // 常量模式：expr is null → expr == null / expr is 0 → expr == 0
+            if (syntax.Pattern is SSyntax.ConstantPatternSyntax constantPattern)
+            {
+                var patternValue = BindExpression((CSharp.Syntax.ExpressionSyntax)constantPattern.Expression);
                 if (patternValue.Type == TypeSymbol.Error)
                     return new BoundErrorExpression(syntax);
 
                 return BoundNodeFactory.Binary(syntax, operand, SSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
             }
 
-            return BindTypeTestOrAs(syntax.Expression, syntax.TypeName!, syntax, wantBool: true);
+            // 声明模式：expr is int n → 检查类型并绑定变量
+            if (syntax.Pattern is SSyntax.DeclarationPatternSyntax declarationPattern)
+            {
+                var type = LookupType(declarationPattern.TypeToken.Text ?? "?");
+                if (type == null)
+                {
+                    _diagnostics.ReportUndefinedType(declarationPattern.TypeToken.Location, declarationPattern.TypeToken.Text ?? "?");
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var variable = new LocalVariableSymbol(declarationPattern.VariableToken.Text ?? "_", isReadOnly: false, type, constant: null);
+                return new BoundDeclarationPattern(syntax, operand, type, variable);
+            }
+
+            // 关系模式：expr is > 0 / expr is <= 10
+            if (syntax.Pattern is SSyntax.RelationalPatternSyntax relationalPattern)
+            {
+                var value = BindExpression((ExpressionSyntax)relationalPattern.Value);
+                if (value.Type == TypeSymbol.Error)
+                    return new BoundErrorExpression(syntax);
+
+                var opKind = relationalPattern.OperatorToken.Kind switch
+                {
+                    SSyntax.SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,
+                    SSyntax.SyntaxKind.GreaterOrEqualsToken => BoundBinaryOperatorKind.GreaterOrEquals,
+                    SSyntax.SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
+                    SSyntax.SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
+                    _ => BoundBinaryOperatorKind.Greater
+                };
+
+                return new BoundRelationalPattern(syntax, operand, opKind, value);
+            }
+
+            // 逻辑模式：expr is > 0 and < 10 / expr is not null
+            if (syntax.Pattern is SSyntax.LogicalPatternSyntax logicalPattern)
+            {
+                return BindLogicalPattern(syntax, operand, logicalPattern);
+            }
+
+            // 回退：类型测试（旧路径）
+            if (syntax.TypeName != null)
+            {
+                return BindTypeTestOrAs(syntax.Expression, syntax.TypeName, syntax, wantBool: true);
+            }
+
+            return new BoundErrorExpression(syntax);
+        }
+
+        private BoundExpression BindLogicalPattern(SSyntax.SyntaxNode syntax, BoundExpression operand, SSyntax.LogicalPatternSyntax logicalPattern)
+        {
+            if (logicalPattern.IsUnary)
+            {
+                // not 模式：expr is not null → !(绑定内层模式)
+                var innerPattern = BindPattern(operand, logicalPattern.Pattern!);
+                return new BoundLogicalPattern(syntax, BoundLogicalPatternKind.Not, innerPattern);
+            }
+            else
+            {
+                // and/or 模式：expr is > 0 and < 10
+                var leftPattern = BindPattern(operand, logicalPattern.Left!);
+                var rightPattern = BindPattern(operand, logicalPattern.Right!);
+                var opKind = logicalPattern.OperatorToken!.Kind == SSyntax.SyntaxKind.AndKeyword
+                    ? BoundLogicalPatternKind.And
+                    : BoundLogicalPatternKind.Or;
+                return new BoundLogicalPattern(syntax, leftPattern, opKind, rightPattern);
+            }
+        }
+
+        private BoundExpression BindPattern(BoundExpression operand, SSyntax.PatternSyntax pattern)
+        {
+            if (pattern is SSyntax.ConstantPatternSyntax constantPattern)
+            {
+                var patternValue = BindExpression((CSharp.Syntax.ExpressionSyntax)constantPattern.Expression);
+                return BoundNodeFactory.Binary(pattern, operand, SSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
+            }
+
+            if (pattern is SSyntax.DeclarationPatternSyntax declarationPattern)
+            {
+                var type = LookupType(declarationPattern.TypeToken.Text ?? "?");
+                if (type == null)
+                {
+                    _diagnostics.ReportUndefinedType(declarationPattern.TypeToken.Location, declarationPattern.TypeToken.Text ?? "?");
+                    return new BoundErrorExpression(pattern);
+                }
+
+                var variable = new LocalVariableSymbol(declarationPattern.VariableToken.Text ?? "_", isReadOnly: false, type, constant: null);
+                return new BoundDeclarationPattern(pattern, operand, type, variable);
+            }
+
+            if (pattern is SSyntax.RelationalPatternSyntax relationalPattern)
+            {
+                var value = BindExpression((ExpressionSyntax)relationalPattern.Value);
+                var opKind = relationalPattern.OperatorToken.Kind switch
+                {
+                    SSyntax.SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,
+                    SSyntax.SyntaxKind.GreaterOrEqualsToken => BoundBinaryOperatorKind.GreaterOrEquals,
+                    SSyntax.SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
+                    SSyntax.SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
+                    _ => BoundBinaryOperatorKind.Greater
+                };
+                return new BoundRelationalPattern(pattern, operand, opKind, value);
+            }
+
+            if (pattern is SSyntax.LogicalPatternSyntax logicalPattern)
+            {
+                return BindLogicalPattern(pattern, operand, logicalPattern);
+            }
+
+            return new BoundErrorExpression(pattern);
         }
 
         /// <summary>6e-M19 M5-b：as 类型转换——同 is 的静态判定；动态情形失败得 null。</summary>

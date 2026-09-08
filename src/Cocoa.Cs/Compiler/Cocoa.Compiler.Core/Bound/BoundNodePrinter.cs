@@ -138,6 +138,50 @@ namespace Cocoa.CodeAnalysis.Binding
                         n.WhenNotNull.WriteTo(writer);
                         break;
                     }
+                case BoundNodeKind.DeclarationPattern:
+                    {
+                        var n = (BoundDeclarationPattern)node;
+                        n.Expression.WriteTo(writer);
+                        writer.WriteKeyword("is");
+                        writer.WriteSpace();
+                        writer.WriteIdentifier(n.Type.Name);
+                        writer.WriteSpace();
+                        writer.WriteIdentifier(n.Variable.Name);
+                        break;
+                    }
+                case BoundNodeKind.RelationalPattern:
+                    {
+                        var n = (BoundRelationalPattern)node;
+                        n.Expression.WriteTo(writer);
+                        writer.WriteKeyword("is");
+                        writer.WriteSpace();
+                        var opText = n.OperatorKind == BoundBinaryOperatorKind.Greater ? ">" :
+                            n.OperatorKind == BoundBinaryOperatorKind.GreaterOrEquals ? ">=" :
+                            n.OperatorKind == BoundBinaryOperatorKind.Less ? "<" : "<=";
+                        writer.WritePunctuation(opText);
+                        writer.WriteSpace();
+                        n.Value.WriteTo(writer);
+                        break;
+                    }
+                case BoundNodeKind.LogicalPattern:
+                    {
+                        var n = (BoundLogicalPattern)node;
+                        if (n.IsUnary)
+                        {
+                            writer.WriteKeyword("not");
+                            writer.WriteSpace();
+                            n.Operand!.WriteTo(writer);
+                        }
+                        else
+                        {
+                            n.Left!.WriteTo(writer);
+                            writer.WriteSpace();
+                            writer.WriteKeyword(n.OperatorKind == BoundLogicalPatternKind.And ? "and" : "or");
+                            writer.WriteSpace();
+                            n.Right!.WriteTo(writer);
+                        }
+                        break;
+                    }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
                         var n = (BoundMemberAssignmentExpression)node;

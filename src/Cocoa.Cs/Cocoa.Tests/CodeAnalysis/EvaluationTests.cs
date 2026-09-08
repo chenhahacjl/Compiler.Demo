@@ -138,9 +138,47 @@ namespace Cocoa.Tests.CodeAnalysis
         // ?. null conditional
         [InlineData("{ var s: string = null return s?.Length }", 0)]
         [InlineData("{ var s: string = \"hello\" return s?.Length }", 5)]
+        // 声明模式 is int n
+        [InlineData("{ var x: any = 42 return x is int n }", true)]
+        [InlineData("{ var x: any = 42 if x is int n return n return 0 }", 42)]
+        [InlineData("{ var x: any = \"hi\" return x is int n }", false)]
+        // 关系模式 is > 0
+        [InlineData("{ var x: any = 5 return x is > 0 }", true)]
+        [InlineData("{ var x: any = -1 return x is > 0 }", false)]
+        [InlineData("{ var x: any = 5 return x is >= 5 }", true)]
+        [InlineData("{ var x: any = 5 return x is < 10 }", true)]
+        // 逻辑模式 (and/or/not)
+        [InlineData("{ var x: any = 5 return x is > 0 and < 10 }", true)]
+        [InlineData("{ var x: any = 15 return x is > 0 and < 10 }", false)]
+        [InlineData("{ var x: any = null return x is not null }", false)]
+        [InlineData("{ var x: any = 5 return x is not null }", true)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
+        }
+
+        [Fact]
+        public void Evaluator_Pattern_Matching_Diagnostics()
+        {
+            var testCases = new[]
+            {
+                "{ var x: any = 42 return x is int n }",
+                "{ var x: any = 42 if x is int n return n return 0 }",
+                "{ var x: any = \"hi\" return x is int n }",
+                "{ var x: any = 5 return x is > 0 and < 10 }",
+                "{ var x: any = null return x is not null }",
+                "{ var x: any = 5 return x is not null }",
+            };
+
+            foreach (var text in testCases)
+            {
+                var syntaxTree = SyntaxTree.Parse(text);
+                var compilation = Compilation.CreateScript(null, syntaxTree);
+                var variables = new Dictionary<VariableSymbol, object>();
+                var result = compilation.Evaluate(variables);
+                var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+                Assert.False(result.Diagnostics.HasErrors(), $"Test '{text}' => [{diagStr}]");
+            }
         }
 
         [Theory]

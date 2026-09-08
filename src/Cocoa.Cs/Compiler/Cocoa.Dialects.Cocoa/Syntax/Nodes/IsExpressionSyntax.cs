@@ -3,14 +3,14 @@ using Cocoa.CodeAnalysis.Syntax;
 namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 {
     /// <summary>
-    /// is 类型测试/常量模式表达式：expr is TypeName / expr is null / expr is 0
+    /// is 类型测试 / 模式匹配表达式：expr is TypeName / expr is null / expr is int n / expr is > 0
     /// </summary>
     public sealed partial class IsExpressionSyntax : ExpressionSyntax
     {
         internal IsExpressionSyntax(SyntaxTree syntaxTree, ExpressionSyntax expression, SyntaxToken isKeyword, SyntaxToken typeName)
-            : this(syntaxTree, expression, isKeyword, typeName, null) { }
+            : this(syntaxTree, expression, isKeyword, typeName, (PatternSyntax?)null) { }
 
-        internal IsExpressionSyntax(SyntaxTree syntaxTree, ExpressionSyntax expression, SyntaxToken isKeyword, SyntaxToken? typeName, ExpressionSyntax? pattern)
+        internal IsExpressionSyntax(SyntaxTree syntaxTree, ExpressionSyntax expression, SyntaxToken isKeyword, SyntaxToken? typeName, PatternSyntax? pattern)
             : base(syntaxTree)
         {
             Expression = expression;
@@ -24,9 +24,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         public ExpressionSyntax Expression { get; }
         public SyntaxToken IsKeyword { get; }
         public SyntaxToken? TypeName { get; }
-        public ExpressionSyntax? Pattern { get; }
+        public PatternSyntax? Pattern { get; }
 
-        public bool IsConstantPattern => Pattern != null;
+        public bool IsConstantPattern => Pattern is ConstantPatternSyntax;
+        public bool IsDeclarationPattern => Pattern is DeclarationPatternSyntax;
+        public bool IsRelationalPattern => Pattern is RelationalPatternSyntax;
+        public bool IsLogicalPattern => Pattern is LogicalPatternSyntax;
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {
@@ -37,4 +40,3 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         }
     }
 }
-
