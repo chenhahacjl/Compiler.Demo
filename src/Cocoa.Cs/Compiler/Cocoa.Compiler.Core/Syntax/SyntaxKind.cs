@@ -216,14 +216,16 @@ ColonToken,               // :
         IsExpression,             // is 类型测试表达式（6e-M19 M5-b）
         AsExpression,             // as 类型转换表达式（6e-M19 M5-b）
         NameofExpression,         // nameof(X) 编译期字符串常量
+        ConditionalAccessExpression, // expr?.Member 空条件访问
         TypeParameter,            // 泛型类型参数个体 T / in T / out T（6e-M22 delegate 真实类型化）
-        DeclarationExpression = 200, // 声明表达式 var v（out var 内联声明用）——末尾追加且显式定值，避免中间值偏移（green RawKind 持久化）与方言枚举漂移
-        LocalFunctionDeclaration = 201, // 局部函数声明（函数体内 function Helper(...)，降级为具名函数值/闭包）
-        NamedArgument = 202, // 命名实参（实参位 `名: 值`，绑定按形参名重排，语言后置件）
-        ParamsKeyword = 203, // params 可变参数（尾参数组，语言后置件）
-        TupleExpression = 204, // 元组 `(a, b)`（合成值类型，语言后置件）
-        QuestionQuestionToken = 205, // ?? null 合并
-        QuestionQuestionEqualsToken = 206, // ??= null 合并赋值
-        NameofKeyword = 207, // nameof(X) 编译期字符串常量
+        DeclarationExpression = 201, // 声明表达式 var v（out var 内联声明用）——末尾追加且显式定值，避免中间值偏移（green RawKind 持久化）与方言枚举漂移
+        LocalFunctionDeclaration = 202, // 局部函数声明（函数体内 function Helper(...)，降级为具名函数值/闭包）
+        NamedArgument = 203, // 命名实参（实参位 `名: 值`，绑定按形参名重排，语言后置件）
+        ParamsKeyword = 204, // params 可变参数（尾参数组，语言后置件）
+        TupleExpression = 205, // 元组 `(a, b)`（合成值类型，语言后置件）
+        QuestionQuestionToken = 206, // ?? null 合并
+        QuestionQuestionEqualsToken = 207, // ??= null 合并赋值
+        QuestionDotToken = 208, // ?. 空条件成员访问
+        NameofKeyword = 209, // nameof(X) 编译期字符串常量
     }
 }

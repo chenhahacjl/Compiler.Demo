@@ -358,6 +358,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     return "??";
                 case SyntaxKind.QuestionQuestionEqualsToken:
                     return "??=";
+                case SyntaxKind.QuestionDotToken:
+                    return "?.";
                 case SyntaxKind.BreakKeyword:
                     return "break";
                 case SyntaxKind.CaseKeyword:

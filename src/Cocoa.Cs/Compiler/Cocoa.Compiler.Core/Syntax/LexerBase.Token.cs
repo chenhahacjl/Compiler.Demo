@@ -334,6 +334,11 @@ namespace Cocoa.CodeAnalysis.Syntax
                             _position += 2;
                         }
                     }
+                    else if (Lookahead == '.')
+                    {
+                        _kind = SyntaxKind.QuestionDotToken;
+                        _position += 2;
+                    }
                     else
                     {
                         _kind = SyntaxKind.QuestionToken;

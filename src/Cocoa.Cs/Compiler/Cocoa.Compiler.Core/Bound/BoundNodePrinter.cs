@@ -130,6 +130,14 @@ namespace Cocoa.CodeAnalysis.Binding
                 case BoundNodeKind.ByRefArgument:
                     WriteByRefArgument((BoundByRefArgument)node, writer);
                     break;
+                case BoundNodeKind.ConditionalAccessExpression:
+                    {
+                        var n = (BoundConditionalAccessExpression)node;
+                        n.Expression.WriteTo(writer);
+                        writer.WritePunctuation(SyntaxKind.QuestionDotToken);
+                        n.WhenNotNull.WriteTo(writer);
+                        break;
+                    }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
                         var n = (BoundMemberAssignmentExpression)node;

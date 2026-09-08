@@ -205,14 +205,16 @@ namespace Cocoa.CodeAnalysis.Syntax
         IsExpression = 196,
         AsExpression = 197,
         NameofExpression = 198,
-        TypeParameter = 199,
-        DeclarationExpression = 200,
-        LocalFunctionDeclaration = 201,
-        NamedArgument = 202,
-        ParamsKeyword = 203,
-        TupleExpression = 204,
-        QuestionQuestionToken = 205,
-        QuestionQuestionEqualsToken = 206,
-        NameofKeyword = 207
+        ConditionalAccessExpression = 199,
+        TypeParameter = 200,
+        DeclarationExpression = 201,
+        LocalFunctionDeclaration = 202,
+        NamedArgument = 203,
+        ParamsKeyword = 204,
+        TupleExpression = 205,
+        QuestionQuestionToken = 206,
+        QuestionQuestionEqualsToken = 207,
+        QuestionDotToken = 208,
+        NameofKeyword = 209
     }
 }

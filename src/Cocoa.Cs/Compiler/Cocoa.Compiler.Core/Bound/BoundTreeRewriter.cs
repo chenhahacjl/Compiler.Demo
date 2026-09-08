@@ -358,6 +358,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteByRefArgument((BoundByRefArgument)node);
                 }
+                case BoundNodeKind.ConditionalAccessExpression:
+                {
+                    return RewriteConditionalAccessExpression((BoundConditionalAccessExpression)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -700,6 +704,18 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundAsExpression(node.Syntax, expression, node.TargetType);
+        }
+
+        protected virtual BoundExpression RewriteConditionalAccessExpression(BoundConditionalAccessExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            var whenNotNull = RewriteExpression(node.WhenNotNull);
+            if (expression == node.Expression && whenNotNull == node.WhenNotNull)
+            {
+                return node;
+            }
+
+            return new BoundConditionalAccessExpression(node.Syntax, expression, whenNotNull);
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

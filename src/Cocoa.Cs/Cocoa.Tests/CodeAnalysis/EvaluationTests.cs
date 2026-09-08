@@ -135,6 +135,9 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("1_000_000", 1000000)]
         [InlineData("0xFF_FF", 65535)]
         [InlineData("0b1010_0101", 165)]
+        // ?. null conditional
+        [InlineData("{ var s: string = null return s?.Length }", 0)]
+        [InlineData("{ var s: string = \"hello\" return s?.Length }", 5)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);

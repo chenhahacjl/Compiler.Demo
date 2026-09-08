@@ -336,6 +336,49 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             };
         }
 
+        private BoundExpression BindConditionalAccessExpression(ConditionalAccessExpressionSyntax syntax)
+        {
+            // expr?.Member → 绑定 expr 与 Member，由 Lowerer 降级为 null 判断 + 三元表达式
+            var expression = BindExpression(syntax.Expression);
+
+            // WhenNotNull 通常是 NameExpressionSyntax("Member")，需要作为 Expression 的成员访问来绑定
+            BoundExpression whenNotNull;
+            if (syntax.WhenNotNull is NameExpressionSyntax nameExpr)
+            {
+                // ?. 后的简单标识符 → 绑定为 Expression.Member
+                whenNotNull = BindMemberAccessOnExpression(expression, nameExpr.IdentifierToken.Text, nameExpr);
+            }
+            else
+            {
+                // ?. 后的调用表达式 → 绑定为 Expression.Method(args)
+                whenNotNull = BindExpression(syntax.WhenNotNull);
+            }
+
+            return new BoundConditionalAccessExpression(syntax, expression, whenNotNull);
+        }
+
+        private BoundExpression BindMemberAccessOnExpression(BoundExpression instance, string memberName, SSyntax.SyntaxNode syntax)
+        {
+            if (instance.Type == TypeSymbol.Error)
+                return new BoundErrorExpression(syntax);
+
+            // string.Length facade 属性
+            if (instance.Type == TypeSymbol.String && memberName == "Length")
+            {
+                return new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, instance, memberName, null);
+            }
+
+            if (instance.Type is NamedTypeSymbol classType && classType != TypeSymbol.String && !classType.IsPrimitiveValueType)
+            {
+                var field = classType.GetField(memberName);
+                if (field != null)
+                    return new BoundMemberAccessExpression(syntax, field.Type, instance, memberName, field);
+            }
+
+            _diagnostics.ReportCannotAccessMember(syntax.Location, memberName, Visibility.Private);
+            return new BoundErrorExpression(syntax);
+        }
+
         private BoundExpression BindTypeTestOrAs(ExpressionSyntax expressionSyntax, SSyntax.SyntaxToken typeName, ExpressionSyntax ownerSyntax, bool wantBool)
         {
             var target = LookupType(typeName.Text ?? "?");
@@ -1896,6 +1939,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 case SSyntax.CSharpSyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
+                case SSyntax.CSharpSyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case SSyntax.CSharpSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);

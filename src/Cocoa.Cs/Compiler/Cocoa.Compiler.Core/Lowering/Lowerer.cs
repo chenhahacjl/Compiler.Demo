@@ -370,6 +370,50 @@ namespace Cocoa.CodeAnalysis.Lowering
             return new BoundBinaryExpression(node.Syntax, left, node.Op, right);
         }
 
+        /// <summary>
+        /// expr?.Member → expr != null ? expr.Member : default
+        /// </summary>
+        protected override BoundExpression RewriteConditionalAccessExpression(BoundConditionalAccessExpression node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            var whenNotNull = RewriteExpression(node.WhenNotNull);
+
+            // expr != null
+            var notEqualsOp = BoundBinaryOperator.Bind(BoundBinaryOperatorKind.NotEquals, expression.Type, TypeSymbol.Null);
+            var condition = Binary(
+                node.Syntax,
+                expression,
+                notEqualsOp!,
+                new BoundLiteralExpression(node.Syntax, null!, TypeSymbol.Null)
+            );
+
+            return Conditional(
+                node.Syntax,
+                condition,
+                whenNotNull,
+                new BoundLiteralExpression(node.Syntax, GetDefaultForType(whenNotNull.Type)!, whenNotNull.Type)
+            );
+        }
+
+        private static object? GetDefaultForType(TypeSymbol type)
+        {
+            if (type == TypeSymbol.Int32)
+                return 0;
+            if (type == TypeSymbol.Int64)
+                return 0L;
+            if (type == TypeSymbol.Int16)
+                return (short)0;
+            if (type == TypeSymbol.UInt8)
+                return (byte)0;
+            if (type == TypeSymbol.Float || type == TypeSymbol.Double)
+                return 0.0;
+            if (type == TypeSymbol.Boolean)
+                return false;
+            if (type == TypeSymbol.String)
+                return "";
+            return null;
+        }
+
         protected override BoundStatement RewriteVariableDeclaration(BoundVariableDeclaration node)
         {
             var rewrittenNode = base.RewriteVariableDeclaration(node);

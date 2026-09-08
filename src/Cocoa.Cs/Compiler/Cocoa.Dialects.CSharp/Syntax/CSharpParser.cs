@@ -887,6 +887,28 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     else
                         expression = new MemberAccessExpressionSyntax(_syntaxTree, expression, dotToken, identifierToken);
                 }
+                else if (Current.Kind == SyntaxKind.QuestionDotToken)
+                {
+                    var questionDotToken = NextToken();
+                    var identifierToken = MatchToken(SyntaxKind.IdentifierToken);
+                    ExpressionSyntax whenNotNull;
+                    if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+                    {
+                        var openParenthesisToken = NextToken();
+                        var arguments = ParseArguments();
+                        var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
+                        whenNotNull = new MemberCallExpressionSyntax(_syntaxTree,
+                            new NameExpressionSyntax(_syntaxTree, identifierToken),
+                            SyntheticToken(SyntaxKind.DotToken, identifierToken.Span.Start, "."),
+                            identifierToken, null, openParenthesisToken, arguments, closeParenthesisToken);
+                    }
+                    else
+                    {
+                        // ?. 后的成员名作为简单标识符，由 Binder 识别为对 Expression 的成员访问
+                        whenNotNull = new NameExpressionSyntax(_syntaxTree, identifierToken);
+                    }
+                    expression = new ConditionalAccessExpressionSyntax(_syntaxTree, expression, questionDotToken, whenNotNull);
+                }
                 else if (Current.Kind == SyntaxKind.PlusPlusToken || Current.Kind == SyntaxKind.MinusMinusToken)
                 {
                     var operatorToken = NextToken();

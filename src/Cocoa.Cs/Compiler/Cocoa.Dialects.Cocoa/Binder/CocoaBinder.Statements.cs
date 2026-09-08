@@ -326,6 +326,44 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             };
         }
 
+        private BoundExpression BindConditionalAccessExpression(ConditionalAccessExpressionSyntax syntax)
+        {
+            var expression = BindExpression(syntax.Expression);
+
+            BoundExpression whenNotNull;
+            if (syntax.WhenNotNull is NameExpressionSyntax nameExpr)
+            {
+                whenNotNull = BindMemberAccessOnExpression(expression, nameExpr.IdentifierToken.Text, nameExpr);
+            }
+            else
+            {
+                whenNotNull = BindExpression(syntax.WhenNotNull);
+            }
+
+            return new BoundConditionalAccessExpression(syntax, expression, whenNotNull);
+        }
+
+        private BoundExpression BindMemberAccessOnExpression(BoundExpression instance, string memberName, SSyntax.SyntaxNode syntax)
+        {
+            if (instance.Type == TypeSymbol.Error)
+                return new BoundErrorExpression(syntax);
+
+            if (instance.Type == TypeSymbol.String && memberName == "Length")
+            {
+                return new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, instance, memberName, null);
+            }
+
+            if (instance.Type is NamedTypeSymbol classType && classType != TypeSymbol.String && !classType.IsPrimitiveValueType)
+            {
+                var field = classType.GetField(memberName);
+                if (field != null)
+                    return new BoundMemberAccessExpression(syntax, field.Type, instance, memberName, field);
+            }
+
+            _diagnostics.ReportCannotAccessMember(syntax.Location, memberName, Visibility.Private);
+            return new BoundErrorExpression(syntax);
+        }
+
         private BoundExpression BindTypeTestOrAs(ExpressionSyntax expressionSyntax, SSyntax.SyntaxToken typeName, ExpressionSyntax ownerSyntax, bool wantBool)
         {
             var target = LookupType(typeName.Text ?? "?");
@@ -1955,6 +1993,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case SSyntax.CocoaSyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
+                case SSyntax.CocoaSyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case SSyntax.CocoaSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
                 case SSyntax.CocoaSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);

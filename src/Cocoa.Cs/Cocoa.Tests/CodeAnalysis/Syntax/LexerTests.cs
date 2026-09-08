@@ -577,6 +577,17 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            if (t1Kind == SyntaxKind.QuestionToken && t2Kind == SyntaxKind.QuestionDotToken)
+            {
+                return true;
+            }
+
+            // ? followed by . would be lexed as ?. (null conditional)
+            if (t1Kind == SyntaxKind.QuestionToken && t2Kind == SyntaxKind.DotToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;
