@@ -254,8 +254,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 left = ParsePrimaryExpression();
                 left = ParsePostfixExpressions(left);
 
-                // switch 表达式（语言后置件）：`x switch { 1 => a, _ => b }` 降级为嵌套条件表达式
-                if (Current.Kind == SyntaxKind.SwitchKeyword)
+                // switch 表达式（语言后置件）：`x switch { 1 => a, _ => b }` 降级为嵌套条件表达式。
+                // 仅 `switch` 后紧跟 `{` 才按表达式；switch 语句 `switch (expr)`（后跟 `(`）是语句级，不在此触发。
+                if (Current.Kind == SyntaxKind.SwitchKeyword && Peek(1).Kind == SyntaxKind.OpenBraceToken)
                 {
                     left = ParseSwitchExpression(left);
                 }

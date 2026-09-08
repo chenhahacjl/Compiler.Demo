@@ -1807,12 +1807,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     var items = ImmutableArray.CreateBuilder<BoundExpression>();
                     if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var paramsNamedValue))
                     {
-                        items.Add(BindConversion(syntax.Location, paramsNamedValue, elementType));
+                        items.Add(BindConversion(paramsNamedValue.Syntax?.Location ?? syntax.Location, paramsNamedValue, elementType));
                     }
 
                     while (positionalIndex < positionalValues.Count)
                     {
-                        items.Add(BindConversion(syntax.Location, positionalValues[positionalIndex], elementType));
+                        items.Add(BindConversion(positionalValues[positionalIndex].Syntax?.Location ?? syntax.Location, positionalValues[positionalIndex], elementType));
                         positionalIndex++;
                     }
 
@@ -1826,11 +1826,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                 if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var namedValue))
                 {
-                    reordered.Add(BindArgumentConversion(syntax.Location, namedValue, parameter));
+                    reordered.Add(BindArgumentConversion(namedValue.Syntax?.Location ?? syntax.Location, namedValue, parameter));
                 }
                 else if (positionalIndex < positionalValues.Count)
                 {
-                    reordered.Add(BindArgumentConversion(syntax.Location, positionalValues[positionalIndex], parameter));
+                    reordered.Add(BindArgumentConversion(positionalValues[positionalIndex].Syntax?.Location ?? syntax.Location, positionalValues[positionalIndex], parameter));
                     positionalIndex++;
                 }
                 else if (parameter.HasDefaultValue)
