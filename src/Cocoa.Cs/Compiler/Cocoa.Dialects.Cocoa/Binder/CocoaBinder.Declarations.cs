@@ -86,6 +86,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     _diagnostics.ReportSymbolAlreadyDeclared(syntax.Identifier.Location, function.Name);
                 }
 
+                // 阶段 4：扩展方法注册——首参带 this 修饰的静态方法
+                if (syntax.Parameters.Count > 0 && syntax.Parameters[0].IsThis && function.IsStatic)
+                {
+                    _extensionMethods.Add(function);
+                }
+
                 // 命名空间函数同时注册进命名空间表（`Foo.Add(...)` 限定访问）；同名同签名由 TryDeclareFunction 已拦
                 if (function.Namespace.Length > 0)
                 {

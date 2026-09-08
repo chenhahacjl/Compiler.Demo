@@ -28,6 +28,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         private readonly Dictionary<string, string> _usingAliases = new Dictionary<string, string>();
         private readonly ImmutableArray<CoaProgram> _codLibraries;
 
+        /// <summary>扩展方法索引：首参带 this 修饰的静态方法——绑定在 BindFunctionDeclaration 登记，成员调用失败时回退查找。</summary>
+        private readonly HashSet<FunctionSymbol> _extensionMethods = new HashSet<FunctionSymbol>();
+
         /// <summary>6f-3：跨用户库同名类型全名集（绑定侧缓存；非限定使用拒绝解析）。</summary>
         private readonly ImmutableHashSet<string> _ambiguousCodTypeNames;
 

@@ -2242,7 +2242,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         private ParameterSyntax ParseParameter()
         {
             SyntaxToken? modifier = null;
-            if (Current.Kind == SyntaxKind.OutKeyword || Current.Kind == SyntaxKind.RefKeyword)
+            if (Current.Kind is SyntaxKind.OutKeyword or SyntaxKind.RefKeyword or SyntaxKind.ThisKeyword)
                 modifier = MatchToken(Current.Kind);
             if (Peek(0).Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.ColonToken)
                 Diagnostics.ReportError(Current.Location, "C# 方言参数须为 `类型 名称`，不能 `名称: 类型`。");

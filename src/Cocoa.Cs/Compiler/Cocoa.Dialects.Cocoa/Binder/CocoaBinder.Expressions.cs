@@ -1176,6 +1176,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     return BindFunctionValueInvocation(syntax.IdentifierToken.Location, identifier, syntax.Arguments, fieldCallee, fieldFunction);
                 }
 
+                // 阶段 4：扩展方法回退——成员未找到时查 this 修饰首参匹配的静态方法
+                var extCall = TryBindExtensionMethodCall(syntax, boundExpression, identifier, boundArguments.ToImmutable());
+                if (extCall != null) return extCall;
+
                 _diagnostics.ReportUnknownMember(syntax.IdentifierToken.Location, identifier, boundExpression.Type);
                 return new BoundErrorExpression(syntax);
             }
@@ -2361,6 +2365,62 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     _diagnostics.ReportNotAVariable(identifierToken.Location, name);
                     return null;
             }
+        }
+
+        /// <summary>阶段 4：扩展方法——成员调用失败时，查找 this 修饰首参匹配的静态方法，包装为静态调用。</summary>
+        private BoundExpression? TryBindExtensionMethodCall(
+            MemberCallExpressionSyntax syntax,
+            BoundExpression boundExpression,
+            string identifier,
+            ImmutableArray<BoundExpression> boundArguments)
+        {
+            if (_extensionMethods.Count == 0) return null;
+
+            var receiverType = boundExpression.Type;
+            var candidates = ImmutableArray.CreateBuilder<FunctionSymbol>();
+
+            foreach (var method in _extensionMethods)
+            {
+                if (method.Name != identifier) continue;
+                if (method.Parameters.Length < 1) continue;
+                if (!IsAccessibleMember(method.Visibility, method.ContainingClass!)) continue;
+                if (method.Parameters[0].IsOut || method.Parameters[0].IsRef) continue;
+
+                var firstParamType = method.Parameters[0].Type;
+                if (firstParamType == receiverType || IsImplicitlyConvertible(receiverType, firstParamType))
+                {
+                    candidates.Add(method);
+                }
+            }
+
+            if (candidates.Count == 0) return null;
+
+            var staticArguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            staticArguments.Add(boundExpression);
+            foreach (var arg in boundArguments)
+            {
+                staticArguments.Add(arg);
+            }
+
+            var resolved = ResolveMemberOverload(syntax.IdentifierToken.Location, identifier, candidates.ToImmutable(), staticArguments.ToImmutable());
+            if (resolved == null) return null;
+
+            var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+            for (var i = 0; i < staticArguments.Count; i++)
+            {
+                var loc = i == 0 ? boundExpression.Syntax.Location : syntax.Arguments[i - 1].Location;
+                arguments.Add(BindConversion(loc, staticArguments[i], resolved.Parameters[i].Type));
+            }
+
+            var staticType = LookupType(resolved.ContainingClass!.Name) as NamedTypeSymbol ?? resolved.ContainingClass!;
+            return new BoundMemberCallExpression(syntax, new BoundStaticTypeExpression(syntax.Expression, staticType), identifier, arguments.ToImmutable(), resolved.ReturnType, resolved);
+        }
+
+        private static bool IsImplicitlyConvertible(TypeSymbol from, TypeSymbol to)
+        {
+            if (from == to) return true;
+            if (to == NamedTypeSymbol.SystemObject) return true;
+            return false;
         }
 
     }
