@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>RawKind(int) 鈫?Cocoa 璇硶绫诲瀷锛堟湭鐭ュ€艰繑鍥?BadToken 鍝ㄥ叺锛夈€?/summary>
         public static CocoaSyntaxKind ToCocoaSyntaxKind(int rawKind)
         {
-            return rawKind >= 0 && rawKind <= (int)CocoaSyntaxKind.QuestionQuestionEqualsToken
+            return rawKind >= 0 && rawKind <= (int)CocoaSyntaxKind.NameofKeyword
                 ? (CocoaSyntaxKind)rawKind
                 : CocoaSyntaxKind.BadToken;
         }

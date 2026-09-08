@@ -278,6 +278,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     return ParseByRefArgumentExpression();
                 case SyntaxKind.BaseKeyword:
                     return new BaseExpressionSyntax(_syntaxTree, NextToken());
+                case SyntaxKind.NameofKeyword:
+                    return ParseNameofExpression();
                 case SyntaxKind.IdentifierToken:
                 default:
                     if (Current.Kind == SyntaxKind.IdentifierToken &&
@@ -669,6 +671,15 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         {
             var keywordToken = MatchToken(SyntaxKind.NullKeyword);
             return new LiteralExpressionSyntax(_syntaxTree, keywordToken, (object)null!);
+        }
+
+        private ExpressionSyntax ParseNameofExpression()
+        {
+            var nameofKeyword = MatchToken(SyntaxKind.NameofKeyword);
+            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var argument = ParseExpression();
+            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+            return new NameofExpressionSyntax(_syntaxTree, nameofKeyword, openParen, argument, closeParen);
         }
 
         private ExpressionSyntax ParseNumberLiteral()

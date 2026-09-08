@@ -114,6 +114,10 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var s: string = null s ??= \"default\" return s }", "default")]
         [InlineData("{ var s: string = \"hello\" s ??= \"default\" return s }", "hello")]
         [InlineData("{ var s: string = null s ??= \"a\" s ??= \"b\" return s }", "a")]
+        // nameof 编译期字符串常量
+        [InlineData("nameof(x)", "x")]
+        [InlineData("{ var x = 10 return nameof(x) }", "x")]
+        [InlineData("{ var x = 10 return nameof(x).Length }", 1)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -1724,6 +1728,13 @@ var z = x [+] y
             ";
 
             AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_Nameof_MemberAccess()
+        {
+            var text = "{ var s = \"hello\" return nameof(s.Length) }";
+            AssertValue(text, "Length");
         }
 
 

@@ -187,8 +187,6 @@ namespace Cocoa.CodeAnalysis.Syntax
         ParenthesizedExpression = 178,
         LambdaExpression = 179,
         ByRefArgument = 180,
-        DeclarationExpression = 199,
-        LocalFunctionDeclaration = 200,
         CastExpression = 181,
         AssignmentExpression = 182,
         PostfixIncrementExpression = 183,
@@ -206,11 +204,15 @@ namespace Cocoa.CodeAnalysis.Syntax
         Interpolation = 195,
         IsExpression = 196,
         AsExpression = 197,
-        TypeParameter = 198,
-        NamedArgument = 201,
-        ParamsKeyword = 202,
-        TupleExpression = 203,
-        QuestionQuestionToken = 204,
-        QuestionQuestionEqualsToken = 205
+        NameofExpression = 198,
+        TypeParameter = 199,
+        DeclarationExpression = 200,
+        LocalFunctionDeclaration = 201,
+        NamedArgument = 202,
+        ParamsKeyword = 203,
+        TupleExpression = 204,
+        QuestionQuestionToken = 205,
+        QuestionQuestionEqualsToken = 206,
+        NameofKeyword = 207
     }
 }

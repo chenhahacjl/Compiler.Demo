@@ -145,6 +145,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.NewKeyword;
                 case "null":
                     return SyntaxKind.NullKeyword;
+                case "nameof":
+                    return SyntaxKind.NameofKeyword;
                 case "out":
                     return SyntaxKind.OutKeyword;
                 case "namespace":
@@ -384,6 +386,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "abstract";
                 case SyntaxKind.AsKeyword:
                     return "as";
+                case SyntaxKind.NameofKeyword:
+                    return "nameof";
                 case SyntaxKind.BaseKeyword:
                     return "base";
                 case SyntaxKind.ThisKeyword:

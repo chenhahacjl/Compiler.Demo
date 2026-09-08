@@ -254,6 +254,24 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return BindTypeTestOrAs(syntax.Expression, syntax.TypeName, syntax, wantBool: false);
         }
 
+        private BoundExpression BindNameofExpression(NameofExpressionSyntax syntax)
+        {
+            // nameof(X) → 编译期字符串常量 "X"
+            // 参数表达式不求值，仅提取最右侧标识符名
+            var name = ExtractName(syntax.Argument);
+            return new BoundLiteralExpression(syntax, name, TypeSymbol.String);
+        }
+
+        private static string ExtractName(ExpressionSyntax expression)
+        {
+            return expression switch
+            {
+                NameExpressionSyntax nameExpr => nameExpr.IdentifierToken.Text ?? "",
+                MemberAccessExpressionSyntax memberExpr => memberExpr.IdentifierToken.Text ?? "",
+                _ => expression.ToString(),
+            };
+        }
+
         private BoundExpression BindTypeTestOrAs(ExpressionSyntax expressionSyntax, SSyntax.SyntaxToken typeName, ExpressionSyntax ownerSyntax, bool wantBool)
         {
             var target = LookupType(typeName.Text ?? "?");
@@ -1813,6 +1831,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 case SSyntax.CSharpSyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
+                case SSyntax.CSharpSyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
                 case SSyntax.CSharpSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
                 case SSyntax.CSharpSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
