@@ -8,6 +8,12 @@
 
 ## 未发布（2026-09-06）
 
+### UI 生态系统规划定稿（Handle + System.UI，6e-M25 规划，纯文档）
+- 新增 [`docs-dev/plan/UI库规划.md`](docs-dev/plan/UI库规划.md)：① `Handle` 通用资源句柄类型入 System.Core（`Raw: long`，修复既有 import `i32` 句柄 64 位截断隐患）；② `System.UI` 独立 `.coa` 库（`src/Cocoa.UI/`，ImGui 式立即模式，IL 完整 + Native 简化双后端，GDI 轮询后端）；③ 远期声明式语法糖（函数调用风格）。
+- 关键决策（ADR A1-A7，登记 docs-dev/README §4）：立即模式（XAML 式标记不采用）；无回调轮询架构（DefWindowProc 地址 + PeekMessage，规避 WNDPROC 函数指针）；分发方案 B（Reference 显式引入，不进 libs/ 避免自动枚举吞并）；UI 库位于 `src/Cocoa.UI/` 与 Cocoa.Cs/SDK 平级。
+- 定位两项**编译器前置增强**（已拍板，未实施）：`.coa` 序列化门禁扩展（带属性实例类/含 body 静态类入库——Handle/实体类硬前置，与「流式库」前置项同源）；native extern 参数上限 7→12+（CreateWindowExW 12 参硬需求）。
+- 文档：`docs-dev/README.md`（plan/ 表 + ADR 索引 ×5）、`docs-dev/开发计划.md`（新增 §6l 执行序列 0a-6）同步。
+
 ### 自举 IO 底层原语收口 + System.IO 门面化前期（P1/P2/P3）
 - `ReadAllBytes` / `WriteAllBytes`（二进制全读写）三后端落地：native `_fileBuffer` `_wfopen/fread×2 计长+回零重读 / fwrite`，fail→空数组；`RuntimeIoSyscallThreeBackendTests` 覆盖往返。
 - 新增 UTF-8↔UTF-16 原语 `StringFromBytes` / `StringToBytes`（三后端；native 经 MultiByteToWideChar 与手写代理对编码），顺带修复 IL 调用 facade receiver 压栈序缺陷。

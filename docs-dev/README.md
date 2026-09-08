@@ -23,6 +23,7 @@
 | [plan/重构执行计划.md](plan/重构执行计划.md) | 重构步骤与进度表（⬜/🔄/✅/⏭️ 标记） |
 | [plan/Cocoa.IDE设计.md](plan/Cocoa.IDE设计.md) | 类 Visual Studio 桌面 IDE：Avalonia 11 路线 + 功能矩阵 |
 | [plan/文档注释设计.md](plan/文档注释设计.md) | `///` 文档注释 → XML + `.coa` 内嵌（6e-M24 规划，未开工） |
+| [plan/UI库规划.md](plan/UI库规划.md) | UI 生态系统：Handle 句柄类型 + System.UI 立即模式库（6e-M25 规划，双后端 + 轮询架构，未开工） |
 
 ## 3. archive/ — 已实现 · 设计依据保留（🛑 归档）
 
@@ -54,6 +55,11 @@
 | 文件 IO 走 Runtime syscall 路线 | — | [plan/自举缺口分析.md](plan/自举缺口分析.md) §4.1 |
 | `.coa` 存结构化 HIR（非 goto-only）；MIR 不落盘；LIR native 私有 | S-7，2026-10-11 | [plan/IR分层与格式设计.md](plan/IR分层与格式设计.md) 头部 |
 | 6e 里程碑（M14 标准库 / M15 双前端 / M17 互操作 / M19 对象模型 / M20 泛型 / M21 数值 / M22 委托 / M23 out-ref） | 用户+实施 | [开发计划.md](开发计划.md) |
+| UI 范式 = 立即模式（XAML 式标记不采用；声明式走宿主语言语法糖远期对齐仓颉 eDSL） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §2/§12 A1-A2 |
+| Handle 类型置 System.Core（通用资源原语；UI 专用句柄归 System.UI，依赖单向） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §4/§12 A3 |
+| System.UI 分发方案 B：Reference 显式引入，不进 libs/（避免 SystemLibrary 自动枚举） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §7/§12 A4 |
+| UI 无回调轮询架构（DefWindowProc 地址 + PeekMessage + GetAsyncKeyState，规避 WNDPROC） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §6/§12 A5 |
+| UI 前置编译器增强：native extern 参数上限 7→12+；`.coa` 序列化门禁扩展（带属性实例类/含 body 静态类） | 用户，2026-09-08 | [plan/UI库规划.md](plan/UI库规划.md) §8/§12 A6 |
 
 ## 5. 维护约定
 
