@@ -492,6 +492,12 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "catch";
                 case SyntaxKind.FinallyKeyword:
                     return "finally";
+                case SyntaxKind.AndKeyword:
+                    return "and";
+                case SyntaxKind.OrKeyword:
+                    return "or";
+                case SyntaxKind.NotKeyword:
+                    return "not";
                 default:
                     return null;
             }

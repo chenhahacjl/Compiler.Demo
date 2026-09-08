@@ -426,22 +426,54 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             MatchToken(SyntaxKind.SwitchKeyword);
             MatchToken(SyntaxKind.OpenBraceToken);
 
-            var arms = new List<(ExpressionSyntax? CaseValue, ExpressionSyntax Result)>();
+            var arms = new List<(ExpressionSyntax? Condition, ExpressionSyntax Result)>();
             while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                ExpressionSyntax? caseValue = null;
+                ExpressionSyntax? condition = null;
+
                 if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text == "_")
                 {
                     NextToken(); // default arm `_`
                 }
+                else if (Current.Kind == SyntaxKind.IsKeyword)
+                {
+                    // is 模式 arm：`is int n` / `is null` / `is > 0`
+                    var isKeyword = NextToken();
+                    var pattern = ParsePattern();
+                    var isExpr = new IsExpressionSyntax(_syntaxTree, operand, isKeyword, null, pattern);
+                    condition = isExpr;
+                }
+                else if (Current.Kind == SyntaxKind.OpenBraceToken)
+                {
+                    // 属性模式 arm：`{ Length: > 0 }`
+                    var pattern = ParsePattern();
+                    var isKeyword = new SyntaxToken(_syntaxTree, SyntaxKind.IsKeyword, pattern.Span.Start, "is", null,
+                        ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                    var isExpr = new IsExpressionSyntax(_syntaxTree, operand, isKeyword, null, pattern);
+                    condition = isExpr;
+                }
+                else if (Current.Kind == SyntaxKind.NotKeyword ||
+                         Current.Kind == SyntaxKind.GreaterToken ||
+                         Current.Kind == SyntaxKind.GreaterOrEqualsToken ||
+                         Current.Kind == SyntaxKind.LessToken ||
+                         Current.Kind == SyntaxKind.LessOrEqualsToken)
+                {
+                    // 关系/not 模式 arm：`> 0` / `not null`
+                    var pattern = ParsePattern();
+                    var isKeyword = new SyntaxToken(_syntaxTree, SyntaxKind.IsKeyword, pattern.Span.Start, "is", null,
+                        ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                    var isExpr = new IsExpressionSyntax(_syntaxTree, operand, isKeyword, null, pattern);
+                    condition = isExpr;
+                }
                 else
                 {
-                    caseValue = ParseExpression();
+                    // 常量匹配 arm：`1` / `"hello"` → 降级为 `operand == case`
+                    condition = ParseExpression();
                 }
 
                 MatchToken(SyntaxKind.FatArrowToken);
                 var result = ParseExpression();
-                arms.Add((caseValue, result));
+                arms.Add((condition, result));
 
                 if (Current.Kind == SyntaxKind.CommaToken)
                 {
@@ -451,20 +483,30 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
             MatchToken(SyntaxKind.CloseBraceToken);
 
-            // 降级：自后向前构造 `operand == case ? result : rest` 链；default(`_`) 为最终兜底
+            // 降级：自后向前构造 `condition ? result : rest` 链；default(`_`) 为最终兜底
             ExpressionSyntax? resultExpr = null;
             for (var i = arms.Count - 1; i >= 0; i--)
             {
-                var (caseValue, armResult) = arms[i];
-                if (caseValue == null)
+                var (cond, armResult) = arms[i];
+                if (cond == null)
                 {
                     resultExpr = armResult;
                     continue;
                 }
 
-                var equals = new SyntaxToken(_syntaxTree, SyntaxKind.EqualsEqualsToken, caseValue.Span.Start, "==", null,
-                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
-                var condition = new BinaryExpressionSyntax(_syntaxTree, operand, equals, caseValue);
+                // 对常量匹配（非 is 表达式），降级为 `operand == case`
+                ExpressionSyntax condition;
+                if (cond is not IsExpressionSyntax)
+                {
+                    var equals = new SyntaxToken(_syntaxTree, SyntaxKind.EqualsEqualsToken, cond.Span.Start, "==", null,
+                        ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                    condition = new BinaryExpressionSyntax(_syntaxTree, operand, equals, cond);
+                }
+                else
+                {
+                    condition = cond;
+                }
+
                 var question = new SyntaxToken(_syntaxTree, SyntaxKind.QuestionToken, armResult.Span.Start, "?", null,
                     ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
                 var colon = new SyntaxToken(_syntaxTree, SyntaxKind.ColonToken, armResult.Span.Start, ":", null,

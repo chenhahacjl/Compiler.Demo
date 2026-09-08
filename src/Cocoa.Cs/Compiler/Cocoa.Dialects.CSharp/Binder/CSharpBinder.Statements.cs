@@ -1335,6 +1335,23 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundIfStatement(syntax, condition, thenStatement, elseStatement);
         }
 
+        private void DeclarePatternVariables(BoundExpression expression)
+        {
+            if (expression is BoundDeclarationPattern declarationPattern)
+            {
+                _scope.TryDeclareVariable(declarationPattern.Variable);
+            }
+            else if (expression is BoundLogicalPattern logicalPattern)
+            {
+                if (logicalPattern.Left != null)
+                    DeclarePatternVariables(logicalPattern.Left);
+                if (logicalPattern.Right != null)
+                    DeclarePatternVariables(logicalPattern.Right);
+                if (logicalPattern.IsUnary && logicalPattern.Operand != null)
+                    DeclarePatternVariables(logicalPattern.Operand);
+            }
+        }
+
         private BoundStatement BindWhileStatement(WhileStatementSyntax syntax)
         {
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);

@@ -157,6 +157,13 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var s: any = \"hi\" return s is { Length: 5 } }", false)]
         [InlineData("{ var s: any = \"hello\" return s is { Length: > 3 } }", true)]
         [InlineData("{ var s: any = \"hi\" return s is { Length: > 3 } }", false)]
+        // switch 表达式 pattern arm
+        [InlineData("{ var x: any = 42 return x switch { is int n => n, _ => 0 } }", 42)]
+        [InlineData("{ var x: any = \"hello\" return x switch { is int n => n, _ => 0 } }", 0)]
+        [InlineData("{ var x: any = 5 return x switch { > 0 => 1, _ => 0 } }", 1)]
+        [InlineData("{ var x: any = -1 return x switch { > 0 => 1, _ => 0 } }", 0)]
+        [InlineData("{ var x: any = null return x switch { not null => 1, _ => 0 } }", 0)]
+        [InlineData("{ var x: any = 5 return x switch { not null => 1, _ => 0 } }", 1)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);

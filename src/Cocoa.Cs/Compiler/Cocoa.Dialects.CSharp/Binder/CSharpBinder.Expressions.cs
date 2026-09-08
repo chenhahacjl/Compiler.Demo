@@ -1614,6 +1614,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private BoundExpression BindConditionalExpression(ConditionalExpressionSyntax syntax)
         {
             var condition = BindExpression(syntax.Condition, TypeSymbol.Boolean);
+
+            // 声明模式变量（switch 表达式 pattern arm 降级后的 `is int n ? n : 0`）
+            DeclarePatternVariables(condition);
+
             var whenTrue = BindExpression(syntax.WhenTrue);
             var whenFalse = BindExpression(syntax.WhenFalse);
 
