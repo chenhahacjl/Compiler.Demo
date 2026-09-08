@@ -207,6 +207,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             {
                 left = ParsePrimaryExpression();
                 left = ParsePostfixExpressions(left);
+
+                // switch 表达式（语言后置件）：`x switch { 1 => a, _ => b }` 降级为嵌套条件表达式。
+                // 仅 `switch` 后紧跟 `{` 才按表达式；switch 语句 `switch (expr)`（后跟 `(`）是语句级，不在此触发。
+                if (Current.Kind == SyntaxKind.SwitchKeyword && Peek(1).Kind == SyntaxKind.OpenBraceToken)
+                {
+                    left = ParseSwitchExpression(left);
+                }
             }
             while (true)
             {
@@ -433,6 +440,194 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             var closeParenthesisToken = MatchToken(SyntaxKind.CloseParenthesisToken);
             var expression = ParseBinaryExpression(6);
             return new CastExpressionSyntax(_syntaxTree, openParenthesisToken, typeName, closeParenthesisToken, expression);
+        }
+
+        /// <summary>record（语言后置件）：`record 名称(位置参数)` 展开为等价类声明（公共字段 + 构造器 + Equals + ToString）。</summary>
+        private MemberSyntax ParseRecordDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        {
+            var recordToken = MatchToken(SyntaxKind.IdentifierToken);
+            var nameToken = MatchToken(SyntaxKind.IdentifierToken);
+            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var parameters = ParseParameterList();
+            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+
+            var members = ImmutableArray.CreateBuilder<MemberSyntax>();
+            ExpandRecordPositionalMembers(nameToken, parameters, members);
+
+            SyntaxToken openBrace;
+            SyntaxToken closeBrace;
+            if (Current.Kind == SyntaxKind.OpenBraceToken)
+            {
+                openBrace = MatchToken(SyntaxKind.OpenBraceToken);
+                while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+                {
+                    members.Add(ParseMember());
+                }
+
+                closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
+            }
+            else
+            {
+                openBrace = SyntheticToken(SyntaxKind.OpenBraceToken, recordToken.Span.End, "{");
+                closeBrace = SyntheticToken(SyntaxKind.CloseBraceToken, recordToken.Span.End, "}");
+            }
+
+            var classKeyword = SyntheticToken(SyntaxKind.ClassKeyword, recordToken.Span.Start, "class");
+            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, nameToken, null, ImmutableArray<TypeClauseSyntax>.Empty, ImmutableArray<WhereClauseSyntax>.Empty, openBrace, members.ToImmutable(), closeBrace);
+        }
+
+        private SyntaxToken SyntheticToken(SyntaxKind kind, int position, string text, object? value = null)
+            => new SyntaxToken(_syntaxTree, kind, position, text, value, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+
+        private void ExpandRecordPositionalMembers(SyntaxToken nameToken, SeparatedSyntaxList<ParameterSyntax> parameters, ImmutableArray<MemberSyntax>.Builder members)
+        {
+            var pos = nameToken.Span.Start;
+            var publicMods = ImmutableArray.Create(SyntheticToken(SyntaxKind.PublicKeyword, pos, "public"));
+
+            foreach (var p in parameters)
+            {
+                members.Add(new ClassFieldDeclarationSyntax(_syntaxTree, publicMods, p.Identifier, p.Type));
+            }
+
+            var ctorStatements = ImmutableArray.CreateBuilder<StatementSyntax>();
+            foreach (var p in parameters)
+            {
+                var thisAccess = new MemberAccessExpressionSyntax(_syntaxTree,
+                    new ThisExpressionSyntax(_syntaxTree, SyntheticToken(SyntaxKind.ThisKeyword, pos, "this")),
+                    SyntheticToken(SyntaxKind.DotToken, pos, "."), p.Identifier);
+                var assign = new AssignmentExpressionSyntax(_syntaxTree, thisAccess, SyntheticToken(SyntaxKind.EqualsToken, pos, "="), new NameExpressionSyntax(_syntaxTree, p.Identifier));
+                ctorStatements.Add(new ExpressionStatementSyntax(_syntaxTree, assign));
+            }
+
+            var ctorBody = new BlockStatementSyntax(_syntaxTree, SyntheticToken(SyntaxKind.OpenBraceToken, pos, "{"), ctorStatements.ToImmutable(), SyntheticToken(SyntaxKind.CloseBraceToken, pos, "}"));
+            members.Add(new ConstructorDeclarationSyntax(_syntaxTree, publicMods,
+                SyntheticToken(SyntaxKind.ConstructorKeyword, pos, "constructor"),
+                SyntheticToken(SyntaxKind.OpenParenthesisToken, pos, "("), parameters,
+                SyntheticToken(SyntaxKind.CloseParenthesisToken, pos, ")"), initializerKeyword: null,
+                new SeparatedSyntaxList<ExpressionSyntax>(ImmutableArray<SyntaxNode>.Empty), ctorBody));
+
+            if (parameters.Count > 0)
+            {
+                var otherParam = new ParameterSyntax(_syntaxTree, modifier: null, SyntheticToken(SyntaxKind.IdentifierToken, pos, "other"), new TypeClauseSyntax(_syntaxTree, null, nameToken));
+                var otherList = new SeparatedSyntaxList<ParameterSyntax>(ImmutableArray<SyntaxNode>.Empty.Add(otherParam));
+                ExpressionSyntax? chain = null;
+                foreach (var p in parameters)
+                {
+                    var left = new NameExpressionSyntax(_syntaxTree, p.Identifier);
+                    var right = new MemberAccessExpressionSyntax(_syntaxTree, new NameExpressionSyntax(_syntaxTree, otherParam.Identifier), SyntheticToken(SyntaxKind.DotToken, pos, "."), p.Identifier);
+                    var eq = new BinaryExpressionSyntax(_syntaxTree, left, SyntheticToken(SyntaxKind.EqualsEqualsToken, pos, "=="), right);
+                    chain = chain == null ? eq : new BinaryExpressionSyntax(_syntaxTree, chain, SyntheticToken(SyntaxKind.AmpersandAmpersandToken, pos, "&&"), eq);
+                }
+
+                var equalsBody = new BlockStatementSyntax(_syntaxTree, SyntheticToken(SyntaxKind.OpenBraceToken, pos, "{"),
+                    ImmutableArray.Create<StatementSyntax>(new ReturnStatementSyntax(_syntaxTree, SyntheticToken(SyntaxKind.ReturnKeyword, pos, "return"), chain)),
+                    SyntheticToken(SyntaxKind.CloseBraceToken, pos, "}"));
+                members.Add(new FunctionDeclarationSyntax(_syntaxTree, publicMods,
+                    SyntheticToken(SyntaxKind.FunctionKeyword, pos, "function"),
+                    SyntheticToken(SyntaxKind.IdentifierToken, pos, "Equals"), null,
+                    SyntheticToken(SyntaxKind.OpenParenthesisToken, pos, "("), otherList,
+                    SyntheticToken(SyntaxKind.CloseParenthesisToken, pos, ")"),
+                    new TypeClauseSyntax(_syntaxTree, null, SyntheticToken(SyntaxKind.IdentifierToken, pos, "bool")), equalsBody));
+            }
+
+            var toStringExpr = BuildRecordToString(nameToken, parameters, pos);
+            var toStringBody = new BlockStatementSyntax(_syntaxTree, SyntheticToken(SyntaxKind.OpenBraceToken, pos, "{"),
+                ImmutableArray.Create<StatementSyntax>(new ReturnStatementSyntax(_syntaxTree, SyntheticToken(SyntaxKind.ReturnKeyword, pos, "return"), toStringExpr)),
+                SyntheticToken(SyntaxKind.CloseBraceToken, pos, "}"));
+            members.Add(new FunctionDeclarationSyntax(_syntaxTree, publicMods,
+                SyntheticToken(SyntaxKind.FunctionKeyword, pos, "function"),
+                SyntheticToken(SyntaxKind.IdentifierToken, pos, "ToString"), null,
+                SyntheticToken(SyntaxKind.OpenParenthesisToken, pos, "("), new SeparatedSyntaxList<ParameterSyntax>(ImmutableArray<SyntaxNode>.Empty),
+                SyntheticToken(SyntaxKind.CloseParenthesisToken, pos, ")"),
+                new TypeClauseSyntax(_syntaxTree, null, SyntheticToken(SyntaxKind.IdentifierToken, pos, "string")), toStringBody));
+        }
+
+        private ExpressionSyntax BuildRecordToString(SyntaxToken nameToken, SeparatedSyntaxList<ParameterSyntax> parameters, int pos)
+        {
+            ExpressionSyntax? expr = null;
+            void Concat(string value)
+            {
+                var literal = new LiteralExpressionSyntax(_syntaxTree, SyntheticToken(SyntaxKind.StringToken, pos, "\"" + value + "\"", value));
+                expr = expr == null ? literal : new BinaryExpressionSyntax(_syntaxTree, expr, SyntheticToken(SyntaxKind.PlusToken, pos, "+"), literal);
+            }
+
+            Concat(nameToken.Text + " { ");
+            var first = true;
+            foreach (var p in parameters)
+            {
+                // Cocoa 无 `string + 非 string`：仅字符串字段拼值，非 string 字段仅留名。
+                var isStringField = p.Type?.Identifier.Text == "string";
+                if (!first)
+                {
+                    Concat(", ");
+                }
+
+                Concat(p.Identifier.Text + (isStringField ? " = " : ""));
+                if (isStringField)
+                {
+                    var valueRef = new NameExpressionSyntax(_syntaxTree, p.Identifier);
+                    expr = expr == null ? valueRef : new BinaryExpressionSyntax(_syntaxTree, expr, SyntheticToken(SyntaxKind.PlusToken, pos, "+"), valueRef);
+                }
+
+                first = false;
+            }
+
+            Concat(" }");
+            return expr ?? new LiteralExpressionSyntax(_syntaxTree, SyntheticToken(SyntaxKind.StringToken, pos, "\"\"", ""));
+        }
+
+        private ExpressionSyntax ParseSwitchExpression(ExpressionSyntax operand)
+        {
+            MatchToken(SyntaxKind.SwitchKeyword);
+            MatchToken(SyntaxKind.OpenBraceToken);
+
+            var arms = new List<(ExpressionSyntax? CaseValue, ExpressionSyntax Result)>();
+            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                ExpressionSyntax? caseValue = null;
+                if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text == "_")
+                {
+                    NextToken(); // default arm `_`
+                }
+                else
+                {
+                    caseValue = ParseExpression();
+                }
+
+                MatchToken(SyntaxKind.FatArrowToken);
+                var result = ParseExpression();
+                arms.Add((caseValue, result));
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                {
+                    NextToken();
+                }
+            }
+
+            MatchToken(SyntaxKind.CloseBraceToken);
+
+            // 降级：自后向前构造 `operand == case ? result : rest` 链；default(`_`) 为最终兜底
+            ExpressionSyntax? resultExpr = null;
+            for (var i = arms.Count - 1; i >= 0; i--)
+            {
+                var (caseValue, armResult) = arms[i];
+                if (caseValue == null)
+                {
+                    resultExpr = armResult;
+                    continue;
+                }
+
+                var equals = new SyntaxToken(_syntaxTree, SyntaxKind.EqualsEqualsToken, caseValue.Span.Start, "==", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                var condition = new BinaryExpressionSyntax(_syntaxTree, operand, equals, caseValue);
+                var question = new SyntaxToken(_syntaxTree, SyntaxKind.QuestionToken, armResult.Span.Start, "?", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                var colon = new SyntaxToken(_syntaxTree, SyntaxKind.ColonToken, armResult.Span.Start, ":", null,
+                    ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+                resultExpr = new ConditionalExpressionSyntax(_syntaxTree, condition, question, armResult, colon, resultExpr ?? armResult);
+            }
+
+            return resultExpr ?? new LiteralExpressionSyntax(_syntaxTree, new SyntaxToken(_syntaxTree, SyntaxKind.NumberToken, operand.Span.Start, "0", 0, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty));
         }
 
         private ExpressionSyntax ParseParenthesizedExpression()
@@ -1447,6 +1642,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             if (Current.Kind == SyntaxKind.NamespaceKeyword)
                 return ParseNamespaceDeclaration();
             var modifiers = ParseModifiers();
+            if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text == "record")
+            {
+                return ParseRecordDeclaration(modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.EnumKeyword) return ParseEnumDeclaration(modifiers);
             if (Current.Kind == SyntaxKind.ClassKeyword) return ParseClassDeclaration(modifiers);
             if (Current.Kind == SyntaxKind.StructKeyword) return ParseClassDeclaration(modifiers);
