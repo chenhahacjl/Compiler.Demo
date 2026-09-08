@@ -866,16 +866,11 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             if (ctor != null)
             {
-                for (var i = 0; i < ctor.Parameters.Length; i++)
+                var reorderedArguments = ReorderCallArguments(syntax, syntax.Arguments, arguments.ToImmutable(), ctor.Parameters, (loc, val, p) => BindConversion(loc, val, p.Type));
+                arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                foreach (var reorderedArgument in reorderedArguments)
                 {
-                    if (i < arguments.Count)
-                    {
-                        arguments[i] = BindConversion(arguments[i].Syntax.Location, arguments[i], ctor.Parameters[i].Type);
-                    }
-                    else if (ctor.Parameters[i].HasDefaultValue)
-                    {
-                        arguments.Add(new BoundLiteralExpression(syntax, ctor.Parameters[i].DefaultValue!, ctor.Parameters[i].Type));
-                    }
+                    arguments.Add(reorderedArgument);
                 }
             }
 
@@ -1143,16 +1138,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     var isBase = boundExpression is BoundBaseExpression;
 
                     var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
-                    for (var i = 0; i < method.Parameters.Length; i++)
+                    foreach (var reorderedArgument in ReorderCallArguments(syntax, syntax.Arguments, boundArguments.ToImmutable(), method.Parameters, (loc, val, p) => BindConversion(loc, val, p.Type)))
                     {
-                        if (i < boundArguments.Count)
-                        {
-                            arguments.Add(BindConversion(syntax.Arguments[i].Location, boundArguments[i], method.Parameters[i].Type));
-                        }
-                        else if (method.Parameters[i].HasDefaultValue)
-                        {
-                            arguments.Add(new BoundLiteralExpression(syntax, method.Parameters[i].DefaultValue!, method.Parameters[i].Type));
-                        }
+                        arguments.Add(reorderedArgument);
                     }
 
                     return new BoundMemberCallExpression(syntax, boundExpression, identifier, arguments.ToImmutable(), method.ReturnType, method, isBase);
@@ -1256,17 +1244,13 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             var converted = ImmutableArray.CreateBuilder<BoundExpression>(method.Parameters.Length);
-            for (var i = 0; i < method.Parameters.Length; i++)
+            foreach (var reorderedArgument in ReorderCallArguments(syntax, syntax.Arguments, arguments, method.Parameters, (loc, val, p) =>
             {
-                if (i < arguments.Length)
-                {
-                    // 参数类型 any：非 void 值隐式装箱/引用转换（Conversion.Classify）
-                    converted.Add(BindConversion(syntax.Arguments[i].Location, arguments[i], method.Parameters[i].Type));
-                }
-                else if (method.Parameters[i].HasDefaultValue)
-                {
-                    converted.Add(new BoundLiteralExpression(syntax, method.Parameters[i].DefaultValue!, method.Parameters[i].Type));
-                }
+                // 参数类型 any：非 void 值隐式装箱/引用转换（Conversion.Classify）
+                return BindConversion(loc, val, p.Type);
+            }))
+            {
+                converted.Add(reorderedArgument);
             }
 
             return new BoundMemberCallExpression(syntax, receiver, identifier, converted.ToImmutable(), method.ReturnType, method);
@@ -1842,6 +1826,53 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             return new BoundCallExpression(syntax, function, reordered.ToImmutable());
+        }
+
+        /// <summary>命名实参重排（语言后置件）：成员方法/构造器/重载调用共用——命名按形参名、未命名按位置、可选缺省补默认值。</summary>
+        private ImmutableArray<BoundExpression> ReorderCallArguments(
+            SSyntax.SyntaxNode syntax,
+            SSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes,
+            ImmutableArray<BoundExpression> boundArguments,
+            ImmutableArray<ParameterSymbol> parameters,
+            Func<TextLocation, BoundExpression, ParameterSymbol, BoundExpression> convert)
+        {
+            var namedValues = new Dictionary<string, BoundExpression>();
+            var positionalValues = new List<BoundExpression>();
+            var hasNamedArgument = false;
+            for (var k = 0; k < argumentSyntaxes.Count; k++)
+            {
+                if (argumentSyntaxes[k] is NamedArgumentExpressionSyntax namedArgument)
+                {
+                    hasNamedArgument = true;
+                    namedValues[namedArgument.Identifier.Text] = boundArguments[k];
+                }
+                else
+                {
+                    positionalValues.Add(boundArguments[k]);
+                }
+            }
+
+            var reordered = ImmutableArray.CreateBuilder<BoundExpression>(parameters.Length);
+            var positionalIndex = 0;
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                var parameter = parameters[i];
+                if (hasNamedArgument && namedValues.TryGetValue(parameter.Name, out var namedValue))
+                {
+                    reordered.Add(convert(namedValue.Syntax?.Location ?? syntax.Location, namedValue, parameter));
+                }
+                else if (positionalIndex < positionalValues.Count)
+                {
+                    reordered.Add(convert(positionalValues[positionalIndex].Syntax?.Location ?? syntax.Location, positionalValues[positionalIndex], parameter));
+                    positionalIndex++;
+                }
+                else if (parameter.HasDefaultValue)
+                {
+                    reordered.Add(new BoundLiteralExpression(syntax, parameter.DefaultValue!, parameter.Type));
+                }
+            }
+
+            return reordered.ToImmutable();
         }
 
         /// <summary>判断标识符是否为可调用函数/方法名（裸调用 `Foo(args)` 应走调用而非转换简写；避免与类型名同名冲突）。</summary>

@@ -982,7 +982,20 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 Current.Kind != SyntaxKind.CloseParenthesisToken &&
                 Current.Kind != SyntaxKind.EndOfFileToken)
             {
-                var argument = ParseExpression();
+                ExpressionSyntax argument;
+                if (Current.Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.ColonToken)
+                {
+                    // 命名实参（语言后置件）：`名: 值` —— 实参位标识符后紧跟冒号即命名参数。
+                    var name = MatchToken(SyntaxKind.IdentifierToken);
+                    var colon = MatchToken(SyntaxKind.ColonToken);
+                    var value = ParseExpression();
+                    argument = new NamedArgumentExpressionSyntax(_syntaxTree, name, colon, value);
+                }
+                else
+                {
+                    argument = ParseExpression();
+                }
+
                 nodesAndSeparators.Add(argument);
 
                 if (Current.Kind == SyntaxKind.CommaToken)
