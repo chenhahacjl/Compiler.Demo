@@ -503,6 +503,12 @@ namespace Cocoa.CodeGen.Interpreter
 
         private void Assign(VariableSymbol variable, object? value)
         {
+            // 阶段 2：struct 值语义——值类型按值存储（深拷贝），防字段引用残留（q = p 后 q.x 写不影响 p）。
+            if (variable.Type.IsValueType)
+            {
+                value = CloneForStorage(variable.Type, value);
+            }
+
             // 6e-M23 R5：形参槽持有 ByRefBox 时写入穿透到调用方存储
             if (variable.Kind == SymbolKind.GlobalVariable)
             {
@@ -537,6 +543,24 @@ namespace Cocoa.CodeGen.Interpreter
 
                 locals[variable] = value!;
             }
+        }
+
+        /// <summary>阶段 2：struct 值语义——按值深拷贝 struct 对象（递归字段），供变量存储/赋值防引用残留。</summary>
+        private object? CloneForStorage(global::Cocoa.CodeAnalysis.Symbols.TypeSymbol type, object? value)
+        {
+            if (type.IsValueType && value is EvaluatorObject source)
+            {
+                var fields = InstanceFieldsOf(source.Class);
+                var copy = new EvaluatorObject(source.Class, new object?[fields.Length]);
+                for (var i = 0; i < fields.Length; i++)
+                {
+                    copy.Fields[i] = CloneForStorage(fields[i].Type, source.Fields[i]);
+                }
+
+                return copy;
+            }
+
+            return value;
         }
 
     }

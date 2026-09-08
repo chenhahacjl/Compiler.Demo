@@ -288,6 +288,33 @@ namespace Cocoa.CodeGen.Native
             return obj;
         }
 
+        /// <summary>阶段 2b：struct 值语义——深拷贝（alloc + vtable + 逐字段拷贝），防赋值引用残留。</summary>
+        private LirVirtualRegister EmitCloneStructValue(LirVirtualRegister source, NamedTypeSymbol structType)
+        {
+            var instructions = _currentFunction.Instructions;
+            var (offsets, instanceSize) = GetLayout(structType);
+            var pointerSize = _isX64 ? 8 : 4;
+
+            var sizeRegister = EmitConst(instanceSize);
+            var copy = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(sizeRegister)));
+            Add(instructions, new LirInstruction(LirOpCode.Call, copy, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
+
+            var vtable = AllocateRegister(LirType.Addr);
+            Add(instructions, new LirInstruction(LirOpCode.LeaData, vtable, LirOperand.Data(NativeObjectModel.VTableKey(structType))));
+            Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(copy), LirOperand.Reg(vtable), 0, pointerSize));
+
+            foreach (var field in NativeObjectModel.CollectInstanceFields(structType))
+            {
+                var fieldSize = NativeObjectModel.FieldSize(field.Type);
+                var valueRegister = AllocateRegister(TypeOf(field.Type));
+                Add(instructions, new LirInstruction(LirOpCode.Load, valueRegister, LirOperand.Reg(source), LirOperand.None, offsets[field], fieldSize));
+                Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(copy), LirOperand.Reg(valueRegister), offsets[field], fieldSize));
+            }
+
+            return copy;
+        }
+
         /// <summary>M4：`base(...)`/`this(...)` 构造链（ctor 体已由绑定前缀注入，this 即隐藏首参）。null = 链到 Object：no-op。</summary>
         private LirVirtualRegister EmitConstructorChainExpression(BoundConstructorChainExpression node)
         {

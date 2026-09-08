@@ -923,7 +923,16 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             if (!isStatic)
             {
-                EmitExpression(il, node.Expression);
+                // 阶段 2c：用户 struct 实例方法接收者需地址（ldloca/ldflda），非值副本
+                if (node.Method != null &&
+                    node.Method.ContainingClass is NamedTypeSymbol { IsValueType: true, SpecialType: global::Cocoa.CodeAnalysis.Symbols.SpecialType.None })
+                {
+                    EmitValueTypeReceiverAddress(il, node.Expression);
+                }
+                else
+                {
+                    EmitExpression(il, node.Expression);
+                }
             }
 
             foreach (var argument in node.Arguments)
@@ -1013,9 +1022,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                     return;
                 }
 
-                // 静态方法：call；base.Method()：非虚 call；实例方法：callvirt 虚分派
-                var op = isStatic || node.IsBase ? "Call" : "Callvirt";
-                il.Emit(IlOpCodeTable.Get(op), _methods[node.Method]);
+                // 静态方法：call；base.Method()：非虚 call；struct 实例方法：非虚 call；实例方法：callvirt 虚分派
+                var instanceMethod = node.Method!;
+                var op = isStatic || node.IsBase ||
+                         node.Method.ContainingClass is NamedTypeSymbol { IsValueType: true, SpecialType: global::Cocoa.CodeAnalysis.Symbols.SpecialType.None }
+                    ? "Call"
+                    : "Callvirt";
+                il.Emit(IlOpCodeTable.Get(op), _methods[instanceMethod]);
                 return;
             }
 

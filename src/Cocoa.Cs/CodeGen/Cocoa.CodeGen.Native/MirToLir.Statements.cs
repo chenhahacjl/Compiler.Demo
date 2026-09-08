@@ -57,6 +57,13 @@ namespace Cocoa.CodeGen.Native
                         }
 
                         var variable = GetVariable(declaration.Variable);
+
+                        // 阶段 2b：struct 值语义——用户 struct（SpecialType.None 排除基元）存独立副本。
+                        if (declaration.Variable.Type is NamedTypeSymbol { TypeKind: TypeKind.Struct, SpecialType: SpecialType.None } && value is { } structValue)
+                        {
+                            value = EmitCloneStructValue(structValue, (NamedTypeSymbol)declaration.Variable.Type);
+                        }
+
                         Add(instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(value)));
                         break;
                     }
@@ -260,6 +267,13 @@ namespace Cocoa.CodeGen.Native
                         }
 
                         var variable = GetVariable(assignment.Variable);
+
+                        // 阶段 2b：struct 值语义——用户 struct（SpecialType.None 排除基元）赋值存独立副本。
+                        if (assignment.Variable.Type is NamedTypeSymbol { TypeKind: TypeKind.Struct, SpecialType: SpecialType.None } && value is { } assignedStructValue)
+                        {
+                            value = EmitCloneStructValue(assignedStructValue, (NamedTypeSymbol)assignment.Variable.Type);
+                        }
+
                         Add(_currentFunction.Instructions, new LirInstruction(LirOpCode.Mov, variable, LirOperand.Reg(value)));
                         return variable;
                     }
