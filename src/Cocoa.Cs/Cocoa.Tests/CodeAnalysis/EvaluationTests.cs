@@ -118,6 +118,15 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("nameof(x)", "x")]
         [InlineData("{ var x = 10 return nameof(x) }", "x")]
         [InlineData("{ var x = 10 return nameof(x).Length }", 1)]
+        // is 常量模式
+        [InlineData("{ var x: any = null return x is null }", true)]
+        [InlineData("{ var x: any = 0 return x is null }", false)]
+        [InlineData("{ var x: string = null return x is null }", true)]
+        [InlineData("{ var x: string = \"hello\" return x is null }", false)]
+        [InlineData("{ var x: string = \"hello\" return x is \"hello\" }", true)]
+        [InlineData("{ var x: string = \"hello\" return x is \"world\" }", false)]
+        [InlineData("{ var x: string = \"abc\" return x is \"abc\" }", true)]
+        [InlineData("{ var x: string = null return x is \"abc\" }", false)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);

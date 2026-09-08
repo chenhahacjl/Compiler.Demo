@@ -243,10 +243,24 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return BindConversion(syntax.Expression, type, allowExplicit: true);
         }
 
-        /// <summary>6e-M19 M5-b：is 类型测试——静态可判定折叠，仅"接收者为目标的严格基类/接口"产生动态节点。</summary>
+        /// <summary>is 类型测试/常量模式——常量模式降级为 == 比较，类型测试走既有路径。</summary>
         private BoundExpression BindIsExpression(IsExpressionSyntax syntax)
         {
-            return BindTypeTestOrAs(syntax.Expression, syntax.TypeName, syntax, wantBool: true);
+            // 常量模式：expr is null → expr == null / expr is 0 → expr == 0
+            if (syntax.IsConstantPattern && syntax.Pattern != null)
+            {
+                var operand = BindExpression(syntax.Expression);
+                if (operand.Type == TypeSymbol.Error)
+                    return new BoundErrorExpression(syntax);
+
+                var patternValue = BindExpression(syntax.Pattern);
+                if (patternValue.Type == TypeSymbol.Error)
+                    return new BoundErrorExpression(syntax);
+
+                return BoundNodeFactory.Binary(syntax, operand, SSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
+            }
+
+            return BindTypeTestOrAs(syntax.Expression, syntax.TypeName!, syntax, wantBool: true);
         }
 
         /// <summary>6e-M19 M5-b：as 类型转换——同 is 的静态判定；动态情形失败得 null。</summary>

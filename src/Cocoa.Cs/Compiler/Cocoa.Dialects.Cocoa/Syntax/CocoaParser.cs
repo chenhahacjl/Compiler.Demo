@@ -275,8 +275,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 if (Current.Kind == SyntaxKind.IsKeyword)
                 {
                     var isKeyword = NextToken();
-                    var isTypeName = MatchToken(SyntaxKind.IdentifierToken);
-                    left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, isTypeName);
+                    // 常量模式：is null / is 0 / is "hello"
+                    if (Current.Kind == SyntaxKind.NullKeyword ||
+                        Current.Kind == SyntaxKind.NumberToken ||
+                        Current.Kind == SyntaxKind.DoubleToken ||
+                        Current.Kind == SyntaxKind.StringToken ||
+                        Current.Kind == SyntaxKind.TrueKeyword ||
+                        Current.Kind == SyntaxKind.FalseKeyword)
+                    {
+                        var pattern = ParsePrimaryExpression();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
+                    else
+                    {
+                        var isTypeName = MatchToken(SyntaxKind.IdentifierToken);
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, isTypeName);
+                    }
                     continue;
                 }
 
