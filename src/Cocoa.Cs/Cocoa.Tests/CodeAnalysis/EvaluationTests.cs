@@ -1754,6 +1754,17 @@ var z = x [+] y
             AssertValue(text, "Length");
         }
 
+        [Fact]
+        public void Evaluator_UsingDeclaration_Parses_Correctly()
+        {
+            // using declaration should parse without errors
+            var text = "{ using var x = \"hello\" return 42 }";
+            var syntaxTree = SyntaxTree.Parse(text);
+
+            // Verify no syntax errors
+            Assert.Empty(syntaxTree.Diagnostics);
+        }
+
 
 
         [Fact]

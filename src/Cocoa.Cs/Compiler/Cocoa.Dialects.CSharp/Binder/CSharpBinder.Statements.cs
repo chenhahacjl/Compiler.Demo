@@ -83,15 +83,65 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
             _scope = new BoundScope(_scope);
 
+            var usingVariables = new List<(VariableSymbol variable, BoundExpression initializer)>();
+
             foreach (var statementSyntax in syntax.Statements)
             {
                 var statement = BindStatement(statementSyntax);
                 statements.Add(statement);
+
+                // Track using declarations for try/finally lowering
+                if (statementSyntax is VariableDeclarationSyntax varDecl && varDecl.IsUsingDeclaration &&
+                    statement is BoundVariableDeclaration boundVar && boundVar.Initializer.Type != TypeSymbol.Error)
+                {
+                    usingVariables.Add((boundVar.Variable, boundVar.Initializer));
+                }
             }
 
             _scope = _scope.Parent!;
 
-            return new BoundBlockStatement(syntax, statements.ToImmutable());
+            var block = new BoundBlockStatement(syntax, statements.ToImmutable());
+
+            // Wrap in try/finally if there are using declarations
+            if (usingVariables.Count > 0)
+            {
+                return WrapWithUsingFinally(syntax, block, usingVariables);
+            }
+
+            return block;
+        }
+
+        private BoundStatement WrapWithUsingFinally(SSyntax.SyntaxNode syntax, BoundBlockStatement block,
+            List<(VariableSymbol variable, BoundExpression initializer)> usingVars)
+        {
+            // Build finally block: if (x != null) ((IDisposable)x).Dispose()
+            var finallyStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            foreach (var (variable, _) in usingVars)
+            {
+                // if (x != null) x.Dispose()
+                var varExpr = BoundNodeFactory.Variable(syntax, variable);
+                var notNull = BoundNodeFactory.Binary(syntax, varExpr, SSyntax.SyntaxKind.BangEqualsToken,
+                    new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
+
+                // x.Dispose()
+                var disposeCall = BindDisposeCall(syntax, varExpr);
+
+                var ifTrue = new BoundBlockStatement(syntax, ImmutableArray.Create<BoundStatement>(
+                    new BoundExpressionStatement(syntax, disposeCall)));
+                var ifStmt = new BoundIfStatement(syntax, notNull, ifTrue, null);
+                finallyStatements.Add(ifStmt);
+            }
+
+            var finallyBlock = new BoundBlockStatement(syntax, finallyStatements.ToImmutable());
+            return new BoundTryStatement(syntax, block, ImmutableArray<BoundCatchClause>.Empty, finallyBlock);
+        }
+
+        private BoundExpression BindDisposeCall(SSyntax.SyntaxNode syntax, BoundExpression receiver)
+        {
+            // Create receiver.Dispose() as a BoundMemberCallExpression
+            return new BoundMemberCallExpression(syntax, receiver, "Dispose",
+                ImmutableArray<BoundExpression>.Empty, TypeSymbol.Void);
         }
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)

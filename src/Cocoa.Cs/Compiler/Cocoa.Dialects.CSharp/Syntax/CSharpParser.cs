@@ -1009,6 +1009,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 case SyntaxKind.ConstKeyword:
                     statement = ParseVariableDeclaration();
                     break;
+                case SyntaxKind.UsingKeyword:
+                    statement = ParseUsingDeclaration();
+                    break;
                 case SyntaxKind.IfKeyword:
                     statement = ParseIfStatement();
                     break;
@@ -1658,6 +1661,31 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             var eq = Current.Kind == SyntaxKind.EqualsToken ? MatchToken(SyntaxKind.EqualsToken) : null;
             var init = eq == null ? null : ParseExpression();
             return new VariableDeclarationSyntax(_syntaxTree, keyword, id, typeClause: null, eq, init);
+        }
+
+        private StatementSyntax ParseUsingDeclaration()
+        {
+            var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
+            // using var x = expr
+            if (Current.Kind == SyntaxKind.VarKeyword)
+            {
+                var varKeyword = MatchToken(SyntaxKind.VarKeyword);
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                var equals = Current.Kind == SyntaxKind.EqualsToken ? MatchToken(SyntaxKind.EqualsToken) : null;
+                var initializer = equals == null ? null : ParseExpression();
+                return new VariableDeclarationSyntax(_syntaxTree, usingKeyword, varKeyword, identifier, typeClause: null, equals, initializer);
+            }
+            // using Type x = expr
+            if (Current.Kind == SyntaxKind.IdentifierToken)
+            {
+                var type = ParsePrefixTypeClause();
+                var identifier = MatchToken(SyntaxKind.IdentifierToken);
+                var equals = Current.Kind == SyntaxKind.EqualsToken ? MatchToken(SyntaxKind.EqualsToken) : null;
+                var initializer = equals == null ? null : ParseExpression();
+                return new VariableDeclarationSyntax(_syntaxTree, usingKeyword, null, identifier, type, equals, initializer);
+            }
+            Diagnostics.ReportError(Current.Location, "Expected 'var' or type after 'using'.");
+            return new VariableDeclarationSyntax(_syntaxTree, usingKeyword, null, MatchToken(SyntaxKind.IdentifierToken), null, null, null);
         }
 
         // ==================== Members ====================
