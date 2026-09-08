@@ -153,6 +153,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     case SyntaxKind.AmpersandEqualsToken:
                     case SyntaxKind.PipeEqualsToken:
                     case SyntaxKind.HatEqualsToken:
+                    case SyntaxKind.QuestionQuestionEqualsToken:
                     case SyntaxKind.EqualsToken:
                         var identifierToken = NextToken();
                         var operatorToken = NextToken();
@@ -174,6 +175,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 case SyntaxKind.AmpersandEqualsToken:
                 case SyntaxKind.PipeEqualsToken:
                 case SyntaxKind.HatEqualsToken:
+                case SyntaxKind.QuestionQuestionEqualsToken:
                 case SyntaxKind.EqualsToken:
                     var eqOp = NextToken();
                     var eqRight = ParseAssignmentExpression();

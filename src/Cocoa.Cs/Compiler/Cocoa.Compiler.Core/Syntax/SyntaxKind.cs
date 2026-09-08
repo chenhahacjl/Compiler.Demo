@@ -220,6 +220,8 @@ ColonToken,               // :
         LocalFunctionDeclaration = 200, // 局部函数声明（函数体内 function Helper(...)，降级为具名函数值/闭包）
         NamedArgument = 201, // 命名实参（实参位 `名: 值`，绑定按形参名重排，语言后置件）
         ParamsKeyword = 202, // params 可变参数（尾参数组，语言后置件）
-        TupleExpression = 203 // 元组 `(a, b)`（合成值类型，语言后置件）
+        TupleExpression = 203, // 元组 `(a, b)`（合成值类型，语言后置件）
+        QuestionQuestionToken = 204, // ?? null 合并
+        QuestionQuestionEqualsToken = 205, // ??= null 合并赋值
     }
 }

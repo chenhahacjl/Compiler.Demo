@@ -35,6 +35,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 BoundBinaryOperatorKind.GreaterOrEquals => ">=",
                 BoundBinaryOperatorKind.LogicalAnd => "&&",
                 BoundBinaryOperatorKind.LogicalOr => "||",
+                BoundBinaryOperatorKind.NullCoalescing => "??",
                 _ => throw new NotSupportedException($"Unsupported binary operator '{kind}'"),
             };
         }
@@ -76,7 +77,8 @@ namespace Cocoa.CodeAnalysis.Binding
                 or BoundBinaryOperatorKind.GreaterOrEquals => 3,
 
                 BoundBinaryOperatorKind.BitwiseAnd
-                or BoundBinaryOperatorKind.LogicalAnd => 2,
+                or BoundBinaryOperatorKind.LogicalAnd
+                or BoundBinaryOperatorKind.NullCoalescing => 2,
 
                 BoundBinaryOperatorKind.BitwiseOr
                 or BoundBinaryOperatorKind.BitwiseXor

@@ -103,6 +103,17 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var a = 1 a ^= 0 return a }", 1)]
         [InlineData("{ var a = 1 var b = 2 var c = 3 a += b += c return a }", 6)]
         [InlineData("{ var a = 1 var b = 2 var c = 3 a += b += c return b }", 5)]
+        // ?? null coalescing
+        [InlineData("\"hello\" ?? \"world\"", "hello")]
+        [InlineData("{ var s: string = \"hello\" return s ?? \"default\" }", "hello")]
+        [InlineData("{ var s: string = null return s ?? \"default\" }", "default")]
+        [InlineData("{ var s: string = null return s ?? s ?? \"fallback\" }", "fallback")]
+        [InlineData("{ var a: string = \"a\" var b: string = \"b\" return a ?? b }", "a")]
+        [InlineData("{ var a: string = null var b: string = \"b\" return a ?? b }", "b")]
+        // ??= null coalescing assignment
+        [InlineData("{ var s: string = null s ??= \"default\" return s }", "default")]
+        [InlineData("{ var s: string = \"hello\" s ??= \"default\" return s }", "hello")]
+        [InlineData("{ var s: string = null s ??= \"a\" s ??= \"b\" return s }", "a")]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -1195,6 +1206,31 @@ function Main()
 
             var diagnostics = @"
                 Variable 'x' doesn't exist.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_NullCoalescing_Reports_TypeMismatch()
+        {
+            var text = @"10 [??] false";
+
+            var diagnostics = @"
+                Binary operator '??' is not defined for types 'int' and 'bool'.
+            ";
+
+            AssertDiagnostics(text, diagnostics);
+        }
+
+        [Fact]
+        public void Evaluator_NullCoalescingAssignment_Reports_TypeMismatch()
+        {
+            var text = @"var x = 10
+                         x [??=] false";
+
+            var diagnostics = @"
+                Binary operator '??=' is not defined for types 'int' and 'bool'.
             ";
 
             AssertDiagnostics(text, diagnostics);

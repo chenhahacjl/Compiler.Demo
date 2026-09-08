@@ -117,6 +117,13 @@ namespace Cocoa.CodeAnalysis.Binding
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Null, TypeSymbol.Boolean));
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Null, TypeSymbol.Boolean));
 
+            // ?? null 合并：引用类型 x ?? y → x 非 null 则 x，否则 y；结果类型 = x 的类型
+            var referenceTypes = new[] { TypeSymbol.Any, TypeSymbol.String };
+            foreach (var t in referenceTypes)
+            {
+                ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NullCoalescing, t, t, t));
+            }
+
             return ops.ToArray();
         }
 
@@ -218,6 +225,15 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // ?? null 合并：左操作数必须为引用类型，右操作数类型与左相同，结果类型 = 左类型
+            if (kind == BoundBinaryOperatorKind.NullCoalescing)
+            {
+                if (IsNullableReference(leftType) && leftType == rightType)
+                {
+                    return new BoundBinaryOperator(BoundBinaryOperatorKind.NullCoalescing, leftType, rightType, leftType);
+                }
+            }
+
             foreach (var op in _operators)
             {
                 if (op.Kind == kind && op.LeftType == leftType && op.RightType == rightType)
@@ -238,6 +254,7 @@ namespace Cocoa.CodeAnalysis.Binding
                 SyntaxKind.AmpersandAmpersandToken => BoundBinaryOperatorKind.LogicalAnd,
                 SyntaxKind.PipeToken => BoundBinaryOperatorKind.BitwiseOr,
                 SyntaxKind.PipePipeToken => BoundBinaryOperatorKind.LogicalOr,
+                SyntaxKind.QuestionQuestionToken => BoundBinaryOperatorKind.NullCoalescing,
                 SyntaxKind.HatToken => BoundBinaryOperatorKind.BitwiseXor,
                 SyntaxKind.EqualsEqualsToken => BoundBinaryOperatorKind.Equals,
                 SyntaxKind.BangEqualsToken => BoundBinaryOperatorKind.NotEquals,

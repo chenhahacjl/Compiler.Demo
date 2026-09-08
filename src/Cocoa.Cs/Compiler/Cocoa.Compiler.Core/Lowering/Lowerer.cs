@@ -293,6 +293,28 @@ namespace Cocoa.CodeAnalysis.Lowering
         {
             var newNode = (BoundCompoundAssignmentExpression)base.RewriteCompoundAssignmentExpression(node);
 
+            // ??= null 合并赋值：x ??= y → x = x ?? y
+            if (newNode.Op.Kind == BoundBinaryOperatorKind.NullCoalescing)
+            {
+                // x ??= y  →  x = x ?? y
+                var nullCoalescingOp = BoundBinaryOperator.Bind(BoundBinaryOperatorKind.NullCoalescing, newNode.Variable.Type, newNode.Expression.Type);
+                var nullCoalescing = Binary(
+                    newNode.Syntax,
+                    Variable(newNode.Syntax, newNode.Variable),
+                    nullCoalescingOp!,
+                    newNode.Expression
+                );
+
+                // Rewrite x ?? y → x != null ? x : y
+                var rewrittenNullCoalescing = RewriteExpression(nullCoalescing);
+
+                return Assignment(
+                    newNode.Syntax,
+                    newNode.Variable,
+                    rewrittenNullCoalescing
+                );
+            }
+
             // a <op>= b
             //
             // ---->
@@ -311,6 +333,41 @@ namespace Cocoa.CodeAnalysis.Lowering
             );
 
             return result;
+        }
+
+        /// <summary>
+        /// ?? null 合并：x ?? y → x != null ? x : y
+        /// </summary>
+        protected override BoundExpression RewriteBinaryExpression(BoundBinaryExpression node)
+        {
+            var left = RewriteExpression(node.Left);
+            var right = RewriteExpression(node.Right);
+
+            if (node.Op.Kind == BoundBinaryOperatorKind.NullCoalescing)
+            {
+                // x ?? y  →  x != null ? x : y
+                var notEqualsOp = BoundBinaryOperator.Bind(BoundBinaryOperatorKind.NotEquals, left.Type, TypeSymbol.Null);
+                var condition = Binary(
+                    node.Syntax,
+                    left,
+                    notEqualsOp!,
+                    new BoundLiteralExpression(node.Syntax, null!, TypeSymbol.Null)
+                );
+
+                return Conditional(
+                    node.Syntax,
+                    condition,
+                    left,
+                    right
+                );
+            }
+
+            if (left == node.Left && right == node.Right)
+            {
+                return node;
+            }
+
+            return new BoundBinaryExpression(node.Syntax, left, node.Op, right);
         }
 
         protected override BoundStatement RewriteVariableDeclaration(BoundVariableDeclaration node)

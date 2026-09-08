@@ -186,6 +186,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     case SyntaxKind.AmpersandEqualsToken:
                     case SyntaxKind.PipeEqualsToken:
                     case SyntaxKind.HatEqualsToken:
+                    case SyntaxKind.QuestionQuestionEqualsToken:
                     case SyntaxKind.EqualsToken:
                     {
                         var identifierToken = NextToken();
@@ -212,6 +213,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 case SyntaxKind.AmpersandEqualsToken:
                 case SyntaxKind.PipeEqualsToken:
                 case SyntaxKind.HatEqualsToken:
+                case SyntaxKind.QuestionQuestionEqualsToken:
                 case SyntaxKind.EqualsToken:
                 {
                     var operatorToken = NextToken();

@@ -544,6 +544,39 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            // ?? followed by = would be lexed as ??= (null coalescing assignment)
+            if (t1Kind == SyntaxKind.QuestionQuestionToken && t2Kind == SyntaxKind.EqualsToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.QuestionQuestionToken && t2Kind == SyntaxKind.EqualsEqualsToken)
+            {
+                return true;
+            }
+
+            // ?? followed by => would lex ??= then > (greedy match)
+            if (t1Kind == SyntaxKind.QuestionQuestionToken && t2Kind == SyntaxKind.FatArrowToken)
+            {
+                return true;
+            }
+
+            // ? followed by ?? would be lexed as ?? (two question marks merge)
+            if (t1Kind == SyntaxKind.QuestionToken && t2Kind == SyntaxKind.QuestionQuestionToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.QuestionToken && t2Kind == SyntaxKind.QuestionToken)
+            {
+                return true;
+            }
+
+            if (t1Kind == SyntaxKind.QuestionToken && t2Kind == SyntaxKind.QuestionQuestionEqualsToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;

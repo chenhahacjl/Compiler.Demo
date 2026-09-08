@@ -131,5 +131,15 @@ namespace Cocoa.CodeAnalysis.Binding
 
             return new BoundLiteralExpression(syntax, literal);
         }
+
+        public static BoundLiteralExpression Literal(SyntaxNode syntax, object? literal, TypeSymbol type)
+        {
+            return new BoundLiteralExpression(syntax, literal!, type);
+        }
+
+        public static BoundConditionalExpression Conditional(SyntaxNode syntax, BoundExpression condition, BoundExpression whenTrue, BoundExpression whenFalse)
+        {
+            return new BoundConditionalExpression(syntax, condition, whenTrue, whenFalse);
+        }
     }
 }

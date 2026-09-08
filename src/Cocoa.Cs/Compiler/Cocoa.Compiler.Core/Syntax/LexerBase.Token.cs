@@ -321,8 +321,24 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
                 case '?':
                 {
-                    _kind = SyntaxKind.QuestionToken;
-                    _position++;
+                    if (Lookahead == '?')
+                    {
+                        if (Peek(2) == '=')
+                        {
+                            _kind = SyntaxKind.QuestionQuestionEqualsToken;
+                            _position += 3;
+                        }
+                        else
+                        {
+                            _kind = SyntaxKind.QuestionQuestionToken;
+                            _position += 2;
+                        }
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.QuestionToken;
+                        _position++;
+                    }
                     break;
                 }
                 case '"':

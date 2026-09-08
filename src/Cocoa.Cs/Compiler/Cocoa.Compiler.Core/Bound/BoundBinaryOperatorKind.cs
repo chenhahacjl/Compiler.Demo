@@ -26,5 +26,6 @@ namespace Cocoa.CodeAnalysis.Binding
         LessOrEquals,
         Greater,
         GreaterOrEquals,
+        NullCoalescing,
     }
 }

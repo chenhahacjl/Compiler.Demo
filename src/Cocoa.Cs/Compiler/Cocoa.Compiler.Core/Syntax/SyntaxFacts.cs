@@ -56,6 +56,7 @@ namespace Cocoa.CodeAnalysis.Syntax
 
                 case SyntaxKind.AmpersandToken:
                 case SyntaxKind.AmpersandAmpersandToken:
+                case SyntaxKind.QuestionQuestionToken:
                 {
                     return 2;
                 }
@@ -349,6 +350,10 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return "]";
                 case SyntaxKind.QuestionToken:
                     return "?";
+                case SyntaxKind.QuestionQuestionToken:
+                    return "??";
+                case SyntaxKind.QuestionQuestionEqualsToken:
+                    return "??=";
                 case SyntaxKind.BreakKeyword:
                     return "break";
                 case SyntaxKind.CaseKeyword:
@@ -510,6 +515,8 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.PipeToken;
                 case SyntaxKind.HatEqualsToken:
                     return SyntaxKind.HatToken;
+                case SyntaxKind.QuestionQuestionEqualsToken:
+                    return SyntaxKind.QuestionQuestionToken;
                 default:
                     throw new Exception($"Unexpected syntax: '{kind}'");
             }
