@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.CSharp.Syntax;
-using SSyntax = Cocoa.CodeAnalysis.Syntax;
+using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -107,7 +107,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
         }
 
-        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<SSyntax.SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null, ImmutableArray<CoaProgram> codLibraries = default)
+        public static BoundGlobalScope BindGlobalScope(bool isScript, BoundGlobalScope? previous, ImmutableArray<CoreSyntax.SyntaxTree> syntaxTrees, string entryPointName = "Main", string[]? references = null, ImmutableArray<CoaProgram> codLibraries = default)
         {
             // 6e-M19 M2-c：System.Object 成员面注入（幂等）——须先于类成员绑定，
             // 用户类 override 解析与成员沿链上溯依赖 Object 四虚方法已就位
@@ -255,7 +255,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 // 6e-M19 M2-b → 6e-M20 v3：facade 类标记改为显式 `facade` 修饰符驱动——
                 // 命中 FacadeTargets 且带标记 → 认领；命中但无标记 → 警告（按普通类处理）；
                 // 须先于成员绑定，实例方法声明时的降级依赖此标记
-                var declaredFacade = primary.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword);
+                var declaredFacade = primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword);
                 if (FacadeTargets.TryGetValue(classType.FullName, out var facadeTarget))
                 {
                     if (declaredFacade)
@@ -279,7 +279,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 // 须先于成员绑定，override 签名解析/base 表达式/成员沿链上溯依赖基类链就位（接口不默认）。
                 // facade struct 无 CO 基类（整类映射到 BCL 值类型），跳过默认 Object 基类。
                 if (!classType.IsInterface && classType.BaseType == null &&
-                    !primary.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword))
+                    !primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword))
                 {
                     classType.BaseType = NamedTypeSymbol.SystemObject;
                 }
@@ -287,7 +287,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 // 6e-M26 Phase3：facade struct → 整类映射到 BCL 值类型（FullName 即 BCL 全名，对齐 facade class 约定）：
                 // 不发射 CO TypeDef，类型/成员调用重定向到 BCL（this 为 BCL 值类型，按托管指针传参）。
                 // 可选基类子句（单标识符）作为显式映射目标；缺省则直接用 FullName 解析 BCL 类型。
-                if (classType.TypeKind == TypeKind.Struct && primary.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword))
+                if (classType.TypeKind == TypeKind.Struct && primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword))
                 {
                     classType.IsFacadeClass = true;
                     if (classType.BaseType != null)
@@ -304,7 +304,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
 
                 // facade interface: facade modifier claims (FullName == BCL interface name, like facade struct; no FacadeTargets whitelist).
-                if (classType.TypeKind == TypeKind.Interface && primary.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword))
+                if (classType.TypeKind == TypeKind.Interface && primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword))
                 {
                     classType.IsFacadeClass = true;
                 }
@@ -707,12 +707,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private static (BoundBlockStatement Raw, BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics, ImmutableDictionary<FunctionSymbol, BoundBlockStatement> TupleCtors) BuildFunctionBody(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, NamespaceSymbol? globalNamespace)
         {
             var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
-            var bodyLocation = (SSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
+            var bodyLocation = (CoreSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
 
             if (function.Syntax is ConstructorDeclarationSyntax ctorSyntax)
             {
                 bodySyntax = ctorSyntax.Body;
-                bodyLocation = (SSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
+                bodyLocation = (CoreSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
             var binder = new CSharpBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, CSharpLanguage.Instance.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries, globalNamespace);
@@ -768,12 +768,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         internal static (BoundBlockStatement Body, ImmutableArray<Diagnostic> Diagnostics) BuildFunctionBodyForMonomorphization(bool isScript, BoundScope parentScope, FunctionSymbol function, BoundGlobalScope globalScope, ImmutableArray<CoaProgram> codLibraries, Language dialect, Dictionary<string, TypeSymbol> typeArgumentsByName)
         {
             var bodySyntax = ((FunctionDeclarationSyntax?)function.Declaration)?.Body;
-            var bodyLocation = (SSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
+            var bodyLocation = (CoreSyntax.SyntaxNode?)((FunctionDeclarationSyntax?)function.Declaration)?.Identifier ?? function.Syntax;
 
             if (function.Syntax is ConstructorDeclarationSyntax ctorSyntax)
             {
                 bodySyntax = ctorSyntax.Body;
-                bodyLocation = (SSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
+                bodyLocation = (CoreSyntax.SyntaxNode?)ctorSyntax.ConstructorKeyword ?? ctorSyntax.OpenParenthesisToken;
             }
 
             var binder = new CSharpBinder(isScript, parentScope, function, globalScope.References, globalScope.UsingNamespaces, CSharpLanguage.Instance.LookupBuiltinType, globalScope.UsingStatics, globalScope.UsingAliases, codLibraries);
@@ -826,7 +826,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// （CocoaBinder/CSharpBinder）时复用，不随方言复制。实例字段初始化器 → 每个实例构造函数；
         /// 静态字段初始化器 → .cctor（body 即初始化语句）。
         /// </summary>
-        internal static BoundBlockStatement BuildConstructorPrefix(CSharpBinder binder, FunctionSymbol function, SSyntax.SyntaxNode wrapSyntax, BoundBlockStatement body)
+        internal static BoundBlockStatement BuildConstructorPrefix(CSharpBinder binder, FunctionSymbol function, CoreSyntax.SyntaxNode wrapSyntax, BoundBlockStatement body)
         {
             var prefixStatements = ImmutableArray<BoundStatement>.Empty;
 

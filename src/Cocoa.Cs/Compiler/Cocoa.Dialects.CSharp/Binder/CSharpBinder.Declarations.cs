@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.CSharp.Syntax;
-using SSyntax = Cocoa.CodeAnalysis.Syntax;
+using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -48,8 +48,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                 var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
 
-                var isExtern = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.CdeclKeyword || m.Kind == SSyntax.SyntaxKind.StdcallKeyword);
-                var isSyscall = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.SyscallKeyword);
+                var isExtern = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.CdeclKeyword || m.Kind == CoreSyntax.SyntaxKind.StdcallKeyword);
+                var isSyscall = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.SyscallKeyword);
 
                 if (isSyscall)
                 {
@@ -68,10 +68,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
 
                 var callingConvention = syntax.Modifiers.Select(m => m.Kind)
-                    .FirstOrDefault(k => k == SSyntax.SyntaxKind.CdeclKeyword || k == SSyntax.SyntaxKind.StdcallKeyword) switch
+                    .FirstOrDefault(k => k == CoreSyntax.SyntaxKind.CdeclKeyword || k == CoreSyntax.SyntaxKind.StdcallKeyword) switch
                 {
-                    SSyntax.SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
-                    SSyntax.SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
+                    CoreSyntax.SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
+                    CoreSyntax.SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
                     _ => CallingConvention.Winapi,
                 };
 
@@ -104,7 +104,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
         }
 
-        private ImmutableArray<ParameterSymbol> BindParameters(SSyntax.SeparatedSyntaxList<ParameterSyntax> parameterSyntaxList)
+        private ImmutableArray<ParameterSymbol> BindParameters(CoreSyntax.SeparatedSyntaxList<ParameterSyntax> parameterSyntaxList)
         {
             var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
 
@@ -133,9 +133,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// 可选参数（语言后置件）：形参默认值 `x: i32 = 10` 求值为常量存入 ParameterSymbol。</summary>
         private ParameterSymbol CreateParameterSymbol(string name, TypeSymbol type, ParameterSyntax syntax, int ordinal)
         {
-            var isOut = syntax.Modifier?.Kind == SSyntax.SyntaxKind.OutKeyword;
-            var isRef = syntax.Modifier?.Kind == SSyntax.SyntaxKind.RefKeyword;
-            var isParams = syntax.Modifier?.Kind == SSyntax.SyntaxKind.ParamsKeyword;
+            var isOut = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.OutKeyword;
+            var isRef = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.RefKeyword;
+            var isParams = syntax.Modifier?.Kind == CoreSyntax.SyntaxKind.ParamsKeyword;
 
             object? defaultValue = null;
             var hasDefault = false;
@@ -257,24 +257,24 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         }
 
         /// <summary>从修饰符列表解析可见性（public &gt; internal &gt; protected &gt; private；无修饰符取默认值）。</summary>
-        private static Visibility GetVisibility(ImmutableArray<SSyntax.SyntaxToken> modifiers, Visibility defaultVisibility)
+        private static Visibility GetVisibility(ImmutableArray<CoreSyntax.SyntaxToken> modifiers, Visibility defaultVisibility)
         {
-            if (modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.PublicKeyword))
+            if (modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.PublicKeyword))
             {
                 return Visibility.Public;
             }
 
-            if (modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.InternalKeyword))
+            if (modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.InternalKeyword))
             {
                 return Visibility.Internal;
             }
 
-            if (modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.ProtectedKeyword))
+            if (modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.ProtectedKeyword))
             {
                 return Visibility.Protected;
             }
 
-            if (modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.PrivateKeyword))
+            if (modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.PrivateKeyword))
             {
                 return Visibility.Private;
             }
@@ -282,15 +282,15 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return defaultVisibility;
         }
 
-        private static bool IsVisibilityModifier(SSyntax.SyntaxKind kind)
+        private static bool IsVisibilityModifier(CoreSyntax.SyntaxKind kind)
         {
-            return kind == SSyntax.SyntaxKind.PublicKeyword ||
-                   kind == SSyntax.SyntaxKind.InternalKeyword ||
-                   kind == SSyntax.SyntaxKind.ProtectedKeyword ||
-                   kind == SSyntax.SyntaxKind.PrivateKeyword;
+            return kind == CoreSyntax.SyntaxKind.PublicKeyword ||
+                   kind == CoreSyntax.SyntaxKind.InternalKeyword ||
+                   kind == CoreSyntax.SyntaxKind.ProtectedKeyword ||
+                   kind == CoreSyntax.SyntaxKind.PrivateKeyword;
         }
 
-        private static bool HasVisibilityModifier(ImmutableArray<SSyntax.SyntaxToken> modifiers)
+        private static bool HasVisibilityModifier(ImmutableArray<CoreSyntax.SyntaxToken> modifiers)
         {
             return modifiers.Any(m => IsVisibilityModifier(m.Kind));
         }
@@ -348,8 +348,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
             // `facade` 修饰符（6e-M20）：类须命中 FacadeTargets 才被认领为基元成员面载体；
             // struct 的 facade 为 6e-M26 Phase3 形态（映射 CO struct 到 BCL 值类型），不要求命中 FacadeTargets。
-            var isStructDecl = primary.Syntax.ClassKeyword.Kind == SSyntax.SyntaxKind.StructKeyword;
-            if (primary.Syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword) &&
+            var isStructDecl = primary.Syntax.ClassKeyword.Kind == CoreSyntax.SyntaxKind.StructKeyword;
+            if (primary.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword) &&
                 !isStructDecl &&
                 !FacadeTargets.ContainsKey(primary.Namespace.Length == 0 ? name : primary.Namespace + "." + name))
             {
@@ -364,7 +364,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 {
                     var part = parts[i];
 
-                    if (!part.Syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.PartialKeyword))
+                    if (!part.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.PartialKeyword))
                     {
                         _diagnostics.ReportSymbolAlreadyDeclared(part.Syntax.Identifier.Location, name);
                     }
@@ -389,17 +389,17 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var isStruct = primary.Syntax.IsStruct;
             NamedTypeSymbol classType = new NamedTypeSymbol(name, primary.Namespace, visibility, primary.Syntax);
             classType.TypeKind = isStruct ? TypeKind.Struct : TypeKind.Class;
-            classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.AbstractKeyword));
-            classType.IsSealed = isStruct || parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.SealedKeyword));
+            classType.IsAbstract = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.AbstractKeyword));
+            classType.IsSealed = isStruct || parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.SealedKeyword));
 
             // struct 约束（MVP）：常规 struct 不可有基类/接口、不可 abstract、不可 facade；
             // 但 `facade struct : <BCL值类型>` 是允许的特殊形态（6e-M26 Phase3：映射 CO struct 到 BCL）。
             if (isStruct)
             {
-                var isFacadeStruct = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword));
+                var isFacadeStruct = parts.Any(p => p.Syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword));
                 foreach (var (syntax, _) in parts)
                 {
-                    if (syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.AbstractKeyword))
+                    if (syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.AbstractKeyword))
                     {
                         _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 abstract。");
                     }
@@ -424,7 +424,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                             _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能有基类或实现接口（MVP 阶段仅支持值字段/构造器）。");
                         }
 
-                        if (syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword))
+                        if (syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword))
                         {
                             _diagnostics.ReportError(syntax.Identifier.Location, $"struct '{name}' 不能声明为 facade（除非同时指定 BCL 值类型基类）。");
                         }
@@ -736,15 +736,15 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             foreach (var member in syntax.Members)
             {
-                if (member.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.PartialKeyword))
+                if (member.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.PartialKeyword))
                 {
                     _diagnostics.ReportError(member.Location, "partial 只能用于类声明。");
                     continue;
                 }
 
                 if (classType.IsStatic &&
-                    (member is ClassFieldDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword) ||
-                     member is FunctionDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword)))
+                    (member is ClassFieldDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword) ||
+                     member is FunctionDeclarationSyntax && !member.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword)))
                 {
                     _diagnostics.ReportError(member.Location, $"静态类 {classType.Name} 只能包含静态成员。");
                 }
@@ -753,8 +753,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 {
                     var fieldType = BindTypeClause(fieldDeclaration.Type);
                     var fieldVisibility = GetVisibility(fieldDeclaration.Modifiers, Visibility.Private);
-                    var fieldIsReadonly = fieldDeclaration.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.ReadonlyKeyword);
-                    var fieldIsStatic = fieldDeclaration.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword);
+                    var fieldIsReadonly = fieldDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.ReadonlyKeyword);
+                    var fieldIsStatic = fieldDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
 
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
@@ -767,7 +767,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 }
                 else if (member is ConstructorDeclarationSyntax constructorDeclaration)
                 {
-                    var isStatic = constructorDeclaration.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword);
+                    var isStatic = constructorDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
 
                     if (isStatic)
                     {
@@ -894,7 +894,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var eventName = syntax.Identifier.Text;
 
             // 静态事件后置（设计 §7.3）：当前多播存储为实例字段，明确拒绝
-            if (syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword))
+            if (syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword))
             {
                 _diagnostics.ReportStaticEventNotSupported(syntax.Identifier.Location, eventName);
                 return;
@@ -924,7 +924,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private BoundStatement? TryBindEventSubscription(AssignmentExpressionSyntax syntax)
         {
             var operatorKind = syntax.AssignmentToken.Kind;
-            if (operatorKind != SSyntax.SyntaxKind.PlusEqualsToken && operatorKind != SSyntax.SyntaxKind.MinusEqualsToken)
+            if (operatorKind != CoreSyntax.SyntaxKind.PlusEqualsToken && operatorKind != CoreSyntax.SyntaxKind.MinusEqualsToken)
             {
                 return null;
             }
@@ -934,7 +934,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             NamedTypeSymbol? ownerClass = null;
             BoundExpression? receiver = null;
 
-            if (syntax.Target.Kind == SSyntax.CSharpSyntaxKind.MemberAccessExpression)
+            if (syntax.Target.Kind == CoreSyntax.CSharpSyntaxKind.MemberAccessExpression)
             {
                 var memberAccess = (MemberAccessExpressionSyntax)syntax.Target;
                 var boundReceiver = BindExpression(memberAccess.Expression);
@@ -947,7 +947,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     ownerClass = candidate;
                 }
             }
-            else if (syntax.Target.Kind == SSyntax.CSharpSyntaxKind.NameExpression && _currentClass != null)
+            else if (syntax.Target.Kind == CoreSyntax.CSharpSyntaxKind.NameExpression && _currentClass != null)
             {
                 var nameIdentifier = ((NameExpressionSyntax)syntax.Target).IdentifierToken.Text;
 
@@ -1010,7 +1010,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
             var nullLiteral = new BoundLiteralExpression(syntax, null!, TypeSymbol.Null);
 
-            if (operatorKind == SSyntax.SyntaxKind.PlusEqualsToken)
+            if (operatorKind == CoreSyntax.SyntaxKind.PlusEqualsToken)
             {
                 // += 尾插：
                 // if __old == null { _<e> = new Fn[1] { __h } }
@@ -1022,7 +1022,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 // }
                 var isNullCondition = BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, oldListLocal),
-                    SSyntax.SyntaxKind.EqualsEqualsToken,
+                    CoreSyntax.SyntaxKind.EqualsEqualsToken,
                     nullLiteral);
 
                 var singleItem = new BoundArrayCreationExpression(
@@ -1081,7 +1081,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 // }
                 var notNullCondition = BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, oldListLocal),
-                    SSyntax.SyntaxKind.BangEqualsToken,
+                    CoreSyntax.SyntaxKind.BangEqualsToken,
                     nullLiteral);
 
                 var scanStatements = new List<BoundStatement>();
@@ -1098,11 +1098,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 var loopBody = ImmutableArray.CreateBuilder<BoundStatement>();
                 var elementEqualsHandler = BoundNodeFactory.Binary(syntax,
                     ElementOf(syntax, oldListLocal, BoundNodeFactory.Variable(syntax, scanIndexLocal)),
-                    SSyntax.SyntaxKind.EqualsEqualsToken,
+                    CoreSyntax.SyntaxKind.EqualsEqualsToken,
                     BoundNodeFactory.Variable(syntax, handlerLocal));
                 var notYetFound = BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, matchIndexLocal),
-                    SSyntax.SyntaxKind.EqualsEqualsToken,
+                    CoreSyntax.SyntaxKind.EqualsEqualsToken,
                     BoundNodeFactory.Literal(syntax, -1));
 
                 loopBody.Add(new BoundIfStatement(
@@ -1119,7 +1119,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     syntax,
                     BoundNodeFactory.Binary(syntax,
                         BoundNodeFactory.Variable(syntax, scanIndexLocal),
-                        SSyntax.SyntaxKind.LessToken,
+                        CoreSyntax.SyntaxKind.LessToken,
                         LengthOf(syntax, oldListLocal)),
                     new BoundBlockStatement(syntax, loopBody.ToImmutable()),
                     scanBreak, scanContinue);
@@ -1131,7 +1131,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                 var lengthIsOne = BoundNodeFactory.Binary(syntax,
                     LengthOf(syntax, oldListLocal),
-                    SSyntax.SyntaxKind.EqualsEqualsToken,
+                    CoreSyntax.SyntaxKind.EqualsEqualsToken,
                     BoundNodeFactory.Literal(syntax, 1));
                 var storeNull = new BoundExpressionStatement(
                     syntax,
@@ -1148,7 +1148,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                         syntax, handlerArray,
                         BoundNodeFactory.Binary(syntax,
                             LengthOf(syntax, oldListLocal),
-                            SSyntax.SyntaxKind.MinusToken,
+                            CoreSyntax.SyntaxKind.MinusToken,
                             BoundNodeFactory.Literal(syntax, 1)),
                         ImmutableArray<BoundExpression>.Empty)));
                 compactStatements.Add(new BoundVariableDeclaration(syntax, targetIndexLocal, BoundNodeFactory.Literal(syntax, 0)));
@@ -1161,7 +1161,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 var copyBody = ImmutableArray.CreateBuilder<BoundStatement>();
                 var sourceIsMatch = BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, sourceIndexLocal),
-                    SSyntax.SyntaxKind.EqualsEqualsToken,
+                    CoreSyntax.SyntaxKind.EqualsEqualsToken,
                     BoundNodeFactory.Variable(syntax, matchIndexLocal));
                 var advanceTarget = ImmutableArray.Create<BoundStatement>(
                     new BoundExpressionStatement(syntax, new BoundElementAssignmentExpression(
@@ -1180,7 +1180,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 syntax,
                 BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, sourceIndexLocal),
-                    SSyntax.SyntaxKind.LessToken,
+                    CoreSyntax.SyntaxKind.LessToken,
                     LengthOf(syntax, oldListLocal)),
                 new BoundBlockStatement(syntax, copyBody.ToImmutable()),
                 compactBreak, compactContinue);
@@ -1189,7 +1189,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 compactStatements.Add(new BoundExpressionStatement(syntax, new BoundMemberAssignmentExpression(
                     syntax, receiver, backingField, BoundNodeFactory.Variable(syntax, compactedListLocal))));                var hitCondition = BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, matchIndexLocal),
-                    SSyntax.SyntaxKind.GreaterOrEqualsToken,
+                    CoreSyntax.SyntaxKind.GreaterOrEqualsToken,
                     BoundNodeFactory.Literal(syntax, 0));
 
                 rebuildStatements.Add(new BoundIfStatement(
@@ -1211,7 +1211,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
         /// <summary>6e-M22 委托真实类型化 M4：C# 式事件订阅/退订——后备字段为具名 delegate 类时走
         /// `_<e> = Combine(_<e>, h)` / `Remove(_<e>, h)`（+= / -= 绑定层合成 delegate 二元运算，三后端经委托管道）。</summary>
-        private BoundStatement BuildDelegateEventSubscription(AssignmentExpressionSyntax syntax, SSyntax.SyntaxKind operatorKind, BoundExpression receiver, FieldSymbol backingField, NamedTypeSymbol delegateBacking)
+        private BoundStatement BuildDelegateEventSubscription(AssignmentExpressionSyntax syntax, CoreSyntax.SyntaxKind operatorKind, BoundExpression receiver, FieldSymbol backingField, NamedTypeSymbol delegateBacking)
         {
             _labelCounter++;
             var sequence = _labelCounter;
@@ -1234,13 +1234,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var fieldAccess = new BoundMemberAccessExpression(syntax, delegateBacking, receiver, backingField.Name, backingField);
             var nullLiteral = new BoundLiteralExpression(syntax, null!, TypeSymbol.Null);
 
-            if (operatorKind == SSyntax.SyntaxKind.PlusEqualsToken)
+            if (operatorKind == CoreSyntax.SyntaxKind.PlusEqualsToken)
             {
                 // if _e == null { _e = h } else { _e = _e + h }
-                var isNullCondition = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.EqualsEqualsToken, nullLiteral);
+                var isNullCondition = BoundNodeFactory.Binary(syntax, fieldAccess, CoreSyntax.SyntaxKind.EqualsEqualsToken, nullLiteral);
                 var storeHandler = new BoundExpressionStatement(syntax,
                     new BoundMemberAssignmentExpression(syntax, receiver, backingField, BoundNodeFactory.Variable(syntax, handlerLocal)));
-                var combined = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.PlusToken,
+                var combined = BoundNodeFactory.Binary(syntax, fieldAccess, CoreSyntax.SyntaxKind.PlusToken,
                     BoundNodeFactory.Variable(syntax, handlerLocal));
                 var storeCombine = new BoundExpressionStatement(syntax,
                     new BoundMemberAssignmentExpression(syntax, receiver, backingField, combined));
@@ -1249,8 +1249,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             else
             {
                 // if _e != null { _e = _e - h }
-                var notNullCondition = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.BangEqualsToken, nullLiteral);
-                var removed = BoundNodeFactory.Binary(syntax, fieldAccess, SSyntax.SyntaxKind.MinusToken,
+                var notNullCondition = BoundNodeFactory.Binary(syntax, fieldAccess, CoreSyntax.SyntaxKind.BangEqualsToken, nullLiteral);
+                var removed = BoundNodeFactory.Binary(syntax, fieldAccess, CoreSyntax.SyntaxKind.MinusToken,
                     BoundNodeFactory.Variable(syntax, handlerLocal));
                 var storeRemove = new BoundExpressionStatement(syntax,
                     new BoundMemberAssignmentExpression(syntax, receiver, backingField, removed));
@@ -1264,7 +1264,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// 类内触发脱糖（6e-M22 C5+ 多播）：`e(args)` → 判空 + 快照遍历逐个调用。
         /// 实参只求值一次（提升隐藏局部，防遍历期间重复执行副作用）。
         /// </summary>
-        private BoundStatement BindEventRaise(ExpressionStatementSyntax syntax, TextLocation errorLocation, string eventName, SSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes)
+        private BoundStatement BindEventRaise(ExpressionStatementSyntax syntax, TextLocation errorLocation, string eventName, CoreSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes)
         {
             var eventSymbol = _currentClass!.GetEvent(eventName)!;
             var signature = eventSymbol.HandlerType;
@@ -1295,7 +1295,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                 _labelCounter++;
                 var dlgNotNull = BoundNodeFactory.Binary(syntax, dlgFieldAccess,
-                    SSyntax.SyntaxKind.BangEqualsToken,
+                    CoreSyntax.SyntaxKind.BangEqualsToken,
                     new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
                 var dlgInvocationArguments = dlgArgumentLocals
                     .Select(local => (BoundExpression)BoundNodeFactory.Variable(syntax, local))
@@ -1331,7 +1331,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
             var notNullCondition = BoundNodeFactory.Binary(syntax,
                 BoundNodeFactory.Variable(syntax, snapshotLocal),
-                SSyntax.SyntaxKind.BangEqualsToken,
+                CoreSyntax.SyntaxKind.BangEqualsToken,
                 new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
 
             _labelCounter++;
@@ -1352,7 +1352,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 syntax,
                 BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, indexLocal),
-                    SSyntax.SyntaxKind.LessToken,
+                    CoreSyntax.SyntaxKind.LessToken,
                     LengthOf(syntax, snapshotLocal)),
                 new BoundBlockStatement(syntax, loopBody.ToImmutable()),
                 breakLabel, continueLabel);
@@ -1363,13 +1363,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         }
 
         /// <summary>`__local.Length` 成员访问合成。</summary>
-        private static BoundMemberAccessExpression LengthOf(SSyntax.SyntaxNode syntax, LocalVariableSymbol arrayLocal)
+        private static BoundMemberAccessExpression LengthOf(CoreSyntax.SyntaxNode syntax, LocalVariableSymbol arrayLocal)
         {
             return new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, BoundNodeFactory.Variable(syntax, arrayLocal), "Length");
         }
 
         /// <summary>`__local[index]` 元素访问合成。</summary>
-        private static BoundElementAccessExpression ElementOf(SSyntax.SyntaxNode syntax, LocalVariableSymbol arrayLocal, BoundExpression index)
+        private static BoundElementAccessExpression ElementOf(CoreSyntax.SyntaxNode syntax, LocalVariableSymbol arrayLocal, BoundExpression index)
         {
             return new BoundElementAccessExpression(syntax, arrayLocal.Type.ElementType!, BoundNodeFactory.Variable(syntax, arrayLocal), index);
         }
@@ -1383,7 +1383,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         }
 
         /// <summary>数组复制循环合成：`while i < source.Length { target[i] = source[i]; i++ }`（target 与 source 等长或更长）。</summary>
-        private IEnumerable<BoundStatement> BuildElementCopyLoop(SSyntax.SyntaxNode syntax, LocalVariableSymbol targetLocal, LocalVariableSymbol indexLocal, LocalVariableSymbol sourceLocal, string labelSuffix)
+        private IEnumerable<BoundStatement> BuildElementCopyLoop(CoreSyntax.SyntaxNode syntax, LocalVariableSymbol targetLocal, LocalVariableSymbol indexLocal, LocalVariableSymbol sourceLocal, string labelSuffix)
         {
             _labelCounter++;
             var breakLabel = new BoundLabel($"{labelSuffix}{_labelCounter}");
@@ -1401,7 +1401,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 syntax,
                 BoundNodeFactory.Binary(syntax,
                     BoundNodeFactory.Variable(syntax, indexLocal),
-                    SSyntax.SyntaxKind.LessToken,
+                    CoreSyntax.SyntaxKind.LessToken,
                     LengthOf(syntax, sourceLocal)),
                 new BoundBlockStatement(syntax, loopBody),
                 breakLabel, continueLabel);
@@ -1565,12 +1565,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return VarianceKind.Invariant;
             }
 
-            return syntax.VarianceKeyword.Kind == SSyntax.SyntaxKind.InKeyword ? VarianceKind.In : VarianceKind.Out;
+            return syntax.VarianceKeyword.Kind == CoreSyntax.SyntaxKind.InKeyword ? VarianceKind.In : VarianceKind.Out;
         }
 
         private static string VarianceKeywordText(TypeParameterSyntax syntax)
         {
-            return syntax.VarianceKeyword?.Kind == SSyntax.SyntaxKind.InKeyword ? "in" : "out";
+            return syntax.VarianceKeyword?.Kind == CoreSyntax.SyntaxKind.InKeyword ? "in" : "out";
         }
 
         /// <summary>delegate 型变安全位诊断（6e-M22 真实类型化，对齐 C# CS1961/CS1962）：
@@ -2104,7 +2104,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var isIndexer = syntax.Identifier.Text == "this";
             var propertyType = BindTypeClause(syntax.Type);
             var visibility = GetVisibility(syntax.Modifiers, Visibility.Private);
-            var isStatic = isIndexer ? false : syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword);
+            var isStatic = isIndexer ? false : syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
             var isAuto = syntax.IsAuto;
 
             if (isIndexer && isAuto)
@@ -2421,12 +2421,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             var parameters = BindParameters(syntax.Parameters);
             var type = BindTypeClause(syntax.Type) ?? TypeSymbol.Void;
-            var isSyscall = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.SyscallKeyword);
-            var isExtern = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.CdeclKeyword || m.Kind == SSyntax.SyntaxKind.StdcallKeyword) ||
+            var isSyscall = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.SyscallKeyword);
+            var isExtern = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.CdeclKeyword || m.Kind == CoreSyntax.SyntaxKind.StdcallKeyword) ||
                            syntax.ExternMetadata != null;
             // syscall/extern 方法缺省 public（System.Runtime.Runtime.Print 供 System.Console 封装层调用；extern 供类外限定调用）
             var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
-            var isStatic = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.StaticKeyword);
+            var isStatic = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
 
             // 6e-M19 M2-b → 6f（镜像 Cocoa 侧）：facade 实例方法降级——同源规则：FacadeThisType 异型必降；
             // 同类 facade 无实例字段（纯成员面）维持降级；携带实例状态的同类 facade（FileStream._h…）保留真实例。
@@ -2441,10 +2441,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 parameters = new[] { thisParameter }.Concat(shifted).ToImmutableArray();
             }
 
-            var isVirtual = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.VirtualKeyword);
-            var isOverride = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.OverrideKeyword);
-            var isAbstract = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.AbstractKeyword);
-            var isSealed = syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.SealedKeyword);
+            var isVirtual = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.VirtualKeyword);
+            var isOverride = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.OverrideKeyword);
+            var isAbstract = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.AbstractKeyword);
+            var isSealed = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.SealedKeyword);
 
             BuiltinKind? builtinKind = null;
             if (isSyscall)
@@ -2599,10 +2599,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private static CallingConvention GetCallingConvention(FunctionDeclarationSyntax syntax)
         {
             return syntax.Modifiers.Select(m => m.Kind)
-                .FirstOrDefault(k => k == SSyntax.SyntaxKind.CdeclKeyword || k == SSyntax.SyntaxKind.StdcallKeyword) switch
+                .FirstOrDefault(k => k == CoreSyntax.SyntaxKind.CdeclKeyword || k == CoreSyntax.SyntaxKind.StdcallKeyword) switch
             {
-                SSyntax.SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
-                SSyntax.SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
+                CoreSyntax.SyntaxKind.CdeclKeyword => CallingConvention.Cdecl,
+                CoreSyntax.SyntaxKind.StdcallKeyword => CallingConvention.StdCall,
                 _ => CallingConvention.Winapi,
             };
         }
@@ -2623,7 +2623,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 if (blockMember is FunctionDeclarationSyntax functionDeclaration)
                 {
                     // 块内只允许 extern 函数声明（stdcall/cdecl 或带 extern 元数据）；普通带体函数 → 诊断
-                    var isExternDecl = functionDeclaration.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.CdeclKeyword || m.Kind == SSyntax.SyntaxKind.StdcallKeyword) ||
+                    var isExternDecl = functionDeclaration.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.CdeclKeyword || m.Kind == CoreSyntax.SyntaxKind.StdcallKeyword) ||
                                        functionDeclaration.ExternMetadata != null;
                     if (!isExternDecl)
                     {
@@ -2650,7 +2650,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         }
 
         /// <summary>解析 charset 值文本（`ansi` / `unicode` / `auto`）；未知值 → unicode + 诊断。</summary>
-        private CharSet ParseCharSetValue(SSyntax.SyntaxToken? valueToken)
+        private CharSet ParseCharSetValue(CoreSyntax.SyntaxToken? valueToken)
         {
             if (valueToken == null)
             {
@@ -2673,7 +2673,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
         private BoundConstructorChainExpression? BindConstructorChain(ConstructorDeclarationSyntax syntax, NamedTypeSymbol classType)
         {
-            var isBase = syntax.InitializerKeyword!.Kind == SSyntax.SyntaxKind.BaseKeyword;
+            var isBase = syntax.InitializerKeyword!.Kind == CoreSyntax.SyntaxKind.BaseKeyword;
             var targetClass = isBase ? classType.BaseType : classType;
 
             if (targetClass == null)

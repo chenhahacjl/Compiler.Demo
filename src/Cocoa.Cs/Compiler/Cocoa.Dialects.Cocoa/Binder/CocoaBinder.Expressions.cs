@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Cocoa.Syntax;
-using SSyntax = Cocoa.CodeAnalysis.Syntax;
+using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
     /// </summary>
     public partial class CocoaBinder
     {
-        private BoundExpression CreateFunctionValue(SSyntax.SyntaxNode syntax, BoundExpression? receiver, FunctionSymbol function)
+        private BoundExpression CreateFunctionValue(CoreSyntax.SyntaxNode syntax, BoundExpression? receiver, FunctionSymbol function)
         {
             if (function.Parameters.Any(p => p.IsByRef))
             {
@@ -412,7 +412,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// descend into nested lambda bodies, so inner lambda returns are never converted
         /// against the outer target type.
         /// </summary>
-        private BoundBlockStatement ConvertLambdaBodyReturns(BoundBlockStatement body, TypeSymbol targetType, SSyntax.SyntaxNode syntax)
+        private BoundBlockStatement ConvertLambdaBodyReturns(BoundBlockStatement body, TypeSymbol targetType, CoreSyntax.SyntaxNode syntax)
         {
             var converter = new LambdaReturnConverter(this, targetType);
             var converted = converter.RewriteStatement(body);
@@ -454,7 +454,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             {
                 var propertyName = propertyGetCall.Method.Name.Substring(4);
                 var property = propertyGetCall.Method.ContainingClass!.GetProperty(propertyName);
-                if (property?.Setter != null && syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.EqualsToken)
+                if (property?.Setter != null && syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.EqualsToken)
                 {
                     if (!IsAccessibleMember(property.Setter.Visibility, property.Setter.ContainingClass!))
                     {
@@ -479,7 +479,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             {
                 var propertyName = facadeGetCall.Function.Name.Substring(4);
                 var property = fc.GetProperty(propertyName);
-                if (property?.Setter != null && syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.EqualsToken)
+                if (property?.Setter != null && syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.EqualsToken)
                 {
                     if (!IsAccessibleMember(property.Setter.Visibility, property.Setter.ContainingClass!))
                     {
@@ -504,9 +504,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     _diagnostics.ReportCannotAssign(syntax.AssignmentToken.Location, variable.Name);
                 }
 
-                if (syntax.AssignmentToken.Kind != SSyntax.SyntaxKind.EqualsToken)
+                if (syntax.AssignmentToken.Kind != CoreSyntax.SyntaxKind.EqualsToken)
                 {
-                    var equivalentOperatorTokenKind = SSyntax.SyntaxFacts.GetBinaryOperatorOfAssignmentOperator(syntax.AssignmentToken.Kind);
+                    var equivalentOperatorTokenKind = CoreSyntax.SyntaxFacts.GetBinaryOperatorOfAssignmentOperator(syntax.AssignmentToken.Kind);
                     var boundOperator = BoundBinaryOperator.Bind(equivalentOperatorTokenKind, variable.Type, boundExpression.Type);
 
                     // 6e-M21 Phase 7：数值复合赋值走二元提升（x: i64 += 50 等），失败再报未定义
@@ -544,7 +544,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return boundExpression;
             }
 
-            if (boundTarget is BoundElementAccessExpression arrayElementTarget && syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.EqualsToken)
+            if (boundTarget is BoundElementAccessExpression arrayElementTarget && syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.EqualsToken)
             {
                 var convertedExpression = BindConversion(syntax.Expression.Location, boundExpression, arrayElementTarget.Type);
 
@@ -552,7 +552,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             // 索引器赋值：list[i] = x → set_Item（facade 经普通调用 → IL 直连 BCL；其余走 Cocoa 体）
-            if (boundTarget is BoundMemberCallExpression mcIndexer && mcIndexer.Method?.ContainingProperty?.IsIndexer == true && syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.EqualsToken)
+            if (boundTarget is BoundMemberCallExpression mcIndexer && mcIndexer.Method?.ContainingProperty?.IsIndexer == true && syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.EqualsToken)
             {
                 var indexer = mcIndexer.Method.ContainingProperty!;
                 if (indexer.Setter != null)
@@ -565,7 +565,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return boundExpression;
             }
 
-            if (boundTarget is BoundCallExpression bcIndexer && bcIndexer.Function.ContainingProperty?.IsIndexer == true && syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.EqualsToken)
+            if (boundTarget is BoundCallExpression bcIndexer && bcIndexer.Function.ContainingProperty?.IsIndexer == true && syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.EqualsToken)
             {
                 var indexer = bcIndexer.Function.ContainingProperty!;
                 if (indexer.Setter != null)
@@ -579,9 +579,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             if (boundTarget is BoundMemberAccessExpression memberTarget && memberTarget.Field != null &&
-                (syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.EqualsToken ||
-                 syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.PlusEqualsToken ||
-                 syntax.AssignmentToken.Kind == SSyntax.SyntaxKind.MinusEqualsToken))
+                (syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.EqualsToken ||
+                 syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.PlusEqualsToken ||
+                 syntax.AssignmentToken.Kind == CoreSyntax.SyntaxKind.MinusEqualsToken))
             {
                 // 6e-M22 C5+ 多播：事件后备字段的 += / -= 已在语句级拦截（TryBindEventSubscription）；
                 // 事件不能直接赋值（含 `=`），只能经订阅语法或类内触发。
@@ -621,7 +621,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return BindIncrementOrDecrement(syntax, syntax.Operand, syntax.OperatorToken);
         }
 
-        private BoundExpression BindIncrementOrDecrement(SSyntax.SyntaxNode syntax, ExpressionSyntax operandSyntax, SSyntax.SyntaxToken operatorToken)
+        private BoundExpression BindIncrementOrDecrement(CoreSyntax.SyntaxNode syntax, ExpressionSyntax operandSyntax, CoreSyntax.SyntaxToken operatorToken)
         {
             var boundTarget = BindExpression(operandSyntax);
 
@@ -635,9 +635,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 }
 
                 // x++/++x → x = x + 1；x--/--x → x = x - 1
-                var operatorTokenKind = operatorToken.Kind == SSyntax.SyntaxKind.PlusPlusToken
-                    ? SSyntax.SyntaxKind.PlusToken
-                    : SSyntax.SyntaxKind.MinusToken;
+                var operatorTokenKind = operatorToken.Kind == CoreSyntax.SyntaxKind.PlusPlusToken
+                    ? CoreSyntax.SyntaxKind.PlusToken
+                    : CoreSyntax.SyntaxKind.MinusToken;
                 var boundOperator = BoundBinaryOperator.Bind(operatorTokenKind, variable.Type, variable.Type);
 
                 if (boundOperator == null)
@@ -699,7 +699,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         /// <summary>元组（语言后置件）：合成 `__Tuple_N` 类型（Item1..ItemN 公共字段 + 参数构造器），复用对象创建。
         /// 合成构造器体：p1→Item1、p2→Item2、…（无源码 Declaration，经 _tupleCtorBodies 注入 BoundProgram）。</summary>
-        private NamedTypeSymbol GetOrCreateTupleType(ImmutableArray<TypeSymbol> elementTypes, SSyntax.SyntaxNode syntax)
+        private NamedTypeSymbol GetOrCreateTupleType(ImmutableArray<TypeSymbol> elementTypes, CoreSyntax.SyntaxNode syntax)
         {
             var key = string.Join(",", elementTypes.Select(t => t.Name));
             if (_tupleTypes.TryGetValue(key, out var existing))
@@ -1452,8 +1452,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         private BoundExpression BindUnaryExpression(UnaryExpressionSyntax syntax)
         {
-            if (syntax.OperatorToken.Kind == SSyntax.SyntaxKind.PlusPlusToken ||
-                syntax.OperatorToken.Kind == SSyntax.SyntaxKind.MinusMinusToken)
+            if (syntax.OperatorToken.Kind == CoreSyntax.SyntaxKind.PlusPlusToken ||
+                syntax.OperatorToken.Kind == CoreSyntax.SyntaxKind.MinusMinusToken)
             {
                 return BindIncrementOrDecrement(syntax, syntax.Operand, syntax.OperatorToken);
             }
@@ -1519,7 +1519,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// i64+u64 无 128 位支撑 → null（报运算符未定义）。移位结果 = 左操作数提升类型（小整数→i32），
         /// 计数随后归一到同一公共类型。
         /// </summary>
-        private static TypeSymbol? GetBinaryNumericResultType(TypeSymbol left, TypeSymbol right, SSyntax.SyntaxKind operatorKind)
+        private static TypeSymbol? GetBinaryNumericResultType(TypeSymbol left, TypeSymbol right, CoreSyntax.SyntaxKind operatorKind)
         {
             var raw = GetRawBinaryNumericResultType(left, right, operatorKind);
             if (raw == null)
@@ -1529,7 +1529,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             // 统一归一化：任何落在 <32 位域的整数结果升到 32 位（运算符表仅注册 32/64 位算术）
             if (raw.IsInteger && !raw.IsPlaceholder128 && raw.BitWidth < 32 &&
-                operatorKind != SSyntax.SyntaxKind.ShiftLeftToken && operatorKind != SSyntax.SyntaxKind.ShiftRightToken)
+                operatorKind != CoreSyntax.SyntaxKind.ShiftLeftToken && operatorKind != CoreSyntax.SyntaxKind.ShiftRightToken)
             {
                 return raw.IsSigned ? TypeSymbol.Int32 : TypeSymbol.UInt32;
             }
@@ -1537,9 +1537,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return raw;
         }
 
-        private static TypeSymbol? GetRawBinaryNumericResultType(TypeSymbol left, TypeSymbol right, SSyntax.SyntaxKind operatorKind)
+        private static TypeSymbol? GetRawBinaryNumericResultType(TypeSymbol left, TypeSymbol right, CoreSyntax.SyntaxKind operatorKind)
         {
-            if (operatorKind == SSyntax.SyntaxKind.ShiftLeftToken || operatorKind == SSyntax.SyntaxKind.ShiftRightToken)
+            if (operatorKind == CoreSyntax.SyntaxKind.ShiftLeftToken || operatorKind == CoreSyntax.SyntaxKind.ShiftRightToken)
             {
                 return left.IsInteger && left.BitWidth < 32 ? TypeSymbol.Int32 : left;
             }
@@ -1871,8 +1871,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         /// <summary>命名实参重排（语言后置件）：成员方法/构造器/重载调用共用——命名按形参名、未命名按位置、可选缺省补默认值。</summary>
         private ImmutableArray<BoundExpression> ReorderCallArguments(
-            SSyntax.SyntaxNode syntax,
-            SSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes,
+            CoreSyntax.SyntaxNode syntax,
+            CoreSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes,
             ImmutableArray<BoundExpression> boundArguments,
             ImmutableArray<ParameterSymbol> parameters,
             Func<TextLocation, BoundExpression, ParameterSymbol, BoundExpression> convert)
@@ -2118,7 +2118,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             TextSpan span;
             if (syntax.Arguments.Count > function.Parameters.Length)
             {
-                SSyntax.SyntaxNode firstExceedingNode;
+                CoreSyntax.SyntaxNode firstExceedingNode;
                 if (function.Parameters.Length > 0)
                 {
                     firstExceedingNode = syntax.Arguments.GetSeparator(function.Parameters.Length - 1);
@@ -2166,7 +2166,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         private BoundExpression BindConversion(ExpressionSyntax syntax, TypeSymbol type, bool allowExplicit = false)
         {
             // 期望类型下推（6e-M22 C4）：lambda 字面量在目标函数类型位置按目标签名提升
-            if (type is FunctionTypeSymbol expectedFunction && syntax.Kind == SSyntax.CocoaSyntaxKind.LambdaExpression)
+            if (type is FunctionTypeSymbol expectedFunction && syntax.Kind == CoreSyntax.CocoaSyntaxKind.LambdaExpression)
             {
                 var lambdaValue = BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedFunction);
                 if (lambdaValue.Type != type && lambdaValue.Type != TypeSymbol.Error)
@@ -2188,7 +2188,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     return new BoundErrorExpression(syntax);
                 }
 
-                if (syntax.Kind == SSyntax.CocoaSyntaxKind.LambdaExpression)
+                if (syntax.Kind == CoreSyntax.CocoaSyntaxKind.LambdaExpression)
                 {
                     var lambdaValue = BindLambdaExpression((LambdaExpressionSyntax)syntax, delegateSignature);
                     if (lambdaValue.Type != delegateSignature && lambdaValue.Type != TypeSymbol.Error)
@@ -2201,7 +2201,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 }
 
                 // 方法组/命名函数 → delegate 类型
-                if (syntax.Kind == SSyntax.CocoaSyntaxKind.NameExpression)
+                if (syntax.Kind == CoreSyntax.CocoaSyntaxKind.NameExpression)
                 {
                     var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
                     if (asValue != null)
@@ -2219,7 +2219,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             // 方法组到函数类型的转换（6e-M22 C4）：命名方法/实例方法引用 → 一等函数值
-            if (type is FunctionTypeSymbol functionTarget && syntax.Kind == SSyntax.CocoaSyntaxKind.NameExpression)
+            if (type is FunctionTypeSymbol functionTarget && syntax.Kind == CoreSyntax.CocoaSyntaxKind.NameExpression)
             {
                 var asValue = TryBindNameAsFunctionValue((NameExpressionSyntax)syntax);
                 if (asValue != null)
@@ -2259,7 +2259,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         }
 
         /// <summary>函数值间接调用共享核心（6e-M22 C4）：元数校验 + 实参转换 + Invocation 节点。</summary>
-        private BoundExpression BindFunctionValueInvocation(TextLocation errorLocation, string displayName, SSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, BoundExpression callee, FunctionTypeSymbol functionType)
+        private BoundExpression BindFunctionValueInvocation(TextLocation errorLocation, string displayName, CoreSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, BoundExpression callee, FunctionTypeSymbol functionType)
         {
             if (functionType.ParameterTypes.Length != argumentSyntaxes.Count)
             {
@@ -2338,7 +2338,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return new BoundConversionExpression(expression.Syntax, type, expression);
         }
 
-        private VariableSymbol BindVariableDeclaration(SSyntax.SyntaxToken identifier, bool isReadOnly, TypeSymbol type, BoundConstant? constant = null)
+        private VariableSymbol BindVariableDeclaration(CoreSyntax.SyntaxToken identifier, bool isReadOnly, TypeSymbol type, BoundConstant? constant = null)
         {
             var name = identifier.Text ?? "?";
             var declare = !identifier.IsMissing;
@@ -2354,7 +2354,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return variable;
         }
 
-        private VariableSymbol? BindVariableReference(SSyntax.SyntaxToken identifierToken)
+        private VariableSymbol? BindVariableReference(CoreSyntax.SyntaxToken identifierToken)
         {
             var name = identifierToken.Text;
 

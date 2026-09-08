@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.CSharp.Syntax;
-using SSyntax = Cocoa.CodeAnalysis.Syntax;
+using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -16,7 +16,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
     /// </summary>
     public partial class CSharpBinder
     {
-        private BoundStatement BindErrorStatement(SSyntax.SyntaxNode syntax)
+        private BoundStatement BindErrorStatement(CoreSyntax.SyntaxNode syntax)
         {
             return new BoundExpressionStatement(syntax, new BoundErrorExpression(syntax));
         }
@@ -56,21 +56,21 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             switch (syntax.Kind)
             {
-                case SSyntax.CSharpSyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.LocalFunctionDeclaration: return BindLocalFunctionDeclaration((LocalFunctionDeclarationStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.BlockStatement: return BindBlockStatement((BlockStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.VariableDeclaration: return BindVariableDeclaration((VariableDeclarationSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.IfStatement: return BindIfStatement((IfStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.WhileStatement: return BindWhileStatement((WhileStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.DoWhileStatement: return BindDoWhileStatement((DoWhileStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ForStatement: return BindForStatement((ForStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ForeachStatement: return BindForeachStatement((ForeachStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.SwitchStatement: return BindSwitchStatement((SwitchStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.BreakStatement: return BindBreakStatement((BreakStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ContinueStatement: return BindContinueStatement((ContinueStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.LocalFunctionDeclaration: return BindLocalFunctionDeclaration((LocalFunctionDeclarationStatementSyntax)syntax);
                 default:
                     // 1b/B8：解析器 panic 恢复合成的意外节点报诊断 + Nop 降级，而非编译器崩溃
                     _diagnostics.ReportError(syntax.Location, $"意外的语句语法 {syntax.Kind}。");
@@ -111,7 +111,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return block;
         }
 
-        private BoundStatement WrapWithUsingFinally(SSyntax.SyntaxNode syntax, BoundBlockStatement block,
+        private BoundStatement WrapWithUsingFinally(CoreSyntax.SyntaxNode syntax, BoundBlockStatement block,
             List<(VariableSymbol variable, BoundExpression initializer)> usingVars)
         {
             // Build finally block: if (x != null) ((IDisposable)x).Dispose()
@@ -121,7 +121,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             {
                 // if (x != null) x.Dispose()
                 var varExpr = BoundNodeFactory.Variable(syntax, variable);
-                var notNull = BoundNodeFactory.Binary(syntax, varExpr, SSyntax.SyntaxKind.BangEqualsToken,
+                var notNull = BoundNodeFactory.Binary(syntax, varExpr, CoreSyntax.SyntaxKind.BangEqualsToken,
                     new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
 
                 // x.Dispose()
@@ -137,7 +137,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundTryStatement(syntax, block, ImmutableArray<BoundCatchClause>.Empty, finallyBlock);
         }
 
-        private BoundExpression BindDisposeCall(SSyntax.SyntaxNode syntax, BoundExpression receiver)
+        private BoundExpression BindDisposeCall(CoreSyntax.SyntaxNode syntax, BoundExpression receiver)
         {
             // Create receiver.Dispose() as a BoundMemberCallExpression
             return new BoundMemberCallExpression(syntax, receiver, "Dispose",
@@ -146,8 +146,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)
         {
-            var isReadOnly = syntax.Keyword?.Kind == SSyntax.SyntaxKind.LetKeyword ||
-                             syntax.Keyword?.Kind == SSyntax.SyntaxKind.ConstKeyword;
+            var isReadOnly = syntax.Keyword?.Kind == CoreSyntax.SyntaxKind.LetKeyword ||
+                             syntax.Keyword?.Kind == CoreSyntax.SyntaxKind.ConstKeyword;
             var type = BindTypeClause(syntax.TypeClause);
             var initializer = syntax.Initializer == null ? null : BindExpression(syntax.Initializer);
             var variableType = type ?? initializer?.Type ?? TypeSymbol.Error;
@@ -163,8 +163,8 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
             if (initializer == null)
             {
-                if (syntax.Keyword?.Kind == SSyntax.SyntaxKind.LetKeyword ||
-                    syntax.Keyword?.Kind == SSyntax.SyntaxKind.ConstKeyword)
+                if (syntax.Keyword?.Kind == CoreSyntax.SyntaxKind.LetKeyword ||
+                    syntax.Keyword?.Kind == CoreSyntax.SyntaxKind.ConstKeyword)
                 {
                     _diagnostics.ReportError(syntax.Location, $"{syntax.Keyword.Text} 变量必须提供初始值。");
                 }
@@ -300,17 +300,17 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return new BoundErrorExpression(syntax);
 
             // 常量模式：expr is null → expr == null / expr is 0 → expr == 0
-            if (syntax.Pattern is SSyntax.ConstantPatternSyntax constantPattern)
+            if (syntax.Pattern is CoreSyntax.ConstantPatternSyntax constantPattern)
             {
                 var patternValue = BindExpression((CSharp.Syntax.ExpressionSyntax)constantPattern.Expression);
                 if (patternValue.Type == TypeSymbol.Error)
                     return new BoundErrorExpression(syntax);
 
-                return BoundNodeFactory.Binary(syntax, operand, SSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
+                return BoundNodeFactory.Binary(syntax, operand, CoreSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
             }
 
             // 声明模式：expr is int n → 检查类型并绑定变量
-            if (syntax.Pattern is SSyntax.DeclarationPatternSyntax declarationPattern)
+            if (syntax.Pattern is CoreSyntax.DeclarationPatternSyntax declarationPattern)
             {
                 var type = LookupType(declarationPattern.TypeToken.Text ?? "?");
                 if (type == null)
@@ -324,7 +324,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             // 关系模式：expr is > 0 / expr is <= 10
-            if (syntax.Pattern is SSyntax.RelationalPatternSyntax relationalPattern)
+            if (syntax.Pattern is CoreSyntax.RelationalPatternSyntax relationalPattern)
             {
                 var value = BindExpression((ExpressionSyntax)relationalPattern.Value);
                 if (value.Type == TypeSymbol.Error)
@@ -332,10 +332,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
                 var opKind = relationalPattern.OperatorToken.Kind switch
                 {
-                    SSyntax.SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,
-                    SSyntax.SyntaxKind.GreaterOrEqualsToken => BoundBinaryOperatorKind.GreaterOrEquals,
-                    SSyntax.SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
-                    SSyntax.SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
+                    CoreSyntax.SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,
+                    CoreSyntax.SyntaxKind.GreaterOrEqualsToken => BoundBinaryOperatorKind.GreaterOrEquals,
+                    CoreSyntax.SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
+                    CoreSyntax.SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
                     _ => BoundBinaryOperatorKind.Greater
                 };
 
@@ -343,13 +343,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             // 逻辑模式：expr is > 0 and < 10 / expr is not null
-            if (syntax.Pattern is SSyntax.LogicalPatternSyntax logicalPattern)
+            if (syntax.Pattern is CoreSyntax.LogicalPatternSyntax logicalPattern)
             {
                 return BindLogicalPattern(syntax, operand, logicalPattern);
             }
 
             // 属性模式：expr is { Length: > 0 }
-            if (syntax.Pattern is SSyntax.PropertyPatternSyntax propertyPattern)
+            if (syntax.Pattern is CoreSyntax.PropertyPatternSyntax propertyPattern)
             {
                 return BindPropertyPattern(syntax, operand, propertyPattern);
             }
@@ -363,7 +363,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundErrorExpression(syntax);
         }
 
-        private BoundExpression BindLogicalPattern(SSyntax.SyntaxNode syntax, BoundExpression operand, SSyntax.LogicalPatternSyntax logicalPattern)
+        private BoundExpression BindLogicalPattern(CoreSyntax.SyntaxNode syntax, BoundExpression operand, CoreSyntax.LogicalPatternSyntax logicalPattern)
         {
             if (logicalPattern.IsUnary)
             {
@@ -376,21 +376,21 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 // and/or 模式：expr is > 0 and < 10
                 var leftPattern = BindPattern(operand, logicalPattern.Left!);
                 var rightPattern = BindPattern(operand, logicalPattern.Right!);
-                var opKind = logicalPattern.OperatorToken!.Kind == SSyntax.SyntaxKind.AndKeyword
+                var opKind = logicalPattern.OperatorToken!.Kind == CoreSyntax.SyntaxKind.AndKeyword
                     ? BoundLogicalPatternKind.And
                     : BoundLogicalPatternKind.Or;
                 return new BoundLogicalPattern(syntax, leftPattern, opKind, rightPattern);
             }
         }
 
-        private BoundExpression BindPropertyPattern(SSyntax.SyntaxNode syntax, BoundExpression operand, SSyntax.PropertyPatternSyntax propertyPattern)
+        private BoundExpression BindPropertyPattern(CoreSyntax.SyntaxNode syntax, BoundExpression operand, CoreSyntax.PropertyPatternSyntax propertyPattern)
         {
             var subpatterns = ImmutableArray.CreateBuilder<BoundPropertySubpattern>();
 
             foreach (var sub in propertyPattern.Subpatterns)
             {
                 // For constant patterns, bind the value directly (not via BindPattern which creates binary expr)
-                if (sub.Pattern is SSyntax.ConstantPatternSyntax constantSub)
+                if (sub.Pattern is CoreSyntax.ConstantPatternSyntax constantSub)
                 {
                     var patternValue = BindExpression((CSharp.Syntax.ExpressionSyntax)constantSub.Expression);
                     subpatterns.Add(new BoundPropertySubpattern(sub.NameToken.Text ?? "", patternValue));
@@ -406,15 +406,15 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundPropertyPattern(propertyPattern, operand, subpatterns.ToImmutable());
         }
 
-        private BoundExpression BindPattern(BoundExpression operand, SSyntax.PatternSyntax pattern)
+        private BoundExpression BindPattern(BoundExpression operand, CoreSyntax.PatternSyntax pattern)
         {
-            if (pattern is SSyntax.ConstantPatternSyntax constantPattern)
+            if (pattern is CoreSyntax.ConstantPatternSyntax constantPattern)
             {
                 var patternValue = BindExpression((CSharp.Syntax.ExpressionSyntax)constantPattern.Expression);
-                return BoundNodeFactory.Binary(pattern, operand, SSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
+                return BoundNodeFactory.Binary(pattern, operand, CoreSyntax.SyntaxKind.EqualsEqualsToken, patternValue);
             }
 
-            if (pattern is SSyntax.DeclarationPatternSyntax declarationPattern)
+            if (pattern is CoreSyntax.DeclarationPatternSyntax declarationPattern)
             {
                 var type = LookupType(declarationPattern.TypeToken.Text ?? "?");
                 if (type == null)
@@ -427,26 +427,26 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return new BoundDeclarationPattern(pattern, operand, type, variable);
             }
 
-            if (pattern is SSyntax.RelationalPatternSyntax relationalPattern)
+            if (pattern is CoreSyntax.RelationalPatternSyntax relationalPattern)
             {
                 var value = BindExpression((ExpressionSyntax)relationalPattern.Value);
                 var opKind = relationalPattern.OperatorToken.Kind switch
                 {
-                    SSyntax.SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,
-                    SSyntax.SyntaxKind.GreaterOrEqualsToken => BoundBinaryOperatorKind.GreaterOrEquals,
-                    SSyntax.SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
-                    SSyntax.SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
+                    CoreSyntax.SyntaxKind.GreaterToken => BoundBinaryOperatorKind.Greater,
+                    CoreSyntax.SyntaxKind.GreaterOrEqualsToken => BoundBinaryOperatorKind.GreaterOrEquals,
+                    CoreSyntax.SyntaxKind.LessToken => BoundBinaryOperatorKind.Less,
+                    CoreSyntax.SyntaxKind.LessOrEqualsToken => BoundBinaryOperatorKind.LessOrEquals,
                     _ => BoundBinaryOperatorKind.Greater
                 };
                 return new BoundRelationalPattern(pattern, operand, opKind, value);
             }
 
-            if (pattern is SSyntax.LogicalPatternSyntax logicalPattern)
+            if (pattern is CoreSyntax.LogicalPatternSyntax logicalPattern)
             {
                 return BindLogicalPattern(pattern, operand, logicalPattern);
             }
 
-            if (pattern is SSyntax.PropertyPatternSyntax propertyPattern)
+            if (pattern is CoreSyntax.PropertyPatternSyntax propertyPattern)
             {
                 return BindPropertyPattern(pattern, operand, propertyPattern);
             }
@@ -499,7 +499,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundConditionalAccessExpression(syntax, expression, whenNotNull);
         }
 
-        private BoundExpression BindMemberAccessOnExpression(BoundExpression instance, string memberName, SSyntax.SyntaxNode syntax)
+        private BoundExpression BindMemberAccessOnExpression(BoundExpression instance, string memberName, CoreSyntax.SyntaxNode syntax)
         {
             if (instance.Type == TypeSymbol.Error)
                 return new BoundErrorExpression(syntax);
@@ -521,7 +521,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundErrorExpression(syntax);
         }
 
-        private BoundExpression BindTypeTestOrAs(ExpressionSyntax expressionSyntax, SSyntax.SyntaxToken typeName, ExpressionSyntax ownerSyntax, bool wantBool)
+        private BoundExpression BindTypeTestOrAs(ExpressionSyntax expressionSyntax, CoreSyntax.SyntaxToken typeName, ExpressionSyntax ownerSyntax, bool wantBool)
         {
             var target = LookupType(typeName.Text ?? "?");
             if (target == null)
@@ -717,7 +717,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// `Func&lt;A1..An,R&gt;` = (A..) -&gt; R（1~16 参）；`Action&lt;A1..An&gt;` = (A..) -&gt; void（0~16 参）；
         /// `Predicate&lt;T&gt;` = (T) -&gt; bool。非家族名返回 null 回落常规查找；命中但元数/绑定失败报诊断返回 Error 壳。
         /// </summary>
-        private TypeSymbol? TryResolveDelegateFamily(SSyntax.SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
+        private TypeSymbol? TryResolveDelegateFamily(CoreSyntax.SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
         {
             var name = identifier.Text;
 
@@ -795,7 +795,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         }
 
         /// <summary>Monomorphizer 专用：泛型类型名绑定（new/调用站点的 Identifier+实参列表，命中同一缓存壳）。</summary>
-        public TypeSymbol? BindGenericTypeNameForExpansion(SSyntax.SyntaxToken identifier, ImmutableArray<SSyntax.SyntaxNode> argumentClauses)
+        public TypeSymbol? BindGenericTypeNameForExpansion(CoreSyntax.SyntaxToken identifier, ImmutableArray<CoreSyntax.SyntaxNode> argumentClauses)
             => BindGenericTypeName(identifier, argumentClauses.Cast<TypeClauseSyntax>().ToImmutableArray());
 
         /// <summary>
@@ -810,7 +810,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         /// 泛型类型名绑定核心（6e-M20）：名字 + 实参列表 → 定义查找/非泛型拒绝/元数校验/约束校验/实例化去重。
         /// 类型子句与 `new Box&lt;int&gt;(…)` 两路共用。
         /// </summary>
-        private TypeSymbol? BindGenericTypeName(SSyntax.SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
+        private TypeSymbol? BindGenericTypeName(CoreSyntax.SyntaxToken identifier, ImmutableArray<TypeClauseSyntax> argumentClauses)
         {
             // 内建委托家族（6e-M22 C3）：Func<…>/Action<…>/Predicate<T> → 结构化函数类型（两方言共享拼写）
             var familyResult = TryResolveDelegateFamily(identifier, argumentClauses);
@@ -1134,7 +1134,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         }
 
         /// <summary>泛型方法实参转换绑定（元数已由共享核心校验）。</summary>
-        private ImmutableArray<BoundExpression> BindGenericMethodArguments(SSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, FunctionSymbol instantiated)
+        private ImmutableArray<BoundExpression> BindGenericMethodArguments(CoreSyntax.SeparatedSyntaxList<ExpressionSyntax> argumentSyntaxes, FunctionSymbol instantiated)
         {
             var boundArguments = ImmutableArray.CreateBuilder<BoundExpression>();
             for (var i = 0; i < argumentSyntaxes.Count; i++)
@@ -1423,13 +1423,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             // 隐藏计数器 __i（唯一名，用户不可见）
             _labelCounter++;
             var counterName = $"__foreach_i{_labelCounter}";
-            var counterToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, counterName, counterName, ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
+            var counterToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, counterName, counterName, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
             var counter = BindVariableDeclaration(counterToken, isReadOnly: false, TypeSymbol.Int32);
 
             // 隐藏集合暂存 __c（1b/B1）：集合表达式只求值一次——旧实现把 collection 节点同时
             // 嵌入条件 Length 访问与体内元素访问，带副作用的集合（如 GetItems()）每迭代重复求值
             var collectionTempName = $"__foreach_c{_labelCounter}";
-            var collectionTempToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, collectionTempName, collectionTempName, ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
+            var collectionTempToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, collectionTempName, collectionTempName, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
             var collectionDecl = BindVariableDeclaration(collectionTempToken, isReadOnly: true, collection.Type);
             var collectionVar = BoundNodeFactory.Variable(syntax, collectionDecl);
 
@@ -1457,7 +1457,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var lengthAccess = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, collectionVar, "Length");
             var condition = BoundNodeFactory.Binary(syntax,
                 BoundNodeFactory.Variable(syntax, counter),
-                SSyntax.SyntaxKind.LessToken,
+                CoreSyntax.SyntaxKind.LessToken,
                 lengthAccess);
 
             var whileStatement = BoundNodeFactory.While(syntax, condition,
@@ -1539,7 +1539,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             _scope = new BoundScope(_scope);
 
             // 隐藏枚举器变量 __enum
-            var enumToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, $"__foreach_e{counter}", $"__foreach_e{counter}", ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
+            var enumToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, $"__foreach_e{counter}", $"__foreach_e{counter}", ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
             var enumeratorDecl = BindVariableDeclaration(enumToken, isReadOnly: false, enumeratorClass);
 
             var breakLabel = new BoundLabel($"break{counter}");
@@ -1591,7 +1591,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             // 等值比较，switch (GetVal()) {...} 会对每个 case 各调一次 GetVal()
             _labelCounter++;
             var switchTempName = $"__switch_v{_labelCounter}";
-            var switchTempToken = new SSyntax.SyntaxToken(syntax.SyntaxTree, SSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, switchTempName, switchTempName, ImmutableArray<SSyntax.SyntaxTrivia>.Empty, ImmutableArray<SSyntax.SyntaxTrivia>.Empty);
+            var switchTempToken = new CoreSyntax.SyntaxToken(syntax.SyntaxTree, CoreSyntax.SyntaxKind.IdentifierToken, syntax.Keyword.Span.Start, switchTempName, switchTempName, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty, ImmutableArray<CoreSyntax.SyntaxTrivia>.Empty);
             var switchTempDecl = BindVariableDeclaration(switchTempToken, isReadOnly: true, boundValue.Type);
             var value = BoundNodeFactory.Variable(syntax, switchTempDecl);
 
@@ -1659,10 +1659,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 var allValues = pendingValues.ToImmutable().AddRange(clauseValues);
                 foreach (var caseValue in allValues)
                 {
-                    var equality = BoundNodeFactory.Binary(syntax, value, SSyntax.SyntaxKind.EqualsEqualsToken, caseValue);
+                    var equality = BoundNodeFactory.Binary(syntax, value, CoreSyntax.SyntaxKind.EqualsEqualsToken, caseValue);
                     condition = condition == null
                         ? equality
-                        : BoundNodeFactory.Binary(syntax, condition, SSyntax.SyntaxKind.PipePipeToken, equality);
+                        : BoundNodeFactory.Binary(syntax, condition, CoreSyntax.SyntaxKind.PipePipeToken, equality);
                 }
 
                 pendingValues.Clear();
@@ -1672,7 +1672,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     var whenCondition = BindExpression(caseClause.WhenCondition, TypeSymbol.Boolean);
                     condition = condition == null
                         ? whenCondition
-                        : BoundNodeFactory.Binary(syntax, condition, SSyntax.SyntaxKind.AmpersandAmpersandToken, whenCondition);
+                        : BoundNodeFactory.Binary(syntax, condition, CoreSyntax.SyntaxKind.AmpersandAmpersandToken, whenCondition);
                 }
 
                 var bodySyntax = caseClause.Body;
@@ -1692,10 +1692,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 BoundExpression? trailingCondition = null;
                 foreach (var caseValue in pendingValues)
                 {
-                    var equality = BoundNodeFactory.Binary(syntax, value, SSyntax.SyntaxKind.EqualsEqualsToken, caseValue);
+                    var equality = BoundNodeFactory.Binary(syntax, value, CoreSyntax.SyntaxKind.EqualsEqualsToken, caseValue);
                     trailingCondition = trailingCondition == null
                         ? equality
-                        : BoundNodeFactory.Binary(syntax, trailingCondition, SSyntax.SyntaxKind.PipePipeToken, equality);
+                        : BoundNodeFactory.Binary(syntax, trailingCondition, CoreSyntax.SyntaxKind.PipePipeToken, equality);
                 }
 
                 conditions.Add(trailingCondition);
@@ -1736,7 +1736,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return;
             }
 
-            if (last.Kind is SSyntax.CSharpSyntaxKind.BreakStatement or SSyntax.CSharpSyntaxKind.ReturnStatement or SSyntax.CSharpSyntaxKind.ContinueStatement)
+            if (last.Kind is CoreSyntax.CSharpSyntaxKind.BreakStatement or CoreSyntax.CSharpSyntaxKind.ReturnStatement or CoreSyntax.CSharpSyntaxKind.ContinueStatement)
             {
                 return;
             }
@@ -1982,7 +1982,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             // 6e-M22 C5+ 多播事件：订阅（+=/-=）与类内触发（裸名调用）语句级拦截，
             // 脱糖为既有 Bound 节点块（foreach 先例），三后端 + Evaluator 零改动。
-            if (syntax.Expression.Kind == SSyntax.CSharpSyntaxKind.AssignmentExpression)
+            if (syntax.Expression.Kind == CoreSyntax.CSharpSyntaxKind.AssignmentExpression)
             {
                 var subscription = TryBindEventSubscription((AssignmentExpressionSyntax)syntax.Expression);
                 if (subscription != null)
@@ -1997,7 +1997,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return BindTupleDeconstruction(deconstructAssign);
             }
 
-            if (syntax.Expression.Kind == SSyntax.CSharpSyntaxKind.CallExpression && _currentClass != null)
+            if (syntax.Expression.Kind == CoreSyntax.CSharpSyntaxKind.CallExpression && _currentClass != null)
             {
                 var raiseCall = (CallExpressionSyntax)syntax.Expression;
 
@@ -2077,32 +2077,32 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         {
             switch (syntax.Kind)
             {
-                case SSyntax.CSharpSyntaxKind.ParenthesizedExpression: return BindParenthesizedExpression((ParenthesizedExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.LiteralExpression: return BindLiteralExpression((LiteralExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.NameExpression: return BindNameExpression((NameExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.AssignmentExpression: return BindAssignmentExpression((AssignmentExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.PostfixIncrementExpression: return BindPostfixIncrementExpression((PostfixIncrementExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ConditionalExpression: return BindConditionalExpression((ConditionalExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
-                case SSyntax.CSharpSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
-                case SSyntax.CSharpSyntaxKind.TupleExpression: return BindTupleExpression((TupleExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ParenthesizedExpression: return BindParenthesizedExpression((ParenthesizedExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.LiteralExpression: return BindLiteralExpression((LiteralExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.NameExpression: return BindNameExpression((NameExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.AssignmentExpression: return BindAssignmentExpression((AssignmentExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.UnaryExpression: return BindUnaryExpression((UnaryExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.PostfixIncrementExpression: return BindPostfixIncrementExpression((PostfixIncrementExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.BinaryExpression: return BindBinaryExpression((BinaryExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ConditionalExpression: return BindConditionalExpression((ConditionalExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.CallExpression: return BindCallExpression((CallExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ArrayCreationExpression: return BindArrayCreationExpression((ArrayCreationExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ObjectCreationExpression: return BindObjectCreationExpression((ObjectCreationExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ElementAccessExpression: return BindElementAccessExpression((ElementAccessExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.MemberAccessExpression: return BindMemberAccessExpression((MemberAccessExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.MemberCallExpression: return BindMemberCallExpression((MemberCallExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.CastExpression: return BindCastExpression((CastExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ThisExpression: return BindThisExpression((ThisExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.BaseExpression: return BindBaseExpression((BaseExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.InterpolatedStringExpression: return BindInterpolatedStringExpression((InterpolatedStringExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.IsExpression: return BindIsExpression((IsExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.AsExpression: return BindAsExpression((AsExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.NameofExpression: return BindNameofExpression((NameofExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.ConditionalAccessExpression: return BindConditionalAccessExpression((ConditionalAccessExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.LambdaExpression: return BindLambdaExpression((LambdaExpressionSyntax)syntax, expectedType: null);
+                case CoreSyntax.CSharpSyntaxKind.ByRefArgument: return BindByRefArgument((ByRefArgumentExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.NamedArgument: return BindNamedArgument((NamedArgumentExpressionSyntax)syntax);
+                case CoreSyntax.CSharpSyntaxKind.TupleExpression: return BindTupleExpression((TupleExpressionSyntax)syntax);
 
                 default:
                     // 1b/B8：意外的表达式语法报诊断 + ErrorExpression 降级，而非编译器崩溃
@@ -2257,7 +2257,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private BoundExpression BindLiteralExpression(LiteralExpressionSyntax syntax)
         {
             // 6e-M19 M5-a：null 字面量 → Null 类型（绑定期经 BindConversion 落到目标引用型）
-            if (syntax.LiteralToken.Kind == SSyntax.SyntaxKind.NullKeyword)
+            if (syntax.LiteralToken.Kind == CoreSyntax.SyntaxKind.NullKeyword)
             {
                 return new BoundLiteralExpression(syntax, null!, TypeSymbol.Null);
             }

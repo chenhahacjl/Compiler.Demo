@@ -3,7 +3,7 @@ using Cocoa.CodeAnalysis.Binding;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.CSharp.Syntax;
-using SSyntax = Cocoa.CodeAnalysis.Syntax;
+using CoreSyntax = Cocoa.CodeAnalysis.Syntax;
 using Cocoa.CodeAnalysis.Text;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
@@ -619,7 +619,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             enumType.SetEnumMembers(members);
 
             // facade enum：`facade` 修饰符 + FacadeTargets 命中 → 整型映射到 BCL 同名枚举（IL 直链签名用）
-            if (syntax.Modifiers.Any(m => m.Kind == SSyntax.SyntaxKind.FacadeKeyword) &&
+            if (syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword) &&
                 FacadeTargets.ContainsKey(enumType.FullName))
             {
                 enumType.IsFacadeClass = true;
