@@ -348,6 +348,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return BindLogicalPattern(syntax, operand, logicalPattern);
             }
 
+            // 属性模式：expr is { Length: > 0 }
+            if (syntax.Pattern is SSyntax.PropertyPatternSyntax propertyPattern)
+            {
+                return BindPropertyPattern(syntax, operand, propertyPattern);
+            }
+
             // 回退：类型测试（旧路径）
             if (syntax.TypeName != null)
             {
@@ -375,6 +381,29 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     : BoundLogicalPatternKind.Or;
                 return new BoundLogicalPattern(syntax, leftPattern, opKind, rightPattern);
             }
+        }
+
+        private BoundExpression BindPropertyPattern(SSyntax.SyntaxNode syntax, BoundExpression operand, SSyntax.PropertyPatternSyntax propertyPattern)
+        {
+            var subpatterns = ImmutableArray.CreateBuilder<BoundPropertySubpattern>();
+
+            foreach (var sub in propertyPattern.Subpatterns)
+            {
+                // For constant patterns, bind the value directly (not via BindPattern which creates binary expr)
+                if (sub.Pattern is SSyntax.ConstantPatternSyntax constantSub)
+                {
+                    var patternValue = BindExpression((CSharp.Syntax.ExpressionSyntax)constantSub.Expression);
+                    subpatterns.Add(new BoundPropertySubpattern(sub.NameToken.Text ?? "", patternValue));
+                }
+                else
+                {
+                    // For relational/logical/declaration patterns, use BindPattern with operand
+                    var subPattern = BindPattern(operand, sub.Pattern);
+                    subpatterns.Add(new BoundPropertySubpattern(sub.NameToken.Text ?? "", subPattern));
+                }
+            }
+
+            return new BoundPropertyPattern(propertyPattern, operand, subpatterns.ToImmutable());
         }
 
         private BoundExpression BindPattern(BoundExpression operand, SSyntax.PatternSyntax pattern)
@@ -415,6 +444,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             if (pattern is SSyntax.LogicalPatternSyntax logicalPattern)
             {
                 return BindLogicalPattern(pattern, operand, logicalPattern);
+            }
+
+            if (pattern is SSyntax.PropertyPatternSyntax propertyPattern)
+            {
+                return BindPropertyPattern(pattern, operand, propertyPattern);
             }
 
             return new BoundErrorExpression(pattern);

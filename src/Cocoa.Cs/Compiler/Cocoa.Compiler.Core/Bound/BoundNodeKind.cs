@@ -55,5 +55,6 @@ AsExpression,
         DeclarationPattern,        // 声明模式：expr is int n
         RelationalPattern,         // 关系模式：expr is > 0
         LogicalPattern,            // 逻辑模式：expr is > 0 and < 10
+        PropertyPattern,           // 属性模式：expr is { Length: > 0 }
     }
 }

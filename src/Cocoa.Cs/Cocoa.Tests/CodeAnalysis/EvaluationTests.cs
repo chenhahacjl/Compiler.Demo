@@ -152,6 +152,11 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var x: any = 15 return x is > 0 and < 10 }", false)]
         [InlineData("{ var x: any = null return x is not null }", false)]
         [InlineData("{ var x: any = 5 return x is not null }", true)]
+        // 属性模式
+        [InlineData("{ var s: any = \"hello\" return s is { Length: 5 } }", true)]
+        [InlineData("{ var s: any = \"hi\" return s is { Length: 5 } }", false)]
+        [InlineData("{ var s: any = \"hello\" return s is { Length: > 3 } }", true)]
+        [InlineData("{ var s: any = \"hi\" return s is { Length: > 3 } }", false)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);
@@ -168,6 +173,8 @@ namespace Cocoa.Tests.CodeAnalysis
                 "{ var x: any = 5 return x is > 0 and < 10 }",
                 "{ var x: any = null return x is not null }",
                 "{ var x: any = 5 return x is not null }",
+                "{ var s: any = \"hello\" return s is { Length: 5 } }",
+                "{ var s: any = \"hello\" return s is { Length: > 3 } }",
             };
 
             foreach (var text in testCases)

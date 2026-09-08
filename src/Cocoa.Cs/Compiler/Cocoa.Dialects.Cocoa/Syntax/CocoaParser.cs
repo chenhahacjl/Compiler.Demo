@@ -308,6 +308,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                         var pattern = ParsePattern();
                         left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
                     }
+                    // 属性模式：is { Length: > 0 }
+                    else if (Current.Kind == SyntaxKind.OpenBraceToken)
+                    {
+                        var pattern = ParsePattern();
+                        left = new IsExpressionSyntax(_syntaxTree, left, isKeyword, null, pattern);
+                    }
                     else
                     {
                         // 类型测试：is TypeName
@@ -1116,6 +1122,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         /// </summary>
         private PatternSyntax ParsePattern()
         {
+            // 属性模式：{ Length: > 0 } / { Name: "hello", Age: > 18 }
+            if (Current.Kind == SyntaxKind.OpenBraceToken)
+            {
+                return ParsePropertyPattern();
+            }
+
             // not 模式：is not null / is not 0
             if (Current.Kind == SyntaxKind.NotKeyword)
             {
@@ -1169,6 +1181,29 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             // 回退：解析为表达式常量模式
             var fallback = ParsePrimaryExpression();
             return new ConstantPatternSyntax(_syntaxTree, (SyntaxNode)fallback);
+        }
+
+        /// <summary>
+        /// 解析属性模式：{ Name: pattern, Age: > 18 }
+        /// </summary>
+        private PatternSyntax ParsePropertyPattern()
+        {
+            var openBrace = MatchToken(SyntaxKind.OpenBraceToken);
+            var subpatterns = ImmutableArray.CreateBuilder<PropertySubpatternSyntax>();
+
+            while (Current.Kind != SyntaxKind.CloseBraceToken && Current.Kind != SyntaxKind.EndOfFileToken)
+            {
+                var nameToken = MatchToken(SyntaxKind.IdentifierToken);
+                var colonToken = MatchToken(SyntaxKind.ColonToken);
+                var pattern = ParsePattern();
+                subpatterns.Add(new PropertySubpatternSyntax(_syntaxTree, nameToken, colonToken, pattern));
+
+                if (Current.Kind == SyntaxKind.CommaToken)
+                    NextToken();
+            }
+
+            var closeBrace = MatchToken(SyntaxKind.CloseBraceToken);
+            return new PropertyPatternSyntax(_syntaxTree, openBrace, subpatterns.ToImmutable(), closeBrace);
         }
 
         /// <summary>

@@ -235,5 +235,6 @@ ColonToken,               // :
         AndKeyword = 215, // and 模式组合关键字
         OrKeyword = 216, // or 模式组合关键字
         NotKeyword = 217, // not 模式取反关键字
+        PropertySubpattern = 218, // 属性子模式：Name: pattern
     }
 }

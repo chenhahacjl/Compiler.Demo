@@ -374,6 +374,10 @@ namespace Cocoa.CodeAnalysis.Binding
                 {
                     return RewriteLogicalPattern((BoundLogicalPattern)node);
                 }
+                case BoundNodeKind.PropertyPattern:
+                {
+                    return RewritePropertyPattern((BoundPropertyPattern)node);
+                }
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -776,6 +780,26 @@ namespace Cocoa.CodeAnalysis.Binding
 
                 return new BoundLogicalPattern(node.Syntax, left, node.OperatorKind, right);
             }
+        }
+
+        protected virtual BoundExpression RewritePropertyPattern(BoundPropertyPattern node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            var builder = ImmutableArray.CreateBuilder<BoundPropertySubpattern>();
+            var changed = false;
+
+            foreach (var sub in node.Subpatterns)
+            {
+                var pattern = RewriteExpression(sub.Pattern);
+                if (pattern != sub.Pattern)
+                    changed = true;
+                builder.Add(new BoundPropertySubpattern(sub.PropertyName, pattern));
+            }
+
+            if (!changed && expression == node.Expression)
+                return node;
+
+            return new BoundPropertyPattern(node.Syntax, expression, builder.ToImmutable());
         }
 
         private ImmutableArray<BoundExpression> RewriteExpressions(ImmutableArray<BoundExpression> expressions)

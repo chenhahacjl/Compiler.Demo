@@ -158,6 +158,8 @@ namespace Cocoa.CodeGen.Interpreter
                     return EvaluateRelationalPattern((BoundRelationalPattern)node);
                 case BoundNodeKind.LogicalPattern:
                     return EvaluateLogicalPattern((BoundLogicalPattern)node);
+                case BoundNodeKind.PropertyPattern:
+                    return EvaluatePropertyPattern((BoundPropertyPattern)node);
                 case BoundNodeKind.ConditionalAccessExpression:
                     return EvaluateConditionalAccessExpression((BoundConditionalAccessExpression)node);
 

@@ -588,6 +588,107 @@ namespace Cocoa.CodeGen.Interpreter
         }
 
         /// <summary>
+        /// 属性模式：expr is { Length: > 0 }
+        /// 检查对象属性是否匹配指定的子模式
+        /// </summary>
+        private object EvaluatePropertyPattern(BoundPropertyPattern node)
+        {
+            var value = EvaluateExpression(node.Expression);
+            if (value == null)
+                return false;
+
+            var type = value.GetType();
+            foreach (var sub in node.Subpatterns)
+            {
+                var prop = type.GetProperty(sub.PropertyName);
+                if (prop == null)
+                    return false;
+
+                var propValue = prop.GetValue(value);
+
+                // 子模式可能是关系模式、常量模式等
+                // 我们需要将属性值与子模式进行匹配
+                if (!MatchSubPattern(propValue, sub.Pattern))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private bool MatchSubPattern(object? propValue, BoundExpression pattern)
+        {
+            if (pattern is BoundRelationalPattern relational)
+            {
+                var patternValue = EvaluateExpression(relational.Value);
+                if (propValue == null || patternValue == null)
+                    return false;
+
+                var comparison = CompareValues(propValue, patternValue);
+                return relational.OperatorKind switch
+                {
+                    BoundBinaryOperatorKind.Greater => comparison > 0,
+                    BoundBinaryOperatorKind.GreaterOrEquals => comparison >= 0,
+                    BoundBinaryOperatorKind.Less => comparison < 0,
+                    BoundBinaryOperatorKind.LessOrEquals => comparison <= 0,
+                    _ => false
+                };
+            }
+
+            if (pattern is BoundBinaryExpression binary && binary.Op.Kind == BoundBinaryOperatorKind.Equals)
+            {
+                var patternValue = EvaluateExpression(binary.Right);
+                return Equals(propValue, patternValue);
+            }
+
+            // 直接常量值（属性模式中的常量子模式）
+            if (pattern is BoundLiteralExpression literal)
+            {
+                var patternValue = literal.ConstantValue!.Value;
+                return Equals(propValue, patternValue);
+            }
+
+            if (pattern is BoundDeclarationPattern declaration)
+            {
+                if (propValue == null)
+                    return !declaration.TargetType.IsPrimitiveValueType;
+                if (CheckTypeMatch(propValue, declaration.TargetType))
+                {
+                    _locals.Peek()[declaration.Variable] = propValue;
+                    return true;
+                }
+                return false;
+            }
+
+            if (pattern is BoundLogicalPattern logical)
+            {
+                if (logical.IsUnary)
+                {
+                    return !MatchSubPattern(propValue, logical.Operand!);
+                }
+                else
+                {
+                    var left = MatchSubPattern(propValue, logical.Left!);
+                    var right = MatchSubPattern(propValue, logical.Right!);
+                    return logical.OperatorKind switch
+                    {
+                        BoundLogicalPatternKind.And => left && right,
+                        BoundLogicalPatternKind.Or => left || right,
+                        _ => false
+                    };
+                }
+            }
+
+            // 常量模式（降级为二元比较）
+            if (pattern is BoundBinaryExpression eq && eq.Op.Kind == BoundBinaryOperatorKind.Equals)
+            {
+                var patternValue = EvaluateExpression(eq.Right);
+                return Equals(propValue, patternValue);
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// ?. 空条件成员访问
         /// </summary>
         private object? EvaluateConditionalAccessExpression(BoundConditionalAccessExpression node)

@@ -182,6 +182,27 @@ namespace Cocoa.CodeAnalysis.Binding
                         }
                         break;
                     }
+                case BoundNodeKind.PropertyPattern:
+                    {
+                        var n = (BoundPropertyPattern)node;
+                        n.Expression.WriteTo(writer);
+                        writer.WriteSpace();
+                        writer.WritePunctuation(SyntaxKind.OpenBraceToken);
+                        for (int i = 0; i < n.Subpatterns.Length; i++)
+                        {
+                            if (i > 0)
+                            {
+                                writer.WritePunctuation(SyntaxKind.CommaToken);
+                                writer.WriteSpace();
+                            }
+                            writer.WriteIdentifier(n.Subpatterns[i].PropertyName);
+                            writer.WritePunctuation(SyntaxKind.ColonToken);
+                            writer.WriteSpace();
+                            n.Subpatterns[i].Pattern.WriteTo(writer);
+                        }
+                        writer.WritePunctuation(SyntaxKind.CloseBraceToken);
+                        break;
+                    }
                 case BoundNodeKind.MemberAssignmentExpression:
                     {
                         var n = (BoundMemberAssignmentExpression)node;

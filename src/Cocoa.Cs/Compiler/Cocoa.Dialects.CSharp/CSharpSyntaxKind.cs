@@ -223,6 +223,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         LogicalPattern = 214,
         AndKeyword = 215,
         OrKeyword = 216,
-        NotKeyword = 217
+        NotKeyword = 217,
+        PropertySubpattern = 218
     }
 }
