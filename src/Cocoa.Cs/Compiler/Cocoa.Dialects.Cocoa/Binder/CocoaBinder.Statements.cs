@@ -1688,6 +1688,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 }
             }
 
+            // 元组解构（语言后置件）：`(a, b) = expr` —— 按 ItemN 逐字段赋给变量（多赋值语句块）。
+            if (syntax.Expression is AssignmentExpressionSyntax deconstructAssign && deconstructAssign.Target is TupleExpressionSyntax)
+            {
+                return BindTupleDeconstruction(deconstructAssign);
+            }
+
             if (syntax.Expression.Kind == SSyntax.CocoaSyntaxKind.CallExpression && _currentClass != null)
             {
                 var raiseCall = (CallExpressionSyntax)syntax.Expression;
@@ -1701,6 +1707,48 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var expression = BindExpression(syntax.Expression, canBeVoid: true);
 
             return new BoundExpressionStatement(syntax, expression);
+        }
+
+        /// <summary>元组解构（语言后置件）：`(a, b) = expr` —— 右侧元组按 ItemN 逐字段赋给变量，生成多赋值语句块。</summary>
+        private BoundStatement BindTupleDeconstruction(AssignmentExpressionSyntax assignment)
+        {
+            var target = (TupleExpressionSyntax)assignment.Target;
+            var value = BindExpression(assignment.Expression, canBeVoid: true);
+            var tupleType = value.Type as NamedTypeSymbol;
+            if (tupleType == null)
+            {
+                _diagnostics.ReportError(assignment.Expression.Location, "解构右侧必须是元组值。");
+                return new BoundNopStatement(assignment);
+            }
+
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            for (var i = 0; i < target.Elements.Count; i++)
+            {
+                var elementSyntax = target.Elements[i];
+                if (elementSyntax is not NameExpressionSyntax nameExpression)
+                {
+                    _diagnostics.ReportError(elementSyntax.Location, "解构目标须为变量名。");
+                    continue;
+                }
+
+                if (_scope.TryLookupSymbol(nameExpression.IdentifierToken.Text) is not VariableSymbol variable)
+                {
+                    _diagnostics.ReportError(elementSyntax.Location, $"未定义变量 '{nameExpression.IdentifierToken.Text}'。");
+                    continue;
+                }
+
+                var field = tupleType.GetField($"Item{i + 1}");
+                if (field == null)
+                {
+                    _diagnostics.ReportError(elementSyntax.Location, $"元组没有第 {i + 1} 个字段。");
+                    continue;
+                }
+
+                var itemAccess = new BoundMemberAccessExpression(assignment, field.Type, value, $"Item{i + 1}", field);
+                statements.Add(new BoundExpressionStatement(assignment, new BoundAssignmentExpression(assignment, variable, itemAccess)));
+            }
+
+            return new BoundBlockStatement(assignment, statements.ToImmutable());
         }
 
         private BoundExpression BindExpression(ExpressionSyntax syntax, TypeSymbol targetType)
