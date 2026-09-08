@@ -127,6 +127,14 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var x: string = \"hello\" return x is \"world\" }", false)]
         [InlineData("{ var x: string = \"abc\" return x is \"abc\" }", true)]
         [InlineData("{ var x: string = null return x is \"abc\" }", false)]
+        // 二进制字面量
+        [InlineData("0b1010", 10)]
+        [InlineData("0b11111111", 255)]
+        [InlineData("0B1010", 10)]
+        // 数字分隔符
+        [InlineData("1_000_000", 1000000)]
+        [InlineData("0xFF_FF", 65535)]
+        [InlineData("0b1010_0101", 165)]
         public void Evaluator_Computes_CorrectValues(string text, object expectedValue)
         {
             AssertValue(text, expectedValue);

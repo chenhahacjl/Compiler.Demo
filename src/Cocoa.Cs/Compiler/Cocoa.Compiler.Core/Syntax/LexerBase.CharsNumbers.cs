@@ -116,15 +116,28 @@ namespace Cocoa.CodeAnalysis.Syntax
         {
             var length = 0;
             var isHex = false;
+            var isBin = false;
             var hasExponent = false;
 
-            if (Current == '0' && Peek(1) == 'x')
+            if (Current == '0' && (Peek(1) == 'x' || Peek(1) == 'X'))
             {
                 isHex = true;
                 _position += 2;
                 length = 2;
 
-                while (IsHexDigit(Current))
+                while (IsHexDigit(Current) || Current == '_')
+                {
+                    if (Current != '_') { _position++; length++; }
+                    else { _position++; length++; }
+                }
+            }
+            else if (Current == '0' && (Peek(1) == 'b' || Peek(1) == 'B'))
+            {
+                isBin = true;
+                _position += 2;
+                length = 2;
+
+                while (IsBinaryDigit(Current) || Current == '_')
                 {
                     _position++;
                     length++;
@@ -132,7 +145,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
             else
             {
-                while (char.IsDigit(Current))
+                while (char.IsDigit(Current) || Current == '_')
                 {
                     _position++;
                     length++;
@@ -222,6 +235,35 @@ namespace Cocoa.CodeAnalysis.Syntax
             }
 
             var text = _text.ToString(_start, length);
+
+            // 数字分隔符：去掉所有 _
+            text = text.Replace("_", "");
+
+            // 二进制字面量：0b / 0B
+            if (isBin)
+            {
+                var binText = text.Substring(2);
+                if (int.TryParse(binText, System.Globalization.NumberStyles.BinaryNumber, null, out var binValue))
+                {
+                    _value = binValue;
+                    _kind = SyntaxKind.NumberToken;
+                    return;
+                }
+
+                if (long.TryParse(binText, System.Globalization.NumberStyles.BinaryNumber, null, out var binLong))
+                {
+                    _value = binLong;
+                    _kind = SyntaxKind.NumberToken;
+                    return;
+                }
+
+                var span = new TextSpan(_start, length);
+                var location = new TextLocation(_text, span);
+                _diagnostics.ReportInvalidNumber(location, text, TypeSymbol.Int32);
+                _value = 0;
+                _kind = SyntaxKind.NumberToken;
+                return;
+            }
 
             if (fSuffix)
             {
@@ -339,6 +381,11 @@ namespace Cocoa.CodeAnalysis.Syntax
         private static bool IsHexDigit(char c)
         {
             return char.IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+        }
+
+        private static bool IsBinaryDigit(char c)
+        {
+            return c == '0' || c == '1';
         }
 
         private void ReadIdentifierOrKeyword()
