@@ -1722,6 +1722,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            var instanceFields = tupleType.Fields.Where(f => !f.IsStatic).ToArray();
             for (var i = 0; i < target.Elements.Count; i++)
             {
                 var elementSyntax = target.Elements[i];
@@ -1737,14 +1738,15 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     continue;
                 }
 
-                var field = tupleType.GetField($"Item{i + 1}");
-                if (field == null)
+                // 按位置取实例字段：元组（Item1..ItemN）与 record（位置参数字段序）统一按声明序取值。
+                if (i >= instanceFields.Length)
                 {
-                    _diagnostics.ReportError(elementSyntax.Location, $"元组没有第 {i + 1} 个字段。");
+                    _diagnostics.ReportError(elementSyntax.Location, $"记录没有第 {i + 1} 个字段。");
                     continue;
                 }
 
-                var itemAccess = new BoundMemberAccessExpression(assignment, field.Type, value, $"Item{i + 1}", field);
+                var field = instanceFields[i];
+                var itemAccess = new BoundMemberAccessExpression(assignment, field.Type, value, field.Name, field);
                 statements.Add(new BoundExpressionStatement(assignment, new BoundAssignmentExpression(assignment, variable, itemAccess)));
             }
 

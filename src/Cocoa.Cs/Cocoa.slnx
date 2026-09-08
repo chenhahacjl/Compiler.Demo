@@ -23,6 +23,9 @@
     <Project Path="Cli/Cocoa.Compiler.Cocoa/Cocoa.Compiler.Cocoa.csproj" />
     <Project Path="Cli/Cocoa.Compiler.CSharp/Cocoa.Compiler.CSharp.csproj" />
   </Folder>
+  <Folder Name="/IDE/">
+    <Project Path="../Cocoa.IDE/Cocoa.IDE.csproj" />
+  </Folder>
   <Project Path="Cocoa.Build/Cocoa.Build.csproj" />
   <Project Path="Cocoa.Tests/Cocoa.Tests.csproj" />
 </Solution>
