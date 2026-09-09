@@ -408,10 +408,12 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             var methodCount = ReadCountField(reader, "methods:");
-            // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填
+            // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填；
+            // 接口方法无 fn 条目，须从这里的完整签名（Name[params]:Return）重建符号。
+            var methodSignatureTexts = new string[methodCount];
             for (var i = 0; i < methodCount; i++)
             {
-                reader.ExpectString();
+                methodSignatureTexts[i] = reader.ExpectString();
             }
 
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
@@ -436,6 +438,20 @@ namespace Cocoa.CodeAnalysis.Serialization
             context.Classes.Add(classType);
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
+
+            // N1：接口成员符号重建——接口方法无 fn 条目（无方法体），从 methods: 完整签名恢复，
+            // 否则库侧接口为空壳，消费方实现/成员解析（如 System.IDisposable.Dispose）失败。
+            if (isInterface && methodSignatureTexts.Length > 0)
+            {
+                foreach (var signature in methodSignatureTexts)
+                {
+                    var method = ParseInterfaceMethodSignature(signature, classType, context);
+                    if (method != null)
+                    {
+                        classType.AddMethod(method);
+                    }
+                }
+            }
 
             // 6e-Step D-a：类字段（含闭包环境类 __Env_* 捕获实例成员）解析回填——与写侧 fields:/methods: 顺序一致
             if (reader.PeekRaw().StartsWith("fields:", StringComparison.Ordinal))
@@ -625,10 +641,12 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             var methodCount = ReadCountField(reader, "methods:");
-            // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填
+            // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填；
+            // 接口方法无 fn 条目，须从完整签名（Name[params]:Return）重建符号。
+            var methodSignatureTexts = new string[methodCount];
             for (var i = 0; i < methodCount; i++)
             {
-                reader.ExpectString();
+                methodSignatureTexts[i] = reader.ExpectString();
             }
 
             // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填（tpar 已注册，开放参数引用可解）
@@ -640,6 +658,19 @@ namespace Cocoa.CodeAnalysis.Serialization
             foreach (var interfaceRef in interfaceRefs)
             {
                 classType.AddInterface((NamedTypeSymbol)ResolveTypeRef(interfaceRef, context));
+            }
+
+            // N1：接口成员符号重建（泛型接口如 System.Collections.Generic.IEnumerable<T>）
+            if (isInterface && methodSignatureTexts.Length > 0)
+            {
+                foreach (var signature in methodSignatureTexts)
+                {
+                    var method = ParseInterfaceMethodSignature(signature, classType, context);
+                    if (method != null)
+                    {
+                        classType.AddMethod(method);
+                    }
+                }
             }
 
             // 6e 跨库里程碑：gcls 一律只入 GenericDefinitions，不入 Classes——否则 CoaLibraryCompiler 生成
@@ -992,6 +1023,95 @@ namespace Cocoa.CodeAnalysis.Serialization
         {
             var moduleName = Path.GetFileNameWithoutExtension(path);
             return Read(File.ReadAllText(path), moduleName, external ?? ImmutableArray<CoaProgram>.Empty);
+        }
+
+        /// <summary>解析接口方法完整签名 `Name[params]:Return` → FunctionSymbol（接口方法无 fn 条目承载时的成员重建）。</summary>
+        private static FunctionSymbol? ParseInterfaceMethodSignature(string signature, NamedTypeSymbol classType, ReadContext context)
+        {
+            try
+            {
+                var openBracket = signature.IndexOf('[');
+                string retText;
+                string paramsText;
+                string name;
+                if (openBracket >= 0)
+                {
+                    var closeBracket = signature.LastIndexOf(']');
+                    var sep = signature.IndexOf(':', closeBracket + 1);
+                    if (sep < 0)
+                    {
+                        return null;
+                    }
+
+                    name = signature.Substring(0, openBracket);
+                    paramsText = signature.Substring(openBracket + 1, closeBracket - openBracket - 1);
+                    retText = signature.Substring(sep + 1);
+                }
+                else
+                {
+                    var sep = signature.IndexOf(':');
+                    if (sep < 0)
+                    {
+                        return null;
+                    }
+
+                    name = signature.Substring(0, sep);
+                    retText = signature.Substring(sep + 1);
+                    paramsText = "";
+                }
+
+                var returnType = ResolveTypeRef(retText, context);
+                var parameters = ImmutableArray.CreateBuilder<ParameterSymbol>();
+                if (paramsText.Length > 0)
+                {
+                    var ordinal = 0;
+                    foreach (var raw in SplitInterfaceMethodParams(paramsText))
+                    {
+                        var isOut = raw.StartsWith("out:", StringComparison.Ordinal);
+                        var isRef = raw.StartsWith("ref:", StringComparison.Ordinal);
+                        var typeText = isOut ? raw.Substring(4) : isRef ? raw.Substring(4) : raw;
+                        parameters.Add(new ParameterSymbol("p" + ordinal, ResolveTypeRef(typeText, context), ordinal, isOut, isRef, isThis: false));
+                        ordinal++;
+                    }
+                }
+
+                return new FunctionSymbol(name, parameters.ToImmutable(), returnType, containingClass: classType);
+            }
+            catch (System.Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>签名参数列表按顶层逗号切分（忽略方括号/开放形参引用内的逗号）。</summary>
+        private static IEnumerable<string> SplitInterfaceMethodParams(string paramsText)
+        {
+            var depth = 0;
+            var current = new System.Text.StringBuilder();
+            foreach (var ch in paramsText)
+            {
+                switch (ch)
+                {
+                    case '[':
+                    case ']':
+                    case '!':
+                        depth++;
+                        current.Append(ch);
+                        break;
+                    case ',' when depth == 0:
+                        yield return current.ToString();
+                        current.Length = 0;
+                        break;
+                    default:
+                        current.Append(ch);
+                        break;
+                }
+            }
+
+            if (current.Length > 0)
+            {
+                yield return current.ToString();
+            }
         }
     }
 }

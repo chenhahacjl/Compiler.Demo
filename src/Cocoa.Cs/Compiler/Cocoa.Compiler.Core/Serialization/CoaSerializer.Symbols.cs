@@ -63,7 +63,8 @@ namespace Cocoa.CodeAnalysis.Serialization
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
-                w.Field(MethodSignature(method));
+                // 接口方法无 fn 条目（无方法体），methods: 是唯一来源——须携带返回类型供读侧重建完整符号
+                w.Field(classType.IsInterface ? InterfaceMethodSignature(method) : MethodSignature(method));
             }
             // 6e-Step D-a：类字段（含闭包环境类 __Env_* 捕获实例成员）随 fld 携带——供闭包读侧重建
             var classFields = classType.Fields.ToArray();
@@ -119,6 +120,16 @@ if (properties.Length > 0)
                     (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type))) + "]";
         }
 
+        /// <summary>接口方法完整签名：Name[params]:Return（返回类型必须携带——接口无 fn 条目承载方法体签名）。</summary>
+        private static string InterfaceMethodSignature(FunctionSymbol method)
+        {
+            var parameters = method.Parameters.Length == 0
+                ? ""
+                : "[" + string.Join(",", method.Parameters.Select(p =>
+                    (p.IsOut ? "out:" : p.IsRef ? "ref:" : "") + TypeRef(p.Type))) + "]";
+            return method.Name + parameters + ":" + TypeRef(method.ReturnType);
+        }
+
         /// <summary>
         /// 泛型定义类节点（6e-G7 S1）：类型参数（含约束）+ 字段 + 静态方法签名。
         /// 成员类型经 TypeRef 携带开放参数（!属主.名）与实例化 mangle；开放绑定体经 bodies 区按 FnKey 携带（S2）。
@@ -165,7 +176,7 @@ if (properties.Length > 0)
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
-                w.Field(MethodSignature(method));
+                w.Field(classType.IsInterface ? InterfaceMethodSignature(method) : MethodSignature(method));
             }
 
             // 6e-Step D-b：泛型定义类事件声明（handler 类型可含开放参数）

@@ -135,7 +135,7 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
-    (cls System.IO.Stream public iface:true ifaces:0 methods:11 get_CanRead get_CanWrite get_CanSeek get_Length get_Position set_Position[@i64] Read[@u8[],@i32,@i32] Write[@u8[],@i32,@i32] Flush Close Seek[@i64,@i32] fields:0 events:0 props:5
+    (cls System.IO.Stream public iface:true ifaces:0 methods:11 get_CanRead:@bool get_CanWrite:@bool get_CanSeek:@bool get_Length:@i64 get_Position:@i64 set_Position[@i64]:@void Read[@u8[],@i32,@i32]:@i32 Write[@u8[],@i32,@i32]:@void Flush:@void Close:@void Seek[@i64,@i32]:@i64 fields:0 events:0 props:5
       (prop CanRead @bool true false public false)
       (prop CanWrite @bool true false public false)
       (prop CanSeek @bool true false public false)
@@ -168,7 +168,7 @@
       (fld _value @string private false false) events:0
     )
     (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:1 GetEnumerator events:0
+      (tpar T 0 - v:- c:0) fields:0 methods:1 GetEnumerator:System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.IEnumerable.T events:0
     )
     (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
       (tpar TKey 0 - v:- c:0)
@@ -192,7 +192,7 @@
       (prop Item !System.Collections.Generic.Dictionary.V true true public false)
     )
     (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:2 MoveNext get_Current events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:2 MoveNext:@bool get_Current:!System.Collections.Generic.IEnumerator.T events:0 props:1
       (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V tparams:2
@@ -205,7 +205,7 @@
       (prop Current System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V true false public false)
     )
     (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:7 get_Count get_IsReadOnly Add[!System.Collections.Generic.ICollection.T] Clear Contains[!System.Collections.Generic.ICollection.T] CopyTo[!System.Collections.Generic.ICollection.T[],@i32] Remove[!System.Collections.Generic.ICollection.T] events:0 props:2
+      (tpar T 0 - v:- c:0) fields:0 methods:7 get_Count:@i32 get_IsReadOnly:@bool Add[!System.Collections.Generic.ICollection.T]:@bool Clear:@void Contains[!System.Collections.Generic.ICollection.T]:@bool CopyTo[!System.Collections.Generic.ICollection.T[],@i32]:@void Remove[!System.Collections.Generic.ICollection.T]:@bool events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
@@ -224,15 +224,15 @@
       (prop Current !System.Collections.Generic.HashSetEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.IList public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:5 get_Item[@i32] set_Item[@i32,!System.Collections.Generic.IList.T] IndexOf[!System.Collections.Generic.IList.T] Insert[@i32,!System.Collections.Generic.IList.T] RemoveAt[@i32] events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:5 get_Item[@i32]:!System.Collections.Generic.IList.T set_Item[@i32,!System.Collections.Generic.IList.T]:@void IndexOf[!System.Collections.Generic.IList.T]:@i32 Insert[@i32,!System.Collections.Generic.IList.T]:@void RemoveAt[@i32]:@void events:0 props:1
       (prop Item !System.Collections.Generic.IList.T true true public false)
     )
     (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Item[@i32] events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Item[@i32]:!System.Collections.Generic.IReadOnlyList.T events:0 props:1
       (prop Item !System.Collections.Generic.IReadOnlyList.T true false public false)
     )
     (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Count events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Count:@i32 events:0 props:1
       (prop Count @i32 true false public false)
     )
     (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T tparams:1
@@ -294,13 +294,13 @@
       (prop ContentionCount @i64 true false public true)
     )
     (cls System.Threading.Monitor public iface:false ifaces:0 methods:9 Enter[System.Object] Exit[System.Object] IsEntered[System.Object] TryEnter[System.Object] TryEnter[System.Object,@i32] Wait[System.Object] Wait[System.Object,@i32] Pulse[System.Object] PulseAll[System.Object] fields:0 events:0)
-    (cls System.IDisposable public iface:true ifaces:0 methods:1 Dispose fields:0 events:0)
+    (cls System.IDisposable public iface:true ifaces:0 methods:1 Dispose:@void fields:0 events:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:10 UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] events:0
+      (tpar T 0 - v:- c:0) fields:0 methods:10 UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool events:0
     )
     (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 tparams:2
       (tpar TKey 0 - v:- c:0)
-      (tpar TValue 1 - v:- c:0) fields:0 methods:13 get_Item[!System.Collections.Generic.IDictionary.TKey] set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue] get_Keys get_Values get_Count get_IsReadOnly Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue] Clear ContainsKey[!System.Collections.Generic.IDictionary.TKey] Contains[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue] CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32] Remove[!System.Collections.Generic.IDictionary.TKey] TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue] events:0 props:5
+      (tpar TValue 1 - v:- c:0) fields:0 methods:13 get_Item[!System.Collections.Generic.IDictionary.TKey]:!System.Collections.Generic.IDictionary.TValue set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]:@void get_Keys:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey get_Values:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue get_Count:@i32 get_IsReadOnly:@bool Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]:@void Clear:@void ContainsKey[!System.Collections.Generic.IDictionary.TKey]:@bool Contains[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue]:@bool CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32]:@void Remove[!System.Collections.Generic.IDictionary.TKey]:@bool TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue]:@bool events:0 props:5
       (prop Item !System.Collections.Generic.IDictionary.TValue true true public false)
       (prop Keys System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey true false public false)
       (prop Values System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue true false public false)
@@ -17453,4 +17453,4 @@
     (ns System.Threading)
   )
 )
-(checksum sha256:6c62427f2ab2bde632d10cc23080add50888bf7d5dc962b73e73fcf41a0483d3)
+(checksum sha256:25a02bc6b7ddf07f8c9a6bc588a5f222134a3a0668acaea821aed84fa556cb12)

@@ -188,6 +188,11 @@ namespace Cocoa.CodeGen.Managed.Writer
                     {
                         typeDef.Interfaces.Add(new IlInterfaceImpl(null, ResolveExternalTypeRef(iface)));
                     }
+                    else if (iface.ContainingLibrary != null && iface.TypeKind == TypeKind.Interface)
+                    {
+                        // cod 库接口（BCL 同名）：无 TypeDef，按全名直联
+                        typeDef.Interfaces.Add(new IlInterfaceImpl(null, _framework.RequireType(iface.FullName)));
+                    }
                     else
                     {
                         // 泛型标记接口（6e-M20 IEnumerable$T 等）不进发射清单：仅作编译期能力标记
@@ -895,6 +900,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                 if (classType == NamedTypeSymbol.SystemType)
                 {
                     return IlType.Class(_framework.RequireType("System.Type"));
+                }
+
+                // cod 库接口（System.IDisposable / IEnumerable 等 BCL 同名接口）：无 TypeDef，按全名直联 BCL TypeRef。
+                // （接口在 .coa 重建后 ContainingLibrary 已回填，正值系统库与消费方共享接口成员。）
+                if (classType.ContainingLibrary != null && classType.TypeKind == TypeKind.Interface)
+                {
+                    return IlType.Class(_framework.RequireType(classType.FullName));
                 }
 
                 return IlType.Class(_classTypeDefs[classType], isValueType: classType.IsValueType);

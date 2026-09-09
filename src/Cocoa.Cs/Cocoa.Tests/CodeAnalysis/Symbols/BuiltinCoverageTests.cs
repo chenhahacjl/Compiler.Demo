@@ -44,10 +44,16 @@ namespace Cocoa.Tests.CodeAnalysis.Symbols
 
             foreach (var kind in BuiltinCoverage.AllKinds)
             {
-                var hasSpec = specKinds.Contains(kind) || SystemObjectMembers.GetByKind(kind) is not null;
+                var hasSpec = specKinds.Contains(kind) || SystemObjectMembers.GetByKind(kind) is not null || IsSynthesizedBuiltin(kind);
 
                 Assert.True(hasSpec, $"{kind} 在覆盖表中有行，但没有对应的 spec 或 SystemObjectMembers 符号");
             }
+        }
+
+        private static bool IsSynthesizedBuiltin(BuiltinKind kind)
+        {
+            // binder 直接合成的泛型机器内建（无法以非泛型 spec 表达），三后端各有 kind case
+            return kind == BuiltinKind.CopyRange;
         }
 
         [Fact]
