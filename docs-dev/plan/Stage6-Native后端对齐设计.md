@@ -49,11 +49,18 @@
 | 5 | native：Oop_Override ToString/GetHashCode 覆写返回垃圾值（4 测试，新旧 .coa 交互） | native vtable | Dog.ToString 虚槽内容指向错误目标；怀疑 .coa 新增类改变存活类集合与 AssignVirtualSlots 序；无 try 的代码路径指令流已验证与改动前逐指令一致，嫌疑集中在运行时函数注册顺序或伪 vtable 交互。**2026-09-09 事后实证**：旧 .coa 替换 → 9/9 全绿，确认 100% 由 .coa 内容触发、与代码改动无关；判别特征 = 唯一失败的 4 个测试全部是"覆写 Object 面内建虚成员"形态（17/22 个 native Oop 测试过）；探针工程受阻（MSBuild 增量对 CodeGen.Native 跳过 + 测试 bin 拷贝陈旧，探针字面量无法可靠进入被测 dll；CS0162 实验证明编译器读取当前源是正常的）。下轮建议直接写 MirToLir 级单测（构造带 Object 面 override 的 BoundProgram → 断言虚槽解析与 vtable 数据键），绕过测试 bin 拷贝链路后再二分 .coa 内容 |
 | 6 | 解释器/IL/测试中的 `Variable 'Console' doesn't exist`（裸 `Console.` 短名） | binder using 解析 | facade 类（null target）注入时被 `continue` 跳过未按名注册 scope，仅全名经 GlobalNamespace 树可达；裸短名依赖 using 前缀扫描路径，部分 IL e2e（C# 方言）未命中——随 N1 收尾一并核查 |
 
-### 测试基线（本轮结束）
+### 上游顺带修复（2026-09-09 第二轮，提交 2565e13 / 57b978f）
 
-- 全量：47,863 通过 / 91 失败 / 1 skip（91 = 80 既有 + 9 个新 IndexRangeLock 三后端测试中的未绿项）
-- Index 元素访问（含 `^1`、`^4`、`arr[^2]=x`、`Index.FromEnd` 变量）：**解释器/native x64/x86 三路 green**
-- IL 端 Index/Rnage/Lock 与解释器/原生 Range/Lock：见收尾清单
+| 项 | 根因 | 修复 |
+|----|------|------|
+| **native Object 面 override 回归 ×4**（原 9 子集中唯一泄漏） | 读侧 `System.Object` TypeRef 修复使 .coa fn 的 `owner:System.Object` 反解回**编译器单例** → 单例进库类注入遍历 → `FacadeTargets` 含 "System.Object" → **单例 SystemObject 被误标 `IsFacadeClass=true`** → native ObjectFace（object 引用调 ToString/GetHashCode/Equals/GetType）旁落运行时默认 | 两方言 facade 标记循环跳过 `IsBuiltinSystemClass` 单例；**连带治愈约 73 个测试**（含大量经 object 引用的成员面用例） |
+| 库接口发行体循环（IDisposable 阴影/空壳） | 写侧接口无静态方法 → 整类先前被丢弃出 .coa；补签名后又缺返回类型 | 接口方法携**完整签名** `Name[params]:Return`；读侧为接口重建 FunctionSymbol（无 fn 条目回填）；IL 发射器：库接口 → BCL TypeRef（ToIlType + InterfaceImpl），接口方法调用 → BCL MemberRef（CLR 接口映射路由到实现方法） |
+| BuiltinCoverage 守门 | 新增 `CopyRange` 枚举无覆盖行 + bind 合成内建无 spec | 覆盖行 + 测试承认 binder 合成内建 |
+
+### 本轮结束基线（2026-09-09）
+
+- 全量：**47,939 通过 / 14 失败 / 1 skip**（会话起点 47,861/80）
+- 剩余 14 个 === 预存基线 8（Evaluator is/switch×6、Lexer DotDotToken×2）+ 既有杂项 2（FacadeStruct_Vector3 属性重定向、Cod_Consumer_SelfHeals）+ **N1 新测试 4**（IlE2e_RangeSlice / IL EdgeLockStatement / IlE2e_IndexElementAccess TypeLoad、Evaluator_LockStatement 解释器 try 内跳转）
 
 ---
 
