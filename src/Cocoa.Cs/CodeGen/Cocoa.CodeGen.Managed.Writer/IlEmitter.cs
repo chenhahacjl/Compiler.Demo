@@ -35,6 +35,12 @@ namespace Cocoa.CodeGen.Managed.Writer
         // N1：非 BoundExpression 键的合成临时槽（builtin 发射内部用，如 CopyRange 的 count/dst），键需调用点唯一
         private readonly Dictionary<object, int> _syntheticTemporaryLocalIndices = new Dictionary<object, int>();
         private List<IlType>? _currentFunctionLocals;
+
+        /// <summary>保护区内 return 的出口块（leave 目标）——CLR 要求离开保护区域须 leave，且 finally 须先执行。</summary>
+        private IlInstruction? _returnExitTarget;
+        private bool _returnExitHasValue;
+        private int _returnExitTemp = -1;
+        private int _protectedBlockDepth;
         private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
 
         private FunctionSymbol? _entryFunction;
@@ -126,10 +132,12 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.coa 的 Console/Math 等，不在 program.Classes 的源码声明集内）
-            var classes = program.Classes.Where(c => !c.IsFacadeClass).ToList();
+            // cod 库容器类（ContainingLibrary != null）一律不出 TypeDef：System.Core 与 BCL 同名同构，
+            // TypeDef 会与 BCL TypeRef 冲撞（回归：System.Index value type mismatch）；按名直联 TypeRef。
+            var classes = program.Classes.Where(c => !c.IsFacadeClass && c.ContainingLibrary == null).ToList();
             foreach (var f in orderedFunctions)
             {
-                if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass && !classes.Contains(f.ContainingClass))
+                if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass && f.ContainingClass.ContainingLibrary == null && !classes.Contains(f.ContainingClass))
                 {
                     classes.Add(f.ContainingClass);
                 }
@@ -230,6 +238,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var function in orderedFunctions)
             {
                 if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.ContainingClass is { ContainingLibrary: not null }) continue; // cod 库容器方法：调用点直联 BCL MemberRef
                 if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue; // 6e-M22 真实类型化：Invoke 已合成
                 if (function.BuiltinKind != null)
                 {
@@ -271,6 +280,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var function in orderedFunctions)
             {
                 if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.ContainingClass is { ContainingLibrary: not null }) continue; // cod 库容器方法：体在 BCL，不发射 MethodDef
                 if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue; // 6e-M22 真实类型化：Invoke 体由 CLR 填充
                 if (function.IsExtern || function.IsAbstract || function.BuiltinKind != null)
                 {
@@ -471,6 +481,10 @@ namespace Cocoa.CodeGen.Managed.Writer
             _temporaryLocalIndices.Clear();
             _syntheticTemporaryLocalIndices.Clear();
             _currentMethodIsInstance = !method.IsStatic;
+            _returnExitTarget = null;
+            _returnExitHasValue = false;
+            _returnExitTemp = -1;
+            _protectedBlockDepth = 0;
 
             var assembler = new IlAssembler();
 
@@ -542,6 +556,18 @@ namespace Cocoa.CodeGen.Managed.Writer
             var needsImplicitRet = !TailEndsWithReturn(lastStatement);
             if (needsImplicitRet)
             {
+                assembler.Emit(IlOpCodeTable.Get("Ret"));
+            }
+
+            // 保护区返回出口块：仅经 leave 可达，CLR 执行全部 finally 后落在出口 → ldloc+ret
+            if (_returnExitTarget != null)
+            {
+                assembler.Emit(_returnExitTarget);
+                if (_returnExitHasValue)
+                {
+                    assembler.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)_returnExitTemp);
+                }
+
                 assembler.Emit(IlOpCodeTable.Get("Ret"));
             }
 

@@ -407,6 +407,13 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
             }
 
+            // N1：值类型位（旧版 .coa 无此字段 → 默认非 struct）
+            var isStruct = false;
+            if (reader.PeekRaw().StartsWith("struct:", StringComparison.Ordinal))
+            {
+                isStruct = ParseBoolWord(ReadLabeledField(reader, "struct:"));
+            }
+
             var methodCount = ReadCountField(reader, "methods:");
             // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填；
             // 接口方法无 fn 条目，须从这里的完整签名（Name[params]:Return）重建符号。
@@ -428,6 +435,10 @@ namespace Cocoa.CodeAnalysis.Serialization
             else if (isDelegateKind)
             {
                 classType.TypeKind = TypeKind.Delegate;
+            }
+            else if (isStruct)
+            {
+                classType.TypeKind = TypeKind.Struct;
             }
 
             foreach (var interfaceRef in interfaceRefs)
@@ -549,6 +560,13 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
             }
 
+            // N1：泛型 struct 值类型位（旧版 .coa 无此字段 → 默认非 struct）
+            var isStruct = false;
+            if (reader.PeekRaw().StartsWith("struct:", StringComparison.Ordinal))
+            {
+                isStruct = ParseBoolWord(ReadLabeledField(reader, "struct:"));
+            }
+
             var typeParameterCount = ReadCountField(reader, "tparams:");
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
             classType.ContainingLibrary = context.ModuleName;
@@ -653,6 +671,10 @@ namespace Cocoa.CodeAnalysis.Serialization
             if (isInterface)
             {
                 classType.TypeKind = TypeKind.Interface;
+            }
+            else if (isStruct)
+            {
+                classType.TypeKind = TypeKind.Struct;
             }
 
             foreach (var interfaceRef in interfaceRefs)

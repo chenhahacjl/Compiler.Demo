@@ -112,6 +112,31 @@ namespace Cocoa.CodeGen.Managed.Writer
 
         private void EmitReturnStatement(IlAssembler il, BoundReturnStatement node)
         {
+            if (_protectedBlockDepth > 0)
+            {
+                // 保护区内 return：值存暂存局部 → leave 方法出口（CLR 经 finally 链），出口再 ldloc+ret。
+                // 直接 ret 会绕过 finally 且违反 EH 校验（InvalidProgramException）。
+                if (node.Expression != null)
+                {
+                    EmitExpression(il, node.Expression);
+                    if (!_returnExitHasValue)
+                    {
+                        _returnExitHasValue = true;
+                        _returnExitTemp = AllocateSyntheticTemporaryLocal("return-exit", node.Expression.Type);
+                        _returnExitTarget = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)_returnExitTemp);
+                }
+                else if (_returnExitTarget == null)
+                {
+                    _returnExitTarget = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
+                }
+
+                il.Emit(IlOpCodeTable.Get("Leave"), _returnExitTarget);
+                return;
+            }
+
             if (node.Expression != null)
             {
                 EmitExpression(il, node.Expression);
@@ -146,6 +171,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 结束标签（前向引用，最终作为方法体内的 Nop 落位）
             var endLabel = new IlInstruction(IlOpCodeTable.Get("Nop"), null);
 
+            _protectedBlockDepth++;
             var tryStart = EmitLabel(il);
             // 空 try 体（无任何语句）：插入平衡无害指令，避免"try 区域仅含 leave"被 CLR EH 校验拒绝。
             if (node.TryBlock is BoundBlockStatement tryBlock && tryBlock.Statements.Length == 0)
@@ -198,6 +224,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             il.Emit(endLabel);
+            _protectedBlockDepth--;
         }
 
         /// <summary>在指令流中插入一个 Nop 标签并返回其 IlInstruction（供 leave/异常区域引用）。</summary>

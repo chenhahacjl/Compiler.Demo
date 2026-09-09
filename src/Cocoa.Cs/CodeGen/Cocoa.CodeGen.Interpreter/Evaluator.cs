@@ -26,6 +26,7 @@ namespace Cocoa.CodeGen.Interpreter
         private readonly Stack<object> _thisStack = new Stack<object>();
 
         private object? _lastValue;
+        private bool _returned;
 
         // 6e-M23 R5：byref 实参回写队列（LIFO——调用退出时回写到基线标记）
         private readonly List<Action> _byRefWriteBacks = new List<Action>();

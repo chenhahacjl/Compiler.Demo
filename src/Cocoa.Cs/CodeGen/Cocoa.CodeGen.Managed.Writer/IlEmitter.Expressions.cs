@@ -1075,23 +1075,23 @@ namespace Cocoa.CodeGen.Managed.Writer
                          node.Method.ContainingClass is NamedTypeSymbol { IsValueType: true, SpecialType: global::Cocoa.CodeAnalysis.Symbols.SpecialType.None }
                     ? "Call"
                     : "Callvirt";
-                // cod 库接口方法（System.IDisposable.Dispose 等）：无 MethodDef，按接口 TypeRef 直联 BCL MemberRef，
-                // CLR 接口映射经 Resource 的 InterfaceImpl 路由到实现方法。
-                if (instanceMethod.ContainingClass is { ContainingLibrary: not null, TypeKind: TypeKind.Interface } && !_methods.ContainsKey(instanceMethod))
+                // cod 库容器方法（System.IDisposable.Dispose / System.Index.FromEnd / System.Array.GetValue 等）：
+                // 不作 TypeDef/MethodDef，调用点按容器类型 TypeRef 直联 BCL MemberRef（op 视 static/struct/类而定）。
+                if (instanceMethod.ContainingClass is { ContainingLibrary: not null } && !_methods.ContainsKey(instanceMethod))
                 {
-                    var interfaceParamNames = new string[instanceMethod.Parameters.Length];
+                    var libraryParamNames = new string[instanceMethod.Parameters.Length];
                     for (var i = 0; i < instanceMethod.Parameters.Length; i++)
                     {
-                        interfaceParamNames[i] = ToIlType(instanceMethod.Parameters[i].Type).FullName;
+                        libraryParamNames[i] = ToIlType(instanceMethod.Parameters[i].Type).FullName;
                     }
 
-                    var interfaceMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, instanceMethod.Name, interfaceParamNames);
-                    if (interfaceMemberRef == null)
+                    var libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, instanceMethod.Name, libraryParamNames);
+                    if (libraryMemberRef == null)
                     {
-                        throw new System.Exception($"接口方法 {instanceMethod.ContainingClass.FullName}.{instanceMethod.Name} 未在 BCL 找到。");
+                        throw new System.Exception($"库方法 {instanceMethod.ContainingClass.FullName}.{instanceMethod.Name} 未在 BCL 找到。");
                     }
 
-                    il.Emit(IlOpCodeTable.Get("Callvirt"), interfaceMemberRef);
+                    il.Emit(IlOpCodeTable.Get(op), libraryMemberRef);
                     return;
                 }
 
@@ -1145,6 +1145,20 @@ namespace Cocoa.CodeGen.Managed.Writer
         private void EmitObjectCreationExpression(IlAssembler il, BoundObjectCreationExpression node)
         {
             var classType = (NamedTypeSymbol)node.Type;
+
+            // 内建 System.Object（new object()）：编译器单例无 .ctor 符号，直链 BCL Object::.ctor
+            // （N1：lock 语句 `var gate = new object()` 的持有对象——native 已有对应特例）
+            if (classType.IsSystemObjectRoot)
+            {
+                var objectCtor = _framework.FindMethod("System.Object", ".ctor", System.Array.Empty<string>());
+                if (objectCtor == null)
+                {
+                    throw new System.Exception("System.Object..ctor 未在 BCL 找到。");
+                }
+
+                il.Emit(IlOpCodeTable.Get("Newobj"), objectCtor);
+                return;
+            }
 
             // facade 类构造：重定向到 BCL .ctor（泛型直构 MemberRef）
             if (IsFacadeRedirect(classType))

@@ -83,6 +83,7 @@ namespace Cocoa.CodeGen.Interpreter
                     case BoundNodeKind.ReturnStatement:
                         var rs = (BoundReturnStatement)statement;
                         _lastValue = rs.Expression == null ? null : EvaluateExpression(rs.Expression);
+                        _returned = true;
                         return _lastValue;
                     case BoundNodeKind.YieldReturnStatement:
                         var yrs = (BoundYieldReturnStatement)statement;
@@ -94,6 +95,11 @@ namespace Cocoa.CodeGen.Interpreter
                         throw new YieldBreakException();
                     case BoundNodeKind.TryStatement:
                         EvaluateTryStatement((BoundTryStatement)statement);
+                        if (_returned)
+                        {
+                            _returned = false;
+                            return _lastValue;
+                        }
                         index++;
                         break;
                     default:
@@ -183,7 +189,11 @@ namespace Cocoa.CodeGen.Interpreter
             {
                 if (node.FinallyBlock != null)
                 {
+                    var savedLastValue = _lastValue;
+                    var savedReturned = _returned;
                     EvaluateStatement((BoundBlockStatement)node.FinallyBlock);
+                    _lastValue = savedLastValue;
+                    _returned = savedReturned;
                 }
             }
         }

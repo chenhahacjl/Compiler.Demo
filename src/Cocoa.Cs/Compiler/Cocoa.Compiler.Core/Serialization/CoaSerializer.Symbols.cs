@@ -55,6 +55,8 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 w.Field(TypeRef(iface));
             }
+            // N1：值类型位（struct 重建须还原 TypeKind.Struct——否则消费侧按引用类型签名发射，BCL 同名 struct 直联处 value-type mismatch）
+            w.Field("struct:" + BoolWord(classType.TypeKind == TypeKind.Struct));
             // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
             // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
             // N1：接口的实例（抽象）方法签名也须随库携带——否则库侧空壳接口（如 System.IDisposable methods:0）
@@ -150,6 +152,8 @@ if (properties.Length > 0)
             {
                 w.Field(TypeRef(iface));
             }
+            // N1：值类型位（gcls 同样携带——ValueTuple 等泛型 struct 重建须还原 TypeKind.Struct）
+            w.Field("struct:" + BoolWord(classType.TypeKind == TypeKind.Struct));
 
             var typeParameters = classType.TypeParameters;
             w.Field("tparams:" + typeParameters.Length.ToString(CultureInfo.InvariantCulture));

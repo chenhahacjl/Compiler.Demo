@@ -19,53 +19,53 @@
       (ReadWrite 3)
       (Write 2)
     )
-    (cls System.Array internal iface:false ifaces:0 methods:16 Sum[@i32[]] Sum[@f64[]] Min[@i32[]] Min[@f64[]] Max[@i32[]] Max[@f64[]] Average[@i32[]] Average[@f64[]] Contains[@i32[],@i32] Contains[@f64[],@f64] IndexOf[@i32[],@i32] IndexOf[@f64[],@f64] Reverse[@i32[]] Reverse[@f64[]] Sort[@i32[]] Sort[@f64[]] fields:0 events:0)
-    (cls System.Boolean public iface:false ifaces:0 methods:7 ToString[@bool] Parse[@string] Parse[@string,@bool] Equals[@bool,@bool] GetHashCode[@bool] ToString[@bool,@string] TryParse[@string,out:@bool] fields:0 events:0)
-    (cls System.Byte public iface:false ifaces:0 methods:7 ToString[@u8] CompareTo[@u8,@u8] Parse[@string] Equals[@u8,@u8] GetHashCode[@u8] ToString[@u8,@string] TryParse[@string,out:@u8] fields:0 events:0)
-    (cls System.Char public iface:false ifaces:0 methods:17 ToString[@char] Parse[@string] CompareTo[@char,@char] IsDigit[@char] IsLetter[@char] IsWhiteSpace[@char] ToUpper[@char] ToLower[@char] IsLetterOrDigit[@char] IsControl[@char] IsHexDigit[@char] IsUpper[@char] IsLower[@char] Equals[@char,@char] GetHashCode[@char] ToString[@char,@string] TryParse[@string,out:@char] fields:0 events:0)
-    (cls System.Console internal iface:false ifaces:0 methods:22 WriteLine WriteLine[@string] WriteLine[@i32] WriteLine[@f64] WriteLine[@bool] WriteLine[@char] WriteLine[@i64] WriteLine[@u32] WriteLine[@u64] WriteLine[@f32] Write[@string] Write[@i32] Write[@f64] Write[@bool] Write[@char] Write[@i64] Write[@u32] Write[@u64] Write[@f32] ReadLine ReadKey[@bool] Beep[@i32,@i32] fields:0 events:0)
-    (cls System.Convert public iface:false ifaces:0 methods:7 ToHexString[@u8[]] FromHexString[@string] HexValue[@char] Base64Alphabet ToBase64String[@u8[]] FromBase64String[@string] Base64Value[@char] fields:0 events:0)
-    (cls System.Double public iface:false ifaces:0 methods:10 ToString[@f64] CompareTo[@f64,@f64] Equals[@f64,@f64] GetHashCode[@f64] ToString[@f64,@string] TryParse[@string,out:@f64] Parse[@string] IsNaN[@f64] IsInfinity[@f64] IsFinite[@f64] fields:0 events:0)
-    (cls System.Environment internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
-    (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception] fields:0 events:0 props:1
+    (cls System.Array internal iface:false ifaces:0 struct:false methods:16 Sum[@i32[]] Sum[@f64[]] Min[@i32[]] Min[@f64[]] Max[@i32[]] Max[@f64[]] Average[@i32[]] Average[@f64[]] Contains[@i32[],@i32] Contains[@f64[],@f64] IndexOf[@i32[],@i32] IndexOf[@f64[],@f64] Reverse[@i32[]] Reverse[@f64[]] Sort[@i32[]] Sort[@f64[]] fields:0 events:0)
+    (cls System.Boolean public iface:false ifaces:0 struct:false methods:7 ToString[@bool] Parse[@string] Parse[@string,@bool] Equals[@bool,@bool] GetHashCode[@bool] ToString[@bool,@string] TryParse[@string,out:@bool] fields:0 events:0)
+    (cls System.Byte public iface:false ifaces:0 struct:false methods:7 ToString[@u8] CompareTo[@u8,@u8] Parse[@string] Equals[@u8,@u8] GetHashCode[@u8] ToString[@u8,@string] TryParse[@string,out:@u8] fields:0 events:0)
+    (cls System.Char public iface:false ifaces:0 struct:false methods:17 ToString[@char] Parse[@string] CompareTo[@char,@char] IsDigit[@char] IsLetter[@char] IsWhiteSpace[@char] ToUpper[@char] ToLower[@char] IsLetterOrDigit[@char] IsControl[@char] IsHexDigit[@char] IsUpper[@char] IsLower[@char] Equals[@char,@char] GetHashCode[@char] ToString[@char,@string] TryParse[@string,out:@char] fields:0 events:0)
+    (cls System.Console internal iface:false ifaces:0 struct:false methods:22 WriteLine WriteLine[@string] WriteLine[@i32] WriteLine[@f64] WriteLine[@bool] WriteLine[@char] WriteLine[@i64] WriteLine[@u32] WriteLine[@u64] WriteLine[@f32] Write[@string] Write[@i32] Write[@f64] Write[@bool] Write[@char] Write[@i64] Write[@u32] Write[@u64] Write[@f32] ReadLine ReadKey[@bool] Beep[@i32,@i32] fields:0 events:0)
+    (cls System.Convert public iface:false ifaces:0 struct:false methods:7 ToHexString[@u8[]] FromHexString[@string] HexValue[@char] Base64Alphabet ToBase64String[@u8[]] FromBase64String[@string] Base64Value[@char] fields:0 events:0)
+    (cls System.Double public iface:false ifaces:0 struct:false methods:10 ToString[@f64] CompareTo[@f64,@f64] Equals[@f64,@f64] GetHashCode[@f64] ToString[@f64,@string] TryParse[@string,out:@f64] Parse[@string] IsNaN[@f64] IsInfinity[@f64] IsFinite[@f64] fields:0 events:0)
+    (cls System.Environment internal iface:false ifaces:0 struct:false methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
+    (cls System.Exception public iface:false ifaces:0 struct:false methods:1 get_Message[System.Exception] fields:0 events:0 props:1
       (prop Message @string true false public false)
     )
-    (cls System.Index public iface:false ifaces:0 methods:4 FromStart[@i32] FromEnd[@i32] get_Start get_End fields:1
+    (cls System.Index public iface:false ifaces:0 struct:true methods:4 FromStart[@i32] FromEnd[@i32] get_Start get_End fields:1
       (fld _value @i32 public false false) events:0 props:4
       (prop Value @i32 true false public false)
       (prop IsFromEnd @bool true false public false)
       (prop Start System.Index true false public true)
       (prop End System.Index true false public true)
     )
-    (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[@i16] CompareTo[@i16,@i16] Parse[@string] Equals[@i16,@i16] GetHashCode[@i16] ToString[@i16,@string] TryParse[@string,out:@i16] fields:0 events:0)
-    (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
-    (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
-    (cls System.Math internal iface:false ifaces:0 methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
-    (cls System.Range public iface:false ifaces:0 methods:3 get_All StartAt[System.Index] EndAt[System.Index] fields:2
+    (cls System.Int16 public iface:false ifaces:0 struct:false methods:7 ToString[@i16] CompareTo[@i16,@i16] Parse[@string] Equals[@i16,@i16] GetHashCode[@i16] ToString[@i16,@string] TryParse[@string,out:@i16] fields:0 events:0)
+    (cls System.Int32 public iface:false ifaces:0 struct:false methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
+    (cls System.Int64 public iface:false ifaces:0 struct:false methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
+    (cls System.Math internal iface:false ifaces:0 struct:false methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
+    (cls System.Range public iface:false ifaces:0 struct:true methods:3 get_All StartAt[System.Index] EndAt[System.Index] fields:2
       (fld _start System.Index public false false)
       (fld _end System.Index public false false) events:0 props:3
       (prop Start System.Index true false public false)
       (prop End System.Index true false public false)
       (prop All System.Range true false public true)
     )
-    (cls System.Runtime internal iface:false ifaces:0 methods:10 Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Int32ToString[@i32] Int64ToString[@i64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] fields:0 events:0)
-    (cls System.SByte public iface:false ifaces:0 methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8] fields:0 events:0)
-    (cls System.Single public iface:false ifaces:0 methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32] fields:0 events:0)
-    (cls System.String public iface:false ifaces:0 methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]] fields:0 events:0)
-    (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
-    (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
-    (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:1
+    (cls System.Runtime internal iface:false ifaces:0 struct:false methods:10 Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Int32ToString[@i32] Int64ToString[@i64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] fields:0 events:0)
+    (cls System.SByte public iface:false ifaces:0 struct:false methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8] fields:0 events:0)
+    (cls System.Single public iface:false ifaces:0 struct:false methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32] fields:0 events:0)
+    (cls System.String public iface:false ifaces:0 struct:false methods:23 IsNullOrEmpty[@string] ToUpper[@string] ToLower[@string] StartsWith[@string,@string] EndsWith[@string,@string] Contains[@string,@string] IndexOf[@string,@string] Trim[@string] Replace[@string,@string,@string] PadLeft[@string,@i32,@char] PadLeft[@string,@i32] PadRight[@string,@i32,@char] PadRight[@string,@i32] Split[@string,@char] IndexOf[@string,@char] LastIndexOf[@string,@string] LastIndexOf[@string,@char] TrimStart[@string,@char] TrimEnd[@string,@char] ToCharArray[@string] Remove[@string,@i32,@i32] Insert[@string,@i32,@string] Join[@string,@string[]] fields:0 events:0)
+    (cls System.UInt16 public iface:false ifaces:0 struct:false methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
+    (cls System.UInt32 public iface:false ifaces:0 struct:false methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
+    (cls System.UInt64 public iface:false ifaces:0 struct:false methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:1
       (tpar T1 0 - v:- c:0) fields:1
       (fld Item1 !System.ValueTuple.T1 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:2
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:2
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0) fields:2
       (fld Item1 !System.ValueTuple.T1 public false false)
       (fld Item2 !System.ValueTuple.T2 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:3
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:3
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0) fields:3
@@ -73,7 +73,7 @@
       (fld Item2 !System.ValueTuple.T2 public false false)
       (fld Item3 !System.ValueTuple.T3 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:4
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:4
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
@@ -83,7 +83,7 @@
       (fld Item3 !System.ValueTuple.T3 public false false)
       (fld Item4 !System.ValueTuple.T4 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:5
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:5
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
@@ -95,7 +95,7 @@
       (fld Item4 !System.ValueTuple.T4 public false false)
       (fld Item5 !System.ValueTuple.T5 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:6
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:6
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
@@ -109,7 +109,7 @@
       (fld Item5 !System.ValueTuple.T5 public false false)
       (fld Item6 !System.ValueTuple.T6 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple public iface:false ifaces:0 tparams:7
+    (gcls System.ValueTuple public iface:false ifaces:0 struct:true tparams:7
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
@@ -125,9 +125,9 @@
       (fld Item6 !System.ValueTuple.T6 public false false)
       (fld Item7 !System.ValueTuple.T7 public false false) methods:0 events:0
     )
-    (cls System.IO.Directory public iface:false ifaces:0 methods:3 Exists[@string] CreateDirectory[@string] GetCurrentDirectory fields:0 events:0)
-    (cls System.IO.File public iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
-    (cls System.IO.FileStream public iface:false ifaces:0 methods:0 fields:1
+    (cls System.IO.Directory public iface:false ifaces:0 struct:false methods:3 Exists[@string] CreateDirectory[@string] GetCurrentDirectory fields:0 events:0)
+    (cls System.IO.File public iface:false ifaces:0 struct:false methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
+    (cls System.IO.FileStream public iface:false ifaces:0 struct:false methods:0 fields:1
       (fld _h @i64 private false false) events:0 props:5
       (prop CanRead @bool true false public false)
       (prop CanWrite @bool true false public false)
@@ -135,14 +135,14 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
-    (cls System.IO.Stream public iface:true ifaces:0 methods:11 get_CanRead:@bool get_CanWrite:@bool get_CanSeek:@bool get_Length:@i64 get_Position:@i64 set_Position[@i64]:@void Read[@u8[],@i32,@i32]:@i32 Write[@u8[],@i32,@i32]:@void Flush:@void Close:@void Seek[@i64,@i32]:@i64 fields:0 events:0 props:5
+    (cls System.IO.Stream public iface:true ifaces:0 struct:false methods:11 get_CanRead:@bool get_CanWrite:@bool get_CanSeek:@bool get_Length:@i64 get_Position:@i64 set_Position[@i64]:@void Read[@u8[],@i32,@i32]:@i32 Write[@u8[],@i32,@i32]:@void Flush:@void Close:@void Seek[@i64,@i32]:@i64 fields:0 events:0 props:5
       (prop CanRead @bool true false public false)
       (prop CanWrite @bool true false public false)
       (prop CanSeek @bool true false public false)
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
-    (cls System.IO.MemoryStream public iface:false ifaces:1 System.IO.Stream methods:0 fields:3
+    (cls System.IO.MemoryStream public iface:false ifaces:1 System.IO.Stream struct:false methods:0 fields:3
       (fld _buffer @u8[] private false false)
       (fld _pos @i32 private false false)
       (fld _length @i32 private false false) events:0 props:5
@@ -152,25 +152,25 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
-    (cls System.IO.Path public iface:false ifaces:0 methods:10 IsSeparator[@char] Combine[@string,@string] TrimTrailingSeparators[@string] LastIndexOfSeparator[@string] NormalizeSeps[@string] GetFileName[@string] GetFileNameOrNull[@string] GetExtension[@string] GetFileNameWithoutExtension[@string] GetDirectoryName[@string] fields:0 events:0)
-    (cls System.IO.StreamReader public iface:false ifaces:0 methods:2 DecodeSlice[@u8[],@i32] TrimTrailingCR[@string] fields:3
+    (cls System.IO.Path public iface:false ifaces:0 struct:false methods:10 IsSeparator[@char] Combine[@string,@string] TrimTrailingSeparators[@string] LastIndexOfSeparator[@string] NormalizeSeps[@string] GetFileName[@string] GetFileNameOrNull[@string] GetExtension[@string] GetFileNameWithoutExtension[@string] GetDirectoryName[@string] fields:0 events:0)
+    (cls System.IO.StreamReader public iface:false ifaces:0 struct:false methods:2 DecodeSlice[@u8[],@i32] TrimTrailingCR[@string] fields:3
       (fld _stream System.IO.MemoryStream private false false)
       (fld _cache @string private false false)
       (fld _eof @bool private false false) events:0
     )
-    (cls System.IO.StreamWriter public iface:false ifaces:0 methods:1 NewLine fields:1
+    (cls System.IO.StreamWriter public iface:false ifaces:0 struct:false methods:1 NewLine fields:1
       (fld _stream System.IO.MemoryStream private false false) events:0
     )
-    (cls System.IO.StringReader public iface:false ifaces:0 methods:1 TrimTrailingCR[@string] fields:1
+    (cls System.IO.StringReader public iface:false ifaces:0 struct:false methods:1 TrimTrailingCR[@string] fields:1
       (fld _rest @string private false false) events:0
     )
-    (cls System.IO.StringWriter public iface:false ifaces:0 methods:1 NewLine fields:1
+    (cls System.IO.StringWriter public iface:false ifaces:0 struct:false methods:1 NewLine fields:1
       (fld _value @string private false false) events:0
     )
-    (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
+    (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:1 GetEnumerator:System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.IEnumerable.T events:0
     )
-    (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
+    (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 struct:false tparams:2
       (tpar TKey 0 - v:- c:0)
       (tpar TValue 1 - v:- c:0) fields:2
       (fld _key !System.Collections.Generic.KeyValuePair.TKey private false false)
@@ -178,7 +178,7 @@
       (prop Key !System.Collections.Generic.KeyValuePair.TKey true false public false)
       (prop Value !System.Collections.Generic.KeyValuePair.TValue true false public false)
     )
-    (gcls System.Collections.Generic.Dictionary public iface:false ifaces:1 System.Collections.Generic.IEnumerable`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.Dictionary.K$!System.Collections.Generic.Dictionary.V tparams:2
+    (gcls System.Collections.Generic.Dictionary public iface:false ifaces:1 System.Collections.Generic.IEnumerable`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.Dictionary.K$!System.Collections.Generic.Dictionary.V struct:false tparams:2
       (tpar K 0 - v:- c:0)
       (tpar V 1 - v:- c:0) fields:5
       (fld _keys !System.Collections.Generic.Dictionary.K[] private false false)
@@ -191,11 +191,11 @@
       (prop Values !System.Collections.Generic.Dictionary.V[] true false public false)
       (prop Item !System.Collections.Generic.Dictionary.V true true public false)
     )
-    (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
+    (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:2 MoveNext:@bool get_Current:!System.Collections.Generic.IEnumerator.T events:0 props:1
       (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
     )
-    (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V tparams:2
+    (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V struct:false tparams:2
       (tpar K 0 - v:- c:0)
       (tpar V 1 - v:- c:0) fields:4
       (fld _keys !System.Collections.Generic.DictionaryEnumerator.K[] private false false)
@@ -204,38 +204,38 @@
       (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V true false public false)
     )
-    (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 tparams:1
+    (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:7 get_Count:@i32 get_IsReadOnly:@bool Add[!System.Collections.Generic.ICollection.T]:@bool Clear:@void Contains[!System.Collections.Generic.ICollection.T]:@bool CopyTo[!System.Collections.Generic.ICollection.T[],@i32]:@void Remove[!System.Collections.Generic.ICollection.T]:@bool events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
-    (gcls System.Collections.Generic.HashSet public iface:false ifaces:2 System.Collections.Generic.ICollection`1#!System.Collections.Generic.HashSet.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.HashSet.T tparams:1
+    (gcls System.Collections.Generic.HashSet public iface:false ifaces:2 System.Collections.Generic.ICollection`1#!System.Collections.Generic.HashSet.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.HashSet.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:2
       (fld _items !System.Collections.Generic.HashSet.T[] private false false)
       (fld _count @i32 private false false) methods:0 events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
-    (gcls System.Collections.Generic.HashSetEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.HashSetEnumerator.T tparams:1
+    (gcls System.Collections.Generic.HashSetEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.HashSetEnumerator.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:3
       (fld _items !System.Collections.Generic.HashSetEnumerator.T[] private false false)
       (fld _count @i32 private false false)
       (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.HashSetEnumerator.T true false public false)
     )
-    (gcls System.Collections.Generic.IList public iface:true ifaces:0 tparams:1
+    (gcls System.Collections.Generic.IList public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:5 get_Item[@i32]:!System.Collections.Generic.IList.T set_Item[@i32,!System.Collections.Generic.IList.T]:@void IndexOf[!System.Collections.Generic.IList.T]:@i32 Insert[@i32,!System.Collections.Generic.IList.T]:@void RemoveAt[@i32]:@void events:0 props:1
       (prop Item !System.Collections.Generic.IList.T true true public false)
     )
-    (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 tparams:1
+    (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:1 get_Item[@i32]:!System.Collections.Generic.IReadOnlyList.T events:0 props:1
       (prop Item !System.Collections.Generic.IReadOnlyList.T true false public false)
     )
-    (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 tparams:1
+    (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:1 get_Count:@i32 events:0 props:1
       (prop Count @i32 true false public false)
     )
-    (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T tparams:1
+    (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:2
       (fld _items !System.Collections.Generic.List.T[] private false false)
       (fld _count @i32 private false false) methods:0 events:0 props:4
@@ -244,14 +244,14 @@
       (prop Capacity @i32 true false public false)
       (prop Item !System.Collections.Generic.List.T true true public false)
     )
-    (gcls System.Collections.Generic.ListEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.ListEnumerator.T tparams:1
+    (gcls System.Collections.Generic.ListEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.ListEnumerator.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:3
       (fld _items !System.Collections.Generic.ListEnumerator.T[] private false false)
       (fld _count @i32 private false false)
       (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.ListEnumerator.T true false public false)
     )
-    (gcls System.Collections.Generic.Queue public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Queue.T tparams:1
+    (gcls System.Collections.Generic.Queue public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Queue.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:4
       (fld _items !System.Collections.Generic.Queue.T[] private false false)
       (fld _count @i32 private false false)
@@ -259,7 +259,7 @@
       (fld _capacity @i32 private false false) methods:0 events:0 props:1
       (prop Count @i32 true false public false)
     )
-    (gcls System.Collections.Generic.QueueEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.QueueEnumerator.T tparams:1
+    (gcls System.Collections.Generic.QueueEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.QueueEnumerator.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:5
       (fld _items !System.Collections.Generic.QueueEnumerator.T[] private false false)
       (fld _head @i32 private false false)
@@ -268,37 +268,37 @@
       (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.QueueEnumerator.T true false public false)
     )
-    (gcls System.Collections.Generic.Stack public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Stack.T tparams:1
+    (gcls System.Collections.Generic.Stack public iface:false ifaces:1 System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.Stack.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:2
       (fld _items !System.Collections.Generic.Stack.T[] private false false)
       (fld _count @i32 private false false) methods:0 events:0 props:1
       (prop Count @i32 true false public false)
     )
-    (gcls System.Collections.Generic.StackEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.StackEnumerator.T tparams:1
+    (gcls System.Collections.Generic.StackEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#!System.Collections.Generic.StackEnumerator.T struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:3
       (fld _items !System.Collections.Generic.StackEnumerator.T[] private false false)
       (fld _count @i32 private false false)
       (fld _index @i32 private false false) methods:0 events:0 props:1
       (prop Current !System.Collections.Generic.StackEnumerator.T true false public false)
     )
-    (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 methods:8 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Sleep[@i32] TickCount Exit[@i32] Beep[@i32,@i32] fields:0 events:0)
-    (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
-    (cls System.Syscall.FileSyscall internal iface:false ifaces:0 methods:5 Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
-    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 methods:9 FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
-    (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
-    (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
-    (cls System.Syscall.StringSyscall public iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
-    (cls System.Threading.Lock public iface:false ifaces:0 methods:1 get_ContentionCount fields:1
+    (cls System.Syscall.ConsoleSyscall internal iface:false ifaces:0 struct:false methods:8 WriteLine[@any] Write[@any] ReadLine ReadKey[@bool] Sleep[@i32] TickCount Exit[@i32] Beep[@i32,@i32] fields:0 events:0)
+    (cls System.Syscall.EnvironmentSyscall internal iface:false ifaces:0 struct:false methods:4 GetEnvironmentVariable[@string] GetCurrentDirectory SetCurrentDirectory[@string] GetExecutablePath fields:0 events:0)
+    (cls System.Syscall.FileSyscall internal iface:false ifaces:0 struct:false methods:5 Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
+    (cls System.Syscall.IOSyscall internal iface:false ifaces:0 struct:false methods:9 FileOpen[@string,System.IO.FileMode,System.IO.FileAccess,System.IO.FileShare] FileSize[@i64] FileSeek[@i64,@i64,@i32] FileTell[@i64] FileRead[@i64,@u8[],@i32,@i32] FileWrite[@i64,@u8[],@i32,@i32] FileClose[@i64] DirectoryExists[@string] CreateDirectory[@string] fields:0 events:0)
+    (cls System.Syscall.MathSyscall internal iface:false ifaces:0 struct:false methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
+    (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 struct:false methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
+    (cls System.Syscall.StringSyscall public iface:false ifaces:0 struct:false methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
+    (cls System.Threading.Lock public iface:false ifaces:0 struct:false methods:1 get_ContentionCount fields:1
       (fld _owner System.Object private false false) events:0 props:2
       (prop IsHeldByCurrentThread @bool true false public false)
       (prop ContentionCount @i64 true false public true)
     )
-    (cls System.Threading.Monitor public iface:false ifaces:0 methods:9 Enter[System.Object] Exit[System.Object] IsEntered[System.Object] TryEnter[System.Object] TryEnter[System.Object,@i32] Wait[System.Object] Wait[System.Object,@i32] Pulse[System.Object] PulseAll[System.Object] fields:0 events:0)
-    (cls System.IDisposable public iface:true ifaces:0 methods:1 Dispose:@void fields:0 events:0)
-    (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
+    (cls System.Threading.Monitor public iface:false ifaces:0 struct:false methods:9 Enter[System.Object] Exit[System.Object] IsEntered[System.Object] TryEnter[System.Object] TryEnter[System.Object,@i32] Wait[System.Object] Wait[System.Object,@i32] Pulse[System.Object] PulseAll[System.Object] fields:0 events:0)
+    (cls System.IDisposable public iface:true ifaces:0 struct:false methods:1 Dispose:@void fields:0 events:0)
+    (gcls System.Collections.Generic.ISet public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:10 UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool events:0
     )
-    (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 tparams:2
+    (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 struct:false tparams:2
       (tpar TKey 0 - v:- c:0)
       (tpar TValue 1 - v:- c:0) fields:0 methods:13 get_Item[!System.Collections.Generic.IDictionary.TKey]:!System.Collections.Generic.IDictionary.TValue set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]:@void get_Keys:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey get_Values:System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue get_Count:@i32 get_IsReadOnly:@bool Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue]:@void Clear:@void ContainsKey[!System.Collections.Generic.IDictionary.TKey]:@bool Contains[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue]:@bool CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32]:@void Remove[!System.Collections.Generic.IDictionary.TKey]:@bool TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue]:@bool events:0 props:5
       (prop Item !System.Collections.Generic.IDictionary.TValue true true public false)
@@ -17453,4 +17453,4 @@
     (ns System.Threading)
   )
 )
-(checksum sha256:25a02bc6b7ddf07f8c9a6bc588a5f222134a3a0668acaea821aed84fa556cb12)
+(checksum sha256:36a3466491f733036dd0054999a58deab345dcf9f8a65a8c9be792599e58dc5a)

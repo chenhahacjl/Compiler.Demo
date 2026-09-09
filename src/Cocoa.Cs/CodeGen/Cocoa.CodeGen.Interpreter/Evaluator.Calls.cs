@@ -94,7 +94,9 @@ namespace Cocoa.CodeGen.Interpreter
                 }
                 else
                 {
+                    var savedReturned = _returned;
                     result = EvaluateStatement(statement);
+                    _returned = savedReturned;
                 }
             }
             finally
