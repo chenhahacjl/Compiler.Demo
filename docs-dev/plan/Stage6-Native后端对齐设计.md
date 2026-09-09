@@ -46,7 +46,7 @@
 | 2 | GetOffsetAndLength 的 ValueTuple 返回类型在 reader 产生 `System.System.ValueTuple`2` 双前缀名 | 序列化器 | Instantiate 的 FullName 拼装重复加 ns；当前切片路径已绕开，但 GetOffsetAndLength 仍在 .coa 中，native 可达性扫描会拉进其方法体（ValueTuple 构造器发射崩溃） |
 | 3 | IL：facade struct `System.Index` TypeDef/TypeRef 冲突 → `TypeLoadException: value type mismatch` | IL 发射器 | 用户程序集同时出现 Index 的 TypeDef（值类型）与 BCL TypeRef 引用；需查明 emittedClasses 把 .coa facade struct 类带进发射清单的路径并排除 |
 | 4 | IL：lock 中带 return 的函数 `Grab` → `InvalidProgramException` | IL 发射器 | try 体 return + finally 的 leave/ EH 块布局问题（`CollectLabels` 已修 try 遍历，仍需核查 EH 子句边界与 return 前置序列点） |
-| 5 | native：Oop_Override ToString/GetHashCode 覆写返回垃圾值（4 测试，新旧 .coa 交互） | native vtable | Dog.ToString 虚槽内容指向错误目标；怀疑 .coa 新增类改变存活类集合与 AssignVirtualSlots 序；无 try 的代码路径指令流已验证与改动前逐指令一致，嫌疑集中在运行时函数注册顺序或伪 vtable 交互 |
+| 5 | native：Oop_Override ToString/GetHashCode 覆写返回垃圾值（4 测试，新旧 .coa 交互） | native vtable | Dog.ToString 虚槽内容指向错误目标；怀疑 .coa 新增类改变存活类集合与 AssignVirtualSlots 序；无 try 的代码路径指令流已验证与改动前逐指令一致，嫌疑集中在运行时函数注册顺序或伪 vtable 交互。**2026-09-09 事后实证**：旧 .coa 替换 → 9/9 全绿，确认 100% 由 .coa 内容触发、与代码改动无关；判别特征 = 唯一失败的 4 个测试全部是"覆写 Object 面内建虚成员"形态（17/22 个 native Oop 测试过）；探针工程受阻（MSBuild 增量对 CodeGen.Native 跳过 + 测试 bin 拷贝陈旧，探针字面量无法可靠进入被测 dll；CS0162 实验证明编译器读取当前源是正常的）。下轮建议直接写 MirToLir 级单测（构造带 Object 面 override 的 BoundProgram → 断言虚槽解析与 vtable 数据键），绕过测试 bin 拷贝链路后再二分 .coa 内容 |
 | 6 | 解释器/IL/测试中的 `Variable 'Console' doesn't exist`（裸 `Console.` 短名） | binder using 解析 | facade 类（null target）注入时被 `continue` 跳过未按名注册 scope，仅全名经 GlobalNamespace 树可达；裸短名依赖 using 前缀扫描路径，部分 IL e2e（C# 方言）未命中——随 N1 收尾一并核查 |
 
 ### 测试基线（本轮结束）
