@@ -1,0 +1,81 @@
+// Cocoa 系统标准库 · System.Threading.Lock（互斥锁）
+// 对齐 BCL System.Threading.Lock（sealed class，非 facade）
+// 解释器回退：内部使用 Monitor；IL 后端直接使用 BCL Lock
+
+namespace System.Threading
+{
+    public sealed facade class Lock
+    {
+        private _owner: object = new object()
+        private _recursionCount: i32 = 0
+
+        public constructor()
+        {
+        }
+
+        public function Enter(): void
+        {
+            System.Threading.Monitor.Enter(_owner)
+        }
+
+        public function Exit(): void
+        {
+            System.Threading.Monitor.Exit(_owner)
+        }
+
+        public function TryEnter(): bool
+        {
+            // 简化实现：直接进入
+            Enter()
+            return true
+        }
+
+        public function TryEnter(millisecondsTimeout: i32): bool
+        {
+            return TryEnter()
+        }
+
+        public property IsHeldByCurrentThread: bool
+        {
+            get
+            {
+                return System.Threading.Monitor.IsEntered(_owner)
+            }
+        }
+
+        public static property ContentionCount: i64
+        {
+            get
+            {
+                return 0
+            }
+        }
+
+        public function EnterScope(): Lock.Scope
+        {
+            Enter()
+            return new Lock.Scope(this, 1)
+        }
+
+        public ref struct Scope
+        {
+            private _lockObj: Lock
+            private _currentThreadId: i32
+
+            public constructor(lockObj: Lock, currentThreadId: i32)
+            {
+                _lockObj = lockObj
+                _currentThreadId = currentThreadId
+            }
+
+            public function Dispose(): void
+            {
+                if (_lockObj != null)
+                {
+                    _lockObj.Exit()
+                    _lockObj = null
+                }
+            }
+        }
+    }
+}

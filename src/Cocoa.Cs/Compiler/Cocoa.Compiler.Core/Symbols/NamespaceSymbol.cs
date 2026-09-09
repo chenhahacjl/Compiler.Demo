@@ -90,6 +90,21 @@ namespace Cocoa.CodeAnalysis.Symbols
             return null;
         }
 
+        /// <summary>按简单名+泛型元数查类型（ValueTuple&lt;T1&gt; vs ValueTuple&lt;T1,T2&gt;）。</summary>
+        public TypeSymbol? TryGetType(string simpleName, int arity)
+        {
+            foreach (var member in GetTypeMembers())
+            {
+                if (member.Name == simpleName && member is NamedTypeSymbol type &&
+                    type.TypeParameters.Length == arity)
+                {
+                    return member;
+                }
+            }
+
+            return null;
+        }
+
         public ImmutableArray<FunctionSymbol> GetFunctionMembers() => _functionMembers;
 
         /// <summary>按点分全名查找命名空间成员（相对本节点；空名返回本节点，未命中返回 null）。</summary>

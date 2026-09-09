@@ -6,7 +6,7 @@ namespace Cocoa.CodeAnalysis.Binding
 {
     public sealed class BoundScope
     {
-        private Dictionary<string, Symbol>? _symbols;
+        private Dictionary<string, List<Symbol>>? _symbols;
         private Dictionary<string, List<FunctionSymbol>>? _functions;
         private Dictionary<string, List<FunctionSymbol>>? _namespaceFunctions;
 
@@ -25,19 +25,36 @@ namespace Cocoa.CodeAnalysis.Binding
 
         private bool TryDeclareNonFunctionSymbol(Symbol symbol)
         {
-            if (_symbols != null && _symbols.ContainsKey(symbol.Name))
-            {
-                return false;
-            }
-
             if (_functions != null && _functions.ContainsKey(symbol.Name))
             {
                 return false;
             }
 
-            _symbols ??= new Dictionary<string, Symbol>();
-            _symbols.Add(symbol.Name, symbol);
+            _symbols ??= new Dictionary<string, List<Symbol>>();
 
+            if (_symbols.TryGetValue(symbol.Name, out var existing))
+            {
+                // 同名类型：泛型元数不同放行（ValueTuple<T1> vs ValueTuple<T1,T2>）
+                if (symbol is NamedTypeSymbol newType)
+                {
+                    var arity = newType.TypeParameters.Length;
+                    foreach (var existingSymbol in existing)
+                    {
+                        if (existingSymbol is NamedTypeSymbol existingType &&
+                            existingType.TypeParameters.Length == arity)
+                        {
+                            return false; // 同名同元数拒绝
+                        }
+                    }
+                    existing.Add(symbol);
+                    return true;
+                }
+
+                // 非类型符号同名拒绝
+                return false;
+            }
+
+            _symbols.Add(symbol.Name, new List<Symbol> { symbol });
             return true;
         }
 
@@ -102,12 +119,29 @@ namespace Cocoa.CodeAnalysis.Binding
                 return functions[0];
             }
 
-            if (_symbols != null && _symbols.TryGetValue(name, out var symbol))
+            if (_symbols != null && _symbols.TryGetValue(name, out var symbols) && symbols.Count > 0)
             {
-                return symbol;
+                return symbols[0];
             }
 
             return Parent?.TryLookupSymbol(name);
+        }
+
+        /// <summary>按名+泛型元数查类型符号，沿作用域链。</summary>
+        public Symbol? TryLookupSymbol(string name, int arity)
+        {
+            if (_symbols != null && _symbols.TryGetValue(name, out var symbols))
+            {
+                foreach (var symbol in symbols)
+                {
+                    if (symbol is NamedTypeSymbol type && type.TypeParameters.Length == arity)
+                    {
+                        return symbol;
+                    }
+                }
+            }
+
+            return Parent?.TryLookupSymbol(name, arity);
         }
 
         /// <summary>按名查全部函数候选（重载），沿作用域链；被同名非函数符号遮蔽返回空集；无匹配返回 null。</summary>
@@ -192,7 +226,19 @@ namespace Cocoa.CodeAnalysis.Binding
                 return ImmutableArray<TSymbol>.Empty;
             }
 
-            return _symbols.Values.OfType<TSymbol>().ToImmutableArray();
+            var builder = ImmutableArray.CreateBuilder<TSymbol>();
+            foreach (var list in _symbols.Values)
+            {
+                foreach (var symbol in list)
+                {
+                    if (symbol is TSymbol typed)
+                    {
+                        builder.Add(typed);
+                    }
+                }
+            }
+
+            return builder.ToImmutable();
         }
     }
 }

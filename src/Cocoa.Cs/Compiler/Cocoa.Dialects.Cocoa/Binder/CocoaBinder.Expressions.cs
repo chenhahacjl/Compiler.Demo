@@ -707,8 +707,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return existing;
             }
 
-            // 阶段 3：优先 SDK System.ValueTupleN<T1..Tn>（值语义，对齐 C#）。
-            var genericDefinition = LookupType($"ValueTuple{elementTypes.Length}") as NamedTypeSymbol;
+            // 阶段 3：优先 SDK System.ValueTuple<T1..Tn>（值语义，对齐 C#）。
+            var genericDefinition = LookupType("ValueTuple", elementTypes.Length) as NamedTypeSymbol;
             if (genericDefinition != null && genericDefinition.IsGenericDefinition && genericDefinition.TypeParameters.Length == elementTypes.Length)
             {
                 var sdkTuple = GenericTypeInstantiator.Instantiate(genericDefinition, elementTypes.ToImmutableArray());
@@ -888,27 +888,40 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)
         {
-            // ^n (index from end) → desugar to array.Length - n at syntax level
+            // ^n (index from end) → new Index(n, fromEnd: true)
             if (syntax.Index is UnaryExpressionSyntax unary && unary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
             {
                 var boundTarget = BindExpression(syntax.Expression);
                 if (boundTarget.Type == TypeSymbol.Error)
                     return new BoundErrorExpression(syntax);
 
+                var boundOperand = BindExpression(unary.Operand);
+                var indexType = LookupType("Index") as NamedTypeSymbol;
+                if (indexType != null)
+                {
+                    var fromEndTrue = new BoundLiteralExpression(syntax.Index, true, TypeSymbol.Boolean);
+                    var indexCtor = indexType.GetMethod("Index");
+                    if (indexCtor != null)
+                    {
+                        var indexObj = new BoundObjectCreationExpression(syntax.Index, indexType,
+                            ImmutableArray.Create<BoundExpression>(boundOperand, fromEndTrue), indexCtor);
+                        return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType ?? TypeSymbol.Error,
+                            boundTarget, indexObj);
+                    }
+                }
+                // Fallback: direct arithmetic
                 if (boundTarget.Type.ElementType == null)
                 {
                     _diagnostics.ReportIndexRequiresArray(syntax.Location, boundTarget.Type);
                     return new BoundErrorExpression(syntax);
                 }
-
-                var boundOperand = BindExpression(unary.Operand);
                 var lengthExpr = new BoundMemberAccessExpression(syntax.Index, TypeSymbol.Int32, boundTarget, "Length");
                 var boundIndex = BoundNodeFactory.Binary(syntax.Index, lengthExpr,
                     CoreSyntax.SyntaxKind.MinusToken, boundOperand);
                 return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType, boundTarget, boundIndex);
             }
 
-            // start..end / start.. / ..end / .. (range expression) → desugar to array slice
+            // start..end / start.. / ..end / .. (range expression) → new Range(start, end)
             if (syntax.Index is RangeExpressionSyntax range)
             {
                 return BindRangeExpression(syntax, range);
@@ -966,8 +979,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         }
 
         /// <summary>
-        /// arr[start..end] → 新数组（复制切片）
-        /// arr[start..] / arr[..end] / arr[..] 同理
+        /// arr[start..end] → new Range(start, end)
         /// </summary>
         private BoundExpression BindRangeExpression(ElementAccessExpressionSyntax syntax, RangeExpressionSyntax range)
         {
@@ -981,9 +993,104 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            var elementType = boundTarget.Type.ElementType;
+            var rangeType = LookupType("Range") as NamedTypeSymbol;
+            var indexType = LookupType("Index") as NamedTypeSymbol;
 
-            // Bind start/end expressions (default to 0 / Length)
+            if (rangeType != null && indexType != null)
+            {
+                // Build start Index
+                BoundExpression boundStartIndex;
+                if (range.Left != null)
+                {
+                    var boundStartValue = BindExpression(range.Left);
+                    if (range.Left is UnaryExpressionSyntax leftUnary && leftUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+                    {
+                        var leftOperand = BindExpression(leftUnary.Operand);
+                        var fromEndTrue = new BoundLiteralExpression(range.Left, true, TypeSymbol.Boolean);
+                        var indexCtor = indexType.GetMethod("Index");
+                        if (indexCtor != null)
+                            boundStartIndex = new BoundObjectCreationExpression(range.Left, indexType,
+                                ImmutableArray.Create<BoundExpression>(leftOperand, fromEndTrue), indexCtor);
+                        else
+                            boundStartIndex = new BoundLiteralExpression(range.Left, 0, TypeSymbol.Int32);
+                    }
+                    else
+                    {
+                        var fromEndFalse = new BoundLiteralExpression(range.Left, false, TypeSymbol.Boolean);
+                        var indexCtor = indexType.GetMethod("Index");
+                        if (indexCtor != null)
+                            boundStartIndex = new BoundObjectCreationExpression(range.Left, indexType,
+                                ImmutableArray.Create<BoundExpression>(boundStartValue, fromEndFalse), indexCtor);
+                        else
+                            boundStartIndex = boundStartValue;
+                    }
+                }
+                else
+                {
+                    // ..b → Index.Start
+                    var indexCtor = indexType.GetMethod("Index");
+                    var zero = new BoundLiteralExpression(range, 0, TypeSymbol.Int32);
+                    var fromEndFalse = new BoundLiteralExpression(range, false, TypeSymbol.Boolean);
+                    if (indexCtor != null)
+                        boundStartIndex = new BoundObjectCreationExpression(range, indexType,
+                            ImmutableArray.Create<BoundExpression>(zero, fromEndFalse), indexCtor);
+                    else
+                        boundStartIndex = zero;
+                }
+
+                // Build end Index
+                BoundExpression boundEndIndex;
+                if (range.Right != null)
+                {
+                    var boundEndValue = BindExpression(range.Right);
+                    if (range.Right is UnaryExpressionSyntax rightUnary && rightUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+                    {
+                        var rightOperand = BindExpression(rightUnary.Operand);
+                        var fromEndTrue = new BoundLiteralExpression(range.Right, true, TypeSymbol.Boolean);
+                        var indexCtor = indexType.GetMethod("Index");
+                        if (indexCtor != null)
+                            boundEndIndex = new BoundObjectCreationExpression(range.Right, indexType,
+                                ImmutableArray.Create<BoundExpression>(rightOperand, fromEndTrue), indexCtor);
+                        else
+                            boundEndIndex = boundEndValue;
+                    }
+                    else
+                    {
+                        var fromEndFalse = new BoundLiteralExpression(range.Right, false, TypeSymbol.Boolean);
+                        var indexCtor = indexType.GetMethod("Index");
+                        if (indexCtor != null)
+                            boundEndIndex = new BoundObjectCreationExpression(range.Right, indexType,
+                                ImmutableArray.Create<BoundExpression>(boundEndValue, fromEndFalse), indexCtor);
+                        else
+                            boundEndIndex = boundEndValue;
+                    }
+                }
+                else
+                {
+                    // a.. → Index.End (IsFromEnd=true, Value=0)
+                    var indexCtor = indexType.GetMethod("Index");
+                    var zero = new BoundLiteralExpression(range, 0, TypeSymbol.Int32);
+                    var fromEndTrue = new BoundLiteralExpression(range, true, TypeSymbol.Boolean);
+                    if (indexCtor != null)
+                        boundEndIndex = new BoundObjectCreationExpression(range, indexType,
+                            ImmutableArray.Create<BoundExpression>(zero, fromEndTrue), indexCtor);
+                    else
+                        boundEndIndex = new BoundMemberAccessExpression(range, TypeSymbol.Int32, boundTarget, "Length");
+                }
+
+                // Build Range object
+                var rangeCtor = rangeType.GetMethod("Range");
+                if (rangeCtor != null)
+                {
+                    var rangeObj = new BoundObjectCreationExpression(syntax, rangeType,
+                        ImmutableArray.Create(boundStartIndex, boundEndIndex), rangeCtor);
+                    return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType,
+                        boundTarget, rangeObj);
+                }
+            }
+
+            // Fallback: direct arithmetic (CopyRange)
+            var elementType = boundTarget.Type.ElementType;
             var lengthExpr = new BoundMemberAccessExpression(range, TypeSymbol.Int32, boundTarget, "Length");
             BoundExpression boundStart = range.Left != null
                 ? BindExpression(range.Left)
@@ -992,22 +1099,18 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 ? BindExpression(range.Right)
                 : lengthExpr;
 
-            // If start uses ^, desugar
-            if (range.Left is UnaryExpressionSyntax leftUnary && leftUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+            if (range.Left is UnaryExpressionSyntax leftUnary2 && leftUnary2.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
             {
-                var leftOperand = BindExpression(leftUnary.Operand);
+                var leftOperand = BindExpression(leftUnary2.Operand);
                 boundStart = BoundNodeFactory.Binary(range.Left, lengthExpr, CoreSyntax.SyntaxKind.MinusToken, leftOperand);
             }
 
-            // If end uses ^, desugar
-            if (range.Right is UnaryExpressionSyntax rightUnary && rightUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+            if (range.Right is UnaryExpressionSyntax rightUnary2 && rightUnary2.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
             {
-                var rightOperand = BindExpression(rightUnary.Operand);
+                var rightOperand = BindExpression(rightUnary2.Operand);
                 boundEnd = BoundNodeFactory.Binary(range.Right, lengthExpr, CoreSyntax.SyntaxKind.MinusToken, rightOperand);
             }
 
-            // Desugar: new数组 = CopyRange(arr, start, end)
-            // 生成: arr → CopyRange(arr, start, end - start)
             var count = BoundNodeFactory.Binary(range, boundEnd, CoreSyntax.SyntaxKind.MinusToken, boundStart);
             return new BoundCallExpression(syntax, GetCopyRangeMethod(syntax, elementType),
                 ImmutableArray.Create(boundTarget, boundStart, count));

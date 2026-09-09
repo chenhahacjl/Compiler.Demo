@@ -246,18 +246,41 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private BoundStatement BindLockStatement(LockStatementSyntax syntax)
         {
             // lock (expr) { body }
-            // → try { expr; body } finally { }
+            // If expr is System.Threading.Lock: try { expr.Enter(); body } finally { expr.Exit(); }
+            // Else: try { Monitor.Enter(expr); body } finally { Monitor.Exit(expr); }
 
             var boundExpression = BindExpression(syntax.Expression);
             if (boundExpression.Type == TypeSymbol.Error)
                 return new BoundNopStatement(syntax);
 
-            var exprStatement = new BoundExpressionStatement(syntax, boundExpression);
             var boundBody = BindStatement(syntax.Body);
-
-            // Unwrap body if it's a block statement to avoid nested blocks
             var bodyStatements = ImmutableArray.CreateBuilder<BoundStatement>();
-            bodyStatements.Add(exprStatement);
+
+            var isLockType = boundExpression.Type is NamedTypeSymbol namedType && namedType.FullName == "System.Threading.Lock";
+
+            if (isLockType)
+            {
+                var lockType = boundExpression.Type as NamedTypeSymbol;
+                var enterMethod = lockType?.GetMethod("Enter");
+                var enterCall = new BoundMemberCallExpression(syntax, boundExpression, "Enter",
+                    ImmutableArray<BoundExpression>.Empty, TypeSymbol.Void, enterMethod);
+                bodyStatements.Add(new BoundExpressionStatement(syntax, enterCall));
+            }
+            else
+            {
+                var monitorType = LookupType("System.Threading.Monitor") as NamedTypeSymbol;
+                if (monitorType != null)
+                {
+                    var enterMethod = monitorType.GetMethod("Enter");
+                    if (enterMethod != null)
+                    {
+                        var enterCall = new BoundCallExpression(syntax, enterMethod,
+                            ImmutableArray.Create(boundExpression));
+                        bodyStatements.Add(new BoundExpressionStatement(syntax, enterCall));
+                    }
+                }
+            }
+
             if (boundBody is BoundBlockStatement block)
             {
                 foreach (var s in block.Statements)
@@ -269,7 +292,33 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             var tryBlock = new BoundBlockStatement(syntax.Body, bodyStatements.ToImmutable());
+
+            var finallyStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+            if (isLockType)
+            {
+                var lockType = boundExpression.Type as NamedTypeSymbol;
+                var exitMethod = lockType?.GetMethod("Exit");
+                var exitCall = new BoundMemberCallExpression(syntax, boundExpression, "Exit",
+                    ImmutableArray<BoundExpression>.Empty, TypeSymbol.Void, exitMethod);
+                finallyStatements.Add(new BoundExpressionStatement(syntax, exitCall));
+            }
+            else
+            {
+                var monitorType = LookupType("System.Threading.Monitor") as NamedTypeSymbol;
+                if (monitorType != null)
+                {
+                    var exitMethod = monitorType.GetMethod("Exit");
+                    if (exitMethod != null)
+                    {
+                        var exitCall = new BoundCallExpression(syntax, exitMethod,
+                            ImmutableArray.Create(boundExpression));
+                        finallyStatements.Add(new BoundExpressionStatement(syntax, exitCall));
+                    }
+                }
+            }
+
             var finallyBlock = new BoundBlockStatement(syntax.Body,
+                finallyStatements.Count > 0 ? finallyStatements.ToImmutable() :
                 ImmutableArray.Create<BoundStatement>(new BoundNopStatement(syntax)));
 
             return new BoundTryStatement(syntax, tryBlock,

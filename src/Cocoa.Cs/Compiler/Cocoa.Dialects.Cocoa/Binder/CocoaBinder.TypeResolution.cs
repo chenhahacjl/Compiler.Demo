@@ -158,6 +158,54 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return null;
         }
 
+        /// <summary>按名+泛型元数查类型（ValueTuple&lt;T1&gt; vs ValueTuple&lt;T1,T2&gt;）。</summary>
+        private TypeSymbol? LookupType(string name, int arity)
+        {
+            // 泛型类型参数同名时按元数匹配
+            if (_currentClass != null)
+            {
+                foreach (var typeParameter in _currentClass.TypeParameters)
+                {
+                    if (typeParameter.Name == name && arity == 0)
+                    {
+                        return typeParameter;
+                    }
+                }
+            }
+
+            if (_bindingClass != null)
+            {
+                foreach (var typeParameter in _bindingClass.TypeParameters)
+                {
+                    if (typeParameter.Name == name && arity == 0)
+                    {
+                        return typeParameter;
+                    }
+                }
+            }
+
+            // using 别名
+            if (_usingAliases.TryGetValue(name, out var aliasTarget))
+            {
+                return LookupType(aliasTarget, arity);
+            }
+
+            // scope 按元数查找
+            var lookup = _scope.TryLookupSymbol(name, arity);
+            if (lookup is TypeSymbol declaredType)
+            {
+                return declaredType;
+            }
+
+            // 点号全名（不含泛型参数时退化为无元数查找）
+            if (name.IndexOf('.') >= 0)
+            {
+                return LookupType(name);
+            }
+
+            return null;
+        }
+
         /// <summary>6f-3：库限定类型解析（复合键绑定侧消费）——`库名.全名` 首段命中已加载用户库，
         /// 以其 TypesByName 解析余部全名；跨库同名类型经此前缀唯一化（`using X = Lib1.Shared.Conflict`）。</summary>
         private TypeSymbol? TryResolveLibraryScopedType(string name)
@@ -242,6 +290,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             ["System.Console"] = null,
             ["System.Diagnostics.Process"] = null,
             ["System.Diagnostics.ProcessStartInfo"] = null,
+            ["System.Threading.Monitor"] = null,
+            ["System.Threading.Lock"] = null,
+            ["System.Index"] = null,
+            ["System.Range"] = null,
         };
 
         /// <summary>6e-M19 M2-b：facade 静态常量表（i32.MaxValue 等，编译期折叠为字面量）。</summary>

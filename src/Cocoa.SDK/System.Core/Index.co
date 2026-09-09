@@ -1,0 +1,83 @@
+// Cocoa 系统标准库 · System.Index（索引从末尾）
+// 编码规则：_value >= 0 表示从开头，_value < 0 表示从末尾（存储 ~value）
+
+namespace System
+{
+    public facade struct Index
+    {
+        public _value: i32
+
+        public constructor(value: i32, fromEnd: bool = false)
+        {
+            if (fromEnd)
+            {
+                _value = ~value
+            }
+            else
+            {
+                _value = value
+            }
+        }
+
+        public property Value: i32
+        {
+            get
+            {
+                if (_value < 0)
+                {
+                    return ~_value
+                }
+                else
+                {
+                    return _value
+                }
+            }
+        }
+
+        public property IsFromEnd: bool
+        {
+            get
+            {
+                return _value < 0
+            }
+        }
+
+        public function GetOffset(length: i32): i32
+        {
+            if (_value < 0)
+            {
+                return length + _value + 1
+            }
+            else
+            {
+                return _value
+            }
+        }
+
+        public static function FromStart(value: i32): Index
+        {
+            return new Index(value, false)
+        }
+
+        public static function FromEnd(value: i32): Index
+        {
+            return new Index(value, true)
+        }
+
+        public static property Start: Index
+        {
+            get
+            {
+                return new Index(0, false)
+            }
+        }
+
+        public static property End: Index
+        {
+            get
+            {
+                return new Index(0, true)
+            }
+        }
+    }
+}

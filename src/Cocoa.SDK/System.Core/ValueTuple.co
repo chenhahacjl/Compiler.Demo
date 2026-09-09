@@ -1,8 +1,8 @@
-// Cocoa 系统标准库 · 元组值类型（ValueTuple1..7，对齐 C# System.ValueTuple）
+// Cocoa 系统标准库 · 元组值类型（ValueTuple<T1..Tn>，对齐 BCL System.ValueTuple）
 
 namespace System
 {
-    public struct ValueTuple1<T1>
+    public struct ValueTuple<T1>
     {
         public Item1: T1
 
@@ -12,7 +12,7 @@ namespace System
         }
     }
 
-    public struct ValueTuple2<T1, T2>
+    public struct ValueTuple<T1, T2>
     {
         public Item1: T1
         public Item2: T2
@@ -24,7 +24,7 @@ namespace System
         }
     }
 
-    public struct ValueTuple3<T1, T2, T3>
+    public struct ValueTuple<T1, T2, T3>
     {
         public Item1: T1
         public Item2: T2
@@ -38,7 +38,7 @@ namespace System
         }
     }
 
-    public struct ValueTuple4<T1, T2, T3, T4>
+    public struct ValueTuple<T1, T2, T3, T4>
     {
         public Item1: T1
         public Item2: T2
@@ -54,7 +54,7 @@ namespace System
         }
     }
 
-    public struct ValueTuple5<T1, T2, T3, T4, T5>
+    public struct ValueTuple<T1, T2, T3, T4, T5>
     {
         public Item1: T1
         public Item2: T2
@@ -72,7 +72,7 @@ namespace System
         }
     }
 
-    public struct ValueTuple6<T1, T2, T3, T4, T5, T6>
+    public struct ValueTuple<T1, T2, T3, T4, T5, T6>
     {
         public Item1: T1
         public Item2: T2
@@ -92,7 +92,7 @@ namespace System
         }
     }
 
-    public struct ValueTuple7<T1, T2, T3, T4, T5, T6, T7>
+    public struct ValueTuple<T1, T2, T3, T4, T5, T6, T7>
     {
         public Item1: T1
         public Item2: T2

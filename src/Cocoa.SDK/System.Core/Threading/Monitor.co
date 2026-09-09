@@ -1,0 +1,50 @@
+// Cocoa 系统标准库 · System.Threading.Monitor（互斥锁原语）
+// facade 映射到 BCL System.Threading.Monitor
+// 方法体为解释器回退实现；IL 后端重定向到 BCL
+
+namespace System.Threading
+{
+    public facade class Monitor
+    {
+        public static function Enter(obj: object): void
+        {
+        }
+
+        public static function Exit(obj: object): void
+        {
+        }
+
+        public static function IsEntered(obj: object): bool
+        {
+            return false
+        }
+
+        public static function TryEnter(obj: object): bool
+        {
+            return true
+        }
+
+        public static function TryEnter(obj: object, millisecondsTimeout: i32): bool
+        {
+            return true
+        }
+
+        public static function Wait(obj: object): bool
+        {
+            return false
+        }
+
+        public static function Wait(obj: object, millisecondsTimeout: i32): bool
+        {
+            return false
+        }
+
+        public static function Pulse(obj: object): void
+        {
+        }
+
+        public static function PulseAll(obj: object): void
+        {
+        }
+    }
+}

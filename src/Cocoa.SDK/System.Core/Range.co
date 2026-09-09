@@ -1,0 +1,57 @@
+// Cocoa 系统标准库 · System.Range（范围）
+
+namespace System
+{
+    public facade struct Range
+    {
+        public _start: Index
+        public _end: Index
+
+        public constructor(start: Index, end: Index)
+        {
+            _start = start
+            _end = end
+        }
+
+        public property Start: Index
+        {
+            get
+            {
+                return _start
+            }
+        }
+
+        public property End: Index
+        {
+            get
+            {
+                return _end
+            }
+        }
+
+        public function GetOffsetAndLength(length: i32): (i32, i32)
+        {
+            var start = _start.GetOffset(length)
+            var end = _end.GetOffset(length)
+            return (start, end - start)
+        }
+
+        public static property All: Range
+        {
+            get
+            {
+                return new Range(Index.Start, Index.End)
+            }
+        }
+
+        public static function StartAt(start: Index): Range
+        {
+            return new Range(start, Index.End)
+        }
+
+        public static function EndAt(end: Index): Range
+        {
+            return new Range(Index.Start, end)
+        }
+    }
+}

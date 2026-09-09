@@ -42,25 +42,96 @@ namespace Cocoa.CodeGen.Interpreter
         private object EvaluateElementAccessExpression(BoundElementAccessExpression node)
         {
             var target = EvaluateExpression(node.Target)!;
-            var index = Convert.ToInt32(EvaluateExpression(node.Index));
+            var indexValue = EvaluateExpression(node.Index);
 
             if (node.Target.Type == TypeSymbol.String)
             {
                 var text = (string)target;
-                return text[index];
+                var idx = Convert.ToInt32(indexValue);
+                return text[idx];
             }
 
             var array = (object[])target;
-            return array[index]!;
+
+            // Index type → call GetOffset(length)
+            if (indexValue is EvaluatorObject indexObj && indexObj.Class.Name == "Index")
+            {
+                var getOffsetMethod = indexObj.Class.GetMethod("GetOffset");
+                if (getOffsetMethod != null)
+                {
+                    var offset = InvokeFunction(getOffsetMethod, indexObj,
+                        new object[] { array.Length });
+                    return array[Convert.ToInt32(offset)]!;
+                }
+                // Fallback: direct field access
+                var isFromEnd = (bool)indexObj.Fields[0]!;
+                var value = Convert.ToInt32(indexObj.Fields[1]!);
+                var idx2 = isFromEnd ? array.Length - value : value;
+                return array[idx2]!;
+            }
+
+            // Range type → call GetOffsetAndLength(length) then slice
+            if (indexValue is EvaluatorObject rangeObj && rangeObj.Class.Name == "Range")
+            {
+                var getOffsetAndLengthMethod = rangeObj.Class.GetMethod("GetOffsetAndLength");
+                if (getOffsetAndLengthMethod != null)
+                {
+                    var result = InvokeFunction(getOffsetAndLengthMethod, rangeObj,
+                        new object[] { array.Length });
+                    if (result is EvaluatorObject tuple && tuple.Fields.Length >= 2)
+                    {
+                        var offset = Convert.ToInt32(tuple.Fields[0]!);
+                        var length = Convert.ToInt32(tuple.Fields[1]!);
+                        var sliced = new object[length];
+                        Array.Copy(array, offset, sliced, 0, length);
+                        return sliced;
+                    }
+                }
+                // Fallback: direct field access
+                var startObj = (EvaluatorObject)rangeObj.Fields[0]!;
+                var endObj = (EvaluatorObject)rangeObj.Fields[1]!;
+                var startOffset = ResolveIndexOffset(startObj, array.Length);
+                var endOffset = ResolveIndexOffset(endObj, array.Length);
+                var count = endOffset - startOffset;
+                var result2 = new object[count];
+                Array.Copy(array, startOffset, result2, 0, count);
+                return result2;
+            }
+
+            var intIndex = Convert.ToInt32(indexValue);
+            return array[intIndex]!;
+        }
+
+        private int ResolveIndexOffset(EvaluatorObject indexObj, int length)
+        {
+            var getOffsetMethod = indexObj.Class.GetMethod("GetOffset");
+            if (getOffsetMethod != null)
+            {
+                var offset = InvokeFunction(getOffsetMethod, indexObj, new object[] { length });
+                return Convert.ToInt32(offset);
+            }
+            var isFromEnd = (bool)indexObj.Fields[0]!;
+            var value = Convert.ToInt32(indexObj.Fields[1]!);
+            return isFromEnd ? length - value : value;
         }
 
         private object EvaluateElementAssignmentExpression(BoundElementAssignmentExpression node)
         {
             var array = (object[])EvaluateExpression(node.Target.Target)!;
-            var index = Convert.ToInt32(EvaluateExpression(node.Target.Index));
+            var indexValue = EvaluateExpression(node.Target.Index);
             var value = EvaluateExpression(node.Expression)!;
 
-            array[index] = value;
+            int idx;
+            if (indexValue is EvaluatorObject indexObj && indexObj.Class.Name == "Index")
+            {
+                idx = ResolveIndexOffset(indexObj, array.Length);
+            }
+            else
+            {
+                idx = Convert.ToInt32(indexValue);
+            }
+
+            array[idx] = value;
 
             return value;
         }
