@@ -2131,9 +2131,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             }
 
             // facade 实例方法降级（隐藏首参 this + 强制静态）；索引器亦遵循。
-            // 6f：规则同 BindFunctionDeclaration——基元别名必降；同类 facade 无实例字段（纯成员面）亦降。
+            // 6f → N1：基元别名必降；同类 facade 无实例字段（纯成员面）亦降；
+            // 自型 facade struct（Index/Range）保留实例形状（对齐 BCL 实例方法 + 方法体可用隐式 this）。
             var staticContainerLike = classType.FacadeThisType != null ||
-                                      !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                                      (classType.IsValueType == false && !classType.Fields.Any(f => !f.IsStatic));
             var lower = !isStatic && classType.IsFacadeClass && staticContainerLike;
 
             // getter：get_Name / get_Item
@@ -2427,12 +2428,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
 
-// 6e-M19 M2-b → 6f：facade 实例方法降级条件——
+// 6e-M19 M2-b → 6f → N1：facade 实例方法降级条件——
             //   · FacadeThisType 指向异型（Int32/Type 等基元别名）→ 必须降级；
             //   · 同类 facade（FacadeThisType==null）无实例字段（纯成员面载体，如 Exception/上下文字）→ 维持旧降级；
-            //   · 同类 facade 携带实例状态（FileStream._h）→ 保留真实例（成员可用字段/body，IL 端仍直链 BCL）。
+            //   · 同类 facade 携带实例状态（FileStream._h / Lock._owner）→ 保留真实例（成员可用字段/body，IL 端仍直链 BCL）；
+            //   · N1：自型 facade struct（Index/Range，映射 BCL 值类型且 BCL 侧为实例方法）→ 保留实例形状，
+            //     降级会使方法体失去隐式 this（"静态方法中不能访问实例字段"）且与 BCL 实例方法签名不匹配。
             var staticContainerLike = classType.FacadeThisType != null ||
-                                      !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                                      (classType.IsValueType == false && !classType.Fields.Any(f => !f.IsStatic));
             if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass && staticContainerLike)
             {
                 isStatic = true;

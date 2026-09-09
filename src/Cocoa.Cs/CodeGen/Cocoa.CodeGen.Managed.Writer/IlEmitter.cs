@@ -32,6 +32,8 @@ namespace Cocoa.CodeGen.Managed.Writer
         private readonly Dictionary<FunctionSymbol, IlMethodDef> _methods = new Dictionary<FunctionSymbol, IlMethodDef>();
         private readonly Dictionary<VariableSymbol, int> _locals = new Dictionary<VariableSymbol, int>();
         private readonly Dictionary<BoundExpression, int> _temporaryLocalIndices = new Dictionary<BoundExpression, int>();
+        // N1：非 BoundExpression 键的合成临时槽（builtin 发射内部用，如 CopyRange 的 count/dst），键需调用点唯一
+        private readonly Dictionary<object, int> _syntheticTemporaryLocalIndices = new Dictionary<object, int>();
         private List<IlType>? _currentFunctionLocals;
         private readonly Dictionary<BoundLabel, IlInstruction> _labelTargets = new Dictionary<BoundLabel, IlInstruction>();
 
@@ -462,6 +464,7 @@ namespace Cocoa.CodeGen.Managed.Writer
             _locals.Clear();
             _labelTargets.Clear();
             _temporaryLocalIndices.Clear();
+            _syntheticTemporaryLocalIndices.Clear();
             _currentMethodIsInstance = !method.IsStatic;
 
             var assembler = new IlAssembler();
@@ -649,6 +652,18 @@ namespace Cocoa.CodeGen.Managed.Writer
                     break;
                 case BoundSequencePointStatement sequencePoint:
                     CollectLabels(sequencePoint.Statement);
+                    break;
+                case BoundTryStatement tryStatement:
+                    // N1：try/finally/catch 体内同样可能含 label（lock 体中的循环 lowering 产物）
+                    CollectLabels(tryStatement.TryBlock);
+                    if (tryStatement.FinallyBlock != null)
+                    {
+                        CollectLabels(tryStatement.FinallyBlock);
+                    }
+                    foreach (var catchClause in tryStatement.Catches)
+                    {
+                        CollectLabels(catchClause.Body);
+                    }
                     break;
             }
         }

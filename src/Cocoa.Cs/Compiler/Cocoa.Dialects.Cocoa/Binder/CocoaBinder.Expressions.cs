@@ -905,6 +905,19 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     {
                         var indexObj = new BoundObjectCreationExpression(syntax.Index, indexType,
                             ImmutableArray.Create<BoundExpression>(boundOperand, fromEndTrue), indexCtor);
+
+                        // N1：降级为显式 GetOffset(length) 实例调用 + 普通 i32 元素访问——三后端零特判共享
+                        //（facade 方法体为纯算术；IL 直连 BCL System.Index.GetOffset；native/解释器编译 .co 体）。
+                        // target 经 Length 重复出现，与下方算术回退的既有求值语义一致。
+                        var offsetCall = TryBindIndexOffset(syntax.Index, indexObj, boundTarget);
+                        if (offsetCall != null)
+                        {
+                            var resolvedElementType = boundTarget.Type == TypeSymbol.String
+                                ? TypeSymbol.Char
+                                : boundTarget.Type.ElementType ?? TypeSymbol.Error;
+                            return new BoundElementAccessExpression(syntax, resolvedElementType, boundTarget, offsetCall);
+                        }
+
                         return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType ?? TypeSymbol.Error,
                             boundTarget, indexObj);
                     }
@@ -975,7 +988,41 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return new BoundErrorExpression(syntax);
             }
 
+            // N1：Index 类型索引变量（var i = ^1; arr[i]）→ GetOffset(length) 降级，与 ^ 字面量路径同构
+            if (boundIndex2.Type is NamedTypeSymbol { IsFacadeClass: true } indexVariableType &&
+                indexVariableType.FullName == "System.Index")
+            {
+                var offsetVariableCall = TryBindIndexOffset(syntax.Index, boundIndex2, boundTarget2);
+                if (offsetVariableCall != null)
+                {
+                    return new BoundElementAccessExpression(syntax, boundTarget2.Type.ElementType, boundTarget2, offsetVariableCall);
+                }
+            }
+
             return new BoundElementAccessExpression(syntax, boundTarget2.Type.ElementType, boundTarget2, boundIndex2);
+        }
+
+        /// <summary>
+        /// N1：Index 类型表达式 → GetOffset(length) 实例调用降级（i32）。
+        /// 自型 facade struct（Index）保留实例方法形状（对齐 BCL System.Index.GetOffset），
+        /// 调用形状 = BoundMemberCallExpression(receiver, method, args)。
+        /// </summary>
+        private BoundExpression? TryBindIndexOffset(CoreSyntax.SyntaxNode syntax, BoundExpression indexObj, BoundExpression target)
+        {
+            if (indexObj.Type is not NamedTypeSymbol indexType)
+            {
+                return null;
+            }
+
+            var getOffset = indexType.GetMethod("GetOffset");
+            if (getOffset == null)
+            {
+                return null;
+            }
+
+            var lengthExpr = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, target, "Length");
+            return new BoundMemberCallExpression(syntax, indexObj, "GetOffset",
+                ImmutableArray.Create<BoundExpression>(lengthExpr), TypeSymbol.Int32, getOffset);
         }
 
         /// <summary>
@@ -1002,12 +1049,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 BoundExpression boundStartIndex;
                 if (range.Left != null)
                 {
-                    var boundStartValue = BindExpression(range.Left);
+                    var indexCtor = indexType.GetMethod("Index");
                     if (range.Left is UnaryExpressionSyntax leftUnary && leftUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
                     {
+                        // ^n：先拦截再绑定（对 ^ 一元表达式调用 BindExpression 会因无对应一元运算符而崩溃）
                         var leftOperand = BindExpression(leftUnary.Operand);
                         var fromEndTrue = new BoundLiteralExpression(range.Left, true, TypeSymbol.Boolean);
-                        var indexCtor = indexType.GetMethod("Index");
                         if (indexCtor != null)
                             boundStartIndex = new BoundObjectCreationExpression(range.Left, indexType,
                                 ImmutableArray.Create<BoundExpression>(leftOperand, fromEndTrue), indexCtor);
@@ -1016,8 +1063,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     }
                     else
                     {
+                        var boundStartValue = BindExpression(range.Left);
                         var fromEndFalse = new BoundLiteralExpression(range.Left, false, TypeSymbol.Boolean);
-                        var indexCtor = indexType.GetMethod("Index");
                         if (indexCtor != null)
                             boundStartIndex = new BoundObjectCreationExpression(range.Left, indexType,
                                 ImmutableArray.Create<BoundExpression>(boundStartValue, fromEndFalse), indexCtor);
@@ -1042,22 +1089,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 BoundExpression boundEndIndex;
                 if (range.Right != null)
                 {
-                    var boundEndValue = BindExpression(range.Right);
+                    var indexCtor = indexType.GetMethod("Index");
                     if (range.Right is UnaryExpressionSyntax rightUnary && rightUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
                     {
+                        // ^n：先拦截再绑定（同上）
                         var rightOperand = BindExpression(rightUnary.Operand);
                         var fromEndTrue = new BoundLiteralExpression(range.Right, true, TypeSymbol.Boolean);
-                        var indexCtor = indexType.GetMethod("Index");
                         if (indexCtor != null)
                             boundEndIndex = new BoundObjectCreationExpression(range.Right, indexType,
                                 ImmutableArray.Create<BoundExpression>(rightOperand, fromEndTrue), indexCtor);
                         else
-                            boundEndIndex = boundEndValue;
+                            boundEndIndex = new BoundMemberAccessExpression(range, TypeSymbol.Int32, boundTarget, "Length");
                     }
                     else
                     {
+                        var boundEndValue = BindExpression(range.Right);
                         var fromEndFalse = new BoundLiteralExpression(range.Right, false, TypeSymbol.Boolean);
-                        var indexCtor = indexType.GetMethod("Index");
                         if (indexCtor != null)
                             boundEndIndex = new BoundObjectCreationExpression(range.Right, indexType,
                                 ImmutableArray.Create<BoundExpression>(boundEndValue, fromEndFalse), indexCtor);
@@ -1084,6 +1131,31 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 {
                     var rangeObj = new BoundObjectCreationExpression(syntax, rangeType,
                         ImmutableArray.Create(boundStartIndex, boundEndIndex), rangeCtor);
+
+                    // N1：降级为 Start/End + GetOffset(length) 组合 + CopyRange(target, start, count)——
+                    // 三后端零特判共享。不走 GetOffsetAndLength（BCL 返回 ValueTuple，IL 元数据读侧
+                    // 解析 GENERICINST 签名受限）；Start/End/GetOffset 均为非元组返回，三路直连。
+                    var getStart = rangeType.GetMethod("get_Start");
+                    var getEnd = rangeType.GetMethod("get_End");
+                    if (getStart != null && getEnd != null)
+                    {
+                        var rangeLengthExpr = new BoundMemberAccessExpression(syntax, TypeSymbol.Int32, boundTarget, "Length");
+
+                        var startObj = new BoundMemberCallExpression(syntax, rangeObj, "get_Start",
+                            ImmutableArray<BoundExpression>.Empty, indexType, getStart);
+                        var endObj = new BoundMemberCallExpression(syntax, rangeObj, "get_End",
+                            ImmutableArray<BoundExpression>.Empty, indexType, getEnd);
+
+                        var startOffset = TryBindIndexOffset(syntax, startObj, boundTarget);
+                        var endOffset = TryBindIndexOffset(syntax, endObj, boundTarget);
+                        if (startOffset != null && endOffset != null)
+                        {
+                            var sliceCount = BoundNodeFactory.Binary(syntax, endOffset, CoreSyntax.SyntaxKind.MinusToken, startOffset);
+                            return new BoundCallExpression(syntax, GetCopyRangeMethod(syntax, boundTarget.Type.ElementType),
+                                ImmutableArray.Create<BoundExpression>(boundTarget, startOffset, sliceCount));
+                        }
+                    }
+
                     return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType,
                         boundTarget, rangeObj);
                 }
@@ -1092,23 +1164,32 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             // Fallback: direct arithmetic (CopyRange)
             var elementType = boundTarget.Type.ElementType;
             var lengthExpr = new BoundMemberAccessExpression(range, TypeSymbol.Int32, boundTarget, "Length");
-            BoundExpression boundStart = range.Left != null
-                ? BindExpression(range.Left)
-                : new BoundLiteralExpression(range, 0, TypeSymbol.Int32);
-            BoundExpression boundEnd = range.Right != null
-                ? BindExpression(range.Right)
-                : lengthExpr;
 
+            BoundExpression boundStart;
             if (range.Left is UnaryExpressionSyntax leftUnary2 && leftUnary2.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
             {
+                // ^n：先拦截再绑定（对 ^ 一元表达式调用 BindExpression 会因无对应一元运算符而崩溃）
                 var leftOperand = BindExpression(leftUnary2.Operand);
                 boundStart = BoundNodeFactory.Binary(range.Left, lengthExpr, CoreSyntax.SyntaxKind.MinusToken, leftOperand);
             }
+            else
+            {
+                boundStart = range.Left != null
+                    ? BindExpression(range.Left)
+                    : new BoundLiteralExpression(range, 0, TypeSymbol.Int32);
+            }
 
+            BoundExpression boundEnd;
             if (range.Right is UnaryExpressionSyntax rightUnary2 && rightUnary2.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
             {
                 var rightOperand = BindExpression(rightUnary2.Operand);
                 boundEnd = BoundNodeFactory.Binary(range.Right, lengthExpr, CoreSyntax.SyntaxKind.MinusToken, rightOperand);
+            }
+            else
+            {
+                boundEnd = range.Right != null
+                    ? BindExpression(range.Right)
+                    : lengthExpr;
             }
 
             var count = BoundNodeFactory.Binary(range, boundEnd, CoreSyntax.SyntaxKind.MinusToken, boundStart);
@@ -1209,7 +1290,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     }
 
                     var facadeStaticContainerLike = classType.FacadeThisType != null ||
-                                       !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                                       (classType.IsValueType == false && !classType.Fields.Any(f => !f.IsStatic));
                     if (classType.IsFacadeClass && facadeStaticContainerLike)
                     {
                         // 基元别名 facade：getter 已静态降级 + 显式 this 首参
@@ -1305,7 +1386,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             if (boundExpression.Type is NamedTypeSymbol classType && classType != TypeSymbol.String && !classType.IsPrimitiveValueType)
             {
                 var facadeStaticContainerLike = classType.FacadeThisType != null ||
-                                       !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                                       (classType.IsValueType == false && !classType.Fields.Any(f => !f.IsStatic));
                     if (classType.IsFacadeClass && facadeStaticContainerLike)
                 {
                     var facadeMemberCall = TryBindFacadeMemberCall(syntax, identifier, boundExpression, boundArguments.ToImmutable());

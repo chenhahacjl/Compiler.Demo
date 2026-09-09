@@ -57,7 +57,9 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
             // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
-            var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
+            // N1：接口的实例（抽象）方法签名也须随库携带——否则库侧空壳接口（如 System.IDisposable methods:0）
+            // 会遮蔽消费方/源码声明，成员解析全部失败。
+            var methods = classType.Methods.Where(m => m.IsStatic || classType.IsInterface).ToArray();
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {
@@ -158,7 +160,8 @@ if (properties.Length > 0)
                 w.End();
             }
 
-            var methods = classType.Methods.Where(m => m.IsStatic).ToArray();
+            // N1：接口的实例（抽象）方法签名同样携带（同上）
+            var methods = classType.Methods.Where(m => m.IsStatic || classType.IsInterface).ToArray();
             w.Field("methods:" + methods.Length.ToString(CultureInfo.InvariantCulture));
             foreach (var method in methods)
             {

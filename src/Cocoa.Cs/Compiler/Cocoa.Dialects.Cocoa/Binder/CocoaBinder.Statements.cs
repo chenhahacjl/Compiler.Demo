@@ -1004,7 +1004,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 return familyResult;
             }
 
-            var definition = LookupType(identifier.Text) as NamedTypeSymbol;
+            // N1：同名不同元数的泛型类型（如 ValueTuple<T1>..<T1..T7>）——按实参个数精确查找，未命中回退原名
+            var definition = (LookupType(identifier.Text, argumentClauses.Length) ?? LookupType(identifier.Text)) as NamedTypeSymbol;
             if (definition == null)
             {
                 _diagnostics.ReportUndefinedType(identifier.Location, identifier.Text);

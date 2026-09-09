@@ -339,6 +339,22 @@ namespace Cocoa.CodeGen.Native
                     Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("LaunchProcess"), LirOperand.Constant(0)));
                     return result;
                 }
+                case BuiltinKind.CopyRange:
+                {
+                    // N1：(source: T[], start: i32, count: i32) → T[]——Index/Range 切片降级路径 + 无 SDK 回退共享
+                    var source = EmitExpression(arguments[0]);
+                    var start = EmitExpression(arguments[1]);
+                    var count = EmitExpression(arguments[2]);
+                    var elementType = function.ReturnType.ElementType!;
+                    var elementSizeRegister = EmitConst(ElementSize(elementType));
+                    var result = AllocateRegister(LirType.Addr);
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(source)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(1), LirOperand.Reg(start)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(2), LirOperand.Reg(count)));
+                    Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(3), LirOperand.Reg(elementSizeRegister)));
+                    Add(instructions, new LirInstruction(LirOpCode.Call, result, LirOperand.Runtime("SliceArray"), LirOperand.Constant(0)));
+                    return result;
+                }
                 default:
                     throw new InvalidOperationException($"native 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }

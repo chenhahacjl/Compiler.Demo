@@ -13,6 +13,7 @@ namespace Cocoa.CodeGen.Native
     ///   - Object/Type 成员面调用的 receiver 为 any / 数组 / 枚举（无 vtable 表示，装箱未实现）
     ///   - 接口声明与接口分派（M5/后续里程碑）
     ///   - 静态构造函数/静态字段初始化器（native 无 .cctor 触发时机）
+    ///   - throw 语句 / try/catch（native 无异常机制；zero-catch try/finally 由 MirToLir 直接支持）
     /// </summary>
     internal sealed class NativeObjectModelValidator : BoundTreeRewriter
     {
@@ -39,6 +40,26 @@ namespace Cocoa.CodeGen.Native
 
                 validator.RewriteStatement(body);
             }
+        }
+
+        public override BoundStatement RewriteStatement(BoundStatement node)
+        {
+            // N1：throw / try-catch 在 native 无异常机制支撑（规划 N5），编译期给出明确诊断而非运行期裸抛。
+            // zero-catch try/finally（含 lock 语句与 using 降级产物）放行，由 MirToLir 以 finally 克隆语义发射。
+            if (node.Kind == BoundNodeKind.ThrowStatement)
+            {
+                var throwLocation = node.Syntax?.Location ?? _fallbackLocation;
+                _diagnostics.ReportError(throwLocation, "native 后端暂不支持 throw 语句（异常机制规划 N5，见 docs-dev/plan/Stage6-Native后端对齐设计.md）。");
+                return node;
+            }
+
+            if (node.Kind == BoundNodeKind.TryStatement && ((BoundTryStatement)node).Catches.Length > 0)
+            {
+                var tryLocation = node.Syntax?.Location ?? _fallbackLocation;
+                _diagnostics.ReportError(tryLocation, "native 后端暂不支持 try/catch（仅支持 try/finally；异常机制规划 N5，见 docs-dev/plan/Stage6-Native后端对齐设计.md）。");
+            }
+
+            return base.RewriteStatement(node);
         }
 
         public override BoundExpression RewriteExpression(BoundExpression node)

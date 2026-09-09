@@ -261,6 +261,23 @@ namespace Cocoa.CodeGen.Native
         {
             var instructions = _currentFunction.Instructions;
             var classType = (NamedTypeSymbol)node.Type;
+
+            // N1：`new object()`（System.Object 无用户布局）——分配仅含 vtable 头的最小对象，
+            // 供 Lock._owner 等身份用途（字段初始化器/显式构造）。binder 可能已解析到 Object 的隐式 ctor，
+            // 故不检查 node.Constructor。
+            if (classType == NamedTypeSymbol.SystemObject)
+            {
+                var pointerSizeObj = _isX64 ? 8 : 4;
+                var objSizeRegister = EmitConst(pointerSizeObj);
+                var bareObject = AllocateRegister(LirType.Addr);
+                Add(instructions, new LirInstruction(LirOpCode.SetArg, LirOperand.Constant(0), LirOperand.Reg(objSizeRegister)));
+                Add(instructions, new LirInstruction(LirOpCode.Call, bareObject, LirOperand.Runtime("Alloc"), LirOperand.Constant(0)));
+
+                var objectVtable = EmitPseudoVTable("System.Object");
+                Add(instructions, new LirInstruction(LirOpCode.Store, null, LirOperand.Reg(bareObject), LirOperand.Reg(objectVtable), 0, pointerSizeObj));
+                return bareObject;
+            }
+
             var (offsets, instanceSize) = GetLayout(classType);
             var pointerSize = _isX64 ? 8 : 4;
 

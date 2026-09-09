@@ -51,6 +51,82 @@ namespace Cocoa.CodeGen.Native
             }
 
             // ------------------------------------------------------------------
+            // SliceArray(src:8, start:4, count:4, elemSize:4) → ptr:8
+            // N1：CopyRange 原语——把源数组元素区 [start, start+count) 复制进新数组。
+            // Index/Range 切片（binder 降级路径）与无 SDK 回退共享；字节粒度拷贝适配全部元素宽度。
+            // ------------------------------------------------------------------
+
+            private void EmitSliceArray()
+            {
+                var src = _args[0];
+                var start = _args[1];
+                var count = _args[2];
+                var elementSize = _args[3];
+
+                // dst = NewArray(count, elemSize)
+                var dst = NewPtr();
+                CallRuntime(dst, "NewArray", count, elementSize);
+
+                // 越界即退出：start >= 0、count >= 0、start + count <= src.Length
+                var srcLength = NewReg(4);
+                Load(srcLength, src, 0, 4);
+                var error = NewLabel();
+                var exit = NewLabel();
+                Cmp(start, 0);
+                Jcc(LirCond.Less, error);
+                Cmp(count, 0);
+                Jcc(LirCond.Less, error);
+                var end = NewReg(4);
+                Add(end, start, count);
+                Cmp(end, srcLength);
+                Jcc(LirCond.Greater, error);
+
+                // 字节粒度逐字节拷贝：dst 字节区[i] = src 字节区[(start·elemSize) + i]
+                var totalBytes = NewReg(4);
+                Imul(totalBytes, count, elementSize);
+                var srcByteBase = NewReg(4);
+                Imul(srcByteBase, start, elementSize);
+
+                var index = NewReg(4);
+                Mov(index, C(4, 0));
+                var loop = NewLabel();
+                var done = NewLabel();
+
+                Mark(loop);
+                Cmp(index, totalBytes);
+                Jcc(LirCond.GreaterOrEqual, done);
+
+                var srcAddr = NewPtr();
+                Lea(srcAddr, src, 8);
+                Add(srcAddr, srcAddr, srcByteBase);
+                Add(srcAddr, srcAddr, index);
+
+                var byteValue = NewReg(4);
+                Load(byteValue, srcAddr, 0, 1);
+
+                var dstAddr = NewPtr();
+                Lea(dstAddr, dst, 8);
+                Add(dstAddr, dstAddr, index);
+                Store(dstAddr, 0, byteValue, 1);
+
+                AddI(index, index, 1);
+                Jmp(loop);
+
+                Mark(done);
+                StoreRet(dst);
+                Jmp(exit);
+
+                Mark(error);
+                var message = NewPtr();
+                LeaData(message, _arrayBoundsMessage);
+                CallRuntime(null, "PrintString", message);
+                CallRuntime(null, "ExitProcess", C(4, 1));
+
+                Mark(exit);
+                EndFunction(_currentFunction!, 8);
+            }
+
+            // ------------------------------------------------------------------
             // ArrayBoundsCheck(index:4, length:4) → 越界时报错退出
             // ------------------------------------------------------------------
 

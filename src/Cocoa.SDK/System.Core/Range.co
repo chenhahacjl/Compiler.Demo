@@ -29,29 +29,29 @@ namespace System
             }
         }
 
-        public function GetOffsetAndLength(length: i32): (i32, i32)
+        public function GetOffsetAndLength(length: i32): ValueTuple<i32, i32>
         {
             var start = _start.GetOffset(length)
             var end = _end.GetOffset(length)
-            return (start, end - start)
+            return new ValueTuple<i32, i32>(start, end - start)
         }
 
         public static property All: Range
         {
             get
             {
-                return new Range(Index.Start, Index.End)
+                return new Range(new Index(0, false), new Index(0, true))
             }
         }
 
         public static function StartAt(start: Index): Range
         {
-            return new Range(start, Index.End)
+            return new Range(start, new Index(0, true))
         }
 
         public static function EndAt(end: Index): Range
         {
-            return new Range(Index.Start, end)
+            return new Range(new Index(0, false), end)
         }
     }
 }

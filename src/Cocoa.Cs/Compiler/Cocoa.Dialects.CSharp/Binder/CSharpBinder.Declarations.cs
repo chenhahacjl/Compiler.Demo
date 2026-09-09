@@ -2132,9 +2132,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             // facade 实例方法降级（隐藏首参 this + 强制静态）；索引器亦遵循。
-            // 6f 同源镜像：基元别名必降；同类 facade 无实例字段（纯成员面）亦降；携带实例状态的同类 facade 保留真实例。
+            // 6f 同源镜像：基元别名必降；同类 facade 无实例字段（纯成员面）亦降；
+            // N1：自型 facade struct（Index/Range）保留实例形状（对齐 BCL 实例方法 + 方法体可用隐式 this）。
             var staticContainerLike = classType.FacadeThisType != null ||
-                                      !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                                      (classType.IsValueType == false && !classType.Fields.Any(f => !f.IsStatic));
             var lower = !isStatic && classType.IsFacadeClass && staticContainerLike;
 
             // getter：get_Name / get_Item
@@ -2428,11 +2429,12 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             var visibility = GetVisibility(syntax.Modifiers, (isSyscall || isExtern) ? Visibility.Public : Visibility.Private);
             var isStatic = syntax.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.StaticKeyword);
 
-            // 6e-M19 M2-b → 6f（镜像 Cocoa 侧）：facade 实例方法降级——同源规则：FacadeThisType 异型必降；
-            // 同类 facade 无实例字段（纯成员面）维持降级；携带实例状态的同类 facade（FileStream._h…）保留真实例。
+            // 6e-M19 M2-b → 6f → N1（镜像 Cocoa 侧）：facade 实例方法降级——同源规则：FacadeThisType 异型必降；
+            // 同类 facade 无实例字段（纯成员面）维持降级；携带实例状态的同类 facade（FileStream._h…）保留真实例；
+            // N1：自型 facade struct（Index/Range）保留实例形状（对齐 BCL 实例方法 + 方法体可用隐式 this）。
             // 声明参数 ordinal 整体 +1（真静态无 instance offset，this 占据 arg0）
             var staticContainerLike = classType.FacadeThisType != null ||
-                                      !(classType.IsValueType == false && classType.Fields.Any(f => !f.IsStatic));
+                                      (classType.IsValueType == false && !classType.Fields.Any(f => !f.IsStatic));
             if (!isStatic && !isSyscall && !isExtern && classType.IsFacadeClass && staticContainerLike)
             {
                 isStatic = true;

@@ -646,6 +646,9 @@ namespace Cocoa.CodeAnalysis.Serialization
             // Managed dll 时把开放类型参数类当普通类发射（IL Unexpected type K）。类型注入经 GenericDefinitions。
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
+            // N1：同名不同元数的泛型定义（ValueTuple<T1>..<T1..T7>）——补 backtick 元数键，
+            // 避免同名键互相覆盖导致 `定义`元数` 实例化 mangle 无法反解
+            context.AddNamedType(fullName + "`" + classType.TypeParameters.Length, classType);
 
             // 6e-Step D-b：泛型定义类事件声明读回
             if (reader.PeekRaw().StartsWith("events:", StringComparison.Ordinal))

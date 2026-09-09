@@ -283,6 +283,40 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case BuiltinKind.ObjectReferenceEquals:
                     il.Emit(IlOpCodeTable.Get("Call"), _framework.ObjectReferenceEquals);
                     break;
+                case BuiltinKind.CopyRange:
+                {
+                    // N1：(source: T[], start: i32, count: i32) → T[]
+                    // 进 case 时栈 = [src, start, count]（switch 前统一压参）。
+                    // dst = new T[count]; Array.Copy(src, start, dst, 0, count); → dst
+                    var elementType = function.ReturnType.ElementType ?? TypeSymbol.Error;
+                    var countLocal = AllocateSyntheticTemporaryLocal((function, "count"), TypeSymbol.Int32);
+                    var dstLocal = AllocateSyntheticTemporaryLocal((function, "dst"), function.ReturnType);
+
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)countLocal);            // [src, start]
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)countLocal);
+                    if (IsReferenceElement(elementType))
+                    {
+                        il.Emit(IlOpCodeTable.Get("Newarr"), OperandForTypeToken(ToIlType(elementType)));
+                    }
+                    else
+                    {
+                        il.Emit(IlOpCodeTable.Get("Newarr"), _framework.RequireType(PrimitiveArrayElementTypeName(elementType)));
+                    }
+                    il.Emit(IlOpCodeTable.Get("Stloc"), (ushort)dstLocal);              // [src, start]
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);              // [src, start, dst]
+                    il.Emit(IlOpCodeTable.Get("Ldc_I4_0"));                             // [src, start, dst, 0]
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)countLocal);            // [src, start, dst, 0, count]
+
+                    var arrayCopy = _framework.FindMethod("System.Array", "Copy",
+                        new[] { "System.Array", "System.Int32", "System.Array", "System.Int32", "System.Int32" });
+                    if (arrayCopy == null) throw new Exception("System.Array.Copy(Array,int,Array,int,int) not found in framework references");
+                    il.Emit(IlOpCodeTable.Get("Call"), arrayCopy);                      // []
+
+                    il.Emit(IlOpCodeTable.Get("Ldloc"), (ushort)dstLocal);              // [dst]
+                    break;
+                }
                 default:
                     throw new InvalidOperationException($"IL 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }
@@ -698,6 +732,19 @@ namespace Cocoa.CodeGen.Managed.Writer
                 index = _currentFunctionLocals!.Count;
                 _temporaryLocalIndices.Add(node, index);
                 _currentFunctionLocals.Add(ToIlType(typeOverride ?? node.Type));
+            }
+
+            return index;
+        }
+
+        /// <summary>N1：非 BoundExpression 键的合成临时槽（builtin 发射内部用）；键须调用点唯一。</summary>
+        private int AllocateSyntheticTemporaryLocal(object key, TypeSymbol type)
+        {
+            if (!_syntheticTemporaryLocalIndices.TryGetValue(key, out var index))
+            {
+                index = _currentFunctionLocals!.Count;
+                _syntheticTemporaryLocalIndices.Add(key, index);
+                _currentFunctionLocals.Add(ToIlType(type));
             }
 
             return index;

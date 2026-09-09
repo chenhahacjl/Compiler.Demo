@@ -187,6 +187,9 @@ namespace Cocoa.CodeAnalysis.Serialization
                 "char" => TypeSymbol.Char,
                 "string" => TypeSymbol.String,
                 "void" => TypeSymbol.Void,
+                // N1：object 字段/参数（Lock._owner 等）TypeRef 以全名落盘 → 回落 SystemObject 单例
+                "object" => NamedTypeSymbol.SystemObject,
+                "System.Object" => NamedTypeSymbol.SystemObject,
                 "i128" => TypeSymbol.Int128,
                 "u128" => TypeSymbol.UInt128,
                 "f128" => TypeSymbol.Float128,
@@ -283,8 +286,15 @@ namespace Cocoa.CodeAnalysis.Serialization
                 }
 
                 position++; // skip '#'
-                if (!context.TypesByName.TryGetValue(fullName, out var definitionObject) ||
-                    definitionObject is not NamedTypeSymbol definition ||
+                // N1：同名不同元数的泛型定义（ValueTuple<T1>..<T1..T7>）——优先按 `定义`元数` 键查，
+                // 旧格式（单泛型定义）回退裸全名键 + 元数校验
+                if (!context.TypesByName.TryGetValue(fullName + "`" + arity, out var definitionObject) &&
+                    !context.TypesByName.TryGetValue(fullName, out definitionObject))
+                {
+                    throw new InvalidDataException($"Unknown generic definition '{fullName}`{arity}' in '{text}'");
+                }
+
+                if (definitionObject is not NamedTypeSymbol definition ||
                     !definition.IsGenericDefinition ||
                     definition.TypeParameters.Length != arity)
                 {

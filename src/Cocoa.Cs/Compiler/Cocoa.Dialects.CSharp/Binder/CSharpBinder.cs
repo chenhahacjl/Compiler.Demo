@@ -203,7 +203,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
             foreach (var (syntax, ns) in allClasses)
             {
-                var fullName = ns.Length == 0 ? syntax.Identifier.Text : ns + "." + syntax.Identifier.Text;
+                // 分组键含泛型元数：同名不同元数的泛型类（如 ValueTuple<T1>..<T1..T7>）是独立符号，
+                // 不得按名字合并为 partial（否则首段类型参数表被套用到全部段）
+                var arity = syntax.TypeParameters?.Parameters.Length ?? 0;
+                var fullName = (ns.Length == 0 ? syntax.Identifier.Text : ns + "." + syntax.Identifier.Text) + "`" + arity;
                 if (!classByName.TryGetValue(fullName, out var parts))
                 {
                     parts = new List<(ClassDeclarationSyntax Syntax, string Namespace)>();

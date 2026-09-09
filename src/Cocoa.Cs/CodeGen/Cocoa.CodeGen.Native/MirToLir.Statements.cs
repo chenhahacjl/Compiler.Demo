@@ -21,6 +21,13 @@ namespace Cocoa.CodeGen.Native
     /// </summary>
     internal sealed partial class MirToLir
     {
+        // N1：zero-catch try/finally 支持（catch 已由 NativeObjectModelValidator 编译期拒绝）。
+        // native 无异常机制 → try/finally = "try 体执行完后执行 finally"；
+        // 任何离开 try 体的控制流（return / 跳出体外 label 的 goto·条件跳转，含 lock 体中的 break/continue）
+        // 先克隆执行被退出 try 的 finally（嵌套时内→外逐层），再执行原跳转。
+        private readonly List<BoundStatement?> _finallyStack = new();
+        private readonly List<HashSet<BoundLabel>> _tryLocalLabels = new();
+
         private void EmitStatement(BoundStatement node)
         {
             var instructions = _currentFunction.Instructions;
@@ -158,18 +165,46 @@ namespace Cocoa.CodeGen.Native
                         break;
                     }
 
+                case BoundNodeKind.TryStatement:
+                    EmitTryStatement((BoundTryStatement)node);
+                    break;
+
                 case BoundNodeKind.LabelStatement:
                     Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(GetLabel(((BoundLabelStatement)node).Label))));
                     break;
 
                 case BoundNodeKind.GotoStatement:
-                    Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(GetLabel(((BoundGotoStatement)node).Label))));
-                    break;
+                    {
+                        var statement = (BoundGotoStatement)node;
+                        if (IsEscapingJump(statement.Label))
+                        {
+                            EmitFinallyForEscape(statement.Label);
+                        }
+
+                        Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(GetLabel(statement.Label))));
+                        break;
+                    }
 
                 case BoundNodeKind.ConditionalGotoStatement:
                     {
                         var statement = (BoundConditionalGotoStatement)node;
                         var condition = EmitExpression(statement.Condition);
+
+                        if (IsEscapingJump(statement.Label))
+                        {
+                            // 跳转将发生 → 先执行被退出 try 的 finally 再跳；
+                            // 跳转不发生 → 经 skipLabel 绕过 finally（条件只求值一次）
+                            var skipLabel = AllocLabel();
+                            Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
+                            Add(instructions, new LirInstruction(LirOpCode.Jcc,
+                                LirOperand.Constant((int)(statement.JumpIfTrue ? LirCond.Equal : LirCond.NotEqual)),
+                                LirOperand.Label(skipLabel)));
+                            EmitFinallyForEscape(statement.Label);
+                            Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(GetLabel(statement.Label))));
+                            Add(instructions, new LirInstruction(LirOpCode.Label, LirOperand.Label(skipLabel)));
+                            break;
+                        }
+
                         Add(instructions, new LirInstruction(LirOpCode.Cmp, LirOperand.Reg(condition), LirOperand.Constant(0)));
                         Add(instructions, new LirInstruction(LirOpCode.Jcc,
                             LirOperand.Constant((int)(statement.JumpIfTrue ? LirCond.NotEqual : LirCond.Equal)),
@@ -186,6 +221,8 @@ namespace Cocoa.CodeGen.Native
                             Add(instructions, new LirInstruction(LirOpCode.StoreRet, LirOperand.Reg(value)));
                         }
 
+                        // N1：return 离开全部活动 try → 先执行所有 finally（内→外），再跳函数尾
+                        EmitAllFinallys();
                         Add(instructions, new LirInstruction(LirOpCode.Jmp, LirOperand.Label(_currentFunction.EndLabelId)));
                         break;
                     }
@@ -196,6 +233,120 @@ namespace Cocoa.CodeGen.Native
 
                 default:
                     throw new Exception($"Unexpected statement: {node.Kind}");
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // N1：zero-catch try/finally（finally 克隆到每个出口）
+        // ------------------------------------------------------------------
+
+        private void EmitTryStatement(BoundTryStatement node)
+        {
+            var labels = new HashSet<BoundLabel>();
+            CollectTryLabels(node.TryBlock, labels);
+
+            _tryLocalLabels.Add(labels);
+            _finallyStack.Add(node.FinallyBlock);
+            EmitStatement(node.TryBlock);
+            _finallyStack.RemoveAt(_finallyStack.Count - 1);
+            _tryLocalLabels.RemoveAt(_tryLocalLabels.Count - 1);
+
+            // 正常路径出口：try 体顺序执行完后执行 finally
+            //（try 体若已含 return/跳出跳转，finally 已在出口处克隆执行，此处为不可达死代码，无害）
+            if (node.FinallyBlock != null)
+            {
+                EmitStatement(node.FinallyBlock);
+            }
+        }
+
+        /// <summary>收集 try 体内定义的全部 label（跳转到这些 label 不离开 try，无需先执行 finally）。</summary>
+        private static void CollectTryLabels(BoundStatement statement, HashSet<BoundLabel> labels)
+        {
+            switch (statement.Kind)
+            {
+                case BoundNodeKind.LabelStatement:
+                    labels.Add(((BoundLabelStatement)statement).Label);
+                    break;
+
+                case BoundNodeKind.BlockStatement:
+                    foreach (var inner in ((BoundBlockStatement)statement).Statements)
+                    {
+                        CollectTryLabels(inner, labels);
+                    }
+                    break;
+
+                case BoundNodeKind.SequencePointStatement:
+                    CollectTryLabels(((BoundSequencePointStatement)statement).Statement, labels);
+                    break;
+
+                case BoundNodeKind.IfStatement:
+                    var ifStatement = (BoundIfStatement)statement;
+                    CollectTryLabels(ifStatement.ThenStatement, labels);
+                    if (ifStatement.ElseStatement != null)
+                    {
+                        CollectTryLabels(ifStatement.ElseStatement, labels);
+                    }
+                    break;
+
+                case BoundNodeKind.WhileStatement:
+                    CollectTryLabels(((BoundWhileStatement)statement).Body, labels);
+                    break;
+
+                case BoundNodeKind.DoWhileStatement:
+                    CollectTryLabels(((BoundDoWhileStatement)statement).Body, labels);
+                    break;
+
+                case BoundNodeKind.ForRangeStatement:
+                    CollectTryLabels(((BoundForRangeStatement)statement).Body, labels);
+                    break;
+
+                case BoundNodeKind.TryStatement:
+                    var tryStatement = (BoundTryStatement)statement;
+                    CollectTryLabels(tryStatement.TryBlock, labels);
+                    if (tryStatement.FinallyBlock != null)
+                    {
+                        CollectTryLabels(tryStatement.FinallyBlock, labels);
+                    }
+                    foreach (var catchClause in tryStatement.Catches)
+                    {
+                        CollectTryLabels(catchClause.Body, labels);
+                    }
+                    break;
+            }
+        }
+
+        /// <summary>跳转目标不在最内层 try 体内 → 该跳转离开 try（需先执行其 finally）。</summary>
+        private bool IsEscapingJump(BoundLabel target)
+        {
+            return _tryLocalLabels.Count > 0 && !_tryLocalLabels[^1].Contains(target);
+        }
+
+        /// <summary>执行被跳出 try 的 finally：从最内层向外，直到目标 label 属于某层 try 体内为止。</summary>
+        private void EmitFinallyForEscape(BoundLabel target)
+        {
+            for (var i = _finallyStack.Count - 1; i >= 0; i--)
+            {
+                if (_tryLocalLabels[i].Contains(target))
+                {
+                    break;
+                }
+
+                if (_finallyStack[i] != null)
+                {
+                    EmitStatement(_finallyStack[i]!);
+                }
+            }
+        }
+
+        /// <summary>return 离开全部活动 try：按内→外执行所有 finally。</summary>
+        private void EmitAllFinallys()
+        {
+            for (var i = _finallyStack.Count - 1; i >= 0; i--)
+            {
+                if (_finallyStack[i] != null)
+                {
+                    EmitStatement(_finallyStack[i]!);
+                }
             }
         }
 

@@ -30,10 +30,24 @@
     (cls System.Exception public iface:false ifaces:0 methods:1 get_Message[System.Exception] fields:0 events:0 props:1
       (prop Message @string true false public false)
     )
+    (cls System.Index public iface:false ifaces:0 methods:4 FromStart[@i32] FromEnd[@i32] get_Start get_End fields:1
+      (fld _value @i32 public false false) events:0 props:4
+      (prop Value @i32 true false public false)
+      (prop IsFromEnd @bool true false public false)
+      (prop Start System.Index true false public true)
+      (prop End System.Index true false public true)
+    )
     (cls System.Int16 public iface:false ifaces:0 methods:7 ToString[@i16] CompareTo[@i16,@i16] Parse[@string] Equals[@i16,@i16] GetHashCode[@i16] ToString[@i16,@string] TryParse[@string,out:@i16] fields:0 events:0)
     (cls System.Int32 public iface:false ifaces:0 methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
     (cls System.Int64 public iface:false ifaces:0 methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
     (cls System.Math internal iface:false ifaces:0 methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
+    (cls System.Range public iface:false ifaces:0 methods:3 get_All StartAt[System.Index] EndAt[System.Index] fields:2
+      (fld _start System.Index public false false)
+      (fld _end System.Index public false false) events:0 props:3
+      (prop Start System.Index true false public false)
+      (prop End System.Index true false public false)
+      (prop All System.Range true false public true)
+    )
     (cls System.Runtime internal iface:false ifaces:0 methods:10 Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] Int32ToString[@i32] Int64ToString[@i64] BooleanToString[@bool] CharToString[@char] ParseInt64[@string] UInt64ToString[@u64] fields:0 events:0)
     (cls System.SByte public iface:false ifaces:0 methods:7 ToString[@i8] CompareTo[@i8,@i8] Parse[@string] Equals[@i8,@i8] GetHashCode[@i8] ToString[@i8,@string] TryParse[@string,out:@i8] fields:0 events:0)
     (cls System.Single public iface:false ifaces:0 methods:9 ToString[@f32] Equals[@f32,@f32] GetHashCode[@f32] ToString[@f32,@string] TryParse[@string,out:@f32] Parse[@string] IsNaN[@f32] IsInfinity[@f32] IsFinite[@f32] fields:0 events:0)
@@ -41,61 +55,61 @@
     (cls System.UInt16 public iface:false ifaces:0 methods:7 ToString[@u16] CompareTo[@u16,@u16] Parse[@string] Equals[@u16,@u16] GetHashCode[@u16] ToString[@u16,@string] TryParse[@string,out:@u16] fields:0 events:0)
     (cls System.UInt32 public iface:false ifaces:0 methods:7 ToString[@u32] CompareTo[@u32,@u32] Parse[@string] Equals[@u32,@u32] GetHashCode[@u32] ToString[@u32,@string] TryParse[@string,out:@u32] fields:0 events:0)
     (cls System.UInt64 public iface:false ifaces:0 methods:6 ToString[@u64] CompareTo[@u64,@u64] Equals[@u64,@u64] GetHashCode[@u64] ToString[@u64,@string] TryParse[@string,out:@u64] fields:0 events:0)
-    (gcls System.ValueTuple1 public iface:false ifaces:0 tparams:1
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:1
       (tpar T1 0 - v:- c:0) fields:1
-      (fld Item1 !System.ValueTuple1.T1 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple2 public iface:false ifaces:0 tparams:2
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:2
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0) fields:2
-      (fld Item1 !System.ValueTuple2.T1 public false false)
-      (fld Item2 !System.ValueTuple2.T2 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false)
+      (fld Item2 !System.ValueTuple.T2 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple3 public iface:false ifaces:0 tparams:3
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:3
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0) fields:3
-      (fld Item1 !System.ValueTuple3.T1 public false false)
-      (fld Item2 !System.ValueTuple3.T2 public false false)
-      (fld Item3 !System.ValueTuple3.T3 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false)
+      (fld Item2 !System.ValueTuple.T2 public false false)
+      (fld Item3 !System.ValueTuple.T3 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple4 public iface:false ifaces:0 tparams:4
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:4
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
       (tpar T4 3 - v:- c:0) fields:4
-      (fld Item1 !System.ValueTuple4.T1 public false false)
-      (fld Item2 !System.ValueTuple4.T2 public false false)
-      (fld Item3 !System.ValueTuple4.T3 public false false)
-      (fld Item4 !System.ValueTuple4.T4 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false)
+      (fld Item2 !System.ValueTuple.T2 public false false)
+      (fld Item3 !System.ValueTuple.T3 public false false)
+      (fld Item4 !System.ValueTuple.T4 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple5 public iface:false ifaces:0 tparams:5
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:5
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
       (tpar T4 3 - v:- c:0)
       (tpar T5 4 - v:- c:0) fields:5
-      (fld Item1 !System.ValueTuple5.T1 public false false)
-      (fld Item2 !System.ValueTuple5.T2 public false false)
-      (fld Item3 !System.ValueTuple5.T3 public false false)
-      (fld Item4 !System.ValueTuple5.T4 public false false)
-      (fld Item5 !System.ValueTuple5.T5 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false)
+      (fld Item2 !System.ValueTuple.T2 public false false)
+      (fld Item3 !System.ValueTuple.T3 public false false)
+      (fld Item4 !System.ValueTuple.T4 public false false)
+      (fld Item5 !System.ValueTuple.T5 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple6 public iface:false ifaces:0 tparams:6
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:6
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
       (tpar T4 3 - v:- c:0)
       (tpar T5 4 - v:- c:0)
       (tpar T6 5 - v:- c:0) fields:6
-      (fld Item1 !System.ValueTuple6.T1 public false false)
-      (fld Item2 !System.ValueTuple6.T2 public false false)
-      (fld Item3 !System.ValueTuple6.T3 public false false)
-      (fld Item4 !System.ValueTuple6.T4 public false false)
-      (fld Item5 !System.ValueTuple6.T5 public false false)
-      (fld Item6 !System.ValueTuple6.T6 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false)
+      (fld Item2 !System.ValueTuple.T2 public false false)
+      (fld Item3 !System.ValueTuple.T3 public false false)
+      (fld Item4 !System.ValueTuple.T4 public false false)
+      (fld Item5 !System.ValueTuple.T5 public false false)
+      (fld Item6 !System.ValueTuple.T6 public false false) methods:0 events:0
     )
-    (gcls System.ValueTuple7 public iface:false ifaces:0 tparams:7
+    (gcls System.ValueTuple public iface:false ifaces:0 tparams:7
       (tpar T1 0 - v:- c:0)
       (tpar T2 1 - v:- c:0)
       (tpar T3 2 - v:- c:0)
@@ -103,13 +117,13 @@
       (tpar T5 4 - v:- c:0)
       (tpar T6 5 - v:- c:0)
       (tpar T7 6 - v:- c:0) fields:7
-      (fld Item1 !System.ValueTuple7.T1 public false false)
-      (fld Item2 !System.ValueTuple7.T2 public false false)
-      (fld Item3 !System.ValueTuple7.T3 public false false)
-      (fld Item4 !System.ValueTuple7.T4 public false false)
-      (fld Item5 !System.ValueTuple7.T5 public false false)
-      (fld Item6 !System.ValueTuple7.T6 public false false)
-      (fld Item7 !System.ValueTuple7.T7 public false false) methods:0 events:0
+      (fld Item1 !System.ValueTuple.T1 public false false)
+      (fld Item2 !System.ValueTuple.T2 public false false)
+      (fld Item3 !System.ValueTuple.T3 public false false)
+      (fld Item4 !System.ValueTuple.T4 public false false)
+      (fld Item5 !System.ValueTuple.T5 public false false)
+      (fld Item6 !System.ValueTuple.T6 public false false)
+      (fld Item7 !System.ValueTuple.T7 public false false) methods:0 events:0
     )
     (cls System.IO.Directory public iface:false ifaces:0 methods:3 Exists[@string] CreateDirectory[@string] GetCurrentDirectory fields:0 events:0)
     (cls System.IO.File public iface:false ifaces:0 methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
@@ -121,7 +135,7 @@
       (prop Length @i64 true false public false)
       (prop Position @i64 true true public false)
     )
-    (cls System.IO.Stream public iface:true ifaces:0 methods:0 fields:0 events:0 props:5
+    (cls System.IO.Stream public iface:true ifaces:0 methods:11 get_CanRead get_CanWrite get_CanSeek get_Length get_Position set_Position[@i64] Read[@u8[],@i32,@i32] Write[@u8[],@i32,@i32] Flush Close Seek[@i64,@i32] fields:0 events:0 props:5
       (prop CanRead @bool true false public false)
       (prop CanWrite @bool true false public false)
       (prop CanSeek @bool true false public false)
@@ -154,7 +168,7 @@
       (fld _value @string private false false) events:0
     )
     (gcls System.Collections.Generic.IEnumerable public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
+      (tpar T 0 - v:- c:0) fields:0 methods:1 GetEnumerator events:0
     )
     (gcls System.Collections.Generic.KeyValuePair public iface:false ifaces:0 tparams:2
       (tpar TKey 0 - v:- c:0)
@@ -178,7 +192,7 @@
       (prop Item !System.Collections.Generic.Dictionary.V true true public false)
     )
     (gcls System.Collections.Generic.IEnumerator public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:2 MoveNext get_Current events:0 props:1
       (prop Current !System.Collections.Generic.IEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.DictionaryEnumerator public iface:false ifaces:1 System.Collections.Generic.IEnumerator`1#System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V tparams:2
@@ -191,7 +205,7 @@
       (prop Current System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.DictionaryEnumerator.K$!System.Collections.Generic.DictionaryEnumerator.V true false public false)
     )
     (gcls System.Collections.Generic.ICollection public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:2
+      (tpar T 0 - v:- c:0) fields:0 methods:7 get_Count get_IsReadOnly Add[!System.Collections.Generic.ICollection.T] Clear Contains[!System.Collections.Generic.ICollection.T] CopyTo[!System.Collections.Generic.ICollection.T[],@i32] Remove[!System.Collections.Generic.ICollection.T] events:0 props:2
       (prop Count @i32 true false public false)
       (prop IsReadOnly @bool true false public false)
     )
@@ -210,15 +224,15 @@
       (prop Current !System.Collections.Generic.HashSetEnumerator.T true false public false)
     )
     (gcls System.Collections.Generic.IList public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:5 get_Item[@i32] set_Item[@i32,!System.Collections.Generic.IList.T] IndexOf[!System.Collections.Generic.IList.T] Insert[@i32,!System.Collections.Generic.IList.T] RemoveAt[@i32] events:0 props:1
       (prop Item !System.Collections.Generic.IList.T true true public false)
     )
     (gcls System.Collections.Generic.IReadOnlyList public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Item[@i32] events:0 props:1
       (prop Item !System.Collections.Generic.IReadOnlyList.T true false public false)
     )
     (gcls System.Collections.Generic.IReadOnlyCollection public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0 props:1
+      (tpar T 0 - v:- c:0) fields:0 methods:1 get_Count events:0 props:1
       (prop Count @i32 true false public false)
     )
     (gcls System.Collections.Generic.List public iface:false ifaces:5 System.Collections.Generic.IList`1#!System.Collections.Generic.List.T System.Collections.Generic.ICollection`1#!System.Collections.Generic.List.T System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyList`1#!System.Collections.Generic.List.T System.Collections.Generic.IReadOnlyCollection`1#!System.Collections.Generic.List.T tparams:1
@@ -274,13 +288,19 @@
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
     (cls System.Syscall.StringSyscall public iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
-    (cls System.IDisposable public iface:true ifaces:0 methods:0 fields:0 events:0)
+    (cls System.Threading.Lock public iface:false ifaces:0 methods:1 get_ContentionCount fields:1
+      (fld _owner System.Object private false false) events:0 props:2
+      (prop IsHeldByCurrentThread @bool true false public false)
+      (prop ContentionCount @i64 true false public true)
+    )
+    (cls System.Threading.Monitor public iface:false ifaces:0 methods:9 Enter[System.Object] Exit[System.Object] IsEntered[System.Object] TryEnter[System.Object] TryEnter[System.Object,@i32] Wait[System.Object] Wait[System.Object,@i32] Pulse[System.Object] PulseAll[System.Object] fields:0 events:0)
+    (cls System.IDisposable public iface:true ifaces:0 methods:1 Dispose fields:0 events:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
-      (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
+      (tpar T 0 - v:- c:0) fields:0 methods:10 UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T] events:0
     )
     (gcls System.Collections.Generic.IDictionary public iface:true ifaces:0 tparams:2
       (tpar TKey 0 - v:- c:0)
-      (tpar TValue 1 - v:- c:0) fields:0 methods:0 events:0 props:5
+      (tpar TValue 1 - v:- c:0) fields:0 methods:13 get_Item[!System.Collections.Generic.IDictionary.TKey] set_Item[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue] get_Keys get_Values get_Count get_IsReadOnly Add[!System.Collections.Generic.IDictionary.TKey,!System.Collections.Generic.IDictionary.TValue] Clear ContainsKey[!System.Collections.Generic.IDictionary.TKey] Contains[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue] CopyTo[System.Collections.Generic.KeyValuePair`2#!System.Collections.Generic.IDictionary.TKey$!System.Collections.Generic.IDictionary.TValue[],@i32] Remove[!System.Collections.Generic.IDictionary.TKey] TryGetValue[!System.Collections.Generic.IDictionary.TKey,out:!System.Collections.Generic.IDictionary.TValue] events:0 props:5
       (prop Item !System.Collections.Generic.IDictionary.TValue true true public false)
       (prop Keys System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TKey true false public false)
       (prop Values System.Collections.Generic.ICollection`1#!System.Collections.Generic.IDictionary.TValue true false public false)
@@ -674,6 +694,23 @@
     (fn System.Core!System.Exception.get_Message[System.Exception] name:get_Message ret:@string ns:- owner:System.Exception extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:1
       (par System.Core!System.Exception.get_Message[System.Exception]/this this System.Exception 0 - this)
     )
+    (fn System.Core!System.Index.Index[@i32,@bool] name:Index ret:@void ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Core!System.Index.Index[@i32,@bool]/value value @i32 0 - -)
+      (par System.Core!System.Index.Index[@i32,@bool]/fromEnd fromEnd @bool 1 - -)
+    )
+    (fn System.Core!System.Index.get_Value[] name:get_Value ret:@i32 ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.Index.get_IsFromEnd[] name:get_IsFromEnd ret:@bool ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.Index.GetOffset[@i32] name:GetOffset ret:@i32 ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.Index.GetOffset[@i32]/length length @i32 0 - -)
+    )
+    (fn System.Core!System.Index.FromStart[@i32] name:FromStart ret:System.Index ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Index.FromStart[@i32]/value value @i32 0 - -)
+    )
+    (fn System.Core!System.Index.FromEnd[@i32] name:FromEnd ret:System.Index ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Index.FromEnd[@i32]/value value @i32 0 - -)
+    )
+    (fn System.Core!System.Index.get_Start[] name:get_Start ret:System.Index ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:0)
+    (fn System.Core!System.Index.get_End[] name:get_End ret:System.Index ns:- owner:System.Index extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:0)
     (fn System.Core!System.Int16.ToString[@i16] name:ToString ret:@string ns:- owner:System.Int16 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Int16.ToString[@i16]/this this @i16 0 - this)
     )
@@ -822,6 +859,22 @@
     )
     (fn System.Core!System.Math.Round[@f64] name:Round ret:@f64 ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Math.Round[@f64]/x x @f64 0 - -)
+    )
+    (fn System.Core!System.Range.Range[System.Index,System.Index] name:Range ret:@void ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Core!System.Range.Range[System.Index,System.Index]/start start System.Index 0 - -)
+      (par System.Core!System.Range.Range[System.Index,System.Index]/end end System.Index 1 - -)
+    )
+    (fn System.Core!System.Range.get_Start[] name:get_Start ret:System.Index ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.Range.get_End[] name:get_End ret:System.Index ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.Range.GetOffsetAndLength[@i32] name:GetOffsetAndLength ret:System.ValueTuple`2#@i32$@i32 ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.Range.GetOffsetAndLength[@i32]/length length @i32 0 - -)
+    )
+    (fn System.Core!System.Range.get_All[] name:get_All ret:System.Range ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:0)
+    (fn System.Core!System.Range.StartAt[System.Index] name:StartAt ret:System.Range ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Range.StartAt[System.Index]/start start System.Index 0 - -)
+    )
+    (fn System.Core!System.Range.EndAt[System.Index] name:EndAt ret:System.Range ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Range.EndAt[System.Index]/end end System.Index 0 - -)
     )
     (fn System.Core!System.Runtime.Floor[@f64] name:Floor ret:@f64 ns:- owner:System.Runtime extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Runtime.Floor[@f64]/x x @f64 0 - -)
@@ -1072,47 +1125,47 @@
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/s s @string 0 - -)
       (par System.Core!System.UInt64.TryParse[@string,out:@u64]/result result @u64 1 out -)
     )
-    (fn System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1] name:ValueTuple1 ret:@void ns:- owner:System.ValueTuple1 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
-      (par System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1]/p1 p1 !System.ValueTuple1.T1 0 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1]/p1 p1 !System.ValueTuple.T1 0 - -)
     )
-    (fn System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2] name:ValueTuple2 ret:@void ns:- owner:System.ValueTuple2 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
-      (par System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p1 p1 !System.ValueTuple2.T1 0 - -)
-      (par System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p2 p2 !System.ValueTuple2.T2 1 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2]/p1 p1 !System.ValueTuple.T1 0 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2]/p2 p2 !System.ValueTuple.T2 1 - -)
     )
-    (fn System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3] name:ValueTuple3 ret:@void ns:- owner:System.ValueTuple3 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:3
-      (par System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p1 p1 !System.ValueTuple3.T1 0 - -)
-      (par System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p2 p2 !System.ValueTuple3.T2 1 - -)
-      (par System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p3 p3 !System.ValueTuple3.T3 2 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:3
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]/p1 p1 !System.ValueTuple.T1 0 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]/p2 p2 !System.ValueTuple.T2 1 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]/p3 p3 !System.ValueTuple.T3 2 - -)
     )
-    (fn System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4] name:ValueTuple4 ret:@void ns:- owner:System.ValueTuple4 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:4
-      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p1 p1 !System.ValueTuple4.T1 0 - -)
-      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p2 p2 !System.ValueTuple4.T2 1 - -)
-      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p3 p3 !System.ValueTuple4.T3 2 - -)
-      (par System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p4 p4 !System.ValueTuple4.T4 3 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:4
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p1 p1 !System.ValueTuple.T1 0 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p2 p2 !System.ValueTuple.T2 1 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p3 p3 !System.ValueTuple.T3 2 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p4 p4 !System.ValueTuple.T4 3 - -)
     )
-    (fn System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5] name:ValueTuple5 ret:@void ns:- owner:System.ValueTuple5 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:5
-      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p1 p1 !System.ValueTuple5.T1 0 - -)
-      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p2 p2 !System.ValueTuple5.T2 1 - -)
-      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p3 p3 !System.ValueTuple5.T3 2 - -)
-      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p4 p4 !System.ValueTuple5.T4 3 - -)
-      (par System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p5 p5 !System.ValueTuple5.T5 4 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:5
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p1 p1 !System.ValueTuple.T1 0 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p2 p2 !System.ValueTuple.T2 1 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p3 p3 !System.ValueTuple.T3 2 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p4 p4 !System.ValueTuple.T4 3 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p5 p5 !System.ValueTuple.T5 4 - -)
     )
-    (fn System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6] name:ValueTuple6 ret:@void ns:- owner:System.ValueTuple6 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:6
-      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p1 p1 !System.ValueTuple6.T1 0 - -)
-      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p2 p2 !System.ValueTuple6.T2 1 - -)
-      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p3 p3 !System.ValueTuple6.T3 2 - -)
-      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p4 p4 !System.ValueTuple6.T4 3 - -)
-      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p5 p5 !System.ValueTuple6.T5 4 - -)
-      (par System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p6 p6 !System.ValueTuple6.T6 5 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:6
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p1 p1 !System.ValueTuple.T1 0 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p2 p2 !System.ValueTuple.T2 1 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p3 p3 !System.ValueTuple.T3 2 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p4 p4 !System.ValueTuple.T4 3 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p5 p5 !System.ValueTuple.T5 4 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p6 p6 !System.ValueTuple.T6 5 - -)
     )
-    (fn System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7] name:ValueTuple7 ret:@void ns:- owner:System.ValueTuple7 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:7
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p1 p1 !System.ValueTuple7.T1 0 - -)
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p2 p2 !System.ValueTuple7.T2 1 - -)
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p3 p3 !System.ValueTuple7.T3 2 - -)
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p4 p4 !System.ValueTuple7.T4 3 - -)
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p5 p5 !System.ValueTuple7.T5 4 - -)
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p6 p6 !System.ValueTuple7.T6 5 - -)
-      (par System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p7 p7 !System.ValueTuple7.T7 6 - -)
+    (fn System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7] name:ValueTuple ret:@void ns:- owner:System.ValueTuple extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:7
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p1 p1 !System.ValueTuple.T1 0 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p2 p2 !System.ValueTuple.T2 1 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p3 p3 !System.ValueTuple.T3 2 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p4 p4 !System.ValueTuple.T4 3 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p5 p5 !System.ValueTuple.T5 4 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p6 p6 !System.ValueTuple.T6 5 - -)
+      (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p7 p7 !System.ValueTuple.T7 6 - -)
     )
     (fn System.Core!System.IO.Directory.Exists[@string] name:Exists ret:@bool ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.IO.Directory.Exists[@string]/path path @string 0 - -)
@@ -1570,6 +1623,45 @@
     (fn System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]] name:StringFromChars ret:@string ns:- owner:System.Syscall.StringSyscall extern:false dll:- cc:winapi builtin:StringFromChars entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Syscall.StringSyscall.StringFromChars[@char[]]/chars chars @char[] 0 - -)
     )
+    (fn System.Core!System.Threading.Lock.Lock[] name:Lock ret:@void ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:0)
+    (fn System.Core!System.Threading.Lock.Enter[] name:Enter ret:@void ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Threading.Lock.Exit[] name:Exit ret:@void ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Threading.Lock.TryEnter[] name:TryEnter ret:@bool ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Threading.Lock.TryEnter[@i32] name:TryEnter ret:@bool ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.Threading.Lock.TryEnter[@i32]/millisecondsTimeout millisecondsTimeout @i32 0 - -)
+    )
+    (fn System.Core!System.Threading.Lock.get_IsHeldByCurrentThread[] name:get_IsHeldByCurrentThread ret:@bool ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:true params:0)
+    (fn System.Core!System.Threading.Lock.get_ContentionCount[] name:get_ContentionCount ret:@i64 ns:- owner:System.Threading.Lock extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:true params:0)
+    (systype System.Object)
+    (fn System.Core!System.Threading.Monitor.Enter[System.Object] name:Enter ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.Enter[System.Object]/obj obj System.Object 0 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.Exit[System.Object] name:Exit ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.Exit[System.Object]/obj obj System.Object 0 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.IsEntered[System.Object] name:IsEntered ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.IsEntered[System.Object]/obj obj System.Object 0 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.TryEnter[System.Object] name:TryEnter ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.TryEnter[System.Object]/obj obj System.Object 0 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.TryEnter[System.Object,@i32] name:TryEnter ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Threading.Monitor.TryEnter[System.Object,@i32]/obj obj System.Object 0 - -)
+      (par System.Core!System.Threading.Monitor.TryEnter[System.Object,@i32]/millisecondsTimeout millisecondsTimeout @i32 1 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.Wait[System.Object] name:Wait ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.Wait[System.Object]/obj obj System.Object 0 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.Wait[System.Object,@i32] name:Wait ret:@bool ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.Threading.Monitor.Wait[System.Object,@i32]/obj obj System.Object 0 - -)
+      (par System.Core!System.Threading.Monitor.Wait[System.Object,@i32]/millisecondsTimeout millisecondsTimeout @i32 1 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.Pulse[System.Object] name:Pulse ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.Pulse[System.Object]/obj obj System.Object 0 - -)
+    )
+    (fn System.Core!System.Threading.Monitor.PulseAll[System.Object] name:PulseAll ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.Threading.Monitor.PulseAll[System.Object]/obj obj System.Object 0 - -)
+    )
     (loc System.Core!System.Array.Sum[@i32[]]/sum false @i32)
     (loc System.Core!System.Array.Sum[@i32[]]/i false @i32)
     (loc System.Core!System.Array.Sum[@f64[]]/sum false @f64)
@@ -1702,6 +1794,8 @@
     (loc System.Core!System.Math.Gcd[@i32,@i32]/x false @i32)
     (loc System.Core!System.Math.Gcd[@i32,@i32]/y false @i32)
     (loc System.Core!System.Math.Gcd[@i32,@i32]/t false @i32)
+    (loc System.Core!System.Range.GetOffsetAndLength[@i32]/start false @i32)
+    (loc System.Core!System.Range.GetOffsetAndLength[@i32]/end false @i32)
     (loc System.Core!System.Runtime.Floor[@f64]/t false @i64)
     (loc System.Core!System.Runtime.Ceiling[@f64]/t false @i64)
     (loc System.Core!System.Runtime.Round[@f64]/t false @i64)
@@ -6182,6 +6276,150 @@
         )
       )
     )
+    (body System.Core!System.Index.Index[@i32,@bool]
+      (block 1
+        (if
+          (var System.Core!System.Index.Index[@i32,@bool]/fromEnd)
+          (block 1
+            (exprstmt
+              (memberassign
+                (this System.Index) name:_value @i32 false
+                (unary
+                  (uop ~ @i32)
+                  (var System.Core!System.Index.Index[@i32,@bool]/value)
+                )
+              )
+            )
+          )
+          (block 1
+            (exprstmt
+              (memberassign
+                (this System.Index) name:_value @i32 false
+                (var System.Core!System.Index.Index[@i32,@bool]/value)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.get_Value[]
+      (block 1
+        (if
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _value owner:System.Index
+              (this System.Index)
+            )
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (unary
+                (uop ~ @i32)
+                (memberacc @i32 _value owner:System.Index
+                  (this System.Index)
+                )
+              )
+            )
+          )
+          (block 1
+            (return
+              (memberacc @i32 _value owner:System.Index
+                (this System.Index)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.get_IsFromEnd[]
+      (block 1
+        (return
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _value owner:System.Index
+              (this System.Index)
+            )
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.GetOffset[@i32]
+      (block 1
+        (if
+          (binary
+            (bop < @i32 @i32)
+            (memberacc @i32 _value owner:System.Index
+              (this System.Index)
+            )
+            (lit @i32 i:0)
+          )
+          (block 1
+            (return
+              (binary
+                (bop + @i32 @i32)
+                (binary
+                  (bop + @i32 @i32)
+                  (var System.Core!System.Index.GetOffset[@i32]/length)
+                  (memberacc @i32 _value owner:System.Index
+                    (this System.Index)
+                  )
+                )
+                (lit @i32 i:1)
+              )
+            )
+          )
+          (block 1
+            (return
+              (memberacc @i32 _value owner:System.Index
+                (this System.Index)
+              )
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.FromStart[@i32]
+      (block 1
+        (return
+          (objnew System.Index 2
+            (var System.Core!System.Index.FromStart[@i32]/value)
+            (lit @bool b:0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.FromEnd[@i32]
+      (block 1
+        (return
+          (objnew System.Index 2
+            (var System.Core!System.Index.FromEnd[@i32]/value)
+            (lit @bool b:1)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.get_Start[]
+      (block 1
+        (return
+          (objnew System.Index 2
+            (lit @i32 i:0)
+            (lit @bool b:0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Index.get_End[]
+      (block 1
+        (return
+          (objnew System.Index 2
+            (lit @i32 i:0)
+            (lit @bool b:1)
+          )
+        )
+      )
+    )
     (body System.Core!System.Int16.ToString[@i16]
       (block 1
         (return
@@ -7407,6 +7645,112 @@
           (membercall @f64 Round System.Core!System.Runtime.Round[@f64] 1
             (statictype System.Runtime)
             (var System.Core!System.Math.Round[@f64]/x)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.Range[System.Index,System.Index]
+      (block 2
+        (exprstmt
+          (memberassign
+            (this System.Range) name:_start System.Index false
+            (var System.Core!System.Range.Range[System.Index,System.Index]/start)
+          )
+        )
+        (exprstmt
+          (memberassign
+            (this System.Range) name:_end System.Index false
+            (var System.Core!System.Range.Range[System.Index,System.Index]/end)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.get_Start[]
+      (block 1
+        (return
+          (memberacc System.Index _start owner:System.Range
+            (this System.Range)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.get_End[]
+      (block 1
+        (return
+          (memberacc System.Index _end owner:System.Range
+            (this System.Range)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.GetOffsetAndLength[@i32]
+      (block 3
+        (vardecl System.Core!System.Range.GetOffsetAndLength[@i32]/start
+          (membercall @i32 GetOffset System.Core!System.Index.GetOffset[@i32] 1
+            (memberacc System.Index _start owner:System.Range
+              (this System.Range)
+            )
+            (var System.Core!System.Range.GetOffsetAndLength[@i32]/length)
+          )
+        )
+        (vardecl System.Core!System.Range.GetOffsetAndLength[@i32]/end
+          (membercall @i32 GetOffset System.Core!System.Index.GetOffset[@i32] 1
+            (memberacc System.Index _end owner:System.Range
+              (this System.Range)
+            )
+            (var System.Core!System.Range.GetOffsetAndLength[@i32]/length)
+          )
+        )
+        (return
+          (objnew System.ValueTuple`2#@i32$@i32 2
+            (var System.Core!System.Range.GetOffsetAndLength[@i32]/start)
+            (binary
+              (bop - @i32 @i32)
+              (var System.Core!System.Range.GetOffsetAndLength[@i32]/end)
+              (var System.Core!System.Range.GetOffsetAndLength[@i32]/start)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.get_All[]
+      (block 1
+        (return
+          (objnew System.Range 2
+            (objnew System.Index 2
+              (lit @i32 i:0)
+              (lit @bool b:0)
+            )
+            (objnew System.Index 2
+              (lit @i32 i:0)
+              (lit @bool b:1)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.StartAt[System.Index]
+      (block 1
+        (return
+          (objnew System.Range 2
+            (var System.Core!System.Range.StartAt[System.Index]/start)
+            (objnew System.Index 2
+              (lit @i32 i:0)
+              (lit @bool b:1)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Range.EndAt[System.Index]
+      (block 1
+        (return
+          (objnew System.Range 2
+            (objnew System.Index 2
+              (lit @i32 i:0)
+              (lit @bool b:0)
+            )
+            (var System.Core!System.Range.EndAt[System.Index]/end)
           )
         )
       )
@@ -13694,6 +14038,129 @@
         )
       )
     )
+    (body System.Core!System.Threading.Lock.Lock[]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.Threading.Lock) name:_owner System.Object false
+            (objnew System.Object 0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Threading.Lock.Enter[]
+      (block 1
+        (exprstmt
+          (membercall @void Enter System.Core!System.Threading.Monitor.Enter[System.Object] 1
+            (statictype System.Threading.Monitor)
+            (memberacc System.Object _owner owner:System.Threading.Lock
+              (this System.Threading.Lock)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Threading.Lock.Exit[]
+      (block 1
+        (exprstmt
+          (membercall @void Exit System.Core!System.Threading.Monitor.Exit[System.Object] 1
+            (statictype System.Threading.Monitor)
+            (memberacc System.Object _owner owner:System.Threading.Lock
+              (this System.Threading.Lock)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Threading.Lock.TryEnter[]
+      (block 2
+        (exprstmt
+          (membercall @void Enter System.Core!System.Threading.Lock.Enter[] 0
+            (this System.Threading.Lock)
+          )
+        )
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Core!System.Threading.Lock.TryEnter[@i32]
+      (block 1
+        (return
+          (membercall @bool TryEnter System.Core!System.Threading.Lock.TryEnter[] 0
+            (this System.Threading.Lock)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Threading.Lock.get_IsHeldByCurrentThread[]
+      (block 1
+        (return
+          (membercall @bool IsEntered System.Core!System.Threading.Monitor.IsEntered[System.Object] 1
+            (statictype System.Threading.Monitor)
+            (memberacc System.Object _owner owner:System.Threading.Lock
+              (this System.Threading.Lock)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Threading.Lock.get_ContentionCount[]
+      (block 1
+        (return
+          (conv @i64
+            (lit @i32 i:0)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Threading.Monitor.Enter[System.Object]
+      (block 0)
+    )
+    (body System.Core!System.Threading.Monitor.Exit[System.Object]
+      (block 0)
+    )
+    (body System.Core!System.Threading.Monitor.IsEntered[System.Object]
+      (block 1
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Core!System.Threading.Monitor.TryEnter[System.Object]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Core!System.Threading.Monitor.TryEnter[System.Object,@i32]
+      (block 1
+        (return
+          (lit @bool b:1)
+        )
+      )
+    )
+    (body System.Core!System.Threading.Monitor.Wait[System.Object]
+      (block 1
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Core!System.Threading.Monitor.Wait[System.Object,@i32]
+      (block 1
+        (return
+          (lit @bool b:0)
+        )
+      )
+    )
+    (body System.Core!System.Threading.Monitor.Pulse[System.Object]
+      (block 0)
+    )
+    (body System.Core!System.Threading.Monitor.PulseAll[System.Object]
+      (block 0)
+    )
     (body System.Core!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]
       (block 4
         (exprstmt
@@ -16780,198 +17247,198 @@
         )
       )
     )
-    (body System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1]
       (block 1
         (exprstmt
           (memberassign
-            (this System.ValueTuple1) name:Item1 !System.ValueTuple1.T1 false
-            (var System.Core!System.ValueTuple1.ValueTuple1[!System.ValueTuple1.T1]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1]/p1)
           )
         )
       )
     )
-    (body System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2]
       (block 2
         (exprstmt
           (memberassign
-            (this System.ValueTuple2) name:Item1 !System.ValueTuple2.T1 false
-            (var System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2]/p1)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple2) name:Item2 !System.ValueTuple2.T2 false
-            (var System.Core!System.ValueTuple2.ValueTuple2[!System.ValueTuple2.T1,!System.ValueTuple2.T2]/p2)
+            (this System.ValueTuple) name:Item2 !System.ValueTuple.T2 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2]/p2)
           )
         )
       )
     )
-    (body System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]
       (block 3
         (exprstmt
           (memberassign
-            (this System.ValueTuple3) name:Item1 !System.ValueTuple3.T1 false
-            (var System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]/p1)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple3) name:Item2 !System.ValueTuple3.T2 false
-            (var System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p2)
+            (this System.ValueTuple) name:Item2 !System.ValueTuple.T2 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]/p2)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple3) name:Item3 !System.ValueTuple3.T3 false
-            (var System.Core!System.ValueTuple3.ValueTuple3[!System.ValueTuple3.T1,!System.ValueTuple3.T2,!System.ValueTuple3.T3]/p3)
+            (this System.ValueTuple) name:Item3 !System.ValueTuple.T3 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3]/p3)
           )
         )
       )
     )
-    (body System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]
       (block 4
         (exprstmt
           (memberassign
-            (this System.ValueTuple4) name:Item1 !System.ValueTuple4.T1 false
-            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p1)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple4) name:Item2 !System.ValueTuple4.T2 false
-            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p2)
+            (this System.ValueTuple) name:Item2 !System.ValueTuple.T2 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p2)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple4) name:Item3 !System.ValueTuple4.T3 false
-            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p3)
+            (this System.ValueTuple) name:Item3 !System.ValueTuple.T3 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p3)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple4) name:Item4 !System.ValueTuple4.T4 false
-            (var System.Core!System.ValueTuple4.ValueTuple4[!System.ValueTuple4.T1,!System.ValueTuple4.T2,!System.ValueTuple4.T3,!System.ValueTuple4.T4]/p4)
+            (this System.ValueTuple) name:Item4 !System.ValueTuple.T4 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4]/p4)
           )
         )
       )
     )
-    (body System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]
       (block 5
         (exprstmt
           (memberassign
-            (this System.ValueTuple5) name:Item1 !System.ValueTuple5.T1 false
-            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p1)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple5) name:Item2 !System.ValueTuple5.T2 false
-            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p2)
+            (this System.ValueTuple) name:Item2 !System.ValueTuple.T2 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p2)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple5) name:Item3 !System.ValueTuple5.T3 false
-            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p3)
+            (this System.ValueTuple) name:Item3 !System.ValueTuple.T3 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p3)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple5) name:Item4 !System.ValueTuple5.T4 false
-            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p4)
+            (this System.ValueTuple) name:Item4 !System.ValueTuple.T4 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p4)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple5) name:Item5 !System.ValueTuple5.T5 false
-            (var System.Core!System.ValueTuple5.ValueTuple5[!System.ValueTuple5.T1,!System.ValueTuple5.T2,!System.ValueTuple5.T3,!System.ValueTuple5.T4,!System.ValueTuple5.T5]/p5)
+            (this System.ValueTuple) name:Item5 !System.ValueTuple.T5 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5]/p5)
           )
         )
       )
     )
-    (body System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]
       (block 6
         (exprstmt
           (memberassign
-            (this System.ValueTuple6) name:Item1 !System.ValueTuple6.T1 false
-            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p1)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple6) name:Item2 !System.ValueTuple6.T2 false
-            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p2)
+            (this System.ValueTuple) name:Item2 !System.ValueTuple.T2 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p2)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple6) name:Item3 !System.ValueTuple6.T3 false
-            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p3)
+            (this System.ValueTuple) name:Item3 !System.ValueTuple.T3 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p3)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple6) name:Item4 !System.ValueTuple6.T4 false
-            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p4)
+            (this System.ValueTuple) name:Item4 !System.ValueTuple.T4 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p4)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple6) name:Item5 !System.ValueTuple6.T5 false
-            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p5)
+            (this System.ValueTuple) name:Item5 !System.ValueTuple.T5 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p5)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple6) name:Item6 !System.ValueTuple6.T6 false
-            (var System.Core!System.ValueTuple6.ValueTuple6[!System.ValueTuple6.T1,!System.ValueTuple6.T2,!System.ValueTuple6.T3,!System.ValueTuple6.T4,!System.ValueTuple6.T5,!System.ValueTuple6.T6]/p6)
+            (this System.ValueTuple) name:Item6 !System.ValueTuple.T6 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6]/p6)
           )
         )
       )
     )
-    (body System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]
+    (body System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]
       (block 7
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item1 !System.ValueTuple7.T1 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p1)
+            (this System.ValueTuple) name:Item1 !System.ValueTuple.T1 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p1)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item2 !System.ValueTuple7.T2 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p2)
+            (this System.ValueTuple) name:Item2 !System.ValueTuple.T2 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p2)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item3 !System.ValueTuple7.T3 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p3)
+            (this System.ValueTuple) name:Item3 !System.ValueTuple.T3 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p3)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item4 !System.ValueTuple7.T4 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p4)
+            (this System.ValueTuple) name:Item4 !System.ValueTuple.T4 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p4)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item5 !System.ValueTuple7.T5 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p5)
+            (this System.ValueTuple) name:Item5 !System.ValueTuple.T5 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p5)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item6 !System.ValueTuple7.T6 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p6)
+            (this System.ValueTuple) name:Item6 !System.ValueTuple.T6 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p6)
           )
         )
         (exprstmt
           (memberassign
-            (this System.ValueTuple7) name:Item7 !System.ValueTuple7.T7 false
-            (var System.Core!System.ValueTuple7.ValueTuple7[!System.ValueTuple7.T1,!System.ValueTuple7.T2,!System.ValueTuple7.T3,!System.ValueTuple7.T4,!System.ValueTuple7.T5,!System.ValueTuple7.T6,!System.ValueTuple7.T7]/p7)
+            (this System.ValueTuple) name:Item7 !System.ValueTuple.T7 false
+            (var System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p7)
           )
         )
       )
@@ -16983,6 +17450,7 @@
     (ns System.Collections.Generic)
     (ns System.IO)
     (ns System.Syscall)
+    (ns System.Threading)
   )
 )
-(checksum sha256:8b0f638febf661921602f8711b9dff7c9f8008a2a81cd26ff820db5a4da87ef1)
+(checksum sha256:6c62427f2ab2bde632d10cc23080add50888bf7d5dc962b73e73fcf41a0483d3)
