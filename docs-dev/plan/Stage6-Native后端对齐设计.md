@@ -6,6 +6,57 @@
 
 ---
 
+## 实施进度（2026-09-09 更新）
+
+> **提交**：`437c7a8` wip(N1) | **全量**：47,863 通过 / 91 失败（HEAD+新 .coa 对照 47,859/95，净修复 4 失败、零新增回归）
+
+### N1 已落地
+
+| 项 | 内容 |
+|----|------|
+| native try/finally | `MirToLir.Statements.cs` finally 栈 + 出口克隆（return / 跳出体的 goto·条件跳转，嵌套时内→外）；catch 在 `NativeObjectModelValidator` 编译期拒绝 |
+| Index/Range 切片降级 | 两方言 binder：`arr[^n]` → `GetOffset(length)` 实例调用；`arr[i..j]` → `Start/End + GetOffset + CopyRange`（**未走 GetOffsetAndLength**，见偏差 ②）；`arr[i]=x`（Index 变量）同构；`str[^1]` 顺带修复 |
+| CopyRange builtin | native `SliceArray` 运行时（字节粒度拷贝 + 越界陷阱）+ IL `Array.Copy`（合成临时槽） |
+| `new object()` | native 分配仅含 vtable 头的最小对象（Lock._owner 身份用途） |
+| SDK 首次真正构建 | Index/Range/Monitor/Lock/ValueTuple 方法体首次进入 System.Core.coa——**此前所有"通过"的 Index/Range 测试实际走算术回退路径** |
+
+### 顺带修复的存量/系统性 bug（6 个）
+
+1. **`arr[^2..]` 解析崩溃**（存量）：`^` 一元表达式在拦截检查**之前**被 `BindExpression(range.Left)` 绑定 → `BoundUnaryOperator.Translate(HatToken)` 抛异常。修复：两个 binder 的 SDK 路径（左/右）与回退路径均改为先拦截再绑定
+2. **类分组忽略泛型元数**：`BindGlobalScope` 按 `ns + 名` 分组 → `ValueTuple<T1>..<T1..T7>` 七个声明被合并成一个残废类（首段类型参数表套用全部段）。修复：分组键加 `` `元数 `` 后缀
+3. **序列化器丢接口实例方法**：`EmitClassSymbol`/`EmitGenericClassSymbol` 只写静态方法 → 新 .coa 里的 `System.IDisposable` 是空壳（methods:0），**遮蔽消费方源码声明**，连锁破坏 ExternalInterface/StructValueType 等 6+ 测试。修复：接口（iface:true）携带实例方法签名
+4. **`System.Object` TypeRef 无法反解**：Lock._owner 字段以全名落盘，读侧 switch 无此映射 → 整个 .coa 加载静默降级为空表（SystemLibrary.TryLoad 吞异常）。修复：`"object"`/`"System.Object"` → SystemObject 单例
+5. **同名不同元数 gcls 相互覆盖**：7 个 `System.ValueTuple` 都以裸全名注册 → 实例化 mangle `` `定义`元数` `` 反解失败。修复：读侧补 backtick 元数键 + 查找优先按元数键
+6. **facade struct（自型）错误降级**：Index/Range 的实例方法被降级为 static + 隐藏 this → 方法体失去隐式 this（"静态方法中不能访问实例字段"）且与 BCL 实例方法签名不匹配。修复：降级条件改为 `FacadeThisType != null ||（引用型 facade 且无实例字段）`——自型 struct facade 保留实例形状（4 处副本：Declarations ×2 + Expressions ×2，两方言）
+
+### 与原设计的偏差
+
+| # | 原设计 | 实际 | 原因 |
+|---|--------|------|------|
+| ① | native 在 EmitElementAccess 特判 Index/Range | **binder 层降级**（三后端共享） | per-backend 特判无法保证库方法可达性（native 可达性从绑定树计算）；binder 降级天然解决 |
+| ② | 切片经 `GetOffsetAndLength` 返回元组 | **Start/End + GetOffset 组合** | BCL `GetOffsetAndLength` 返回 ValueTuple → IL 元数据读侧解析 GENERICINST 方法签名受限；Start/End/GetOffset 均为非元组返回三路直连 |
+| ③ | facade struct 降级为静态调用形状 | **保留实例形状** | 见 bug 6；BCL System.Index.GetOffset 本就是实例方法 |
+| ④ | 解释器 lock 场景零改动 | 发现**解释器无法执行 try 体内的跳转** | 见下"N1 收尾清单" |
+
+### N1 收尾清单（下一轮工作面）
+
+| # | 问题 | 层 | 详情 |
+|---|------|----|------|
+| 1 | 解释器无法执行 try 体内的 goto/条件跳转（`lock` + 循环场景） | 解释器 | `EvaluateSingleStatement` 不支持跳转节点；需要 GotoSignal 式控制流异常或 MIR 块拍平（try 体保持成对 finally 语义） |
+| 2 | GetOffsetAndLength 的 ValueTuple 返回类型在 reader 产生 `System.System.ValueTuple`2` 双前缀名 | 序列化器 | Instantiate 的 FullName 拼装重复加 ns；当前切片路径已绕开，但 GetOffsetAndLength 仍在 .coa 中，native 可达性扫描会拉进其方法体（ValueTuple 构造器发射崩溃） |
+| 3 | IL：facade struct `System.Index` TypeDef/TypeRef 冲突 → `TypeLoadException: value type mismatch` | IL 发射器 | 用户程序集同时出现 Index 的 TypeDef（值类型）与 BCL TypeRef 引用；需查明 emittedClasses 把 .coa facade struct 类带进发射清单的路径并排除 |
+| 4 | IL：lock 中带 return 的函数 `Grab` → `InvalidProgramException` | IL 发射器 | try 体 return + finally 的 leave/ EH 块布局问题（`CollectLabels` 已修 try 遍历，仍需核查 EH 子句边界与 return 前置序列点） |
+| 5 | native：Oop_Override ToString/GetHashCode 覆写返回垃圾值（4 测试，新旧 .coa 交互） | native vtable | Dog.ToString 虚槽内容指向错误目标；怀疑 .coa 新增类改变存活类集合与 AssignVirtualSlots 序；无 try 的代码路径指令流已验证与改动前逐指令一致，嫌疑集中在运行时函数注册顺序或伪 vtable 交互 |
+| 6 | 解释器/IL/测试中的 `Variable 'Console' doesn't exist`（裸 `Console.` 短名） | binder using 解析 | facade 类（null target）注入时被 `continue` 跳过未按名注册 scope，仅全名经 GlobalNamespace 树可达；裸短名依赖 using 前缀扫描路径，部分 IL e2e（C# 方言）未命中——随 N1 收尾一并核查 |
+
+### 测试基线（本轮结束）
+
+- 全量：47,863 通过 / 91 失败 / 1 skip（91 = 80 既有 + 9 个新 IndexRangeLock 三后端测试中的未绿项）
+- Index 元素访问（含 `^1`、`^4`、`arr[^2]=x`、`Index.FromEnd` 变量）：**解释器/native x64/x86 三路 green**
+- IL 端 Index/Rnage/Lock 与解释器/原生 Range/Lock：见收尾清单
+
+---
+
 ## 背景与调查结论
 
 ### Native facade 机制与 IL 的本质差异
