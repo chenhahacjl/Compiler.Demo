@@ -70,6 +70,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 case CoreSyntax.CocoaSyntaxKind.ReturnStatement: return BindReturnStatement((ReturnStatementSyntax)syntax);
                 case CoreSyntax.CocoaSyntaxKind.ThrowStatement: return BindThrowStatement((ThrowStatementSyntax)syntax);
                 case CoreSyntax.CocoaSyntaxKind.TryStatement: return BindTryStatement((TryStatementSyntax)syntax);
+                case CoreSyntax.CocoaSyntaxKind.UsingStatement: return BindUsingStatement((UsingStatementSyntax)syntax);
+                case CoreSyntax.CocoaSyntaxKind.LockStatement: return BindLockStatement((LockStatementSyntax)syntax);
+                case CoreSyntax.CocoaSyntaxKind.CheckedStatement:
+                case CoreSyntax.CocoaSyntaxKind.UncheckedStatement: return BindCheckedStatement((CheckedStatementSyntax)syntax);
+                case CoreSyntax.CocoaSyntaxKind.YieldReturnStatement: return BindYieldReturnStatement((YieldReturnStatementSyntax)syntax);
+                case CoreSyntax.CocoaSyntaxKind.YieldBreakStatement: return BindYieldBreakStatement((YieldBreakStatementSyntax)syntax);
                 case CoreSyntax.CocoaSyntaxKind.ExpressionStatement: return BindExpressionStatement((ExpressionStatementSyntax)syntax);
                 case CoreSyntax.CocoaSyntaxKind.LocalFunctionDeclaration: return BindLocalFunctionDeclaration((LocalFunctionDeclarationStatementSyntax)syntax);
                 default:
@@ -95,6 +101,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 if (statementSyntax is VariableDeclarationSyntax varDecl && varDecl.IsUsingDeclaration &&
                     statement is BoundVariableDeclaration boundVar && boundVar.Initializer.Type != TypeSymbol.Error)
                 {
+                    // IDisposable 类型检查
+                    ValidateUsingResourceType(varDecl, boundVar.Variable.Type);
                     usingVariables.Add((boundVar.Variable, boundVar.Initializer));
                 }
             }
@@ -112,10 +120,39 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return block;
         }
 
+        /// <summary>
+        /// using 资源类型检查：类型必须实现 IDisposable 或有 Dispose() 方法
+        /// </summary>
+        private void ValidateUsingResourceType(VariableDeclarationSyntax syntax, TypeSymbol resourceType)
+        {
+            if (resourceType == TypeSymbol.Error || resourceType == TypeSymbol.Null)
+                return;
+
+            if (resourceType is not NamedTypeSymbol namedType)
+                return;
+
+            // 检查是否实现 IDisposable
+            var disposable = LookupType("IDisposable") as NamedTypeSymbol;
+            if (disposable != null && namedType.GetAllInterfaces().Contains(disposable))
+                return;
+
+            // 检查是否有 Dispose() 方法（模式匹配）
+            if (namedType.GetMethod("Dispose") != null)
+                return;
+
+            // 都没有 → 报错
+            _diagnostics.ReportError(syntax.Location,
+                $"Type '{resourceType}' cannot be used in a using statement " +
+                $"because it does not implement IDisposable and has no Dispose() method.");
+        }
+
         private BoundStatement WrapWithUsingFinally(CoreSyntax.SyntaxNode syntax, BoundBlockStatement block,
             List<(VariableSymbol variable, BoundExpression initializer)> usingVars)
         {
             var finallyStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+
+            // 查找 IDisposable 接口
+            var disposable = LookupType("IDisposable") as NamedTypeSymbol;
 
             foreach (var (variable, _) in usingVars)
             {
@@ -123,7 +160,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 var notNull = BoundNodeFactory.Binary(syntax, varExpr, CoreSyntax.SyntaxKind.BangEqualsToken,
                     new BoundLiteralExpression(syntax, null!, TypeSymbol.Null));
 
-                var disposeCall = new BoundMemberCallExpression(syntax, varExpr, "Dispose",
+                BoundExpression disposeReceiver;
+
+                // 如果类型实现了 IDisposable，生成 ((IDisposable)x).Dispose()
+                if (disposable != null &&
+                    variable.Type is NamedTypeSymbol namedType &&
+                    namedType.GetAllInterfaces().Contains(disposable))
+                {
+                    disposeReceiver = new BoundConversionExpression(syntax, disposable, varExpr);
+                }
+                else
+                {
+                    // 模式匹配：直接调用 x.Dispose()
+                    disposeReceiver = varExpr;
+                }
+
+                var disposeCall = new BoundMemberCallExpression(syntax, disposeReceiver, "Dispose",
                     ImmutableArray<BoundExpression>.Empty, TypeSymbol.Void);
 
                 var ifTrue = new BoundBlockStatement(syntax, ImmutableArray.Create<BoundStatement>(
@@ -134,6 +186,105 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             var finallyBlock = new BoundBlockStatement(syntax, finallyStatements.ToImmutable());
             return new BoundTryStatement(syntax, block, ImmutableArray<BoundCatchClause>.Empty, finallyBlock);
+        }
+
+        private BoundStatement BindUsingStatement(UsingStatementSyntax syntax)
+        {
+            _scope = new BoundScope(_scope);
+
+            // Bind resource declaration
+            var resource = BindStatement(syntax.Resource);
+
+            // Validate resource type for IDisposable
+            if (resource is BoundVariableDeclaration boundVar && boundVar.Initializer.Type != TypeSymbol.Error)
+            {
+                if (syntax.Resource is VariableDeclarationSyntax varDecl)
+                    ValidateUsingResourceType(varDecl, boundVar.Variable.Type);
+            }
+
+            // Bind body
+            var bodyBlock = BindBlockStatement(syntax.Body);
+
+            _scope = _scope.Parent!;
+
+            // Collect using variable for try/finally lowering
+            var usingVariables = new List<(VariableSymbol variable, BoundExpression initializer)>();
+            if (resource is BoundVariableDeclaration bv && bv.Initializer.Type != TypeSymbol.Error)
+            {
+                usingVariables.Add((bv.Variable, bv.Initializer));
+            }
+
+            // Flatten: resource + body statements into one block
+            var statements = ImmutableArray.CreateBuilder<BoundStatement>();
+            statements.Add(resource);
+            if (bodyBlock is BoundBlockStatement bb)
+            {
+                foreach (var s in bb.Statements)
+                    statements.Add(s);
+            }
+            else
+            {
+                statements.Add(bodyBlock);
+            }
+
+            var block = new BoundBlockStatement(syntax, statements.ToImmutable());
+            if (usingVariables.Count > 0)
+            {
+                var tryFinally = WrapWithUsingFinally(syntax, block, usingVariables);
+                return new BoundBlockStatement(syntax, ImmutableArray.Create<BoundStatement>(tryFinally));
+            }
+
+            return block;
+        }
+
+        private BoundStatement BindLockStatement(LockStatementSyntax syntax)
+        {
+            // lock (expr) { body }
+            // → try { expr; body } finally { }
+
+            var boundExpression = BindExpression(syntax.Expression);
+            if (boundExpression.Type == TypeSymbol.Error)
+                return new BoundNopStatement(syntax);
+
+            var exprStatement = new BoundExpressionStatement(syntax, boundExpression);
+            var boundBody = BindStatement(syntax.Body);
+
+            // Unwrap body if it's a block statement to avoid nested blocks
+            var bodyStatements = ImmutableArray.CreateBuilder<BoundStatement>();
+            bodyStatements.Add(exprStatement);
+            if (boundBody is BoundBlockStatement block)
+            {
+                foreach (var s in block.Statements)
+                    bodyStatements.Add(s);
+            }
+            else
+            {
+                bodyStatements.Add(boundBody);
+            }
+
+            var tryBlock = new BoundBlockStatement(syntax.Body, bodyStatements.ToImmutable());
+            var finallyBlock = new BoundBlockStatement(syntax.Body,
+                ImmutableArray.Create<BoundStatement>(new BoundNopStatement(syntax)));
+
+            return new BoundTryStatement(syntax, tryBlock,
+                ImmutableArray<BoundCatchClause>.Empty, finallyBlock);
+        }
+
+        private BoundStatement BindCheckedStatement(CheckedStatementSyntax syntax)
+        {
+            // checked/unchecked { body } → just bind the body (no overflow checking in interpreter)
+            return BindStatement(syntax.Body);
+        }
+
+        private BoundStatement BindYieldReturnStatement(YieldReturnStatementSyntax syntax)
+        {
+            var expression = BindExpression(syntax.Expression);
+            return new BoundYieldReturnStatement(syntax, expression);
+        }
+
+        private BoundStatement BindYieldBreakStatement(YieldBreakStatementSyntax syntax)
+        {
+            return new BoundYieldBreakStatement(syntax);
         }
 
         private BoundStatement BindVariableDeclaration(VariableDeclarationSyntax syntax)

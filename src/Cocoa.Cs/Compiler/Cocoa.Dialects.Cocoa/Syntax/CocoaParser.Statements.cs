@@ -45,6 +45,16 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 case SyntaxKind.WhileKeyword:
                     statement = ParseWhileStatement();
                     break;
+                case SyntaxKind.LockKeyword:
+                    statement = ParseLockStatement();
+                    break;
+                case SyntaxKind.CheckedKeyword:
+                case SyntaxKind.UncheckedKeyword:
+                    statement = ParseCheckedStatement();
+                    break;
+                case SyntaxKind.YieldKeyword:
+                    statement = ParseYieldStatement();
+                    break;
                 case SyntaxKind.DoKeyword:
                     statement = ParseDoWhileStatement();
                     break;
@@ -555,6 +565,39 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             return new TryStatementSyntax(_syntaxTree, keyword, tryBlock, catches.ToImmutable(), finallyClause);
         }
 
+        private StatementSyntax ParseLockStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.LockKeyword);
+            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var expression = ParseExpression();
+            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var body = ParseBlockStatement();
+            return new LockStatementSyntax(_syntaxTree, keyword, openParen, expression, closeParen, body);
+        }
+
+        private StatementSyntax ParseCheckedStatement()
+        {
+            var keyword = MatchToken(Current.Kind);
+            var body = ParseBlockStatement();
+            return new CheckedStatementSyntax(_syntaxTree, keyword, body);
+        }
+
+        private StatementSyntax ParseYieldStatement()
+        {
+            var yieldKeyword = MatchToken(SyntaxKind.YieldKeyword);
+            if (Current.Kind == SyntaxKind.ReturnKeyword)
+            {
+                var returnKeyword = MatchToken(SyntaxKind.ReturnKeyword);
+                var expression = ParseExpression();
+                return new YieldReturnStatementSyntax(_syntaxTree, yieldKeyword, returnKeyword, expression);
+            }
+            else
+            {
+                var breakKeyword = MatchToken(SyntaxKind.BreakKeyword);
+                return new YieldBreakStatementSyntax(_syntaxTree, yieldKeyword, breakKeyword);
+            }
+        }
+
         private StatementSyntax ParseDialectNativeStatement()
         {
             if (Peek(0).Kind == SyntaxKind.IdentifierToken &&
@@ -619,7 +662,18 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         private StatementSyntax ParseUsingDeclaration()
         {
             var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
-            // using var x = expr
+
+            // using (var x = expr) { body } — using 语句
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+                var resource = ParseVariableDeclaration();
+                var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+                var body = ParseBlockStatement();
+                return new UsingStatementSyntax(_syntaxTree, usingKeyword, openParen, resource, closeParen, body);
+            }
+
+            // using var x = expr — using 声明
             if (Current.Kind == SyntaxKind.VarKeyword)
             {
                 var varKeyword = MatchToken(SyntaxKind.VarKeyword);

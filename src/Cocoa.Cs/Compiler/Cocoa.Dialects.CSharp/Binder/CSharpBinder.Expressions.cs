@@ -887,48 +887,91 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
 
         private BoundExpression BindElementAccessExpression(ElementAccessExpressionSyntax syntax)
         {
-            var boundTarget = BindExpression(syntax.Expression);
-            var boundIndex = BindExpression(syntax.Index);
+            // ^n (index from end) → desugar to array.Length - n at syntax level
+            if (syntax.Index is UnaryExpressionSyntax unary && unary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+            {
+                var boundTarget = BindExpression(syntax.Expression);
+                if (boundTarget.Type == TypeSymbol.Error)
+                    return new BoundErrorExpression(syntax);
 
-            if (boundTarget.Type == TypeSymbol.Error)
+                if (boundTarget.Type.ElementType == null)
+                {
+                    _diagnostics.ReportIndexRequiresArray(syntax.Location, boundTarget.Type);
+                    return new BoundErrorExpression(syntax);
+                }
+
+                var boundOperand = BindExpression(unary.Operand);
+                var lengthExpr = new BoundMemberAccessExpression(syntax.Index, TypeSymbol.Int32, boundTarget, "Length");
+                var boundIndex = BoundNodeFactory.Binary(syntax.Index, lengthExpr,
+                    CoreSyntax.SyntaxKind.MinusToken, boundOperand);
+                return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType, boundTarget, boundIndex);
+            }
+
+            // start..end / start.. / ..end / .. (range expression) → desugar to array slice
+            if (syntax.Index is RangeExpressionSyntax range)
+            {
+                return BindRangeExpression(syntax, range);
+            }
+
+            var boundTarget2 = BindExpression(syntax.Expression);
+            var boundIndex2 = BindExpression(syntax.Index);
+
+            if (boundTarget2.Type == TypeSymbol.Error)
             {
                 return new BoundErrorExpression(syntax);
             }
 
-            if (boundTarget.Type == TypeSymbol.String)
+            if (boundTarget2.Type == TypeSymbol.String)
             {
                 // string[index] → char（下标须为 i32）
-                if (boundIndex.Type != TypeSymbol.Error && boundIndex.Type != TypeSymbol.Int32)
+                if (boundIndex2.Type != TypeSymbol.Error && boundIndex2.Type != TypeSymbol.Int32)
                 {
-                    _diagnostics.ReportCannotConvert(syntax.Index.Location, boundIndex.Type, TypeSymbol.Int32);
-                    boundIndex = new BoundErrorExpression(syntax.Index);
+                    _diagnostics.ReportCannotConvert(syntax.Index.Location, boundIndex2.Type, TypeSymbol.Int32);
+                    boundIndex2 = new BoundErrorExpression(syntax.Index);
                 }
 
-                return new BoundElementAccessExpression(syntax, TypeSymbol.Char, boundTarget, boundIndex);
+                return new BoundElementAccessExpression(syntax, TypeSymbol.Char, boundTarget2, boundIndex2);
             }
 
-            // 索引器（this[...]）：重定向到 get_Item（facade 经普通调用 → IL 直连 BCL；其余走 Cocoa 体）
-            if (boundTarget.Type is NamedTypeSymbol cls)
+            // 索引器（this[...]）：重定向到 get_Item
+            if (boundTarget2.Type is NamedTypeSymbol cls)
             {
                 var indexer = cls.GetIndexer();
                 if (indexer != null && indexer.Getter != null)
                 {
-                    // 下标须可转换为索引器参数类型（List 为 i32；Dictionary 为 K；不可硬编码 i32）
                     var indexParameterType = indexer.Getter.Parameters[0].Type;
-                    if (boundIndex.Type != TypeSymbol.Error)
+                    if (boundIndex2.Type != TypeSymbol.Error)
                     {
-                        boundIndex = BindConversion(syntax.Index.Location, boundIndex, indexParameterType);
+                        boundIndex2 = BindConversion(syntax.Index.Location, boundIndex2, indexParameterType);
                     }
 
                     var facade = cls.IsFacadeClass || (cls is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true);
                     if (facade)
                     {
-                        return new BoundCallExpression(syntax, indexer.Getter, ImmutableArray.Create(boundTarget, boundIndex));
+                        return new BoundCallExpression(syntax, indexer.Getter, ImmutableArray.Create(boundTarget2, boundIndex2));
                     }
 
-                    return new BoundMemberCallExpression(syntax, boundTarget, "get_Item", ImmutableArray.Create(boundIndex), indexer.Type, indexer.Getter);
+                    return new BoundMemberCallExpression(syntax, boundTarget2, "get_Item", ImmutableArray.Create(boundIndex2), indexer.Type, indexer.Getter);
                 }
             }
+
+            if (boundTarget2.Type.ElementType == null)
+            {
+                _diagnostics.ReportIndexRequiresArray(syntax.Location, boundTarget2.Type);
+                return new BoundErrorExpression(syntax);
+            }
+
+            return new BoundElementAccessExpression(syntax, boundTarget2.Type.ElementType, boundTarget2, boundIndex2);
+        }
+
+        /// <summary>
+        /// arr[start..end] → 新数组（复制切片）
+        /// </summary>
+        private BoundExpression BindRangeExpression(ElementAccessExpressionSyntax syntax, RangeExpressionSyntax range)
+        {
+            var boundTarget = BindExpression(syntax.Expression);
+            if (boundTarget.Type == TypeSymbol.Error)
+                return new BoundErrorExpression(syntax);
 
             if (boundTarget.Type.ElementType == null)
             {
@@ -936,7 +979,45 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 return new BoundErrorExpression(syntax);
             }
 
-            return new BoundElementAccessExpression(syntax, boundTarget.Type.ElementType, boundTarget, boundIndex);
+            var elementType = boundTarget.Type.ElementType;
+
+            var lengthExpr = new BoundMemberAccessExpression(range, TypeSymbol.Int32, boundTarget, "Length");
+            BoundExpression boundStart = range.Left != null
+                ? BindExpression(range.Left)
+                : new BoundLiteralExpression(range, 0, TypeSymbol.Int32);
+            BoundExpression boundEnd = range.Right != null
+                ? BindExpression(range.Right)
+                : lengthExpr;
+
+            if (range.Left is UnaryExpressionSyntax leftUnary && leftUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+            {
+                var leftOperand = BindExpression(leftUnary.Operand);
+                boundStart = BoundNodeFactory.Binary(range.Left, lengthExpr, CoreSyntax.SyntaxKind.MinusToken, leftOperand);
+            }
+
+            if (range.Right is UnaryExpressionSyntax rightUnary && rightUnary.OperatorToken.Kind == CoreSyntax.SyntaxKind.HatToken)
+            {
+                var rightOperand = BindExpression(rightUnary.Operand);
+                boundEnd = BoundNodeFactory.Binary(range.Right, lengthExpr, CoreSyntax.SyntaxKind.MinusToken, rightOperand);
+            }
+
+            var count = BoundNodeFactory.Binary(range, boundEnd, CoreSyntax.SyntaxKind.MinusToken, boundStart);
+            return new BoundCallExpression(syntax, GetCopyRangeMethod(syntax, elementType),
+                ImmutableArray.Create(boundTarget, boundStart, count));
+        }
+
+        /// <summary>
+        /// arr[start..end] → 新数组（复制切片）
+        /// </summary>
+        private FunctionSymbol GetCopyRangeMethod(CoreSyntax.SyntaxNode syntax, TypeSymbol elementType)
+        {
+            // Use a synthetic method: static T[] CopyRange(T[] source, int start, int count)
+            var arrayType = TypeSymbol.ArrayOf(elementType);
+            var sourceParam = new ParameterSymbol("source", arrayType, 0);
+            var startParam = new ParameterSymbol("start", TypeSymbol.Int32, 1);
+            var countParam = new ParameterSymbol("count", TypeSymbol.Int32, 2);
+            var parameters = ImmutableArray.Create(sourceParam, startParam, countParam);
+            return new FunctionSymbol("CopyRange", parameters, arrayType, null, builtinKind: BuiltinKind.CopyRange);
         }
 
         private BoundExpression BindMemberAccessExpression(MemberAccessExpressionSyntax syntax)

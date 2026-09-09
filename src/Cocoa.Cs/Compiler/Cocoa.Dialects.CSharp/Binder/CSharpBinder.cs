@@ -727,7 +727,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             {
                 bodyLocation = accessorSyntax.Keyword;
                 body = accessorSyntax.Body != null
-                    ? (BoundBlockStatement)binder.BindStatement(accessorSyntax.Body)
+                    ? WrapAsBlock(binder.BindStatement(accessorSyntax.Body), accessorSyntax.Body)
                     : binder.BindAutoPropertyBody(accessorSyntax, function);
             }
             else if (bodySyntax == null)
@@ -737,7 +737,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
             else
             {
-                body = (BoundBlockStatement)binder.BindStatement(bodySyntax);
+                body = WrapAsBlock(binder.BindStatement(bodySyntax), bodySyntax);
             }
 
             // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
@@ -794,7 +794,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             {
                 bodyLocation = accessorSyntax.Keyword;
                 body = accessorSyntax.Body != null
-                    ? (BoundBlockStatement)binder.BindStatement(accessorSyntax.Body)
+                    ? WrapAsBlock(binder.BindStatement(accessorSyntax.Body), accessorSyntax.Body)
                     : binder.BindAutoPropertyBody(accessorSyntax, function);
             }
             else if (bodySyntax == null)
@@ -804,7 +804,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
             else
             {
-                body = (BoundBlockStatement)binder.BindStatement(bodySyntax);
+                body = WrapAsBlock(binder.BindStatement(bodySyntax), bodySyntax);
             }
 
             // F2 共享绑定服务（A3-3）：构造链（base/this）+ 字段初始化器 → 函数体前缀（见 BuildConstructorPrefix）
@@ -867,6 +867,13 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             }
 
             return body;
+        }
+
+        private static BoundBlockStatement WrapAsBlock(BoundStatement bound, CoreSyntax.SyntaxNode syntax)
+        {
+            return bound is BoundBlockStatement b
+                ? b
+                : new BoundBlockStatement(syntax, ImmutableArray.Create(bound));
         }
 
     }

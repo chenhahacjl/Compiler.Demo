@@ -41,6 +41,10 @@ namespace Cocoa.CodeAnalysis.Binding
                     return RewriteExpressionStatement((BoundExpressionStatement)node);
                 case BoundNodeKind.SequencePointStatement:
                     return RewriteSequencePointStatement((BoundSequencePointStatement)node);
+                case BoundNodeKind.YieldReturnStatement:
+                    return RewriteYieldReturnStatement((BoundYieldReturnStatement)node);
+                case BoundNodeKind.YieldBreakStatement:
+                    return RewriteYieldBreakStatement((BoundYieldBreakStatement)node);
                 default:
                 {
                     throw new Exception($"Unexpected node: {node.Kind}");
@@ -240,6 +244,22 @@ namespace Cocoa.CodeAnalysis.Binding
             }
 
             return new BoundSequencePointStatement(node.Syntax, statement, node.Location);
+        }
+
+        protected virtual BoundStatement RewriteYieldReturnStatement(BoundYieldReturnStatement node)
+        {
+            var expression = RewriteExpression(node.Expression);
+            if (expression == node.Expression)
+            {
+                return node;
+            }
+
+            return new BoundYieldReturnStatement(node.Syntax, expression);
+        }
+
+        protected virtual BoundStatement RewriteYieldBreakStatement(BoundYieldBreakStatement node)
+        {
+            return node;
         }
 
         public virtual BoundExpression RewriteExpression(BoundExpression node)

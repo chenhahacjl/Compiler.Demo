@@ -962,9 +962,32 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 if (Current.Kind == SyntaxKind.OpenBracketToken)
                 {
                     var openBracketToken = NextToken();
-                    var index = ParseExpression();
-                    var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
-                    expression = new ElementAccessExpressionSyntax(_syntaxTree, expression, openBracketToken, index, closeBracketToken);
+
+                    // Parse range expression: [start..end] / [start..] / [..end] / [..]
+                    ExpressionSyntax? rangeLeft = null;
+                    if (Current.Kind != SyntaxKind.DotDotToken)
+                    {
+                        rangeLeft = ParseExpression();
+                    }
+
+                    if (Current.Kind == SyntaxKind.DotDotToken)
+                    {
+                        var dotDotToken = NextToken();
+                        ExpressionSyntax? rangeRight = null;
+                        if (Current.Kind != SyntaxKind.CloseBracketToken)
+                        {
+                            rangeRight = ParseExpression();
+                        }
+                        var index = new RangeExpressionSyntax(_syntaxTree, rangeLeft, dotDotToken, rangeRight);
+                        var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                        expression = new ElementAccessExpressionSyntax(_syntaxTree, expression, openBracketToken, index, closeBracketToken);
+                    }
+                    else
+                    {
+                        var index = rangeLeft!;
+                        var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                        expression = new ElementAccessExpressionSyntax(_syntaxTree, expression, openBracketToken, index, closeBracketToken);
+                    }
                 }
                 else if (Current.Kind == SyntaxKind.DotToken)
                 {

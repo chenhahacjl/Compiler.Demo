@@ -149,8 +149,16 @@ namespace Cocoa.CodeAnalysis.Syntax
                 }
                 case '.':
                 {
-                    _kind = SyntaxKind.DotToken;
-                    _position++;
+                    if (_position + 1 < _text.Length && _text[_position + 1] == '.')
+                    {
+                        _kind = SyntaxKind.DotDotToken;
+                        _position += 2;
+                    }
+                    else
+                    {
+                        _kind = SyntaxKind.DotToken;
+                        _position++;
+                    }
                     break;
                 }
                 case ';':

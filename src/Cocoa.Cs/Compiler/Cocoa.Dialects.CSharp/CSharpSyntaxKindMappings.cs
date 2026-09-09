@@ -12,7 +12,7 @@ namespace Cocoa.CodeAnalysis
         /// <summary>RawKind(int) 閳?C# 鐠囶厽纭剁猾璇茬€烽敍鍫熸弓閻儱鈧壈绻戦崶?BadToken 閸濄劌鍙洪敍澶堚偓?/summary>
         public static CSharpSyntaxKind ToCSharpSyntaxKind(int rawKind)
         {
-            return rawKind >= 0 && rawKind <= (int)CSharpSyntaxKind.PropertySubpattern
+            return rawKind >= 0 && rawKind <= (int)CSharpSyntaxKind.YieldBreakStatement
                 ? (CSharpSyntaxKind)rawKind
                 : CSharpSyntaxKind.BadToken;
         }

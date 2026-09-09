@@ -5,7 +5,7 @@
 
 namespace System.IO
 {
-    public interface Stream
+    public interface Stream extends IDisposable
     {
         property CanRead: bool { get; }
         property CanWrite: bool { get; }
@@ -17,7 +17,6 @@ namespace System.IO
         function Write(data: u8[], offset: i32, count: i32): void
         function Flush(): void
         function Close(): void
-        function Dispose(): void
         function Seek(offset: i64, origin: i32): i64
     }
 }

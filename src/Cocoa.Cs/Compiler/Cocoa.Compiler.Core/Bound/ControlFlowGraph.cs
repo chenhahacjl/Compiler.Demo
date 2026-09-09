@@ -108,6 +108,8 @@ namespace Cocoa.CodeAnalysis.Binding
                         case BoundNodeKind.ExpressionStatement:
                         case BoundNodeKind.ThrowStatement:
                         case BoundNodeKind.TryStatement:
+                        case BoundNodeKind.YieldReturnStatement:
+                        case BoundNodeKind.YieldBreakStatement:
                             _statements.Add(statement);
                             break;
                         default:
@@ -199,6 +201,8 @@ namespace Cocoa.CodeAnalysis.Binding
                             case BoundNodeKind.ExpressionStatement:
                             case BoundNodeKind.ThrowStatement:
                             case BoundNodeKind.TryStatement:
+                            case BoundNodeKind.YieldReturnStatement:
+                            case BoundNodeKind.YieldBreakStatement:
                                 if (isLastStatement)
                                     Connect(current, next);
                                 break;
@@ -332,7 +336,17 @@ namespace Cocoa.CodeAnalysis.Binding
             {
                 var lastStatement = branch.From.Statements.LastOrDefault();
                 if (lastStatement == null || lastStatement.Kind != BoundNodeKind.ReturnStatement)
+                {
+                    // using 声明降级后函数体为 Block { TryStatement { try: return ...; finally: dispose } }
+                    // CFG 看到 TryStatement → End，但 TryStatement 不是 ReturnStatement
+                    // 递归检查 try 块内部是否所有路径都 return
+                    if (lastStatement is BoundTryStatement tryStmt &&
+                        tryStmt.TryBlock is BoundBlockStatement tryBlock &&
+                        AllPathsReturn(tryBlock))
+                        continue;
+
                     return false;
+                }
             }
 
             return true;

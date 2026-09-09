@@ -12,6 +12,7 @@ namespace Cocoa.CodeAnalysis.Syntax
                 case SyntaxKind.TildeToken:
                 case SyntaxKind.PlusPlusToken:
                 case SyntaxKind.MinusMinusToken:
+                case SyntaxKind.HatToken:
                 {
                     return 6;
                 }
@@ -219,6 +220,20 @@ namespace Cocoa.CodeAnalysis.Syntax
                     return SyntaxKind.CatchKeyword;
                 case "finally":
                     return SyntaxKind.FinallyKeyword;
+                case "and":
+                    return SyntaxKind.AndKeyword;
+                case "or":
+                    return SyntaxKind.OrKeyword;
+                case "not":
+                    return SyntaxKind.NotKeyword;
+                case "lock":
+                    return SyntaxKind.LockKeyword;
+                case "checked":
+                    return SyntaxKind.CheckedKeyword;
+                case "unchecked":
+                    return SyntaxKind.UncheckedKeyword;
+                case "yield":
+                    return SyntaxKind.YieldKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }

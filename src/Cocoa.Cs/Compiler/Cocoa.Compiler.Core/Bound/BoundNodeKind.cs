@@ -21,6 +21,8 @@ namespace Cocoa.CodeAnalysis.Binding
         SequencePointStatement,
         ThrowStatement,
         TryStatement,
+        YieldReturnStatement,
+        YieldBreakStatement,
 
         // Expression
 ErrorExpression,

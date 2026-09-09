@@ -236,5 +236,17 @@ ColonToken,               // :
         OrKeyword = 216, // or 模式组合关键字
         NotKeyword = 217, // not 模式取反关键字
         PropertySubpattern = 218, // 属性子模式：Name: pattern
+        UsingStatement = 219, // using 语句：using (var x = expr) { body }
+        DotDotToken = 220, // .. 范围运算符
+        RangeExpression = 221, // 范围表达式：1..3 / 1.. / ..3 / ..
+        LockKeyword = 222, // lock 关键字
+        LockStatement = 223, // lock 语句：lock (obj) { body }
+        CheckedKeyword = 224, // checked 关键字
+        UncheckedKeyword = 225, // unchecked 关键字
+        CheckedStatement = 226, // checked 语句：checked { body }
+        UncheckedStatement = 227, // unchecked 语句：unchecked { body }
+        YieldKeyword = 228, // yield 关键字
+        YieldReturnStatement = 229, // yield return 语句
+        YieldBreakStatement = 230, // yield break 语句
     }
 }

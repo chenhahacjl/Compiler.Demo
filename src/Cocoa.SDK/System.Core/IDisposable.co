@@ -1,0 +1,10 @@
+// System.IDisposable 接口（using 语句 / using 声明的类型约束）
+// BCL 对应物为 `public interface IDisposable { void Dispose(); }`。
+
+namespace System
+{
+    public facade interface IDisposable
+    {
+        function Dispose(): void
+    }
+}

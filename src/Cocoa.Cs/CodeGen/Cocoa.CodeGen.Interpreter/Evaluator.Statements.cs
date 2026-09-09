@@ -47,6 +47,12 @@ namespace Cocoa.CodeGen.Interpreter
                     case BoundNodeKind.NopStatement:
                         index++;
                         break;
+                    case BoundNodeKind.BlockStatement:
+                        var block = (BoundBlockStatement)statement;
+                        foreach (var s in block.Statements)
+                            EvaluateSingleStatement(s, labelToIndex);
+                        index++;
+                        break;
                     case BoundNodeKind.VariableDeclaration:
                         EvaluateVariableDeclaration((BoundVariableDeclaration)statement);
                         index++;
@@ -78,6 +84,18 @@ namespace Cocoa.CodeGen.Interpreter
                         var rs = (BoundReturnStatement)statement;
                         _lastValue = rs.Expression == null ? null : EvaluateExpression(rs.Expression);
                         return _lastValue;
+                    case BoundNodeKind.YieldReturnStatement:
+                        var yrs = (BoundYieldReturnStatement)statement;
+                        _lastValue = EvaluateExpression(yrs.Expression);
+                        _yieldedValues!.Add(_lastValue);
+                        index++;
+                        break;
+                    case BoundNodeKind.YieldBreakStatement:
+                        throw new YieldBreakException();
+                    case BoundNodeKind.TryStatement:
+                        EvaluateTryStatement((BoundTryStatement)statement);
+                        index++;
+                        break;
                     default:
                         throw new Exception($"Unexpected node {statement.Kind}");
                 }
@@ -98,6 +116,76 @@ namespace Cocoa.CodeGen.Interpreter
         private void EvaluateExpressionStatement(BoundExpressionStatement node)
         {
             _lastValue = EvaluateExpression(node.Expression);
+        }
+
+        private void EvaluateSingleStatement(BoundStatement statement, Dictionary<BoundLabel, int> labelToIndex)
+        {
+            switch (statement.Kind)
+            {
+                case BoundNodeKind.NopStatement:
+                    break;
+                case BoundNodeKind.VariableDeclaration:
+                    EvaluateVariableDeclaration((BoundVariableDeclaration)statement);
+                    break;
+                case BoundNodeKind.ExpressionStatement:
+                    EvaluateExpressionStatement((BoundExpressionStatement)statement);
+                    break;
+                case BoundNodeKind.ReturnStatement:
+                    var rs = (BoundReturnStatement)statement;
+                    _lastValue = rs.Expression == null ? null : EvaluateExpression(rs.Expression);
+                    break;
+                case BoundNodeKind.YieldReturnStatement:
+                    var yrs = (BoundYieldReturnStatement)statement;
+                    _lastValue = EvaluateExpression(yrs.Expression);
+                    _yieldedValues!.Add(_lastValue);
+                    break;
+                case BoundNodeKind.YieldBreakStatement:
+                    throw new YieldBreakException();
+                case BoundNodeKind.TryStatement:
+                    EvaluateTryStatement((BoundTryStatement)statement);
+                    break;
+                case BoundNodeKind.BlockStatement:
+                    var block = (BoundBlockStatement)statement;
+                    foreach (var s in block.Statements)
+                        EvaluateSingleStatement(s, labelToIndex);
+                    break;
+                default:
+                    throw new Exception($"Unexpected node in nested block: {statement.Kind}");
+            }
+        }
+
+        private void EvaluateTryStatement(BoundTryStatement node)
+        {
+            try
+            {
+                EvaluateStatement((BoundBlockStatement)node.TryBlock);
+            }
+            catch (Exception ex) when (node.Catches.Length > 0)
+            {
+                var caught = false;
+                foreach (var catchClause in node.Catches)
+                {
+                    // 简单异常类型匹配
+                    if (catchClause.CatchType.Name == "Exception" ||
+                        catchClause.CatchType.Name == ex.GetType().Name)
+                    {
+                        _locals.Peek()[catchClause.Variable] = ex;
+                        EvaluateStatement((BoundBlockStatement)catchClause.Body);
+                        caught = true;
+                        break;
+                    }
+                }
+
+                if (!caught)
+                    throw;
+            }
+            finally
+            {
+                if (node.FinallyBlock != null)
+                {
+                    EvaluateStatement((BoundBlockStatement)node.FinallyBlock);
+                }
+            }
         }
 
         private object? EvaluateExpression(BoundExpression node)

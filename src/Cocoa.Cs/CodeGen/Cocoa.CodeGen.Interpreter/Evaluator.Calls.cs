@@ -73,7 +73,29 @@ namespace Cocoa.CodeGen.Interpreter
             object? result;
             try
             {
-                result = EvaluateStatement(statement);
+                // Check if function contains yield statements
+                if (ContainsYieldStatements(statement))
+                {
+                    var savedYieldedValues = _yieldedValues;
+                    _yieldedValues = new List<object?>();
+                    try
+                    {
+                        EvaluateStatement(statement);
+                        result = _yieldedValues.ToArray();
+                    }
+                    catch (YieldBreakException)
+                    {
+                        result = _yieldedValues.ToArray();
+                    }
+                    finally
+                    {
+                        _yieldedValues = savedYieldedValues;
+                    }
+                }
+                else
+                {
+                    result = EvaluateStatement(statement);
+                }
             }
             finally
             {
@@ -90,6 +112,26 @@ namespace Cocoa.CodeGen.Interpreter
             }
 
             return result;
+        }
+
+        private bool ContainsYieldStatements(BoundBlockStatement body)
+        {
+            foreach (var statement in body.Statements)
+            {
+                if (statement.Kind == BoundNodeKind.YieldReturnStatement ||
+                    statement.Kind == BoundNodeKind.YieldBreakStatement)
+                    return true;
+
+                if (statement is BoundBlockStatement block && ContainsYieldStatements(block))
+                    return true;
+
+                if (statement is BoundTryStatement tryStatement)
+                {
+                    if (ContainsYieldStatements((BoundBlockStatement)tryStatement.TryBlock))
+                        return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>
@@ -472,6 +514,15 @@ namespace Cocoa.CodeGen.Interpreter
                     var refLeft = EvaluateExpression(arguments[0]);
                     var refRight = EvaluateExpression(arguments[1]);
                     return object.ReferenceEquals(refLeft, refRight);
+                case BuiltinKind.CopyRange:
+                {
+                    var source = (object[])EvaluateExpression(arguments[0])!;
+                    var start = (int)EvaluateExpression(arguments[1])!;
+                    var count = (int)EvaluateExpression(arguments[2])!;
+                    var result = new object[count];
+                    Array.Copy(source, start, result, 0, count);
+                    return result;
+                }
                 default:
                     throw new InvalidOperationException($"Evaluator 后端未实现内建原语 {function.BuiltinKind}；覆盖登记见 BuiltinCoverage");
             }

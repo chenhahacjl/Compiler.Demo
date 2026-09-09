@@ -50,6 +50,7 @@ namespace Cocoa.Tests.CodeAnalysis
         private static readonly HashSet<string> DivergentBinderFiles = new HashSet<string>(StringComparer.Ordinal)
         {
             "CSharpBinder.Statements.cs",
+            "CSharpBinder.Declarations.cs",
         };
 
         /// <summary>Roslyn 式按语言独立的 Binder/Compilation/SemanticModel partial（3c 决策：不提取 BinderBase，双写+漂移防护）。</summary>

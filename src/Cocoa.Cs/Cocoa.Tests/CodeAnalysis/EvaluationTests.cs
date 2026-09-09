@@ -195,6 +195,196 @@ namespace Cocoa.Tests.CodeAnalysis
             }
         }
 
+        [Fact]
+        public void UsingDeclaration_DisposableType_Works()
+        {
+            var testCode = @"public class MemoryStream
+{
+    private _pos: i32 = 0
+    public function Read(): i32
+    {
+        _pos = _pos + 1
+        return _pos
+    }
+    public function Dispose(): void {}
+}
+
+function Main(): i32
+{
+    using var stream = new MemoryStream()
+    return stream.Read()
+}";
+            var syntaxTree = SyntaxTree.Parse(testCode);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Should compile OK: [{diagStr}]");
+        }
+
+        [Fact]
+        public void UsingDeclaration_WithTypeAnnotation_Parses()
+        {
+            var text = "{ using var x: i32 = 42 return x }";
+            var syntaxTree = SyntaxTree.Parse(text);
+            var diagStr = string.Join("; ", syntaxTree.Diagnostics.Select(d => d.Message));
+            Assert.False(syntaxTree.Diagnostics.Any(d => d.IsError), $"Should parse OK: [{diagStr}]");
+        }
+
+        [Fact]
+        public void UsingDeclaration_NoDisposeMethod_DiagnosticError()
+        {
+            var testCode = @"public class Resource
+{
+    private _val: i32 = 10
+}
+
+function Main(): i32
+{
+    using var res = new Resource()
+    return 42
+}";
+            var syntaxTree = SyntaxTree.Parse(testCode);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.True(result.Diagnostics.HasErrors(),
+                "Should report error for type without IDisposable or Dispose()");
+            var msgs = string.Join("; ", result.Diagnostics.Where(d => d.IsError).Select(d => d.Message));
+            Assert.Contains("Dispose", msgs);
+        }
+
+        [Fact]
+        public void UsingDeclaration_HasDisposeMethod_PatternMatching()
+        {
+            var testCode = @"public class CustomResource
+{
+    public function Dispose(): void {}
+}
+
+function Main(): i32
+{
+    using var res = new CustomResource()
+    return 42
+}";
+            var syntaxTree = SyntaxTree.Parse(testCode);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Pattern matching should pass: [{diagStr}]");
+        }
+
+        [Fact]
+        public void UsingStatement_Basic_Works()
+        {
+            var testCode = @"public class MyResource
+{
+    public function Dispose(): void {}
+}
+
+function Main(): i32
+{
+    using (var res = new MyResource())
+    {
+        return 42
+    }
+}";
+            var syntaxTree = SyntaxTree.Parse(testCode);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Should compile OK: [{diagStr}]");
+        }
+
+        [Fact]
+        public void UsingStatement_NoDispose_DiagnosticError()
+        {
+            var testCode = @"public class NoDisposeClass
+{
+    private _val: i32 = 10
+}
+
+function Main(): i32
+{
+    using (var res = new NoDisposeClass())
+    {
+        return 42
+    }
+}";
+            var syntaxTree = SyntaxTree.Parse(testCode);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            Assert.True(result.Diagnostics.HasErrors(),
+                "Should report error for type without IDisposable or Dispose()");
+            var msgs = string.Join("; ", result.Diagnostics.Where(d => d.IsError).Select(d => d.Message));
+            Assert.Contains("Dispose", msgs);
+        }
+
+        [Theory]
+        [InlineData("{ var arr = new i32[] {10, 20, 30} return arr[^1] }", 30)]
+        [InlineData("{ var arr = new i32[] {10, 20, 30} return arr[^2] }", 20)]
+        [InlineData("{ var arr = new i32[] {10, 20, 30} return arr[^3] }", 10)]
+        [InlineData("{ var arr = new i32[] {10, 20, 30} return arr[0] }", 10)]
+        public void IndexFromEndOperator_Works(string text, object expected)
+        {
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Should compile OK: [{diagStr}]");
+            Assert.Equal(expected, result.Value);
+        }
+
+        [Theory]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[1..3].Length", 2)]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[1..3][0]", 20)]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[1..3][1]", 30)]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[0..2].Length", 2)]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[2..].Length", 3)]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[..2].Length", 2)]
+        [InlineData("var arr = new i32[] {10, 20, 30, 40, 50} return arr[..].Length", 5)]
+        public void RangeOperator_Works(string text, object expected)
+        {
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Should compile OK: [{diagStr}]");
+            Assert.Equal(expected, result.Value);
+        }
+
+        [Theory]
+        [InlineData("lock (1) { } return 1", 1)]
+        [InlineData("var x = 10 lock (x) { x = 20 } return x", 20)]
+        [InlineData("var result = 0 lock (result) { result = 5 + 5 } return result", 10)]
+        public void LockStatement_Works(string text, object expected)
+        {
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Should compile OK: [{diagStr}]");
+            Assert.Equal(expected, result.Value);
+        }
+
+        [Theory]
+        [InlineData("checked { return 42 }", 42)]
+        [InlineData("unchecked { return 42 }", 42)]
+        [InlineData("var x = 10 checked { x = x + 5 } return x", 15)]
+        [InlineData("var x = 10 unchecked { x = x * 2 } return x", 20)]
+        public void CheckedStatement_Works(string text, object expected)
+        {
+            var syntaxTree = SyntaxTree.Parse(text);
+            var compilation = Compilation.CreateScript(null, syntaxTree);
+            var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+            var diagStr = string.Join("; ", result.Diagnostics.Select(d => d.Message));
+            Assert.False(result.Diagnostics.HasErrors(), $"Should compile OK: [{diagStr}]");
+            Assert.Equal(expected, result.Value);
+        }
+
+        [Fact(Skip = "yield requires deeper runtime integration - syntax/parser/binder done, evaluator pending")]
+        public void YieldStatement_Partial()
+        {
+        }
+
         [Theory]
         [InlineData("var a: i32 return a", 0)]
         [InlineData("var a: i32 a = 5 return a", 5)]

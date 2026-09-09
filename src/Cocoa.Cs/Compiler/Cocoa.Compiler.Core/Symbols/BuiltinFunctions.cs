@@ -69,6 +69,9 @@ FileWriteAllBytes,
         ObjectReferenceEquals,
         TypeName,
         TypeFullName,
+
+        // ---- 数组切片（P1-2 .. Range 运算符）----
+        CopyRange,
     }
 
         /// <summary>内置函数规格：名称/签名 + 种类（功能层声明）。</summary>

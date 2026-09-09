@@ -33,6 +33,9 @@ namespace Cocoa.CodeGen.Interpreter
         // 6e-M23 R5：当前调用实参物化的别名去重作用域（同一存储共享 Box，三后端别名语义一致）
         private Dictionary<object, ByRefBox> _byRefSlotScope = new Dictionary<object, ByRefBox>();
 
+        // yield 迭代器收集器
+        private List<object?>? _yieldedValues;
+
         public Evaluator(BoundProgram program, Dictionary<VariableSymbol, object> variables)
         {
             _program = program;
@@ -99,5 +102,9 @@ namespace Cocoa.CodeGen.Interpreter
             }
         }
 
+    }
+
+    internal sealed class YieldBreakException : Exception
+    {
     }
 }

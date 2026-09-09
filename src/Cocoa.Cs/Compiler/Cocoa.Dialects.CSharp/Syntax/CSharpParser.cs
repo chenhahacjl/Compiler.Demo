@@ -928,9 +928,32 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 if (Current.Kind == SyntaxKind.OpenBracketToken)
                 {
                     var openBracketToken = NextToken();
-                    var index = ParseExpression();
-                    var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
-                    expression = new ElementAccessExpressionSyntax(_syntaxTree, expression, openBracketToken, index, closeBracketToken);
+
+                    // Parse range expression: [start..end] / [start..] / [..end] / [..]
+                    ExpressionSyntax? rangeLeft = null;
+                    if (Current.Kind != SyntaxKind.DotDotToken)
+                    {
+                        rangeLeft = ParseExpression();
+                    }
+
+                    if (Current.Kind == SyntaxKind.DotDotToken)
+                    {
+                        var dotDotToken = NextToken();
+                        ExpressionSyntax? rangeRight = null;
+                        if (Current.Kind != SyntaxKind.CloseBracketToken)
+                        {
+                            rangeRight = ParseExpression();
+                        }
+                        var index = new RangeExpressionSyntax(_syntaxTree, rangeLeft, dotDotToken, rangeRight);
+                        var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                        expression = new ElementAccessExpressionSyntax(_syntaxTree, expression, openBracketToken, index, closeBracketToken);
+                    }
+                    else
+                    {
+                        var index = rangeLeft!;
+                        var closeBracketToken = MatchToken(SyntaxKind.CloseBracketToken);
+                        expression = new ElementAccessExpressionSyntax(_syntaxTree, expression, openBracketToken, index, closeBracketToken);
+                    }
                 }
                 else if (Current.Kind == SyntaxKind.DotToken)
                 {
@@ -1134,6 +1157,16 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     break;
                 case SyntaxKind.ThrowKeyword:
                     statement = ParseThrowStatement();
+                    break;
+                case SyntaxKind.LockKeyword:
+                    statement = ParseLockStatement();
+                    break;
+                case SyntaxKind.CheckedKeyword:
+                case SyntaxKind.UncheckedKeyword:
+                    statement = ParseCheckedStatement();
+                    break;
+                case SyntaxKind.YieldKeyword:
+                    statement = ParseYieldStatement();
                     break;
                 case SyntaxKind.TryKeyword:
                     statement = ParseTryStatement();
@@ -1708,6 +1741,39 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             return new TryStatementSyntax(_syntaxTree, keyword, tryBlock, catches.ToImmutable(), finallyClause);
         }
 
+        private StatementSyntax ParseLockStatement()
+        {
+            var keyword = MatchToken(SyntaxKind.LockKeyword);
+            var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+            var expression = ParseExpression();
+            var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+            var body = ParseBlockStatement();
+            return new LockStatementSyntax(_syntaxTree, keyword, openParen, expression, closeParen, body);
+        }
+
+        private StatementSyntax ParseCheckedStatement()
+        {
+            var keyword = MatchToken(Current.Kind);
+            var body = ParseBlockStatement();
+            return new CheckedStatementSyntax(_syntaxTree, keyword, body);
+        }
+
+        private StatementSyntax ParseYieldStatement()
+        {
+            var yieldKeyword = MatchToken(SyntaxKind.YieldKeyword);
+            if (Current.Kind == SyntaxKind.ReturnKeyword)
+            {
+                var returnKeyword = MatchToken(SyntaxKind.ReturnKeyword);
+                var expression = ParseExpression();
+                return new YieldReturnStatementSyntax(_syntaxTree, yieldKeyword, returnKeyword, expression);
+            }
+            else
+            {
+                var breakKeyword = MatchToken(SyntaxKind.BreakKeyword);
+                return new YieldBreakStatementSyntax(_syntaxTree, yieldKeyword, breakKeyword);
+            }
+        }
+
         private StatementSyntax ParseDialectNativeStatement()
         {
             if (Peek(0).Kind == SyntaxKind.IdentifierToken && Peek(1).Kind == SyntaxKind.IdentifierToken)
@@ -1759,6 +1825,17 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         private StatementSyntax ParseUsingDeclaration()
         {
             var usingKeyword = MatchToken(SyntaxKind.UsingKeyword);
+
+            // using (var x = expr) { body } — using 语句
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                var openParen = MatchToken(SyntaxKind.OpenParenthesisToken);
+                var resource = ParseVariableDeclaration();
+                var closeParen = MatchToken(SyntaxKind.CloseParenthesisToken);
+                var body = ParseBlockStatement();
+                return new UsingStatementSyntax(_syntaxTree, usingKeyword, openParen, resource, closeParen, body);
+            }
+
             // using var x = expr
             if (Current.Kind == SyntaxKind.VarKeyword)
             {

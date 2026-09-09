@@ -274,6 +274,7 @@
     (cls System.Syscall.MathSyscall internal iface:false ifaces:0 methods:4 Random[@i32] Sqrt[@f64] DoubleToString[@f64] Sha256Hash[@u8[]] fields:0 events:0)
     (cls System.Syscall.ProcessSyscall internal iface:false ifaces:0 methods:1 LaunchProcess[@string,@string,@string] fields:0 events:0)
     (cls System.Syscall.StringSyscall public iface:false ifaces:0 methods:3 StringFromBytes[@u8[]] StringToBytes[@string] StringFromChars[@char[]] fields:0 events:0)
+    (cls System.IDisposable public iface:true ifaces:0 methods:0 fields:0 events:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:0 events:0
     )
@@ -16984,4 +16985,4 @@
     (ns System.Syscall)
   )
 )
-(checksum sha256:3b9481847621419ed59e4750d8507d83a964f89e8b158c55327c917fb12062d0)
+(checksum sha256:8b0f638febf661921602f8711b9dff7c9f8008a2a81cd26ff820db5a4da87ef1)

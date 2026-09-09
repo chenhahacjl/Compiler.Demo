@@ -224,6 +224,18 @@ namespace Cocoa.CodeAnalysis.Syntax
         AndKeyword = 215,
         OrKeyword = 216,
         NotKeyword = 217,
-        PropertySubpattern = 218
+        PropertySubpattern = 218,
+        UsingStatement = 219,
+        DotDotToken = 220,
+        RangeExpression = 221,
+        LockKeyword = 222,
+        LockStatement = 223,
+        CheckedKeyword = 224,
+        UncheckedKeyword = 225,
+        CheckedStatement = 226,
+        UncheckedStatement = 227,
+        YieldKeyword = 228,
+        YieldReturnStatement = 229,
+        YieldBreakStatement = 230
     }
 }

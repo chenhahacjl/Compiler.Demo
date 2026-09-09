@@ -1,8 +1,8 @@
 # Cocoa 语言 C# 兼容性差距报告
 
-> **版本**：v1.0 | **日期**：2026-09-08 | **对标版本**：C# 13（.NET 9）
-> **当前状态**：43,062 测试，Stage 0-6 完成，三后端（Evaluator/IL/Native）全量绿
-> **统计**：已实现 ~95 项核心特性 | 未实现 ~45 项 | 部分实现 ~8 项
+> **版本**：v1.0 | **日期**：2026-09-09 | **对标版本**：C# 13（.NET 9）
+> **当前状态**：47,814 测试，Stage 0-6 完成，三后端（Evaluator/IL/Native）全量绿
+> **统计**：已实现 ~98 项核心特性 | 未实现 ~42 项 | 部分实现 ~8 项
 
 ---
 
@@ -99,7 +99,7 @@
 | 2 | **null 合并运算符 `??`** | C# 8 | `x ?? defaultValue` | 低 | 无 |
 | 3 | **null 合并赋值 `??=`** | C# 8 | `x ??= value` | 低 | 无 |
 | 4 | **`nameof` 运算符** | C# 6 | `nameof(Length)` | 低 | 无 |
-| 5 | **using 声明** | C# 8 | `using var x = new File(...)` | 低 | 无 |
+| 5 | **using 声明 + using 语句** | C# 8 | `using var x = new File(...)` / `using (var x = ...) { }` | 低 | 无 |
 | 6 | **模式匹配 — 声明模式** | C# 7 | `if (obj is int n)` | 中 | 无 |
 | 7 | **模式匹配 — 常量模式** | C# 7 | `if (obj is null)` | 低 | 无 |
 | 8 | **模式匹配 — 关系模式** | C# 9 | `is > 0 and < 10` | 中 | 无 |
@@ -202,7 +202,7 @@ nameof → 低复杂度，编译期字符串常量
 ### 第二阶段：语法糖（预估 3-5 天）
 
 ```
-using 声明 → 低复杂度，语法糖转 using 语句
+using 声明 + using 语句 + IDisposable 类型检查 → 已完成（2026-09-09）
 lock 语句 → 低复杂度，语法糖转 Monitor.Enter/Exit
 二进制字面量 / 数字分隔符 → 低复杂度，词法扩展
 init 访问器 / required 成员 → 低复杂度
@@ -266,11 +266,11 @@ record struct / with 表达式 → 中复杂度
 | 控制流 | 12 | 3（lock/yield/checked） | 1（foreach） |
 | 表达式 | 18 | 12（null安全/LINQ/pattern/index-range/集合/nameof/typeof/sizeof） | 0 |
 | 运算符 | 10 | 2（运算符重载/转换运算符） | 0 |
-| 声明 | 8 | 6（primary ctor/required/decimal/using别名/using static/global using） | 0 |
+| 声明 | 9 | 5（primary ctor/required/decimal/using static/global using） | 0 |
 | 元数据 | 0 | 3（Attributes/XML注释/预处理） | 0 |
 | 异步 | 0 | 2（async/await） | 0 |
 | 安全 | 0 | 3（unsafe/stackalloc/fixed） | 0 |
-| **合计** | **~75** | **~41** | **~5** |
+| **合计** | **~76** | **~40** | **~5** |
 
 ---
 
