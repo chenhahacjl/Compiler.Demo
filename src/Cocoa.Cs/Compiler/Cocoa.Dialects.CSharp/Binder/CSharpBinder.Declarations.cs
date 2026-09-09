@@ -2895,8 +2895,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                         continue;
                     }
 
-                    // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐
-                    if (!classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
+                    // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐。
+                    // 编译器内建单例（System.Object/System.Type）不得标记——native Object 面分派旁落回归防护。
+                    if (!SystemObjectMembers.IsBuiltinSystemClass(classType) && !classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
                     {
                         classType.IsFacadeClass = true;
 

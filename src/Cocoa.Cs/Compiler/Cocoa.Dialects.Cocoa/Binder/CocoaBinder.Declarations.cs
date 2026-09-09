@@ -2896,8 +2896,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                         continue;
                     }
 
-                    // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐
-                    if (FacadeTargets.ContainsKey(classType.FullName))
+                    // 6e-M19 M2-b：facade 标记不序列化，注入侧按全名映射表补齐。
+                    // 编译器内建单例（System.Object/System.Type，Fn 条目的 owner 反解会引用到它们）**不得**标记——
+                    // 否则 native Object 面成员分派旁落运行时默认、IL facade 降级误作直链（回归：Oop_Override_* ×4）。
+                    if (!SystemObjectMembers.IsBuiltinSystemClass(classType) && !classType.IsFacadeClass && FacadeTargets.ContainsKey(classType.FullName))
                     {
                         // 幂等设置（仅首次）：标记 facade + 绑定 companionship
                         if (!classType.IsFacadeClass)
