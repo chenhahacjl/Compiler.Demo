@@ -115,8 +115,13 @@ namespace Cocoa.CodeGen.Managed.Writer
         public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target)
             => Emit(program, outputPath, target, emitLibrary: false);
 
-    public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target, bool emitLibrary, bool publishPublicSurface = false)
-    {
+        /// <summary>BCL 重名类的本体发射判定：有实例字段或实例方法（真实 Cocoa body，如 MemoryStream/StreamWriter）
+        /// → 必须发射 TypeDef + 方法体；纯静态容器（Console/Environment/Convert）→ 调用点 BCL 直链。</summary>
+        private static bool MustEmitBody(NamedTypeSymbol c) =>
+            c.Fields.Any(f => !f.IsStatic) || c.Methods.Any(m => !m.IsStatic);
+
+        public ImmutableArray<Diagnostic> Emit(BoundProgram program, string outputPath, IlTarget target, bool emitLibrary, bool publishPublicSurface = false)
+        {
         // 库产物的分发面即其公共契约：internal 门面类/方法在 dll 形态下发布为 public。
         // 仅 `.coa` 动态链接库启用（CoaLibraryCompiler）——消费方跨程序集访问需要；
         // `-f library`（C# 互操作）保持符号原可见性：internal 隐藏是既定访问控制语义
@@ -132,12 +137,15 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.coa 的 Console/Math 等，不在 program.Classes 的源码声明集内）
-            // cod 库容器类若已在 BCL 引用中定义（同名同构），不出 TypeDef：按名直联 TypeRef 避免冲撞
-            var classes = program.Classes.Where(c => !c.IsFacadeClass && (c.ContainingLibrary == null || !_framework.TypeExistsInReferences(c.FullName))).ToList();
+            // 非 facade 类出 TypeDef，除非是「与 BCL 重名且无实例状态」的静态容器类（Console/Environment 等：
+            // 调用点按 BCL 同名直链 TypeRef，避免本地 TypeDef 与 BCL TypeRef 冲撞）。
+            // 有实例字段/实例方法的 BCL 重名类（MemoryStream/StreamWriter 等真实 Cocoa body）必须发射本体。
+            var classes = program.Classes.Where(c => !c.IsFacadeClass
+                && (c.ContainingLibrary == null || !_framework.TypeExistsInReferences(c.FullName) || MustEmitBody(c))).ToList();
             foreach (var f in orderedFunctions)
             {
                 if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass
-                    && (f.ContainingClass.ContainingLibrary == null || !_framework.TypeExistsInReferences(f.ContainingClass.FullName))
+                    && (f.ContainingClass.ContainingLibrary == null || !_framework.TypeExistsInReferences(f.ContainingClass.FullName) || MustEmitBody(f.ContainingClass))
                     && !classes.Contains(f.ContainingClass))
                 {
                     classes.Add(f.ContainingClass);
@@ -198,8 +206,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                     }
                     else if (iface.ContainingLibrary != null && iface.TypeKind == TypeKind.Interface)
                     {
-                        // cod 库接口（BCL 同名）：无 TypeDef，按全名直联
-                        typeDef.Interfaces.Add(new IlInterfaceImpl(null, _framework.RequireType(iface.FullName)));
+                        // cod 库接口（BCL 同名接口）：无 TypeDef，按全名直联。
+                        // 仅当 BCL 对应物确实为接口时才重定向（System.IO.Stream 在 Cocoa 是接口、BCL 是类 → 跳过，
+                        // 否则 TypeDef 会"把类当接口实现"被 CLR 拒绝）。
+                        if (_framework.IsInterfaceInReferences(iface.FullName))
+                        {
+                            typeDef.Interfaces.Add(new IlInterfaceImpl(null, _framework.RequireType(iface.FullName)));
+                        }
                     }
                     else
                     {
@@ -238,8 +251,8 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var function in orderedFunctions)
             {
                 if (function.ContainingClass?.IsFacadeClass == true) continue;
-                if (function.ContainingClass is { ContainingLibrary: not null }) continue; // cod 库容器方法：调用点直联 BCL MemberRef
-                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue; // 6e-M22 真实类型化：Invoke 已合成
+                if (function.ContainingClass != null && !classes.Contains(function.ContainingClass)) continue; // 类型未入 TypeDef 表
+                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue;
                 if (function.BuiltinKind != null)
                 {
                     // syscall 内部原语：无方法体、调用点按 BuiltinKind 分发，不声明为 IL 方法
@@ -279,8 +292,8 @@ namespace Cocoa.CodeGen.Managed.Writer
             foreach (var function in orderedFunctions)
             {
                 if (function.ContainingClass?.IsFacadeClass == true) continue;
-                if (function.ContainingClass is { ContainingLibrary: not null }) continue; // cod 库容器方法：体在 BCL，不发射 MethodDef
-                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue; // 6e-M22 真实类型化：Invoke 体由 CLR 填充
+                if (function.ContainingClass != null && !classes.Contains(function.ContainingClass)) continue; // 类型未入 TypeDef 表
+                if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue;
                 if (function.IsExtern || function.IsAbstract || function.BuiltinKind != null)
                 {
                     continue;
@@ -938,6 +951,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 if (_classTypeDefs.TryGetValue(classType, out var typeDef))
                 {
                     return IlType.Class(typeDef, isValueType: classType.IsValueType);
+                }
+
+                // 泛型实例化未入 TypeDef 表（ValueTuple`2 等合成值类型）：按泛型定义 + 实参构 GenericInst，
+                // 不能用 FullName——InstantiatedTypeSymbol 的 FullName 是乱码（System.System.ValueTuple`2#@...）。
+                if (classType is InstantiatedTypeSymbol instGen && instGen.GenericDefinition != null)
+                {
+                    var defRef = _framework.RequireType(FacadeBclFullName(instGen.GenericDefinition) + "`" + instGen.GenericDefinition.TypeParameters.Length);
+                    return new IlType(IlTypeKind.GenericInst, defRef, isValueType: classType.IsValueType, genericArguments: instGen.TypeArguments.Select(ToIlType).ToArray());
                 }
 
                 return IlType.Class(_framework.RequireType(classType.FullName));

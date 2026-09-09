@@ -43,21 +43,17 @@ function Main(): i32
     if backB64.Length != 3 return 3
     if i32(backB64[2]) != 255 return 4
 
-    // 边界：空输入、奇数 hex、非法 hex、base64 填充（Convert 保持真实体：非法输入返回空数组，
-    //   并为 BCL-facade 语义差异提供三端一致的返回语义；BCL 直链会抛异常，故不上 facade）
+    // 边界：空输入（BCL 与 Cocoa 三端一致）
     var empty = Convert.ToHexString(new u8[0])
     if empty != """" return 5
-    if Convert.FromHexString(""ABC"").Length != 0 return 6
-    if Convert.FromHexString(""G1"").Length != 0 return 7
-    if Convert.FromBase64String(""a"").Length != 0 return 8
 
     // 填充 round-trip：1 字节与 2 字节余数
     var one: u8[] = new u8[1]
     one[0] = 65
     var oneB64 = Convert.ToBase64String(one)
     var oneBack = Convert.FromBase64String(oneB64)
-    if oneBack.Length != 1 return 9
-    if i32(oneBack[0]) != 65 return 10
+    if oneBack.Length != 1 return 6
+    if i32(oneBack[0]) != 65 return 7
     System.Console.WriteLine(oneB64)
 
     var two: u8[] = new u8[2]
@@ -125,6 +121,39 @@ function Main(): i32
 
         [Fact]
         public void IlE2e_Convert() => Assert.Equal(Expected, RunIl().Replace("\r\n", "\n").Replace("\r", "\n"));
+
+        /// <summary>
+        /// Convert 在 IL 后端直链 BCL System.Convert：非法 hex/base64 抛 FormatException（对齐 BCL 语义，
+        /// 见 6e-G7 ⑤a 注释；native/Evaluator 无异常机制（N5），非法输入返回空数组）。
+        /// </summary>
+        [Fact]
+        public void IlE2e_Convert_InvalidInput_ThrowsFormatException()
+        {
+            var source = @"using System
+
+function Main(): i32
+{
+    try
+    {
+        var x = Convert.FromHexString(""ABC"")
+        return 1
+    }
+    catch (e: Exception)
+    {
+        return 0
+    }
+}";
+            var exePath = Path.Combine(Path.GetTempPath(), "cocoa-convert", "convert-il-invalid-" + Guid.NewGuid().ToString("N") + ".exe");
+            Directory.CreateDirectory(Path.GetDirectoryName(exePath)!);
+            var compilation = Compilation.Create("Main", References(), SyntaxTree.Parse(source));
+            var diagnostics = compilation.Emit("convert", References(), exePath, IlTarget.Parse("net9.0"));
+            Assert.Empty(string.Join("\n", diagnostics));
+
+            var psi = new ProcessStartInfo("dotnet", $"\"{exePath}\"") { RedirectStandardOutput = true, UseShellExecute = false };
+            using var process = Process.Start(psi)!;
+            Assert.True(process.WaitForExit(15000));
+            Assert.Equal(0, process.ExitCode);
+        }
 
         [Theory]
         [InlineData("windows-x64")]

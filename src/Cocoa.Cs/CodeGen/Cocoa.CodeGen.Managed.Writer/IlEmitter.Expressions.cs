@@ -1089,12 +1089,33 @@ namespace Cocoa.CodeGen.Managed.Writer
                     }
 
                     var libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, instanceMethod.Name, libraryParamNames);
+                    // BCL 属性访问器回退：Cocoa `GetCurrentDirectory()` → BCL `get_CurrentDirectory` 属性
+                    if (libraryMemberRef == null && instanceMethod.Name.Length > 3)
+                    {
+                        if (instanceMethod.Name.StartsWith("Get", StringComparison.Ordinal))
+                            libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, "get_" + instanceMethod.Name.Substring(3), libraryParamNames);
+                        else if (instanceMethod.Name.StartsWith("Set", StringComparison.Ordinal))
+                            libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, "set_" + instanceMethod.Name.Substring(3), libraryParamNames);
+                    }
                     if (libraryMemberRef != null)
                     {
                         il.Emit(IlOpCodeTable.Get(op), libraryMemberRef);
                         return;
                     }
                     // BCL 中未找到该方法（Runtime.Floor 等 Cocoa 独有方法）→ 回退到 Cocoa 体发射
+                }
+
+                // System.String 实例方法（IndexOf/LastIndexOf/StartsWith 等）：string 无 TypeDef/方法体，
+                // 调用点直链 BCL 同名方法。
+                if (node.Expression.Type == TypeSymbol.String && !_methods.ContainsKey(instanceMethod))
+                {
+                    var stringParams = instanceMethod.Parameters.Select(p => ToIlType(p.Type).FullName).ToArray();
+                    var stringMethodRef = _framework.FindMethod("System.String", instanceMethod.Name, stringParams);
+                    if (stringMethodRef != null)
+                    {
+                        il.Emit(IlOpCodeTable.Get("Callvirt"), stringMethodRef);
+                        return;
+                    }
                 }
 
                 il.Emit(IlOpCodeTable.Get(op), _methods[instanceMethod]);
@@ -1261,8 +1282,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
-            // cod 库类已在 BCL 引用中定义（MemoryStream 等）：无 TypeDef，构造函数直连 BCL MemberRef
-            if (classType.ContainingLibrary != null && _framework.TypeExistsInReferences(classType.FullName))
+            // cod 库类已在 BCL 引用中定义且无本地 TypeDef（构造函数不发射）：直连 BCL MemberRef。
+            // （MemoryStream/StreamWriter 等真实 Cocoa body 类已入 TypeDef 表 → 跳过，走下方 _methods[ctor]）
+            var ctor = node.Constructor ?? classType.GetMethod(classType.Name);
+            if (ctor != null && classType.ContainingLibrary != null
+                && _framework.TypeExistsInReferences(classType.FullName)
+                && !_methods.ContainsKey(ctor))
             {
                 var parameterNames = new string[node.Arguments.Length];
                 for (var i = 0; i < node.Arguments.Length; i++)
@@ -1278,7 +1303,6 @@ namespace Cocoa.CodeGen.Managed.Writer
                 }
             }
 
-            var ctor = node.Constructor ?? classType.GetMethod(classType.Name);
             if (ctor == null)
             {
                 throw new System.Exception($"Class {classType.Name} has no constructor.");

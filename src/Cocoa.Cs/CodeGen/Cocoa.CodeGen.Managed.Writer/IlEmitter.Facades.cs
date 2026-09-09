@@ -63,6 +63,29 @@ namespace Cocoa.CodeGen.Managed.Writer
                 }
             }
 
+            // System.String 实例方法兜底（IndexOf/LastIndexOf 等，this: string 首参模式）：重建后
+            // ContainingClass 可能丢失 facade 标记导致上方 TryEmitFacadeBclCall 未命中；string 无 TypeDef/方法体，
+            // 调用点直链 BCL 同名方法。
+            if (!_methods.ContainsKey(node.Function)
+                && node.Function.Parameters.Length > 0
+                && node.Function.Parameters[0].Type == TypeSymbol.String)
+            {
+                var isStrInstance = node.Function.Parameters[0].IsThisParameter;
+                var strArgs = isStrInstance ? node.Arguments.Skip(1) : node.Arguments;
+                var strParams = strArgs.Select(a => ToIlType(a.Type).FullName).ToArray();
+                var strRef = _framework.FindMethod("System.String", node.Function.Name, strParams);
+                if (strRef != null)
+                {
+                    foreach (var argument in node.Arguments)
+                    {
+                        EmitExpression(il, argument);
+                    }
+
+                    il.Emit(IlOpCodeTable.Get("Callvirt"), strRef);
+                    return;
+                }
+            }
+
             var methodDefinition = _methods[node.Function];
             il.Emit(IlOpCodeTable.Get("Call"), methodDefinition);
         }
@@ -77,8 +100,14 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
         {
             if (classType.IsFacadeClass) return true;
             if (classType is InstantiatedTypeSymbol inst && inst.GenericDefinition?.IsFacadeClass == true) return true;
+            // 合成值类型（System.ValueTuple`2 等 FacadeTargets 成员，.coa 重建丢失 facade 标记）：按名识别
+            if (classType is InstantiatedTypeSymbol ivt && ivt.GenericDefinition != null && IsFacadeTargetName(ivt.GenericDefinition.FullName)) return true;
+            if (IsFacadeTargetName(classType.FullName)) return true;
             return false;
         }
+
+        private static bool IsFacadeTargetName(string fullName)
+            => fullName.StartsWith("System.ValueTuple", StringComparison.Ordinal);
 
         /// <summary>
         /// BCL 方法带回值但 Cocoa facade 声明为 void 时（如 Directory.CreateDirectory 返回 DirectoryInfo），

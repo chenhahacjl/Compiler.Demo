@@ -377,13 +377,17 @@ function Main()
                 case 0x04: return 6;  // Field: Flags(2) Name(2) Signature(2)
                 case 0x06: return 14; // MethodDef: RVA(4) ImplFlags(2) Flags(2) Name(2) Signature(2) ParamList(2)
                 case 0x08: return 6;  // Param: Flags(2) Seq(2) Name(2)
+                case 0x09: return 4;  // InterfaceImpl: Class(TypeDefOrRef 2) Interface(TypeDefOrRef 2)
                 case 0x0A: return 6;  // MemberRef: Class(2) Name(2) Signature(2)
                 case 0x0C: return 6;  // CustomAttribute: Parent(2) Type(2) Value(2)
                 case 0x11: return blobIsBig ? 4 : 2;  // StandAloneSig: Signature(#Blob)
+                case 0x12: return 4;  // EventMap: Parent(TypeDef 2) EventList(2)
                 case 0x14: return 6;  // Event: Flags(2) Name(2) EventType(2)
+                case 0x15: return 4;  // PropertyMap: Parent(TypeDef 2) PropertyList(2)
                 case 0x17: return 6;  // Property: Flags(2) Name(2) Type(2)
+                case 0x18: return 6;  // MethodSemantics: Semantics(2) Method(2) Association(2)
                 case 0x1A: return stringIsBig ? 4 : 2;  // ModuleRef: Name(#Strings)
-
+                case 0x1B: return blobIsBig ? 4 : 2;  // TypeSpec: Signature(#Blob)
                 case 0x1C: return 8;  // ImplMap: MappingFlags(2) MemberForwarded(2) ImportName(2) ImportScope(2)
                 default: throw new Exception("row size not implemented: " + tableId);
             }
