@@ -163,6 +163,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             return resolved;
         }
 
+        /// <summary>检查类型是否已在引用程序集中定义。</summary>
+        public bool TypeExistsInReferences(string fullName) => _reader.FindType(fullName, _metadata) != null;
+
         public IlMethodRef RequireMethod(string typeFullName, string methodName, string[] parameterTypeNames)
         {
             var resolved = _reader.FindMethod(typeFullName, methodName, parameterTypeNames, _metadata)

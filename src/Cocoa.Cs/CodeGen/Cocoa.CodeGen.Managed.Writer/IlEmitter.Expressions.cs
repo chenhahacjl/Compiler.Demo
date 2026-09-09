@@ -1076,8 +1076,11 @@ namespace Cocoa.CodeGen.Managed.Writer
                     ? "Call"
                     : "Callvirt";
                 // cod 库容器方法（System.IDisposable.Dispose / System.Index.FromEnd / System.Array.GetValue 等）：
-                // 不作 TypeDef/MethodDef，调用点按容器类型 TypeRef 直联 BCL MemberRef（op 视 static/struct/类而定）。
-                if (instanceMethod.ContainingClass is { ContainingLibrary: not null } && !_methods.ContainsKey(instanceMethod))
+                // 不作 TypeDef/MethodDef，调用点按容器类型 TypeRef 直联 BCL MemberRef。
+                // 仅当容器类型已在 BCL 引用中定义且方法可解析时才走此路径。
+                if (instanceMethod.ContainingClass is { ContainingLibrary: not null }
+                    && !_methods.ContainsKey(instanceMethod)
+                    && _framework.TypeExistsInReferences(instanceMethod.ContainingClass.FullName))
                 {
                     var libraryParamNames = new string[instanceMethod.Parameters.Length];
                     for (var i = 0; i < instanceMethod.Parameters.Length; i++)
@@ -1086,13 +1089,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                     }
 
                     var libraryMemberRef = _framework.FindMethod(instanceMethod.ContainingClass.FullName, instanceMethod.Name, libraryParamNames);
-                    if (libraryMemberRef == null)
+                    if (libraryMemberRef != null)
                     {
-                        throw new System.Exception($"库方法 {instanceMethod.ContainingClass.FullName}.{instanceMethod.Name} 未在 BCL 找到。");
+                        il.Emit(IlOpCodeTable.Get(op), libraryMemberRef);
+                        return;
                     }
-
-                    il.Emit(IlOpCodeTable.Get(op), libraryMemberRef);
-                    return;
+                    // BCL 中未找到该方法（Runtime.Floor 等 Cocoa 独有方法）→ 回退到 Cocoa 体发射
                 }
 
                 il.Emit(IlOpCodeTable.Get(op), _methods[instanceMethod]);
@@ -1257,6 +1259,23 @@ namespace Cocoa.CodeGen.Managed.Writer
 
                 il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
                 return;
+            }
+
+            // cod 库类已在 BCL 引用中定义（MemoryStream 等）：无 TypeDef，构造函数直连 BCL MemberRef
+            if (classType.ContainingLibrary != null && _framework.TypeExistsInReferences(classType.FullName))
+            {
+                var parameterNames = new string[node.Arguments.Length];
+                for (var i = 0; i < node.Arguments.Length; i++)
+                {
+                    parameterNames[i] = ToIlType(node.Arguments[i].Type).FullName;
+                }
+
+                var ctorRef = _framework.FindMethod(classType.FullName, ".ctor", parameterNames);
+                if (ctorRef != null)
+                {
+                    il.Emit(IlOpCodeTable.Get("Newobj"), ctorRef);
+                    return;
+                }
             }
 
             var ctor = node.Constructor ?? classType.GetMethod(classType.Name);

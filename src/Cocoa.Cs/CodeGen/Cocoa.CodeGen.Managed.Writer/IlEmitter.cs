@@ -132,12 +132,13 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.coa 的 Console/Math 等，不在 program.Classes 的源码声明集内）
-            // cod 库容器类（ContainingLibrary != null）一律不出 TypeDef：System.Core 与 BCL 同名同构，
-            // TypeDef 会与 BCL TypeRef 冲撞（回归：System.Index value type mismatch）；按名直联 TypeRef。
-            var classes = program.Classes.Where(c => !c.IsFacadeClass && c.ContainingLibrary == null).ToList();
+            // cod 库容器类若已在 BCL 引用中定义（同名同构），不出 TypeDef：按名直联 TypeRef 避免冲撞
+            var classes = program.Classes.Where(c => !c.IsFacadeClass && (c.ContainingLibrary == null || !_framework.TypeExistsInReferences(c.FullName))).ToList();
             foreach (var f in orderedFunctions)
             {
-                if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass && f.ContainingClass.ContainingLibrary == null && !classes.Contains(f.ContainingClass))
+                if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass
+                    && (f.ContainingClass.ContainingLibrary == null || !_framework.TypeExistsInReferences(f.ContainingClass.FullName))
+                    && !classes.Contains(f.ContainingClass))
                 {
                     classes.Add(f.ContainingClass);
                 }
@@ -186,10 +187,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             // 1.5 InterfaceImpl：所有 TypeDef 就绪后，把类实现/继承的接口（含基类链与接口继承）写入各自 TypeDef
-            foreach (var classType in program.Classes)
+            foreach (var classType in classes)
             {
-                if (classType.IsFacadeClass) continue;
-                var typeDef = _classTypeDefs[classType];
+                if (!_classTypeDefs.TryGetValue(classType, out var typeDef)) continue;
                 foreach (var iface in classType.GetAllInterfaces())
                 {
                     if (iface.IsExternal)
@@ -250,10 +250,9 @@ namespace Cocoa.CodeGen.Managed.Writer
             }
 
             // 2.5 属性定义（getter/setter 方法已发射）
-            foreach (var classType in program.Classes)
+            foreach (var classType in classes)
             {
-                if (classType.IsFacadeClass) continue;
-                var typeDef = _classTypeDefs[classType];
+                if (!_classTypeDefs.TryGetValue(classType, out var typeDef)) continue;
                 foreach (var property in classType.Properties)
                 {
                     IlMethodDef? getterMethod = null;
@@ -935,7 +934,13 @@ namespace Cocoa.CodeGen.Managed.Writer
                     return IlType.Class(_framework.RequireType(classType.FullName));
                 }
 
-                return IlType.Class(_classTypeDefs[classType], isValueType: classType.IsValueType);
+                // cod 库类已在 BCL 引用中定义（MemoryStream 等）：无 TypeDef，按全名直联 BCL TypeRef。
+                if (_classTypeDefs.TryGetValue(classType, out var typeDef))
+                {
+                    return IlType.Class(typeDef, isValueType: classType.IsValueType);
+                }
+
+                return IlType.Class(_framework.RequireType(classType.FullName));
             }
 
             if (type.ElementType != null)
