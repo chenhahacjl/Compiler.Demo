@@ -205,7 +205,7 @@ using System.Collections.Generic
 
 public class Bag<T>
 {
-    private _items: List<T>
+    private field _items: List<T>
 
     public constructor()
     {

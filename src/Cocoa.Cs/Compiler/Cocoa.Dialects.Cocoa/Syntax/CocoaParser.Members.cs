@@ -746,14 +746,22 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 return ParsePropertyDeclaration(modifiers);
             }
 
+            if (Current.Kind == SyntaxKind.FieldKeyword)
+            {
+                MatchToken(SyntaxKind.FieldKeyword);
+                return ParseClassFieldDeclaration(modifiers);
+            }
+
             if (Current.Kind == SyntaxKind.IdentifierToken)
             {
                 if (Peek(1).Kind == SyntaxKind.ColonToken)
                 {
+                    // 6e-M31：类字段须显式 `field` 关键字（与 property 对齐）；裸 `name: type` 报诊断并降级解析
+                    ReportError(Current.Location, "类字段声明须加 field 关键字，如 `field " + Current.Text + ": ...`。");
                     return ParseClassFieldDeclaration(modifiers);
                 }
 
-                ReportError(Current.Location, "Cocoa 类成员须用 function/property/constructor 关键字且类型后置，不支持 C# 式 `类型 名称(...)`。");
+                ReportError(Current.Location, "Cocoa 类成员须用 function/property/field/constructor 关键字且类型后置，不支持 C# 式 `类型 名称(...)`。");
                 return ParseCSharpStyleMember(modifiers, className);
             }
 

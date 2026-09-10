@@ -72,8 +72,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.Native
 
 public class Person
 {
-    private _name: string
-    private _age: i32
+    private field _name: string
+    private field _age: i32
 
     public constructor(name: string, age: i32)
     {
@@ -116,7 +116,7 @@ function Main()
 
 public class Shape
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -131,7 +131,7 @@ public class Shape
 
 public class Circle extends Shape
 {
-    private _radius: i32
+    private field _radius: i32
 
     public constructor(name: string, radius: i32) extends base(name)
     {
@@ -213,7 +213,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -269,7 +269,7 @@ function Main()
 
 public class Box
 {
-    private _v: i32
+    private field _v: i32
 
     public constructor(v: i32)
     {
@@ -353,7 +353,7 @@ function Main()
 
 public class Counter
 {
-    public static Total: i32
+    public static field Total: i32
 
     public constructor()
     {
@@ -363,7 +363,7 @@ public class Counter
 
 public class Node
 {
-    public Value: i32
+    public field Value: i32
 
     public constructor(v: i32)
     {
@@ -420,7 +420,7 @@ function Main()
 
 public class Config
 {
-    public static Version: i32 = 3
+    public static field Version: i32 = 3
 }
 
 function Main()
@@ -519,7 +519,7 @@ function Main()
 
 public class Point
 {
-    public _x: i32
+    public field _x: i32
     public constructor(x: i32)
     {
         _x = x

@@ -29,8 +29,8 @@ public class Calc
 
 public class Point2
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(px: i32, py: i32) { x = px; y = py }
 }
 

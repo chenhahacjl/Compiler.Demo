@@ -25,7 +25,7 @@ namespace Cocoa.Tests.CodeAnalysis.Emit.IL
             var code = @"
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -71,7 +71,7 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: i32
+        private field _x: i32
 
         public constructor(x: i32)
         {
@@ -112,7 +112,7 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: i32
+        private field _x: i32
 
         public constructor(x: i32)
         {
@@ -174,7 +174,7 @@ namespace MyLib
 {
     public class Account
     {
-        internal _balance: i32
+        internal field _balance: i32
 
         protected function GetBalance(): i32
         {
@@ -283,7 +283,7 @@ function Main()
             var libCode = @"
 public class Shape
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -304,7 +304,7 @@ public class Shape
 
 public class Circle extends Shape
 {
-    private _radius: i32
+    private field _radius: i32
 
     public constructor(name: string, radius: i32) extends base(name)
     {
@@ -353,7 +353,7 @@ using System
 
 public class Resource extends IDisposable
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -424,8 +424,8 @@ public class MathHelpers
             var code = @"
 public class Config
 {
-    public static Max: i32 = 100
-    public static Name: string = ""cocoa""
+    public static field Max: i32 = 100
+    public static field Name: string = ""cocoa""
 }";
             var syntaxTree = SyntaxTree.Parse(code);
             var compilation = Compilation.Create(syntaxTree);

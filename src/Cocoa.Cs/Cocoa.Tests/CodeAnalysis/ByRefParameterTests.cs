@@ -37,8 +37,8 @@ function Get99(out v: i32): bool
 
 class Counter
 {
-    public static s: i32
-    private _n: i32
+    public static field s: i32
+    private field _n: i32
 
     public function Take(out old: i32): void
     {

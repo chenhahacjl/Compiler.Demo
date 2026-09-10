@@ -23,7 +23,7 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void PropertyAccessorFunctions_HaveIsPropertyAccessor()
         {
-            var tree = SyntaxTree.Parse("class Foo\n{\n    private _x: i32\n    public property X: i32\n    {\n        get\n        {\n            return _x\n        }\n        set\n        {\n            _x = value\n        }\n    }\n}");
+            var tree = SyntaxTree.Parse("class Foo\n{\n    private field _x: i32\n    public property X: i32\n    {\n        get\n        {\n            return _x\n        }\n        set\n        {\n            _x = value\n        }\n    }\n}");
             var compilation = Compilation.Create("Main", References(), tree);
 
             var getter = compilation.Functions.FirstOrDefault(f => f.Name == "get_X");

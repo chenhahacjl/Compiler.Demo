@@ -23,7 +23,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 public class Box<T>
 {
-    private _value: T
+    private field _value: T
 
     public constructor(value: T)
     {
@@ -56,8 +56,8 @@ function Main(): i32
 
 public class Pair<K, V>
 {
-    private _key: K
-    private _value: V
+    private field _key: K
+    private field _value: V
 
     public constructor(key: K, value: V)
     {
@@ -78,7 +78,7 @@ public class Pair<K, V>
 
 public class Entry<E>
 {
-    private _inner: E
+    private field _inner: E
 
     public constructor(inner: E)
     {
@@ -209,7 +209,7 @@ function Main(): i32
 
 public class Box<T>
 {
-    private _value: T
+    private field _value: T
 
     public constructor(value: T)
     {
@@ -258,8 +258,8 @@ public interface IEnumerator<T>
 
 public class List<T> extends IEnumerable<T>
 {
-    private _items: T[]
-    private _count: i32
+    private field _items: T[]
+    private field _count: i32
 
     public constructor()
     {
@@ -302,8 +302,8 @@ public class List<T> extends IEnumerable<T>
 
 public class ListEnumerator<T> extends IEnumerator<T>
 {
-    private _list: List<T>
-    private _index: i32
+    private field _list: List<T>
+    private field _index: i32
 
     public constructor(list: List<T>)
     {
@@ -620,7 +620,7 @@ function Main()
 
 public class Store<T> where T: class
 {
-    private _value: T
+    private field _value: T
 
     public constructor(value: T)
     {

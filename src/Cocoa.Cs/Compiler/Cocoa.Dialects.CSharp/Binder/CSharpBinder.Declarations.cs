@@ -759,6 +759,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     if (classType.GetDeclaredField(fieldDeclaration.Identifier.Text) == null)
                     {
                         classType.AddField(new FieldSymbol(fieldDeclaration.Identifier.Text, fieldType!, fieldVisibility, classType, isReadonly: fieldIsReadonly, isStatic: fieldIsStatic));
+                        if (fieldVisibility == Visibility.Public)
+                        {
+                            ValidateFacadeMemberAgainstBcl(classType, fieldDeclaration.Identifier.Text, FacadeMemberKind.Field, 0, fieldDeclaration.Identifier.Location);
+                        }
                     }
                     else
                     {
@@ -814,6 +818,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                         {
                             classType.AddMethod(ctor);
                             classFunctions.Add(ctor);
+                            if (ctorVisibility == Visibility.Public)
+                            {
+                                ValidateFacadeMemberAgainstBcl(classType, classType.Name, FacadeMemberKind.Constructor, parameters.Length, constructorDeclaration.Location);
+                            }
                         }
                         else
                         {
@@ -832,6 +840,11 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                     {
                         classType.AddMethod(method);
                         classFunctions.Add(method);
+                        if (method.Visibility == Visibility.Public)
+                        {
+                            var publicArity = method.Parameters.Length - (method.Parameters.Length > 0 && method.Parameters[0].IsThisParameter ? 1 : 0);
+                            ValidateFacadeMemberAgainstBcl(classType, methodDeclaration.Identifier.Text, FacadeMemberKind.Method, publicArity, methodDeclaration.Identifier.Location);
+                        }
                     }
                     else
                     {
@@ -2099,6 +2112,57 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             return new BoundBlockStatement(accessor, ImmutableArray.Create<BoundStatement>(new BoundExpressionStatement(accessor, memberAssignment)));
         }
 
+        private enum FacadeMemberKind { Field, Property, Method, Constructor }
+
+        /// <summary>6e-M31：facade 类型 public 成员须与 BCL 目标一一对应（可行子集，不可多）。
+        /// 守卫：非 facade / 引用集空 / '_' 前缀（实现内部状态，如 Index._value）/ 对应物不可解析 → 跳过。
+        /// 方法/构造函数按「名称 + 参数个数」在 BCL 中存在性校验；属性/字段含种类匹配（property↔field 错配即报错）。</summary>
+        private void ValidateFacadeMemberAgainstBcl(NamedTypeSymbol classType, string memberName, FacadeMemberKind kind, int arity, TextLocation location)
+        {
+            if (!classType.IsFacadeClass) return;
+            if (_references == null || _references.Length == 0) return;
+            if (memberName.StartsWith("_", StringComparison.Ordinal)) return;
+
+            var bclFullName = classType.FacadeThisType is NamedTypeSymbol nts && !nts.IsPrimitiveValueType && nts != TypeSymbol.String
+                ? nts.FullName
+                : classType.FullName;
+            var bcl = ExternalTypeResolver.TryResolve(bclFullName, _references.ToArray());
+            if (bcl == null) return;
+
+            if (kind == FacadeMemberKind.Method)
+            {
+                if (!bcl.GetMethods(memberName).Any(m => m.Parameters.Length == arity))
+                {
+                    _diagnostics.ReportFacadeMemberNotFound(location, bclFullName, memberName);
+                }
+                return;
+            }
+
+            if (kind == FacadeMemberKind.Constructor)
+            {
+                if (!bcl.GetMethods(bcl.Name).Any(m => m.IsConstructor && m.Parameters.Length == arity))
+                {
+                    _diagnostics.ReportFacadeMemberNotFound(location, bclFullName, memberName);
+                }
+                return;
+            }
+
+            var hasField = bcl.GetField(memberName) != null;
+            var bclIsProperty = bcl.GetMethods("get_" + memberName).Any() || bcl.GetMethods("set_" + memberName).Any();
+            if (kind == FacadeMemberKind.Property)
+            {
+                if (bclIsProperty) return;
+                if (hasField) _diagnostics.ReportFacadeMemberKindMismatch(location, bclFullName, memberName, "property", "field");
+                else _diagnostics.ReportFacadeMemberNotFound(location, bclFullName, memberName);
+            }
+            else // Field
+            {
+                if (hasField) return;
+                if (bclIsProperty) _diagnostics.ReportFacadeMemberKindMismatch(location, bclFullName, memberName, "field", "property");
+                else _diagnostics.ReportFacadeMemberNotFound(location, bclFullName, memberName);
+            }
+        }
+
         private void BindPropertyDeclaration(PropertyDeclarationSyntax syntax, NamedTypeSymbol classType, List<FunctionSymbol> classFunctions)
         {
             var isIndexer = syntax.Identifier.Text == "this";
@@ -2186,6 +2250,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
                 if (getter != null) getter.ContainingProperty = property;
                 if (setter != null) setter.ContainingProperty = property;
                 classType.AddProperty(property);
+                if (visibility == Visibility.Public)
+                {
+                    ValidateFacadeMemberAgainstBcl(classType, propertyName, FacadeMemberKind.Property, 0, syntax.Identifier.Location);
+                }
             }
             else
             {

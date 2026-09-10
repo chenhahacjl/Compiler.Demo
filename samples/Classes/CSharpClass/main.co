@@ -6,10 +6,10 @@ using System
 public class Person
 {
     // Cocoa 式字段
-    private _name: string
-    private _age: i32
+    private field _name: string
+    private field _age: i32
     // Cocoa 式静态字段 + 初始化器（合成 .cctor）
-    public static Count: i32 = 0
+    public static field Count: i32 = 0
 
     // Cocoa 式构造函数（constructor 关键字）+ Cocoa 式参数
     public constructor(name: string, age: i32)

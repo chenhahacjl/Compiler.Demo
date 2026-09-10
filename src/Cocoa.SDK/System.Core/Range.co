@@ -4,8 +4,8 @@ namespace System
 {
     public facade struct Range
     {
-        public _start: Index
-        public _end: Index
+        public field _start: Index
+        public field _end: Index
 
         public constructor(start: Index, end: Index)
         {

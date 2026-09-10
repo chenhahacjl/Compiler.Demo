@@ -3,7 +3,7 @@ namespace System.IO
 {
     public class StringReader
     {
-        private _rest: string
+        private field _rest: string
 
         public constructor(text: string)
         {

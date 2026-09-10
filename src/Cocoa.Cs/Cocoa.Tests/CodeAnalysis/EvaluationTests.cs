@@ -200,7 +200,7 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var testCode = @"public class MemoryStream
 {
-    private _pos: i32 = 0
+    private field _pos: i32 = 0
     public function Read(): i32
     {
         _pos = _pos + 1
@@ -235,7 +235,7 @@ function Main(): i32
         {
             var testCode = @"public class Resource
 {
-    private _val: i32 = 10
+    private field _val: i32 = 10
 }
 
 function Main(): i32
@@ -299,7 +299,7 @@ function Main(): i32
         {
             var testCode = @"public class NoDisposeClass
 {
-    private _val: i32 = 10
+    private field _val: i32 = 10
 }
 
 function Main(): i32
@@ -2513,8 +2513,8 @@ function Main(): i32
 
 public class Counter
 {
-    private _count: i32
-    private _delta: i32
+    private field _count: i32
+    private field _delta: i32
 
     public constructor(delta: i32)
     {
@@ -2555,7 +2555,7 @@ public class Shape
 
 public class Square extends Shape
 {
-    private _side: i32
+    private field _side: i32
 
     public constructor(side: i32)
     {
@@ -2588,7 +2588,7 @@ function Main(): i32
 
 public class Animal
 {
-    protected _name: string
+    protected field _name: string
 
     public constructor(name: string)
     {
@@ -2603,7 +2603,7 @@ public class Animal
 
 public class Dog extends Animal
 {
-    private _legs: i32
+    private field _legs: i32
 
     public constructor(name: string, legs: i32) extends base(""dog:"" + name)
     {
@@ -2644,7 +2644,7 @@ function Main(): i32
 
 public class Base<T>
 {
-    protected _tag: string = ""b""
+    protected field _tag: string = ""b""
 
     public constructor(t: string)
     {
@@ -2659,8 +2659,8 @@ public class Base<T>
 
 public class Derived extends Base<i32>
 {
-    private _v: i32 = 7
-    public static _count: i32 = 0
+    private field _v: i32 = 7
+    public static field _count: i32 = 0
 
     public constructor(s: string) extends base(s)
     {
@@ -2697,7 +2697,7 @@ function Main(): i32
 
 public class Registry
 {
-    public static _total: i32 = 5
+    public static field _total: i32 = 5
 
     public static function Add(v: i32): i32
     {
@@ -2723,7 +2723,7 @@ function Main(): i32
             var text = @"
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {

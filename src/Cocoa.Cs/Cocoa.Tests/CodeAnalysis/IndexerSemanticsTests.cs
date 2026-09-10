@@ -24,8 +24,8 @@ namespace Cocoa.Tests.CodeAnalysis
 {
     public class List<T>
     {
-        private _items: T[]
-        private _count: i32
+        private field _items: T[]
+        private field _count: i32
 
         public constructor()
         {

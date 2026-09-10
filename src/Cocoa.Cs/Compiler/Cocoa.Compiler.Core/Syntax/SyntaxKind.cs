@@ -248,5 +248,6 @@ ColonToken,               // :
         YieldKeyword = 228, // yield 关键字
         YieldReturnStatement = 229, // yield return 语句
         YieldBreakStatement = 230, // yield break 语句
+        FieldKeyword = 231, // field（6e-M31 类字段显式关键字，对齐 property；显式值避免移动隐式段成员）
     }
 }

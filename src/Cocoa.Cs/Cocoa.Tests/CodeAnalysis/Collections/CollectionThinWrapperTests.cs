@@ -19,11 +19,11 @@ namespace System.Collections.Generic
 {
     public class Dictionary<K, V>
     {
-        private _keys: K[]
-        private _values: V[]
-        private _next: i32[]
-        private _buckets: i32[]
-        private _count: i32
+        private field _keys: K[]
+        private field _values: V[]
+        private field _next: i32[]
+        private field _buckets: i32[]
+        private field _count: i32
 
         public constructor()
         {
@@ -165,7 +165,7 @@ namespace System.Collections.Generic
 {
     public class Stack<T>
     {
-        private _items: List<T>
+        private field _items: List<T>
 
         public constructor()
         {

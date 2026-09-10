@@ -222,7 +222,7 @@ namespace System.Numerics
     facade struct Vector3
     {
         public constructor(x: f32, y: f32, z: f32) {}
-        public property X: f32 { get set }
+        public field X: f32
     }
 }
 
@@ -234,6 +234,65 @@ function Main()
 }";
             var (_, stdout) = EmitAndRun(source, "FacadeVector3X", new[] { typeof(System.Numerics.Vector3).Assembly.Location });
             Assert.Equal("9\r\n", stdout);
+        }
+
+        /// <summary>仅做绑定（不发射），返回全部诊断文本。</summary>
+        private static string BindDiagnostics(string source, string[]? extraReferences = null)
+        {
+            var coreDir = Path.Combine(RepoRoot(), "src", "Cocoa.SDK", "System.Core");
+            var syntaxTrees = new[]
+            {
+                Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(File.ReadAllText(Path.Combine(coreDir, "Exception.co"))),
+                Cocoa.CodeAnalysis.Syntax.SyntaxTree.Parse(source),
+            };
+
+            var references = new List<string>
+            {
+                typeof(object).Assembly.Location,
+                typeof(System.Console).Assembly.Location,
+            };
+            if (extraReferences != null)
+            {
+                references.AddRange(extraReferences);
+            }
+
+            var compilation = Cocoa.CodeAnalysis.Compilation.Create("Main", references.ToArray(), syntaxTrees);
+            return string.Join("; ", compilation.GetDiagnostics().Select(d => d.Message));
+        }
+
+        [Fact]
+        public void FacadeStruct_PropertyOverField_ReportsKindMismatch()
+        {
+            // BCL System.Numerics.Vector3.X 是字段；声明 property X → 种类错配 error（不许静默退化到字段）
+            var source = @"
+namespace System.Numerics
+{
+    facade struct Vector3
+    {
+        public constructor(x: f32, y: f32, z: f32) {}
+        public property X: f32 { get set }
+    }
+}";
+            var diag = BindDiagnostics(source, new[] { typeof(System.Numerics.Vector3).Assembly.Location });
+            Assert.Contains("declared as a property", diag);
+            Assert.Contains("defines it as a field", diag);
+        }
+
+        [Fact]
+        public void FacadeStruct_ExtraPublicMember_ReportsNotFound()
+        {
+            // BCL Vector3 无 `Magnitude` 字段 → public 字段须一一对应 BCL（可行子集，不可多）
+            var source = @"
+namespace System.Numerics
+{
+    facade struct Vector3
+    {
+        public constructor(x: f32, y: f32, z: f32) {}
+        public field Magnitude: f32
+    }
+}";
+            var diag = BindDiagnostics(source, new[] { typeof(System.Numerics.Vector3).Assembly.Location });
+            Assert.Contains("does not exist in the BCL target", diag);
         }
     }
 }

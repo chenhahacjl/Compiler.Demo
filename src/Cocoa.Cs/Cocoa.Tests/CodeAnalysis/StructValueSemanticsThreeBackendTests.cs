@@ -22,8 +22,8 @@ namespace Cocoa.Tests.CodeAnalysis
 
 public struct Point
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(px: i32, py: i32) { x = px; y = py }
     public function Sum(): i32 { return x + y }
 }

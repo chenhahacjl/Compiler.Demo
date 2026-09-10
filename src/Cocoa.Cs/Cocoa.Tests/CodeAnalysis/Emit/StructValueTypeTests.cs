@@ -80,8 +80,8 @@ namespace Cocoa.Tests.CodeAnalysis.Emit
             var source = @"
 struct Point
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(x: i32, y: i32)
     {
         this.x = x
@@ -105,8 +105,8 @@ function Main()
             var source = @"
 struct Point
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(x: i32, y: i32)
     {
         this.x = x
@@ -135,8 +135,8 @@ function Main()
             var source = @"
 struct Point
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(x: i32, y: i32)
     {
         this.x = x
@@ -165,8 +165,8 @@ function Main()
             var source = @"
 struct Point
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(x: i32, y: i32)
     {
         this.x = x

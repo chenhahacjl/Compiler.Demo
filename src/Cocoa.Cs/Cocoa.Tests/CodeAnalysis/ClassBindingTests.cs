@@ -21,7 +21,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -91,7 +91,7 @@ function Main()
 
 public class Box<T>
 {
-    private _value: T
+    private field _value: T
 
     public constructor(value: T)
     {
@@ -373,7 +373,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -459,7 +459,7 @@ function Main()
 
 public class Counter
 {
-    private _count: i32
+    private field _count: i32
 
     public property Count: i32 { get set }
 
@@ -995,7 +995,7 @@ function Main()
 
 public class Box
 {
-    private _x: i32
+    private field _x: i32
     public constructor(x: i32)
     {
         _x = x
@@ -1159,7 +1159,7 @@ namespace Foo.Bar
         {
             var tree = SyntaxTree.Parse(@"public class Box
 {
-    private _x: i32
+    private field _x: i32
 
     public property Count: i32 { get set }
 
@@ -1246,7 +1246,7 @@ public interface IShape
 
 public class Box : IShape
 {
-    private _x: i32
+    private field _x: i32
 
     public property Count: i32 { get set }
 
@@ -1355,7 +1355,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -1384,7 +1384,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 }
 
 function Main()
@@ -1431,7 +1431,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -1456,7 +1456,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     private function Secret(): i32
     {
@@ -1520,7 +1520,7 @@ public class Foo
         return this._x
     }
 
-    private _x: i32
+    private field _x: i32
 }
 
 function Main()
@@ -1538,7 +1538,7 @@ function Main()
 
 public class Foo
 {
-    private readonly _x: i32
+    private readonly field _x: i32
 
     public constructor(x: i32)
     {
@@ -1565,7 +1565,7 @@ function Main()
             var code = @"
 public class Foo
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -1594,7 +1594,7 @@ function Main()
 
 public class Foo
 {
-    internal _x: i32
+    internal field _x: i32
 
     internal function Bar(): i32
     {
@@ -1619,7 +1619,7 @@ function Main()
 
 public class Animal
 {
-    protected _age: i32
+    protected field _age: i32
 
     protected function Age(): i32
     {
@@ -1661,7 +1661,7 @@ function Main()
 
 public class Animal
 {
-    protected _age: i32
+    protected field _age: i32
 }
 
 public class Dog extends Animal { }
@@ -1695,7 +1695,7 @@ function Main()
 
 public class Animal
 {
-    protected _age: i32
+    protected field _age: i32
 }
 
 public class Keeper
@@ -1811,7 +1811,7 @@ function Main()
 
 public partial class Point
 {
-    private _x: i32
+    private field _x: i32
 }
 
 public partial class Point
@@ -1848,7 +1848,7 @@ function Main()
 
 public partial class Point
 {
-    private _x: i32
+    private field _x: i32
 }
 
 function Main()
@@ -1888,7 +1888,7 @@ public partial class Point
 
 public partial class A
 {
-    private _x: i32
+    private field _x: i32
 }
 
 public partial class A
@@ -2026,8 +2026,8 @@ function Main()
 
 public class Person
 {
-    private _name: string
-    private _age: i32
+    private field _name: string
+    private field _age: i32
 
     public constructor(name: string, age: i32)
     {
@@ -2059,7 +2059,7 @@ function Main()
 
 public class Counter
 {
-    private _count: i32 = 5
+    private field _count: i32 = 5
 
     public function Get(): i32
     {
@@ -2107,7 +2107,7 @@ function Main()
 
 public class Config
 {
-    public static Max: i32 = 100
+    public static field Max: i32 = 100
 }
 
 function Main()
@@ -2129,8 +2129,8 @@ function Main()
 
 public class Foo
 {
-    public static Max: i32
-    private _x: i32
+    public static field Max: i32
+    private field _x: i32
 }
 
 function Main()
@@ -2153,7 +2153,7 @@ function Main()
 
 public class Config
 {
-    public static Max: i32
+    public static field Max: i32
 
     static constructor()
     {
@@ -2181,7 +2181,7 @@ function Main()
 
 public class Config
 {
-    public static Max: i32
+    public static field Max: i32
 
     static constructor()
     {
@@ -2209,7 +2209,7 @@ function Main()
 
 public class Config
 {
-    public static Max: i32
+    public static field Max: i32
 
     static constructor()
     {
@@ -2301,7 +2301,7 @@ function Main()
 
 public class Foo
 {
-    private _x: i32
+    private field _x: i32
 
     static constructor()
     {
@@ -2324,7 +2324,7 @@ function Main()
 
 public class Foo
 {
-    private _x: i32
+    private field _x: i32
 
     static constructor()
     {
@@ -2371,7 +2371,7 @@ function Main()
 
 public class Immutable
 {
-    public readonly Id: i32 = 42
+    public readonly field Id: i32 = 42
 
     public function Get(): i32
     {
@@ -2603,7 +2603,7 @@ public class Point extends Object
             var code = @"
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -2719,7 +2719,7 @@ function Main(): i32
             var code = @"
 public class Holder
 {
-    private _o: object
+    private field _o: object
 }";
             Assert.Empty(GetDiagnostics(code));
         }
@@ -2732,7 +2732,7 @@ public class Holder
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {

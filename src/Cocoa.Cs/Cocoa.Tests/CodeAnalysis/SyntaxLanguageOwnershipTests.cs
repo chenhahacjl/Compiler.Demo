@@ -46,6 +46,7 @@ namespace Cocoa.Tests.CodeAnalysis
             (SyntaxKind.ImportKeyword,      "class K { import kernel32.dll { } }"),
             (SyntaxKind.ToKeyword,          "class P { static void M() { if (a to 3) { } } }"),
             (SyntaxKind.StepKeyword,        "class P { static void M() { if (a step 3) { } } }"),
+            (SyntaxKind.FieldKeyword,       "class P { field X: i32; }"),
         };
 
         [Fact]
@@ -74,7 +75,7 @@ namespace Cocoa.Tests.CodeAnalysis
         public void OwnershipTable_CocoaOnlyKeywordKinds_AreAllCocoaOnly()
         {
             // 锁定归属表为单一真相源：表中登记的 CO 专属关键字全为 CocoaOnly
-            Assert.Equal(12, CocoaOnlyKeywordSnippets.Length);
+            Assert.Equal(13, CocoaOnlyKeywordSnippets.Length);
             foreach (var (keyword, _) in CocoaOnlyKeywordSnippets)
             {
                 Assert.Equal(SyntaxLanguageOwnership.CocoaOnly, SyntaxKindLanguageOwnership.Ownership(keyword));
@@ -118,11 +119,11 @@ namespace Cocoa.Tests.CodeAnalysis
         [Fact]
         public void CocoaOnlyKeywords_UsableAsCsIdentifiers()
         {
-            // 12 个 CO 独占词全部可作 C# 普通标识符（编译 0 错误）
+            // 13 个 CO 独占词全部可作 C# 普通标识符（编译 0 错误）
             var cs = SyntaxTree.ParseCs(
                 "class P { int function = 1; int let = 2; int property = 3; int constructor = 4; " +
                 "int extends = 5; int facade = 6; int syscall = 7; int cdecl = 8; int stdcall = 9; " +
-                "int import = 10; int to = 11; int step = 12; }");
+                "int import = 10; int to = 11; int step = 12; int field = 13; }");
             Assert.False(cs.Diagnostics.Any(d => d.IsError), string.Join("; ", cs.Diagnostics.Select(d => d.Message)));
         }
 

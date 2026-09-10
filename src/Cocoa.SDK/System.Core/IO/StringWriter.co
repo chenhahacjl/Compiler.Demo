@@ -13,7 +13,7 @@ namespace System.IO
             return StringSyscall.StringFromBytes(b)
         }
 
-        private _value: string
+        private field _value: string
 
         public constructor()
         {

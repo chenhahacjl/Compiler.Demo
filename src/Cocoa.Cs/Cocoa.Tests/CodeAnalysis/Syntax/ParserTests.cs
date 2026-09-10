@@ -324,8 +324,8 @@ cdecl function double(x: i32): i32
             var syntaxTree = SyntaxTree.Parse(@"
 public class Point
 {
-    private _x: i32
-    private _y: i32
+    private field _x: i32
+    private field _y: i32
 
     public constructor(x: i32, y: i32)
     {
@@ -838,7 +838,7 @@ switch (x)
         [Fact]
         public void Parser_CocoaStyleFieldWithInitializer_BindsToClassField()
         {
-            var syntaxTree = SyntaxTree.Parse("class Foo { private _x: int = 5 }");
+            var syntaxTree = SyntaxTree.Parse("class Foo { private field _x: int = 5 }");
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);
@@ -1351,7 +1351,7 @@ switch (x)
         [Fact]
         public void Parser_CocoaClassMembers_Parse()
         {
-            var syntaxTree = SyntaxTree.Parse("class Foo { private _x: int public property Y: int { get set } public function Get(): int { return _x; } }");
+            var syntaxTree = SyntaxTree.Parse("class Foo { private field _x: int public property Y: int { get set } public function Get(): int { return _x; } }");
             var root = (CompilationUnitSyntax)syntaxTree.Root;
             var member = Assert.Single(root.Members);
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(member);

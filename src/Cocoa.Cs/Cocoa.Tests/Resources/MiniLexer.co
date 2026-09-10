@@ -9,10 +9,10 @@ namespace MiniLexer
 {
     class Lexer
     {
-        private _src: string
-        private _pos: i32
-        private _line: i32
-        private _col: i32
+        private field _src: string
+        private field _pos: i32
+        private field _line: i32
+        private field _col: i32
 
         public constructor()
         {

@@ -109,7 +109,7 @@ namespace MyLib
 {
     public class Box<T>
     {
-        private _value: T
+        private field _value: T
 
         public constructor(v: T)
         {
@@ -457,7 +457,7 @@ namespace MyLib
 {
     public class Point
     {
-        private _x: i32
+        private field _x: i32
         public function X(): i32 { return _x }
     }
 }

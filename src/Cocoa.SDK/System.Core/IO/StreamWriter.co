@@ -13,7 +13,7 @@ namespace System.IO
             return StringSyscall.StringFromBytes(b)
         }
 
-        private _stream: MemoryStream
+        private field _stream: MemoryStream
 public constructor(stream: MemoryStream)
         {
             _stream = stream

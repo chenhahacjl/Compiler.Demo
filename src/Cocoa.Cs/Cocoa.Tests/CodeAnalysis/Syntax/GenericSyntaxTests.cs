@@ -104,7 +104,7 @@ public interface IEnumerable<T>
             var syntaxTree = SyntaxTree.Parse(@"
 public class Box
 {
-    private _items: List<int>
+    private field _items: List<int>
 }");
             var classDeclaration = Assert.IsType<ClassDeclarationSyntax>(Assert.Single(((CompilationUnitSyntax)syntaxTree.Root).Members));
             var field = Assert.IsType<ClassFieldDeclarationSyntax>(Assert.Single(classDeclaration.Members));

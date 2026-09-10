@@ -159,6 +159,20 @@ namespace Cocoa.CodeAnalysis
             ReportWarning(location, message);
         }
 
+        /// <summary>6e-M31：facade 类型成员种类（property/field）与 BCL 目标不匹配（如声明 property、BCL 实为字段）。</summary>
+        public void ReportFacadeMemberKindMismatch(TextLocation location, string fullName, string memberName, string declaredKind, string actualKind)
+        {
+            var message = $"facade member '{fullName}.{memberName}' is declared as a {declaredKind}, but the BCL target defines it as a {actualKind}. Declare it to match the BCL member kind.";
+            ReportError(location, message);
+        }
+
+        /// <summary>6e-M31：facade 类型声明的 public 成员在 BCL 目标中不存在（可行子集，不可多）。</summary>
+        public void ReportFacadeMemberNotFound(TextLocation location, string fullName, string memberName)
+        {
+            var message = $"facade member '{fullName}.{memberName}' does not exist in the BCL target. A facade may declare a subset of BCL public members, but not extras.";
+            ReportError(location, message);
+        }
+
         public void ReportCannotConvert(TextLocation location, TypeSymbol fromType, TypeSymbol toType)
         {
             var message = $"Cannot convert type '{fromType}' to '{toType}'.";

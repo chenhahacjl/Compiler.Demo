@@ -1042,18 +1042,6 @@ namespace Cocoa.CodeGen.Managed.Writer
                         }
                     }
 
-                    if (facadeMethodRef == null && (node.Identifier.StartsWith("get_") || node.Identifier.StartsWith("set_")) && node.Identifier.Length > 4)
-                    {
-                        // facade 属性映射到 BCL 字段（System.Numerics.Vector3.X 等可变值类型字段，
-                        // 无 get_X/set_X 方法）：接收者与实参已在栈上（值类型=地址），退化到 ldfld/stfld。
-                        var fieldRef = _framework.FindField(facadeOwner.FullName, node.Identifier.Substring(4));
-                        if (fieldRef != null)
-                        {
-                            il.Emit(IlOpCodeTable.Get(node.Identifier.StartsWith("get_") ? "Ldfld" : "Stfld"), fieldRef);
-                            return;
-                        }
-                    }
-
                     if (facadeMethodRef == null)
                     {
                         throw new System.Exception($"facade 成员 {facadeOwner.FullName}.{node.Identifier} 未在 BCL 找到。");
@@ -1332,7 +1320,8 @@ namespace Cocoa.CodeGen.Managed.Writer
         private readonly Dictionary<(string asm, string type, string name), IlFieldRef> _codFieldRefs =
             new Dictionary<(string, string, string), IlFieldRef>();
 
-        /// <summary>6e-Step D-b：cod 类的字段 token——本地 TypeDef 用 _fieldDefs；cod 类走库 dll 宿主 TypeRef 的 FieldRef。</summary>
+        /// <summary>6e-Step D-b：cod 类的字段 token——本地 TypeDef 用 _fieldDefs；cod 类走库 dll 宿主 TypeRef 的 FieldRef。
+        /// 6e-M31：facade 类型字段（映射到 BCL）→ BCL 同名 FieldRef（ldfld/stfld/ldsfld 目标）。</summary>
         private object _fieldToken(FieldSymbol field)
         {
             var owner = field.ContainingClass;
@@ -1346,6 +1335,15 @@ namespace Cocoa.CodeGen.Managed.Writer
                 }
 
                 return reference;
+            }
+
+            if (owner != null && owner.IsFacadeClass)
+            {
+                var facadeFieldRef = _framework.FindField(FacadeBclFullName(owner), field.Name);
+                if (facadeFieldRef != null)
+                {
+                    return facadeFieldRef;
+                }
             }
 
             return _fieldDefs[field];

@@ -6,8 +6,8 @@ namespace System.Collections.Generic
 {
     public class Stack<T> extends IReadOnlyCollection<T>
     {
-        private _items: T[]
-        private _count: i32
+        private field _items: T[]
+        private field _count: i32
 
         public constructor()
         {
@@ -69,9 +69,9 @@ namespace System.Collections.Generic
 
     public class StackEnumerator<T> extends IEnumerator<T>
     {
-        private _items: T[]
-        private _count: i32
-        private _index: i32
+        private field _items: T[]
+        private field _count: i32
+        private field _index: i32
 
         public constructor(items: T[], count: i32)
         {

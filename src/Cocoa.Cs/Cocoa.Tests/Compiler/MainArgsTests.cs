@@ -244,7 +244,7 @@ namespace Cocoa.Tests.Compiler
             var appDir = Path.Combine(root, "App");
             Directory.CreateDirectory(appDir);
             File.WriteAllText(Path.Combine(appDir, "App.co"),
-                "namespace My.App { public class Program { public x: i32 = 0\npublic static function Main() { Console.WriteLine(7) } } }");
+                "namespace My.App { public class Program { public field x: i32 = 0\npublic static function Main() { Console.WriteLine(7) } } }");
             File.WriteAllText(Path.Combine(appDir, "App.coproj"),
                 $"<Project Version=\"1\">\n" +
                 $"  <PropertyGroup Label=\"Language\">\n    <Language>Cocoa</Language>\n  </PropertyGroup>\n" +

@@ -39,7 +39,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 public class BoxS<T> where T: struct
 {
-    public value: T
+    public field value: T
     public constructor(v: T) { value = v }
 }
 
@@ -61,7 +61,7 @@ function Main(): i32
 
 public class BoxR<T> where T: class
 {
-    public value: T
+    public field value: T
     public constructor(v: T) { value = v }
 }
 
@@ -81,7 +81,7 @@ function Main(): i32
 
 public class BoxS<T> where T: struct
 {
-    public value: T
+    public field value: T
     public constructor(v: T) { value = v }
 }
 
@@ -100,7 +100,7 @@ function Main(): i32
 
 public class BoxR<T> where T: class
 {
-    public value: T
+    public field value: T
     public constructor(v: T) { value = v }
 }
 

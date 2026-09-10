@@ -31,7 +31,7 @@ public facade interface IDisposable
 
 public class Resource extends IDisposable
 {
-    private _used: bool
+    private field _used: bool
 
     public function Dispose(): void
     {

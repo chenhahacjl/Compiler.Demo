@@ -7,8 +7,8 @@ namespace System.Collections.Generic
 {
     public class List<T> extends IList<T>, ICollection<T>, IEnumerable<T>, IReadOnlyList<T>, IReadOnlyCollection<T>
     {
-        private _items: T[]
-        private _count: i32
+        private field _items: T[]
+        private field _count: i32
 
         public constructor()
         {
@@ -221,9 +221,9 @@ namespace System.Collections.Generic
 /// <summary>List&lt;T&gt; 的前向枚举器（支撑 foreach），实现 IEnumerator&lt;T&gt;。</summary>
 public class ListEnumerator<T> extends IEnumerator<T>
 {
-    private _items: T[]
-    private _count: i32
-    private _index: i32
+    private field _items: T[]
+    private field _count: i32
+    private field _index: i32
 
     public constructor(items: T[], count: i32)
     {

@@ -28,6 +28,7 @@ namespace Cocoa.CodeAnalysis.Syntax
             SyntaxKind.FunctionKeyword,
             SyntaxKind.LetKeyword,
             SyntaxKind.PropertyKeyword,
+            SyntaxKind.FieldKeyword,
             SyntaxKind.ConstructorKeyword,
             SyntaxKind.ExtendsKeyword,
             SyntaxKind.FacadeKeyword,

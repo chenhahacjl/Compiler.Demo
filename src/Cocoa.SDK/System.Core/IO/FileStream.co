@@ -12,7 +12,7 @@ namespace System.IO
 {
     public facade class FileStream
     {
-        private _h: i64
+        private field _h: i64
 
         public constructor(path: string)
         {

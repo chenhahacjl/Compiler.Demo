@@ -21,7 +21,7 @@ namespace Shared
 {{
     public class Conflict
     {{
-        private _v: i32
+        private field _v: i32
 
         public function Value(): i32
         {{

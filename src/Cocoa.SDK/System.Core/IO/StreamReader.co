@@ -5,9 +5,9 @@ namespace System.IO
 {
     public class StreamReader
     {
-        private _stream: MemoryStream
-        private _cache: string
-        private _eof: bool
+        private field _stream: MemoryStream
+        private field _cache: string
+        private field _eof: bool
 
         public constructor(stream: MemoryStream)
         {

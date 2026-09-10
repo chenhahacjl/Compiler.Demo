@@ -199,43 +199,8 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
 
             if (methodRef == null)
             {
-                // facade 属性可能映射到 BCL 字段（Vector3.X 等可变值类型字段，无 get_X/set_X 方法）：
-                // 退化到 ldfld/stfld 重定向。
-                if (fn.Name.StartsWith("get_") || fn.Name.StartsWith("set_"))
-                {
-                    var fieldName = fn.Name.Substring(4);
-                    var fieldRef = _framework.FindField(FacadeBclFullName(cc), fieldName);
-                    if (fieldRef != null)
-                    {
-                        var receiver = node.Arguments[0];
-                        if (receiver is BoundConversionExpression conversion)
-                        {
-                            receiver = conversion.Expression;
-                        }
-
-                        if (IsValueTypeSymbol(receiver.Type))
-                        {
-                            EmitValueTypeReceiverAddress(il, receiver);
-                        }
-                        else
-                        {
-                            EmitExpression(il, receiver);
-                        }
-
-                        if (fn.Name.StartsWith("get_"))
-                        {
-                            il.Emit(IlOpCodeTable.Get("Ldfld"), fieldRef);
-                        }
-                        else
-                        {
-                            EmitExpression(il, methodArgs.First());
-                            il.Emit(IlOpCodeTable.Get("Stfld"), fieldRef);
-                        }
-
-                        return true;
-                    }
-                }
-
+                // 6e-M31：facade 成员种类错配由绑定期诊断拦截（ReportFacadeMemberKindMismatch），
+                // 这里不再静默退化到 BCL 字段访问——property↔field 声明错配是编译错误。
                 return false;
             }
 

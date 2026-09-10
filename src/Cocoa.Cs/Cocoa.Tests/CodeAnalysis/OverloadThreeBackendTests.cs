@@ -1,4 +1,4 @@
-﻿using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Serialization;
 using Cocoa.Targeting;
 using Cocoa.CodeGen.Native;
@@ -25,7 +25,7 @@ namespace Cocoa.Tests.CodeAnalysis
 
 public class Counter
 {
-    private _v: i32
+    private field _v: i32
 
     public constructor(seed: i32)
     {

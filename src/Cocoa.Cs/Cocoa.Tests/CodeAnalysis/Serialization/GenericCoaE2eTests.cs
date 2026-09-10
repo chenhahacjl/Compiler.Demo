@@ -27,7 +27,7 @@ namespace MyLib
 {
     public class Box<T>
     {
-        private _value: T
+        private field _value: T
 
         public constructor(v: T)
         {

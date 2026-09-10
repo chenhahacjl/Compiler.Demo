@@ -6,10 +6,10 @@ namespace System.Collections.Generic
 {
     public class Queue<T> extends IReadOnlyCollection<T>
     {
-        private _items: T[]
-        private _count: i32
-        private _head: i32
-        private _capacity: i32
+        private field _items: T[]
+        private field _count: i32
+        private field _head: i32
+        private field _capacity: i32
 
         public constructor()
         {
@@ -80,11 +80,11 @@ namespace System.Collections.Generic
 
     public class QueueEnumerator<T> extends IEnumerator<T>
     {
-        private _items: T[]
-        private _head: i32
-        private _count: i32
-        private _capacity: i32
-        private _index: i32
+        private field _items: T[]
+        private field _head: i32
+        private field _count: i32
+        private field _capacity: i32
+        private field _index: i32
 
         public constructor(items: T[], head: i32, count: i32, capacity: i32)
         {

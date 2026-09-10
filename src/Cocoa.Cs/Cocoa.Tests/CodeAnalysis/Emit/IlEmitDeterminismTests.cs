@@ -42,7 +42,7 @@ using System.Collections.Generic
 
 class Box
 {
-    private _value: i32
+    private field _value: i32
     public property Value: i32
     {
         get

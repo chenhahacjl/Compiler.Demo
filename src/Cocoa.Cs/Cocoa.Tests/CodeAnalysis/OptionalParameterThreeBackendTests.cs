@@ -30,8 +30,8 @@ function Greet(name: string, quote: string = ""!""): string { return name + quot
 
 public class Point
 {
-    public x: i32
-    public y: i32
+    public field x: i32
+    public field y: i32
     public constructor(px: i32, py: i32 = 5) { x = px; y = py }
     public function Sum(a: i32, b: i32 = 7): i32 { return a + b }
 }

@@ -236,6 +236,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     return SyntaxKind.UncheckedKeyword;
                 case "yield":
                     return SyntaxKind.YieldKeyword;
+                case "field":
+                    return SyntaxKind.FieldKeyword;
                 default:
                     return SyntaxKind.IdentifierToken;
             }
@@ -525,6 +527,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                     return "unchecked";
                 case SyntaxKind.YieldKeyword:
                     return "yield";
+                case SyntaxKind.FieldKeyword:
+                    return "field";
                 default:
                     return null;
             }

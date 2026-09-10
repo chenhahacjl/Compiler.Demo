@@ -5,7 +5,7 @@ namespace System
 {
     public facade struct Index
     {
-        public _value: i32
+        public field _value: i32
 
         public constructor(value: i32, fromEnd: bool = false)
         {

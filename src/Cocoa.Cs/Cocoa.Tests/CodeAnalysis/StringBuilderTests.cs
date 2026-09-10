@@ -18,8 +18,8 @@ namespace System.Text
 {
     public class StringBuilder
     {
-        private _chars: char[]
-        private _count: i32
+        private field _chars: char[]
+        private field _count: i32
 
         public constructor()
         {

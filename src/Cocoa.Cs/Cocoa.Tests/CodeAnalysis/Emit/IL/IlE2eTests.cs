@@ -910,8 +910,8 @@ function Main()
 
 public class Point
 {
-    private _x: i32
-    private _y: i32
+    private field _x: i32
+    private field _y: i32
 
     public constructor(x: i32, y: i32)
     {
@@ -962,7 +962,7 @@ function Main()
 
 public class Counter
 {
-    private _count: i32
+    private field _count: i32
 
     public constructor(start: i32)
     {
@@ -1004,7 +1004,7 @@ function Main()
 
 public class Box
 {
-    private _value: i32
+    private field _value: i32
 
     public constructor(v: i32)
     {
@@ -1062,8 +1062,8 @@ function Main()
 
 public class Rect
 {
-    private _w: i32 = 3
-    private _h: i32 = 4
+    private field _w: i32 = 3
+    private field _h: i32 = 4
 
     public property Area: i32 => _w * _h
     public property Width: i32 => _w
@@ -1135,7 +1135,7 @@ function Main()
 
 public class Shape
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -1150,7 +1150,7 @@ public class Shape
 
 public class Circle extends Shape
 {
-    private _radius: i32
+    private field _radius: i32
 
     public constructor(name: string, radius: i32) extends base(name)
     {
@@ -1196,7 +1196,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -1229,7 +1229,7 @@ function Main()
 
 public class Point
 {
-    private _x: i32
+    private field _x: i32
 
     public constructor(x: i32)
     {
@@ -1310,7 +1310,7 @@ function Main()
 
 public class Box
 {
-    private _v: i32
+    private field _v: i32
 
     public constructor(v: i32)
     {
@@ -1382,7 +1382,7 @@ public interface IShape
 
 public class Circle extends IShape
 {
-    private _radius: i32
+    private field _radius: i32
 
     public constructor(radius: i32)
     {
@@ -1430,7 +1430,7 @@ public interface IColoredShape extends IShape
 
 public class ColoredSquare extends IColoredShape
 {
-    private _side: i32
+    private field _side: i32
 
     public constructor(side: i32)
     {
@@ -1474,7 +1474,7 @@ public interface IAnimal
 
 public class Dog extends IAnimal
 {
-    private _age: i32
+    private field _age: i32
 
     public constructor(age: i32)
     {
@@ -1588,7 +1588,7 @@ using System
 
 public class Resource extends IDisposable
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -1734,7 +1734,7 @@ function Main()
 
 public class Animal
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -1777,7 +1777,7 @@ function Main()
 
 public class Animal
 {
-    private _name: string
+    private field _name: string
 
     public constructor(name: string)
     {
@@ -1792,7 +1792,7 @@ public class Animal
 
 public class Dog extends Animal
 {
-    private _tricks: i32
+    private field _tricks: i32
 
     public constructor(name: string): base(name)
     {
@@ -1918,7 +1918,7 @@ public static void Main()
 
 public class Counter
 {
-    private _count: i32 = 5
+    private field _count: i32 = 5
 
     public function Get(): i32
     {
@@ -1943,8 +1943,8 @@ function Main()
 
 public class Config
 {
-    public static Max: i32 = 100
-    public static Base: i32 = 7
+    public static field Max: i32 = 100
+    public static field Base: i32 = 7
 }
 
 function Main()
@@ -1992,7 +1992,7 @@ function Trace(tag: string): i32
 
 public class Base
 {
-    public static Text: string = """"
+    public static field Text: string = """"
 
     public constructor()
     {
@@ -2002,7 +2002,7 @@ public class Base
 
 public class Derived extends Base
 {
-    private _x: i32 = Trace(""field"")
+    private field _x: i32 = Trace(""field"")
 
     public constructor()
     {
@@ -2027,8 +2027,8 @@ function Main()
 
 public class Counter
 {
-    public static Start: i32 = 5
-    public static End: i32 = Start + 10
+    public static field Start: i32 = 5
+    public static field End: i32 = Start + 10
 }
 
 function Main()
@@ -2246,7 +2246,7 @@ namespace My.App
 
     public class Config
     {
-        public static Version: i32 = 7
+        public static field Version: i32 = 7
     }
 }
 
@@ -2751,8 +2751,8 @@ public interface ICloneable
 
 public class Rectangle extends IShape, ICloneable
 {
-    private _w: i32
-    private _h: i32
+    private field _w: i32
+    private field _h: i32
 
     public constructor(w: i32, h: i32)
     {
@@ -2839,7 +2839,7 @@ public class C extends A, B { }", "Main");
 
 public class Config
 {
-    public static Max: i32
+    public static field Max: i32
 
     static constructor()
     {
@@ -2868,7 +2868,7 @@ function Main()
 
 public class Config
 {
-    public static Max: i32
+    public static field Max: i32
 
     static constructor()
     {
@@ -2898,7 +2898,7 @@ function Main()
 
 public class Config
 {
-    public static Order: i32 = 1
+    public static field Order: i32 = 1
 
     static constructor()
     {
@@ -2928,14 +2928,14 @@ function Main()
 
 public class Account
 {
-    public static Seq: i32
+    public static field Seq: i32
 
     static constructor()
     {
         Seq = 100
     }
 
-    private _base: i32
+    private field _base: i32
 
     public constructor()
     {
@@ -2992,7 +2992,7 @@ public class Foo extends Base
             var messages = GetEmitDiagnostics(@"
 public class Foo
 {
-    private _x: i32
+    private field _x: i32
 
     static constructor()
     {
@@ -3008,7 +3008,7 @@ public class Foo
             var messages = GetEmitDiagnostics(@"
 public class Foo
 {
-    private _x: i32
+    private field _x: i32
 
     static constructor()
     {
@@ -3192,7 +3192,7 @@ function Main()
 
 public class Point
 {
-    public _x: i32
+    public field _x: i32
     public constructor(x: i32)
     {
         _x = x

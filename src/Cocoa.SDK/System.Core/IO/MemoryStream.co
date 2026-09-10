@@ -1,4 +1,4 @@
-﻿// Cocoa 绯荤粺鏍囧噯搴?路 System.IO 妯″潡
+// Cocoa 绯荤粺鏍囧噯搴?路 System.IO 妯″潡
 // MemoryStream锛氱函鍐呭瓨缂撳啿 + 娓告爣锛圗valuator/IL/native 涓夌鍙窇鏈綋锛屼笉渚濊禆 BCL锛夈€?
 using System
 
@@ -6,9 +6,9 @@ namespace System.IO
 {
     public class MemoryStream extends Stream
     {
-        private _buffer: u8[]
-        private _pos: i32
-        private _length: i32
+        private field _buffer: u8[]
+        private field _pos: i32
+        private field _length: i32
 
         public constructor()
         {

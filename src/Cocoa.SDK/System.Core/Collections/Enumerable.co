@@ -78,8 +78,8 @@ namespace System.Collections.Generic
     // CO 无 struct，故用 class。只读属性经后备字段暴露（不可在构造器给只读属性赋值）。
     public class KeyValuePair<TKey, TValue>
     {
-        private _key: TKey
-        private _value: TValue
+        private field _key: TKey
+        private field _value: TValue
 
         public property Key: TKey { get { return _key } }
         public property Value: TValue { get { return _value } }
