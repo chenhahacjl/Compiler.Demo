@@ -296,6 +296,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             ["System.Threading.Lock"] = null,
             ["System.Index"] = null,
             ["System.Range"] = null,
+            // nint/nuint 成员面载体（真体 Cocoa 类，非 BCL 映射——BCL 无 System.NativeInt32，发射/校验自动落回真体）
+            ["System.NativeInt32"] = TypeSymbol.NativeInt32,
+            ["System.NativeUInt32"] = TypeSymbol.NativeUInt32,
         };
 
         /// <summary>6e-M19 M2-b：facade 静态常量表（i32.MaxValue 等，编译期折叠为字面量）。</summary>
@@ -394,6 +397,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             if (receiverType == TypeSymbol.UInt64) return "System.UInt64";
             if (receiverType == TypeSymbol.Float) return "System.Single";
             if (receiverType == TypeSymbol.Double) return "System.Double";
+            if (receiverType == TypeSymbol.NativeInt32) return "System.NativeInt32";
+            if (receiverType == TypeSymbol.NativeUInt32) return "System.NativeUInt32";
             return null;
         }
 
@@ -575,6 +580,30 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         internal static bool IsNativeInt(TypeSymbol type)
         {
             return type == TypeSymbol.NativeInt32 || type == TypeSymbol.NativeUInt32;
+        }
+
+        /// <summary>类声明是否带 `[Facade]` attribute（6e-M32）——取首个字符串实参为目标全名；bare `[Facade]` 目标为 null（= 类自身全名）。</summary>
+        internal bool TryGetFacadeAttribute(ClassDeclarationSyntax syntax, out string? targetName)
+        {
+            targetName = null;
+            foreach (var attribute in syntax.Attributes)
+            {
+                if (attribute.Name.Text == "Facade")
+                {
+                    foreach (var argument in attribute.Arguments)
+                    {
+                        if (argument.Kind == CoreSyntax.SyntaxKind.StringToken)
+                        {
+                            targetName = (string?)argument.Value;
+                            break;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 字面量的合法转换目标。</summary>

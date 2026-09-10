@@ -41,6 +41,8 @@
     (cls System.Int32 public iface:false ifaces:0 struct:false methods:7 ToString[@i32] CompareTo[@i32,@i32] Parse[@string] TryParse[@string,out:@i32] Equals[@i32,@i32] GetHashCode[@i32] ToString[@i32,@string] fields:0 events:0)
     (cls System.Int64 public iface:false ifaces:0 struct:false methods:7 ToString[@i64] CompareTo[@i64,@i64] Parse[@string] Equals[@i64,@i64] GetHashCode[@i64] ToString[@i64,@string] TryParse[@string,out:@i64] fields:0 events:0)
     (cls System.Math internal iface:false ifaces:0 struct:false methods:21 Max[@i32,@i32] Max[@f64,@f64] Min[@i32,@i32] Min[@f64,@f64] Abs[@i32] Abs[@f64] Clamp[@i32,@i32,@i32] Clamp[@f64,@f64,@f64] Sign[@i32] Sign[@f64] IsEven[@i32] IsOdd[@i32] Pow[@i32,@i32] Factorial[@i32] Gcd[@i32,@i32] Lcm[@i32,@i32] Sqrt[@f64] Floor[@f64] Ceiling[@f64] Truncate[@f64] Round[@f64] fields:0 events:0)
+    (cls System.NativeInt32 public iface:false ifaces:0 struct:false bclTarget:System.IntPtr methods:5 ToString[@nint] Equals[@nint,@nint] GetHashCode[@nint] ToInt64[@nint] ToInt32[@nint] fields:0 events:0)
+    (cls System.NativeUInt32 public iface:false ifaces:0 struct:false bclTarget:System.UIntPtr methods:5 ToString[@nuint] Equals[@nuint,@nuint] GetHashCode[@nuint] ToUInt64[@nuint] ToUInt32[@nuint] fields:0 events:0)
     (cls System.Range public iface:false ifaces:0 struct:true methods:3 get_All StartAt[System.Index] EndAt[System.Index] fields:2
       (fld _start System.Index public false false)
       (fld _end System.Index public false false) events:0 props:3
@@ -859,6 +861,38 @@
     )
     (fn System.Core!System.Math.Round[@f64] name:Round ret:@f64 ns:- owner:System.Math extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Math.Round[@f64]/x x @f64 0 - -)
+    )
+    (fn System.Core!System.NativeInt32.ToString[@nint] name:ToString ret:@string ns:- owner:System.NativeInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeInt32.ToString[@nint]/this this @nint 0 - this)
+    )
+    (fn System.Core!System.NativeInt32.Equals[@nint,@nint] name:Equals ret:@bool ns:- owner:System.NativeInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.NativeInt32.Equals[@nint,@nint]/this this @nint 0 - this)
+      (par System.Core!System.NativeInt32.Equals[@nint,@nint]/other other @nint 1 - -)
+    )
+    (fn System.Core!System.NativeInt32.GetHashCode[@nint] name:GetHashCode ret:@i32 ns:- owner:System.NativeInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeInt32.GetHashCode[@nint]/this this @nint 0 - this)
+    )
+    (fn System.Core!System.NativeInt32.ToInt64[@nint] name:ToInt64 ret:@i64 ns:- owner:System.NativeInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeInt32.ToInt64[@nint]/this this @nint 0 - this)
+    )
+    (fn System.Core!System.NativeInt32.ToInt32[@nint] name:ToInt32 ret:@i32 ns:- owner:System.NativeInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeInt32.ToInt32[@nint]/this this @nint 0 - this)
+    )
+    (fn System.Core!System.NativeUInt32.ToString[@nuint] name:ToString ret:@string ns:- owner:System.NativeUInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeUInt32.ToString[@nuint]/this this @nuint 0 - this)
+    )
+    (fn System.Core!System.NativeUInt32.Equals[@nuint,@nuint] name:Equals ret:@bool ns:- owner:System.NativeUInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:2
+      (par System.Core!System.NativeUInt32.Equals[@nuint,@nuint]/this this @nuint 0 - this)
+      (par System.Core!System.NativeUInt32.Equals[@nuint,@nuint]/other other @nuint 1 - -)
+    )
+    (fn System.Core!System.NativeUInt32.GetHashCode[@nuint] name:GetHashCode ret:@i32 ns:- owner:System.NativeUInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeUInt32.GetHashCode[@nuint]/this this @nuint 0 - this)
+    )
+    (fn System.Core!System.NativeUInt32.ToUInt64[@nuint] name:ToUInt64 ret:@u64 ns:- owner:System.NativeUInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeUInt32.ToUInt64[@nuint]/this this @nuint 0 - this)
+    )
+    (fn System.Core!System.NativeUInt32.ToUInt32[@nuint] name:ToUInt32 ret:@u32 ns:- owner:System.NativeUInt32 extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
+      (par System.Core!System.NativeUInt32.ToUInt32[@nuint]/this this @nuint 0 - this)
     )
     (fn System.Core!System.Range.Range[System.Index,System.Index] name:Range ret:@void ns:- owner:System.Range extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:2
       (par System.Core!System.Range.Range[System.Index,System.Index]/start start System.Index 0 - -)
@@ -7645,6 +7679,106 @@
           (membercall @f64 Round System.Core!System.Runtime.Round[@f64] 1
             (statictype System.Runtime)
             (var System.Core!System.Math.Round[@f64]/x)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeInt32.ToString[@nint]
+      (block 1
+        (return
+          (membercall @string Int64ToString System.Core!System.Runtime.Int64ToString[@i64] 1
+            (statictype System.Runtime)
+            (conv @i64
+              (var System.Core!System.NativeInt32.ToString[@nint]/this)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeInt32.Equals[@nint,@nint]
+      (block 1
+        (return
+          (binary
+            (bop == @nint @nint)
+            (var System.Core!System.NativeInt32.Equals[@nint,@nint]/this)
+            (var System.Core!System.NativeInt32.Equals[@nint,@nint]/other)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeInt32.GetHashCode[@nint]
+      (block 1
+        (return
+          (conv @i32
+            (var System.Core!System.NativeInt32.GetHashCode[@nint]/this)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeInt32.ToInt64[@nint]
+      (block 1
+        (return
+          (conv @i64
+            (var System.Core!System.NativeInt32.ToInt64[@nint]/this)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeInt32.ToInt32[@nint]
+      (block 1
+        (return
+          (conv @i32
+            (var System.Core!System.NativeInt32.ToInt32[@nint]/this)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeUInt32.ToString[@nuint]
+      (block 1
+        (return
+          (membercall @string UInt64ToString System.Core!System.Runtime.UInt64ToString[@u64] 1
+            (statictype System.Runtime)
+            (conv @u64
+              (var System.Core!System.NativeUInt32.ToString[@nuint]/this)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeUInt32.Equals[@nuint,@nuint]
+      (block 1
+        (return
+          (binary
+            (bop == @nuint @nuint)
+            (var System.Core!System.NativeUInt32.Equals[@nuint,@nuint]/this)
+            (var System.Core!System.NativeUInt32.Equals[@nuint,@nuint]/other)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeUInt32.GetHashCode[@nuint]
+      (block 1
+        (return
+          (conv @i32
+            (var System.Core!System.NativeUInt32.GetHashCode[@nuint]/this)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeUInt32.ToUInt64[@nuint]
+      (block 1
+        (return
+          (conv @u64
+            (var System.Core!System.NativeUInt32.ToUInt64[@nuint]/this)
+          )
+        )
+      )
+    )
+    (body System.Core!System.NativeUInt32.ToUInt32[@nuint]
+      (block 1
+        (return
+          (conv @u32
+            (var System.Core!System.NativeUInt32.ToUInt32[@nuint]/this)
           )
         )
       )
@@ -17453,4 +17587,4 @@
     (ns System.Threading)
   )
 )
-(checksum sha256:36a3466491f733036dd0054999a58deab345dcf9f8a65a8c9be792599e58dc5a)
+(checksum sha256:60c12e321e2cbc778f817010a67209b0dfc27fc522d9c850a67250a793b0ffbd)

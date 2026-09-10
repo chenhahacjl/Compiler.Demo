@@ -236,6 +236,7 @@ namespace Cocoa.CodeAnalysis.Syntax
         UncheckedStatement = 227,
         YieldKeyword = 228,
         YieldReturnStatement = 229,
-        YieldBreakStatement = 230
+        YieldBreakStatement = 230,
+        Attribute = 232,
     }
 }

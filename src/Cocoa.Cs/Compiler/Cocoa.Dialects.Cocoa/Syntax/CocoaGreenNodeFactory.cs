@@ -100,6 +100,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
                 SyntaxKind.ExternMetadata => BuildExternMetadata(syntaxTree, position),
                 SyntaxKind.ExternMetadataArgument => BuildExternMetadataArgument(syntaxTree, position),
                 SyntaxKind.ImportBlock => BuildImportBlock(syntaxTree, position),
+                SyntaxKind.Attribute => BuildAttribute(syntaxTree, position),
                 _ => _green.CreateRed(syntaxTree, position),
             };
         }
@@ -1390,6 +1391,14 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
         private SyntaxNode BuildClassLikeDeclaration(SyntaxTree syntaxTree, int position, bool isInterface)
         {
             var slot = 0;
+            var attributes = ImmutableArray.CreateBuilder<AttributeSyntax>();
+            while (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.Attribute)
+            {
+                attributes.Add((AttributeSyntax)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
             var modifiers = ImmutableArray.CreateBuilder<SyntaxToken>();
             while (slot < _green.SlotCount && IsModifierToken(_green.GetSlot(slot)!.Kind))
             {
@@ -1443,7 +1452,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
             var closeBrace = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, closePosition);
             return isInterface
                 ? new InterfaceDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), keyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses.ToImmutable(), openBrace, members, closeBrace)
-                : new ClassDeclarationSyntax(syntaxTree, modifiers.ToImmutable(), keyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses.ToImmutable(), openBrace, members, closeBrace);
+                : new ClassDeclarationSyntax(syntaxTree, attributes.ToImmutable(), modifiers.ToImmutable(), keyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses.ToImmutable(), openBrace, members, closeBrace);
         }
 
         private SyntaxNode BuildConstructorDeclaration(SyntaxTree syntaxTree, int position)
@@ -1850,6 +1859,45 @@ namespace Cocoa.CodeAnalysis.Cocoa.Syntax
 
             var closeBrace = (SyntaxToken)_green.GetSlot(_green.SlotCount - 1)!.CreateTypedRed(syntaxTree, closePosition);
             return new ImportBlockSyntax(syntaxTree, importKeyword, nameTokens.ToImmutable(), openParenthesis, charsetKey, charsetValue, closeParenthesis, openBrace, members, closeBrace);
+        }
+
+        private SyntaxNode BuildAttribute(SyntaxTree syntaxTree, int position)
+        {
+            var slot = 0;
+            var openBracket = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+            var name = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            position += _green.GetSlot(slot)!.Width;
+            slot++;
+
+            SyntaxToken? openParenthesis = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
+            var arguments = ImmutableArray.CreateBuilder<SyntaxToken>();
+            while (slot < _green.SlotCount &&
+                   (_green.GetSlot(slot)!.Kind == SyntaxKind.StringToken || _green.GetSlot(slot)!.Kind == SyntaxKind.CommaToken))
+            {
+                arguments.Add((SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position));
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
+            SyntaxToken? closeParenthesis = null;
+            if (slot < _green.SlotCount && _green.GetSlot(slot)!.Kind == SyntaxKind.CloseParenthesisToken)
+            {
+                closeParenthesis = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+                position += _green.GetSlot(slot)!.Width;
+                slot++;
+            }
+
+            var closeBracket = (SyntaxToken)_green.GetSlot(slot)!.CreateTypedRed(syntaxTree, position);
+            return new AttributeSyntax(syntaxTree, openBracket, name, openParenthesis, arguments.ToImmutable(), closeParenthesis, closeBracket);
         }
 
         /// <summary>把 [startIndex..endIndex] 槽位批量转为类型化红节点数组（用于 Block 语句 / 集合子节点）。</summary>

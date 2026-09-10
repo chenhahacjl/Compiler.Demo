@@ -249,5 +249,6 @@ ColonToken,               // :
         YieldReturnStatement = 229, // yield return 语句
         YieldBreakStatement = 230, // yield break 语句
         FieldKeyword = 231, // field（6e-M31 类字段显式关键字，对齐 property；显式值避免移动隐式段成员）
+        Attribute = 232,    // attribute 声明（`[Name]` / `[Name("arg")]`，6e-M32 首例为 facade 属性；显式值避免偏移）
     }
 }

@@ -414,6 +414,13 @@ namespace Cocoa.CodeAnalysis.Serialization
                 isStruct = ParseBoolWord(ReadLabeledField(reader, "struct:"));
             }
 
+            // 6e-M32：`[Facade("X")]` 显式 BCL 目标（仅当库侧声明时写出；旧版 .coa 无此字段 → null）
+            string? bclTargetName = null;
+            if (reader.PeekRaw().StartsWith("bclTarget:", StringComparison.Ordinal))
+            {
+                bclTargetName = ReadLabeledField(reader, "bclTarget:");
+            }
+
             var methodCount = ReadCountField(reader, "methods:");
             // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填；
             // 接口方法无 fn 条目，须从这里的完整签名（Name[params]:Return）重建符号。
@@ -425,6 +432,7 @@ namespace Cocoa.CodeAnalysis.Serialization
 
             var classType = new NamedTypeSymbol(name, ns, visibility, declaration: null);
             classType.ContainingLibrary = context.ModuleName;
+            classType.FacadeBclTargetName = bclTargetName;
             // 6e-M19 M2-c：cod 类默认继承 System.Object（与源码绑定一致；.coa v1 不序列化接口声明）。
             classType.BaseType = NamedTypeSymbol.SystemObject;
             // 6e-G7/M0-1a：接口位回填 + 实现接口列表回填

@@ -1,0 +1,35 @@
+// Cocoa 系统标准库 · System.Core（namespace System）
+// class NativeInt32 —— nint 的成员面载体（6e-M32 `[Facade("System.IntPtr")]` 显式 IL 目标；
+// 类名/成员保留 Cocoa 形态，成员签名对齐 BCL System.IntPtr 子集；native/Evaluator 走真体）。
+
+namespace System
+{
+    [Facade("System.IntPtr")]
+    public class NativeInt32
+    {
+        public function ToString(): string
+        {
+            return Runtime.Int64ToString(i64(this))
+        }
+
+        public function Equals(other: nint): bool
+        {
+            return this == other
+        }
+
+        public function GetHashCode(): i32
+        {
+            return i32(this)
+        }
+
+        public function ToInt64(): i64
+        {
+            return this
+        }
+
+        public function ToInt32(): i32
+        {
+            return i32(this)
+        }
+    }
+}

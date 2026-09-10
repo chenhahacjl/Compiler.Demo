@@ -9,9 +9,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
     /// </summary>
     public sealed partial class ClassDeclarationSyntax : MemberSyntax
     {
-        internal ClassDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<SyntaxToken> modifiers, SyntaxToken classKeyword, SyntaxToken identifier, TypeParameterListSyntax? typeParameters, ImmutableArray<TypeClauseSyntax> baseTypes, ImmutableArray<WhereClauseSyntax> whereClauses, SyntaxToken openBraceToken, ImmutableArray<MemberSyntax> members, SyntaxToken closeBraceToken)
+        internal ClassDeclarationSyntax(SyntaxTree syntaxTree, ImmutableArray<AttributeSyntax> attributes, ImmutableArray<SyntaxToken> modifiers, SyntaxToken classKeyword, SyntaxToken identifier, TypeParameterListSyntax? typeParameters, ImmutableArray<TypeClauseSyntax> baseTypes, ImmutableArray<WhereClauseSyntax> whereClauses, SyntaxToken openBraceToken, ImmutableArray<MemberSyntax> members, SyntaxToken closeBraceToken)
             : base(syntaxTree, modifiers)
         {
+            Attributes = attributes;
             ClassKeyword = classKeyword;
             Identifier = identifier;
             TypeParameters = typeParameters;
@@ -23,6 +24,9 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         }
 
         public override CSharpSyntaxKind Kind => CSharpSyntaxKind.ClassDeclaration;
+
+        /// <summary>类声明前的 attribute 列表（6e-M32，`[Facade("...")]` 等；Tier-1 编译器识别 Facade）。</summary>
+        public ImmutableArray<AttributeSyntax> Attributes { get; }
 
         public SyntaxToken ClassKeyword { get; }
         public SyntaxToken Identifier { get; }
@@ -45,6 +49,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
 
         public override IEnumerable<SyntaxNode> GetChildren()
         {
+            foreach (var child in Attributes)
+            {
+                yield return child;
+            }
             foreach (var child in Modifiers)
             {
                 yield return child;
@@ -72,5 +80,3 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
         }
     }
 }
-
-

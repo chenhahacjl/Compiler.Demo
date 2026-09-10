@@ -228,6 +228,55 @@ public static void Main()
             return (process.ExitCode, stdout);
         }
 
+        // ---- 成员面（System.NativeInt32 / NativeUInt32 facade 载体） -------------
+
+        private const string FacadeProgram = @"using System
+
+function Main(): i32
+{
+    var a: nint = 123
+    var b: nuint = 456
+    Console.WriteLine(a.ToString())
+    Console.WriteLine(a.ToInt64() == 123L)
+    Console.WriteLine(a.ToInt32() == 123)
+    Console.WriteLine(a.Equals(123))
+    Console.WriteLine(b.ToString())
+    Console.WriteLine(b.ToUInt64() == 456UL)
+    Console.WriteLine(b.ToUInt32() == 456U)
+    return 0
+}";
+
+        private const string FacadeExpected = "123\nTrue\nTrue\nTrue\n456\nTrue\nTrue\n";
+
+        [Fact]
+        public void Evaluator_NativeInt_FacadeMembers()
+        {
+            var original = Console.Out;
+            try
+            {
+                using var writer = new StringWriter();
+                Console.SetOut(writer);
+
+                var compilation = Compilation.Create("Main", new[] { typeof(object).Assembly.Location, typeof(System.Console).Assembly.Location }, SyntaxTree.Parse(FacadeProgram));
+                var result = compilation.Evaluate(new Dictionary<VariableSymbol, object>());
+
+                Assert.True(!result.Diagnostics.HasErrors(), string.Join("\n", result.Diagnostics.Select(d => d.Message)));
+                Assert.Equal(FacadeExpected, writer.ToString().Replace("\r\n", "\n"));
+            }
+            finally
+            {
+                Console.SetOut(original);
+            }
+        }
+
+        [Fact]
+        public void Il_E2e_NativeInt_FacadeMembers()
+        {
+            var (exitCode, stdout) = EmitIlAndRun(FacadeProgram, "nint-facade-il");
+            Assert.Equal(0, exitCode);
+            Assert.Equal(FacadeExpected, stdout.Replace("\r\n", "\n"));
+        }
+
         // ---- .coa round-trip（@nint/@nuint TypeRef） -------------------------
 
         [Fact]

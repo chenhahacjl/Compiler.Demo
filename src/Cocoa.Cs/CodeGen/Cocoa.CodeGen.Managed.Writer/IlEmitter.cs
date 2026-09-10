@@ -140,11 +140,11 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 非 facade 类出 TypeDef，除非是「与 BCL 重名且无实例状态」的静态容器类（Console/Environment 等：
             // 调用点按 BCL 同名直链 TypeRef，避免本地 TypeDef 与 BCL TypeRef 冲撞）。
             // 有实例字段/实例方法的 BCL 重名类（MemoryStream/StreamWriter 等真实 Cocoa body）必须发射本体。
-            var classes = program.Classes.Where(c => !c.IsFacadeClass
+            var classes = program.Classes.Where(c => (!c.IsFacadeClass || IsNativeIntCarrier(c))
                 && (c.ContainingLibrary == null || !_framework.TypeExistsInReferences(c.FullName) || MustEmitBody(c))).ToList();
             foreach (var f in orderedFunctions)
             {
-                if (f.ContainingClass != null && !f.ContainingClass.IsFacadeClass
+                if (f.ContainingClass != null && (!f.ContainingClass.IsFacadeClass || IsNativeIntCarrier(f.ContainingClass))
                     && (f.ContainingClass.ContainingLibrary == null || !_framework.TypeExistsInReferences(f.ContainingClass.FullName) || MustEmitBody(f.ContainingClass))
                     && !classes.Contains(f.ContainingClass))
                 {
@@ -250,7 +250,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             foreach (var function in orderedFunctions)
             {
-                if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.ContainingClass?.IsFacadeClass == true && !IsNativeIntCarrier(function.ContainingClass)) continue;
                 if (function.ContainingClass != null && !classes.Contains(function.ContainingClass)) continue; // 类型未入 TypeDef 表
                 if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue;
                 if (function.BuiltinKind != null)
@@ -291,7 +291,7 @@ namespace Cocoa.CodeGen.Managed.Writer
 
             foreach (var function in orderedFunctions)
             {
-                if (function.ContainingClass?.IsFacadeClass == true) continue;
+                if (function.ContainingClass?.IsFacadeClass == true && !IsNativeIntCarrier(function.ContainingClass)) continue;
                 if (function.ContainingClass != null && !classes.Contains(function.ContainingClass)) continue; // 类型未入 TypeDef 表
                 if (function.ContainingClass is { TypeKind: TypeKind.Delegate }) continue;
                 if (function.IsExtern || function.IsAbstract || function.BuiltinKind != null)

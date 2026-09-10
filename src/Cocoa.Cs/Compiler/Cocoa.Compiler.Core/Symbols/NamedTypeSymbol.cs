@@ -122,6 +122,10 @@ namespace Cocoa.CodeAnalysis.Symbols
         /// <summary>facade 承载的类型（Int32→i32、String→string；null = 自身，用于 Object/Type facade）。</summary>
         public TypeSymbol? FacadeThisType { get; set; }
 
+        /// <summary>facade 显式 BCL 目标全名（6e-M32 `[Facade("System.IntPtr")]`）——IL 重定向/严格校验对照；
+        /// null 表示隐式目标（= 类自身全名，与既有 `facade class` 关键字一致）。</summary>
+        public string? FacadeBclTargetName { get; set; }
+
         /// <summary>facade 合并（Phase 1-3）：基元符号在类型表中以 facade 全名登记后，成员面经此委托到
         /// `<c>System.Int32</c>`` 等 facade 类（System.Core 缓存实例，进程内共享，赋值幂等）。</summary>
         public NamedTypeSymbol? FacadeCompanion { get; set; }

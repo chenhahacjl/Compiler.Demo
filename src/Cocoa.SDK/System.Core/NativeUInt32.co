@@ -1,0 +1,35 @@
+// Cocoa 系统标准库 · System.Core（namespace System）
+// class NativeUInt32 —— nuint 的成员面载体（6e-M32 `[Facade("System.UIntPtr")]` 显式 IL 目标；
+// 类名/成员保留 Cocoa 形态，成员签名对齐 BCL System.UIntPtr 子集；native/Evaluator 走真体）。
+
+namespace System
+{
+    [Facade("System.UIntPtr")]
+    public class NativeUInt32
+    {
+        public function ToString(): string
+        {
+            return Runtime.UInt64ToString(u64(this))
+        }
+
+        public function Equals(other: nuint): bool
+        {
+            return this == other
+        }
+
+        public function GetHashCode(): i32
+        {
+            return i32(this)
+        }
+
+        public function ToUInt64(): u64
+        {
+            return this
+        }
+
+        public function ToUInt32(): u32
+        {
+            return u32(this)
+        }
+    }
+}

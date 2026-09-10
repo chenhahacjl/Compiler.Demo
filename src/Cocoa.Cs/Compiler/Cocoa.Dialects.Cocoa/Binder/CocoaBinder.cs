@@ -256,16 +256,21 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             {
                 var primary = parts[0].Syntax;
 
-                // 6e-M19 M2-b → 6e-M20 v3：facade 类标记改为显式 `facade` 修饰符驱动——
+                // 6e-M19 M2-b → 6e-M20 v3：facade 类标记——显式 `facade` 修饰符 或 6e-M32 `[Facade("target")]` attribute 驱动——//
                 // 命中 FacadeTargets 且带标记 → 认领；命中但无标记 → 警告（按普通类处理）；
                 // 须先于成员绑定，实例方法声明时的降级依赖此标记
-                var declaredFacade = primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword);
+                var facadeAttr = binder.TryGetFacadeAttribute(primary, out var facadeAttrTarget);
+                var declaredFacade = primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword) || facadeAttr;
                 if (FacadeTargets.TryGetValue(classType.FullName, out var facadeTarget))
                 {
                     if (declaredFacade)
                     {
                         classType.IsFacadeClass = true;
                         classType.FacadeThisType = facadeTarget;
+                        if (facadeAttr)
+                        {
+                            classType.FacadeBclTargetName = facadeAttrTarget;
+                        }
                     }
                     else
                     {
@@ -283,7 +288,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 // 须先于成员绑定，override 签名解析/base 表达式/成员沿链上溯依赖基类链就位（接口不默认）。
                 // facade struct 无 CO 基类（整类映射到 BCL 值类型），跳过默认 Object 基类。
                 if (!classType.IsInterface && classType.BaseType == null &&
-                    !primary.Modifiers.Any(m => m.Kind == CoreSyntax.SyntaxKind.FacadeKeyword))
+                    !declaredFacade)
                 {
                     classType.BaseType = NamedTypeSymbol.SystemObject;
                 }

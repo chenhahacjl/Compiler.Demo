@@ -153,7 +153,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     return Conversion.Implicit;
                 }
 
-                if (to == TypeSymbol.Int32 || to == TypeSymbol.NativeUInt32)
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.NativeUInt32 ||
+                    to == TypeSymbol.UInt32 || to == TypeSymbol.UInt64)
                 {
                     return Conversion.Explicit;
                 }
@@ -185,7 +186,8 @@ namespace Cocoa.CodeAnalysis.Binding
                     return Conversion.Implicit;
                 }
 
-                if (to == TypeSymbol.UInt32 || to == TypeSymbol.NativeInt32)
+                if (to == TypeSymbol.UInt32 || to == TypeSymbol.NativeInt32 ||
+                    to == TypeSymbol.Int32 || to == TypeSymbol.Int64)
                 {
                     return Conversion.Explicit;
                 }

@@ -520,7 +520,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             }
 
             var classKeyword = SyntheticToken(SyntaxKind.ClassKeyword, recordToken.Span.Start, "class");
-            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, nameToken, null, ImmutableArray<TypeClauseSyntax>.Empty, ImmutableArray<WhereClauseSyntax>.Empty, openBrace, members.ToImmutable(), closeBrace);
+            return new ClassDeclarationSyntax(_syntaxTree, ImmutableArray<AttributeSyntax>.Empty, modifiers, classKeyword, nameToken, null, ImmutableArray<TypeClauseSyntax>.Empty, ImmutableArray<WhereClauseSyntax>.Empty, openBrace, members.ToImmutable(), closeBrace);
         }
 
         private SyntaxToken SyntheticToken(SyntaxKind kind, int position, string text, object? value = null)
@@ -1866,15 +1866,23 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                 return ParseUsingDirective();
             if (Current.Kind == SyntaxKind.NamespaceKeyword)
                 return ParseNamespaceDeclaration();
+            var attributes = ParseOptionalAttributes();
             var modifiers = ParseModifiers();
             if (Current.Kind == SyntaxKind.IdentifierToken && Current.Text == "record")
             {
                 return ParseRecordDeclaration(modifiers);
             }
 
+            // Tier-1：attribute 仅支持类/结构体声明（`[Facade("...")] class X`）——其余成员位暂不支持
+            if (Current.Kind != SyntaxKind.ClassKeyword && Current.Kind != SyntaxKind.StructKeyword &&
+                attributes.Length > 0)
+            {
+                ReportError(Current.Location, "attribute 目前仅支持类声明（如 `[Facade(\"System.IntPtr\")] class NativeInt32`）。");
+            }
+
             if (Current.Kind == SyntaxKind.EnumKeyword) return ParseEnumDeclaration(modifiers);
-            if (Current.Kind == SyntaxKind.ClassKeyword) return ParseClassDeclaration(modifiers);
-            if (Current.Kind == SyntaxKind.StructKeyword) return ParseClassDeclaration(modifiers);
+            if (Current.Kind == SyntaxKind.ClassKeyword) return ParseClassDeclaration(attributes, modifiers);
+            if (Current.Kind == SyntaxKind.StructKeyword) return ParseClassDeclaration(attributes, modifiers);
             if (Current.Kind == SyntaxKind.InterfaceKeyword) return ParseInterfaceDeclaration(modifiers);
             if (Current.Kind == SyntaxKind.DelegateKeyword) return ParseDelegateDeclaration(modifiers);
             if (IsCSharpStyleTopLevelFunction())
@@ -1967,6 +1975,74 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             while (IsModifier(Current.Kind))
                 modifiers.Add(NextToken());
             return modifiers.ToImmutable();
+        }
+
+        /// <summary>解析声明前 attribute 列表（`[Name]` / `[Name("arg")]`，可多个；Tier-1 编译器识别 Facade）。</summary>
+        private ImmutableArray<AttributeSyntax> ParseOptionalAttributes()
+        {
+            if (Current.Kind != SyntaxKind.OpenBracketToken)
+            {
+                return ImmutableArray<AttributeSyntax>.Empty;
+            }
+
+            var attributes = ImmutableArray.CreateBuilder<AttributeSyntax>();
+            while (Current.Kind == SyntaxKind.OpenBracketToken)
+            {
+                attributes.Add(ParseAttribute());
+            }
+
+            return attributes.ToImmutable();
+        }
+
+        private AttributeSyntax ParseAttribute()
+        {
+            var openBracket = MatchToken(SyntaxKind.OpenBracketToken);
+
+            SyntaxToken name;
+            if (Current.Kind == SyntaxKind.IdentifierToken)
+            {
+                name = MatchToken(SyntaxKind.IdentifierToken);
+            }
+            else
+            {
+                ReportError(Current.Location, "attribute 名应为标识符（如 `[Facade(\"System.IntPtr\")]`）。");
+                name = new SyntaxToken(_syntaxTree, SyntaxKind.IdentifierToken, Current.Position, "?", null, ImmutableArray<SyntaxTrivia>.Empty, ImmutableArray<SyntaxTrivia>.Empty);
+            }
+
+            SyntaxToken? openParenthesis = null;
+            var arguments = ImmutableArray.CreateBuilder<SyntaxToken>();
+            SyntaxToken? closeParenthesis = null;
+
+            if (Current.Kind == SyntaxKind.OpenParenthesisToken)
+            {
+                openParenthesis = MatchToken(SyntaxKind.OpenParenthesisToken);
+                while (Current.Kind != SyntaxKind.CloseParenthesisToken && Current.Kind != SyntaxKind.EndOfFileToken)
+                {
+                    if (Current.Kind == SyntaxKind.StringToken)
+                    {
+                        arguments.Add(NextToken());
+                    }
+                    else
+                    {
+                        ReportError(Current.Location, "attribute 实参目前仅支持字符串字面量（如 `[Facade(\"System.IntPtr\")]`）。");
+                        NextToken();
+                    }
+
+                    if (Current.Kind == SyntaxKind.CommaToken)
+                    {
+                        arguments.Add(NextToken());
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                closeParenthesis = MatchToken(SyntaxKind.CloseParenthesisToken);
+            }
+
+            var closeBracket = MatchToken(SyntaxKind.CloseBracketToken);
+            return new AttributeSyntax(_syntaxTree, openBracket, name, openParenthesis, arguments.ToImmutable(), closeParenthesis, closeBracket);
         }
 
         private static bool IsModifier(SyntaxKind kind)
@@ -2084,7 +2160,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             return nameTokens.ToImmutable();
         }
 
-        private MemberSyntax ParseClassDeclaration(ImmutableArray<SyntaxToken> modifiers)
+        private MemberSyntax ParseClassDeclaration(ImmutableArray<AttributeSyntax> attributes, ImmutableArray<SyntaxToken> modifiers)
         {
             var classKeyword = Current.Kind == SyntaxKind.StructKeyword
                 ? MatchToken(SyntaxKind.StructKeyword)
@@ -2106,7 +2182,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
             var openBraceToken = MatchToken(SyntaxKind.OpenBraceToken);
             var members = ParseClassMemberList(identifier.Text);
             var closeBraceToken = MatchToken(SyntaxKind.CloseBraceToken);
-            return new ClassDeclarationSyntax(_syntaxTree, modifiers, classKeyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses, openBraceToken, members, closeBraceToken);
+            return new ClassDeclarationSyntax(_syntaxTree, attributes, modifiers, classKeyword, identifier, typeParameters, baseTypes.ToImmutable(), whereClauses, openBraceToken, members, closeBraceToken);
         }
 
         private ImmutableArray<MemberSyntax> ParseClassMemberList(string className)

@@ -106,6 +106,11 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
             return false;
         }
 
+        /// <summary>6e-M32：nint/nuint 载体类（`[Facade("System.IntPtr")]` / `System.UIntPtr`）——
+        /// 真体方法须发射（调用点不走 BCL 重定向，见 TryEmitFacadeBclCall）。</summary>
+        private static bool IsNativeIntCarrier(NamedTypeSymbol classType)
+            => classType.FacadeBclTargetName is "System.IntPtr" or "System.UIntPtr";
+
         private static bool IsFacadeTargetName(string fullName)
             => fullName.StartsWith("System.ValueTuple", StringComparison.Ordinal);
 
@@ -120,12 +125,15 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
             return full == "System.IO.Directory" && method.Name == "CreateDirectory";
         }
 
-        /// <summary>facade 类型运行期映射到的 BCL 全名：优先用 FacadeThisType（struct facade 由此提供 BCL 值类型名；
+        /// <summary>facade 类型运行期映射到的 BCL 全名：优先用 6e-M32 `[Facade("X")]` 显式目标（FacadeBclTargetName，
+        /// 如 System.NativeInt32 → System.IntPtr）；否则 FacadeThisType（struct facade 由此提供 BCL 值类型名；
         /// class facade 的 FacadeThisType 即 BCL 目标，与自身 FullName 一致，故回退到 FullName 等价）。</summary>
         private string FacadeBclFullName(NamedTypeSymbol classType)
-            => classType.FacadeThisType is NamedTypeSymbol nts && !nts.IsPrimitiveValueType && nts != TypeSymbol.String
-                ? nts.FullName
-                : classType.FullName;
+            => classType.FacadeBclTargetName != null
+                ? classType.FacadeBclTargetName
+                : classType.FacadeThisType is NamedTypeSymbol nts && !nts.IsPrimitiveValueType && nts != TypeSymbol.String
+                    ? nts.FullName
+                    : classType.FullName;
 
         private static bool IsValueTypeSymbol(TypeSymbol type)
             => type.IsValueType;
@@ -179,6 +187,16 @@ private bool IsFacadeRedirect(NamedTypeSymbol classType)
             var fn = node.Function;
             var cc = fn.ContainingClass;
             if (cc == null || !IsFacadeRedirect(cc)) return false;
+
+            // 6e-M32：nint/nuint 接收者的 facade 实例调用走真体（不重定向 BCL）——
+            // IntPtr/UIntPtr 方法面与 SDK 声明面不完全对齐（如仅 Equals(object)、无 Equals(IntPtr)），
+            // 且 native-int& receiver 对 valuetype IntPtr 的 call 存在验证风险；真体三后端一致。
+            if (fn.Parameters.Length > 0 && fn.Parameters[0].IsThisParameter &&
+                node.Arguments.Length > 0 &&
+                (node.Arguments[0].Type == TypeSymbol.NativeInt32 || node.Arguments[0].Type == TypeSymbol.NativeUInt32))
+            {
+                return false;
+            }
 
             // facade 实例方法已降级为静态（首参 = this）；真正静态方法无 this 首参。
             // this 标记经 .coa 序列化保留（IsThisParameter ⇔ IsReadOnly）。

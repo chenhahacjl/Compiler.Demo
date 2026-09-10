@@ -2123,9 +2123,10 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             if (_references == null || _references.Length == 0) return;
             if (memberName.StartsWith("_", StringComparison.Ordinal)) return;
 
-            var bclFullName = classType.FacadeThisType is NamedTypeSymbol nts && !nts.IsPrimitiveValueType && nts != TypeSymbol.String
-                ? nts.FullName
-                : classType.FullName;
+            var bclFullName = classType.FacadeBclTargetName
+                ?? (classType.FacadeThisType is NamedTypeSymbol nts && !nts.IsPrimitiveValueType && nts != TypeSymbol.String
+                    ? nts.FullName
+                    : classType.FullName);
             var bcl = ExternalTypeResolver.TryResolve(bclFullName, _references.ToArray());
             if (bcl == null) return;
 

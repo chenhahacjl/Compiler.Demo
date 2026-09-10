@@ -580,6 +580,18 @@ namespace Cocoa.CodeGen.Managed.Writer
                     il.Emit(IlOpCodeTable.Get("Conv_I4"));
                     return;
                 }
+
+                if (to == TypeSymbol.UInt32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.UInt64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                    return;
+                }
             }
 
             if (from == TypeSymbol.NativeUInt32)
@@ -593,6 +605,18 @@ namespace Cocoa.CodeGen.Managed.Writer
                 if (to == TypeSymbol.UInt32)
                 {
                     il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.Int32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    return;
+                }
+
+                if (to == TypeSymbol.Int64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I8"));
                     return;
                 }
             }

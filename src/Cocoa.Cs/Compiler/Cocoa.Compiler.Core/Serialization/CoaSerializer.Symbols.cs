@@ -57,6 +57,11 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
             // N1：值类型位（struct 重建须还原 TypeKind.Struct——否则消费侧按引用类型签名发射，BCL 同名 struct 直联处 value-type mismatch）
             w.Field("struct:" + BoolWord(classType.TypeKind == TypeKind.Struct));
+            // 6e-M32：`[Facade("X")]` 显式 BCL 目标（如 System.NativeInt32 → System.IntPtr）——跨库消费端恢复 IL 重定向必需
+            if (classType.FacadeBclTargetName != null)
+            {
+                w.Field("bclTarget:" + classType.FacadeBclTargetName);
+            }
             // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
             // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
             // N1：接口的实例（抽象）方法签名也须随库携带——否则库侧空壳接口（如 System.IDisposable methods:0）
