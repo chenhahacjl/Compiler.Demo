@@ -768,6 +768,13 @@ var wide = AllocateRegister(LirType.I64);
                 return floatResult;
             }
 
+            // nint/nuint（原生整型，Addr 表示，平台自适应）转换
+            if (to == TypeSymbol.NativeInt32 || to == TypeSymbol.NativeUInt32 ||
+                from == TypeSymbol.NativeInt32 || from == TypeSymbol.NativeUInt32)
+            {
+                return EmitNativeIntConversion(value, from, to);
+            }
+
             if (from == TypeSymbol.Char && to == TypeSymbol.Int32 ||
                 from == TypeSymbol.Int32 && to == TypeSymbol.Char ||
                 from is NamedTypeSymbol { TypeKind: TypeKind.Enum } && to == TypeSymbol.Int32 ||
@@ -968,6 +975,44 @@ var wide = AllocateRegister(LirType.I64);
             }
 
             throw new Exception($"Unexpected conversion from {from} to {to}");
+        }
+
+        /// <summary>nint/nuint（原生整型）native 转换：Addr 表示层级——整型源按符号/零扩展到平台宽（x64 8 字节）；
+        /// native→i64/u64 同宽直通；native→i32/u32 走 Trunc64（x86 下低 4 字节即句柄值）。</summary>
+        private LirVirtualRegister EmitNativeIntConversion(LirVirtualRegister value, TypeSymbol from, TypeSymbol to)
+        {
+            var instructions = _currentFunction.Instructions;
+
+            if (to == TypeSymbol.NativeInt32 || to == TypeSymbol.NativeUInt32)
+            {
+                if (from == TypeSymbol.Int64 || from == TypeSymbol.UInt64 ||
+                    from == TypeSymbol.NativeInt32 || from == TypeSymbol.NativeUInt32)
+                {
+                    return value;
+                }
+
+                // 32 位源：符号/零扩展到平台宽（unsigned/char 零扩展）
+                var zeroExtend = (from.IsInteger && !from.IsSigned) || from == TypeSymbol.Char;
+                var result = AllocateRegister(LirType.Addr);
+                Add(instructions, new LirInstruction(
+                    zeroExtend ? LirOpCode.Movzx64 : LirOpCode.Movsx64,
+                    result, LirOperand.Reg(value)));
+                return result;
+            }
+
+            if (to == TypeSymbol.Int64 || to == TypeSymbol.UInt64)
+            {
+                return value;
+            }
+
+            if (to == TypeSymbol.Int32 || to == TypeSymbol.UInt32)
+            {
+                var result = AllocateRegister(4);
+                Add(instructions, new LirInstruction(LirOpCode.Trunc64, result, LirOperand.Reg(value)));
+                return result;
+            }
+
+            throw new Exception($"Unexpected native-int conversion from {from} to {to}");
         }
 
         // ------------------------------------------------------------------

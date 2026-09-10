@@ -852,6 +852,16 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return IlType.Double;
             }
 
+            if (type == TypeSymbol.NativeInt32)
+            {
+                return IlType.NativeInt;
+            }
+
+            if (type == TypeSymbol.NativeUInt32)
+            {
+                return IlType.NativeUInt;
+            }
+
             if (type == TypeSymbol.String)
             {
                 return IlType.String;

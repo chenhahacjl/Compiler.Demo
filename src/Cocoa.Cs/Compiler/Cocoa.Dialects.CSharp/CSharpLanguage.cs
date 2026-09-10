@@ -52,6 +52,8 @@ namespace Cocoa.CodeAnalysis
             "byte" => TypeSymbol.UInt8,
             "float" => TypeSymbol.Float,
             "double" => TypeSymbol.Double,
+            "nint" => TypeSymbol.NativeInt32,
+            "nuint" => TypeSymbol.NativeUInt32,
             _ => null,
         };
 

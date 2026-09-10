@@ -18,6 +18,7 @@ namespace Cocoa.CodeGen.Managed.Structure
         SzArray,
         GenericInst,
         NativeInt,
+        NativeUInt,
         GenericParameter,
         I1,
         I2,
@@ -79,6 +80,7 @@ namespace Cocoa.CodeGen.Managed.Structure
         public static IlType SzArrayOf(IlType elementType) => new IlType(IlTypeKind.SzArray, elementType: elementType);
         public static IlType GenericInstance(IlTypeRef definition, IReadOnlyList<IlType> arguments) => new IlType(IlTypeKind.GenericInst, definition, genericArguments: arguments);
         public static readonly IlType NativeInt = new IlType(IlTypeKind.NativeInt);
+        public static readonly IlType NativeUInt = new IlType(IlTypeKind.NativeUInt);
         public static IlType GenericVar(int ordinal) => new IlType(IlTypeKind.GenericParameter, genericOrdinal: ordinal);
         public static IlType ByRefOf(IlType elementType) => new IlType(IlTypeKind.ByRef, elementType: elementType);
 
@@ -104,6 +106,8 @@ namespace Cocoa.CodeGen.Managed.Structure
                 : Reference!.FullName,
             IlTypeKind.SzArray => ElementType!.FullName + "[]",
             IlTypeKind.ByRef => ElementType!.FullName + "&",
+            IlTypeKind.NativeInt => "System.IntPtr",
+            IlTypeKind.NativeUInt => "System.UIntPtr",
             _ => "?",
         };
     }

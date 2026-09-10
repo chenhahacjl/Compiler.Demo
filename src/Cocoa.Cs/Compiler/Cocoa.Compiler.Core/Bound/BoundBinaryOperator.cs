@@ -109,6 +109,13 @@ namespace Cocoa.CodeAnalysis.Binding
                 ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.GreaterOrEquals, t, TypeSymbol.Boolean));
             }
 
+            // nint/nuint（原生整型，平台自适应）：相等比较（`Raw == 0` / `Raw == other.Raw` 句柄判定语义；
+            // 算术/关系运算留待指针运算扩展，MVP 仅等值）
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.NativeInt32, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.NativeInt32, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.NativeUInt32, TypeSymbol.Boolean));
+            ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.NativeUInt32, TypeSymbol.Boolean));
+
             // any：相等（6e-M19 M5-c 修：结果类型此前误为 any，致 WriteLine(if 条件等) 无法消费）
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.Equals, TypeSymbol.Any, TypeSymbol.Boolean));
             ops.Add(new BoundBinaryOperator(BoundBinaryOperatorKind.NotEquals, TypeSymbol.Any, TypeSymbol.Boolean));

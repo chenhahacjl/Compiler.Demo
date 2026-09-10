@@ -24,6 +24,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         System_Double,  // double
         System_Int128,
         System_UInt128,
+        System_IntPtr,   // nint（原生有符号整型）
+        System_UIntPtr,  // nuint（原生无符号整型）
         System_Void,
     }
 }

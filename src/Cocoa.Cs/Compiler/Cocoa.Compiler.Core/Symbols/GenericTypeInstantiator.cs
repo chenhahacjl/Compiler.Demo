@@ -206,6 +206,8 @@ namespace Cocoa.CodeAnalysis.Symbols
             [TypeSymbol.Int128] = "@i128",
             [TypeSymbol.UInt128] = "@u128",
             [TypeSymbol.Float128] = "@f128",
+            [TypeSymbol.NativeInt32] = "@nint",
+            [TypeSymbol.NativeUInt32] = "@nuint",
         };
 
         /// <summary>基元权威编码反解（6e-G7 S1：.coa 类型流读侧）。</summary>

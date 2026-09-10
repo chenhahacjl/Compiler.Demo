@@ -524,6 +524,13 @@ namespace Cocoa.CodeGen.Native
                 return LirType.I64;
             }
 
+            // nint/nuint（原生整型，平台自适应）：走指针宽 Addr——x64=8 字节、x86=单 dword 槽，
+            // 隐含导入/导出句柄边界按平台位宽自动装卸（杜绝 64 位截断 / 32 位压栈错位）。
+            if (type == TypeSymbol.NativeInt32 || type == TypeSymbol.NativeUInt32)
+            {
+                return LirType.Addr;
+            }
+
             // 引用/数组/字符串/函数值/任意 → 指针（逻辑宽 8 字节）
             if (type == TypeSymbol.String || type == TypeSymbol.Any ||
                 type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||

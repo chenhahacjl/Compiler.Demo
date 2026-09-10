@@ -925,6 +925,15 @@ namespace Cocoa.CodeGen.Interpreter
                 // 枚举底层为 int，无操作
                 return Convert.ToInt32(value);
             }
+            else if (node.Type == TypeSymbol.NativeInt32)
+            {
+                // 原生整型：宿主 64 位表示
+                return Binding.NumericBox.ToSigned64(value!);
+            }
+            else if (node.Type == TypeSymbol.NativeUInt32)
+            {
+                return Binding.NumericBox.ToUnsigned64(value!);
+            }
             else if (node.Type is Symbols.NamedTypeSymbol { TypeKind: TypeKind.Delegate })
             {
                 // 6e-M22 委托真实类型化：fnty 值 → 具名 delegate（调用列表对象，单元素）

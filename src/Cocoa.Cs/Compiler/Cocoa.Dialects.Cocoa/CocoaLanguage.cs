@@ -43,6 +43,8 @@ namespace Cocoa.CodeAnalysis
             "i128" => TypeSymbol.Int128,
             "u128" => TypeSymbol.UInt128,
             "f128" => TypeSymbol.Float128,
+            "nint" => TypeSymbol.NativeInt32,
+            "nuint" => TypeSymbol.NativeUInt32,
             _ => null,
         };
 

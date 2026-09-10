@@ -106,6 +106,9 @@ namespace Cocoa.CodeGen.Managed.Writer
                 case IlTypeKind.NativeInt:
                     stream.WriteByte(0x18); // ELEMENT_TYPE_I
                     break;
+                case IlTypeKind.NativeUInt:
+                    stream.WriteByte(0x19); // ELEMENT_TYPE_U
+                    break;
                 case IlTypeKind.GenericParameter:
                     stream.WriteByte(0x13); // ELEMENT_TYPE_VAR (!n)
                     WriteCompressedInteger(stream, type.GenericOrdinal);

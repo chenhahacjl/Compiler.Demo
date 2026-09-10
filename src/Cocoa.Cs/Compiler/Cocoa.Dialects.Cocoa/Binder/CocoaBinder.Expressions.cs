@@ -1752,7 +1752,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             var boundOperator = BoundBinaryOperator.Bind(operatorKind, boundLeft.Type, boundRight.Type);
 
             if (boundOperator == null && boundLeft.Type != TypeSymbol.Error && boundRight.Type != TypeSymbol.Error &&
-                IsNumeric(boundLeft.Type) && IsNumeric(boundRight.Type))
+                (IsNumeric(boundLeft.Type) && IsNumeric(boundRight.Type) ||
+                 IsNativeInt(boundLeft.Type) || IsNativeInt(boundRight.Type)))
             {
                 // 6e-M21 Phase 1：二元数值提升——先求公共计算类型，两侧隐式归一后再查表
                 var commonType = GetBinaryNumericResultType(boundLeft.Type, boundRight.Type, operatorKind);
@@ -1807,6 +1808,31 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
         private static TypeSymbol? GetRawBinaryNumericResultType(TypeSymbol left, TypeSymbol right, CoreSyntax.SyntaxKind operatorKind)
         {
+            // nint/nuint（原生整型）：与同符号的 ≥位宽 整型混算归一到原生（int→nint 无损隐式，`nint == 0` 字面量判定）
+            if ((left == TypeSymbol.NativeInt32 && right == TypeSymbol.Int32) ||
+                (right == TypeSymbol.NativeInt32 && left == TypeSymbol.Int32))
+            {
+                return TypeSymbol.NativeInt32;
+            }
+
+            if ((left == TypeSymbol.NativeUInt32 && right == TypeSymbol.Int32) ||
+                (right == TypeSymbol.NativeUInt32 && left == TypeSymbol.Int32))
+            {
+                return TypeSymbol.NativeUInt32;
+            }
+
+            if ((left == TypeSymbol.NativeUInt32 && right == TypeSymbol.UInt32) ||
+                (right == TypeSymbol.NativeUInt32 && left == TypeSymbol.UInt32))
+            {
+                return TypeSymbol.NativeUInt32;
+            }
+
+            if ((left == TypeSymbol.NativeInt32 && right == TypeSymbol.UInt32) ||
+                (right == TypeSymbol.NativeInt32 && left == TypeSymbol.UInt32))
+            {
+                return TypeSymbol.NativeInt32;
+            }
+
             if (operatorKind == CoreSyntax.SyntaxKind.ShiftLeftToken || operatorKind == CoreSyntax.SyntaxKind.ShiftRightToken)
             {
                 return left.IsInteger && left.BitWidth < 32 ? TypeSymbol.Int32 : left;

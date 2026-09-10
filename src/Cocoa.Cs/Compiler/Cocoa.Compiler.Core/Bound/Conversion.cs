@@ -143,6 +143,67 @@ namespace Cocoa.CodeAnalysis.Binding
                 }
             }
 
+            // 原生整型（nint/nuint，平台自适应位宽）：对齐 C# IntPtr 语义——
+            // int→nint / uint→nuint / nint→long / nuint→ulong 隐式（无损失）；
+            // 其余 numeric↔native 一律显式（窄化/换号），native↔native 显式。
+            if (from == TypeSymbol.NativeInt32)
+            {
+                if (to == TypeSymbol.Int64)
+                {
+                    return Conversion.Implicit;
+                }
+
+                if (to == TypeSymbol.Int32 || to == TypeSymbol.NativeUInt32)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
+            if (to == TypeSymbol.NativeInt32)
+            {
+                if (from == TypeSymbol.Int32)
+                {
+                    return Conversion.Implicit;
+                }
+
+                if (from == TypeSymbol.Int64 || from == TypeSymbol.NativeUInt32)
+                {
+                    return Conversion.Explicit;
+                }
+
+                if (from == TypeSymbol.UInt32)
+                {
+                    // uint→nint：可能超出 nint 正域，显式
+                    return Conversion.Explicit;
+                }
+            }
+
+            if (from == TypeSymbol.NativeUInt32)
+            {
+                if (to == TypeSymbol.UInt64)
+                {
+                    return Conversion.Implicit;
+                }
+
+                if (to == TypeSymbol.UInt32 || to == TypeSymbol.NativeInt32)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
+            if (to == TypeSymbol.NativeUInt32)
+            {
+                if (from == TypeSymbol.UInt32)
+                {
+                    return Conversion.Implicit;
+                }
+
+                if (from == TypeSymbol.Int32 || from == TypeSymbol.UInt64 || from == TypeSymbol.NativeInt32)
+                {
+                    return Conversion.Explicit;
+                }
+            }
+
             // 6e-M21 Phase 1：数值类型系统化转换（按位宽/有无符号/是否浮点判定）
             // 隐式（拓宽）：同符号位宽不降；unsigned(n)→signed(>n)；任意数值→浮点（含 f32→f64）。
             // 显式（窄化）：其余数值↔数值组合（含 signed→unsigned、浮点→整数、f64→f32）。

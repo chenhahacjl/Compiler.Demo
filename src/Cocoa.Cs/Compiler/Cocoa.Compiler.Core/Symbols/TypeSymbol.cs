@@ -27,6 +27,9 @@ namespace Cocoa.CodeAnalysis.Symbols
         public static readonly TypeSymbol Int128 = new TypeSymbol("i128");
         public static readonly TypeSymbol UInt128 = new TypeSymbol("u128");
         public static readonly TypeSymbol Float128 = new TypeSymbol("f128");
+        // 原生整型（native int/uint，平台自适应：x86=32 位 / x64=64 位，对齐 C# nint/nuint = IntPtr/UIntPtr）
+        public static readonly TypeSymbol NativeInt32 = new NamedTypeSymbol("nint", "", Visibility.Public, null) { SpecialType = SpecialType.System_IntPtr, TypeKind = TypeKind.Struct };
+        public static readonly TypeSymbol NativeUInt32 = new NamedTypeSymbol("nuint", "", Visibility.Public, null) { SpecialType = SpecialType.System_UIntPtr, TypeKind = TypeKind.Struct };
 
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<TypeSymbol, TypeSymbol> _arrayTypes = new System.Collections.Concurrent.ConcurrentDictionary<TypeSymbol, TypeSymbol>();
 
@@ -60,7 +63,8 @@ namespace Cocoa.CodeAnalysis.Symbols
         public bool IsPrimitiveValueType =>
             this == Boolean || this == Int8 || this == Int16 || this == Int32 || this == Int64 ||
             this == UInt8 || this == UInt16 || this == UInt32 || this == UInt64 ||
-            this == Int128 || this == UInt128 || this == Float || this == Double || this == Char;
+            this == Int128 || this == UInt128 || this == Float || this == Double || this == Char ||
+            this == NativeInt32 || this == NativeUInt32;
 
         /// <summary>是否为值类型（基元值类型 + 用户 struct/enum；NamedTypeSymbol 覆盖见下）。</summary>
         public virtual bool IsValueType => IsPrimitiveValueType;

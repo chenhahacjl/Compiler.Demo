@@ -571,6 +571,12 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return type.IsNumeric && !type.IsPlaceholder128;
         }
 
+        /// <summary>原生整型（nint/nuint，平台自适应位宽）——二元提升/公共类型判定的专用门。</summary>
+        internal static bool IsNativeInt(TypeSymbol type)
+        {
+            return type == TypeSymbol.NativeInt32 || type == TypeSymbol.NativeUInt32;
+        }
+
         /// <summary>6e-M19 M5-a：可空引用型（类/接口/string/数组/any）——null 字面量的合法转换目标。</summary>
         private static bool IsNullableReferenceType(TypeSymbol type)
         {
@@ -581,14 +587,28 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         /// <summary>6e-M21 Phase 4/6：可接受范围内常量隐式窄化的目标整型（含 64 位：ulong y = 2 与 C# 同构）。</summary>
         private static bool IsNarrowIntegerTarget(TypeSymbol type)
         {
+            // 注：nint 不在此列——int→nint 本已隐式（nint ≥ 32 位）；仅 nuint 需 int 字面量隐式常量转换
+            // （C# `nuint x = 0`/`x == 0` 同构），long→native 仍强制显式（5L 不缩成隐式）。
             return type == TypeSymbol.Int8 || type == TypeSymbol.Int16 ||
                    type == TypeSymbol.UInt8 || type == TypeSymbol.UInt16 ||
                    type == TypeSymbol.UInt32 || type == TypeSymbol.Int64 ||
-                   type == TypeSymbol.UInt64;
+                   type == TypeSymbol.UInt64 ||
+                   type == TypeSymbol.NativeUInt32;
         }
 
         private static bool FitsInIntegerType(long value, TypeSymbol type)
         {
+            // nint/nuint（原生整型）：源为 int 常量（±2^31 内）；nint 恒容纳，nuint 仅非负
+            if (type == TypeSymbol.NativeInt32)
+            {
+                return true;
+            }
+
+            if (type == TypeSymbol.NativeUInt32)
+            {
+                return value >= 0;
+            }
+
             if (type.IsSigned)
             {
                 return type.BitWidth switch

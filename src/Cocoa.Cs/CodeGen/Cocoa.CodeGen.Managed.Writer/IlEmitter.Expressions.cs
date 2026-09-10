@@ -346,6 +346,14 @@ namespace Cocoa.CodeGen.Managed.Writer
                 return;
             }
 
+            // nint/nuint（原生整型，平台自适应）转换：对齐 IL native int 语义（ELEMENT_TYPE_I/U）
+            if (node.Expression.Type == TypeSymbol.NativeInt32 || node.Expression.Type == TypeSymbol.NativeUInt32 ||
+                node.Type == TypeSymbol.NativeInt32 || node.Type == TypeSymbol.NativeUInt32)
+            {
+                EmitNativeIntConversion(il, node.Expression.Type, node.Type);
+                return;
+            }
+
             if (node.Expression.Type == TypeSymbol.Char && node.Type == TypeSymbol.String)
             {
                 var type = _framework.RequireType("System.Char");
@@ -535,6 +543,61 @@ namespace Cocoa.CodeGen.Managed.Writer
             {
                 throw new System.Exception($"Unexpected conversion from {node.Expression.Type} to {node.Type}");
             }
+        }
+
+        /// <summary>nint/nuint（原生整型）转换发射——IL native int（ELEMENT_TYPE_I/U）语义。
+        /// int/long→nint = conv.i（符号扩展到平台宽）；uint/ulong→nuint = conv.u；native↔整型按位宽发 conv.i4/i8/u4/u8。</summary>
+        private void EmitNativeIntConversion(IlAssembler il, TypeSymbol from, TypeSymbol to)
+        {
+            if (to == from)
+            {
+                return;
+            }
+
+            // to 为原生整型：int/long/nuint → nint = conv.i；uint/ulong/nint → nuint = conv.u
+            if (to == TypeSymbol.NativeInt32)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_I"));
+                return;
+            }
+
+            if (to == TypeSymbol.NativeUInt32)
+            {
+                il.Emit(IlOpCodeTable.Get("Conv_U"));
+                return;
+            }
+
+            if (from == TypeSymbol.NativeInt32)
+            {
+                if (to == TypeSymbol.Int64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I8"));
+                    return;
+                }
+
+                if (to == TypeSymbol.Int32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_I4"));
+                    return;
+                }
+            }
+
+            if (from == TypeSymbol.NativeUInt32)
+            {
+                if (to == TypeSymbol.UInt64)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U8"));
+                    return;
+                }
+
+                if (to == TypeSymbol.UInt32)
+                {
+                    il.Emit(IlOpCodeTable.Get("Conv_U4"));
+                    return;
+                }
+            }
+
+            throw new System.Exception($"Unexpected native-int conversion from {from} to {to}");
         }
 
         /// <summary>值类型（bool/int/long/char/byte/double/短整型/浮点/枚举）→ 装箱为 System.Object 参数。</summary>

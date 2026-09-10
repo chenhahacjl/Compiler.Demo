@@ -142,6 +142,8 @@ namespace Cocoa.CodeGen.Managed.Structure
             Define("Conv_R8", 0x6C, IlOperandType.InlineNone);
             Define("Conv_U4", 0x6D, IlOperandType.InlineNone);
             Define("Conv_U8", 0x6E, IlOperandType.InlineNone);
+            Define("Conv_I", 0xD3, IlOperandType.InlineNone);    // conv.i：转 native int（nint/nuint 平台宽度）
+            Define("Conv_U", 0xE0, IlOperandType.InlineNone);    // conv.u：转 native unsigned int
 
             // 比较
             Define("Ceq", 0xFE01, IlOperandType.InlineNone);
@@ -210,6 +212,7 @@ namespace Cocoa.CodeGen.Managed.Structure
             Define("Ldind_I4", 0x4A, IlOperandType.InlineNone);
             Define("Ldind_U4", 0x4B, IlOperandType.InlineNone);
             Define("Ldind_I8", 0x4C, IlOperandType.InlineNone);
+            Define("Ldind_I", 0x4D, IlOperandType.InlineNone);    // ldind.i：解引用读 native int（nint/nuint）
             Define("Ldind_R4", 0x4E, IlOperandType.InlineNone);
             Define("Ldind_R8", 0x4F, IlOperandType.InlineNone);
             Define("Ldind_Ref", 0x50, IlOperandType.InlineNone);
@@ -218,6 +221,7 @@ namespace Cocoa.CodeGen.Managed.Structure
             Define("Stind_I2", 0x53, IlOperandType.InlineNone);
             Define("Stind_I4", 0x54, IlOperandType.InlineNone);
             Define("Stind_I8", 0x55, IlOperandType.InlineNone);
+            Define("Stind_I", 0x5A, IlOperandType.InlineNone);    // stind.i：解引用写 native int（nint/nuint）
             Define("Stind_R4", 0x56, IlOperandType.InlineNone);
             Define("Stind_R8", 0x57, IlOperandType.InlineNone);
             Define("Ldelema", 0x8F, IlOperandType.InlineType);
