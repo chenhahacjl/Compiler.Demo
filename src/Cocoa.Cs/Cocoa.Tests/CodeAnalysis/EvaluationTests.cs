@@ -138,10 +138,10 @@ namespace Cocoa.Tests.CodeAnalysis
         // ?. null conditional
         [InlineData("{ var s: string = null return s?.Length }", 0)]
         [InlineData("{ var s: string = \"hello\" return s?.Length }", 5)]
-        // 声明模式 is int n
-        [InlineData("{ var x: any = 42 return x is int n }", true)]
-        [InlineData("{ var x: any = 42 if x is int n return n return 0 }", 42)]
-        [InlineData("{ var x: any = \"hi\" return x is int n }", false)]
+        // 声明模式 is i32 n
+        [InlineData("{ var x: any = 42 return x is i32 n }", true)]
+        [InlineData("{ var x: any = 42 if x is i32 n return n return 0 }", 42)]
+        [InlineData("{ var x: any = \"hi\" return x is i32 n }", false)]
         // 关系模式 is > 0
         [InlineData("{ var x: any = 5 return x is > 0 }", true)]
         [InlineData("{ var x: any = -1 return x is > 0 }", false)]
@@ -158,8 +158,8 @@ namespace Cocoa.Tests.CodeAnalysis
         [InlineData("{ var s: any = \"hello\" return s is { Length: > 3 } }", true)]
         [InlineData("{ var s: any = \"hi\" return s is { Length: > 3 } }", false)]
         // switch 表达式 pattern arm
-        [InlineData("{ var x: any = 42 return x switch { is int n => n, _ => 0 } }", 42)]
-        [InlineData("{ var x: any = \"hello\" return x switch { is int n => n, _ => 0 } }", 0)]
+        [InlineData("{ var x: any = 42 return x switch { is i32 n => n, _ => 0 } }", 42)]
+        [InlineData("{ var x: any = \"hello\" return x switch { is i32 n => n, _ => 0 } }", 0)]
         [InlineData("{ var x: any = 5 return x switch { > 0 => 1, _ => 0 } }", 1)]
         [InlineData("{ var x: any = -1 return x switch { > 0 => 1, _ => 0 } }", 0)]
         [InlineData("{ var x: any = null return x switch { not null => 1, _ => 0 } }", 0)]
@@ -174,9 +174,9 @@ namespace Cocoa.Tests.CodeAnalysis
         {
             var testCases = new[]
             {
-                "{ var x: any = 42 return x is int n }",
-                "{ var x: any = 42 if x is int n return n return 0 }",
-                "{ var x: any = \"hi\" return x is int n }",
+                "{ var x: any = 42 return x is i32 n }",
+                "{ var x: any = 42 if x is i32 n return n return 0 }",
+                "{ var x: any = \"hi\" return x is i32 n }",
                 "{ var x: any = 5 return x is > 0 and < 10 }",
                 "{ var x: any = null return x is not null }",
                 "{ var x: any = 5 return x is not null }",

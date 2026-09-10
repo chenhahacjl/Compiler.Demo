@@ -282,6 +282,7 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
             ["System.IO.FileAccess"] = null,
             ["System.IO.FileShare"] = null,
             // StreamReader/StreamWriter 现已提供真实体（MemoryStream 同类带实例状态），不作为 facade 直链
+            ["System.Convert"] = null,
             ["System.Math"] = null,
             ["System.Console"] = null,
             ["System.Diagnostics.Process"] = null,

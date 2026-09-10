@@ -3,7 +3,7 @@
 namespace System
 {
 
-    public static class Convert
+    public facade class Convert
     {
         // ----------------------------------------------------------------
         // 鍗佸叚杩涘埗

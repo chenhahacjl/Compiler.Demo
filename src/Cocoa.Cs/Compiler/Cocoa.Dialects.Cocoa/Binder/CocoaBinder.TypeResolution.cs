@@ -286,6 +286,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             ["System.IO.FileAccess"] = null,
             ["System.IO.FileShare"] = null,
             // StreamReader/StreamWriter 现已提供真实体（MemoryStream 同类带实例状态），不作为 facade 直链
+            // 6e-G7 ⑤a：Convert facade——IL 直链 BCL System.Convert（非法输入抛 FormatException，对齐 BCL 语义）
+            ["System.Convert"] = null,
             ["System.Math"] = null,
             ["System.Console"] = null,
             ["System.Diagnostics.Process"] = null,

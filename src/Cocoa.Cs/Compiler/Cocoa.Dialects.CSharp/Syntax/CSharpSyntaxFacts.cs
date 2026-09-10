@@ -515,6 +515,16 @@ namespace Cocoa.CodeAnalysis.CSharp.Syntax
                     return "or";
                 case SyntaxKind.NotKeyword:
                     return "not";
+                case SyntaxKind.DotDotToken:
+                    return "..";
+                case SyntaxKind.LockKeyword:
+                    return "lock";
+                case SyntaxKind.CheckedKeyword:
+                    return "checked";
+                case SyntaxKind.UncheckedKeyword:
+                    return "unchecked";
+                case SyntaxKind.YieldKeyword:
+                    return "yield";
                 default:
                     return null;
             }

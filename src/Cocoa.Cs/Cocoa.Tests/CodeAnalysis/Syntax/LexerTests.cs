@@ -588,6 +588,24 @@ namespace Cocoa.Tests.CodeAnalysis.Syntax
                 return true;
             }
 
+            // . followed by . would be lexed as .. (range operator)
+            if (t1Kind == SyntaxKind.DotToken && t2Kind == SyntaxKind.DotToken)
+            {
+                return true;
+            }
+
+            // . followed by .. would be lexed as .. then .
+            if (t1Kind == SyntaxKind.DotToken && t2Kind == SyntaxKind.DotDotToken)
+            {
+                return true;
+            }
+
+            // ? followed by .. would be lexed as ?. then .
+            if (t1Kind == SyntaxKind.QuestionToken && t2Kind == SyntaxKind.DotDotToken)
+            {
+                return true;
+            }
+
             if (t1Kind == SyntaxKind.PlusToken && t2Kind == SyntaxKind.EqualsToken)
             {
                 return true;
