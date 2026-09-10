@@ -62,6 +62,11 @@ namespace Cocoa.CodeAnalysis.Serialization
             {
                 w.Field("bclTarget:" + classType.FacadeBclTargetName);
             }
+            // 6e-M33：显式基类（非 Object）——消费端恢复继承链（Handle 族 FileHandle extends Handle 硬前置）
+            if (classType.BaseType != null && !classType.BaseType.IsSystemObjectRoot)
+            {
+                w.Field("base:" + LibraryQualify(classType.BaseType));
+            }
             // 序列化全部静态方法签名（6e-M18：容器类允许带体静态方法，如 Console.WriteLine/Math.Max；syscall/extern 亦为静态）。
             // 方法本体由各自 fn 条目携带（owner 字段回填类归属），这里列 Name[参数类型] 供阅读（无参省略方括号）。
             // N1：接口的实例（抽象）方法签名也须随库携带——否则库侧空壳接口（如 System.IDisposable methods:0）

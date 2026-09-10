@@ -303,9 +303,10 @@ namespace Cocoa.CodeAnalysis
             }
 
             // 6e-Step D-b：普通实例类（如事件类：实例字段 + 实例方法体）入 .coa ——
-            // base 限制 System.Object（无多继承依赖），仍需真实实例语义（否则落入纯容器判定，杜绝容器默认构造器泄漏）。
+            // base 限制 System.Object（无多继承依赖），6e-M33 放宽为「base 亦同库可序列化」（Handle 族 FileHandle extends Handle），
+            // 仍需真实实例语义（否则落入纯容器判定，杜绝容器默认构造器泄漏）。
             if (!classType.IsInterface &&
-                (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot) &&
+                (classType.BaseType == null || classType.BaseType.IsSystemObjectRoot || IsCodSerializableClass(classType.BaseType)) &&
                 (classType.Fields.Any(f => !f.IsStatic) ||
                  classType.Events.Length > 0 ||
                  classType.Methods.Any(m => !m.IsStatic && !m.IsConstructor)))

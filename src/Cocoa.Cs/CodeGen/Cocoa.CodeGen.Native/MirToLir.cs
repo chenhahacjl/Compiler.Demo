@@ -503,6 +503,7 @@ namespace Cocoa.CodeGen.Native
 
         private static bool Is8ByteType(TypeSymbol type) => type == TypeSymbol.String || type == TypeSymbol.Any ||
             type == TypeSymbol.Double || type == TypeSymbol.Int64 || type == TypeSymbol.UInt64 ||
+            type == TypeSymbol.NativeInt32 || type == TypeSymbol.NativeUInt32 ||
             type.ElementType != null || (type is NamedTypeSymbol { IsValueType: false }) ||
             (type is NamedTypeSymbol { TypeKind: TypeKind.Struct } && !type.IsPrimitiveValueType) || type is FunctionTypeSymbol;
 

@@ -314,6 +314,22 @@ namespace Cocoa.CodeAnalysis.Serialization
                         var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);
                         return new BoundStaticTypeExpression(NoSyntax, type);
                     }
+                case "ctorchain":
+                    {
+                        // 6e-M33：构造链 `base(...)` / `this(...)`——kind + 目标构造 FnKey（"-" = 链 System.Object 0 参 no-op）+ 实参
+                        var kindText = reader.ExpectString();
+                        var ctorKey = reader.ExpectString();
+                        var constructor = ctorKey == "-" ? null : ResolveFunction(ctorKey, context);
+                        var count = reader.ExpectInt();
+                        var arguments = ImmutableArray.CreateBuilder<BoundExpression>();
+                        for (var i = 0; i < count; i++)
+                        {
+                            arguments.Add(ReadExpression(reader, context, labels));
+                        }
+
+                        var initializerKind = kindText == "this" ? ConstructorInitializerKind.This : ConstructorInitializerKind.Base;
+                        return new BoundConstructorChainExpression(NoSyntax, initializerKind, constructor, arguments.ToImmutable());
+                    }
                 case "this":
                     {
                         var type = (NamedTypeSymbol)ResolveTypeRef(reader.ExpectString(), context);

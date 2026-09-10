@@ -154,15 +154,15 @@ namespace Cocoa.CodeAnalysis
                 return ImmutableArray.Create(Diagnostic.Error(ZeroLocation, "output = cocoa 的库不允许入口函数（Main/script）"));
             }
 
-            // 校验 2：无内部 OOP（.coa 6e-M17 起放行纯容器类：仅 syscall/extern 静态方法；6b 起放行 facade 实例类
-            // ——facade 映射 BCL（System.Exception 等），体内不经 cod 执行，仅需符号+成员签名；非 facade 实例类仍 6b 后置）
+            // 校验 2：库无内部 OOP（.coa 6e-M17 起放行纯容器类；6b 起放行 facade 实例类与真体实例类；
+            // 6e-M33 起放行同库可序列化基类的继承链（Handle 族）——仅剩真不可序列化类（接口/多继承基类等）报错）
             if (program.Classes.Length > 0)
             {
                 var offendingClass = program.Classes.FirstOrDefault(c => !IsCodSerializableClass(c));
                 if (offendingClass != null)
                 {
                     var location = Language.GetDeclarationNameLocation(offendingClass.Declaration) ?? ZeroLocation;
-                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含实例类 '{offendingClass.Name}'（OOP），.coa 序列化阶段 6b 后置（requires:dotnet）；纯 syscall/extern 容器类与 facade 类已支持"));
+                    return ImmutableArray.Create(Diagnostic.Error(location, $"库含不可序列化类 '{offendingClass.Name}'（基类不可序列化/接口等），.coa 暂不支持（纯容器/facade/真体实例类/同库可序列化基类链已支持）"));
                 }
             }
 

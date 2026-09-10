@@ -95,6 +95,7 @@ namespace Cocoa.CodeAnalysis.Serialization
                         ReadSymbols(reader, context);
                         ApplyPendingProperties(context);
                         ApplyPendingClosures(context);
+                        ApplyPendingBaseTypes(context);
                         break;
                     case "bodies":
                         ReadBodies(reader, context, bodies);
@@ -247,6 +248,9 @@ namespace Cocoa.CodeAnalysis.Serialization
             /// <summary>6f-4：捕获闭包元数据待回填（捕获变量 loc 晚于 fn 记录——全符号读毕后再解析）。</summary>
             public List<(FunctionSymbol Function, bool IsLambdaWithEnvironment, NamedTypeSymbol? EnvironmentClass, List<string> CapturedKeys)> PendingClosures { get; } = new();
 
+            /// <summary>6e-M33：待回填基类（base 类声明可能晚于子类——全类注册后 pass2 解析，仿 PendingClosures）。</summary>
+            public List<(NamedTypeSymbol ClassType, string BaseRef)> PendingBaseTypes { get; } = new();
+
             public void AddNamedType(string fullName, TypeSymbol type)
             {
                 TypesByName[fullName] = type;
@@ -331,6 +335,24 @@ namespace Cocoa.CodeAnalysis.Serialization
             }
 
             context.PendingClosures.Clear();
+        }
+
+        /// <summary>6e-M33：基类回填——全部类注册后按引用解析（base 类声明可能晚于子类），解析失败明确报错。</summary>
+        private static void ApplyPendingBaseTypes(ReadContext context)
+        {
+            foreach (var (classType, baseRef) in context.PendingBaseTypes)
+            {
+                if (ResolveTypeRef(baseRef, context) is NamedTypeSymbol baseClass)
+                {
+                    classType.BaseType = baseClass;
+                }
+                else
+                {
+                    throw new InvalidDataException($"Unknown base type '{baseRef}' for class '{classType.FullName}'");
+                }
+            }
+
+            context.PendingBaseTypes.Clear();
         }
 
         private static void ReadEnum(Reader reader, ReadContext context)
@@ -421,6 +443,13 @@ namespace Cocoa.CodeAnalysis.Serialization
                 bclTargetName = ReadLabeledField(reader, "bclTarget:");
             }
 
+            // 6e-M33：显式基类（非 Object）引用——base 类声明可能晚于子类，延迟到全类注册后 pass2 解析
+            string? baseTypeRef = null;
+            if (reader.PeekRaw().StartsWith("base:", StringComparison.Ordinal))
+            {
+                baseTypeRef = ReadLabeledField(reader, "base:");
+            }
+
             var methodCount = ReadCountField(reader, "methods:");
             // 方法名仅供阅读，方法符号由各自 fn 条目的 owner 字段回填；
             // 接口方法无 fn 条目，须从这里的完整签名（Name[params]:Return）重建符号。
@@ -457,6 +486,10 @@ namespace Cocoa.CodeAnalysis.Serialization
             context.Classes.Add(classType);
             context.GenericDefinitions.Add(classType);
             context.AddNamedType(fullName, classType);
+            if (baseTypeRef != null)
+            {
+                context.PendingBaseTypes.Add((classType, baseTypeRef));
+            }
 
             // N1：接口成员符号重建——接口方法无 fn 条目（无方法体），从 methods: 完整签名恢复，
             // 否则库侧接口为空壳，消费方实现/成员解析（如 System.IDisposable.Dispose）失败。

@@ -368,6 +368,21 @@ namespace Cocoa.CodeAnalysis.Serialization
                         w.End();
                         break;
                     }
+                case BoundNodeKind.ConstructorChainExpression:
+                    {
+                        // 6e-M33：构造链 `base(...)` / `this(...)`——kind + 目标构造 FnKey（null = 链 System.Object 0 参 no-op）+ 实参
+                        var n = (BoundConstructorChainExpression)expression;
+                        w.Open("ctorchain");
+                        w.Field(n.InitializerKind == ConstructorInitializerKind.This ? "this" : "base");
+                        w.Field(n.Constructor != null ? registry.FnKey(n.Constructor) : "-");
+                        w.Field(n.Arguments.Length);
+                        foreach (var arg in n.Arguments)
+                        {
+                            WriteExpression(w, registry, labels, arg);
+                        }
+                        w.End();
+                        break;
+                    }
                 case BoundNodeKind.ThisExpression:
                     {
                         var n = (BoundThisExpression)expression;
