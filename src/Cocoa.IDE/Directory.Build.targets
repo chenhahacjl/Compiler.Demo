@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project>
+	<!-- IDE 项目位于 src\Cocoa.IDE，不在编译库的祖先目录链内，无法自动导入 Cocoa.Cs\Directory.Build.targets；
+		显式导入以复用 DeployStdLib 目标（把 libs\*.coa 分发到输出目录，供 F6 构建时 SystemLibrary 使用） -->
+	<Import Project="..\Cocoa.Cs\Directory.Build.targets" />
+</Project>
