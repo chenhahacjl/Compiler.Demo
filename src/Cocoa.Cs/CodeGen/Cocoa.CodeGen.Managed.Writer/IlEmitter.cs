@@ -135,6 +135,12 @@ namespace Cocoa.CodeGen.Managed.Writer
                 .OrderBy(FunctionSortKey, StringComparer.Ordinal)
                 .ToList();
 
+            if (Environment.GetEnvironmentVariable("COCOA_DEBUG_FACADE") == "1" &&
+                orderedFunctions.Any(f => f.Name == "CloseHandle"))
+            {
+                System.Console.Error.WriteLine("DBG CloseHandle in orderedFunctions=true; kernel32InProgramClasses=" + program.Classes.Any(c => c.FullName == "System.Kernel32"));
+            }
+
             // 1. 收集 class（基类在前）→ 建 IlTypeDef + 字段
             // 6e-M18：补入函数引用的注入容器类（System.Core.coa 的 Console/Math 等，不在 program.Classes 的源码声明集内）
             // 非 facade 类出 TypeDef，除非是「与 BCL 重名且无实例状态」的静态容器类（Console/Environment 等：

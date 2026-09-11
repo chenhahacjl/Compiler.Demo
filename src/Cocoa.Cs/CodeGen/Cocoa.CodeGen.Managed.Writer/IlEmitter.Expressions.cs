@@ -1077,6 +1077,27 @@ namespace Cocoa.CodeGen.Managed.Writer
             // 动态链接（阶段 A3）：cod 容器类静态方法 → MemberRef 外部调用
             if (node.Method != null)
             {
+                // 6e-M35：库 extern（import P/Invoke）调用点按需声明 MethodDef+ImplMap——仅被调用时才入发射集，
+                // 避免所有 System.Core extern 无条件进消费端 ImplMap
+                if (node.Method.IsExtern && node.Method.DllName != null && !_methods.ContainsKey(node.Method))
+                {
+                    if (node.Method.ContainingClass != null && !_classTypeDefs.ContainsKey(node.Method.ContainingClass))
+                    {
+                        var owner = node.Method.ContainingClass;
+                        var typeDef = new IlTypeDef(owner.Name, owner.Namespace, null, isPublic: _publishPublicSurface || owner.Visibility == Cocoa.CodeAnalysis.Symbols.Visibility.Public)
+                        {
+                            IsAbstract = owner.IsAbstract,
+                            IsSealed = owner.IsSealed,
+                            IsInterface = owner.IsInterface,
+                            IsValueType = owner.IsValueType,
+                        };
+                        _classTypeDefs.Add(owner, typeDef);
+                        _metadata.AddTypeDef(typeDef);
+                    }
+
+                    EmitFunctionDeclaration(node.Method);
+                }
+
                 if (_codAssemblies.TryGetValue(node.Method, out var codAssembly))
                 {
                     il.Emit(IlOpCodeTable.Get("Call"), CodMethodRef(node.Method, codAssembly));

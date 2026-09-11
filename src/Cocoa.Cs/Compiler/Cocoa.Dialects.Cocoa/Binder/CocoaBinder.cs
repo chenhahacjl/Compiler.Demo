@@ -251,8 +251,8 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 binder.BindClassWhereClauses(parts, classType);
             }
 
-            // 阶段 3.5：绑定类成员（字段/方法/构造/基类）——部分类每个部分分别绑定，隐式默认构造在所有部分之后统一生成
-            foreach (var (classType, parts) in classGroups)
+            // 阶段 3.5：绑定类成员（字段/方法/构造/基类）——基类优先拓扑序（6e-M34）
+            foreach (var (classType, parts) in OrderClassesByBaseFirst(classGroups))
             {
                 var primary = parts[0].Syntax;
 
@@ -641,6 +641,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                             }
                         }
                     }
+
                 }
                 else
                 {
@@ -884,6 +885,41 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
             return bound is BoundBlockStatement b
                 ? b
                 : new BoundBlockStatement(syntax, ImmutableArray.Create(bound));
+        }
+
+        private static List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)> OrderClassesByBaseFirst(
+            List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)> classGroups)
+        {
+            var ordered = new List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)>();
+            var done = new HashSet<NamedTypeSymbol>();
+
+            while (ordered.Count < classGroups.Count)
+            {
+                var progressed = false;
+                foreach (var group in classGroups)
+                {
+                    if (done.Contains(group.Type))
+                    {
+                        continue;
+                    }
+
+                    var baseType = group.Type.BaseType;
+                    if (baseType == null || baseType.IsSystemObjectRoot || done.Contains(baseType))
+                    {
+                        ordered.Add(group);
+                        done.Add(group.Type);
+                        progressed = true;
+                    }
+                }
+
+                if (!progressed)
+                {
+                    ordered.AddRange(classGroups.Where(g => !done.Contains(g.Type)));
+                    break;
+                }
+            }
+
+            return ordered;
         }
 
     }

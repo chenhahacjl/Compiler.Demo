@@ -13,6 +13,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Source Include="*.co" />
+    <Source Include="Handle/*.co" />
     <Source Include="IO/*.co" />
     <Source Include="Collections/*.co" />
     <Source Include="Syscall/*.co" />

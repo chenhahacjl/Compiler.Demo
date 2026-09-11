@@ -1,0 +1,22 @@
+// Cocoa 系统标准库 · System.Core（namespace System）
+// class FileHandle —— 文件句柄（extends Handle；Dispose 释放经 Kernel32.CloseHandle）。
+
+namespace System
+{
+    public class FileHandle extends Handle
+    {
+        public constructor(value: nint) extends base(value)
+        {
+        }
+
+        public function IsOpen(): bool
+        {
+            return IsNotNull()
+        }
+
+        public override function Dispose(): void
+        {
+            Kernel32.CloseHandle(Raw)
+        }
+    }
+}

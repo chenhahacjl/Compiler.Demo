@@ -419,6 +419,17 @@ namespace Cocoa.CodeAnalysis.Serialization
             for (var i = 0; i < text.Length; i++)
             {
                 var c = text[i];
+
+                // 6e-M35：反斜杠转义序列（`\(`/`\)`/`\s`/`\\` 等）整体入 token——
+                // 否则字符串含 `(`/`)` 时（如 Handle.ToString "Handle("）构造定界符切碎，
+                // Escape 已产出 `\(` 但 tokenizer 未识别 → System.Core.coa 加载失败。
+                if (c == '\\' && i + 1 < text.Length)
+                {
+                    sb.Append(c).Append(text[i + 1]);
+                    i++;
+                    continue;
+                }
+
                 if (c == '(' || c == ')')
                 {
                     if (sb.Length > 0)

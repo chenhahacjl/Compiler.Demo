@@ -162,8 +162,10 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
                 BoundExpression disposeReceiver;
 
-                // 如果类型实现了 IDisposable，生成 ((IDisposable)x).Dispose()
-                if (disposable != null &&
+                // 6e-M35：接收者类型自身有 Dispose 方法 → 直接调用（native 虚分派/IL callvirt 可处理具体类方法）；
+                // 否则才用 IDisposable 接口转换（facade 接口抽象方法 native 无 IR/imdispatch）。
+                var hasOwnDispose = variable.Type is NamedTypeSymbol own && own.GetMethod("Dispose") != null;
+                if (disposable != null && !hasOwnDispose &&
                     variable.Type is NamedTypeSymbol namedType &&
                     namedType.GetAllInterfaces().Contains(disposable))
                 {
@@ -175,8 +177,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                     disposeReceiver = varExpr;
                 }
 
-                var disposeCall = new BoundMemberCallExpression(syntax, disposeReceiver, "Dispose",
-                    ImmutableArray<BoundExpression>.Empty, TypeSymbol.Void);
+                // IDisposable 接收者（转换后）/模式匹配接收者上解析 Dispose 方法——6e-M35：Method 为空时
+                // 发射器/求值器无法定位成员（Handle 族 using 触发），沿类型链查询补全
+                var disposeCall = BindDisposeCall(syntax, disposeReceiver);
 
                 var ifTrue = new BoundBlockStatement(syntax, ImmutableArray.Create<BoundStatement>(
                     new BoundExpressionStatement(syntax, disposeCall)));
@@ -186,6 +189,20 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
 
             var finallyBlock = new BoundBlockStatement(syntax, finallyStatements.ToImmutable());
             return new BoundTryStatement(syntax, block, ImmutableArray<BoundCatchClause>.Empty, finallyBlock);
+        }
+
+        private BoundExpression BindDisposeCall(CoreSyntax.SyntaxNode syntax, BoundExpression receiver)
+        {
+            // Create receiver.Dispose() as a BoundMemberCallExpression
+            // 6e-M35：解析 Dispose 方法（沿 receiver 类型链）——Method 为空时发射器/求值器无法定位成员
+            FunctionSymbol? disposeMethod = null;
+            if (receiver.Type is NamedTypeSymbol disposeType)
+            {
+                disposeMethod = disposeType.GetMethod("Dispose");
+            }
+
+            return new BoundMemberCallExpression(syntax, receiver, "Dispose",
+                ImmutableArray<BoundExpression>.Empty, TypeSymbol.Void, disposeMethod);
         }
 
         private BoundStatement BindUsingStatement(UsingStatementSyntax syntax)

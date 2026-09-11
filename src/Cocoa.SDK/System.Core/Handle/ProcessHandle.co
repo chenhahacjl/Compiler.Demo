@@ -1,0 +1,22 @@
+// Cocoa 系统标准库 · System.Core（namespace System）
+// class ProcessHandle —— 进程句柄（extends Handle；Dispose 释放经 Kernel32.CloseHandle）。
+
+namespace System
+{
+    public class ProcessHandle extends Handle
+    {
+        public constructor(value: nint) extends base(value)
+        {
+        }
+
+        public function IsValid(): bool
+        {
+            return IsNotNull()
+        }
+
+        public override function Dispose(): void
+        {
+            Kernel32.CloseHandle(Raw)
+        }
+    }
+}

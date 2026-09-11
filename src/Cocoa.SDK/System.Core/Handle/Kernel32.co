@@ -1,0 +1,13 @@
+// Cocoa 系统标准库 · System.Core（namespace System）
+// class Kernel32 —— kernel32.dll 句柄 API 容器（import 块；extern 经 .coa 携带供消费端双后端解析）。
+
+namespace System
+{
+    public class Kernel32
+    {
+        import kernel32.dll
+        {
+            static stdcall function CloseHandle(h: nint): i32
+        }
+    }
+}

@@ -1,0 +1,56 @@
+// Cocoa 系统标准库 · System.Core（namespace System）
+// class Handle —— 通用资源句柄基类（对齐 C# SafeHandle 家族；Raw 承载原生句柄/指针值）。
+// 具体类：可裸存任意句柄（IntPtr 自由度）；virtual Dispose 供类型化子类覆写释放。
+
+namespace System
+{
+    public class Handle extends IDisposable
+    {
+        public field Raw: nint
+
+        public constructor(value: nint)
+        {
+            Raw = value
+        }
+
+        public function IsNull(): bool
+        {
+            return Raw == 0
+        }
+
+        public function IsNotNull(): bool
+        {
+            return Raw != 0
+        }
+
+        public function ToLong(): i64
+        {
+            return Raw
+        }
+
+        public function ToInt(): i32
+        {
+            return i32(Raw)
+        }
+
+        public function Equals(other: Handle): bool
+        {
+            return Raw == other.Raw
+        }
+
+        public function GetHashCode(): i32
+        {
+            return i32(Raw)
+        }
+
+        public function ToString(): string
+        {
+            return "Handle(" + Runtime.Int64ToString(i64(Raw)) + ")"
+        }
+
+        public virtual function Dispose(): void
+        {
+            // 基类默认空实现；类型化子类覆写释放原生资源
+        }
+    }
+}

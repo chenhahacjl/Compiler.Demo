@@ -70,6 +70,15 @@ namespace Cocoa.CodeGen.Managed.Writer
                 functionsBuilder.Add(pair.Key, Lowerer.Lower(pair.Key, pair.Value));
             }
 
+            // 6e-M35：库 extern 函数（import P/Invoke，无 body）同样进发射清单——本地 MethodDef+ImplMap（kernel32.dll 等 native import）
+            foreach (var fn in cod.Functions)
+            {
+                if (fn.IsExtern && !functionsBuilder.ContainsKey(fn))
+                {
+                    functionsBuilder.Add(fn, new BoundBlockStatement(null!, ImmutableArray<BoundStatement>.Empty));
+                }
+            }
+
             // 无入口的纯库程序集：Main/Script 均空，emitLibrary 走库 PE 形态
             var program = new BoundProgram(
                 previous: null,
