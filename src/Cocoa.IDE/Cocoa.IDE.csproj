@@ -25,6 +25,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Cocoa.Cs\Cocoa.Build\Cocoa.Build.csproj" />
+		<ProjectReference Include="..\Cocoa.Cs\Compiler\Cocoa.Dialects.Cocoa\Cocoa.Dialects.Cocoa.csproj" />
+		<ProjectReference Include="..\Cocoa.Cs\Compiler\Cocoa.Dialects.CSharp\Cocoa.Dialects.CSharp.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
