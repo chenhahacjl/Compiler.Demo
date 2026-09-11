@@ -16,12 +16,12 @@
   <RuleSets>
     <RuleSet name="Main">
       <!-- 注释 -->
-      <Rule color="Comment">//.*$" />
+      <Rule color="Comment">//.*$</Rule>
       <Rule color="Comment">/\*[\s\S]*?\*/</Rule>
       <Rule color="Comment">///.*$</Rule>
 
       <!-- 字符串 -->
-      <Rule color="String">@"(?:""|[^\"])*"</Rule>
+      <Rule color="String">@"(?:""|[^"])*"</Rule>
       <Rule color="String">"(?:\\.|[^"\\])*"</Rule>
       <Rule color="String">'\\.'|'[^'\\]+'</Rule>
 

@@ -6,6 +6,8 @@ namespace Cocoa.IDE.ViewModels;
 
 public partial class OutputViewModel : ObservableObject
 {
+    private const int MaxLines = 5000;
+
     public ObservableCollection<string> Lines { get; } = new();
 
     private readonly StringBuilder _buffer = new();
@@ -18,15 +20,17 @@ public partial class OutputViewModel : ObservableObject
         Lines.Add(text);
         _buffer.AppendLine(text);
 
-        // 保持合理数量，避免内存爆
-        if (Lines.Count > 5000)
-            Lines.RemoveAt(0);
+        if (Lines.Count > MaxLines)
+        {
+            for (var i = Lines.Count - MaxLines; i > 0; i--)
+                Lines.RemoveAt(0);
+        }
     }
 
     public void AppendLines(IEnumerable<string> texts)
     {
         foreach (var t in texts)
-            Lines.Add(t);
+            AppendLine(t);
     }
 
     public void Clear()

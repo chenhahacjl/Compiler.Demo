@@ -16,7 +16,7 @@
   <RuleSets>
     <RuleSet name="Main">
       <!-- 注释 -->
-      <Rule color="Comment">//.*$" />
+      <Rule color="Comment">//.*$</Rule>
       <Rule color="Comment">/\*[\s\S]*?\*/</Rule>
 
       <!-- 字符串 -->

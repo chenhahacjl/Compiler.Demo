@@ -12,7 +12,6 @@ public partial class EditorTabsViewModel : ObservableObject
 
     public void OpenFile(string filePath)
     {
-        // 避免重复打开
         var existing = Tabs.FirstOrDefault(t => t.FilePath == filePath);
         if (existing != null)
         {
@@ -25,9 +24,28 @@ public partial class EditorTabsViewModel : ObservableObject
         ActiveTab = tab;
     }
 
+    public void Activate(EditorTabViewModel tab)
+    {
+        if (Tabs.Contains(tab))
+            ActiveTab = tab;
+    }
+
     public void CloseTab(EditorTabViewModel tab)
     {
+        var index = Tabs.IndexOf(tab);
         Tabs.Remove(tab);
-        ActiveTab = Tabs.LastOrDefault();
+
+        if (ActiveTab == tab)
+        {
+            // 优先选择原本相邻的右侧标签，否则左侧；无剩余则置空
+            var next = index < Tabs.Count ? Tabs[index] : Tabs.LastOrDefault();
+            ActiveTab = next;
+        }
+    }
+
+    public void CloseAll()
+    {
+        Tabs.Clear();
+        ActiveTab = null;
     }
 }
