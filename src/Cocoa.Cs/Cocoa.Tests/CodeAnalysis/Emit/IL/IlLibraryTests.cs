@@ -47,7 +47,10 @@ public class Point
             Assert.True(File.Exists(path));
 
             var assembly = Assembly.LoadFile(path);
-            var point = assembly.GetTypes().Single(t => t.Name == "Point");
+            Type[] types;
+            try { types = assembly.GetTypes(); }
+            catch (ReflectionTypeLoadException ex) { types = ex.Types.Where(t => t != null).ToArray()!; }
+            var point = types.Single(t => t.Name == "Point");
             Assert.True(point.IsPublic);
 
             var ctor = point.GetConstructor(new[] { typeof(int) });

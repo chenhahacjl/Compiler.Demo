@@ -890,31 +890,100 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
         private static List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)> OrderClassesByBaseFirst(
             List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)> classGroups)
         {
+            // 构建类名→group 索引映射（供语法级基类名称查找）
+            var nameToGroup = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < classGroups.Count; i++)
+            {
+                nameToGroup[classGroups[i].Type.Name] = i;
+            }
+
+            // 构建依赖图：若 BaseType 已落位则用 BaseType，否则从语法中提取基类名
+            var needsBefore = new HashSet<int>();
+            for (var i = 0; i < classGroups.Count; i++)
+            {
+                var (classType, parts) = classGroups[i];
+                var baseType = classType.BaseType;
+                if (baseType != null && !baseType.IsSystemObjectRoot && !baseType.IsInterface &&
+                    nameToGroup.TryGetValue(baseType.Name, out var baseIdx) && baseIdx != i)
+                {
+                    needsBefore.Add(i); // 依赖已在列表中——标记需要排序
+                    continue;
+                }
+
+                // BaseType 未落位——从语法中提取首个基类名
+                if (baseType == null && parts.Count > 0)
+                {
+                    foreach (var baseClause in parts[0].Syntax.BaseTypes)
+                    {
+                        var baseName = baseClause.Identifier.Text;
+                        if (nameToGroup.TryGetValue(baseName, out var syntaxBaseIdx) && syntaxBaseIdx != i)
+                        {
+                            needsBefore.Add(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
             var ordered = new List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)>();
-            var done = new HashSet<NamedTypeSymbol>();
+            var done = new HashSet<int>();
 
             while (ordered.Count < classGroups.Count)
             {
                 var progressed = false;
-                foreach (var group in classGroups)
+                for (var i = 0; i < classGroups.Count; i++)
                 {
-                    if (done.Contains(group.Type))
+                    if (done.Contains(i)) continue;
+
+                    if (!needsBefore.Contains(i))
                     {
+                        ordered.Add(classGroups[i]);
+                        done.Add(i);
+                        progressed = true;
                         continue;
                     }
 
-                    var baseType = group.Type.BaseType;
-                    if (baseType == null || baseType.IsSystemObjectRoot || done.Contains(baseType))
+                    // 检查所有依赖是否已处理
+                    var (classType, _) = classGroups[i];
+                    var baseType = classType.BaseType;
+                    var allResolved = true;
+                    if (baseType != null && !baseType.IsSystemObjectRoot && !baseType.IsInterface &&
+                        nameToGroup.TryGetValue(baseType.Name, out var baseIdx) && !done.Contains(baseIdx))
                     {
-                        ordered.Add(group);
-                        done.Add(group.Type);
+                        allResolved = false;
+                    }
+                    // 语法级依赖检查
+                    if (allResolved && baseType == null && classGroups[i].Parts.Count > 0)
+                    {
+                        foreach (var baseClause in classGroups[i].Parts[0].Syntax.BaseTypes)
+                        {
+                            var baseName = baseClause.Identifier.Text;
+                            if (nameToGroup.TryGetValue(baseName, out var syntaxBaseIdx) && !done.Contains(syntaxBaseIdx))
+                            {
+                                allResolved = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (allResolved)
+                    {
+                        ordered.Add(classGroups[i]);
+                        done.Add(i);
                         progressed = true;
                     }
                 }
 
                 if (!progressed)
                 {
-                    ordered.AddRange(classGroups.Where(g => !done.Contains(g.Type)));
+                    for (var i = 0; i < classGroups.Count; i++)
+                    {
+                        if (!done.Contains(i))
+                        {
+                            ordered.Add(classGroups[i]);
+                            done.Add(i);
+                        }
+                    }
                     break;
                 }
             }

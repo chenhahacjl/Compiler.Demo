@@ -127,6 +127,13 @@
       (fld Item6 !System.ValueTuple.T6 public false false)
       (fld Item7 !System.ValueTuple.T7 public false false) methods:0 events:0
     )
+    (cls System.FileHandle public iface:false ifaces:0 struct:false base:System.Handle methods:0 fields:0 events:0)
+    (cls System.IDisposable public iface:true ifaces:0 struct:false methods:1 Dispose:@void fields:0 events:0)
+    (cls System.Handle public iface:false ifaces:1 System.IDisposable struct:false methods:0 fields:1
+      (fld Raw @nint public false false) events:0
+    )
+    (cls System.Kernel32 public iface:false ifaces:0 struct:false methods:1 CloseHandle[@nint] fields:0 events:0)
+    (cls System.ProcessHandle public iface:false ifaces:0 struct:false base:System.Handle methods:0 fields:0 events:0)
     (cls System.IO.Directory public iface:false ifaces:0 struct:false methods:3 Exists[@string] CreateDirectory[@string] GetCurrentDirectory fields:0 events:0)
     (cls System.IO.File public iface:false ifaces:0 struct:false methods:7 ReadAllText[@string] WriteAllText[@string,@string] Exists[@string] Copy[@string,@string] Delete[@string] ReadAllBytes[@string] WriteAllBytes[@string,@u8[]] fields:0 events:0)
     (cls System.IO.FileStream public iface:false ifaces:0 struct:false methods:0 fields:1
@@ -296,7 +303,6 @@
       (prop ContentionCount @i64 true false public true)
     )
     (cls System.Threading.Monitor public iface:false ifaces:0 struct:false methods:9 Enter[System.Object] Exit[System.Object] IsEntered[System.Object] TryEnter[System.Object] TryEnter[System.Object,@i32] Wait[System.Object] Wait[System.Object,@i32] Pulse[System.Object] PulseAll[System.Object] fields:0 events:0)
-    (cls System.IDisposable public iface:true ifaces:0 struct:false methods:1 Dispose:@void fields:0 events:0)
     (gcls System.Collections.Generic.ISet public iface:true ifaces:0 struct:false tparams:1
       (tpar T 0 - v:- c:0) fields:0 methods:10 UnionWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IntersectWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void ExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void SymmetricExceptWith[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@void IsSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSubsetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool IsProperSupersetOf[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool Overlaps[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool SetEquals[System.Collections.Generic.IEnumerable`1#!System.Collections.Generic.ISet.T]:@bool events:0
     )
@@ -1201,6 +1207,27 @@
       (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p6 p6 !System.ValueTuple.T6 5 - -)
       (par System.Core!System.ValueTuple.ValueTuple[!System.ValueTuple.T1,!System.ValueTuple.T2,!System.ValueTuple.T3,!System.ValueTuple.T4,!System.ValueTuple.T5,!System.ValueTuple.T6,!System.ValueTuple.T7]/p7 p7 !System.ValueTuple.T7 6 - -)
     )
+    (fn System.Core!System.Handle.Handle[@nint] name:Handle ret:@void ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.Handle.Handle[@nint]/value value @nint 0 - -)
+    )
+    (fn System.Core!System.Handle.IsNull[] name:IsNull ret:@bool ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Handle.IsNotNull[] name:IsNotNull ret:@bool ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Handle.ToLong[] name:ToLong ret:@i64 ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Handle.ToInt[] name:ToInt ret:@i32 ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Handle.Equals[System.Handle] name:Equals ret:@bool ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:1
+      (par System.Core!System.Handle.Equals[System.Handle]/other other System.Handle 0 - -)
+    )
+    (fn System.Core!System.Handle.GetHashCode[] name:GetHashCode ret:@i32 ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Handle.ToString[] name:ToString ret:@string ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Handle.Dispose[] name:Dispose ret:@void ns:- owner:System.Handle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.Kernel32.CloseHandle[@nint] name:CloseHandle ret:@i32 ns:- owner:System.Kernel32 extern:true dll:kernel32.dll cc:stdcall builtin:- entry:- charset:unicode static:true ctor:false acc:false params:1
+      (par System.Core!System.Kernel32.CloseHandle[@nint]/h h @nint 0 - -)
+    )
+    (fn System.Core!System.ProcessHandle.ProcessHandle[@nint] name:ProcessHandle ret:@void ns:- owner:System.ProcessHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.ProcessHandle.ProcessHandle[@nint]/value value @nint 0 - -)
+    )
+    (fn System.Core!System.ProcessHandle.IsValid[] name:IsValid ret:@bool ns:- owner:System.ProcessHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.ProcessHandle.Dispose[] name:Dispose ret:@void ns:- owner:System.ProcessHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (fn System.Core!System.IO.Directory.Exists[@string] name:Exists ret:@bool ns:- owner:System.IO.Directory extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.IO.Directory.Exists[@string]/path path @string 0 - -)
     )
@@ -1696,6 +1723,11 @@
     (fn System.Core!System.Threading.Monitor.PulseAll[System.Object] name:PulseAll ret:@void ns:- owner:System.Threading.Monitor extern:false dll:- cc:winapi builtin:- entry:- charset:- static:true ctor:false acc:false params:1
       (par System.Core!System.Threading.Monitor.PulseAll[System.Object]/obj obj System.Object 0 - -)
     )
+    (fn System.Core!System.FileHandle.FileHandle[@nint] name:FileHandle ret:@void ns:- owner:System.FileHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:true acc:false params:1
+      (par System.Core!System.FileHandle.FileHandle[@nint]/value value @nint 0 - -)
+    )
+    (fn System.Core!System.FileHandle.IsOpen[] name:IsOpen ret:@bool ns:- owner:System.FileHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
+    (fn System.Core!System.FileHandle.Dispose[] name:Dispose ret:@void ns:- owner:System.FileHandle extern:false dll:- cc:winapi builtin:- entry:- charset:- static:false ctor:false acc:false params:0)
     (loc System.Core!System.Array.Sum[@i32[]]/sum false @i32)
     (loc System.Core!System.Array.Sum[@i32[]]/i false @i32)
     (loc System.Core!System.Array.Sum[@f64[]]/sum false @f64)
@@ -10872,6 +10904,149 @@
         )
       )
     )
+    (body System.Core!System.Handle.Handle[@nint]
+      (block 1
+        (exprstmt
+          (memberassign
+            (this System.Handle) name:Raw @nint false
+            (var System.Core!System.Handle.Handle[@nint]/value)
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.IsNull[]
+      (block 1
+        (return
+          (binary
+            (bop == @nint @nint)
+            (memberacc @nint Raw owner:System.Handle
+              (this System.Handle)
+            )
+            (conv @nint
+              (lit @i32 i:0)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.IsNotNull[]
+      (block 1
+        (return
+          (binary
+            (bop != @nint @nint)
+            (memberacc @nint Raw owner:System.Handle
+              (this System.Handle)
+            )
+            (conv @nint
+              (lit @i32 i:0)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.ToLong[]
+      (block 1
+        (return
+          (conv @i64
+            (memberacc @nint Raw owner:System.Handle
+              (this System.Handle)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.ToInt[]
+      (block 1
+        (return
+          (conv @i32
+            (memberacc @nint Raw owner:System.Handle
+              (this System.Handle)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.Equals[System.Handle]
+      (block 1
+        (return
+          (binary
+            (bop == @nint @nint)
+            (memberacc @nint Raw owner:System.Handle
+              (this System.Handle)
+            )
+            (memberacc @nint Raw owner:System.Handle
+              (var System.Core!System.Handle.Equals[System.Handle]/other)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.GetHashCode[]
+      (block 1
+        (return
+          (conv @i32
+            (memberacc @nint Raw owner:System.Handle
+              (this System.Handle)
+            )
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.ToString[]
+      (block 1
+        (return
+          (binary
+            (bop + @string @string)
+            (binary
+              (bop + @string @string)
+              (lit @string s:Handle\()
+              (membercall @string Int64ToString System.Core!System.Runtime.Int64ToString[@i64] 1
+                (statictype System.Runtime)
+                (conv @i64
+                  (memberacc @nint Raw owner:System.Handle
+                    (this System.Handle)
+                  )
+                )
+              )
+            )
+            (lit @string s:\))
+          )
+        )
+      )
+    )
+    (body System.Core!System.Handle.Dispose[]
+      (block 0)
+    )
+    (body System.Core!System.ProcessHandle.ProcessHandle[@nint]
+      (block 1
+        (exprstmt
+          (ctorchain base System.Core!System.Handle.Handle[@nint] 1
+            (var System.Core!System.ProcessHandle.ProcessHandle[@nint]/value)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ProcessHandle.IsValid[]
+      (block 1
+        (return
+          (membercall @bool IsNotNull System.Core!System.Handle.IsNotNull[] 0
+            (this System.ProcessHandle)
+          )
+        )
+      )
+    )
+    (body System.Core!System.ProcessHandle.Dispose[]
+      (block 1
+        (exprstmt
+          (membercall @i32 CloseHandle System.Core!System.Kernel32.CloseHandle[@nint] 1
+            (statictype System.Kernel32)
+            (memberacc @nint Raw owner:System.Handle
+              (this System.ProcessHandle)
+            )
+          )
+        )
+      )
+    )
     (body System.Core!System.IO.Directory.Exists[@string]
       (block 1
         (return
@@ -14295,6 +14470,36 @@
     (body System.Core!System.Threading.Monitor.PulseAll[System.Object]
       (block 0)
     )
+    (body System.Core!System.FileHandle.FileHandle[@nint]
+      (block 1
+        (exprstmt
+          (ctorchain base System.Core!System.Handle.Handle[@nint] 1
+            (var System.Core!System.FileHandle.FileHandle[@nint]/value)
+          )
+        )
+      )
+    )
+    (body System.Core!System.FileHandle.IsOpen[]
+      (block 1
+        (return
+          (membercall @bool IsNotNull System.Core!System.Handle.IsNotNull[] 0
+            (this System.FileHandle)
+          )
+        )
+      )
+    )
+    (body System.Core!System.FileHandle.Dispose[]
+      (block 1
+        (exprstmt
+          (membercall @i32 CloseHandle System.Core!System.Kernel32.CloseHandle[@nint] 1
+            (statictype System.Kernel32)
+            (memberacc @nint Raw owner:System.Handle
+              (this System.FileHandle)
+            )
+          )
+        )
+      )
+    )
     (body System.Core!System.Collections.Generic.DictionaryEnumerator.DictionaryEnumerator[!System.Collections.Generic.DictionaryEnumerator.K[],!System.Collections.Generic.DictionaryEnumerator.V[],@i32]
       (block 4
         (exprstmt
@@ -17580,6 +17785,7 @@
   )
   (manifest
     (requires any)
+    (import kernel32.dll)
     (ns System)
     (ns System.Collections.Generic)
     (ns System.IO)
@@ -17587,4 +17793,4 @@
     (ns System.Threading)
   )
 )
-(checksum sha256:60c12e321e2cbc778f817010a67209b0dfc27fc522d9c850a67250a793b0ffbd)
+(checksum sha256:9498f69bb2163e20cefd5857d6d5d594294dd46cefe8296127c5e04a52541ac1)

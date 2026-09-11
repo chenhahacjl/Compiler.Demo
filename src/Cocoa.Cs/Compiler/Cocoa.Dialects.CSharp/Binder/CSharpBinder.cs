@@ -888,31 +888,95 @@ namespace Cocoa.CodeAnalysis.CSharp.Binding
         private static List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)> OrderClassesByBaseFirst(
             List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)> classGroups)
         {
+            var nameToGroup = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var i = 0; i < classGroups.Count; i++)
+            {
+                nameToGroup[classGroups[i].Type.Name] = i;
+            }
+
+            var needsBefore = new HashSet<int>();
+            for (var i = 0; i < classGroups.Count; i++)
+            {
+                var (classType, parts) = classGroups[i];
+                var baseType = classType.BaseType;
+                if (baseType != null && !baseType.IsSystemObjectRoot && !baseType.IsInterface &&
+                    nameToGroup.TryGetValue(baseType.Name, out var baseIdx) && baseIdx != i)
+                {
+                    needsBefore.Add(i); // 依赖已在列表中——标记需要排序
+                    continue;
+                }
+
+                if (baseType == null && parts.Count > 0)
+                {
+                    foreach (var baseClause in parts[0].Syntax.BaseTypes)
+                    {
+                        var baseName = baseClause.Identifier.Text;
+                        if (nameToGroup.TryGetValue(baseName, out var syntaxBaseIdx) && syntaxBaseIdx != i)
+                        {
+                            needsBefore.Add(i);
+                            break;
+                        }
+                    }
+                }
+            }
+
             var ordered = new List<(NamedTypeSymbol Type, List<(ClassDeclarationSyntax Syntax, string Namespace)> Parts)>();
-            var done = new HashSet<NamedTypeSymbol>();
+            var done = new HashSet<int>();
 
             while (ordered.Count < classGroups.Count)
             {
                 var progressed = false;
-                foreach (var group in classGroups)
+                for (var i = 0; i < classGroups.Count; i++)
                 {
-                    if (done.Contains(group.Type))
+                    if (done.Contains(i)) continue;
+
+                    if (!needsBefore.Contains(i))
                     {
+                        ordered.Add(classGroups[i]);
+                        done.Add(i);
+                        progressed = true;
                         continue;
                     }
 
-                    var baseType = group.Type.BaseType;
-                    if (baseType == null || baseType.IsSystemObjectRoot || done.Contains(baseType))
+                    var (classType, _) = classGroups[i];
+                    var baseType = classType.BaseType;
+                    var allResolved = true;
+                    if (baseType != null && !baseType.IsSystemObjectRoot && !baseType.IsInterface &&
+                        nameToGroup.TryGetValue(baseType.Name, out var baseIdx) && !done.Contains(baseIdx))
                     {
-                        ordered.Add(group);
-                        done.Add(group.Type);
+                        allResolved = false;
+                    }
+                    if (allResolved && baseType == null && classGroups[i].Parts.Count > 0)
+                    {
+                        foreach (var baseClause in classGroups[i].Parts[0].Syntax.BaseTypes)
+                        {
+                            var baseName = baseClause.Identifier.Text;
+                            if (nameToGroup.TryGetValue(baseName, out var syntaxBaseIdx) && !done.Contains(syntaxBaseIdx))
+                            {
+                                allResolved = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (allResolved)
+                    {
+                        ordered.Add(classGroups[i]);
+                        done.Add(i);
                         progressed = true;
                     }
                 }
 
                 if (!progressed)
                 {
-                    ordered.AddRange(classGroups.Where(g => !done.Contains(g.Type)));
+                    for (var i = 0; i < classGroups.Count; i++)
+                    {
+                        if (!done.Contains(i))
+                        {
+                            ordered.Add(classGroups[i]);
+                            done.Add(i);
+                        }
+                    }
                     break;
                 }
             }

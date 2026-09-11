@@ -2603,8 +2603,9 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                 }
                 else
                 {
-                    var candidates = classType.BaseType!.GetMethods(syntax.Identifier.Text)
-                        .Where(m => (m.IsVirtual || m.IsAbstract) && !m.IsSealed)
+                    // 沿继承链向上查找（含当前类自身）——virtual 定义可能在当前类而非 BaseType
+                    var candidates = classType.GetMethods(syntax.Identifier.Text)
+                        .Where(m => (m.IsVirtual || m.IsAbstract) && !m.IsSealed && m != method)
                         .ToImmutableArray();
 
                     FunctionSymbol? baseMethod = null;
@@ -2625,7 +2626,7 @@ namespace Cocoa.CodeAnalysis.Cocoa.Binding
                         }
                         else
                         {
-                            var nearest = classType.BaseType.GetMethod(syntax.Identifier.Text);
+                            var nearest = classType.BaseType!.GetMethod(syntax.Identifier.Text);
                             _diagnostics.ReportOverrideSignatureMismatch(syntax.Identifier.Location, syntax.Identifier.Text, nearest?.ReturnType ?? method.ReturnType, method.ReturnType);
                         }
                     }
