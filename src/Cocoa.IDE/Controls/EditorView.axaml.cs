@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using AvaloniaEdit;
@@ -187,48 +188,54 @@ public sealed class SquiggleRenderer : IBackgroundRenderer
     {
         if (_segments.Count == 0) return;
 
-        var builder = new BackgroundGeometryBuilder
-        {
-            AlignToWholePixels = true,
-            BorderThickness = 1.5,
-            CornerRadius = 1.0,
-        };
-
-        foreach (var seg in _segments)
-            builder.AddSegment(textView, seg);
-
-        // 分错误/警告两组绘制不同颜色
-        builder.CloseFigure();
-        var geometry = builder.CreateGeometry();
-        if (geometry != null && !IsEmptyGeometry(geometry))
-        {
-            // 分错误/警告两组绘制不同颜色
-            drawingContext.DrawGeometry(null, ErrorPen, geometry);
-        }
-
-        // 区分警告：单独重跑一遍只为警告段
-        var warningBuilder = new BackgroundGeometryBuilder
-        {
-            AlignToWholePixels = true,
-            BorderThickness = 1.5,
-            CornerRadius = 1.0,
-        };
-        var anyWarning = false;
         foreach (var seg in _segments)
         {
-            if (!seg.IsError)
+            var builder = new BackgroundGeometryBuilder
             {
-                warningBuilder.AddSegment(textView, seg);
-                anyWarning = true;
-            }
+                AlignToWholePixels = true,
+                BorderThickness = 1.0,
+                CornerRadius = 0,
+            };
+            builder.AddSegment(textView, seg);
+            builder.CloseFigure();
+
+            // 单段矩形 → 沿底部画锯齿波浪线
+            var g = builder.CreateGeometry();
+            if (g == null || IsEmptyGeometry(g)) continue;
+
+            DrawSquiggle(drawingContext, g.Bounds, seg.IsError ? ErrorPen : WarningPen);
         }
-        if (anyWarning)
+    }
+
+    /// <summary>沿矩形底线画 3px 步进的锯齿波浪线（类 VS 诊断下划线）。</summary>
+    private static void DrawSquiggle(DrawingContext drawingContext, Rect rect, IPen pen)
+    {
+        const double step = 3.0;
+        const double amplitude = 2.0;
+
+        var baseline = rect.Y + rect.Height - 1;
+        var x = rect.X;
+        var points = new List<Point>();
+        var index = 0;
+        while (x <= rect.Right + step)
         {
-            warningBuilder.CloseFigure();
-            var w = warningBuilder.CreateGeometry();
-            if (w != null && !IsEmptyGeometry(w))
-                drawingContext.DrawGeometry(null, WarningPen, w);
+            var y = baseline + ((index % 2 == 0) ? -amplitude : amplitude);
+            points.Add(new Point(x, y));
+            x += step;
+            index++;
         }
+        if (points.Count < 2) return;
+
+        var geometry = new StreamGeometry();
+        using (var ctx = geometry.Open())
+        {
+            ctx.BeginFigure(points[0], false);
+            for (var i = 1; i < points.Count; i++)
+                ctx.LineTo(points[i]);
+            ctx.EndFigure(false);
+        }
+
+        drawingContext.DrawGeometry(null, pen, geometry);
     }
 
     private static bool IsEmptyGeometry(Geometry geometry)
