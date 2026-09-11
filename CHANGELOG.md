@@ -6,12 +6,26 @@
 
 ---
 
-## 未发布（2026-09-06）
+## 未发布（2026-09-11）
+
+### 6l/0b：native extern 参数上限移除（7→无限制，2026-09-11）
+- 删除前端 `NativeImportValidator` 参数数检查与后端 `MirToLir` >7 抛出守卫——x64/x86 后端本就按 `argCount` 循环处理任意参数量，上限纯为遗留硬编码。
+- 新增 e2e：12 参 stdcall `CreateWindowExW`（×x64/x86）+ 5 参 `GetDiskFreeSpaceExW` + 7 参 `ReadFile`。
+- 全量 **53438** 绿（0de27ea）。
+
+### 6l/0a：Handle SDK（Handle 基类 + FileHandle/ProcessHandle，2026-09-10/11）
+- `System.Core/Handle/` 新增 `Handle`（虚 `Dispose()`，`Raw: long` 句柄）+ `FileHandle`/`ProcessHandle`（override Dispose）+ `Kernel32.CloseHandle` lazy extern；System.Core.coa 重建入库。
+- `.coa` 类继承链基类序列化（Handle 前置）；override 解析走全继承链（`classType.GetMethods`）；`OrderClassesByBaseFirst` 改语法级依赖解析（`BaseType` 未就绪时读 `Syntax.BaseTypes`），解决 SDK 构建下 FileHandle 先于 Handle 处理导致的 override 失败。
+- HandleThreeBackendTests 4 例 × 三后端绿；全量 **53435** 绿（8fb456b/047127e）。
+
+### 阶段 6 收尾 C9 收官（2026-09-11）
+- 并轨期清账六步 A-F **全部落地**：Step B foreach 消费 .coa 集合 + Dictionary 枚举器（26/26）→ Step C 统一动态链接（闭包 NRE 消除）→ Step D fnty/evt/dlgalias 库体序列化（含 delegate 真实类型化 M0-M6）→ Step E refcod 拓扑 + 跨库同名 CS0104 式消歧 → Step F 动态链接运行期闭环（事件/链式/捕获闭包，专项 71/71）。
+- 文档同步（阶段6收尾方案状态行 / 开发计划 G7·C9 行）+ 全量回归 **53438** 绿；详见 [`docs-dev/阶段6收尾方案.md`](docs-dev/阶段6收尾方案.md)。
 
 ### UI 生态系统规划定稿（Handle + System.UI，6e-M25 规划，纯文档）
 - 新增 [`docs-dev/plan/UI库规划.md`](docs-dev/plan/UI库规划.md)：① `Handle` 通用资源句柄类型入 System.Core（`Raw: long`，修复既有 import `i32` 句柄 64 位截断隐患）；② `System.UI` 独立 `.coa` 库（`src/Cocoa.UI/`，ImGui 式立即模式，IL 完整 + Native 简化双后端，GDI 轮询后端）；③ 远期声明式语法糖（函数调用风格）。
 - 关键决策（ADR A1-A7，登记 docs-dev/README §4）：立即模式（XAML 式标记不采用）；无回调轮询架构（DefWindowProc 地址 + PeekMessage，规避 WNDPROC 函数指针）；分发方案 B（Reference 显式引入，不进 libs/ 避免自动枚举吞并）；UI 库位于 `src/Cocoa.UI/` 与 Cocoa.Cs/SDK 平级。
-- 定位两项**编译器前置增强**（已拍板，未实施）：`.coa` 序列化门禁扩展（带属性实例类/含 body 静态类入库——Handle/实体类硬前置，与「流式库」前置项同源）；native extern 参数上限 7→12+（CreateWindowExW 12 参硬需求）。
+- 同期定位两项**编译器前置增强**：`.coa` 序列化门禁扩展（带属性实例类/含 body 静态类入库——Handle/实体类硬前置，与「流式库」前置项同源）；native extern 参数上限 7→12+（CreateWindowExW 12 参硬需求）——两项均已于 6l/0a、6l/0b **实施落地**（见下方条目）。
 - 文档：`docs-dev/README.md`（plan/ 表 + ADR 索引 ×5）、`docs-dev/开发计划.md`（新增 §6l 执行序列 0a-6）同步。
 
 ### 自举 IO 底层原语收口 + System.IO 门面化前期（P1/P2/P3）
