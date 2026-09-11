@@ -2,110 +2,110 @@
 <SyntaxDefinition name="Cocoa" extensions=".co"
                   xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
 
-  <Color name="Comment"    foreground="#57A64A" />
-  <Color name="String"     foreground="#D69D85" />
-  <Color name="Number"     foreground="#B5CEA8" />
-  <Color name="Keyword"    foreground="#569CD6" />
-  <Color name="Type"       foreground="#4EC9B0" />
-  <Color name="Punctuation" foreground="#D4D4D4" />
-  <Color name="Operator"   foreground="#D4D4D4" />
-  <Color name="Function"   foreground="#DCDCAA" />
-  <Color name="Variable"   foreground="#9CDCFE" />
-  <Color name="Constant"   foreground="#4FC1FF" />
+  <Color name="Comment"       foreground="#57A64A" />
+  <Color name="String"        foreground="#D69D85" />
+  <Color name="Number"        foreground="#B5CEA8" />
+  <Color name="Keyword"       foreground="#569CD6" />
+  <Color name="Type"          foreground="#4EC9B0" />
+  <Color name="Punctuation"   foreground="#D4D4D4" />
+  <Color name="Operator"      foreground="#D4D4D4" />
+  <Color name="Function"      foreground="#DCDCAA" />
+  <Color name="Variable"      foreground="#9CDCFE" />
 
-  <RuleSets>
-    <RuleSet name="Main">
-      <!-- 注释 -->
-      <Rule color="Comment">//.*$</Rule>
-      <Rule color="Comment">/\*[\s\S]*?\*/</Rule>
+  <!-- 主规则集（匿名 RuleSet 即主集） -->
+  <RuleSet>
 
-      <!-- 字符串 -->
-      <Rule color="String">"(?:\\.|[^"\\])*"</Rule>
-      <Rule color="String">'\\.'|'[^'\\]+'</Rule>
+    <!-- 注释 -->
+    <Rule color="Comment">//.*$</Rule>
+    <Rule color="Comment">/\*[\s\S]*?\*/</Rule>
 
-      <!-- 数字（含 0x 十六进制）-->
-      <Rule color="Number">\b0[xX][0-9a-fA-F]+\b|\b\d+(\.\d+)?([eE][+-]?\d+)?[fFdDmM]?\b</Rule>
+    <!-- 字符串 -->
+    <Rule color="String">"(?:\\.|[^"\\])*"</Rule>
+    <Rule color="String">'\\.'|'[^'\\]+'</Rule>
 
-      <!-- 关键字 -->
-      <Keywords color="Keyword">
-        <Word>function</Word>
-        <Word>let</Word>
-        <Word>var</Word>
-        <Word>const</Word>
-        <Word>if</Word>
-        <Word>else</Word>
-        <Word>while</Word>
-        <Word>for</Word>
-        <Word>do</Word>
-        <Word>switch</Word>
-        <Word>case</Word>
-        <Word>default</Word>
-        <Word>break</Word>
-        <Word>continue</Word>
-        <Word>return</Word>
-        <Word>class</Word>
-        <Word>struct</Word>
-        <Word>enum</Word>
-        <Word>interface</Word>
-        <Word>extends</Word>
-        <Word>implements</Word>
-        <Word>new</Word>
-        <Word>this</Word>
-        <Word>base</Word>
-        <Word>null</Word>
-        <Word>true</Word>
-        <Word>false</Word>
-        <Word>void</Word>
-        <Word>static</Word>
-        <Word>abstract</Word>
-        <Word>virtual</Word>
-        <Word>override</Word>
-        <Word>sealed</Word>
-        <Word>extern</Word>
-        <Word>import</Word>
-        <Word>using</Word>
-        <Word>namespace</Word>
-        <Word>package</Word>
-        <Word>event</Word>
-        <Word>delegate</Word>
-        <Word>try</Word>
-        <Word>catch</Word>
-        <Word>finally</Word>
-        <Word>throw</Word>
-        <Word>is</Word>
-        <Word>as</Word>
-        <Word>typeof</Word>
-        <Word>sizeof</Word>
-        <Word>ref</Word>
-        <Word>out</Word>
-        <Word>in</Word>
-        <Word>params</Word>
-        <Word>print</Word>
-      </Keywords>
+    <!-- 数字（含 0x 十六进制与后缀） -->
+    <Rule color="Number">\b0[xX][0-9a-fA-F]+\b|\b\d+(\.\d+)?([eE][+-]?\d+)?[fFdDmM]?\b</Rule>
 
-      <!-- 内置类型 -->
-      <Keywords color="Type">
-        <Word>int</Word>
-        <Word>long</Word>
-        <Word>float</Word>
-        <Word>double</Word>
-        <Word>string</Word>
-        <Word>bool</Word>
-        <Word>byte</Word>
-        <Word>char</Word>
-        <Word>object</Word>
-        <Word>any</Word>
-        <Word>var</Word>
-      </Keywords>
+    <!-- 关键字 -->
+    <Keywords color="Keyword">
+      <Word>function</Word>
+      <Word>let</Word>
+      <Word>var</Word>
+      <Word>const</Word>
+      <Word>if</Word>
+      <Word>else</Word>
+      <Word>while</Word>
+      <Word>for</Word>
+      <Word>do</Word>
+      <Word>switch</Word>
+      <Word>case</Word>
+      <Word>default</Word>
+      <Word>break</Word>
+      <Word>continue</Word>
+      <Word>return</Word>
+      <Word>class</Word>
+      <Word>struct</Word>
+      <Word>enum</Word>
+      <Word>interface</Word>
+      <Word>extends</Word>
+      <Word>implements</Word>
+      <Word>new</Word>
+      <Word>this</Word>
+      <Word>base</Word>
+      <Word>null</Word>
+      <Word>true</Word>
+      <Word>false</Word>
+      <Word>void</Word>
+      <Word>static</Word>
+      <Word>abstract</Word>
+      <Word>virtual</Word>
+      <Word>override</Word>
+      <Word>sealed</Word>
+      <Word>extern</Word>
+      <Word>import</Word>
+      <Word>using</Word>
+      <Word>namespace</Word>
+      <Word>package</Word>
+      <Word>event</Word>
+      <Word>delegate</Word>
+      <Word>try</Word>
+      <Word>catch</Word>
+      <Word>finally</Word>
+      <Word>throw</Word>
+      <Word>is</Word>
+      <Word>as</Word>
+      <Word>typeof</Word>
+      <Word>sizeof</Word>
+      <Word>ref</Word>
+      <Word>out</Word>
+      <Word>in</Word>
+      <Word>params</Word>
+    </Keywords>
 
-      <!-- 函数名：function 后面的标识符 -->
-      <Rule color="Function">\b(function)\s+(\w+)</Rule>
+    <!-- 内置类型 -->
+    <Keywords color="Type">
+      <Word>int</Word>
+      <Word>long</Word>
+      <Word>float</Word>
+      <Word>double</Word>
+      <Word>string</Word>
+      <Word>bool</Word>
+      <Word>byte</Word>
+      <Word>char</Word>
+      <Word>object</Word>
+      <Word>any</Word>
+    </Keywords>
 
-      <!-- 操作符 -->
-      <Rule color="Operator">(\+\+|--|&&|\|\||!=|==|<=|>=|=>|\+=|-=|\*=|/=|%=|\.\.\.|\?\.|\?\?|<<|>>|[-+*/%&|^~!<>]=?)</Rule>
+    <!-- 函数名：function 后面的标识符 -->
+    <Rule color="Function">\b(function)\s+(\w+)</Rule>
 
-      <!-- 标点 -->
-      <Rule color="Punctuation">[()[\]{},;.]</Rule>
-    </RuleSet>
-  </RuleSets>
+    <!-- 操作符 -->
+    <Rule color="Operator">(\+\+|--|&amp;&amp;|\|\||!=|==|&lt;=|&gt;=|=&gt;|\+=|-=|\*=|/=|%=|\.\.\.|\?\.|\?\?|&lt;&lt;|&gt;&gt;|[-+*/%&amp;|^~!&lt;&gt;]=?)</Rule>
+
+    <!-- 标点 -->
+    <Rule color="Punctuation">[()[\]{},;.]</Rule>
+
+    <!-- 标识符（兜底，映射到 Variable 色） -->
+    <Rule color="Variable">\b[A-Za-z_]\w*</Rule>
+  </RuleSet>
 </SyntaxDefinition>
