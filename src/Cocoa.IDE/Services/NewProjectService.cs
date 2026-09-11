@@ -160,29 +160,35 @@ public int Add(int a, int b)
 }}
 ");
 
-            default: // console
+            default: // console — 类风格（namespace + class + static function Main）
                 return (
                     BuildCoproj(name, "Executable", tfm),
                     "main.co",
                     $@"using System
 
-function Factorial(n: i32): i32
+namespace {name}
 {{
-    var result: i32 = 1
-    for var i = 1 to n
+    public class Program
     {{
-        result = result * i
-    }}
-    return result
-}}
+        static function Factorial(n: i32): i32
+        {{
+            var result: i32 = 1
+            for var i = 1 to n
+            {{
+                result = result * i
+            }}
+            return result
+        }}
 
-function Main()
-{{
-    Console.WriteLine(""Hello from {name}!"")
-    var values = new i32[5] {{1, 2, 3, 4, 5}}
-    for var i = 0 to values.Length - 1
-    {{
-        Console.WriteLine(values[i].ToString() + "" -> "" + Factorial(values[i]).ToString())
+        static function Main()
+        {{
+            Console.WriteLine(""Hello from {name}!"")
+            var values = new i32[5] {{1, 2, 3, 4, 5}}
+            for var i = 0 to values.Length - 1
+            {{
+                Console.WriteLine(values[i].ToString() + "" -> "" + Factorial(values[i]).ToString())
+            }}
+        }}
     }}
 }}
 ");
