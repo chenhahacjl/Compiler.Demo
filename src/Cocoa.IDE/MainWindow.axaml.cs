@@ -1,6 +1,8 @@
+using System.Collections.Immutable;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Cocoa.CodeAnalysis;
 using Cocoa.IDE.ViewModels;
 
 namespace Cocoa.IDE;
@@ -33,9 +35,21 @@ public partial class MainWindow : Window
             if (clipboard != null)
                 await clipboard.SetTextAsync(text);
         };
+        ViewModel.DiagnosticsUpdated += (filePath, diagnostics) => OnDiagnosticsUpdated(filePath, diagnostics);
 
         UpdateEmptyState();
         Closing += OnWindowClosing;
+    }
+
+    private void OnDiagnosticsUpdated(string filePath, ImmutableArray<Diagnostic> diagnostics)
+    {
+        var tab = ViewModel.EditorTabs.ActiveTab;
+        if (tab == null || tab.FilePath != filePath) return;
+
+        EditorHost.SetDiagnostics(diagnostics);
+
+        // 实时诊断同步进错误列表（按文件替换）
+        ViewModel.ErrorList.ReplaceFile(filePath, diagnostics);
     }
 
     private void OnActiveTabChanged()
@@ -53,6 +67,11 @@ public partial class MainWindow : Window
         _syncingEditor = true;
         EditorHost.LoadText(tab.Content, tab.FilePath, tab.Dialect);
         _syncingEditor = false;
+
+        // 恢复该文件的诊断波浪线
+        EditorHost.SetDiagnostics(tab.Diagnostics);
+        ViewModel.ErrorList.ShowFile(tab.FilePath, tab.Diagnostics);
+
         UpdateEmptyState();
     }
 
@@ -61,7 +80,12 @@ public partial class MainWindow : Window
         if (_syncingEditor) return;
         var tab = ViewModel.EditorTabs.ActiveTab;
         if (tab != null)
+        {
             tab.Content = EditorHost.GetText();
+            // 防抖实时诊断
+            if (tab.Dialect != null)
+                ViewModel.DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
+        }
     }
 
     private void OnEditorCaretChanged()

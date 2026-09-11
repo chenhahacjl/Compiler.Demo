@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using Cocoa.CodeAnalysis;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Cocoa.IDE.ViewModels;
@@ -45,6 +47,10 @@ public partial class EditorTabViewModel : ObservableObject
 
     [ObservableProperty]
     private int _cursorColumn = 1;
+
+    /// <summary>当前文件最新诊断（M3 实时诊断结果），供编辑器画波浪线。</summary>
+    [ObservableProperty]
+    private ImmutableArray<Diagnostic> _diagnostics = ImmutableArray<Diagnostic>.Empty;
 
     public string? Dialect => _dialect;
 

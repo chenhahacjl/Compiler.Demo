@@ -1,7 +1,9 @@
+using System.Collections.Immutable;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Cocoa.Build;
+using Cocoa.CodeAnalysis;
 using Cocoa.IDE.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,13 +18,14 @@ public partial class MainViewModel : ObservableObject
     public OutputViewModel Output { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
     public BuildService BuildService { get; } = new();
+    public DiagnosticService DiagnosticService { get; } = new();
 
     private Window? MainWindow => App.Current?.ApplicationLifetime is
         IClassicDesktopStyleApplicationLifetime d ? d.MainWindow : null;
 
     public MainViewModel()
     {
-        SolutionTree.FileActivated += path => EditorTabs.OpenFile(path);
+        SolutionTree.FileActivated += path => OpenFile(path);
         EditorTabs.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(EditorTabs.ActiveTab))
@@ -34,11 +37,51 @@ public partial class MainViewModel : ObservableObject
             ErrorList.Add(file, line, col, msg, DiagnosticSeverity.Error);
         BuildService.BuildFinished += (success, errors, warnings) =>
             StatusBar.SetBuildResult(success, errors, warnings);
+
+        EditorTabs.Tabs.CollectionChanged += (_, e) =>
+        {
+            if (e.OldItems != null)
+            {
+                foreach (EditorTabViewModel tab in e.OldItems)
+                    DiagnosticService.CloseFile(tab.FilePath);
+            }
+        };
+
+        DiagnosticService.DiagnosticsReady += (filePath, diagnostics) =>
+        {
+            var tab = EditorTabs.Tabs.FirstOrDefault(t => t.FilePath == filePath);
+            if (tab == null) return;
+
+            tab.Diagnostics = diagnostics;
+
+            // 刷新错误列表：仅当这是当前文件时由视图触发（避免与构建错误列表混用），
+            // 这里只更新波浪线数据，错误列表由 MainWindow 监听 tab.Diagnostics 变化。
+            DiagnosticsUpdated?.Invoke(filePath, diagnostics);
+        };
     }
+
+    /// <summary>实时诊断结果 — 供视图把诊断合并进错误列表并重画波浪线。</summary>
+    public event Action<string, ImmutableArray<Diagnostic>>? DiagnosticsUpdated;
 
     public void InitializeServices()
     {
-        // 占位：后续可在此注册文件监听等
+        // 打开当前活动文件触发一次初始诊断
+        if (EditorTabs.ActiveTab != null)
+            Reanalyze(EditorTabs.ActiveTab);
+    }
+
+    public void OpenFile(string path)
+    {
+        EditorTabs.OpenFile(path);
+        var tab = EditorTabs.ActiveTab;
+        if (tab != null && tab.FilePath == path)
+            Reanalyze(tab);
+    }
+
+    private void Reanalyze(EditorTabViewModel tab)
+    {
+        if (tab.Dialect != null)
+            DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
     }
 
     private void OnActiveTabChanged()
@@ -57,7 +100,7 @@ public partial class MainViewModel : ObservableObject
     private void NavigateToError(ErrorItemViewModel item)
     {
         if (string.IsNullOrEmpty(item.FilePath)) return;
-        EditorTabs.OpenFile(item.FilePath);
+        OpenFile(item.FilePath);
         var tab = EditorTabs.ActiveTab;
         if (tab != null)
         {
@@ -65,6 +108,12 @@ public partial class MainViewModel : ObservableObject
             tab.CursorColumn = Math.Max(1, item.Column);
             EditorContent?.Invoke(tab.FilePath, item.Line, item.Column);
         }
+    }
+
+    /// <summary>编辑器内容变化时触发实时诊断（视图在 TextChanged 时调用）。</summary>
+    public void EditorTextChanged(EditorTabViewModel tab)
+    {
+        Reanalyze(tab);
     }
 
     public event Action<string, int, int>? EditorContent; // filePath, line, col — 供视图将光标移到文件错误位置
