@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Controls;
 using Cocoa.IDE.ViewModels;
 
@@ -32,6 +33,26 @@ public partial class MainWindow : Window
 
         // 标签拖出 → 独立浮动窗口
         Pane.TabDetached += OnTabDetached;
+
+        // F12 跳转定义
+        Pane.NavigationRequested += target =>
+        {
+            if (target == null) return;
+
+            // 若目标文件已在某窗口打开则激活并在该窗口定位，否则在主窗口打开
+            var existing = ViewModel.FindOpenTabViewModel(target.FilePath);
+            if (existing != null)
+            {
+                EditorTabsRegistry.RequestNavigate(existing, target.Line, target.Column);
+            }
+            else
+            {
+                ViewModel.OpenFile(target.FilePath);
+                var tab = ViewModel.EditorTabs.ActiveTab;
+                if (tab != null)
+                    Pane.NavigateTo(tab, target.Line, target.Column);
+            }
+        };
 
         ViewModel.Output.CopyRequested += async text =>
         {

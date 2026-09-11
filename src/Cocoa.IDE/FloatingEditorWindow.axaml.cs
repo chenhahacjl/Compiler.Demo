@@ -26,6 +26,37 @@ public partial class FloatingEditorWindow : Window
                 Pane.NavigateTo(tab, line, col);
         };
 
+        // F12 跳转定义：目标为其它窗口已打开文件则由注册表分发；否则由主窗口打开定位
+        Pane.NavigationRequested += target =>
+        {
+            if (target == null) return;
+
+            var main = MainViewModel.Shared;
+            if (main == null) return;
+
+            var own = ViewTabs.ActiveTab;
+            var existing = main.FindOpenTabViewModel(target.FilePath);
+
+            if (own != null && existing != null && ViewTabs.Tabs.Contains(existing))
+            {
+                // 目标就在本窗口 → 直接定位
+                Pane.NavigateTo(existing, target.Line, target.Column);
+            }
+            else if (existing != null)
+            {
+                // 目标在其它窗口 → 广播定位
+                EditorTabsRegistry.RequestNavigate(existing, target.Line, target.Column);
+            }
+            else
+            {
+                // 未打开 → 主窗口打开并定位
+                main.OpenFile(target.FilePath);
+                var tab = main.EditorTabs.ActiveTab;
+                if (tab != null)
+                    EditorTabsRegistry.RequestNavigate(tab, target.Line, target.Column);
+            }
+        };
+
         Closing += OnWindowClosing;
     }
 

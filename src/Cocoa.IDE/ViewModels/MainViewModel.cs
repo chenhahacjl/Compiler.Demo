@@ -157,6 +157,9 @@ public partial class MainViewModel : ObservableObject
         return null;
     }
 
+    /// <summary>公开版：查找任意窗口已打开的文件标签（F12/错误跳转用）。</summary>
+    public EditorTabViewModel? FindOpenTabViewModel(string filePath) => FindOpenTab(filePath);
+
     /// <summary>编辑器内容变化时触发实时诊断（视图在 TextChanged 时调用）。</summary>
     public void EditorTextChanged(EditorTabViewModel tab)
     {

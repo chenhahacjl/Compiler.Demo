@@ -1,10 +1,13 @@
 using System.Collections.Immutable;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using AvaloniaEdit.CodeCompletion;
 using Cocoa.CodeAnalysis;
+using Cocoa.IDE.LanguageServices;
 using Cocoa.IDE.ViewModels;
 
 namespace Cocoa.IDE.Controls;
@@ -25,6 +28,11 @@ public partial class EditorPane : UserControl
     /// <summary>标签被拖出（detach），参数是被拖出的标签。</summary>
     public event Action<EditorTabViewModel>? TabDetached;
 
+    /// <summary>请求跳转到某文件的行列（F12 / 错误），供宿主窗口处理（可能在其它窗口打开）。</summary>
+    public event Action<GoToTarget>? NavigationRequested;
+
+    private CompletionWindow? _completionWindow;
+
     public EditorPane()
     {
         InitializeComponent();
@@ -38,6 +46,110 @@ public partial class EditorPane : UserControl
             if (active != null && active.FilePath == filePath)
                 UpdateSquiggles(active);
         };
+
+        // Ctrl+Space 补全
+        EditorHost.Editor.TextArea.KeyDown += OnEditorKeyDown;
+
+        // 悬停签名提示
+        EditorHost.Editor.TextArea.TextView.PointerHover += OnEditorPointerHover;
+        EditorHost.Editor.TextArea.TextView.PointerHoverStopped += OnEditorPointerHoverStopped;
+    }
+
+    private void OnEditorKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Space && (e.KeyModifiers & KeyModifiers.Control) != 0)
+        {
+            ShowCompletion();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F12 && e.KeyModifiers == KeyModifiers.None)
+        {
+            GoToDefinition();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>用当前活动标签的内容构建语义宿主，供补全/Hover/F12 使用。
+    /// 附带同一目录下的其它 .co/.cs 源文件（跨文件解析）。</summary>
+    private SemanticModelHost? BuildSemanticHost()
+    {
+        var tab = EditorTabs?.ActiveTab;
+        if (tab == null || tab.Dialect == null) return null;
+
+        var host = new SemanticModelHost();
+        var language = tab.Dialect == "CSharp" ? Language.CSharp : Language.Cocoa;
+
+        var dir = Path.GetDirectoryName(tab.FilePath);
+        List<string>? others = null;
+        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+        {
+            others = Directory.EnumerateFiles(dir, "*.co", SearchOption.TopDirectoryOnly)
+                .Concat(Directory.EnumerateFiles(dir, "*.cs", SearchOption.TopDirectoryOnly))
+                .ToList();
+        }
+
+        host.Update(tab.Content, tab.FilePath, language, others);
+        return host;
+    }
+
+    private void ShowCompletion()
+    {
+        var tab = EditorTabs?.ActiveTab;
+        if (tab == null) return;
+
+        _completionWindow?.Close();
+        _completionWindow = new CompletionWindow(EditorHost.Editor.TextArea)
+        {
+            CloseAutomatically = true,
+        };
+
+        var host = BuildSemanticHost();
+        if (host != null)
+        {
+            var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
+            var text = EditorHost.Editor.Text ?? "";
+            foreach (var item in CocoaCompletionProvider.GetCompletions(host, caretOffset, text))
+                _completionWindow.CompletionList.CompletionData.Add(item);
+        }
+
+        _completionWindow.Show();
+    }
+
+    private void GoToDefinition()
+    {
+        var host = BuildSemanticHost();
+        if (host == null) return;
+
+        var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
+        var target = GoToDefinitionProvider.FindTarget(host, caretOffset);
+        if (target == null)
+            return;
+
+        NavigationRequested?.Invoke(target);
+    }
+
+    private void OnEditorPointerHover(object? sender, PointerEventArgs e)
+    {
+        var host = BuildSemanticHost();
+        if (host == null) return;
+
+        var pos = e.GetPosition(EditorHost.Editor.TextArea.TextView);
+        var viewPos = EditorHost.Editor.TextArea.TextView.GetPositionFloor(pos);
+        if (viewPos == null) return;
+
+        var offset = EditorHost.Editor.Document.GetOffset(viewPos.Value.Location);
+
+        var hover = HoverProvider.GetHover(host, offset);
+        if (hover == null) return;
+
+        ToolTip.SetTip(EditorHost.Editor.TextArea, hover.Display);
+        ToolTip.SetPlacement(EditorHost.Editor.TextArea, PlacementMode.Pointer);
+        ToolTip.SetIsOpen(EditorHost.Editor.TextArea, true);
+    }
+
+    private void OnEditorPointerHoverStopped(object? sender, PointerEventArgs e)
+    {
+        ToolTip.SetIsOpen(EditorHost.Editor.TextArea, false);
     }
 
     public void AttachTabs(EditorTabsViewModel tabs)

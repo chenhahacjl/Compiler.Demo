@@ -15,6 +15,9 @@ public partial class EditorView : UserControl
 {
     private TextEditor TextEditor => this.FindControl<TextEditor>("AvaloniaEdit")!;
 
+    /// <summary>暴露给语义服务（补全弹窗等）。</summary>
+    public TextEditor Editor => TextEditor;
+
     private static readonly Dictionary<string, IHighlightingDefinition> HighlightingCache = new();
 
     private readonly SquiggleRenderer _squiggles = new();
