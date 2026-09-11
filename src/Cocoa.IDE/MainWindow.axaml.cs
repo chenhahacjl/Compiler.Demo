@@ -17,7 +17,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = new MainViewModel();
 
-        // 树节点双击 → 打开文件
         EditorHost.TextChanged += (_, _) => OnEditorTextChanged();
         EditorHost.CaretChanged += (_, _) => OnEditorCaretChanged();
 
@@ -29,9 +28,7 @@ public partial class MainWindow : Window
 
         ViewModel.EditorContent += (file, line, col) => NavigateToEditor(file, line, col);
 
-        // 初始无标签状态
         UpdateEmptyState();
-
         Closing += OnWindowClosing;
     }
 
@@ -73,17 +70,9 @@ public partial class MainWindow : Window
 
     private void UpdateEmptyState()
     {
-        var hasTab = ViewModel.EditorTabs.ActiveTab != null;
-        if (!_syncingEditor)
-        {
-            EmptyStateText.IsVisible = !hasTab;
-            EditorHost.IsVisible = hasTab;
-        }
-        else
-        {
-            EmptyStateText.IsVisible = false;
-            EditorHost.IsVisible = true;
-        }
+        // 编辑器控件常驻可见，避免 AvaloniaEdit 子控件在 IsVisible=false→true 后不再参与布局。
+        // 只切换空态提示文字的显隐。
+        EmptyStateText.IsVisible = ViewModel.EditorTabs.ActiveTab == null;
     }
 
     private void NavigateToEditor(string file, int line, int col)
