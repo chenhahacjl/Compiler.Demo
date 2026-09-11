@@ -21,8 +21,18 @@ public partial class SolutionTreeViewModel : ObservableObject
 
     public event Action<string>? FileActivated;
 
+    /// <summary>重新加载当前打开的解决方案/项目/文件夹（新建项目后刷新树）。</summary>
+    public void Refresh()
+    {
+        if (_loadedPath != null)
+            LoadPath(_loadedPath);
+    }
+
+    private string? _loadedPath;
+
     public void LoadPath(string path)
     {
+        _loadedPath = path;
         RootNodes.Clear();
         CurrentSolution = null;
         CurrentProject = null;

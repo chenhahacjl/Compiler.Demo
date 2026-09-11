@@ -10,6 +10,7 @@
         Background="#1E1E1E">
 
     <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+Shift+N" Command="{Binding NewProjectCommand}" />
         <KeyBinding Gesture="Ctrl+O"  Command="{Binding OpenFileCommand}" />
         <KeyBinding Gesture="Ctrl+Shift+O" Command="{Binding OpenSolutionPickerCommand}" />
         <KeyBinding Gesture="Ctrl+S"  Command="{Binding SaveCommand}" />
@@ -23,6 +24,8 @@
         <!-- ═══ ① 菜单栏 ═══ -->
         <Menu DockPanel.Dock="Top" Background="#2D2D30">
             <MenuItem Header="文件(_F)">
+                <MenuItem Header="新建项目…"        Command="{Binding NewProjectCommand}" InputGesture="Ctrl+Shift+N" />
+                <Separator />
                 <MenuItem Header="打开文件…"        Command="{Binding OpenFileCommand}" InputGesture="Ctrl+O" />
                 <MenuItem Header="打开解决方案…"    Command="{Binding OpenSolutionPickerCommand}" InputGesture="Ctrl+Shift+O" />
                 <Separator />
@@ -47,6 +50,7 @@
                 BorderThickness="0,0,0,1"
                 Padding="4,2">
             <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="➕" ToolTip.Tip="新建项目" Command="{Binding NewProjectCommand}" />
                 <Button Content="📂" ToolTip.Tip="打开文件" Command="{Binding OpenFileCommand}" />
                 <Button Content="📁" ToolTip.Tip="打开解决方案" Command="{Binding OpenSolutionPickerCommand}" />
                 <Border Width="1" Background="#3F3F46" Margin="4,2" />
