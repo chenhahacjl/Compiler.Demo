@@ -55,12 +55,6 @@ namespace Cocoa.CodeGen.Native
                 var location = DeclarationNameLocation(function) ?? default;
 
                 // 9d：签名自检（生成期失败快，不产运行期坏 exe）。
-                // 参数上限 7（MirToLir.Conversions 现有上限，validator 前置为诊断而非 throw）。
-                if (function.Parameters.Length > 7)
-                {
-                    builder.Add(Diagnostic.Error(location,
-                        $"extern function '{function.Name}' 有 {function.Parameters.Length} 个参数，native 后端支持最多 7 个（x64 前 4 寄存器 + 第 5-7 栈参；更多需 shim）。"));
-                }
 
                 // 返回类型：仅 void/整型/指针（SysCall 返回值经 EAX/EDX:EAX 整数路径；float/double 走 XMM0 未支持）。
                 var rt = function.ReturnType;

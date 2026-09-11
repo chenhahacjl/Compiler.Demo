@@ -388,5 +388,100 @@ function Main()
             var diagnostic = Assert.Single(diagnostics);
             Assert.Contains("charset = ansi，native 后端未实现", diagnostic.Message);
         }
+
+        [Fact]
+        public void Native_12Parameter_StdCall_CreateWindowExW_X64()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function RegisterClassExW(lpwcx: i32): i32
+        static stdcall function CreateWindowExW(dwExStyle: i32, lpClassName: i32, lpWindowName: i32, dwStyle: i32, X: i32, Y: i32, nWidth: i32, nHeight: i32, hWndParent: i32, hMenu: i32, hInstance: i32, lpParam: i32): i32
+    }
+}
+
+function Main()
+{
+    var wndClass: i32[] = new i32[17]
+    wndClass[0] = 48
+    var hWnd = User32.CreateWindowExW(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Console.WriteLine(""ok"")
+}", "native-12param-stdcall", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Native_12Parameter_StdCall_CreateWindowExW_X86()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class User32
+{
+    import user32.dll
+    {
+        static stdcall function CreateWindowExW(dwExStyle: i32, lpClassName: i32, lpWindowName: i32, dwStyle: i32, X: i32, Y: i32, nWidth: i32, nHeight: i32, hWndParent: i32, hMenu: i32, hInstance: i32, lpParam: i32): i32
+    }
+}
+
+function Main()
+{
+    var hWnd = User32.CreateWindowExW(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    Console.WriteLine(""ok"")
+}", "native-12param-stdcall-x86-v2", X86);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Native_5Parameter_StdCall_GetDiskFreeSpaceExW()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function GetDiskFreeSpaceExW(lpDirectoryName: i32, lpFreeBytesAvailableToCaller: i32, lpTotalNumberOfBytes: i32, lpTotalNumberOfFreeBytes: i32): i32
+    }
+}
+
+function Main()
+{
+    var r = Kernel32.GetDiskFreeSpaceExW(0, 0, 0, 0)
+    Console.WriteLine(""ok"")
+}", "native-5param-stdcall", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
+
+        [Fact]
+        public void Native_7Parameter_StdCall_ReadFile()
+        {
+            var (exitCode, stdout) = EmitNativeAndRun(@"using System
+
+class Kernel32
+{
+    import kernel32.dll
+    {
+        static stdcall function ReadFile(hFile: i32, lpBuffer: i32, nNumberOfBytesToRead: i32, lpNumberOfBytesRead: i32, lpOverlapped: i32): i32
+    }
+}
+
+function Main()
+{
+    var r = Kernel32.ReadFile(0, 0, 0, 0, 0)
+    Console.WriteLine(""ok"")
+}", "native-7param-stdcall", X64);
+
+            Assert.Equal(0, exitCode);
+            Assert.Equal("ok\r\n", stdout);
+        }
     }
 }
