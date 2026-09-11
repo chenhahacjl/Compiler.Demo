@@ -103,6 +103,12 @@ public partial class MainWindow : Window
         ViewModel.StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
     }
 
+    private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (SolutionTree.SelectedItem is TreeNodeViewModel node)
+            ViewModel.ShowNodeProperties(node);
+    }
+
     private void OnTreeDoubleTapped(object? sender, RoutedEventArgs e)
     {
         if (SolutionTree.SelectedItem is not TreeNodeViewModel node) return;

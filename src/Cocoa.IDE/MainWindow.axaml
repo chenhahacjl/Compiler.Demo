@@ -34,9 +34,38 @@
                 <Separator />
                 <MenuItem Header="退出" />
             </MenuItem>
+            <MenuItem Header="编辑(_E)">
+                <MenuItem Header="撤销" InputGesture="Ctrl+Z" />
+                <MenuItem Header="重做" InputGesture="Ctrl+Y" />
+                <Separator />
+                <MenuItem Header="剪切" InputGesture="Ctrl+X" />
+                <MenuItem Header="复制" InputGesture="Ctrl+C" />
+                <MenuItem Header="粘贴" InputGesture="Ctrl+V" />
+            </MenuItem>
+            <MenuItem Header="视图(_V)">
+                <MenuItem Header="解决方案资源管理器" />
+                <MenuItem Header="属性窗口" />
+                <MenuItem Header="错误列表" />
+                <MenuItem Header="输出" />
+            </MenuItem>
+            <MenuItem Header="项目(_P)">
+                <MenuItem Header="添加文件…" />
+                <MenuItem Header="添加现有文件…" />
+                <MenuItem Header="从项目中排除" />
+            </MenuItem>
             <MenuItem Header="生成(_B)">
                 <MenuItem Header="生成"             Command="{Binding BuildCommand}" InputGesture="F6" />
+                <MenuItem Header="重新生成"         Command="{Binding BuildCommand}" />
+                <MenuItem Header="清理" />
+                <Separator />
                 <MenuItem Header="运行(不调试)"      Command="{Binding RunCommand}" InputGesture="F5" />
+            </MenuItem>
+            <MenuItem Header="调试(_D)">
+                <MenuItem Header="开始调试" InputGesture="F5" />
+                <MenuItem Header="开始执行(不调试)" InputGesture="Ctrl+F5" />
+            </MenuItem>
+            <MenuItem Header="工具(_T)">
+                <MenuItem Header="选项" />
             </MenuItem>
             <MenuItem Header="帮助(_H)">
                 <MenuItem Header="关于 Cocoa IDE" />
@@ -79,7 +108,7 @@
 
         <Grid RowDefinitions="*,180">
             <!-- ═══ ③ 主内容区 ═══ -->
-            <Grid Grid.Row="0" ColumnDefinitions="280,4,*">
+            <Grid Grid.Row="0" ColumnDefinitions="280,4,*,4,300">
                 <!-- 左：解决方案资源管理器 -->
                 <Border Grid.Column="0"
                         Background="#252526"
@@ -95,6 +124,7 @@
                                   ItemsSource="{Binding SolutionTree.RootNodes}"
                                   Background="Transparent" Foreground="#CCCCCC"
                                   BorderThickness="0" Padding="4"
+                                  SelectionChanged="OnTreeSelectionChanged"
                                   DoubleTapped="OnTreeDoubleTapped">
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
@@ -111,6 +141,39 @@
 
                 <!-- 中央：编辑器（EditorPane 内嵌标签栏 + 编辑器） -->
                 <controls:EditorPane Grid.Column="2" x:Name="Pane" />
+
+                <GridSplitter Grid.Column="3" Background="#3F3F46" Width="4" />
+
+                <!-- 右：属性窗口（VS 风格，选中自动填充） -->
+                <Border Grid.Column="4"
+                        Background="#252526"
+                        BorderBrush="#3F3F46"
+                        BorderThickness="1,0,0,0">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top"
+                                   Text="属性"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Padding="8,6" Foreground="#CCCCCC"
+                                   Background="#333337" />
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding Properties.Items}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid ColumnDefinitions="110,*"
+                                              Margin="4,2" VerticalAlignment="Center">
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                       FontSize="12" Foreground="#9CDCFE"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="1" Text="{Binding Value}"
+                                                       FontSize="12" Foreground="#CCCCCC"
+                                                       TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
             </Grid>
 
             <!-- ═══ ④ 底部面板：输出 / 错误列表 ═══ -->

@@ -27,8 +27,8 @@ public sealed class NewProjectDialog : Window
             HorizontalAlignment = HorizontalAlignment.Stretch,
             Margin = new Thickness(0, 4, 0, 0),
         };
-        foreach (var t in NewProjectService.Templates)
-            _templateBox.Items.Add(t);
+        foreach (var option in NewProjectService.TemplateOptions)
+            _templateBox.Items.Add(option.Label);
         _templateBox.SelectedIndex = 0;
         _templateBox.SelectionChanged += (_, _) => UpdateDescription();
 
@@ -117,7 +117,8 @@ public sealed class NewProjectDialog : Window
             };
     }
 
-    private string SelectedTemplate => _templateBox.SelectedItem?.ToString() ?? "console";
+    private string SelectedTemplate =>
+        NewProjectService.KeyByLabel(_templateBox.SelectedItem?.ToString() ?? "");
 
     private async Task CreateAsync()
     {

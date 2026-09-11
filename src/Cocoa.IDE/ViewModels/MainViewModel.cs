@@ -20,6 +20,7 @@ public partial class MainViewModel : ObservableObject
     public ErrorListViewModel ErrorList { get; } = new();
     public OutputViewModel Output { get; } = new();
     public StatusBarViewModel StatusBar { get; } = new();
+    public PropertiesViewModel Properties { get; } = new();
     public BuildService BuildService { get; } = new();
     public DiagnosticService DiagnosticService { get; } = new();
 
@@ -119,11 +120,20 @@ public partial class MainViewModel : ObservableObject
         if (tab == null)
         {
             StatusBar.ResetActiveDocument();
+            Properties.Clear();
             return;
         }
 
         StatusBar.Language = tab.Dialect ?? "";
         StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
+        Properties.ShowDocument(tab);
+    }
+
+    /// <summary>树节点选中 → 属性窗口自动填充。</summary>
+    public void ShowNodeProperties(TreeNodeViewModel node)
+    {
+        if (node != null)
+            Properties.ShowNode(node);
     }
 
     private void NavigateToError(ErrorItemViewModel item)
