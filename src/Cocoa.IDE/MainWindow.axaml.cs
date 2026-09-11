@@ -34,6 +34,20 @@ public partial class MainWindow : Window
         // 标签拖出 → 独立浮动窗口
         Pane.TabDetached += OnTabDetached;
 
+        // 编辑命令 → 转发到编辑器
+        ViewModel.EditActionRequested += action =>
+        {
+            switch (action)
+            {
+                case "Undo": Pane.EditUndo(); break;
+                case "Redo": Pane.EditRedo(); break;
+                case "Cut": Pane.EditCut(); break;
+                case "Copy": Pane.EditCopy(); break;
+                case "Paste": Pane.EditPaste(); break;
+                case "SelectAll": Pane.EditSelectAll(); break;
+            }
+        };
+
         // F12 跳转定义
         Pane.NavigationRequested += target =>
         {

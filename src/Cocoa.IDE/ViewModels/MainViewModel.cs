@@ -261,6 +261,22 @@ public partial class MainViewModel : ObservableObject
             EditorTabs.CloseTab(EditorTabs.ActiveTab);
     }
 
+    /// <summary>编辑动作请求（撤销/重做/剪切/复制/粘贴/全选），由视图转发到编辑器。</summary>
+    public event Action<string>? EditActionRequested;
+
+    [RelayCommand]
+    private void Undo() => EditActionRequested?.Invoke("Undo");
+    [RelayCommand]
+    private void Redo() => EditActionRequested?.Invoke("Redo");
+    [RelayCommand]
+    private void Cut() => EditActionRequested?.Invoke("Cut");
+    [RelayCommand]
+    private void Copy() => EditActionRequested?.Invoke("Copy");
+    [RelayCommand]
+    private void Paste() => EditActionRequested?.Invoke("Paste");
+    [RelayCommand]
+    private void SelectAll() => EditActionRequested?.Invoke("SelectAll");
+
     /// <summary>新建项目向导：弹对话框 → 生成工程 → 刷新树。需要窗口宿主，由视图触发。</summary>
     public async Task<string[]?> ShowNewProjectDialog(Window owner)
     {

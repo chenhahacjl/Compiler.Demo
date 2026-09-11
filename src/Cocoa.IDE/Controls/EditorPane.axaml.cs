@@ -128,6 +128,31 @@ public partial class EditorPane : UserControl
         NavigationRequested?.Invoke(target);
     }
 
+    // ─── 编辑命令（菜单/工具栏转发到编辑器）───
+
+    public void EditUndo() => EditorHost.Undo();
+    public void EditRedo() => EditorHost.Redo();
+    public void EditCut() => EditorHost.Cut();
+    public void EditCopy() => EditorHost.Copy();
+    public void EditPaste() => EditorHost.Paste();
+    public void EditSelectAll() => EditorHost.SelectAll();
+
+    /// <summary>保存：内容已在 TextEdited 中连续同步到 tab.Content，这里直接写盘。</summary>
+    public void SaveActiveTab()
+    {
+        var tab = EditorTabs?.ActiveTab;
+        if (tab == null || string.IsNullOrEmpty(tab.FilePath)) return;
+        try
+        {
+            File.WriteAllText(tab.FilePath, tab.Content);
+            tab.MarkSaved();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"save failed: {ex.Message}");
+        }
+    }
+
     private void OnEditorPointerHover(object? sender, PointerEventArgs e)
     {
         var host = BuildSemanticHost();

@@ -104,6 +104,21 @@ public partial class EditorView : UserControl
         TextEditor.TextArea.Caret.BringCaretToView();
     }
 
+    // ─── 编辑操作（菜单/工具栏）───
+
+    public bool CanUndo => TextEditor.CanUndo;
+    public bool CanRedo => TextEditor.CanRedo;
+    public bool CanCopy => TextEditor.CanCopy;
+    public bool CanCut => TextEditor.CanCut;
+    public bool CanPaste => TextEditor.CanPaste;
+
+    public void Undo() => TextEditor.Undo();
+    public void Redo() => TextEditor.Redo();
+    public void Copy() => TextEditor.Copy();
+    public void Cut() => TextEditor.Cut();
+    public void Paste() => TextEditor.Paste();
+    public void SelectAll() => TextEditor.SelectAll();
+
     private static string? GetHighlightingName(string? filePath)
     {
         if (filePath == null) return null;
