@@ -1,0 +1,20 @@
+<Project Version="1">
+  <PropertyGroup Label="Language">
+    <Language>Cocoa</Language>
+  </PropertyGroup>
+  <PropertyGroup Label="Assembly">
+    <AssemblyName>{{Name}}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label="Target">
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Label="Output">
+    <OutputType>Cocoa</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label="Build">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include="*.co" />
+  </ItemGroup>
+</Project>

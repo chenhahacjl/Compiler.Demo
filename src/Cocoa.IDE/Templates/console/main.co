@@ -1,0 +1,27 @@
+using System
+
+namespace {{Name}}
+{
+    public class Program
+    {
+        static function Factorial(n: i32): i32
+        {
+            var result: i32 = 1
+            for var i = 1 to n
+            {
+                result = result * i
+            }
+            return result
+        }
+
+        static function Main()
+        {
+            Console.WriteLine("Hello from {{Name}}!")
+            var values = new i32[5] {1, 2, 3, 4, 5}
+            for var i = 0 to values.Length - 1
+            {
+                Console.WriteLine(values[i].ToString() + " -> " + Factorial(values[i]).ToString())
+            }
+        }
+    }
+}

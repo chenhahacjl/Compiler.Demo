@@ -35,4 +35,16 @@
 		<EmbeddedResource Include="Themes\**\*.xshd" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- 新建项目模板：仅作为内容复制到输出目录，不参与编译（{{Name}} 占位符非法 C# 标识符） -->
+		<Content Include="Templates\**\*">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<Link>Templates\%(RecursiveDir)%(Filename)%(Extension)</Link>
+		</Content>
+		<Compile Remove="Templates\**\*" />
+		<None Remove="Templates\**\*" />
+		<EmbeddedResource Remove="Templates\**\*" />
+		<AvaloniaResource Remove="Templates\**\*" />
+	</ItemGroup>
+
 </Project>

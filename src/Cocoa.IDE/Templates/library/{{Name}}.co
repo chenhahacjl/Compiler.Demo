@@ -1,0 +1,10 @@
+namespace {{Name}}
+{
+    public class Greeter
+    {
+        public function Greet(name: string): string
+        {
+            return "Hello, " + name + "!"
+        }
+    }
+}

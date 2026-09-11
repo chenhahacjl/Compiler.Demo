@@ -122,15 +122,15 @@ public sealed class NewProjectDialog : Window
     private async Task CreateAsync()
     {
         var template = SelectedTemplate;
-        var name = _nameBox.Text?.Trim() ?? "";
+        var rawName = _nameBox.Text?.Trim() ?? "";
         var dir = _dirBox.Text?.Trim() ?? "";
 
-        if (name.Length == 0)
+        if (rawName.Length == 0)
         {
             _descText.Text = "请输入项目名称";
             return;
         }
-        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        if (rawName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
         {
             _descText.Text = "名称包含非法字符";
             return;
@@ -140,6 +140,9 @@ public sealed class NewProjectDialog : Window
             _descText.Text = "输出目录不存在";
             return;
         }
+
+        // 驼峰命名规范化：my-app / my app → MyApp
+        var name = NewProjectService.ToPascalCase(rawName);
 
         var targetDir = Path.Combine(dir, name);
         try
