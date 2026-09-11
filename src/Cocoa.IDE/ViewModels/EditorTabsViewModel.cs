@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Cocoa.IDE.ViewModels;
 
@@ -9,6 +10,11 @@ public partial class EditorTabsViewModel : ObservableObject
 
     [ObservableProperty]
     private EditorTabViewModel? _activeTab;
+
+    public EditorTabsViewModel()
+    {
+        EditorTabsRegistry.Register(this);
+    }
 
     public void OpenFile(string filePath)
     {
@@ -47,5 +53,18 @@ public partial class EditorTabsViewModel : ObservableObject
     {
         Tabs.Clear();
         ActiveTab = null;
+    }
+
+    /// <summary>窗口关闭时调用，从全局注册表移除本集合。</summary>
+    public void DisposeSet()
+    {
+        EditorTabsRegistry.Unregister(this);
+    }
+
+    [RelayCommand]
+    private void Close(EditorTabViewModel? tab)
+    {
+        if (tab != null && Tabs.Contains(tab))
+            CloseTab(tab);
     }
 }

@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:Cocoa.IDE.Controls"
+        x:Class="Cocoa.IDE.FloatingEditorWindow"
+        Title="Cocoa IDE"
+        Width="800" Height="600"
+        MinWidth="400" MinHeight="300"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E1E">
+
+    <controls:EditorPane x:Name="Pane" />
+
+</Window>

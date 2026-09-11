@@ -12,6 +12,9 @@ namespace Cocoa.IDE.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
+    /// <summary>全局共享实例（浮窗等需要访问共享服务时使用）。</summary>
+    public static MainViewModel? Shared { get; private set; }
+
     public SolutionTreeViewModel SolutionTree { get; } = new();
     public EditorTabsViewModel EditorTabs { get; } = new();
     public ErrorListViewModel ErrorList { get; } = new();
@@ -25,6 +28,8 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
+        Shared = this;
+
         SolutionTree.FileActivated += path => OpenFile(path);
         EditorTabs.PropertyChanged += (_, e) =>
         {
@@ -47,21 +52,28 @@ public partial class MainViewModel : ObservableObject
             }
         };
 
+        // 实时诊断：派发到所有已注册的标签集合（主窗口 + 浮窗）
         DiagnosticService.DiagnosticsReady += (filePath, diagnostics) =>
         {
-            var tab = EditorTabs.Tabs.FirstOrDefault(t => t.FilePath == filePath);
-            if (tab == null) return;
+            foreach (var set in EditorTabsRegistry.All)
+            {
+                foreach (var tab in set.Tabs.Where(t => t.FilePath == filePath))
+                    tab.Diagnostics = diagnostics;
+            }
 
-            tab.Diagnostics = diagnostics;
+            // 若该文件正显示在主窗口，同步进错误列表
+            if (ErrorList != null)
+            {
+                var active = EditorTabs.ActiveTab;
+                if (active != null && active.FilePath == filePath)
+                    ErrorList.ReplaceFile(filePath, diagnostics);
+            }
 
-            // 刷新错误列表：仅当这是当前文件时由视图触发（避免与构建错误列表混用），
-            // 这里只更新波浪线数据，错误列表由 MainWindow 监听 tab.Diagnostics 变化。
-            DiagnosticsUpdated?.Invoke(filePath, diagnostics);
+            EditorTabsRegistry.PublishDiagnostics(filePath, diagnostics);
         };
     }
 
-    /// <summary>实时诊断结果 — 供视图把诊断合并进错误列表并重画波浪线。</summary>
-    public event Action<string, ImmutableArray<Diagnostic>>? DiagnosticsUpdated;
+    /// <summary>实时诊断通过 <see cref="EditorTabsRegistry.PublishDiagnostics"/> 广播给各窗口。</summary>
 
     public void InitializeServices()
     {
@@ -72,11 +84,28 @@ public partial class MainViewModel : ObservableObject
 
     public void OpenFile(string path)
     {
+        // 若该文件已在任意窗口打开，直接激活对应标签
+        foreach (var set in EditorTabsRegistry.All)
+        {
+            var existing = set.ActiveTab != null && set.Tabs.Any(t => t.FilePath == path)
+                ? set.Tabs.First(t => t.FilePath == path)
+                : null;
+            if (existing != null)
+            {
+                set.Activate(existing);
+                FileActivated?.Invoke(path);
+                return;
+            }
+        }
+
         EditorTabs.OpenFile(path);
         var tab = EditorTabs.ActiveTab;
         if (tab != null && tab.FilePath == path)
             Reanalyze(tab);
     }
+
+    /// <summary>通知主窗口激活某标签（供浮窗拖回/错误导航使用）。</summary>
+    public event Action<string>? FileActivated;
 
     private void Reanalyze(EditorTabViewModel tab)
     {
@@ -100,14 +129,32 @@ public partial class MainViewModel : ObservableObject
     private void NavigateToError(ErrorItemViewModel item)
     {
         if (string.IsNullOrEmpty(item.FilePath)) return;
-        OpenFile(item.FilePath);
-        var tab = EditorTabs.ActiveTab;
-        if (tab != null)
+
+        // 若文件已在某窗口打开则激活；否则在主窗口打开
+        var tab = FindOpenTab(item.FilePath);
+        if (tab == null)
         {
-            tab.CursorLine = Math.Max(1, item.Line);
-            tab.CursorColumn = Math.Max(1, item.Column);
-            EditorContent?.Invoke(tab.FilePath, item.Line, item.Column);
+            OpenFile(item.FilePath);
+            tab = EditorTabs.ActiveTab;
         }
+        else
+        {
+            EditorTabsRegistry.RequestNavigate(tab, Math.Max(1, item.Line), Math.Max(1, item.Column));
+            return;
+        }
+
+        if (tab != null)
+            EditorTabsRegistry.RequestNavigate(tab, Math.Max(1, item.Line), Math.Max(1, item.Column));
+    }
+
+    private EditorTabViewModel? FindOpenTab(string filePath)
+    {
+        foreach (var set in EditorTabsRegistry.All)
+        {
+            var tab = set.Tabs.FirstOrDefault(t => t.FilePath == filePath);
+            if (tab != null) return tab;
+        }
+        return null;
     }
 
     /// <summary>编辑器内容变化时触发实时诊断（视图在 TextChanged 时调用）。</summary>
@@ -115,8 +162,6 @@ public partial class MainViewModel : ObservableObject
     {
         Reanalyze(tab);
     }
-
-    public event Action<string, int, int>? EditorContent; // filePath, line, col — 供视图将光标移到文件错误位置
 
     [RelayCommand]
     private async Task OpenFileAsync()
@@ -201,13 +246,6 @@ public partial class MainViewModel : ObservableObject
     {
         if (EditorTabs.ActiveTab != null)
             EditorTabs.CloseTab(EditorTabs.ActiveTab);
-    }
-
-    [RelayCommand]
-    private void CloseTabItem(EditorTabViewModel? tab)
-    {
-        if (tab != null)
-            EditorTabs.CloseTab(tab);
     }
 
     [RelayCommand]

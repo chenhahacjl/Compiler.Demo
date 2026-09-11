@@ -1,8 +1,7 @@
-using System.Collections.Immutable;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Cocoa.CodeAnalysis;
+using Cocoa.IDE.Controls;
 using Cocoa.IDE.ViewModels;
 
 namespace Cocoa.IDE;
@@ -11,7 +10,6 @@ public partial class MainWindow : Window
 {
     private MainViewModel ViewModel => (MainViewModel)DataContext!;
 
-    private bool _syncingEditor;
     private bool _closingConfirmed;
 
     public MainWindow()
@@ -19,98 +17,69 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = new MainViewModel();
 
-        EditorHost.TextChanged += (_, _) => OnEditorTextChanged();
-        EditorHost.CaretChanged += (_, _) => OnEditorCaretChanged();
+        // 主窗口绑定共享 ViewModel 的标签集合
+        Pane.AttachTabs(ViewModel.EditorTabs);
 
-        ViewModel.EditorTabs.PropertyChanged += (_, e) =>
+        // 编辑器内容变化 → 实时诊断
+        Pane.TextEdited += tab =>
         {
-            if (e.PropertyName == nameof(EditorTabsViewModel.ActiveTab))
-                OnActiveTabChanged();
+            if (tab.Dialect != null)
+                ViewModel.DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
         };
 
-        ViewModel.EditorContent += (file, line, col) => NavigateToEditor(file, line, col);
+        // 光标位置 → 状态栏
+        Pane.CaretMoved += tab => ViewModel.StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
+
+        // 标签拖出 → 独立浮动窗口
+        Pane.TabDetached += OnTabDetached;
+
         ViewModel.Output.CopyRequested += async text =>
         {
             var clipboard = Clipboard;
             if (clipboard != null)
                 await clipboard.SetTextAsync(text);
         };
-        ViewModel.DiagnosticsUpdated += (filePath, diagnostics) => OnDiagnosticsUpdated(filePath, diagnostics);
 
-        UpdateEmptyState();
+        ViewModel.FileActivated += path =>
+        {
+            OnActiveTabChanged();
+        };
+
+        // 错误列表等请求定位：若标签在本窗口则定位
+        EditorTabsRegistry.NavigateRequested += (tab, line, col) =>
+        {
+            if (ViewModel.EditorTabs.Tabs.Contains(tab))
+                Pane.NavigateTo(tab, line, col);
+        };
+
         Closing += OnWindowClosing;
     }
 
-    private void OnDiagnosticsUpdated(string filePath, ImmutableArray<Diagnostic> diagnostics)
+    /// <summary>标签被拖出：从主窗口移除，放入新浮动窗口。</summary>
+    private void OnTabDetached(EditorTabViewModel tab)
     {
-        var tab = ViewModel.EditorTabs.ActiveTab;
-        if (tab == null || tab.FilePath != filePath) return;
+        if (tab == null) return;
 
-        EditorHost.SetDiagnostics(diagnostics);
+        // 从主窗口标签集合移除
+        if (ViewModel.EditorTabs.Tabs.Contains(tab))
+            ViewModel.EditorTabs.CloseTab(tab);
 
-        // 实时诊断同步进错误列表（按文件替换）
-        ViewModel.ErrorList.ReplaceFile(filePath, diagnostics);
+        var floatWin = new FloatingEditorWindow();
+        floatWin.AddTab(tab);
+        floatWin.Show();
     }
 
     private void OnActiveTabChanged()
     {
+        // 标签集合变化后主窗口状态栏联动
         var tab = ViewModel.EditorTabs.ActiveTab;
         if (tab == null)
         {
-            _syncingEditor = false;
-            EditorHost.LoadText("", null, null);
-            UpdateEmptyState();
+            ViewModel.StatusBar.ResetActiveDocument();
             return;
         }
-
-        // 同步编辑器内容 = 标签内容（连续同步，无需额外保存）
-        _syncingEditor = true;
-        EditorHost.LoadText(tab.Content, tab.FilePath, tab.Dialect);
-        _syncingEditor = false;
-
-        // 恢复该文件的诊断波浪线
-        EditorHost.SetDiagnostics(tab.Diagnostics);
-        ViewModel.ErrorList.ShowFile(tab.FilePath, tab.Diagnostics);
-
-        UpdateEmptyState();
-    }
-
-    private void OnEditorTextChanged()
-    {
-        if (_syncingEditor) return;
-        var tab = ViewModel.EditorTabs.ActiveTab;
-        if (tab != null)
-        {
-            tab.Content = EditorHost.GetText();
-            // 防抖实时诊断
-            if (tab.Dialect != null)
-                ViewModel.DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
-        }
-    }
-
-    private void OnEditorCaretChanged()
-    {
-        var tab = ViewModel.EditorTabs.ActiveTab;
-        if (tab == null) return;
-
-        tab.CursorLine = EditorHost.GetCaretLine();
-        tab.CursorColumn = EditorHost.GetCaretColumn();
+        ViewModel.StatusBar.Language = tab.Dialect ?? "";
         ViewModel.StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
-    }
-
-    private void UpdateEmptyState()
-    {
-        // 编辑器控件常驻可见，避免 AvaloniaEdit 子控件在 IsVisible=false→true 后不再参与布局。
-        // 只切换空态提示文字的显隐。
-        EmptyStateText.IsVisible = ViewModel.EditorTabs.ActiveTab == null;
-    }
-
-    private void NavigateToEditor(string file, int line, int col)
-    {
-        // 打开文件后定位到行列
-        OnActiveTabChanged();
-        EditorHost.SetCaret(line, col);
-        EditorHost.Focus();
     }
 
     private void OnTreeDoubleTapped(object? sender, RoutedEventArgs e)
@@ -118,7 +87,7 @@ public partial class MainWindow : Window
         if (SolutionTree.SelectedItem is not TreeNodeViewModel node) return;
         if (node.Kind != NodeKind.Source || node.FullPath == null) return;
 
-        ViewModel.EditorTabs.OpenFile(node.FullPath);
+        ViewModel.OpenFile(node.FullPath);
         e.Handled = true;
     }
 
@@ -136,6 +105,7 @@ public partial class MainWindow : Window
         if (_closingConfirmed) return;
 
         var dirty = ViewModel.EditorTabs.Tabs.Where(t => t.IsModified).ToList();
+        // 浮窗关闭各自处理；主窗口只负责自己的标签
         if (dirty.Count == 0) return;
 
         // 先取消默认关闭，弹确认框后再关闭
