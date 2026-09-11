@@ -27,6 +27,12 @@ public partial class MainWindow : Window
         };
 
         ViewModel.EditorContent += (file, line, col) => NavigateToEditor(file, line, col);
+        ViewModel.Output.CopyRequested += async text =>
+        {
+            var clipboard = Clipboard;
+            if (clipboard != null)
+                await clipboard.SetTextAsync(text);
+        };
 
         UpdateEmptyState();
         Closing += OnWindowClosing;

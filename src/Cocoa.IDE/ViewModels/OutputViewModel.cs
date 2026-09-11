@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Cocoa.IDE.ViewModels;
 
@@ -10,15 +11,15 @@ public partial class OutputViewModel : ObservableObject
 
     public ObservableCollection<string> Lines { get; } = new();
 
-    private readonly StringBuilder _buffer = new();
-
     [ObservableProperty]
     private bool _isAutoScroll = true;
+
+    /// <summary>请求复制时触发，由视图层把文本放到剪贴板。</summary>
+    public event Action<string>? CopyRequested;
 
     public void AppendLine(string text)
     {
         Lines.Add(text);
-        _buffer.AppendLine(text);
 
         if (Lines.Count > MaxLines)
         {
@@ -36,8 +37,21 @@ public partial class OutputViewModel : ObservableObject
     public void Clear()
     {
         Lines.Clear();
-        _buffer.Clear();
     }
 
-    public string GetAllText() => _buffer.ToString();
+    public string GetAllText() => string.Join(Environment.NewLine, Lines);
+
+    [RelayCommand]
+    private void Copy()
+    {
+        var text = GetAllText();
+        if (text.Length > 0)
+            CopyRequested?.Invoke(text);
+    }
+
+    [RelayCommand]
+    private void ClearOutput()
+    {
+        Clear();
+    }
 }

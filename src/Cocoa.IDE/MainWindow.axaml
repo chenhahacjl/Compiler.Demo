@@ -168,16 +168,30 @@
                     BorderThickness="0,1,0,0">
                 <TabControl Padding="0">
                     <TabItem Header="输出">
-                        <ListBox ItemsSource="{Binding Output.Lines}"
-                                 Background="Transparent"
-                                 Foreground="#CCCCCC"
-                                 BorderThickness="0">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" FontSize="12" />
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                        <DockPanel>
+                            <Border DockPanel.Dock="Top"
+                                    Background="#2D2D30"
+                                    BorderBrush="#3F3F46"
+                                    BorderThickness="0,0,0,1"
+                                    Padding="4,2">
+                                <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                                    <Button Content="复制" FontSize="11" Padding="8,2"
+                                            Command="{Binding Output.CopyCommand}" />
+                                    <Button Content="清空" FontSize="11" Padding="8,2"
+                                            Command="{Binding Output.ClearOutputCommand}" />
+                                </StackPanel>
+                            </Border>
+                            <ListBox ItemsSource="{Binding Output.Lines}"
+                                     Background="Transparent"
+                                     Foreground="#CCCCCC"
+                                     BorderThickness="0">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontSize="12" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
                     </TabItem>
                     <TabItem Header="错误列表">
                         <ListBox ItemsSource="{Binding ErrorList.FilteredItems}"
