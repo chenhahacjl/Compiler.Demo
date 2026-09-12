@@ -73,11 +73,7 @@ public partial class EditorView : UserControl
             TextEditor.Text = text ?? "";
 
             var name = highlightingName ?? GetHighlightingName(filePath);
-            if (name != null)
-            {
-                var def = GetHighlighting(name);
-                if (def != null) TextEditor.SyntaxHighlighting = def;
-            }
+            TextEditor.SyntaxHighlighting = name != null ? GetHighlighting(name) : null;
 
             TextEditor.IsReadOnly = GetIsReadOnly(filePath);
         }
@@ -136,7 +132,8 @@ public partial class EditorView : UserControl
         return Path.GetExtension(filePath).ToLowerInvariant() switch
         {
             ".cs" => "CSharp",
-            _     => "Cocoa"
+            ".co" => "Cocoa",
+            _     => null, // 非源码不着色
         };
     }
 

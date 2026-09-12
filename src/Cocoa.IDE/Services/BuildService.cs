@@ -18,10 +18,7 @@ public sealed class BuildService
             RegexOptions.Compiled);
 
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private bool _isBuilding;
     private volatile Process? _runningProcess;
-
-    public bool IsBuilding => _isBuilding;
 
     /// <summary>(success, errors, warnings) — UI 线程触发</summary>
     public event Action<bool, int, int>? BuildFinished;
@@ -131,13 +128,6 @@ public sealed class BuildService
     private async Task<bool> RunCoreAsync(Func<TextWriter, bool> build)
     {
         await _gate.WaitAsync();
-        if (_isBuilding)
-        {
-            _gate.Release();
-            return false;
-        }
-
-        _isBuilding = true;
         var errors = 0;
         var warnings = 0;
 
@@ -186,7 +176,6 @@ public sealed class BuildService
         }
         finally
         {
-            _isBuilding = false;
             _gate.Release();
         }
     }

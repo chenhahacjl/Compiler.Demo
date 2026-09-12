@@ -154,6 +154,14 @@ public partial class EditorPane : UserControl
                 _completionWindow.CompletionList.CompletionData.Add(item);
         }
 
+        // 无候选不弹出空框
+        if (_completionWindow.CompletionList.CompletionData.Count == 0)
+        {
+            _completionWindow.Close();
+            _completionWindow = null;
+            return;
+        }
+
         _completionWindow.Show();
     }
 
@@ -309,7 +317,7 @@ public partial class EditorPane : UserControl
 
     private void OnTabPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (sender is Border { DataContext: EditorTabViewModel tab })
+        if (sender is Border { DataContext: EditorTabViewModel tab } && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
         {
             _dragTab = tab;
             _dragStart = e.GetPosition(this);
