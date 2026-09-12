@@ -1,8 +1,10 @@
 # Cocoa 语言 C# 兼容性差距报告
 
-> **版本**：v1.0 | **日期**：2026-09-09 | **对标版本**：C# 13（.NET 9）
-> **当前状态**：47,814 测试，Stage 0-6 完成，三后端（Evaluator/IL/Native）全量绿
-> **统计**：已实现 ~98 项核心特性 | 未实现 ~42 项 | 部分实现 ~8 项
+> **版本**：v1.1 | **日期**：2026-09-12 | **对标版本**：C# 13（.NET 9）
+> **当前状态**：53,471 测试，Stage 0-6 完成，三后端（Evaluator/IL/Native）全量绿
+> **统计**：已实现 ~103 项核心特性 | 未实现 ~36 项 | 部分实现 ~9 项
+>
+> **更新记录（v1.1，2026-09-12）**：补记近期落地——XML 文档注释 `///`（6e-M24，全文/XML/.coa/REPL）、Attributes Tier-1（6e-M32，`[Name]`/`[Facade]`）、`using static` / `using` 别名（6e-M18）、二进制字面量 `0b` / 数字分隔符 `_`（词法）。测试基线 47,814 → 53,471。
 
 ---
 
@@ -87,6 +89,14 @@
 | Convert / Environment | ✅ |
 | 所有数值类型 facades（Parse/TryParse/CompareTo） | ✅ |
 
+### 1.7 元数据 / 文档
+
+| 特性 | 状态 |
+|------|------|
+| XML 文档注释 `///`（`<summary>/<param>/<returns>/<remarks>`） | ✅（6e-M24：.NET 兼容 XML + `.coa` 内嵌 + REPL `#docs`） |
+| Attributes Tier-1（`[Name]` / `[Name("arg")]` / `[Facade]`，类/结构位） | ✅（6e-M32） |
+| Attributes Tier-2（属性类解析 / 成员级 attribute / CustomAttribute 发射） | 🔶 部分 |
+
 ---
 
 ## 2. 未实现特性清单
@@ -121,7 +131,7 @@
 | 17 | **索引运算符 `^`** | C# 8 | `arr[^1]` | 中 | 无 |
 | 18 | **范围运算符 `..`** | C# 8 | `arr[1..^1]` | 中 | 无 |
 | 19 | **集合表达式** | C# 12 | `[1, 2, 3]` / `[..a, 4]` | 中 | 无 |
-| 20 | **属性（Attributes）** | C# 1 | `[Serializable]` | 高 | 无 |
+| 20 | **属性（Attributes）** 🔶 Tier-1（`[Name]`/`[Facade]`，6e-M32） | C# 1 | `[Serializable]` | 高 | 无 |
 | 21 | **运算符重载** | C# | `public static operator +(Point a, Point b)` | 中 | 无 |
 | 22 | **隐式/显式转换运算符** | C# | `public static implicit operator int(Foo f)` | 中 | 无 |
 
@@ -142,10 +152,10 @@
 | 33 | **`new` 成员隐藏** | C# | `new void M() { }` | 低 | 无 |
 | 34 | **`decimal` 类型** | C# | `decimal x = 3.14m` | 中 | 无 |
 | 35 | **`global using`** | C# 10 | `global using System.Linq;` | 低 | 无 |
-| 36 | **`using static`** | C# 6 | `using static System.Math;` | 低 | 无 |
-| 37 | **`using` 别名** | C# 2 | `using IntList = List<int>;` | 低 | 无 |
-| 38 | **二进制字面量** | C# 7.2 | `0b1010` | 低 | 无 |
-| 39 | **数字分隔符** | C# 7.2 | `1_000_000` | 低 | 无 |
+| 36 | **`using static`** ✅（6e-M18） | C# 6 | `using static System.Math;` | 低 | 无 |
+| 37 | **`using` 别名** ✅（6e-M18） | C# 2 | `using IntList = List<int>;` | 低 | 无 |
+| 38 | **二进制字面量** ✅ | C# 7.2 | `0b1010` | 低 | 无 |
+| 39 | **数字分隔符** ✅ | C# 7.2 | `1_000_000` | 低 | 无 |
 | 40 | **可空值类型 `int?`** | C# 2 | `Nullable<int>` / `int?` | 高 | 无 |
 | 41 | **可空引用类型 `string?`** | C# 8 | 注解式，编译期检查 | 高 | 无 |
 
@@ -160,7 +170,7 @@
 | 46 | **unsafe / 指针** | C# | `int* p = &x;` | 高 | 无 |
 | 47 | **fixed-size buffers** | C# 2 | `fixed int buf[10]` | 中 | 无 |
 | 48 | **源生成器** | C# 9 | `[Generator]` | 高 | 无 |
-| 49 | **XML 文档注释 `///`** | C# | `/// <summary>` | 低 | 无 |
+| 49 | **XML 文档注释 `///`** ✅（6e-M24） | C# | `/// <summary>` | 低 | 无 |
 | 50 | **`volatile` 字段** | C# | `volatile int x;` | 低 | 无 |
 | 51 | **匿名类型** | C# 3 | `new { X = 1, Y = "a" }` | 中 | 无 |
 | 52 | **`Span<T>` / `Memory<T>`** | C# 7.2 | `Span<int> s = stackalloc int[10]` | 高 | 无 |
@@ -266,11 +276,11 @@ record struct / with 表达式 → 中复杂度
 | 控制流 | 12 | 3（lock/yield/checked） | 1（foreach） |
 | 表达式 | 18 | 12（null安全/LINQ/pattern/index-range/集合/nameof/typeof/sizeof） | 0 |
 | 运算符 | 10 | 2（运算符重载/转换运算符） | 0 |
-| 声明 | 9 | 5（primary ctor/required/decimal/using static/global using） | 0 |
-| 元数据 | 0 | 3（Attributes/XML注释/预处理） | 0 |
+| 声明 | 10 | 4（primary ctor/required/decimal/global using） | 0 |
+| 元数据 | 1（XML 文档注释） | 1（预处理） | 1（Attributes Tier-1） |
 | 异步 | 0 | 2（async/await） | 0 |
 | 安全 | 0 | 3（unsafe/stackalloc/fixed） | 0 |
-| **合计** | **~76** | **~40** | **~5** |
+| **合计** | **~103** | **~36** | **~9** |
 
 ---
 
@@ -313,14 +323,14 @@ record struct / with 表达式 → 中复杂度
 | null 条件 ?. | 6.0 | ❌ |
 | nameof | 6.0 | ❌ |
 | Expression-bodied 成员 | 6.0 | ✅ |
-| using static | 6.0 | ❌ |
+| using static | 6.0 | ✅ |
 | out var | 7.0 | ❌ |
 | 模式匹配 is/pattern | 7.0 | ❌ |
 | 元组 | 7.0 | ✅（部分） |
 | local functions | 7.0 | ✅（部分） |
 | deconstruction | 7.0 | ✅（部分） |
-| digit separators | 7.2 | ❌ |
-| binary literals | 7.2 | ❌ |
+| digit separators | 7.2 | ✅ |
+| binary literals | 7.2 | ✅ |
 | Span&lt;T&gt; | 7.2 | ❌ |
 
 ### C# 8-10 近期特性
