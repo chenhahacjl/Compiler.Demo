@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using Cocoa.CodeAnalysis.Syntax;
 using Cocoa.IDE.Controls;
 using Cocoa.IDE.ViewModels;
@@ -205,10 +206,60 @@ public partial class MainWindow : Window
     private void OnTreeDoubleTapped(object? sender, RoutedEventArgs e)
     {
         if (SolutionTree.SelectedItem is not TreeNodeViewModel node) return;
-        if (node.Kind != NodeKind.Source || node.FullPath == null) return;
 
+        // 容器节点：展开/折叠
+        if (node.Kind is NodeKind.Solution or NodeKind.Project or NodeKind.Folder or NodeKind.Dependencies)
+        {
+            node.IsExpanded = !node.IsExpanded;
+            e.Handled = true;
+            return;
+        }
+
+        if (node.Kind != NodeKind.Source || node.FullPath == null) return;
         ViewModel.OpenFile(node.FullPath);
         e.Handled = true;
+    }
+
+    // ─── 资源管理器工具栏 ───
+
+    private void OnTreeRefresh(object? sender, RoutedEventArgs e) => ViewModel.SolutionTree.Refresh();
+
+    private void OnTreeCollapseAll(object? sender, RoutedEventArgs e) => ViewModel.SolutionTree.CollapseAll();
+
+    private void OnTreeProperties(object? sender, RoutedEventArgs e)
+    {
+        if (SolutionTree.SelectedItem is TreeNodeViewModel node)
+            ViewModel.ShowNodeProperties(node);
+    }
+
+    // ─── 引用增删 ───
+
+    private async void OnCtxAddReference(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is not { } node) return;
+
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "添加引用",
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("引用程序集") { Patterns = new[] { "*.coa", "*.dll" } },
+                new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
+            },
+        });
+
+        foreach (var file in files)
+        {
+            if (file.TryGetLocalPath() is { } path)
+                ViewModel.SolutionTree.AddReferenceToProject(node, path);
+        }
+    }
+
+    private void OnCtxRemoveReference(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node)
+            ViewModel.SolutionTree.RemoveReferenceFromProject(node);
     }
 
     private void OnErrorDoubleTapped(object? sender, RoutedEventArgs e)

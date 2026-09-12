@@ -32,4 +32,24 @@ public static class Icons
         "solution" => (Get(Solution), new SolidColorBrush(Color.Parse("#007ACC"))),
         _ => (Get(File), new SolidColorBrush(Color.Parse("#CCCCCC"))),
     };
+
+    /// <summary>树节点种类 →（图标, 强调色）；源文件按扩展名区色。</summary>
+    public static (Geometry Geometry, IBrush Brush) ForNode(ViewModels.NodeKind kind, string name)
+    {
+        var ext = System.IO.Path.GetExtension(name).ToLowerInvariant();
+        return kind switch
+        {
+            ViewModels.NodeKind.Solution => (Get(Solution), new SolidColorBrush(Color.Parse("#007ACC"))),
+            ViewModels.NodeKind.Project => (Get(Project), new SolidColorBrush(Color.Parse("#DCDCAA"))),
+            ViewModels.NodeKind.Folder => (Get(Folder), new SolidColorBrush(Color.Parse("#DCDCAA"))),
+            ViewModels.NodeKind.Dependencies => (Get(Folder), new SolidColorBrush(Color.Parse("#AAAAAA"))),
+            ViewModels.NodeKind.Reference => (Get(Reference), new SolidColorBrush(Color.Parse("#4EC9B0"))),
+            _ => ext switch
+            {
+                ".cs" => (Get(File), new SolidColorBrush(Color.Parse("#9B4F96"))),
+                ".co" => (Get(File), new SolidColorBrush(Color.Parse("#E37933"))),
+                _ => (Get(File), new SolidColorBrush(Color.Parse("#CCCCCC"))),
+            },
+        };
+    }
 }

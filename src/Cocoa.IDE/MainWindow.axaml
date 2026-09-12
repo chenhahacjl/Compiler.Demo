@@ -119,7 +119,7 @@
         <Grid RowDefinitions="*,180">
             <!-- ═══ ③ 主内容区 ═══ -->
             <Grid Grid.Row="0" ColumnDefinitions="280,4,*,4,300">
-                <!-- 左：解决方案资源管理器 -->
+                <!-- 左：解决方案资源管理器（VS 风格） -->
                 <Border Grid.Column="0"
                         Background="#252526"
                         BorderBrush="#3F3F46"
@@ -130,25 +130,49 @@
                                    FontSize="12" FontWeight="SemiBold"
                                    Padding="8,6" Foreground="#CCCCCC"
                                    Background="#333337" />
+                        <!-- 工具栏 -->
+                        <Border DockPanel.Dock="Top"
+                                Background="#2D2D30"
+                                BorderBrush="#3F3F46"
+                                BorderThickness="0,0,0,1"
+                                Padding="4,2">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <Button Content="⟳" FontSize="11" Padding="6,1" ToolTip.Tip="刷新" Click="OnTreeRefresh" />
+                                <Button Content="⌄" FontSize="11" Padding="6,1" ToolTip.Tip="折叠全部" Click="OnTreeCollapseAll" />
+                                <ToggleButton Content="⇄" FontSize="11" Padding="6,1" ToolTip.Tip="与活动文档同步" IsChecked="{Binding SolutionTree.AutoSync}" />
+                                <ToggleButton Content="👁" FontSize="11" Padding="6,1" ToolTip.Tip="显示所有文件" IsChecked="{Binding SolutionTree.ShowAllFiles}" />
+                                <Button Content="ⓘ" FontSize="11" Padding="6,1" ToolTip.Tip="属性" Click="OnTreeProperties" />
+                            </StackPanel>
+                        </Border>
                         <TreeView x:Name="SolutionTree"
                                   ItemsSource="{Binding SolutionTree.RootNodes}"
+                                  SelectedItem="{Binding SolutionTree.SelectedNode, Mode=TwoWay}"
                                   Background="Transparent" Foreground="#CCCCCC"
                                   BorderThickness="0" Padding="4"
                                   SelectionChanged="OnTreeSelectionChanged"
                                   DoubleTapped="OnTreeDoubleTapped">
+                            <TreeView.Styles>
+                                <Style Selector="TreeViewItem">
+                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                </Style>
+                            </TreeView.Styles>
                             <TreeView.ItemTemplate>
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <TextBlock Text="{Binding Name}" FontSize="13" />
+                                        <PathIcon Data="{Binding Icon}" Foreground="{Binding IconBrush}"
+                                                  Width="14" Height="14" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Caption}" FontSize="13" VerticalAlignment="Center" />
                                         <StackPanel.ContextMenu>
                                             <ContextMenu>
-                                                <MenuItem Header="打开" Click="OnCtxOpen" />
-                                                <MenuItem Header="在资源管理器中显示" Click="OnCtxShowInExplorer" />
+                                                <MenuItem Header="打开" Click="OnCtxOpen" IsVisible="{Binding IsSource}" />
+                                                <MenuItem Header="在资源管理器中显示" Click="OnCtxShowInExplorer" IsVisible="{Binding HasPath}" />
                                                 <Separator />
-                                                <MenuItem Header="新建文件…" Click="OnCtxNewFile" />
-                                                <MenuItem Header="从项目中移除" Click="OnCtxRemove" />
+                                                <MenuItem Header="新建文件…" Click="OnCtxNewFile" IsVisible="{Binding CanCreateFile}" />
+                                                <MenuItem Header="添加引用…" Click="OnCtxAddReference" IsVisible="{Binding IsProject}" />
+                                                <MenuItem Header="从项目中移除" Click="OnCtxRemove" IsVisible="{Binding IsSource}" />
+                                                <MenuItem Header="移除引用" Click="OnCtxRemoveReference" IsVisible="{Binding IsReferenceNode}" />
                                                 <Separator />
-                                                <MenuItem Header="复制完整路径" Click="OnCtxCopyPath" />
+                                                <MenuItem Header="复制完整路径" Click="OnCtxCopyPath" IsVisible="{Binding HasPath}" />
                                                 <MenuItem Header="属性" Click="OnCtxProperties" />
                                             </ContextMenu>
                                         </StackPanel.ContextMenu>

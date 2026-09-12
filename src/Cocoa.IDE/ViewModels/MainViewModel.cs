@@ -128,6 +128,9 @@ public partial class MainViewModel : ObservableObject
         StatusBar.Language = tab.Dialect ?? "";
         StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";
         Properties.ShowDocument(tab);
+
+        if (SolutionTree.AutoSync)
+            SolutionTree.SyncToFile(tab.FilePath);
     }
 
     /// <summary>树节点选中 → 属性窗口自动填充。</summary>
