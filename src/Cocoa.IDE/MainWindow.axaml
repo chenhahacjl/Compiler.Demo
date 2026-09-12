@@ -94,6 +94,7 @@
                 <Border Width="1" Background="#3F3F46" Margin="4,2" />
                 <Button Content="🔨" ToolTip.Tip="生成 (F6)" Command="{Binding BuildCommand}" />
                 <Button Content="▶"  ToolTip.Tip="运行 (F5)" Command="{Binding RunCommand}" />
+                <Button Content="⏹"  ToolTip.Tip="停止运行" Command="{Binding StopCommand}" />
             </StackPanel>
         </Border>
 

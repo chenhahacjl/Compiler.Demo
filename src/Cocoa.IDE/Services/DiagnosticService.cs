@@ -14,7 +14,6 @@ public sealed class DiagnosticService
 
     private readonly object _sync = new();
     private readonly Dictionary<string, CancellationTokenSource> _debounce = new(StringComparer.OrdinalIgnoreCase);
-    private int _generation;
 
     /// <summary>(filePath, diagnostics) — 每次重解析后触发（UI 线程）。</summary>
     public event Action<string, ImmutableArray<Diagnostic>>? DiagnosticsReady;
@@ -49,7 +48,6 @@ public sealed class DiagnosticService
         var newCts = new CancellationTokenSource();
         lock (_sync) _debounce[filePath] = newCts;
         var token = newCts.Token;
-        var generation = ++_generation;
 
         _ = Task.Run(async () =>
         {
@@ -75,7 +73,6 @@ public sealed class DiagnosticService
                 Dispatcher.UIThread.Post(() =>
                 {
                     if (token.IsCancellationRequested) return;
-                    if (generation != _generation) return;
                     DiagnosticsReady?.Invoke(filePath, final);
                 });
             }

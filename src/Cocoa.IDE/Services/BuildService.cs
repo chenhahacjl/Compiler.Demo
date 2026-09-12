@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using Avalonia.Threading;
@@ -18,11 +19,15 @@ public sealed class BuildService
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private bool _isBuilding;
+    private volatile Process? _runningProcess;
 
     public bool IsBuilding => _isBuilding;
 
     /// <summary>(success, errors, warnings) — UI 线程触发</summary>
     public event Action<bool, int, int>? BuildFinished;
+
+    /// <summary>(exitCode) — 运行结束（UI 线程触发）</summary>
+    public event Action<int>? RunFinished;
 
     /// <summary>原始输出行 — UI 线程触发</summary>
     public event Action<string>? OutputLine;
@@ -48,31 +53,79 @@ public sealed class BuildService
         var exePath = Path.Combine(project.GetOutputDirectory(), project.GetDefaultOutputFileName());
         if (!File.Exists(exePath))
         {
-            OutputLine?.Invoke($"error: executable '{exePath}' was not produced by the build");
-            BuildFinished?.Invoke(false, 1, 0);
+            // 构建已通过 BuildFinished 汇报结果；此处仅报告缺少产物，不再重复触发
+            Dispatcher.UIThread.Post(() => OutputLine?.Invoke($"error: executable '{exePath}' was not produced by the build"));
             return false;
         }
 
+        var workingDir = Path.GetDirectoryName(exePath) ?? project.Directory;
+
         return await Task.Run(() =>
         {
+            var psi = new ProcessStartInfo(exePath)
+            {
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                WorkingDirectory = workingDir,
+            };
+
+            Process? proc = null;
             try
             {
-                var psi = new System.Diagnostics.ProcessStartInfo(exePath)
+                proc = new Process { StartInfo = psi, EnableRaisingEvents = true };
+                proc.OutputDataReceived += (_, e) =>
                 {
-                    UseShellExecute = false,
-                    WorkingDirectory = project.Directory
+                    if (e.Data != null) Dispatcher.UIThread.Post(() => OutputLine?.Invoke(e.Data));
                 };
-                using var proc = System.Diagnostics.Process.Start(psi);
-                if (proc == null) return false;
+                proc.ErrorDataReceived += (_, e) =>
+                {
+                    if (e.Data != null) Dispatcher.UIThread.Post(() => OutputLine?.Invoke(e.Data));
+                };
+
+                proc.Start();
+                _runningProcess = proc;
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
                 proc.WaitForExit();
-                return proc.ExitCode == 0;
+                proc.WaitForExit(); // 确保异步输出读取全部完成
+
+                var exitCode = proc.ExitCode;
+                Dispatcher.UIThread.Post(() =>
+                {
+                    OutputLine?.Invoke($"程序已退出，退出代码 {exitCode}。");
+                    RunFinished?.Invoke(exitCode);
+                });
+                return exitCode == 0;
             }
             catch (Exception ex)
             {
                 Dispatcher.UIThread.Post(() => OutputLine?.Invoke($"error: failed to launch '{exePath}': {ex.Message}"));
                 return false;
             }
+            finally
+            {
+                _runningProcess = null;
+                proc?.Dispose();
+            }
         });
+    }
+
+    /// <summary>终止当前正在运行的程序（若有）。</summary>
+    public void Stop()
+    {
+        var proc = _runningProcess;
+        if (proc == null) return;
+        try
+        {
+            if (!proc.HasExited)
+                proc.Kill(entireProcessTree: true);
+        }
+        catch
+        {
+            // 进程可能已退出，忽略
+        }
     }
 
     private async Task<bool> RunCoreAsync(Func<TextWriter, bool> build)

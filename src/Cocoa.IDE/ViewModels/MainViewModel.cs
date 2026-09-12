@@ -43,6 +43,8 @@ public partial class MainViewModel : ObservableObject
             ErrorList.Add(file, line, col, msg, DiagnosticSeverity.Error);
         BuildService.BuildFinished += (success, errors, warnings) =>
             StatusBar.SetBuildResult(success, errors, warnings);
+        BuildService.RunFinished += code =>
+            StatusBar.StatusText = code == 0 ? "运行结束（退出代码 0）" : $"运行结束（退出代码 {code}）";
 
         EditorTabs.Tabs.CollectionChanged += (_, e) =>
         {
@@ -196,7 +198,7 @@ public partial class MainViewModel : ObservableObject
         {
             var path = file.TryGetLocalPath();
             if (path != null)
-                EditorTabs.OpenFile(path);
+                OpenFile(path);
         }
     }
 
@@ -345,6 +347,9 @@ public partial class MainViewModel : ObservableObject
         await BuildService.RunAsync(exeProject);
     }
 
+    [RelayCommand]
+    private void Stop() => BuildService.Stop();
+
     private CocoaProjectFile? ResolveExecutableProject()
     {
         if (SolutionTree.CurrentSolution != null)
@@ -364,7 +369,10 @@ public partial class MainViewModel : ObservableObject
         if (SolutionTree.CurrentProject != null)
         {
             if (SolutionTree.CurrentProject.Output != ProjectOutputFormat.Exe)
+            {
                 Output.AppendLine("error: 当前项目不是可执行项目");
+                return null;
+            }
             return SolutionTree.CurrentProject;
         }
 
