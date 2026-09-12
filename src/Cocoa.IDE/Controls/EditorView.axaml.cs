@@ -59,6 +59,13 @@ public partial class EditorView : UserControl
         TextEditor.TextArea.TextView.BackgroundRenderers.Add(_debugMarkers);
         _breakpointMargin = new BreakpointMargin(this);
         TextEditor.TextArea.LeftMargins.Insert(0, _breakpointMargin);
+
+        // F11：滚动/换行变化时，边距与背景层按视图坐标重绘（VisualTop 是文档坐标）
+        TextEditor.TextArea.TextView.VisualLinesChanged += (_, _) =>
+        {
+            _breakpointMargin.Invalidate();
+            TextEditor.TextArea.TextView.InvalidateVisual();
+        };
     }
 
     public IReadOnlyCollection<int> Breakpoints => _breakpoints;
@@ -322,9 +329,10 @@ public sealed class DebugMarkerRenderer : IBackgroundRenderer
         {
             if (visualLine.FirstDocumentLine.LineNumber == line)
             {
+                // VisualTop 是文档绝对坐标；背景层用视图坐标，需扣除纵向滚动偏移
                 drawingContext.FillRectangle(
                     CurrentLineBrush,
-                    new Rect(0, visualLine.VisualTop, textView.Bounds.Width, visualLine.Height));
+                    new Rect(0, visualLine.VisualTop - textView.VerticalOffset, textView.Bounds.Width, visualLine.Height));
                 break;
             }
         }
@@ -357,7 +365,8 @@ public sealed class BreakpointMargin : AbstractMargin
             var line = visualLine.FirstDocumentLine.LineNumber;
             if (_owner.Breakpoints.Contains(line))
             {
-                var center = new Point(8, visualLine.VisualTop + visualLine.Height / 2);
+                // 边距同样在视图坐标绘制：扣除纵向滚动偏移
+                var center = new Point(8, visualLine.VisualTop - textView.VerticalOffset + visualLine.Height / 2);
                 drawingContext.DrawEllipse(BreakpointBrush, null, center, 4.5, 4.5);
             }
         }
@@ -368,7 +377,7 @@ public sealed class BreakpointMargin : AbstractMargin
         var textView = TextView;
         if (textView == null) return;
 
-        var y = e.GetPosition(this).Y;
+        var y = e.GetPosition(this).Y + textView.VerticalOffset;
         var position = textView.GetPositionFloor(new Point(0, y));
         if (position is { } p)
             _owner.RaiseBreakpointToggled(p.Line);
