@@ -202,13 +202,13 @@ MainWindow 启动
 | **M2b 新建项目向导** | **VS2022 两步式向导**（模板选择 → 名称/位置/解决方案名/目标框架）；统一生成 `.cosln` + 项目子目录；空白解决方案模板；位置自动创建 | `Cocoa.Build` + 模板 XML | ✅ 已落地（§8.1） |
 | **M3 实时诊断** | 防抖重解析管线；错误列表（过滤、双击定位，改 ObservableCollection + 全量筛选 D6）；编辑器波浪线 | `SemanticModel.GetDiagnostics` | ✅ 已落地（D6 关闭） |
 | **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物；输出窗口；增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | ✅ 已落地（D5 关闭；A7 已修） |
-| **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地（补全 99 项、F12/Hover 主函数可用） |
+| **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地；**M5c 升级为 VS 式语境补全**（输入即触发 / 类型位置仅类型 / 成员-命名空间-声明名-语句表达式语境过滤 / 片段，提交 `M5c`） |
 | **M5b 工程上下文语义** | 补全/诊断/Hover/F12 接入工程源文件集与 `References`（修跨文件误报、`Console.` 补全）；按内容缓存编译 | `Compilation.Create(references, trees)` | ✅ 已落地（§7.5） |
 | **M6 打磨** | 暗色/亮色主题；启动页（最近项目）；状态栏；选项页 | — | 📋 规划 |
 | **M6a UI 接线** | 空壳菜单（退出/视图/项目/生成清理/关于）、状态栏解决方案名、Ctrl+F 查找、错误过滤 UI、输出自动滚动 | AvaloniaEdit SearchPanel | ✅ 已落地 |
-| **M6b F12 定位与打磨** | 声明名字 token 精确定位；空补全不弹；着色扩展名判定；大文件只读/编码 | `Language.GetDeclarationNameLocation` | ✅ 已落地（C3 待编译器侧） |
+| **M6b F12 定位与打磨** | 声明名字 token 精确定位；空补全不弹；着色扩展名判定；大文件只读/编码 | `Language.GetDeclarationNameLocation` | ✅ 已落地（F12 精确到声明名并覆盖变量/参数/成员，提交 `F12`；C3 待编译器侧） |
 | **M6c 解决方案资源管理器** | **VS 风格**：矢量图标、嵌套文件夹、引用/依赖项节点、工具栏（刷新/折叠全部/同步活动文档/显示所有文件/属性）、按种类右键、引用可编辑 | `CocoaProjectFile` + IDE `ProjectFileService` | ✅ 已落地（§6.4） |
-| **M7 解释器调试器** | 断点/继续/单步/步入/步出；局部变量+监视；调用栈窗口；黄色当前行 | `CodeGen.Interpreter` 新增 public `DebuggerSession`（§11.2） | ✅ 已落地（编译器侧 + IDE UI） |
+| **M7 解释器调试器** | 断点/继续/单步/步入/步出；局部变量+监视；调用栈窗口；黄色当前行 | `CodeGen.Interpreter` 新增 public `DebuggerSession`（§11.2） | ✅ 已落地（编译器侧 + IDE UI）；M7 后修复 `F11`/`F13`/`E2`/`F14` |
 
 ### 5.2 增强层（P1/P2/P3）
 
@@ -269,7 +269,7 @@ MainWindow 启动
 
 > 修复归属：A=M6a 前的正确性修复；C=M5b/M6b。所有位置均经源码核对。
 >
-> 修复状态（2026-09-12）：**A1–A10、B6–B9、C1、C2、C4、C5 已修复**（提交 `F8`/`F9`/`M2b`/`M5b`/`M6a`/`M6b`）；**C3 待编译器侧**——定位诊断行需带 `warning:`/`error:` 前缀，`Diagnostic.ToString()` 当前仅返回消息，IDE 无法区分严重性。
+> 修复状态（2026-09-12）：**A1–A10、B6–B9、C1、C2、C4、C5 已修复**（提交 `F8`/`F9`/`M2b`/`M5b`/`M6a`/`M6b`）；**C3 待编译器侧**——定位诊断行需带 `warning:`/`error:` 前缀，`Diagnostic.ToString()` 当前仅返回消息，IDE 无法区分严重性。M7 落地后的体验修复轮：**F11**（调试圆点/当前行随滚动）、**F12**（F12 精确到声明名）、**M5c**（VS 式语境补全）、**F13**（运行独立控制台窗口 + 调试输出重定向）、**F14**（行号槽任意位置打断点）均已修复。
 
 **A 级 — 明确缺陷**
 
@@ -568,6 +568,8 @@ F5 → Process.Start(产物 exe)
 ### 11.2 编译器侧改造：`Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`
 
 > 状态（2026-09-12）：**已全部落地**。编译器侧（提交 `M7(编译器侧)`）：`Evaluator` 增调用帧栈（`DebugFrame`）与公共语句边界钩子（序列点位置 + `isSequencePoint` 标志，生产路径为 null 零开销）；新增 public `DebuggerSession`（断点/继续/步过/步入/步出/停止、`State`/`CallStack`/`CurrentLocals`/`ReturnValue`/`BreakAtEntry`）。IDE 侧（提交 `M7(IDE)`）：`DebuggerService` + `EditorView` 断点边距（F9/点击切换、红点）+ 黄色当前行 + `局部变量`/`调用栈` 面板 + 调试菜单与快捷键（F5 启动/继续、F10 逐过程、F11 逐语句、Shift+F11 跳出、Ctrl+F5 不调试运行）。`DebuggerSessionTests` 4 例（脚本断点/单步/跑完 + class Main 入口断点），全量 **53476+** 通过。
+>
+> M7 后修复轮（IDE 侧）：`F11` 圆点/当前行随滚动（`VisualTop` 文档坐标扣除 `VerticalOffset`，订阅 `VisualLinesChanged` 重绘）；`F13`「运行(不调试)」以 `UseShellExecute` 独立控制台窗口运行、程序自身 stdin/stdout 可用，`E2` 调试期间将解释器 `Console.Out/Error` 重定向到 IDE 输出面板（结束/停止恢复）；`F14` 行号槽任意位置（含行号边距）左键切换断点。
 
 > `Evaluator` 是 internal，无法从 IDE 直接触碰；但 `DebuggerSession` 与 `Evaluator` 同程序集即可见 internal，故**无需扩 `InternalsVisibleTo`**。
 
@@ -609,8 +611,8 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 
 | 组件 | 内容 |
 |------|------|
-| DebuggerService | 会话生命周期；断点表管理 |
-| 编辑器集成 | 左边距断点圆点（红）/ 当前行黄底箭头；F9 切换 |
+| DebuggerService | 会话生命周期；断点表管理；调试期 `Console` 输出重定向到输出面板（F13/E2） |
+| 编辑器集成 | 左边距断点圆点（红）/ 当前行黄底；F9 切换；行号槽任意位置左键切换（F14）；圆点/当前行随滚动定位（F11） |
 | 局部变量/监视窗口 | 当前帧 `Locals` + `_globals` 快照 |
 | 调用栈窗口 | `Frames` 列表，双击切帧联动编辑器 |
 
@@ -657,8 +659,13 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 | 6 | M6a | UI 接线（菜单/状态栏/查找/过滤） | `M6a：补齐菜单/状态栏/查找/过滤等 UI 接线` | ✅ |
 | 7 | M6b | 精确 F12 定位与打磨项 | `M6b：精确 F12 定位与打磨项` | ✅（C3 待编译器） |
 | 8 | M7 | 解释器调试器（触碰编译器，避开并行里程碑） | `M7：解释器调试器` | ✅ 编译器侧 + IDE UI |
+| 9 | M7 后 | 调试圆点/当前行随滚动（文档坐标 → 视图坐标） | `F11：调试圆点与当前行随滚动定位` | ✅ |
+| 10 | M7 后 | F12 跳转精确定位到声明名 | `F12：F12 跳转精确定位到声明名` | ✅ |
+| 11 | M7 后 | VS 式语境补全（自动触发/类型位置/片段） | `M5c：VS 式语境补全(自动触发/类型位置/片段)` | ✅ |
+| 12 | M7 后 | 运行(不调试)独立控制台窗口 + 调试输出重定向 | `F13：运行(不调试)独立控制台窗口 + 调试输出重定向` | ✅ |
+| 13 | M7 后 | 行号槽任意位置可切换断点 | `F14：行号槽任意位置可切换断点` | ✅ |
 
-> 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。
+> 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。F11–F14 为 M7 落地的体验修复轮次（IDE 侧，不触碰编译器）。
 
 ## 13. 风险与开放问题
 
