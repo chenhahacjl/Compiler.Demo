@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Documentation;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
 
@@ -139,7 +140,10 @@ internal sealed class ReplSession
     {
         var compilation = _previous ?? Compilation.CreateScript(null);
         foreach (var symbol in EnumerateUserSymbols(compilation))
-            output.AppendLine($"  {symbol}");
+        {
+            var summary = DocCommentExtractor.SummaryFirstLine(symbol.DocumentationText);
+            output.AppendLine(summary != null ? $"  {symbol} — {summary}" : $"  {symbol}");
+        }
     }
 
     public void DumpSymbol(string name, OutputHistory output)

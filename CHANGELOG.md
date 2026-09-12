@@ -13,7 +13,7 @@
 - **提取与挂点**：`DocCommentExtractor`（多行合并、结构化标签、格式警告）+ `Symbol.DocumentationText`（Binder 在顶层函数/类/接口/枚举/delegate + 方法/构造/属性/字段/事件共 12 处回填）；格式异常经 `ReportMalformedDocComment` 报警告。
 - **XML 文档文件**：`DocIdBuilder`（.NET DocID：`T:/M:/F:/P:/E:`，关键字→`System.Int32` 等全名映射，无参省略括号）+ `DocumentationFileWriter`（保留 `<param name>`、XML 转义、按 DocID 排序去重、无文档跳过）。`build --doc` 与 coproj `<DocumentationFile>` 开启（默认关），exe/library/.coa 三产物均写出同名 `.xml`。
 - **`.coa` 内嵌**：manifest 后新增可选 `(docs …)` 段（DocID → 规范化原文）；读侧按 DocID 回填符号 `DocumentationText`（stdlib 等跨程序集符号文档随程序集分发）。
-- **REPL**：新增 `#docs`（列出带文档符号）与 `#docs <名>`（查看完整文档）。
+- **REPL**：`#docs`（列出带文档符号）、`#docs <名>`（查看完整文档）、`ls` 符号清单附 summary 首行。
 - **stdlib 覆盖**：`System.Core` 的 Console/Math/String/Int32 公开 API 补 `///`（Collections 既有注释一并进入 `.coa`）；`libs/System.Core.coa` 重建入库。
 - **修复的阻断缺陷**：多行文档只取首行（换行 trivia 误断块）；类成员文档不入库（枚举漏类成员）；`.coa` 读侧不回填；XML 丢失 `<param name>` 属性。
 - 测试 +33（词法/提取/DocID/写出/回填/`.coa` 往返/exe `--doc` e2e/跨程序集 stdlib 文档）；全量 **53471** 通过。

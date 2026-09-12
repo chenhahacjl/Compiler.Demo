@@ -94,6 +94,27 @@ namespace Cocoa.CodeAnalysis.Documentation
         }
 
         /// <summary>
+        /// 提取文档原文的 summary 首行（REPL 符号清单等单行展示用）。无 summary 返回 null。
+        /// </summary>
+        public static string? SummaryFirstLine(string? rawText)
+        {
+            if (string.IsNullOrEmpty(rawText))
+            {
+                return null;
+            }
+
+            var warnings = ImmutableArray.CreateBuilder<string>();
+            var summary = ParseStructured(rawText, warnings).Summary;
+            if (string.IsNullOrEmpty(summary))
+            {
+                return null;
+            }
+
+            var newline = summary.IndexOfAny(new[] { '\n', '\r' });
+            return (newline >= 0 ? summary.Substring(0, newline) : summary).Trim();
+        }
+
+        /// <summary>
         /// 解析规范化文档文本为结构化 DocComment。
         /// </summary>
         private static DocComment ParseStructured(string rawText, ImmutableArray<string>.Builder warnings)
@@ -123,16 +144,22 @@ namespace Cocoa.CodeAnalysis.Documentation
                     currentParamName = paramName;
                     tagContent.Clear();
 
-                    // 如果标签在同一行关闭（如 <summary>text</summary>）
+                    // 开标签同一行的内容（无论是否在同一行闭合）
+                    var openEnd = trimmed.IndexOf('>', StringComparison.Ordinal);
                     var closeIndex = trimmed.IndexOf("</", StringComparison.Ordinal);
+                    if (openEnd > 0)
+                    {
+                        var end = closeIndex > openEnd ? closeIndex : trimmed.Length;
+                        var inlineText = trimmed.Substring(openEnd + 1, end - openEnd - 1);
+                        if (inlineText.Length > 0)
+                        {
+                            tagContent.Append(inlineText);
+                        }
+                    }
+
+                    // 同一行闭合（如 <summary>text</summary>）
                     if (closeIndex > 0)
                     {
-                        var openEnd = trimmed.IndexOf('>', StringComparison.Ordinal);
-                        if (openEnd > 0 && openEnd < closeIndex)
-                        {
-                            tagContent.Append(trimmed.Substring(openEnd + 1, closeIndex - openEnd - 1));
-                        }
-
                         FlushTag(ref currentTag, ref currentParamName, tagContent, ref summary, ref returns, ref remarks, parameters);
                     }
 
@@ -155,12 +182,23 @@ namespace Cocoa.CodeAnalysis.Documentation
                 // 追加到当前标签内容
                 if (currentTag != TagType.None)
                 {
-                    if (tagContent.Length > 0)
+                    var closeIdx = line.IndexOf("</", StringComparison.Ordinal);
+                    var text = closeIdx >= 0 ? line.Substring(0, closeIdx) : line;
+
+                    if (text.Length > 0)
                     {
-                        tagContent.Append('\n');
+                        if (tagContent.Length > 0)
+                        {
+                            tagContent.Append('\n');
+                        }
+
+                        tagContent.Append(text);
                     }
 
-                    tagContent.Append(line);
+                    if (closeIdx >= 0)
+                    {
+                        FlushTag(ref currentTag, ref currentParamName, tagContent, ref summary, ref returns, ref remarks, parameters);
+                    }
                 }
                 else
                 {

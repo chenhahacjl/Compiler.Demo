@@ -121,5 +121,20 @@ namespace Cocoa.Tests.CodeAnalysis.Documentation
 
             Assert.Contains(warnings, w => w.Contains("未闭合"));
         }
+
+        [Fact]
+        public void SummaryFirstLine_ExtractsFirstLine()
+        {
+            Assert.Equal("摘要", DocCommentExtractor.SummaryFirstLine("<summary>摘要\n第二行</summary>"));
+            Assert.Equal("纯文本首行", DocCommentExtractor.SummaryFirstLine("纯文本首行\n第二行"));
+        }
+
+        [Fact]
+        public void SummaryFirstLine_NullWhenNoSummary()
+        {
+            Assert.Null(DocCommentExtractor.SummaryFirstLine(null));
+            Assert.Null(DocCommentExtractor.SummaryFirstLine(""));
+            Assert.Null(DocCommentExtractor.SummaryFirstLine("<param name=\"a\">x</param>"));
+        }
     }
 }

@@ -127,16 +127,22 @@ namespace Cocoa.CodeAnalysis.Documentation
                     tagName = open.Value.Name;
                     opener = open.Value.Opener;
 
-                    // 同一行内闭合（<summary>text</summary>）
+                    // 开标签同一行的内容（无论是否在同一行闭合）
+                    var openEnd = trimmed.IndexOf('>');
                     var closeIdx = trimmed.IndexOf("</", System.StringComparison.Ordinal);
+                    if (openEnd > 0)
+                    {
+                        var end = closeIdx > openEnd ? closeIdx : trimmed.Length;
+                        var inlineText = trimmed.Substring(openEnd + 1, end - openEnd - 1);
+                        if (inlineText.Length > 0)
+                        {
+                            content.Append(inlineText);
+                        }
+                    }
+
+                    // 同一行内闭合（<summary>text</summary>）
                     if (closeIdx > 0)
                     {
-                        var openEnd = trimmed.IndexOf('>');
-                        if (openEnd > 0 && openEnd < closeIdx)
-                        {
-                            content.Append(trimmed.Substring(openEnd + 1, closeIdx - openEnd - 1));
-                        }
-
                         FlushTag(writer, tagName, opener, content);
                         tagName = null;
                         opener = null;
@@ -157,12 +163,25 @@ namespace Cocoa.CodeAnalysis.Documentation
                 // 标签内容行
                 if (tagName != null)
                 {
-                    if (content.Length > 0)
+                    var closeIdx = trimmed.IndexOf("</", System.StringComparison.Ordinal);
+                    var text = closeIdx >= 0 ? trimmed.Substring(0, closeIdx) : trimmed;
+
+                    if (text.Length > 0)
                     {
-                        content.Append(' ');
+                        if (content.Length > 0)
+                        {
+                            content.Append(' ');
+                        }
+
+                        content.Append(text);
                     }
 
-                    content.Append(trimmed);
+                    if (closeIdx >= 0)
+                    {
+                        FlushTag(writer, tagName, opener, content);
+                        tagName = null;
+                        opener = null;
+                    }
                 }
                 else if (trimmed.Length > 0)
                 {
