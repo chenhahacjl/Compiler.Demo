@@ -139,6 +139,18 @@
                                 <TreeDataTemplate ItemsSource="{Binding Children}">
                                     <StackPanel Orientation="Horizontal" Spacing="4">
                                         <TextBlock Text="{Binding Name}" FontSize="13" />
+                                        <StackPanel.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="打开" Click="OnCtxOpen" />
+                                                <MenuItem Header="在资源管理器中显示" Click="OnCtxShowInExplorer" />
+                                                <Separator />
+                                                <MenuItem Header="新建文件…" Click="OnCtxNewFile" />
+                                                <MenuItem Header="从项目中移除" Click="OnCtxRemove" />
+                                                <Separator />
+                                                <MenuItem Header="复制完整路径" Click="OnCtxCopyPath" />
+                                                <MenuItem Header="属性" Click="OnCtxProperties" />
+                                            </ContextMenu>
+                                        </StackPanel.ContextMenu>
                                     </StackPanel>
                                 </TreeDataTemplate>
                             </TreeView.ItemTemplate>

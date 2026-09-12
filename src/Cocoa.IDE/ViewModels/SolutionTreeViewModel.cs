@@ -149,6 +149,28 @@ public partial class SolutionTreeViewModel : ObservableObject
         if (node.Kind == NodeKind.Source && node.FullPath != null)
             FileActivated?.Invoke(node.FullPath);
     }
+
+    /// <summary>请求在指定目录新建源文件（由视图弹输入框）。</summary>
+    public event Action<string>? NewFileRequested;
+
+    /// <summary>请求从项目/文件夹移除某源文件（由视图确认并处理）。</summary>
+    public event Action<TreeNodeViewModel>? RemoveRequested;
+
+    public void RequestNewFile(TreeNodeViewModel parent)
+    {
+        var dir = parent.FullPath;
+        if (dir == null) return;
+        if (!Directory.Exists(dir) && File.Exists(dir))
+            dir = Path.GetDirectoryName(dir);
+        if (dir != null)
+            NewFileRequested?.Invoke(dir);
+    }
+
+    public void RequestRemove(TreeNodeViewModel node)
+    {
+        if (node.Kind == NodeKind.Source && node.FullPath != null)
+            RemoveRequested?.Invoke(node);
+    }
 }
 
 public enum NodeKind { Solution, Project, Folder, Source }
@@ -166,5 +188,30 @@ public partial class TreeNodeViewModel : ObservableObject
         Name = name;
         IsExpandable = isExpandable;
         Kind = kind;
+    }
+
+    /// <summary>是否源文件（可打开）。</summary>
+    public bool IsSource => Kind == NodeKind.Source;
+
+    /// <summary>复制完整路径到剪贴板。</summary>
+    public void CopyFullPath()
+    {
+        if (string.IsNullOrEmpty(FullPath)) return;
+
+        var main = Avalonia.Application.Current?.ApplicationLifetime as
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime;
+        var win = main?.MainWindow is { } w
+            ? Avalonia.Controls.TopLevel.GetTopLevel(w)
+            : null;
+        win?.Clipboard?.SetTextAsync(FullPath);
+    }
+
+    /// <summary>在系统资源管理器中显示。</summary>
+    public void ShowInExplorer()
+    {
+        if (string.IsNullOrEmpty(FullPath)) return;
+        var dir = Directory.Exists(FullPath) ? FullPath : Path.GetDirectoryName(FullPath);
+        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+            System.Diagnostics.Process.Start("explorer.exe", $"\"{dir}\"");
     }
 }

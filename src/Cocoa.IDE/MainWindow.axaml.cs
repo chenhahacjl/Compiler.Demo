@@ -87,7 +87,90 @@ public partial class MainWindow : Window
                 Pane.NavigateTo(tab, line, col);
         };
 
+        // 树右键：新建文件 / 移除
+        ViewModel.SolutionTree.NewFileRequested += dir => NewFileIn(dir);
+        ViewModel.SolutionTree.RemoveRequested += node => RemoveNode(node);
+
         Closing += OnWindowClosing;
+    }
+
+    /// <summary>右键菜单：从 sender.DataContext 取节点（ContextMenu 继承节点 DataContext）。</summary>
+    private static TreeNodeViewModel? CtxNode(object? sender) =>
+        (sender as Avalonia.Controls.MenuItem)?.DataContext as TreeNodeViewModel;
+
+    private void OnCtxOpen(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { IsSource: true, FullPath: not null } node)
+            ViewModel.OpenFile(node.FullPath);
+    }
+
+    private void OnCtxShowInExplorer(object? sender, RoutedEventArgs e)
+    {
+        CtxNode(sender)?.ShowInExplorer();
+    }
+
+    private void OnCtxCopyPath(object? sender, RoutedEventArgs e)
+    {
+        CtxNode(sender)?.CopyFullPath();
+    }
+
+    private void OnCtxProperties(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node)
+            ViewModel.ShowNodeProperties(node);
+    }
+
+    private void OnCtxNewFile(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node)
+            ViewModel.SolutionTree.RequestNewFile(node);
+    }
+
+    private void OnCtxRemove(object? sender, RoutedEventArgs e)
+    {
+        if (CtxNode(sender) is { } node)
+            ViewModel.SolutionTree.RequestRemove(node);
+    }
+
+    /// <summary>在目录下新建源文件（简单对话框输入文件名）。</summary>
+    private async void NewFileIn(string dir)
+    {
+        var name = await ShowTextInputAsync("新建文件", "文件名（.co / .cs）");
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            await ShowTextInputAsync("提示", "名称包含非法字符");
+            return;
+        }
+
+        var path = Path.Combine(dir, name.EndsWith(".co", StringComparison.OrdinalIgnoreCase) ||
+                                       name.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+            ? name : name + ".co");
+        if (File.Exists(path))
+        {
+            await ShowTextInputAsync("提示", "文件已存在");
+            return;
+        }
+
+        File.WriteAllText(path, "");
+        ViewModel.OpenFile(path);
+        ViewModel.SolutionTree.Refresh();
+    }
+
+    /// <summary>从项目移除源文件（确认后删除并刷新树）。</summary>
+    private void RemoveNode(TreeNodeViewModel node)
+    {
+        if (node.FullPath == null || !File.Exists(node.FullPath)) return;
+        File.Delete(node.FullPath);
+        ViewModel.SolutionTree.Refresh();
+    }
+
+    /// <summary>轻量文本输入对话框。</summary>
+    private Task<string?> ShowTextInputAsync(string title, string prompt)
+    {
+        var dialog = new TextInputDialog(title, prompt);
+        return dialog.ShowDialog<string?>(this);
     }
 
     /// <summary>标签被拖出：从主窗口移除，放入新浮动窗口。</summary>
@@ -175,6 +258,43 @@ public partial class MainWindow : Window
         var dialog = new SavePromptWindow(names);
         var result = dialog.ShowDialog<bool?>(this);
         return result;
+    }
+}
+
+public sealed class TextInputDialog : Window
+{
+    private readonly TextBox _input;
+
+    public TextInputDialog(string title, string prompt)
+    {
+        Title = title;
+        Width = 380;
+        MinHeight = 140;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        var root = new StackPanel { Margin = new Avalonia.Thickness(16), Spacing = 12 };
+
+        root.Children.Add(new TextBlock { Text = prompt, TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+
+        _input = new TextBox();
+        root.Children.Add(_input);
+
+        var buttons = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 8,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
+        };
+        var okBtn = new Button { Content = "确定", MinWidth = 80 };
+        okBtn.Click += (_, _) => Close(_input.Text?.Trim());
+        var cancelBtn = new Button { Content = "取消", MinWidth = 80 };
+        cancelBtn.Click += (_, _) => Close();
+        buttons.Children.Add(cancelBtn);
+        buttons.Children.Add(okBtn);
+
+        root.Children.Add(buttons);
+        Content = root;
+
+        _input.Loaded += (_, _) => _input.Focus();
     }
 }
 
