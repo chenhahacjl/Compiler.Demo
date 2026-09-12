@@ -1,9 +1,13 @@
 using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform.Storage;
 using Cocoa.Build;
 using Cocoa.CodeAnalysis;
+using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.CodeAnalysis.Text;
+using Cocoa.CodeGen.Interpreter;
 using Cocoa.IDE.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -23,6 +27,14 @@ public partial class MainViewModel : ObservableObject
     public PropertiesViewModel Properties { get; } = new();
     public BuildService BuildService { get; } = new();
     public DiagnosticService DiagnosticService { get; } = new();
+    public DebuggerService DebuggerService { get; } = new();
+
+    /// <summary>M7 调试面板数据。</summary>
+    public ObservableCollection<LocalVariable> DebugLocals { get; } = new();
+    public ObservableCollection<StackFrame> DebugCallStack { get; } = new();
+
+    /// <summary>调试暂停在 (文件, 行)，供视图打开并高亮。</summary>
+    public event Action<string, int>? DebugPausedAt;
 
     private Window? MainWindow => App.Current?.ApplicationLifetime is
         IClassicDesktopStyleApplicationLifetime d ? d.MainWindow : null;
@@ -45,6 +57,9 @@ public partial class MainViewModel : ObservableObject
             StatusBar.SetBuildResult(success, errors, warnings);
         BuildService.RunFinished += code =>
             StatusBar.StatusText = code == 0 ? "运行结束（退出代码 0）" : $"运行结束（退出代码 {code}）";
+
+        DebuggerService.Paused += OnDebugPaused;
+        DebuggerService.Exited += OnDebugExited;
 
         EditorTabs.Tabs.CollectionChanged += (_, e) =>
         {
@@ -383,7 +398,126 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void Stop() => BuildService.Stop();
+    private void Stop()
+    {
+        BuildService.Stop();
+        if (DebuggerService.IsActive)
+            DebugStop();
+    }
+
+    // ─── M7 调试 ───
+
+    [RelayCommand]
+    private void DebugStart()
+    {
+        // F5 语义：已暂停 → 继续；运行中 → 忽略；否则启动
+        if (DebuggerService.State == DebugExecutionState.Paused)
+        {
+            DebuggerService.Continue();
+            return;
+        }
+        if (DebuggerService.State == DebugExecutionState.Running) return;
+
+        var project = ResolveExecutableProject();
+        if (project == null) return;
+
+        var compilation = BuildDebugCompilation(project);
+        if (compilation == null) return;
+
+        if (compilation.GetDiagnostics().HasErrors())
+        {
+            Output.Clear();
+            Output.AppendLine("error: 存在编译错误，无法启动调试");
+            return;
+        }
+
+        Output.Clear();
+        Output.AppendLine($"开始调试 '{project.Name}'…");
+        StatusBar.StatusText = "调试中";
+        DebuggerService.Start(compilation);
+    }
+
+    [RelayCommand]
+    private void DebugContinue() => DebuggerService.Continue();
+
+    [RelayCommand]
+    private void DebugStepOver() => DebuggerService.StepOver();
+
+    [RelayCommand]
+    private void DebugStepInto() => DebuggerService.StepInto();
+
+    [RelayCommand]
+    private void DebugStepOut() => DebuggerService.StepOut();
+
+    [RelayCommand]
+    private void DebugStop()
+    {
+        DebuggerService.Stop();
+        DebugLocals.Clear();
+        DebugCallStack.Clear();
+        StatusBar.StatusText = "已停止调试";
+    }
+
+    private void OnDebugPaused()
+    {
+        DebugLocals.Clear();
+        foreach (var local in DebuggerService.Locals ?? Enumerable.Empty<LocalVariable>())
+            DebugLocals.Add(local);
+
+        DebugCallStack.Clear();
+        var frames = DebuggerService.CallStack;
+        foreach (var frame in frames)
+            DebugCallStack.Add(frame);
+
+        StatusBar.StatusText = $"调试暂停（{frames.Count} 帧）";
+
+        var top = frames.FirstOrDefault();
+        if (top?.FilePath != null && top.Line > 0)
+            DebugPausedAt?.Invoke(top.FilePath, top.Line);
+    }
+
+    private void OnDebugExited()
+    {
+        StatusBar.StatusText = DebuggerService.Error != null
+            ? $"调试异常：{DebuggerService.Error.Message}"
+            : "调试结束";
+    }
+
+    /// <summary>为调试构建解释器编译（含活动标签未保存内容 + 工程引用）。</summary>
+    private Compilation? BuildDebugCompilation(CocoaProjectFile project)
+    {
+        var files = Glob.Expand(project.SourcePatterns, project.Directory).Files;
+        if (files.Length == 0)
+        {
+            Output.AppendLine("error: 项目没有源文件");
+            return null;
+        }
+
+        var activeTab = EditorTabs.ActiveTab;
+        var trees = new List<SyntaxTree>();
+        foreach (var file in files)
+        {
+            if (activeTab != null && string.Equals(activeTab.FilePath, file, StringComparison.OrdinalIgnoreCase))
+            {
+                var language = activeTab.Dialect == "CSharp" ? Language.CSharp : Language.Cocoa;
+                trees.Add(SyntaxTree.Parse(SourceText.From(activeTab.Content, file), language));
+            }
+            else
+            {
+                try { trees.Add(SyntaxTree.Load(file)); }
+                catch { /* 忽略损坏文件 */ }
+            }
+        }
+
+        var references = project.References
+            .Select(r => Path.IsPathRooted(r) ? r : Path.GetFullPath(Path.Combine(project.Directory, r)))
+            .Where(File.Exists)
+            .ToArray();
+
+        return project.Entry == null
+            ? Compilation.Create(references, trees.ToArray())
+            : Compilation.Create(project.Entry, references, trees.ToArray());
+    }
 
     private CocoaProjectFile? ResolveExecutableProject()
     {

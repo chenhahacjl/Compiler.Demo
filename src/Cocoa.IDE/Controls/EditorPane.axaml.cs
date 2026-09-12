@@ -31,6 +31,9 @@ public partial class EditorPane : UserControl
     /// <summary>请求跳转到某文件的行列（F12 / 错误），供宿主窗口处理（可能在其它窗口打开）。</summary>
     public event Action<GoToTarget>? NavigationRequested;
 
+    /// <summary>用户点击断点边距切换某行断点。</summary>
+    public event Action<int>? BreakpointToggled;
+
     private CompletionWindow? _completionWindow;
 
     private readonly Action<string, ImmutableArray<Diagnostic>> _diagnosticsHandler;
@@ -62,6 +65,9 @@ public partial class EditorPane : UserControl
         // 悬停签名提示
         EditorHost.Editor.TextArea.TextView.PointerHover += OnEditorPointerHover;
         EditorHost.Editor.TextArea.TextView.PointerHoverStopped += OnEditorPointerHoverStopped;
+
+        // 断点边距点击转发
+        EditorHost.BreakpointToggled += line => BreakpointToggled?.Invoke(line);
     }
 
     /// <summary>窗口关闭时调用：退订静态事件，避免已关闭窗口被静态注册表长期引用。</summary>
@@ -108,6 +114,11 @@ public partial class EditorPane : UserControl
         else if (e.Key == Key.F12 && e.KeyModifiers == KeyModifiers.None)
         {
             GoToDefinition();
+            e.Handled = true;
+        }
+        else if (e.Key == Key.F9 && e.KeyModifiers == KeyModifiers.None)
+        {
+            EditorHost.ToggleBreakpointAtCaret();
             e.Handled = true;
         }
     }
@@ -189,6 +200,12 @@ public partial class EditorPane : UserControl
 
     /// <summary>打开文件内查找面板（Ctrl+F）。</summary>
     public void ShowFind() => EditorHost.ShowFind();
+
+    /// <summary>设置当前文件断点行。</summary>
+    public void SetBreakpoints(IEnumerable<int> lines) => EditorHost.SetBreakpoints(lines);
+
+    /// <summary>设置调试暂停行（黄色高亮）。</summary>
+    public void SetCurrentDebugLine(int? line) => EditorHost.SetCurrentDebugLine(line);
 
     /// <summary>保存：内容已在 TextEdited 中连续同步到 tab.Content，这里直接写盘。</summary>
     public void SaveActiveTab()

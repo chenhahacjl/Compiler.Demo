@@ -81,5 +81,37 @@ namespace Cocoa.Tests.CodeAnalysis
             Assert.False(paused);
             Assert.Equal(5, session.ReturnValue);
         }
+
+        [Fact]
+        public void Breakpoint_On_Class_Main_Program()
+        {
+            // IDE 调试路径：Compilation.Create(entry, references, trees)（非脚本）
+            var text =
+                "namespace App\n" +
+                "{\n" +
+                "    public class Program\n" +
+                "    {\n" +
+                "        static function Main()\n" +
+                "        {\n" +
+                "            var a = 1\n" +
+                "            var b = a + 2\n" +
+                "        }\n" +
+                "    }\n" +
+                "}";
+            var tree = SyntaxTree.Parse(SourceText.From(text, "prog.co"), Language.Cocoa);
+            var compilation = Compilation.Create(Array.Empty<string>(), tree);
+
+            var session = DebuggerSession.Create(compilation);
+            session.SetBreakpoint("prog.co", 8);
+
+            session.Start();
+            Assert.True(session.WaitForPause(TimeSpan.FromSeconds(10)), "应在第 8 行断点暂停");
+            Assert.Contains(session.CurrentLocals!, l => l.Name == "a");
+            Assert.Equal(8, session.CallStack[0].Line);
+
+            session.Continue();
+            Assert.True(session.WaitForExit(TimeSpan.FromSeconds(10)));
+            Assert.Null(session.UnhandledException);
+        }
     }
 }

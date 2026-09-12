@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
+using AvaloniaEdit.Editing;
 using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.Highlighting.Xshd;
 using AvaloniaEdit.Rendering;
@@ -23,11 +25,18 @@ public partial class EditorView : UserControl
     private static readonly Dictionary<string, IHighlightingDefinition> HighlightingCache = new();
 
     private readonly SquiggleRenderer _squiggles = new();
+    private readonly DebugMarkerRenderer _debugMarkers;
+    private readonly BreakpointMargin _breakpointMargin;
+    private readonly HashSet<int> _breakpoints = new();
+    private int? _currentDebugLine;
     private bool _isLoading;
     private string? _currentFilePath;
 
     public event EventHandler? TextChanged;
     public event EventHandler? CaretChanged;
+
+    /// <summary>用户在断点边距点击某行（切换断点）。</summary>
+    public event Action<int>? BreakpointToggled;
 
     public EditorView()
     {
@@ -44,7 +53,36 @@ public partial class EditorView : UserControl
         TextEditor.TextArea.Caret.PositionChanged += (_, _) => CaretChanged?.Invoke(this, EventArgs.Empty);
 
         TextEditor.TextArea.TextView.BackgroundRenderers.Add(_squiggles);
+
+        // M7：当前调试行高亮 + 断点边距
+        _debugMarkers = new DebugMarkerRenderer(this);
+        TextEditor.TextArea.TextView.BackgroundRenderers.Add(_debugMarkers);
+        _breakpointMargin = new BreakpointMargin(this);
+        TextEditor.TextArea.LeftMargins.Insert(0, _breakpointMargin);
     }
+
+    public IReadOnlyCollection<int> Breakpoints => _breakpoints;
+    public int? CurrentDebugLine => _currentDebugLine;
+
+    /// <summary>设置当前文件的断点行集（重绘边距）。</summary>
+    public void SetBreakpoints(IEnumerable<int> lines)
+    {
+        _breakpoints.Clear();
+        foreach (var line in lines) _breakpoints.Add(line);
+        _breakpointMargin.Invalidate();
+    }
+
+    /// <summary>设置当前调试暂停行（黄色高亮）；null 清除。</summary>
+    public void SetCurrentDebugLine(int? line)
+    {
+        _currentDebugLine = line;
+        TextEditor.TextArea.TextView.Redraw();
+    }
+
+    /// <summary>F9：在光标行切换断点。</summary>
+    public void ToggleBreakpointAtCaret() => BreakpointToggled?.Invoke(TextEditor.TextArea.Caret.Line);
+
+    internal void RaiseBreakpointToggled(int line) => BreakpointToggled?.Invoke(line);
 
     public string? CurrentFilePath => _currentFilePath;
 
@@ -263,4 +301,78 @@ public sealed class SquiggleRenderer : IBackgroundRenderer
 
     private static bool IsEmptyGeometry(Geometry geometry)
         => geometry.Bounds.Width <= 0 || geometry.Bounds.Height <= 0;
+}
+
+/// <summary>M7：调试暂停行黄色高亮（背景层）。</summary>
+public sealed class DebugMarkerRenderer : IBackgroundRenderer
+{
+    private readonly EditorView _owner;
+    private static readonly IBrush CurrentLineBrush = new SolidColorBrush(Color.Parse("#40FFE066"));
+
+    public DebugMarkerRenderer(EditorView owner) => _owner = owner;
+
+    public KnownLayer Layer => KnownLayer.Background;
+
+    public void Draw(TextView textView, DrawingContext drawingContext)
+    {
+        if (textView.Document == null) return;
+        if (_owner.CurrentDebugLine is not int line) return;
+
+        foreach (var visualLine in textView.VisualLines)
+        {
+            if (visualLine.FirstDocumentLine.LineNumber == line)
+            {
+                drawingContext.FillRectangle(
+                    CurrentLineBrush,
+                    new Rect(0, visualLine.VisualTop, textView.Bounds.Width, visualLine.Height));
+                break;
+            }
+        }
+    }
+}
+
+/// <summary>M7：断点边距（红点绘制 + 点击切换）。</summary>
+public sealed class BreakpointMargin : AbstractMargin
+{
+    private readonly EditorView _owner;
+    private static readonly IBrush BreakpointBrush = new SolidColorBrush(Color.Parse("#E51400"));
+
+    public BreakpointMargin(EditorView owner)
+    {
+        _owner = owner;
+        Cursor = new Cursor(StandardCursorType.Hand);
+    }
+
+    protected override Size MeasureOverride(Size availableSize) => new Size(16, 0);
+
+    public void Invalidate() => InvalidateVisual();
+
+    public override void Render(DrawingContext drawingContext)
+    {
+        var textView = TextView;
+        if (textView?.Document == null) return;
+
+        foreach (var visualLine in textView.VisualLines)
+        {
+            var line = visualLine.FirstDocumentLine.LineNumber;
+            if (_owner.Breakpoints.Contains(line))
+            {
+                var center = new Point(8, visualLine.VisualTop + visualLine.Height / 2);
+                drawingContext.DrawEllipse(BreakpointBrush, null, center, 4.5, 4.5);
+            }
+        }
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        var textView = TextView;
+        if (textView == null) return;
+
+        var y = e.GetPosition(this).Y;
+        var position = textView.GetPositionFloor(new Point(0, y));
+        if (position is { } p)
+            _owner.RaiseBreakpointToggled(p.Line);
+
+        e.Handled = true;
+    }
 }

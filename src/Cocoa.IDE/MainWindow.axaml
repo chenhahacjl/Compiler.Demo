@@ -18,7 +18,11 @@
         <KeyBinding Gesture="Ctrl+W"  Command="{Binding CloseTabCommand}" />
         <KeyBinding Gesture="Ctrl+F"  Command="{Binding FindCommand}" />
         <KeyBinding Gesture="F6"      Command="{Binding BuildCommand}" />
-        <KeyBinding Gesture="F5"      Command="{Binding RunCommand}" />
+        <KeyBinding Gesture="F5"      Command="{Binding DebugStartCommand}" />
+        <KeyBinding Gesture="Ctrl+F5" Command="{Binding RunCommand}" />
+        <KeyBinding Gesture="F10"     Command="{Binding DebugStepOverCommand}" />
+        <KeyBinding Gesture="F11"     Command="{Binding DebugStepIntoCommand}" />
+        <KeyBinding Gesture="Shift+F11" Command="{Binding DebugStepOutCommand}" />
     </Window.KeyBindings>
 
     <DockPanel>
@@ -62,11 +66,18 @@
                 <MenuItem Header="重新生成"         Command="{Binding RebuildCommand}" />
                 <MenuItem Header="清理"             Command="{Binding CleanCommand}" />
                 <Separator />
-                <MenuItem Header="运行(不调试)"      Command="{Binding RunCommand}" InputGesture="F5" />
+                <MenuItem Header="运行(不调试)"      Command="{Binding RunCommand}" InputGesture="Ctrl+F5" />
             </MenuItem>
-            <MenuItem Header="调试(_D)" IsEnabled="False">
-                <MenuItem Header="开始调试" InputGesture="F5" />
-                <MenuItem Header="开始执行(不调试)" InputGesture="Ctrl+F5" />
+            <MenuItem Header="调试(_D)">
+                <MenuItem Header="开始调试" Command="{Binding DebugStartCommand}" InputGesture="F5" />
+                <MenuItem Header="开始执行(不调试)" Command="{Binding RunCommand}" InputGesture="Ctrl+F5" />
+                <Separator />
+                <MenuItem Header="继续" Command="{Binding DebugContinueCommand}" />
+                <MenuItem Header="停止调试" Command="{Binding DebugStopCommand}" />
+                <Separator />
+                <MenuItem Header="逐过程" Command="{Binding DebugStepOverCommand}" InputGesture="F10" />
+                <MenuItem Header="逐语句" Command="{Binding DebugStepIntoCommand}" InputGesture="F11" />
+                <MenuItem Header="跳出" Command="{Binding DebugStepOutCommand}" InputGesture="Shift+F11" />
             </MenuItem>
             <MenuItem Header="工具(_T)" IsEnabled="False">
                 <MenuItem Header="选项" />
@@ -95,8 +106,9 @@
                 <Button Content="📥" ToolTip.Tip="粘贴 (Ctrl+V)" Command="{Binding PasteCommand}" />
                 <Border Width="1" Background="#3F3F46" Margin="4,2" />
                 <Button Content="🔨" ToolTip.Tip="生成 (F6)" Command="{Binding BuildCommand}" />
-                <Button Content="▶"  ToolTip.Tip="运行 (F5)" Command="{Binding RunCommand}" />
-                <Button Content="⏹"  ToolTip.Tip="停止运行" Command="{Binding StopCommand}" />
+                <Button Content="▶"  ToolTip.Tip="运行 (Ctrl+F5)" Command="{Binding RunCommand}" />
+                <Button Content="🐞" ToolTip.Tip="调试 (F5)" Command="{Binding DebugStartCommand}" />
+                <Button Content="⏹"  ToolTip.Tip="停止运行/调试" Command="{Binding StopCommand}" />
             </StackPanel>
         </Border>
 
@@ -291,6 +303,36 @@
                                 </ListBox.ItemTemplate>
                             </ListBox>
                         </DockPanel>
+                    </TabItem>
+                    <TabItem Header="局部变量">
+                        <ListBox ItemsSource="{Binding DebugLocals}"
+                                 Background="Transparent" Foreground="#CCCCCC"
+                                 BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="160,120,*">
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12" Foreground="#9CDCFE" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Type}" FontSize="12" Foreground="#4EC9B0" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Value}" FontSize="12" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </TabItem>
+                    <TabItem Header="调用栈">
+                        <ListBox ItemsSource="{Binding DebugCallStack}"
+                                 Background="Transparent" Foreground="#CCCCCC"
+                                 BorderThickness="0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="200,*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{Binding Function}" FontSize="12" />
+                                        <TextBlock Grid.Column="1" Text="{Binding FilePath}" FontSize="12" Foreground="#999" />
+                                        <TextBlock Grid.Column="2" Text="{Binding Line}" FontSize="12" Foreground="#999" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </TabItem>
                 </TabControl>
             </Border>

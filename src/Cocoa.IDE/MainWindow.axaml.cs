@@ -78,6 +78,22 @@ public partial class MainWindow : Window
             OnActiveTabChanged();
         };
 
+        // M7：断点边距 → 服务；服务断点变化 → 编辑器边距；调试暂停 → 打开并高亮
+        Pane.BreakpointToggled += line =>
+        {
+            var file = ViewModel.EditorTabs.ActiveTab?.FilePath;
+            if (file != null) ViewModel.DebuggerService.ToggleBreakpoint(file, line);
+        };
+        ViewModel.DebuggerService.BreakpointsChanged += RefreshBreakpoints;
+        ViewModel.DebuggerService.Resumed += () => Pane.SetCurrentDebugLine(null);
+        ViewModel.DebuggerService.Exited += () => Pane.SetCurrentDebugLine(null);
+        ViewModel.DebugPausedAt += NavigateDebug;
+        ViewModel.EditorTabs.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(EditorTabsViewModel.ActiveTab))
+                RefreshBreakpoints(ViewModel.EditorTabs.ActiveTab?.FilePath);
+        };
+
         // 错误列表等请求定位：若标签在本窗口则定位
         EditorTabsRegistry.NavigateRequested += (tab, line, col) =>
         {
@@ -191,6 +207,26 @@ public partial class MainWindow : Window
     {
         if (ErrorListBox.SelectedItem is ErrorItemViewModel item)
             ViewModel.Properties.ShowError(item);
+    }
+
+    // ─── M7 调试 UI ───
+
+    private void RefreshBreakpoints(string? file)
+    {
+        Pane.SetBreakpoints(file == null
+            ? Array.Empty<int>()
+            : ViewModel.DebuggerService.GetBreakpoints(file));
+    }
+
+    private void NavigateDebug(string file, int line)
+    {
+        ViewModel.OpenFile(file);
+        var tab = ViewModel.EditorTabs.ActiveTab;
+        if (tab != null && string.Equals(tab.FilePath, file, StringComparison.OrdinalIgnoreCase))
+        {
+            Pane.NavigateTo(tab, line, 1);
+            Pane.SetCurrentDebugLine(line);
+        }
     }
 
     /// <summary>右键菜单：从 sender.DataContext 取节点（ContextMenu 继承节点 DataContext）。</summary>
