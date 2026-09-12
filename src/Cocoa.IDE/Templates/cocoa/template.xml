@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Template Key="cocoa"
           Label="Cocoa Assembly"
-          Description="Cocoa 程序集库：.coa 输出、.co 源码">
+          Description="Cocoa 程序集库：.coa 输出、.co 源码"
+          Order="6">
   <File Source="Class1.co"        Target="{Name}.co" />
   <File Source="Project.coproj"   Target="{Name}.coproj" />
 </Template>

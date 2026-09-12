@@ -28,6 +28,7 @@ public static class Icons
         "console" => (Get(Project), new SolidColorBrush(Color.Parse("#4EC9B0"))),
         "csharp" => (Get(File), new SolidColorBrush(Color.Parse("#9B4F96"))),
         "library" => (Get(Project), new SolidColorBrush(Color.Parse("#DCDCAA"))),
+        "library-cs" => (Get(File), new SolidColorBrush(Color.Parse("#9B4F96"))),
         "cocoa" => (Get(Project), new SolidColorBrush(Color.Parse("#E37933"))),
         "solution" => (Get(Solution), new SolidColorBrush(Color.Parse("#007ACC"))),
         _ => (Get(File), new SolidColorBrush(Color.Parse("#CCCCCC"))),

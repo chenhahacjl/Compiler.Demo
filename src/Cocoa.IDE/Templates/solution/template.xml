@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Template Key="solution"
-          Label="Blank Solution"
+          Label="BlankSolution"
           Description="空白解决方案：仅创建 .cosln（无项目）"
-          Special="Solution">
+          Special="Solution"
+          Order="5">
   <!-- Special=Solution：由 NewProjectService.CreateWithSolution 内联生成 .cosln（无项目），无需 File 映射。 -->
 </Template>

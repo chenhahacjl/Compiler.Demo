@@ -12,7 +12,7 @@ public static class NewProjectService
 {
     public sealed record TemplateOption(string Key, string Label, string Description);
     public sealed record FileMapping(string Source, string Target);
-    public sealed record TemplateSpec(string Key, string Label, string Description, string? Special, IReadOnlyList<FileMapping> Files);
+    public sealed record TemplateSpec(string Key, string Label, string Description, string? Special, IReadOnlyList<FileMapping> Files, int Order = 0);
 
     /// <summary>生成结果：解决方案路径、项目路径（空白解决方案为 null）、全部生成文件。</summary>
     public sealed record NewProjectResult(string SolutionPath, string? ProjectPath, IReadOnlyList<string> CreatedFiles);
@@ -31,7 +31,11 @@ public static class NewProjectService
         lock (_sync)
         {
             if (_specs != null) return _specs;
-            _specs = LoadFromXml() ?? FallbackSpecs();
+            var specs = LoadFromXml() ?? FallbackSpecs();
+            _specs = specs
+                .OrderBy(s => s.Order)
+                .ThenBy(s => s.Key, StringComparer.OrdinalIgnoreCase)
+                .ToList();
             return _specs;
         }
     }
@@ -172,6 +176,9 @@ public static class NewProjectService
                 var key = (string?)el.Attribute("Key");
                 if (string.IsNullOrEmpty(key)) continue;
 
+                var orderText = (string?)el.Attribute("Order");
+                var order = int.TryParse(orderText, out var parsedOrder) ? parsedOrder : 0;
+
                 var files = el.Elements("File")
                     .Select(f => new FileMapping(
                         (string?)f.Attribute("Source") ?? "",
@@ -184,7 +191,8 @@ public static class NewProjectService
                     (string?)el.Attribute("Label") ?? key,
                     (string?)el.Attribute("Description") ?? key,
                     (string?)el.Attribute("Special"),
-                    files));
+                    files,
+                    order));
             }
 
             return specs.Count > 0 ? specs : null;
@@ -199,27 +207,32 @@ public static class NewProjectService
 
     private static IReadOnlyList<TemplateSpec> FallbackSpecs() => new[]
     {
-        new TemplateSpec("console", "Console (Cocoa Language)", "控制台应用：可执行、.co 源码、入口 main.co", null, new[]
-        {
-            new FileMapping("main.co", "main.co"),
-            new FileMapping("Project.coproj", "{Name}.coproj"),
-        }),
-        new TemplateSpec("csharp", "Console (C# Language)", "控制台应用：C# 方言（.cs）可执行", null, new[]
-        {
-            new FileMapping("Class1.cs", "{Name}.cs"),
-            new FileMapping("Project.coproj", "{Name}.coproj"),
-        }),
-        new TemplateSpec("library", "Class Library", ".NET 类库：dll、.co 源码", null, new[]
+        new TemplateSpec("library", "Library Cocoa", ".NET 类库：.co 源码、dll 输出", null, new[]
         {
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }),
+        }, Order: 1),
+        new TemplateSpec("library-cs", "Library C#", ".NET 类库：.cs 源码（C# 方言）、dll 输出", null, new[]
+        {
+            new FileMapping("Class1.cs", "{Name}.cs"),
+            new FileMapping("Project.coproj", "{Name}.coproj"),
+        }, Order: 2),
+        new TemplateSpec("console", "Console Cocoa", "控制台应用：.co 源码、可执行、入口 main.co", null, new[]
+        {
+            new FileMapping("main.co", "main.co"),
+            new FileMapping("Project.coproj", "{Name}.coproj"),
+        }, Order: 3),
+        new TemplateSpec("csharp", "Console C#", "控制台应用：.cs 源码（C# 方言）、可执行", null, new[]
+        {
+            new FileMapping("Class1.cs", "{Name}.cs"),
+            new FileMapping("Project.coproj", "{Name}.coproj"),
+        }, Order: 4),
+        new TemplateSpec("solution", "BlankSolution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>(), Order: 5),
         new TemplateSpec("cocoa", "Cocoa Assembly", "Cocoa 程序集库：.coa 输出、.co 源码", null, new[]
         {
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
-        }),
-        new TemplateSpec("solution", "Blank Solution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>()),
+        }, Order: 6),
     };
 
     private static TemplateSpec FallbackSpec(string template)
@@ -266,6 +279,42 @@ public static class NewProjectService
     function Greet(name: string): string
     {{
         return ""Hello, "" + name
+    }}
+}}
+");
+            case "library-cs":
+                return (
+                    $@"<Project Version=""1"">
+  <PropertyGroup Label=""Language"">
+    <Language>CSharp</Language>
+  </PropertyGroup>
+  <PropertyGroup Label=""Assembly"">
+    <AssemblyName>{name}</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup Label=""Target"">
+    <Platform>x64</Platform>
+    <TargetFramework>{tfm}</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup Label=""Output"">
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Label=""Build"">
+    <OutputPath>out</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Source Include=""*.cs"" />
+  </ItemGroup>
+</Project>
+",
+                    name + ".cs",
+                    $@"// C# 方言（.cs 严格子集）：类型前置、分号必选
+namespace {name};
+
+public class Greeter
+{{
+    public string Greet(string name)
+    {{
+        return ""Hello, "" + name + ""!"";
     }}
 }}
 ");
