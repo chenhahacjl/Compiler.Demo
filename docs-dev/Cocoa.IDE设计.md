@@ -208,7 +208,7 @@ MainWindow 启动
 | **M6a UI 接线** | 空壳菜单（退出/视图/项目/生成清理/关于）、状态栏解决方案名、Ctrl+F 查找、错误过滤 UI、输出自动滚动 | AvaloniaEdit SearchPanel | ✅ 已落地 |
 | **M6b F12 定位与打磨** | 声明名字 token 精确定位；空补全不弹；着色扩展名判定；大文件只读/编码 | `Language.GetDeclarationNameLocation` | ✅ 已落地（C3 待编译器侧） |
 | **M6c 解决方案资源管理器** | **VS 风格**：矢量图标、嵌套文件夹、引用/依赖项节点、工具栏（刷新/折叠全部/同步活动文档/显示所有文件/属性）、按种类右键、引用可编辑 | `CocoaProjectFile` + IDE `ProjectFileService` | ✅ 已落地（§6.4） |
-| **M7 解释器调试器** | 断点/继续/单步/步入/步出；局部变量+监视；调用栈窗口；黄色当前行 | `CodeGen.Interpreter` 新增 public `DebuggerSession`（§11.2） | 📋 规划 |
+| **M7 解释器调试器** | 断点/继续/单步/步入/步出；局部变量+监视；调用栈窗口；黄色当前行 | `CodeGen.Interpreter` 新增 public `DebuggerSession`（§11.2） | 🔧 编译器侧已落地；IDE 调试 UI 待做 |
 
 ### 5.2 增强层（P1/P2/P3）
 
@@ -556,6 +556,8 @@ F5 → Process.Start(产物 exe)
 
 ### 11.2 编译器侧改造：`Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`
 
+> 状态（2026-09-12）：**编译器侧已落地**（提交 `M7(编译器侧)`）——`Evaluator` 增调用帧栈（`DebugFrame`）与公共语句边界钩子（序列点位置 + `isSequencePoint` 标志，生产路径为 null 零开销）；新增 public `DebuggerSession`（断点/继续/步过/步入/步出/停止、`State`/`CallStack`/`CurrentLocals`/`ReturnValue`、`BreakAtEntry`）；`Cocoa.Tests` 新增 `DebuggerSessionTests` 3 例；全量 **53476** 通过、0 失败。**IDE 调试 UI（断点边距/F10/F11/局部变量/调用栈/黄色行）待做**。
+
 > `Evaluator` 是 internal，无法从 IDE 直接触碰；但 `DebuggerSession` 与 `Evaluator` 同程序集即可见 internal，故**无需扩 `InternalsVisibleTo`**。
 
 ```csharp
@@ -643,7 +645,7 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 | 5 | M6c | VS 风格解决方案资源管理器 | `M6c：VS 风格解决方案资源管理器(矢量图标/嵌套文件夹/引用节点/工具栏/同步活动文档)` | ✅ |
 | 6 | M6a | UI 接线（菜单/状态栏/查找/过滤） | `M6a：补齐菜单/状态栏/查找/过滤等 UI 接线` | ✅ |
 | 7 | M6b | 精确 F12 定位与打磨项 | `M6b：精确 F12 定位与打磨项` | ✅（C3 待编译器） |
-| 8 | M7 | 解释器调试器（触碰编译器，避开并行里程碑） | `M7：解释器调试器` | 📋 未开工 |
+| 8 | M7 | 解释器调试器（触碰编译器，避开并行里程碑） | `M7：解释器调试器` | 🔧 编译器侧✅ / IDE UI 待做 |
 
 > 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。
 
