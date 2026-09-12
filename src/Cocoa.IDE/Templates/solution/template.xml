@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Template Key="solution"
-          Label="Solution"
-          Description="解决方案：含一个 console 子项目"
+          Label="Blank Solution"
+          Description="空白解决方案：仅创建 .cosln（无项目）"
           Special="Solution">
-  <File Source="Project.cosln"    Target="{Name}.cosln" />
+  <!-- Special=Solution：由 NewProjectService.CreateWithSolution 内联生成 .cosln（无项目），无需 File 映射。 -->
 </Template>

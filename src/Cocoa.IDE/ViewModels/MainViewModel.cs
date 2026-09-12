@@ -277,11 +277,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void SelectAll() => EditActionRequested?.Invoke("SelectAll");
 
-    /// <summary>新建项目向导：弹对话框 → 生成工程 → 刷新树。需要窗口宿主，由视图触发。</summary>
-    public async Task<string[]?> ShowNewProjectDialog(Window owner)
+    /// <summary>新建项目向导：弹对话框 → 生成工程 → 加载返回的解决方案。</summary>
+    public async Task<NewProjectService.NewProjectResult?> ShowNewProjectDialog(Window owner)
     {
         var dialog = new NewProjectDialog();
-        return await dialog.ShowDialog<string[]?>(owner);
+        return await dialog.ShowDialog<NewProjectService.NewProjectResult?>(owner);
     }
 
     [RelayCommand]
@@ -289,34 +289,14 @@ public partial class MainViewModel : ObservableObject
     {
         if (MainWindow == null) return;
 
-        var created = await ShowNewProjectDialog(MainWindow);
-        if (created == null || created.Length == 0) return;
+        var result = await ShowNewProjectDialog(MainWindow);
+        if (result == null) return;
 
-        // 若已打开解决方案/文件夹，刷新树；否则加载新生成的工程
-        var coproj = created.FirstOrDefault(p => p.EndsWith(".coproj", StringComparison.OrdinalIgnoreCase));
-        var cosln = created.FirstOrDefault(p => p.EndsWith(".cosln", StringComparison.OrdinalIgnoreCase));
-
-        if (cosln != null)
-        {
-            SolutionTree.LoadPath(cosln);
-            StatusBar.SolutionName = SolutionTree.SolutionName;
-        }
-        else if (coproj != null)
-        {
-            SolutionTree.Refresh();
-            if (!SolutionTree.HasSolution)
-            {
-                SolutionTree.LoadPath(coproj);
-                StatusBar.SolutionName = SolutionTree.SolutionName;
-            }
-        }
-        else
-        {
-            SolutionTree.Refresh();
-        }
+        SolutionTree.LoadPath(result.SolutionPath);
+        StatusBar.SolutionName = SolutionTree.SolutionName;
 
         Output.Clear();
-        Output.AppendLine($"已创建：{string.Join(" / ", created.Select(Path.GetFileName))}");
+        Output.AppendLine($"已创建：{string.Join(" / ", result.CreatedFiles.Select(Path.GetFileName))}");
         StatusBar.StatusText = "新建项目完成";
     }
 

@@ -1,159 +1,368 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
-using Avalonia.Platform.Storage;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Cocoa.IDE.Services;
 
 namespace Cocoa.IDE;
 
-/// <summary>新建项目向导对话框：模板选择 + 名称 + 输出目录。Close(string[]) 返回生成的文件路径。</summary>
+/// <summary>VS2022 两步式新建项目向导：步骤 1 选模板，步骤 2 配置名称/位置/解决方案/目标框架。
+/// 统一生成「解决方案 + 项目子目录」；空白解决方案模板只生成 .cosln。
+/// Close(NewProjectResult) 返回生成结果。</summary>
 public sealed class NewProjectDialog : Window
 {
-    private readonly ComboBox _templateBox;
-    private readonly TextBox _nameBox;
-    private readonly TextBox _dirBox;
-    private readonly TextBlock _descText;
+    private static readonly string[] TargetFrameworks =
+        { "net48", "net9.0", "net8.0", "net6.0", "netcoreapp3.1" };
 
+    private readonly IReadOnlyList<NewProjectService.TemplateOption> _allOptions;
+
+    private readonly StackPanel _step1Panel;
+    private readonly Grid _step2Panel;
+    private readonly TextBlock _headerText;
+
+    private readonly TextBox _searchBox;
+    private readonly ListBox _templateList;
+    private readonly PathIcon _detailIcon;
+    private readonly TextBlock _detailName;
+    private readonly TextBlock _detailDesc;
+
+    private readonly TextBox _nameBox;
+    private readonly TextBox _locationBox;
+    private readonly TextBox _solutionBox;
+    private readonly CheckBox _sameDirBox;
+    private readonly ComboBox _tfmBox;
+
+    private readonly TextBlock _errorText;
+    private readonly Button _backBtn;
+    private readonly Button _nextBtn;
+    private readonly Button _createBtn;
+
+    private NewProjectService.TemplateOption? _selected;
+    private bool _solutionEdited;
+    private bool _syncingSolution;
     public NewProjectDialog()
     {
-        Title = "新建项目";
-        Width = 520;
-        MinHeight = 340;
+        Title = "创建新项目";
+        Width = 760;
+        Height = 560;
+        MinWidth = 640;
+        MinHeight = 460;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        Background = new SolidColorBrush(Color.Parse("#1E1E1E"));
 
-        _templateBox = new ComboBox
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            Margin = new Thickness(0, 4, 0, 0),
-        };
-        foreach (var option in NewProjectService.TemplateOptions)
-            _templateBox.Items.Add(option.Label);
-        _templateBox.SelectedIndex = 0;
-        _templateBox.SelectionChanged += (_, _) => UpdateDescription();
+        _allOptions = NewProjectService.TemplateOptions;
 
-        _descText = new TextBlock
+        // ── 步骤 1：模板选择 ──
+        _searchBox = new TextBox { Watermark = "搜索模板", Margin = new Thickness(0, 0, 0, 8) };
+        _searchBox.TextChanged += (_, _) => FilterTemplates();
+
+        _templateList = new ListBox { Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
+        _templateList.SelectionChanged += (_, _) => OnTemplateSelected();
+
+        _detailIcon = new PathIcon { Width = 40, Height = 40, Margin = new Thickness(0, 0, 0, 10) };
+        _detailName = new TextBlock { FontSize = 16, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap };
+        _detailDesc = new TextBlock
         {
+            Margin = new Thickness(0, 6, 0, 0),
+            Foreground = new SolidColorBrush(Color.Parse("#AAAAAA")),
             TextWrapping = TextWrapping.Wrap,
-            Foreground = Brushes.Gray,
-            Margin = new Thickness(0, 2, 0, 0),
         };
 
-        _nameBox = new TextBox
+        var detailPanel = new StackPanel
         {
-            Margin = new Thickness(0, 4, 0, 0),
+            Margin = new Thickness(16, 0, 0, 0),
+            Children = { _detailIcon, _detailName, _detailDesc },
         };
-        _nameBox.TextChanged += (_, _) => UpdateDescription();
+        var step1Grid = new Grid { ColumnDefinitions = new ColumnDefinitions("3*,2*") };
+        Grid.SetColumn(_templateList, 0);
+        Grid.SetColumn(detailPanel, 1);
+        step1Grid.Children.Add(_templateList);
+        step1Grid.Children.Add(detailPanel);
 
-        _dirBox = new TextBox
+        _step1Panel = new StackPanel { Children = { _searchBox, step1Grid } };
+
+        // ── 步骤 2：配置 ──
+        _nameBox = new TextBox();
+        _nameBox.TextChanged += (_, _) => SyncSolutionName();
+
+        _locationBox = new TextBox
         {
-            Margin = new Thickness(0, 4, 0, 0),
-            Text = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "CocoaProjects"),
+            Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "CocoaProjects"),
         };
-
-        var browseBtn = new Button { Content = "浏览…", Margin = new Thickness(4, 0, 0, 0) };
+        var browseBtn = new Button { Content = "浏览…", Margin = new Thickness(6, 0, 0, 0) };
         browseBtn.Click += async (_, _) =>
         {
-            var folder = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
-                Title = "选择输出目录",
+                Title = "选择位置",
                 AllowMultiple = false,
             });
-            if (folder.Count > 0)
-                _dirBox.Text = folder[0].TryGetLocalPath() ?? _dirBox.Text;
+            if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } picked)
+                _locationBox.Text = picked;
+        };
+        var locationRow = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        Grid.SetColumn(_locationBox, 0);
+        Grid.SetColumn(browseBtn, 1);
+        locationRow.Children.Add(_locationBox);
+        locationRow.Children.Add(browseBtn);
+
+        _solutionBox = new TextBox();
+        _solutionBox.TextChanged += (_, _) =>
+        {
+            if (!_syncingSolution) _solutionEdited = true;
         };
 
-        var dirRow = new Grid { ColumnDefinitions = new("*,Auto"), Margin = new Thickness(0, 4, 0, 0) };
-        Grid.SetColumn(_dirBox, 0);
-        Grid.SetColumn(browseBtn, 1);
-        dirRow.Children.Add(_dirBox);
-        dirRow.Children.Add(browseBtn);
+        _sameDirBox = new CheckBox { Content = "将解决方案和项目放在同一目录中" };
 
-        var createBtn = new Button { Content = "创建", MinWidth = 90, IsDefault = true };
-        createBtn.Click += async (_, _) => await CreateAsync();
+        _tfmBox = new ComboBox { HorizontalAlignment = HorizontalAlignment.Left, MinWidth = 160 };
+        foreach (var tfm in TargetFrameworks) _tfmBox.Items.Add(tfm);
+        _tfmBox.SelectedIndex = 0;
+
+        _step2Panel = BuildForm(locationRow);
+        _step2Panel.IsVisible = false;
+
+        // ── 页脚 ──
+        _errorText = new TextBlock
+        {
+            Foreground = new SolidColorBrush(Color.Parse("#F48771")),
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center,
+            MaxWidth = 420,
+        };
+        _backBtn = new Button { Content = "上一步", MinWidth = 90, IsVisible = false };
+        _backBtn.Click += (_, _) => SetStep(0);
+        _nextBtn = new Button { Content = "下一步", MinWidth = 90 };
+        _nextBtn.Click += (_, _) => SetStep(1);
+        _createBtn = new Button { Content = "创建", MinWidth = 90, IsDefault = true, IsVisible = false };
+        _createBtn.Click += (_, _) => Create();
         var cancelBtn = new Button { Content = "取消", MinWidth = 90 };
         cancelBtn.Click += (_, _) => Close();
 
-        var buttons = new StackPanel
+        var footerButtons = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             Spacing = 8,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 16, 0, 0),
+            Children = { _backBtn, _nextBtn, _createBtn, cancelBtn },
         };
-        buttons.Children.Add(cancelBtn);
-        buttons.Children.Add(createBtn);
+        var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(0, 16, 0, 0) };
+        Grid.SetColumn(_errorText, 0);
+        Grid.SetColumn(footerButtons, 1);
+        footer.Children.Add(_errorText);
+        footer.Children.Add(footerButtons);
 
-        var form = new StackPanel
+        _headerText = new TextBlock { Text = "创建新项目", FontSize = 18, FontWeight = FontWeight.SemiBold, Margin = new Thickness(0, 0, 0, 12) };
+
+        var root = new Grid
         {
-            Margin = new Thickness(16),
-            Spacing = 4,
+            Margin = new Thickness(20),
+            RowDefinitions = new RowDefinitions("Auto,*,Auto"),
         };
-        form.Children.Add(new TextBlock { Text = "模板" });
-        form.Children.Add(_templateBox);
-        form.Children.Add(_descText);
-        form.Children.Add(new TextBlock { Text = "名称", Margin = new Thickness(0, 8, 0, 0) });
-        form.Children.Add(_nameBox);
-        form.Children.Add(new TextBlock { Text = "输出目录", Margin = new Thickness(0, 8, 0, 0) });
-        form.Children.Add(dirRow);
-        form.Children.Add(buttons);
+        Grid.SetRow(_headerText, 0);
+        Grid.SetRow(_step1Panel, 1);
+        Grid.SetRow(_step2Panel, 1);
+        Grid.SetRow(footer, 2);
+        root.Children.Add(_headerText);
+        root.Children.Add(_step1Panel);
+        root.Children.Add(_step2Panel);
+        root.Children.Add(footer);
 
-        Content = new ScrollViewer { Content = form };
+        Content = root;
 
-        UpdateDescription();
+        FilterTemplates();
+        if (_templateList.ItemCount > 0)
+            _templateList.SelectedIndex = 0;
     }
 
-    private void UpdateDescription()
+    private Grid BuildForm(Grid locationRow)
     {
-        var t = SelectedTemplate;
-        _descText.Text = NewProjectService.Describe(t);
-        if (string.IsNullOrWhiteSpace(_nameBox.Text) && !string.IsNullOrEmpty(t))
-            _nameBox.Text = t switch
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("120,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto"),
+        };
+
+        void AddRow(int row, string label, Control control)
+        {
+            var text = new TextBlock
             {
-                "csharp" => "MyApp",
+                Text = label,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 8, 0),
+            };
+            Grid.SetRow(text, row);
+            Grid.SetColumn(text, 0);
+            Grid.SetRow(control, row);
+            Grid.SetColumn(control, 1);
+            control.Margin = new Thickness(0, 0, 0, 8);
+            grid.Children.Add(text);
+            grid.Children.Add(control);
+        }
+
+        AddRow(0, "项目名称", _nameBox);
+        AddRow(1, "位置", locationRow);
+        AddRow(2, "解决方案名称", _solutionBox);
+        AddRow(3, "目标框架", _tfmBox);
+
+        Grid.SetRow(_sameDirBox, 4);
+        Grid.SetColumn(_sameDirBox, 1);
+        _sameDirBox.Margin = new Thickness(0, 0, 0, 8);
+        grid.Children.Add(_sameDirBox);
+
+        return grid;
+    }
+
+    private void SetStep(int step)
+    {
+        SetError(null);
+        if (step == 1 && _selected == null)
+        {
+            SetError("请先选择模板");
+            return;
+        }
+
+        var onConfig = step == 1;
+        _step1Panel.IsVisible = !onConfig;
+        _step2Panel.IsVisible = onConfig;
+        _backBtn.IsVisible = onConfig;
+        _createBtn.IsVisible = onConfig;
+        _nextBtn.IsVisible = !onConfig;
+        _headerText.Text = onConfig ? "配置新项目" : "创建新项目";
+
+        if (onConfig && string.IsNullOrWhiteSpace(_nameBox.Text))
+        {
+            _nameBox.Text = _selected!.Key switch
+            {
                 "solution" => "MySolution",
                 _ => "MyApp",
             };
+        }
     }
 
-    private string SelectedTemplate =>
-        NewProjectService.KeyByLabel(_templateBox.SelectedItem?.ToString() ?? "");
+    private void SetError(string? message) => _errorText.Text = message ?? "";
 
-    private async Task CreateAsync()
+    private void FilterTemplates()
     {
-        var template = SelectedTemplate;
-        var rawName = _nameBox.Text?.Trim() ?? "";
-        var dir = _dirBox.Text?.Trim() ?? "";
+        var query = _searchBox.Text?.Trim() ?? "";
+        var filtered = _allOptions
+            .Where(o => query.Length == 0
+                        || o.Label.Contains(query, StringComparison.OrdinalIgnoreCase)
+                        || o.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
-        if (rawName.Length == 0)
+        var previousKey = _selected?.Key;
+        _templateList.Items.Clear();
+        foreach (var option in filtered)
         {
-            _descText.Text = "请输入项目名称";
+            var (geometry, brush) = Icons.ForTemplate(option.Key);
+            var icon = new PathIcon { Data = geometry, Foreground = brush, Width = 18, Height = 18 };
+            var texts = new StackPanel { Margin = new Thickness(8, 0, 0, 0) };
+            texts.Children.Add(new TextBlock { Text = option.Label });
+            texts.Children.Add(new TextBlock
+            {
+                Text = option.Description,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.Parse("#999999")),
+                TextWrapping = TextWrapping.Wrap,
+            });
+            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Children = { icon, texts } };
+            _templateList.Items.Add(new ListBoxItem { Content = row, Tag = option });
+        }
+
+        var target = previousKey == null
+            ? 0
+            : filtered.FindIndex(o => o.Key == previousKey);
+        if (_templateList.ItemCount > 0)
+            _templateList.SelectedIndex = target >= 0 ? target : 0;
+        else
+        {
+            _selected = null;
+            UpdateDetails();
+        }
+    }
+
+    private void OnTemplateSelected()
+    {
+        if (_templateList.SelectedItem is ListBoxItem { Tag: NewProjectService.TemplateOption option })
+            _selected = option;
+
+        UpdateDetails();
+    }
+
+    private void UpdateDetails()
+    {
+        if (_selected == null)
+        {
+            _detailIcon.Data = null;
+            _detailName.Text = "";
+            _detailDesc.Text = "";
             return;
         }
-        if (rawName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+
+        var (geometry, brush) = Icons.ForTemplate(_selected.Key);
+        _detailIcon.Data = geometry;
+        _detailIcon.Foreground = brush;
+        _detailName.Text = _selected.Label;
+        _detailDesc.Text = _selected.Description;
+    }
+
+    private void SyncSolutionName()
+    {
+        if (_solutionEdited) return;
+        _syncingSolution = true;
+        _solutionBox.Text = _nameBox.Text?.Trim() ?? "";
+        _syncingSolution = false;
+    }
+
+    private void Create()
+    {
+        if (_selected == null)
         {
-            _descText.Text = "名称包含非法字符";
-            return;
-        }
-        if (dir.Length == 0 || !Directory.Exists(dir))
-        {
-            _descText.Text = "输出目录不存在";
+            SetError("请先选择模板");
             return;
         }
 
-        // 驼峰命名规范化：my-app / my app → MyApp
-        var name = NewProjectService.ToPascalCase(rawName);
+        var projectName = _nameBox.Text?.Trim() ?? "";
+        var location = _locationBox.Text?.Trim() ?? "";
+        var solutionName = _solutionBox.Text?.Trim() ?? "";
 
-        var targetDir = Path.Combine(dir, name);
+        if (projectName.Length == 0)
+        {
+            SetError("请输入项目名称");
+            return;
+        }
+        if (projectName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            SetError("项目名称包含非法字符");
+            return;
+        }
+        if (solutionName.Length == 0)
+        {
+            SetError("请输入解决方案名称");
+            return;
+        }
+        if (solutionName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            SetError("解决方案名称包含非法字符");
+            return;
+        }
+        if (location.Length == 0)
+        {
+            SetError("请选择位置");
+            return;
+        }
+
         try
         {
-            var created = NewProjectService.Create(template, name, targetDir);
-            Close(created.ToArray());
+            var tfm = _tfmBox.SelectedItem?.ToString();
+            var result = NewProjectService.CreateWithSolution(
+                _selected.Key, projectName, solutionName, location, _sameDirBox.IsChecked == true, tfm);
+            Close(result);
         }
         catch (Exception ex)
         {
-            _descText.Text = $"创建失败：{ex.Message}";
+            SetError($"创建失败：{ex.Message}");
         }
     }
 }

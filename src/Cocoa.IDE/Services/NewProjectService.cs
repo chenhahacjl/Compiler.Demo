@@ -4,14 +4,18 @@ using System.Xml.Linq;
 
 namespace Cocoa.IDE.Services;
 
-/// <summary>新建项目向导的服务端：模板规则由 <c>Templates/templates.xml</c> 定义
-/// （VS 风格，可编辑新增模板/改映射），C# 从 XML 加载；缺失时回退到内嵌默认。
-/// 文件内容占位符：{{Name}}（项目驼峰名）、{{Tfm}}（TargetFramework，默认 net48）。</summary>
+/// <summary>新建项目向导的服务端：模板规则由 <c>Templates/&lt;key&gt;/template.xml</c> 定义
+/// （VS .vstemplate 风格，每个模板一个 XML，可编辑新增），C# 从各子目录加载；缺失时回退到内嵌默认。
+/// 文件内容占位符：{{Name}}（项目驼峰名）、{{Tfm}}（TargetFramework，默认 net48）；
+/// 目标文件名支持 {Name}/{Tfm} 单花括号写法。</summary>
 public static class NewProjectService
 {
     public sealed record TemplateOption(string Key, string Label, string Description);
     public sealed record FileMapping(string Source, string Target);
     public sealed record TemplateSpec(string Key, string Label, string Description, string? Special, IReadOnlyList<FileMapping> Files);
+
+    /// <summary>生成结果：解决方案路径、项目路径（空白解决方案为 null）、全部生成文件。</summary>
+    public sealed record NewProjectResult(string SolutionPath, string? ProjectPath, IReadOnlyList<string> CreatedFiles);
 
     private static readonly object _sync = new();
     private static IReadOnlyList<TemplateSpec>? _specs;
@@ -59,33 +63,39 @@ public static class NewProjectService
         return joined.Length > 0 ? joined : name;
     }
 
-    /// <summary>在 targetDir 下生成模板工程。返回生成的文件路径列表。</summary>
-    public static IReadOnlyList<string> Create(string template, string name, string targetDir, string? dotnetRuntime = null)
+    /// <summary>VS 风格生成：在 <paramref name="location"/> 下创建「解决方案目录 + 项目」。
+    /// 默认布局 <c>&lt;location&gt;\&lt;solutionName&gt;\&lt;solutionName&gt;.cosln</c> +
+    /// <c>&lt;location&gt;\&lt;solutionName&gt;\&lt;projectName&gt;\&lt;projectName&gt;.coproj</c>；
+    /// <paramref name="sameDirectory"/> 为 true 时项目与解决方案同层。空白解决方案（Special=Solution）只生成 .cosln。</summary>
+    public static NewProjectResult CreateWithSolution(
+        string template, string projectName, string solutionName,
+        string location, bool sameDirectory, string? dotnetRuntime = null)
     {
-        Directory.CreateDirectory(targetDir);
+        var projectPascal = ToPascalCase(projectName);
+        var solutionPascal = ToPascalCase(solutionName);
+        var solutionDir = Path.Combine(location, solutionPascal);
+        Directory.CreateDirectory(solutionDir);
 
         var spec = LoadSpecs().FirstOrDefault(s => s.Key == template) ?? FallbackSpec(template);
-        if (spec.Special == "Solution")
-            return CreateSolution(spec, name, targetDir, dotnetRuntime);
-
-        return CreateProject(spec, name, targetDir, dotnetRuntime);
-    }
-
-    private static IReadOnlyList<string> CreateSolution(TemplateSpec spec, string name, string targetDir, string? dotnetRuntime)
-    {
-        var pascal = ToPascalCase(name);
-        var projectDir = Path.Combine(targetDir, pascal);
-        var solutionPath = Path.Combine(targetDir, pascal + ".cosln");
-
         var created = new List<string>();
-        created.AddRange(CreateProject(LoadSpecs().First(s => s.Key == "console"), pascal, projectDir, dotnetRuntime));
+        string? projectPath = null;
 
-        if (!File.Exists(solutionPath))
+        if (spec.Special != "Solution")
         {
-            File.WriteAllText(solutionPath, RenderFromSpec(spec, "Project.cosln", pascal, dotnetRuntime));
+            var projectDir = sameDirectory ? solutionDir : Path.Combine(solutionDir, projectPascal);
+            Directory.CreateDirectory(projectDir);
+            created.AddRange(CreateProject(spec, projectPascal, projectDir, dotnetRuntime));
+            projectPath = Path.Combine(projectDir, projectPascal + ".coproj");
         }
-        created.Add(solutionPath);
-        return created;
+
+        var solutionPath = Path.Combine(solutionDir, solutionPascal + ".cosln");
+        var include = projectPath == null
+            ? ""
+            : $"  <Project Include=\"{Path.GetRelativePath(solutionDir, projectPath).Replace('\\', '/')}\" />\n";
+        File.WriteAllText(solutionPath, $"<Solution Version=\"1\">\n{include}</Solution>\n");
+        created.Insert(0, solutionPath);
+
+        return new NewProjectResult(solutionPath, projectPath, created);
     }
 
     private static IReadOnlyList<string> CreateProject(TemplateSpec spec, string name, string targetDir, string? dotnetRuntime)
@@ -131,19 +141,14 @@ public static class NewProjectService
         return created;
     }
 
-    private static string RenderFromSpec(TemplateSpec spec, string sourceName, string name, string? dotnetRuntime)
-    {
-        var sourcePath = Path.Combine(TemplatesRoot, spec.Key, sourceName);
-        if (File.Exists(sourcePath))
-            return ReplaceTokens(File.ReadAllText(sourcePath), name, dotnetRuntime);
-        return ReplaceTokens(sourceName, name, dotnetRuntime);
-    }
-
     private static string ReplaceTokens(string text, string name, string? dotnetRuntime)
     {
         var pascal = ToPascalCase(name);
         var tfm = dotnetRuntime ?? "net48";
-        return text.Replace("{{Name}}", pascal).Replace("{{Tfm}}", tfm);
+        // 内容用双花括号 {{Name}}；文件名映射用单花括号 {Name}（见 template.xml Target）
+        return text
+            .Replace("{{Name}}", pascal).Replace("{{Tfm}}", tfm)
+            .Replace("{Name}", pascal).Replace("{Tfm}", tfm);
     }
 
     // ─────────── XML 加载：每个模板目录一个 template.xml（VS .vstemplate 风格） ───────────
@@ -214,10 +219,7 @@ public static class NewProjectService
             new FileMapping("Class1.co", "{Name}.co"),
             new FileMapping("Project.coproj", "{Name}.coproj"),
         }),
-        new TemplateSpec("solution", "Solution", "解决方案：含一个 console 子项目", "Solution", new[]
-        {
-            new FileMapping("Project.cosln", "{Name}.cosln"),
-        }),
+        new TemplateSpec("solution", "Blank Solution", "空白解决方案：仅创建 .cosln（无项目）", "Solution", Array.Empty<FileMapping>()),
     };
 
     private static TemplateSpec FallbackSpec(string template)

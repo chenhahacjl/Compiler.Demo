@@ -1,3 +1,0 @@
-<Solution Version="1">
-  <Project Include="{{Name}}/{{Name}}.coproj" />
-</Solution>
