@@ -42,6 +42,7 @@ public partial class MainWindow : Window
                 case "Copy": Pane.EditCopy(); break;
                 case "Paste": Pane.EditPaste(); break;
                 case "SelectAll": Pane.EditSelectAll(); break;
+                case "Find": Pane.ShowFind(); break;
             }
         };
 
@@ -88,7 +89,108 @@ public partial class MainWindow : Window
         ViewModel.SolutionTree.NewFileRequested += dir => NewFileIn(dir);
         ViewModel.SolutionTree.RemoveRequested += node => RemoveNode(node);
 
+        // 输出自动滚动到底部
+        ViewModel.Output.Lines.CollectionChanged += (_, _) =>
+        {
+            if (ViewModel.Output.IsAutoScroll && OutputList.ItemCount > 0)
+                OutputList.ScrollIntoView(OutputList.ItemCount - 1);
+        };
+
         Closing += OnWindowClosing;
+    }
+
+    // ─── 菜单/工具栏：退出、视图显隐、项目、帮助 ───
+
+    private void OnExitClick(object? sender, RoutedEventArgs e) => Close();
+
+    private void OnToggleExplorer(object? sender, RoutedEventArgs e)
+    {
+        var visible = ViewExplorerItem.IsChecked == true;
+        ExplorerPanel.IsVisible = visible;
+        ExplorerSplitter.IsVisible = visible;
+        MainContentGrid.ColumnDefinitions[0].Width = new GridLength(visible ? 280 : 0);
+        MainContentGrid.ColumnDefinitions[1].Width = new GridLength(visible ? 4 : 0);
+    }
+
+    private void OnToggleProperties(object? sender, RoutedEventArgs e)
+    {
+        var visible = ViewPropertiesItem.IsChecked == true;
+        PropertiesPanel.IsVisible = visible;
+        PropertiesSplitter.IsVisible = visible;
+        MainContentGrid.ColumnDefinitions[4].Width = new GridLength(visible ? 300 : 0);
+        MainContentGrid.ColumnDefinitions[3].Width = new GridLength(visible ? 4 : 0);
+    }
+
+    private void OnToggleErrors(object? sender, RoutedEventArgs e)
+    {
+        if (ViewErrorItem.IsChecked == true) BottomTabs.SelectedIndex = 1;
+        UpdateBottomVisibility();
+    }
+
+    private void OnToggleOutput(object? sender, RoutedEventArgs e)
+    {
+        if (ViewOutputItem.IsChecked == true) BottomTabs.SelectedIndex = 0;
+        UpdateBottomVisibility();
+    }
+
+    private void UpdateBottomVisibility()
+    {
+        var visible = ViewErrorItem.IsChecked == true || ViewOutputItem.IsChecked == true;
+        BottomPanel.IsVisible = visible;
+        ShellGrid.RowDefinitions[1].Height = new GridLength(visible ? 180 : 0);
+    }
+
+    private async void OnProjectAddExistingFile(object? sender, RoutedEventArgs e)
+    {
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "添加现有文件",
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Cocoa 源文件") { Patterns = new[] { "*.co", "*.cs" } },
+                new FilePickerFileType("所有文件") { Patterns = new[] { "*.*" } },
+            },
+        });
+
+        var node = SolutionTree.SelectedItem as TreeNodeViewModel;
+        foreach (var file in files)
+        {
+            if (file.TryGetLocalPath() is { } path)
+                ViewModel.SolutionTree.AddSourceToProject(node, path);
+        }
+    }
+
+    private void OnProjectRemoveFile(object? sender, RoutedEventArgs e)
+    {
+        if (SolutionTree.SelectedItem is TreeNodeViewModel { IsSource: true } node)
+            RemoveNode(node);
+    }
+
+    private void OnAboutClick(object? sender, RoutedEventArgs e)
+    {
+        var about = new Window
+        {
+            Title = "关于 Cocoa IDE",
+            Width = 440,
+            Height = 200,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new TextBlock
+            {
+                Margin = new Avalonia.Thickness(20),
+                FontSize = 13,
+                TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                Text = "Cocoa IDE\n\n基于 Avalonia 11 + Cocoa 编译器内核的类 Visual Studio 桌面 IDE。\n"
+                       + "支持解决方案/项目管理、语法着色、实时诊断、补全/Hover/F12、构建运行。",
+            },
+        };
+        _ = about.ShowDialog(this);
+    }
+
+    private void OnErrorSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (ErrorListBox.SelectedItem is ErrorItemViewModel item)
+            ViewModel.Properties.ShowError(item);
     }
 
     /// <summary>右键菜单：从 sender.DataContext 取节点（ContextMenu 继承节点 DataContext）。</summary>
@@ -155,12 +257,12 @@ public partial class MainWindow : Window
         ViewModel.SolutionTree.Refresh();
     }
 
-    /// <summary>从项目移除源文件（确认后删除并刷新树）。</summary>
+    /// <summary>从项目移除源文件（文本级改写 .coproj，不删除磁盘文件）。</summary>
     private void RemoveNode(TreeNodeViewModel node)
     {
-        if (node.FullPath == null || !File.Exists(node.FullPath)) return;
-        File.Delete(node.FullPath);
-        ViewModel.SolutionTree.Refresh();
+        if (node.FullPath == null) return;
+        if (!ViewModel.SolutionTree.RemoveSourceFromProject(node))
+            ViewModel.Output.AppendLine("error: 该文件由通配符包含，无法单独移除（可修改 .coproj 的源文件模式）");
     }
 
     /// <summary>轻量文本输入对话框。</summary>

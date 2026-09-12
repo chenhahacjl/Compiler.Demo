@@ -280,6 +280,8 @@ public partial class MainViewModel : ObservableObject
     private void Paste() => EditActionRequested?.Invoke("Paste");
     [RelayCommand]
     private void SelectAll() => EditActionRequested?.Invoke("SelectAll");
+    [RelayCommand]
+    private void Find() => EditActionRequested?.Invoke("Find");
 
     /// <summary>新建项目向导：弹对话框 → 生成工程 → 加载返回的解决方案。</summary>
     public async Task<NewProjectService.NewProjectResult?> ShowNewProjectDialog(Window owner)
@@ -327,6 +329,57 @@ public partial class MainViewModel : ObservableObject
         Output.Clear();
         ErrorList.Clear();
         await BuildService.RunAsync(exeProject);
+    }
+
+    [RelayCommand]
+    private async Task RebuildAsync()
+    {
+        Output.Clear();
+        ErrorList.Clear();
+
+        if (SolutionTree.CurrentSolution != null)
+            await BuildService.BuildSolutionAsync(SolutionTree.CurrentSolution, noIncremental: true);
+        else if (SolutionTree.CurrentProject != null)
+            await BuildService.BuildProjectAsync(SolutionTree.CurrentProject, noIncremental: true);
+        else
+            Output.AppendLine("error: 请先打开解决方案或项目");
+    }
+
+    [RelayCommand]
+    private void Clean()
+    {
+        Output.Clear();
+
+        var projects = SolutionTree.CurrentSolution != null
+            ? SolutionTree.Projects.ToList()
+            : SolutionTree.CurrentProject != null
+                ? new List<CocoaProjectFile> { SolutionTree.CurrentProject }
+                : new List<CocoaProjectFile>();
+
+        if (projects.Count == 0)
+        {
+            Output.AppendLine("error: 请先打开解决方案或项目");
+            return;
+        }
+
+        foreach (var project in projects)
+        {
+            try
+            {
+                var outputDir = project.GetOutputDirectory();
+                if (Directory.Exists(outputDir))
+                {
+                    Directory.Delete(outputDir, true);
+                    Output.AppendLine($"已清理：{outputDir}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Output.AppendLine($"error: 清理失败 '{project.Name}': {ex.Message}");
+            }
+        }
+
+        StatusBar.StatusText = "清理完成";
     }
 
     [RelayCommand]

@@ -82,6 +82,81 @@ public static class ProjectFileService
         }
     }
 
+    public static bool AddSource(string projectPath, string sourceFile, out string? error)
+    {
+        error = null;
+        try
+        {
+            var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? ".";
+            var relative = Normalize(ToRelative(projectDir, sourceFile));
+
+            var document = XDocument.Load(projectPath);
+            var root = document.Root
+                ?? throw new InvalidOperationException("empty document; expected <Project> root element");
+
+            if (root.Descendants().Any(e =>
+                    e.Name.LocalName == "Source" &&
+                    Normalize(e.Attribute("Include")?.Value ?? "") == relative))
+                return true; // 已存在，幂等
+
+            var itemGroups = root.Elements().Where(e => e.Name.LocalName == "ItemGroup").ToList();
+            var element = new XElement("Source", new XAttribute("Include", relative));
+            if (itemGroups.Count > 0)
+            {
+                itemGroups[0].Add(element);
+            }
+            else
+            {
+                var group = new XElement("ItemGroup", element);
+                var lastPropertyGroup = root.Elements().LastOrDefault(e => e.Name.LocalName == "PropertyGroup");
+                if (lastPropertyGroup != null) lastPropertyGroup.AddAfterSelf(group);
+                else root.Add(group);
+            }
+
+            Save(document, projectPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    /// <summary>移除对某文件的显式 <c>&lt;Source Include&gt;</c>（通配符包含的文件无法按此移除）。</summary>
+    public static bool RemoveSource(string projectPath, string sourceFile, out string? error)
+    {
+        error = null;
+        try
+        {
+            var projectDir = Path.GetDirectoryName(Path.GetFullPath(projectPath)) ?? ".";
+            var relative = Normalize(ToRelative(projectDir, sourceFile));
+
+            var document = XDocument.Load(projectPath);
+            var root = document.Root
+                ?? throw new InvalidOperationException("empty document; expected <Project> root element");
+
+            var targets = root.Descendants()
+                .Where(e => e.Name.LocalName == "Source" &&
+                            Normalize(e.Attribute("Include")?.Value ?? "") == relative)
+                .ToList();
+            if (targets.Count == 0)
+            {
+                error = "该文件由通配符包含，无法单独移除（可在 .coproj 中改源文件模式）";
+                return false;
+            }
+
+            foreach (var target in targets) target.Remove();
+            Save(document, projectPath);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
     private static void Save(XDocument document, string projectPath)
     {
         var settings = new XmlWriterSettings

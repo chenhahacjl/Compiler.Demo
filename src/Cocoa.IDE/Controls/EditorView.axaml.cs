@@ -6,6 +6,7 @@ using AvaloniaEdit.Document;
 using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.Highlighting.Xshd;
 using AvaloniaEdit.Rendering;
+using AvaloniaEdit.Search;
 using Avalonia.Media;
 using Cocoa.CodeAnalysis;
 using System.Xml;
@@ -91,6 +92,16 @@ public partial class EditorView : UserControl
     }
 
     public string GetText() => TextEditor.Text ?? "";
+
+    private SearchPanel? _searchPanel;
+
+    /// <summary>打开文件内查找面板（Ctrl+F）。</summary>
+    public void ShowFind()
+    {
+        _searchPanel ??= SearchPanel.Install(TextEditor);
+        _searchPanel.Open();
+        TextEditor.Focus();
+    }
 
     public int GetCaretLine() => TextEditor.TextArea.Caret.Line;
 

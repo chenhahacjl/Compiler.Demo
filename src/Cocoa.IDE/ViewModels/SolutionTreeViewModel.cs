@@ -335,6 +335,27 @@ public partial class SolutionTreeViewModel : ObservableObject
         return true;
     }
 
+    /// <summary>把源文件写入节点所属项目的 .coproj（显式 &lt;Source Include&gt;），成功后刷新树。</summary>
+    public bool AddSourceToProject(TreeNodeViewModel? node, string sourceFile)
+    {
+        var projectPath = node != null ? ResolveOwningProjectPath(node) : CurrentProject?.FilePath;
+        if (projectPath == null) return false;
+        if (!ProjectFileService.AddSource(projectPath, sourceFile, out _)) return false;
+        Refresh();
+        return true;
+    }
+
+    /// <summary>从节点所属项目移除该源文件的显式包含，成功后刷新树。</summary>
+    public bool RemoveSourceFromProject(TreeNodeViewModel node)
+    {
+        if (node.Kind != NodeKind.Source || node.FullPath == null) return false;
+        var projectPath = ResolveOwningProjectPath(node);
+        if (projectPath == null) return false;
+        if (!ProjectFileService.RemoveSource(projectPath, node.FullPath, out _)) return false;
+        Refresh();
+        return true;
+    }
+
     private string? ResolveOwningProjectPath(TreeNodeViewModel node)
     {
         var current = node;

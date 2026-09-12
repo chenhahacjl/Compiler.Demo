@@ -56,6 +56,9 @@ public partial class EditorPane : UserControl
         // Ctrl+Space 补全
         EditorHost.Editor.TextArea.KeyDown += OnEditorKeyDown;
 
+        // 输入 '.' 自动触发成员补全
+        EditorHost.Editor.TextArea.TextEntered += OnEditorTextEntered;
+
         // 悬停签名提示
         EditorHost.Editor.TextArea.TextView.PointerHover += OnEditorPointerHover;
         EditorHost.Editor.TextArea.TextView.PointerHoverStopped += OnEditorPointerHoverStopped;
@@ -107,6 +110,11 @@ public partial class EditorPane : UserControl
             GoToDefinition();
             e.Handled = true;
         }
+    }
+
+    private void OnEditorTextEntered(object? sender, TextInputEventArgs e)
+    {
+        if (e.Text == ".") ShowCompletion();
     }
 
     /// <summary>按需（文件或内容变化时）重建语义宿主；Hover 等高频调用复用缓存，避免重复解析全目录。</summary>
@@ -170,6 +178,9 @@ public partial class EditorPane : UserControl
     public void EditCopy() => EditorHost.Copy();
     public void EditPaste() => EditorHost.Paste();
     public void EditSelectAll() => EditorHost.SelectAll();
+
+    /// <summary>打开文件内查找面板（Ctrl+F）。</summary>
+    public void ShowFind() => EditorHost.ShowFind();
 
     /// <summary>保存：内容已在 TextEdited 中连续同步到 tab.Content，这里直接写盘。</summary>
     public void SaveActiveTab()
