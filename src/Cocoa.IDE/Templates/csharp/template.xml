@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Template Key="csharp"
+          Label="Console (C# Language)"
+          Description="控制台应用：C# 方言（.cs）可执行">
+  <File Source="Class1.cs"        Target="{Name}.cs" />
+  <File Source="Project.coproj"   Target="{Name}.coproj" />
+</Template>

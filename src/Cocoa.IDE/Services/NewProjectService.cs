@@ -146,22 +146,24 @@ public static class NewProjectService
         return text.Replace("{{Name}}", pascal).Replace("{{Tfm}}", tfm);
     }
 
-    // ─────────── XML 加载 ───────────
+    // ─────────── XML 加载：每个模板目录一个 template.xml（VS .vstemplate 风格） ───────────
 
     private static IReadOnlyList<TemplateSpec>? LoadFromXml()
     {
-        var path = Path.Combine(TemplatesRoot, "templates.xml");
-        if (!File.Exists(path)) return null;
+        if (!Directory.Exists(TemplatesRoot)) return null;
 
         try
         {
-            var doc = XDocument.Load(path);
-            var root = doc.Root;
-            if (root == null) return null;
-
             var specs = new List<TemplateSpec>();
-            foreach (var el in root.Elements("Template"))
+            foreach (var dir in Directory.EnumerateDirectories(TemplatesRoot))
             {
+                var xmlPath = Path.Combine(dir, "template.xml");
+                if (!File.Exists(xmlPath)) continue;
+
+                var doc = XDocument.Load(xmlPath);
+                var el = doc.Root;
+                if (el == null || el.Name.LocalName != "Template") continue;
+
                 var key = (string?)el.Attribute("Key");
                 if (string.IsNullOrEmpty(key)) continue;
 

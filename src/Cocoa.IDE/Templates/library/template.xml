@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Template Key="library"
+          Label="Class Library"
+          Description=".NET 类库：dll、.co 源码">
+  <File Source="Class1.co"        Target="{Name}.co" />
+  <File Source="Project.coproj"   Target="{Name}.coproj" />
+</Template>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Template Key="solution"
+          Label="Solution"
+          Description="解决方案：含一个 console 子项目"
+          Special="Solution">
+  <File Source="Project.cosln"    Target="{Name}.cosln" />
+</Template>
