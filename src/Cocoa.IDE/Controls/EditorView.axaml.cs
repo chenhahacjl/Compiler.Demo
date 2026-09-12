@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using AvaloniaEdit;
 using AvaloniaEdit.Document;
@@ -60,12 +61,31 @@ public partial class EditorView : UserControl
         _breakpointMargin = new BreakpointMargin(this);
         TextEditor.TextArea.LeftMargins.Insert(0, _breakpointMargin);
 
+        // F14：在文本视图左侧的整条行号/断点槽（含行号边距）点击均可切换断点
+        TextEditor.AddHandler(PointerPressedEvent, OnGutterPointerPressed, RoutingStrategies.Bubble);
+
         // F11：滚动/换行变化时，边距与背景层按视图坐标重绘（VisualTop 是文档坐标）
         TextEditor.TextArea.TextView.VisualLinesChanged += (_, _) =>
         {
             _breakpointMargin.Invalidate();
             TextEditor.TextArea.TextView.InvalidateVisual();
         };
+    }
+
+    /// <summary>行号槽任意位置点击 → 切换该行断点（文本视图坐标 X&lt;0 即位于左侧边距）。</summary>
+    private void OnGutterPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(TextEditor).Properties.IsLeftButtonPressed) return;
+
+        var textView = TextEditor.TextArea.TextView;
+        var p = e.GetPosition(textView);
+        if (p.X >= 0) return; // 文本区而非左侧边距
+
+        var position = textView.GetPositionFloor(new Point(0, p.Y));
+        if (position is { } vp)
+            BreakpointToggled?.Invoke(vp.Line);
+
+        e.Handled = true;
     }
 
     public IReadOnlyCollection<int> Breakpoints => _breakpoints;
@@ -88,8 +108,6 @@ public partial class EditorView : UserControl
 
     /// <summary>F9：在光标行切换断点。</summary>
     public void ToggleBreakpointAtCaret() => BreakpointToggled?.Invoke(TextEditor.TextArea.Caret.Line);
-
-    internal void RaiseBreakpointToggled(int line) => BreakpointToggled?.Invoke(line);
 
     public string? CurrentFilePath => _currentFilePath;
 
@@ -370,18 +388,5 @@ public sealed class BreakpointMargin : AbstractMargin
                 drawingContext.DrawEllipse(BreakpointBrush, null, center, 4.5, 4.5);
             }
         }
-    }
-
-    protected override void OnPointerPressed(PointerPressedEventArgs e)
-    {
-        var textView = TextView;
-        if (textView == null) return;
-
-        var y = e.GetPosition(this).Y + textView.VerticalOffset;
-        var position = textView.GetPositionFloor(new Point(0, y));
-        if (position is { } p)
-            _owner.RaiseBreakpointToggled(p.Line);
-
-        e.Handled = true;
     }
 }
