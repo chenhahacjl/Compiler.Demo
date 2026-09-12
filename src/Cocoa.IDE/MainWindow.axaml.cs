@@ -22,11 +22,7 @@ public partial class MainWindow : Window
         Pane.AttachTabs(ViewModel.EditorTabs);
 
         // 编辑器内容变化 → 实时诊断
-        Pane.TextEdited += tab =>
-        {
-            if (tab.Dialect != null)
-                ViewModel.DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
-        };
+        Pane.TextEdited += tab => ViewModel.EditorTextChanged(tab);
 
         // 光标位置 → 状态栏
         Pane.CaretMoved += tab => ViewModel.StatusBar.CursorPosition = $"Ln {tab.CursorLine}, Col {tab.CursorColumn}";

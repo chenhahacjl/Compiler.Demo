@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Cocoa.Build;
+using Cocoa.IDE.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -170,6 +171,54 @@ public partial class SolutionTreeViewModel : ObservableObject
     {
         if (node.Kind == NodeKind.Source && node.FullPath != null)
             RemoveRequested?.Invoke(node);
+    }
+
+    /// <summary>为指定文件构建工程上下文（源文件集 + 引用集），供语义/诊断多文件编译使用。
+    /// 优先匹配文件所在项目；无项目（打开文件夹/单文件）时回退到当前项目或同目录扫描。</summary>
+    public ProjectContext? GetContext(string filePath)
+    {
+        var project = ResolveProjectFor(filePath);
+        if (project != null)
+        {
+            var sources = Glob.Expand(project.SourcePatterns, project.Directory).Files
+                .Concat(new[] { filePath })
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var references = project.References
+                .Select(r => Path.IsPathRooted(r) ? r : Path.GetFullPath(Path.Combine(project.Directory, r)))
+                .Where(File.Exists)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return new ProjectContext(sources, references);
+        }
+
+        // 无工程：仅当前目录内的源文件，无引用
+        var dir = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
+
+        var siblings = Directory.EnumerateFiles(dir, "*.co", SearchOption.TopDirectoryOnly)
+            .Concat(Directory.EnumerateFiles(dir, "*.cs", SearchOption.TopDirectoryOnly))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (!siblings.Contains(filePath, StringComparer.OrdinalIgnoreCase))
+            siblings.Add(filePath);
+
+        return new ProjectContext(siblings, Array.Empty<string>());
+    }
+
+    private CocoaProjectFile? ResolveProjectFor(string filePath)
+    {
+        var dir = Path.GetDirectoryName(filePath);
+        if (dir != null)
+        {
+            var match = Projects.FirstOrDefault(p =>
+                string.Equals(Path.GetFullPath(p.Directory), Path.GetFullPath(dir), StringComparison.OrdinalIgnoreCase));
+            if (match != null) return match;
+        }
+
+        return CurrentProject;
     }
 }
 

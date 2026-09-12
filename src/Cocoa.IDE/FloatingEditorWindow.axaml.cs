@@ -81,8 +81,7 @@ public partial class FloatingEditorWindow : Window
 
     private void OnPaneTextEdited(EditorTabViewModel tab)
     {
-        if (tab.Dialect != null && MainViewModel.Shared != null)
-            MainViewModel.Shared.DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
+        MainViewModel.Shared?.EditorTextChanged(tab);
     }
 
     /// <summary>关闭浮窗：未保存修改需确认；结束后把剩余标签交还主窗口。</summary>

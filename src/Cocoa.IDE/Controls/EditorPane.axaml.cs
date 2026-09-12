@@ -34,6 +34,9 @@ public partial class EditorPane : UserControl
     private CompletionWindow? _completionWindow;
 
     private readonly Action<string, ImmutableArray<Diagnostic>> _diagnosticsHandler;
+    private readonly SemanticModelHost _semanticHost = new();
+    private string? _hostFile;
+    private string? _hostText;
 
     public EditorPane()
     {
@@ -106,27 +109,21 @@ public partial class EditorPane : UserControl
         }
     }
 
-    /// <summary>用当前活动标签的内容构建语义宿主，供补全/Hover/F12 使用。
-    /// 附带同一目录下的其它 .co/.cs 源文件（跨文件解析）。</summary>
-    private SemanticModelHost? BuildSemanticHost()
+    /// <summary>按需（文件或内容变化时）重建语义宿主；Hover 等高频调用复用缓存，避免重复解析全目录。</summary>
+    private SemanticModelHost? EnsureSemanticHost()
     {
         var tab = EditorTabs?.ActiveTab;
         if (tab == null || tab.Dialect == null) return null;
 
-        var host = new SemanticModelHost();
+        if (_hostFile == tab.FilePath && _hostText == tab.Content)
+            return _semanticHost;
+
         var language = tab.Dialect == "CSharp" ? Language.CSharp : Language.Cocoa;
-
-        var dir = Path.GetDirectoryName(tab.FilePath);
-        List<string>? others = null;
-        if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
-        {
-            others = Directory.EnumerateFiles(dir, "*.co", SearchOption.TopDirectoryOnly)
-                .Concat(Directory.EnumerateFiles(dir, "*.cs", SearchOption.TopDirectoryOnly))
-                .ToList();
-        }
-
-        host.Update(tab.Content, tab.FilePath, language, others);
-        return host;
+        var context = MainViewModel.Shared?.SolutionTree.GetContext(tab.FilePath);
+        _semanticHost.Update(tab.Content, tab.FilePath, language, context);
+        _hostFile = tab.FilePath;
+        _hostText = tab.Content;
+        return _semanticHost;
     }
 
     private void ShowCompletion()
@@ -140,7 +137,7 @@ public partial class EditorPane : UserControl
             CloseAutomatically = true,
         };
 
-        var host = BuildSemanticHost();
+        var host = EnsureSemanticHost();
         if (host != null)
         {
             var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
@@ -154,7 +151,7 @@ public partial class EditorPane : UserControl
 
     private void GoToDefinition()
     {
-        var host = BuildSemanticHost();
+        var host = EnsureSemanticHost();
         if (host == null) return;
 
         var caretOffset = EditorHost.Editor.TextArea.Caret.Offset;
@@ -192,7 +189,7 @@ public partial class EditorPane : UserControl
 
     private void OnEditorPointerHover(object? sender, PointerEventArgs e)
     {
-        var host = BuildSemanticHost();
+        var host = EnsureSemanticHost();
         if (host == null) return;
 
         var pos = e.GetPosition(EditorHost.Editor.TextArea.TextView);

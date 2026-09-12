@@ -110,8 +110,9 @@ public partial class MainViewModel : ObservableObject
 
     private void Reanalyze(EditorTabViewModel tab)
     {
-        if (tab.Dialect != null)
-            DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect);
+        if (tab.Dialect == null) return;
+        var context = SolutionTree.GetContext(tab.FilePath);
+        DiagnosticService.TextChanged(tab.FilePath, tab.Content, tab.Dialect, context);
     }
 
     private void OnActiveTabChanged()

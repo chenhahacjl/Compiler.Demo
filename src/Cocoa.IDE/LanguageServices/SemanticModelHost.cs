@@ -1,6 +1,7 @@
 using Cocoa.CodeAnalysis;
 using Cocoa.CodeAnalysis.Symbols;
 using Cocoa.CodeAnalysis.Syntax;
+using Cocoa.IDE.Services;
 
 namespace Cocoa.IDE.LanguageServices;
 
@@ -11,15 +12,17 @@ public sealed class SemanticModelHost
     private Compilation? _compilation;
     private SyntaxTree? _tree;
 
-    /// <summary>用当前文本重建多文件编译（含工程内其它源文件，跨文件 F12/Hover 解析）。</summary>
-    public void Update(string text, string fileName, Language language, IEnumerable<string>? otherSourceFiles = null)
+    /// <summary>用当前文本重建多文件编译（含工程源文件集与引用，跨文件 F12/Hover/补全解析）。</summary>
+    public void Update(string text, string fileName, Language language, ProjectContext? context = null)
     {
         _tree = SyntaxTree.Parse(Cocoa.CodeAnalysis.Text.SourceText.From(text, fileName), language);
 
         var trees = new List<SyntaxTree> { _tree };
-        if (otherSourceFiles != null)
+        var references = new List<string>();
+        if (context != null)
         {
-            foreach (var path in otherSourceFiles)
+            references.AddRange(context.References);
+            foreach (var path in context.SourceFiles)
             {
                 if (string.Equals(path, fileName, StringComparison.OrdinalIgnoreCase)) continue;
                 try
@@ -31,7 +34,7 @@ public sealed class SemanticModelHost
             }
         }
 
-        _compilation = Compilation.Create(trees.ToArray());
+        _compilation = Compilation.Create(references.ToArray(), trees.ToArray());
     }
 
     public SyntaxTree? Tree => _tree;
