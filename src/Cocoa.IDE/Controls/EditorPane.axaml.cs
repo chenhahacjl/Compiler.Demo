@@ -33,6 +33,8 @@ public partial class EditorPane : UserControl
 
     private CompletionWindow? _completionWindow;
 
+    private readonly Action<string, ImmutableArray<Diagnostic>> _diagnosticsHandler;
+
     public EditorPane()
     {
         InitializeComponent();
@@ -40,12 +42,13 @@ public partial class EditorPane : UserControl
         EditorHost.CaretChanged += (_, _) => OnEditorCaretChanged();
 
         // 跨窗口诊断广播：若命中的文件是本窗活动标签，重绘波浪线
-        EditorTabsRegistry.DiagnosticsApplied += (filePath, diagnostics) =>
+        _diagnosticsHandler = (filePath, diagnostics) =>
         {
             var active = EditorTabs?.ActiveTab;
             if (active != null && active.FilePath == filePath)
                 UpdateSquiggles(active);
         };
+        EditorTabsRegistry.DiagnosticsApplied += _diagnosticsHandler;
 
         // Ctrl+Space 补全
         EditorHost.Editor.TextArea.KeyDown += OnEditorKeyDown;
@@ -53,6 +56,40 @@ public partial class EditorPane : UserControl
         // 悬停签名提示
         EditorHost.Editor.TextArea.TextView.PointerHover += OnEditorPointerHover;
         EditorHost.Editor.TextArea.TextView.PointerHoverStopped += OnEditorPointerHoverStopped;
+    }
+
+    /// <summary>窗口关闭时调用：退订静态事件，避免已关闭窗口被静态注册表长期引用。</summary>
+    public void Detach()
+    {
+        EditorTabsRegistry.DiagnosticsApplied -= _diagnosticsHandler;
+        EditorTabs = null;
+    }
+
+    /// <summary>关闭脏标签的三态确认（保存/不保存/取消）。返回 true 表示可继续关闭。</summary>
+    private async Task<bool> ConfirmCloseAsync(EditorTabViewModel tab)
+    {
+        if (!tab.IsModified) return true;
+
+        var owner = TopLevel.GetTopLevel(this) as Window;
+        if (owner == null) return true;
+
+        var dialog = new SavePromptWindow(tab.FileName);
+        var choice = await dialog.ShowDialog<bool?>(owner);
+        if (choice == null) return false; // 取消
+        if (choice == true)
+        {
+            try
+            {
+                await File.WriteAllTextAsync(tab.FilePath, tab.Content);
+                tab.MarkSaved();
+            }
+            catch
+            {
+                return false; // 保存失败则不关闭
+            }
+        }
+
+        return true;
     }
 
     private void OnEditorKeyDown(object? sender, KeyEventArgs e)
@@ -181,6 +218,7 @@ public partial class EditorPane : UserControl
     {
         EditorTabs = tabs;
         DataContext = tabs;
+        tabs.ConfirmClose = ConfirmCloseAsync;
 
         if (TabList != null)
             TabList.SelectedItem = tabs.ActiveTab;

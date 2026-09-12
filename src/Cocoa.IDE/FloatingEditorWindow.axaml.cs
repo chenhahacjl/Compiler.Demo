@@ -10,6 +10,7 @@ public partial class FloatingEditorWindow : Window
     public EditorTabsViewModel ViewTabs { get; } = new();
 
     private bool _closingConfirmed;
+    private readonly Action<EditorTabViewModel, int, int> _navigateHandler;
 
     public FloatingEditorWindow()
     {
@@ -20,11 +21,12 @@ public partial class FloatingEditorWindow : Window
         Pane.TextEdited += tab => OnPaneTextEdited(tab);
 
         // 错误列表等请求定位：若标签在本窗口则定位
-        EditorTabsRegistry.NavigateRequested += (tab, line, col) =>
+        _navigateHandler = (tab, line, col) =>
         {
             if (ViewTabs.Tabs.Contains(tab))
                 Pane.NavigateTo(tab, line, col);
         };
+        EditorTabsRegistry.NavigateRequested += _navigateHandler;
 
         // F12 跳转定义：目标为其它窗口已打开文件则由注册表分发；否则由主窗口打开定位
         Pane.NavigationRequested += target =>
@@ -58,6 +60,15 @@ public partial class FloatingEditorWindow : Window
         };
 
         Closing += OnWindowClosing;
+        Closed += (_, _) => DetachRegistry();
+    }
+
+    /// <summary>窗口关闭后清理静态注册表引用，避免已关闭窗口无法回收。</summary>
+    private void DetachRegistry()
+    {
+        EditorTabsRegistry.NavigateRequested -= _navigateHandler;
+        Pane.Detach();
+        ViewTabs.DisposeSet();
     }
 
     /// <summary>由 MainWindow 在拖出标签后调用：把标签挂进本窗口并显示。</summary>

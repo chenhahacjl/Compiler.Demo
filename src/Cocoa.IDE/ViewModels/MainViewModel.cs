@@ -90,9 +90,7 @@ public partial class MainViewModel : ObservableObject
         // 若该文件已在任意窗口打开，直接激活对应标签
         foreach (var set in EditorTabsRegistry.All)
         {
-            var existing = set.ActiveTab != null && set.Tabs.Any(t => t.FilePath == path)
-                ? set.Tabs.First(t => t.FilePath == path)
-                : null;
+            var existing = set.Tabs.FirstOrDefault(t => t.FilePath == path);
             if (existing != null)
             {
                 set.Activate(existing);
@@ -257,10 +255,10 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void CloseTab()
+    private async Task CloseTabAsync()
     {
         if (EditorTabs.ActiveTab != null)
-            EditorTabs.CloseTab(EditorTabs.ActiveTab);
+            await EditorTabs.RequestCloseAsync(EditorTabs.ActiveTab);
     }
 
     /// <summary>编辑动作请求（撤销/重做/剪切/复制/粘贴/全选），由视图转发到编辑器。</summary>

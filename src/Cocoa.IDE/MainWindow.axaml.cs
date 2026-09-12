@@ -228,8 +228,12 @@ public partial class MainWindow : Window
     {
         if (_closingConfirmed) return;
 
-        var dirty = ViewModel.EditorTabs.Tabs.Where(t => t.IsModified).ToList();
-        // 浮窗关闭各自处理；主窗口只负责自己的标签
+        // 覆盖所有窗口（主窗口 + 浮窗）的未保存标签：应用退出时浮窗 Closing 未必触发
+        var dirty = EditorTabsRegistry.All
+            .SelectMany(set => set.Tabs)
+            .Where(t => t.IsModified)
+            .Distinct()
+            .ToList();
         if (dirty.Count == 0) return;
 
         // 先取消默认关闭，弹确认框后再关闭
