@@ -1,10 +1,10 @@
 # Cocoa.IDE 设计 — 类 Visual Studio 桌面 IDE
 
-> 状态：🔧 设计中（2026-09-08 定稿技术路线与功能矩阵；同日补充 **API 现状核实（§4）** 与 **M1 骨架审计清单（§5.4）**）
+> 状态：🔧 实施中（M1~M5 已落地；2026-09-12 完成**第二轮审计（§5.5，A1–A10）**并修订路线图：新增 **M2b VS2022 两步式新建项目向导（§8.1）**、**M5b 工程上下文语义（§7.5）**、**M6c VS 风格解决方案资源管理器（§6.4）**；实施顺序见 §12.2）
 > 目标：为 Cocoa 语言构建**类 Visual Studio 的桌面 IDE**——解决方案/项目管理 + 语法着色编辑器 + 实时诊断 + 补全/Hover/F12 + 构建运行 + （M7）解释器调试器，进程内直接复用编译器 `Cocoa.Compiler.Core` 完整编译管线。
 > 核心决策：**Avalonia 11 跨平台**；**直接消费既有 public API**（`Compilation.GetSemanticModel`/`SemanticModel`/`Classifier`/`BoundScope`/`Cocoa.Build` 全部已公开，零 `InternalsVisibleTo`，详见 §4）；**调试器基于解释器**（在 `Cocoa.CodeGen.Interpreter` 内新增 public `DebuggerSession`，见 §11）。
 > 相关文档：`docs/编译手册.md`（`cocoa` CLI 子命令）、`docs/项目格式规范.md`（`.coproj`/`.cosln`）、`docs-dev/实现目标.md`（编译器架构）
-> 最后更新：2026-09-08
+> 最后更新：2026-09-12
 
 ---
 
@@ -196,13 +196,18 @@ MainWindow 启动
 
 | 里程碑 | 功能 | 复用点 | 状态 |
 |--------|------|--------|:---:|
-| **M1 IDE 骨架** | 五区布局主窗口；多标签编辑器（着色/行号/折叠/括号匹配/Ctrl+F）；打开 `.co/.cs/.coproj/.cosln` | `SyntaxTree.Parse` | ✅ 骨架已搭（审计清单见 §5.4） |
-| **M1.1 编辑器接线** | EditorView 实际嵌入中央区；VM↔编辑器双向同步（Text/Caret）；标签点击激活+高亮+关闭按钮；状态栏 Ln/Col/Language 联动；B1-B5 修复 | AvaloniaEdit 事件桥接 | 📋 下一优先 |
-| **M2 项目系统** | 解决方案树改走 `Cocoa.Build`（`CocoaSolutionFile`/`CocoaProjectFile`/`Glob`），删手写解析（D1）；新建项目向导（`CocoaTemplates` 抽取或 `cocoa new` 子进程）；添加/移除文件 | `Cocoa.Build` | 📋 规划 |
-| **M3 实时诊断** | 防抖重解析管线；错误列表（过滤、双击定位，改 ObservableCollection + 全量筛选 D6）；编辑器波浪线 | `SemanticModel.GetDiagnostics` | 📋 规划 |
-| **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物；输出窗口；增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | 📋 规划 |
-| **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | 📋 规划 |
+| **M1 IDE 骨架** | 五区布局主窗口；多标签编辑器（着色/行号/折叠/括号匹配/Ctrl+F）；打开 `.co/.cs/.coproj/.cosln` | `SyntaxTree.Parse` | ✅ 已落地（审计清单见 §5.4） |
+| **M1.1 编辑器接线** | EditorView 实际嵌入中央区；VM↔编辑器双向同步（Text/Caret）；标签点击激活+高亮+关闭按钮；状态栏 Ln/Col/Language 联动；B1-B5 修复 | AvaloniaEdit 事件桥接 | ✅ 已落地（B1-B5/D2-D4/D7 关闭） |
+| **M2 项目系统** | 解决方案树改走 `Cocoa.Build`（`CocoaSolutionFile`/`CocoaProjectFile`/`Glob`），删手写解析（D1） | `Cocoa.Build` | ✅ 已落地（D1 关闭） |
+| **M2b 新建项目向导** | **VS2022 两步式向导**（模板选择 → 名称/位置/解决方案名/目标框架）；统一生成 `.cosln` + 项目子目录；空白解决方案模板；位置自动创建 | `Cocoa.Build` + 模板 XML | 📋 规划（§8.1） |
+| **M3 实时诊断** | 防抖重解析管线；错误列表（过滤、双击定位，改 ObservableCollection + 全量筛选 D6）；编辑器波浪线 | `SemanticModel.GetDiagnostics` | ✅ 已落地（D6 关闭） |
+| **M4 构建运行** | F6 构建项目/解决方案；F5 运行产物；输出窗口；增量指示；清理 | `ProjectBuilder`/`SolutionBuilder`/`BuildCache` | ✅ 已落地（D5 关闭；A7 待修） |
+| **M5 语义服务** | Ctrl+Space 补全；Hover 显示签名；F12 跳转定义 | `SemanticModel`、`Compilation.GetSemanticModel`、`BoundScope` | ✅ 基础落地（补全 99 项、F12/Hover 主函数可用） |
+| **M5b 工程上下文语义** | 补全/诊断/Hover/F12 接入工程源文件集与 `References`（修跨文件误报、`Console.` 补全）；按内容缓存编译 | `Compilation.Create(references, trees)` | 📋 规划（§7.5） |
 | **M6 打磨** | 暗色/亮色主题；启动页（最近项目）；状态栏；选项页 | — | 📋 规划 |
+| **M6a UI 接线** | 空壳菜单（退出/视图/项目/生成清理/关于）、状态栏解决方案名、Ctrl+F 查找、错误过滤 UI、输出自动滚动 | AvaloniaEdit SearchPanel | 📋 规划 |
+| **M6b F12 定位与打磨** | 声明名字 token 精确定位；空补全不弹；着色扩展名判定；大文件只读/编码 | `Language.GetDeclarationNameLocation` | 📋 规划 |
+| **M6c 解决方案资源管理器** | **VS 风格**：矢量图标、嵌套文件夹、引用/依赖项节点、工具栏（刷新/折叠全部/同步活动文档/显示所有文件/属性）、按种类右键、引用可编辑 | `CocoaProjectFile` + IDE `ProjectFileService` | 📋 规划（§6.4） |
 | **M7 解释器调试器** | 断点/继续/单步/步入/步出；局部变量+监视；调用栈窗口；黄色当前行 | `CodeGen.Interpreter` 新增 public `DebuggerSession`（§11.2） | 📋 规划 |
 
 ### 5.2 增强层（P1/P2/P3）
@@ -259,6 +264,44 @@ MainWindow 启动
 | Q2 | 菜单大面积空壳（编辑/视图/生成/调试多无 Command）；Ctrl+F 未接 AvaloniaEdit SearchPanel | P |
 | Q3 | xshd 关键词手工维护易漂移：Cocoa 组 `var` 重复列、`print` 非关键字误列；C# 缺 `record/init/required/file/scoped/nint/nuint`；CSharp verbatim 串规则 `[^\"])` 误排除 `\`（高亮提前终止） | M1.1 / 长期切 Classifier |
 | Q4 | 工具栏 emoji 跨平台字体风险；`LoadFile` 仅按 `.cs` 判方言，`.coproj/.cosln/.txt` 亦被当 Cocoa 着色；非源码文件应只读 | M1.1 |
+
+### 5.5 第二轮审计清单（2026-09-12，M1~M5 落地后全量读码）
+
+> 修复归属：A=M6a 前的正确性修复；C=M5b/M6b。所有位置均经源码核对。
+
+**A 级 — 明确缺陷**
+
+| # | 问题 | 位置 | 修复归属 |
+|---|------|------|:---:|
+| A1 | 实时诊断结果被别的文件丢弃：`_generation` 为**全局**计数，文件 A 编辑后、回调到达前若编辑 B → `generation != _generation` 使 A 结果永久丢弃（取消令牌本已按文件） | `DiagnosticService.cs:52,78` | M5b |
+| A2 | 诊断仅**单文件**编译 `Compilation.Create(tree)`，未带工程源文件集与 `References` → 调用别处函数/`Console.*` 误报红波浪线（构建却成功） | `DiagnosticService.cs:65` | M5b |
+| A3 | F5 可运行非 exe 项目：当前项目非 exe 时只打印 error 却仍 `return project` 继续执行 | `MainViewModel.cs:364-369` | M6a |
+| A4 | 关闭标签不提示保存直接丢改动：`CloseTab`/`Close` 无脏检查（主窗口 `Closing` 有确认，标签 ✕ 没有，D8 只完成一半） | `EditorTabsViewModel.cs:39-69` | M6a |
+| A5 | 浮窗/编辑器事件订阅泄漏：订阅静态 `EditorTabsRegistry` 事件后从不退订（窗口无法 GC，且会向已脱离 Pane 发导航） | `FloatingEditorWindow.axaml.cs:23`、`EditorPane.axaml.cs:43,54,55` | M6a |
+| A6 | 新建项目默认目录必然报错：硬校验 `Directory.Exists(dir)`，而默认 `我的文档\CocoaProjects` 通常不存在 | `NewProjectDialog.cs:139` | M2b |
+| A7 | 运行程序不捕获输出、无法停止；且运行又触发一次 `BuildFinished`（与构建重复计数） | `BuildService.cs:56-75,130` | M6a |
+| A8 | `文件>打开文件` 打开后不出诊断：`OpenFileAsync` 直接 `EditorTabs.OpenFile`，绕过会 `Reanalyze` 的 `OpenFile(path)` | `MainViewModel.cs:199` | M6a |
+| A9 | 主窗口关闭不保存浮窗脏标签：只遍历主窗口标签，应用退出时浮窗未保存内容可能丢失 | `MainWindow.axaml.cs:227-253` | M6a |
+| A10 | 在任意窗口已打开的文件，若该窗口 `ActiveTab==null` 则找不到（多余条件） | `MainViewModel.cs:91` | M6a |
+
+**B 级 — 语言服务/性能**
+
+| # | 问题 | 位置 | 修复归属 |
+|---|------|------|:---:|
+| B6 | Hover 每次鼠标移动都重解析目录内全部 `.co/.cs`（`SemanticModelHost.Update`）→ 卡顿；应按内容缓存、编辑时失效 | `EditorPane.axaml.cs:74-93` | M5b |
+| B7 | F12 列定位用「行内首个字母」启发式，缩进/字符串会跳错列 | `GoToDefinitionProvider.cs:62-74` | M6b |
+| B8 | 无候选仍弹出空补全框 | `EditorPane.axaml.cs:100-115` | M6b |
+| B9 | 补全仅在 Ctrl+Space 触发，`.` 后不自动弹（违反 §7.2） | `EditorPane.axaml.cs:58-70` | M6a |
+
+**C 级 — 打磨**
+
+| # | 问题 | 位置 | 修复归属 |
+|---|------|------|:---:|
+| C1 | `NewProjectService` 类注释仍写 `Templates/templates.xml`（已拆分为每目录 `template.xml`） | `NewProjectService.cs:7` | M2b |
+| C2 | `BuildService._isBuilding` 死代码（`_gate` 已串行，检查永不命中） | `BuildService.cs:81-85` | M6b |
+| C3 | 构建带位置的诊断一律计为 error，warning 无位置区分 | `BuildService.cs:99-102` | M6b |
+| C4 | 非 `.cs` 一律按 Cocoa 着色（`.coproj/.cosln/.txt` 也着色） | `EditorView.axaml.cs:122-130` | M6b |
+| C5 | 标签拖动 12px 阈值无视觉反馈；点 ✕ 可能误触拖动 | `EditorPane.axaml.cs:264-291` | M6b |
 
 ---
 
@@ -317,6 +360,59 @@ MainWindow 启动
 | 面板背景 / 选中 | #252526 / #094771 |
 | 断点圆点 / 当前行箭头(M7) | #E51400 / #FFE066 |
 
+### 6.4 VS 风格解决方案资源管理器（M6c）
+
+> 目标：对齐 Visual Studio 解决方案资源管理器的结构与交互（2026-09-12 定稿）。
+
+**树结构**
+
+```
+解决方案 'Demo' (2 个项目)          ← 计数（VS 格式）
+├─ 📦 MyApp                        ← 项目（.coproj）
+│  ├─ 🔗 引用                       ← 新增节点，列 .coproj <Reference>
+│  │   ├─ System.Core
+│  │   └─ ../Libs/MyLib.coa
+│  ├─ 📁 Sub                        ← 嵌套文件夹（按磁盘目录，非平铺）
+│  │   └─ 📄 Util.co
+│  └─ 📄 main.co
+└─ 📦 Lib
+   ├─ 🔗 引用
+   └─ 📄 Class1.co
+```
+
+- **替代**现状：`LoadProjectInto` 将源文件**平铺**为项目直接子节点、无图标、无引用节点。
+- 源文件按 `Path.GetRelativePath(project.Directory, file)` 的目录层级建 `Folder` 节点。
+
+**节点图标（矢量，无外部资源）**
+
+- `NodeKind` 扩展 `Reference`；图标用内置矢量 `Geometry`/`Path`（解决方案/项目/文件夹/引用/`.co`/`.cs`/`.coproj`/`.cosln`），随主题变色，规避 emoji 跨平台字体风险（回应 §5.4-Q4）。
+
+**工具栏（VS 同款常用项）**
+
+| 按钮 | 行为 |
+|------|------|
+| 刷新 | `SolutionTree.Refresh()` |
+| 折叠全部 | `CollapseAll()` |
+| 与活动文档同步 | 活动标签切换 → 选中并展开对应节点（`FullPath → 节点` 索引） |
+| 显示所有文件 | 开时枚举项目目录，展示未被 `Glob.Expand` 覆盖的项（`IsPhantom` 灰显） |
+| 属性 | 打开属性窗口并填充选中节点 |
+
+**交互**
+
+- 双击文件夹展开/折叠；双击文件打开（现状文件夹双击无响应）。
+- 右键菜单按 `NodeKind` 区分：解决方案（生成/新建项目…）、项目（生成/添加文件/添加引用…/属性）、引用（移除引用/属性）、文件（打开/打开所在文件夹/从项目中排除/复制路径/属性）。
+- 选中 → 属性窗口（已接线）+ VS 风格高亮。
+
+**模型改动**
+
+- `TreeNodeViewModel` 增 `Icon`、`Glyph`、`IsExpanded`、`Caption`、`IsPhantom`；`NodeKind` 增 `Reference`。
+- `SolutionTreeViewModel` 增 `SyncToFile(path)`、`CollapseAll()`、`ShowAllFiles` 开关、路径索引。
+
+**引用编辑（写回 `.coproj`）**
+
+- 新增 IDE `Services\ProjectFileService.cs`：`AddReference`/`RemoveReference`（`System.Xml.Linq`，`<ItemGroup>` 内 `<Reference Include="…"/>`，去重、绝对转相对、UTF-8 无 BOM），逻辑同 CLI `ReferenceCommand.cs`。
+- **不**给 IDE 引入 `Cocoa.Cli` 依赖，**不**改动并行开发中的编译仓库；后续若需单点复用，可将该逻辑提取为 `Cocoa.Build` 的 public `ProjectFileEditor`（CLI 同步受益）。
+
 ---
 
 ## 7. 语言服务设计
@@ -355,16 +451,69 @@ ResolveAtPosition(tree, position):
   3. 返回 symbol → F12: 所在 SyntaxTree.FileName + Span → NavigationService.OpenAt
 ```
 
+### 7.5 工程上下文语义与缓存（M5b）
+
+> 背景：现状诊断 `Compilation.Create(tree)`（单树）、语义宿主只加载**同目录** `.co/.cs`，均不含工程 `References` 与 stdlib → 跨文件误报、`Console.` 补全/类型解析失败（§5.5-A2）、Hover 每次全量重解析（§5.5-B6）。
+
+**设计**
+
+| 项 | 方案 |
+|----|------|
+| `ProjectContext` | 承载「源文件集（`CocoaProjectFile.SourcePatterns` + `Glob.Expand`）+ `References` + 语言」，由 `SolutionTreeViewModel.CurrentProject/CurrentSolution` 提供 |
+| 编译构造 | `Compilation.Create(references, params SyntaxTree[])`（已 public，见 §4）多树编译；诊断的**语法**部分只取当前树，**语义**部分取整个工程 |
+| 缓存 | 按（文件内容哈希 + 工程引用集）缓存 `Compilation`；仅当某文件内容变化时失效该项并重建 |
+| 诊断 | `DiagnosticService` 接收 `ProjectContext`，替代单文件 `Compilation.Create(tree)` |
+| 语义服务 | `SemanticModelHost.Update` 接收已算好的 `trees + references`，Hover/F12/补全不再各自重解析目录 |
+| 预期收益 | 修跨文件诊断误报、`Console.` 成员补全、跨文件 F12/Hover、Hover 卡顿 |
+
+> 说明：多树编译成本高于单文件，故以缓存 + 防抖（§10）控制；超限文件仍走 §10 的只读/降频保护。
+
 ---
 
 ## 8. 项目系统集成
 
 | 能力 | 实现 |
 |------|------|
-| 解决方案树 | `CocoaSolutionFile.Load` → `CocoaProjectFile.Load` → `Glob.Expand` 懒展开（M2 起，删除 §5.4-D1 手写解析） |
-| 新建项目向导 | M2：二选一 —— `CocoaTemplates` 抽取（`Cocoa.Build.Projects`，CLI 同步受益）或调用 `cocoa new` CLI 子进程；写盘后刷新树 |
-| 添加/移除文件 | 文本级改写 `.coproj` `[sources]` 节 |
-| 文件监听 | `FileSystemWatcher`；外部改动 → DocumentService 缓冲失效 |
+| 解决方案树 | `CocoaSolutionFile.Load` → `CocoaProjectFile.Load` → `Glob.Expand` 懒展开（M2 已落地）；M6c 重做为 VS 风格（§6.4） |
+| 新建项目向导 | M2 已落地第一版（磁盘模板 XML）；M2b 重做为 VS2022 两步式（§8.1） |
+| 添加/移除文件 | 文本级改写 `.coproj`（M6a）；引用增删见 §6.4 |
+| 文件监听 | `FileSystemWatcher`；外部改动 → DocumentService 缓冲失效（P2） |
+
+### 8.1 VS2022 两步式新建项目向导（M2b）
+
+> 替代现有 520px 单页表单（`NewProjectDialog.cs`）。**步骤 1** 选模板，**步骤 2** 配置；对齐 Visual Studio 2022「创建新项目」。
+
+**步骤 1 · 创建新项目**
+
+- 顶部搜索框（按模板名称/描述过滤）
+- 中央模板卡片列表：图标字形 + `Label` + `Description`，可选中
+- 右侧选中项详情（图标、名称、描述）
+- 底部 `下一步` / `取消`
+
+**步骤 2 · 配置新项目**
+
+- 项目名称、位置（`浏览…`）、解决方案名称
+- ☐ 将解决方案和项目放在同一目录中
+- 目标框架下拉：`net48`（默认）/`net9.0`/`net8.0`/`net6.0`/`netcoreapp3.1`
+- `上一步` / `创建`
+
+**目录布局（对齐 VS）**
+
+| 情况 | 产物 |
+|------|------|
+| 默认 | `<位置>\<解决方案名>\<解决方案名>.cosln` + `<位置>\<解决方案名>\<项目名>\<项目名>.coproj` |
+| 勾选「同一目录」 | `<位置>\<解决方案名>\<解决方案名>.cosln` + `<位置>\<解决方案名>\<项目名>.coproj` |
+| 空白解决方案 | 仅 `<位置>\<解决方案名>\<解决方案名>.cosln`（无项目） |
+
+- 位置不存在时**自动创建**（修 §5.5-A6）。
+- `{{Tfm}}` 由界面真正传入（现状恒为 `net48`）。
+- **每个模板统一生成 `.cosln`**；原 `Solution` 模板改为「空白解决方案」（VS Blank Solution 语义）。
+
+**服务端改动**
+
+- `NewProjectService` 新增 `CreateWithSolution(template, projectName, solutionName, location, sameDirectory, tfm)` → 生成 `.cosln`（`<Project Include="相对路径" />`）+ 复用 `CreateProject` 生成项目；返回 `(SolutionPath, ProjectPath, CreatedFiles)`。
+- `MainViewModel.NewProjectAsync` 改为加载返回的 `.cosln`。
+- 清理过期类注释（§5.5-C1）。
 
 ---
 
@@ -465,14 +614,36 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 |--------|------------|
 | M1 | IDE 启动 <2s；打开文件着色正确；行号/查找可用 |
 | M1.1 | 双击树/打开文件即在编辑器可编辑；标签点击激活、脏标记正确（B2 修复）、`//` 注释着色（B1 修复）；Ctrl+S 写入即内容；状态栏 Ln/Col/Language 实时；关脏标签弹保存确认（D8）；B3-B5/D2-D4/D7 关闭 |
-| M2 | 树由 `Cocoa.Build` 解析驱动（D1 关闭）；新建项目与 `cocoa new` 一致（二选一方案） |
+| M2 | 树由 `Cocoa.Build` 解析驱动（D1 关闭）；新建项目与 `cocoa new` 一致 |
+| M2b | 两步式向导可用；默认布局 `<解决方案名>\<解决方案名>.cosln` + `<项目名>\<项目名>.coproj`；勾选同目录生效；空白解决方案模板；目标框架下拉写入 `{{Tfm}}`；位置不存在自动创建（A6） |
 | M3 | ≤0.5s 出红波浪线；双击定位准确（含 D6 修复） |
-| M4 | F6 构建 samples.cosln 成功；F5 运行 HelloWorld（含 D5） |
-| M5 | 补全三类候选正确；Hover 签名正确；F12 跨文件准确（着色切 Classifier） |
+| M4 | F6 构建 samples.cosln 成功；F5 运行 HelloWorld（含 D5；A7 运行输出/停止） |
+| M5 | 补全三类候选正确；Hover 签名正确；F12 跨文件准确 |
+| M5b | 多文件 + `References` 编译；跨文件调用不再误报；`Console.` 成员可补全；Hover 不重解析全目录；A1/A2/B6 关闭 |
+| M6a | 空壳菜单接线（退出/视图/项目/生成清理/关于）；状态栏显示解决方案名；Ctrl+F 查找；错误过滤 UI；输出自动滚动；A3/A4/A5/A7/A8/A9/A10/B9 关闭 |
+| M6b | F12 精确到声明名字列；空补全不弹；非源码不着 Cocoa 色；大文件只读；B7/B8/C2-C5 关闭 |
+| M6c | VS 风格树（矢量图标/嵌套文件夹/引用节点/解决方案计数）；工具栏（刷新/折叠全部/同步活动文档/显示所有文件/属性）；按种类右键；引用可增删并写回 `.coproj` |
 | M6 | 主题切换即时生效；最近项目持久化 |
 | M7 | 断点命中；四种步进行为正确；局部变量正确（`DebuggerSession`） |
 
-依赖关系：M1 → M1.1 → {M2, M3} → M4 → M5；M7 独立线。
+依赖关系：M1 → M1.1 → {M2, M2b, M3} → M4 → M5 → M5b → {M6a, M6b, M6c} → M6；M7 独立线。
+
+### 12.2 实施顺序与提交分组（2026-09-12 定稿）
+
+> 约定：每组一次构建冒烟（`dotnet build src\Cocoa.IDE\Cocoa.IDE.slnx`）后单独提交。
+
+| 序 | Phase | 内容 | 提交信息 |
+|:--:|-------|------|---------|
+| 1 | 正确性 | A1/A3/A7/A8 诊断与运行修复 | `F8：修复实时诊断跨文件丢弃/运行非可执行项目/打开文件不出诊断` |
+| 2 | 生命周期 | A4/A5/A9/A10 关标签/浮窗事件 | `F9：修复关标签丢改动/浮窗事件泄漏/关闭未保存` |
+| 3 | M2b | VS2022 两步式向导 + 解决方案布局 + 空白解决方案（含 A6/C1） | `M2b：VS2022 两步式新建项目向导 + 解决方案布局，空白解决方案模板` |
+| 4 | M5b | 工程上下文语义 + 缓存（A2 + B6 + C 主项） | `M5b：语义/诊断接入工程上下文与引用(修跨文件误报与 Console. 补全)` |
+| 5 | M6c | VS 风格解决方案资源管理器 | `M6c：VS 风格解决方案资源管理器(矢量图标/嵌套文件夹/引用节点/工具栏/同步活动文档)` |
+| 6 | M6a | UI 接线（菜单/状态栏/查找/过滤） | `M6a：补齐菜单/状态栏/查找/过滤等 UI 接线` |
+| 7 | M6b | 精确 F12 定位与打磨项 | `M6b：精确 F12 定位与打磨项` |
+| 8 | M7 | 解释器调试器（触碰编译器，避开并行里程碑） | `M7：解释器调试器` |
+
+> 顺序约束：M5b 为 M6a 的 `.` 自动补全提供工程上下文，不可颠倒；M7 唯一改动编译器（`Cocoa.CodeGen.Interpreter`），置于最后。
 
 ## 13. 风险与开放问题
 
@@ -492,4 +663,5 @@ internal Action<CallFrame, BoundStatement>? StatementBoundaryHook;
 2. 设置存储格式（`%LOCALAPPDATA%\Cocoa\IDE\*.json`）；
 3. 多根工作区（无 `.cosln` 直接开文件夹）；
 4. `BuildReport` 结构化构建诊断返回；
-5. 「新建项目向导」实现方案终选：`CocoaTemplates` 抽取入库 vs `cocoa new` CLI 子进程（M2）。
+5. ~~「新建项目向导」实现方案终选~~ ✅ 已定：磁盘模板 XML（每模板一 `template.xml`）+ IDE 侧 `NewProjectService.CreateWithSolution`（M2b，§8.1）；
+6. 引用写回逻辑单点化：M6c 先在 IDE 内实现 `ProjectFileService`，是否提取为 `Cocoa.Build` 的 public `ProjectFileEditor`（CLI 同步受益）留待评估（§6.4）。
