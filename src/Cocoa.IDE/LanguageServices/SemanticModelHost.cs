@@ -11,6 +11,7 @@ public sealed class SemanticModelHost
 {
     private Compilation? _compilation;
     private SyntaxTree? _tree;
+    private SemanticModel? _model;
 
     /// <summary>用当前文本重建多文件编译（含工程源文件集与引用，跨文件 F12/Hover/补全解析）。</summary>
     public void Update(string text, string fileName, Language language, ProjectContext? context = null)
@@ -35,10 +36,15 @@ public sealed class SemanticModelHost
         }
 
         _compilation = Compilation.Create(references.ToArray(), trees.ToArray());
+        // 缓存语义模型：GetSemanticModel 每次都新建模型，跨调用比对符号引用会失效（本地变量 F12）
+        _model = _compilation.GetSemanticModel(_tree);
     }
 
     public SyntaxTree? Tree => _tree;
     public Compilation? Compilation => _compilation;
+
+    /// <summary>当前编译/语法树的语义模型（与 <see cref="ResolveSymbolAt"/> 同一实例，符号引用可比对）。</summary>
+    public SemanticModel? Model => _model;
 
     /// <summary>定位 offset 处最深的 SyntaxToken（跳过缺失令牌）。</summary>
     public static SyntaxToken? FindToken(SyntaxTree tree, int offset)
@@ -60,7 +66,7 @@ public sealed class SemanticModelHost
         var token = FindToken(_tree, offset);
         if (token == null) return null;
 
-        var model = _compilation.GetSemanticModel(_tree);
+        var model = _model ?? _compilation.GetSemanticModel(_tree);
         var language = _tree.Language;
 
         var cursor = token.Parent;
